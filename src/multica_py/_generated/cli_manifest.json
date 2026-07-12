@@ -1,0 +1,770 @@
+{
+  "_meta": {
+    "pinned_sha": "48b8dbf43971e5ea974bf827220cd212a1240c72",
+    "source_base": "https://github.com/multica-ai/multica/blob/48b8dbf43971e5ea974bf827220cd212a1240c72/server/cmd/multica/",
+    "generated_at": "2026-07-12"
+  },
+  "commands": [
+    {
+      "command": "auth status",
+      "sdk_method": "auth.status",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_auth.go"
+    },
+    {
+      "command": "auth login",
+      "sdk_method": "auth.login",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_login.go"
+    },
+    {
+      "command": "auth logout",
+      "sdk_method": "auth.logout",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_auth.go"
+    },
+    {
+      "command": "setup cloud",
+      "sdk_method": "setup.cloud",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_setup.go"
+    },
+    {
+      "command": "setup self-host",
+      "sdk_method": "setup.self_host",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_setup.go"
+    },
+    {
+      "command": "daemon status",
+      "sdk_method": "daemon.status",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_daemon.go"
+    },
+    {
+      "command": "daemon start",
+      "sdk_method": "daemon.start",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_daemon.go"
+    },
+    {
+      "command": "daemon stop",
+      "sdk_method": "daemon.stop",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_daemon.go"
+    },
+    {
+      "command": "daemon restart",
+      "sdk_method": "daemon.restart",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_daemon.go"
+    },
+    {
+      "command": "daemon logs",
+      "sdk_method": "daemon.logs",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_daemon.go"
+    },
+    {
+      "command": "daemon disk-usage",
+      "sdk_method": "daemon.disk_usage",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_daemon.go"
+    },
+    {
+      "command": "workspace list",
+      "sdk_method": "workspaces.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_workspace.go"
+    },
+    {
+      "command": "workspace get",
+      "sdk_method": "workspaces.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_workspace.go"
+    },
+    {
+      "command": "workspace members",
+      "sdk_method": "workspaces.members",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_workspace.go"
+    },
+    {
+      "command": "workspace switch",
+      "sdk_method": "workspaces.switch",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_workspace.go"
+    },
+    {
+      "command": "workspace watch",
+      "sdk_method": "workspaces.watch",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_workspace.go"
+    },
+    {
+      "command": "workspace unwatch",
+      "sdk_method": "workspaces.unwatch",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_workspace.go"
+    },
+    {
+      "command": "issue list",
+      "sdk_method": "issues.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue get",
+      "sdk_method": "issues.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue pull-requests",
+      "sdk_method": "issues.pull_requests",
+      "output_mode": "json",
+      "aliases": [
+        "prs"
+      ],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue children",
+      "sdk_method": "issues.children",
+      "output_mode": "json",
+      "aliases": [
+        "subissues"
+      ],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue create",
+      "sdk_method": "issues.create",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue update",
+      "sdk_method": "issues.update",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue assign",
+      "sdk_method": "issues.assign",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue set-status",
+      "sdk_method": "issues.set_status",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue reorder",
+      "sdk_method": "issues.reorder",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue search",
+      "sdk_method": "issues.search",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue runs",
+      "sdk_method": "issues.runs",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue run-messages",
+      "sdk_method": "issues.run_messages",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue usage",
+      "sdk_method": "issues.usage",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue rerun",
+      "sdk_method": "issues.rerun",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue cancel-task",
+      "sdk_method": "issues.cancel_task",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue comment list",
+      "sdk_method": "issues.comments.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue comment add",
+      "sdk_method": "issues.comments.add",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue comment reply",
+      "sdk_method": "issues.comments.reply",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue comment delete",
+      "sdk_method": "issues.comments.delete",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue comment resolve",
+      "sdk_method": "issues.comments.resolve",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue comment unresolve",
+      "sdk_method": "issues.comments.unresolve",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue metadata list",
+      "sdk_method": "issues.metadata.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue_metadata.go"
+    },
+    {
+      "command": "issue metadata get",
+      "sdk_method": "issues.metadata.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue_metadata.go"
+    },
+    {
+      "command": "issue metadata set",
+      "sdk_method": "issues.metadata.set",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue_metadata.go"
+    },
+    {
+      "command": "issue metadata delete",
+      "sdk_method": "issues.metadata.delete",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue_metadata.go"
+    },
+    {
+      "command": "issue subscriber list",
+      "sdk_method": "issues.subscribers.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue subscriber add",
+      "sdk_method": "issues.subscribers.add",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue subscriber remove",
+      "sdk_method": "issues.subscribers.remove",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "issue label list",
+      "sdk_method": "issues.labels.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_issue_label.go"
+    },
+    {
+      "command": "issue label add",
+      "sdk_method": "issues.labels.add",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue_label.go"
+    },
+    {
+      "command": "issue label remove",
+      "sdk_method": "issues.labels.remove",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue_label.go"
+    },
+    {
+      "command": "project list",
+      "sdk_method": "projects.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_project.go"
+    },
+    {
+      "command": "project get",
+      "sdk_method": "projects.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_project.go"
+    },
+    {
+      "command": "project create",
+      "sdk_method": "projects.create",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_project.go"
+    },
+    {
+      "command": "project update",
+      "sdk_method": "projects.update",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_project.go"
+    },
+    {
+      "command": "project delete",
+      "sdk_method": "projects.delete",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_project.go"
+    },
+    {
+      "command": "project set-status",
+      "sdk_method": "projects.set_status",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_project.go"
+    },
+    {
+      "command": "label list",
+      "sdk_method": "labels.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_label.go"
+    },
+    {
+      "command": "label get",
+      "sdk_method": "labels.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_label.go"
+    },
+    {
+      "command": "label create",
+      "sdk_method": "labels.create",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_label.go"
+    },
+    {
+      "command": "label update",
+      "sdk_method": "labels.update",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_label.go"
+    },
+    {
+      "command": "label delete",
+      "sdk_method": "labels.delete",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_label.go"
+    },
+    {
+      "command": "agent list",
+      "sdk_method": "agents.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "agent get",
+      "sdk_method": "agents.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "agent create",
+      "sdk_method": "agents.create",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "agent update",
+      "sdk_method": "agents.update",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "agent archive",
+      "sdk_method": "agents.archive",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "agent restore",
+      "sdk_method": "agents.restore",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "agent tasks",
+      "sdk_method": "agents.tasks",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "agent avatar upload",
+      "sdk_method": "agents.upload_avatar",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "agent skill list",
+      "sdk_method": "agents.skills.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "agent skill set",
+      "sdk_method": "agents.skills.set",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_agent.go"
+    },
+    {
+      "command": "skill list",
+      "sdk_method": "skills.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_skill.go"
+    },
+    {
+      "command": "skill get",
+      "sdk_method": "skills.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_skill.go"
+    },
+    {
+      "command": "skill create",
+      "sdk_method": "skills.create",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_skill.go"
+    },
+    {
+      "command": "skill update",
+      "sdk_method": "skills.update",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_skill.go"
+    },
+    {
+      "command": "skill delete",
+      "sdk_method": "skills.delete",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_skill.go"
+    },
+    {
+      "command": "skill import",
+      "sdk_method": "skills.import_from_url",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_skill.go"
+    },
+    {
+      "command": "skill file list",
+      "sdk_method": "skills.files.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_skill.go"
+    },
+    {
+      "command": "skill file upsert",
+      "sdk_method": "skills.files.upsert",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_skill.go"
+    },
+    {
+      "command": "skill file delete",
+      "sdk_method": "skills.files.delete",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_skill.go"
+    },
+    {
+      "command": "autopilot list",
+      "sdk_method": "autopilots.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot get",
+      "sdk_method": "autopilots.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot create",
+      "sdk_method": "autopilots.create",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot update",
+      "sdk_method": "autopilots.update",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot delete",
+      "sdk_method": "autopilots.delete",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot run",
+      "sdk_method": "autopilots.run",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot history",
+      "sdk_method": "autopilots.history",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot run get",
+      "sdk_method": "autopilots.get_run",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot trigger list",
+      "sdk_method": "autopilots.triggers.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot trigger create",
+      "sdk_method": "autopilots.triggers.create",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "autopilot trigger delete",
+      "sdk_method": "autopilots.triggers.delete",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_autopilot.go"
+    },
+    {
+      "command": "repo list",
+      "sdk_method": "repositories.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_repo.go"
+    },
+    {
+      "command": "repo get",
+      "sdk_method": "repositories.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_repo.go"
+    },
+    {
+      "command": "repo checkout",
+      "sdk_method": "repositories.checkout",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_repo.go"
+    },
+    {
+      "command": "runtime list",
+      "sdk_method": "runtimes.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_runtime.go"
+    },
+    {
+      "command": "runtime get",
+      "sdk_method": "runtimes.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_runtime.go"
+    },
+    {
+      "command": "attachment list",
+      "sdk_method": "attachments.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_attachment.go"
+    },
+    {
+      "command": "attachment upload",
+      "sdk_method": "attachments.upload",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_attachment.go"
+    },
+    {
+      "command": "attachment download",
+      "sdk_method": "attachments.download",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_attachment.go"
+    },
+    {
+      "command": "config show",
+      "sdk_method": "configuration.show",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_config.go"
+    },
+    {
+      "command": "config get",
+      "sdk_method": "configuration.get",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_config.go"
+    },
+    {
+      "command": "config set",
+      "sdk_method": "configuration.set",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_config.go"
+    },
+    {
+      "command": "squad list",
+      "sdk_method": "squads.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_squad.go"
+    },
+    {
+      "command": "squad get",
+      "sdk_method": "squads.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_squad.go"
+    },
+    {
+      "command": "user list",
+      "sdk_method": "users.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_user.go"
+    },
+    {
+      "command": "user get",
+      "sdk_method": "users.get",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_user.go"
+    },
+    {
+      "command": "version",
+      "sdk_method": "maintenance.version",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_version.go"
+    },
+    {
+      "command": "update",
+      "sdk_method": "maintenance.update",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_update.go"
+    },
+    {
+      "command": "issue deprioritize",
+      "sdk_method": "issues.deprioritize",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_issue.go"
+    },
+    {
+      "command": "auth whoami",
+      "sdk_method": "",
+      "output_mode": "text",
+      "aliases": [],
+      "status": "unsupported",
+      "reason": "Deprecated upstream, removed from command tree"
+    }
+  ]
+}

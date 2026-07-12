@@ -1,0 +1,135 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "multica-py"
+version = "0.1.0"
+description = "Python SDK for the Multica CLI"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+    { name = "multica-py contributors" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "msgspec>=0.19,<2",
+]
+
+[project.urls]
+Homepage = "https://github.com/maximchikAlexandr/multica-py"
+Repository = "https://github.com/maximchikAlexandr/multica-py"
+Documentation = "https://github.com/maximchikAlexandr/multica-py"
+
+[project.scripts]
+multica-py = "multica_py.cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/multica_py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src",
+    "tests",
+    "scripts",
+    "docs",
+    ".github",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "pyproject.toml",
+    "ruff.toml",
+    "uv.lock",
+]
+exclude = [
+    ".codebase-memory/**",
+    ".devlocal/**",
+    ".opencode/**",
+    ".speckit-chat/**",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/node_modules/**",
+    "build/**",
+    "dist/**",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-v --tb=short --strict-markers"
+filterwarnings = ["error"]
+log_cli_level = "WARNING"
+
+[tool.coverage.run]
+source = ["multica_py"]
+relative_files = true
+include = ["src/multica_py/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
+
+[tool.coverage.regexs]
+transport = "multica_py/_internal/transport\\.py$"
+models = "multica_py/models/.*"
+resources = "multica_py/resources/.*"
+errors = "multica_py/exceptions\\.py$"
+
+[tool.coverage.thresholds]
+transport = 80
+models = 90
+resources = 70
+errors = 95
+
+[tool.mypy]
+strict = true
+disallow_any_expr = true
+disallow_any_decorated = true
+disallow_any_explicit = true
+disallow_any_generics = true
+warn_return_any = true
+warn_unreachable = true
+python_version = "3.12"
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = ["src"]
+ignore_missing_imports = true
+follow_imports = "silent"
+
+[dependency-groups]
+test = ["pytest>=8", "pytest-cov>=5"]
+lint = ["ruff>=0.4"]
+type-check = ["mypy>=1.8"]
+
+[[tool.mypy.overrides]]
+module = ["msgspec"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tests.conftest",
+    "tests.unit.*",
+    "tests.integration.*",
+    "tests.packaging.*",
+    "tests.typing.*",
+    "tests.contract.models.*",
+    "tests.contract.test_public_invariants",
+]
+ignore_missing_imports = true
+follow_imports = "silent"
+check_untyped_defs = true
+disallow_untyped_defs = false
+disallow_any_expr = false
+disallow_any_decorated = false
+disallow_any_explicit = false
+warn_return_any = false

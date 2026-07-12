@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --all-groups
+      - run: uv build
+      - run: uv tool install --from dist/*.whl multica-py
+      - run: multica-py version
+      - run: python -m venv /tmp/verify-venv && /tmp/verify-venv/bin/pip install dist/*.whl && /tmp/verify-venv/bin/python -c "import multica_py; print('import OK')"
+      - run: uv publish

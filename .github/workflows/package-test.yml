@@ -1,0 +1,49 @@
+name: Package Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  install:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --frozen --all-groups
+      - run: uv build
+
+      - name: uv tool install
+        run: uv tool install --from dist/*.whl multica-py
+      - name: uv tool run version
+        run: multica-py version
+
+      - name: uvx --from
+        run: uvx --from dist/*.whl multica-py version
+
+      - name: uv add (consumer project)
+        run: |
+          mkdir -p /tmp/consumer-project
+          cd /tmp/consumer-project
+          uv init --no-readme
+          uv add ${{ github.workspace }}/dist/*.whl
+          uv run python -c "import multica_py; print('uv add ok')"
+
+      - name: uv pip install
+        run: |
+          python -m venv /tmp/test-uv-venv
+          uv pip install --python /tmp/test-uv-venv/bin/python dist/*.whl
+          /tmp/test-uv-venv/bin/python -c "import multica_py; print('uv pip install ok')"
+
+      - name: pip install
+        run: |
+          python -m venv /tmp/test-pip-venv
+          /tmp/test-pip-venv/bin/pip install dist/*.whl
+          /tmp/test-pip-venv/bin/python -c "import multica_py; print('pip install ok')"

@@ -1,0 +1,178 @@
+from __future__ import annotations
+
+import contextlib
+import datetime
+import os
+import signal
+import subprocess
+import time
+from typing import BinaryIO, cast
+
+from multica_py.exceptions import CommandCancelledError, CommandTimeoutError
+
+
+def _stdin_pipe(process: subprocess.Popen[bytes]) -> BinaryIO | None:
+    return cast("BinaryIO | None", process.stdin)
+
+
+def _stdout_pipe(process: subprocess.Popen[bytes]) -> BinaryIO | None:
+    return cast("BinaryIO | None", process.stdout)
+
+
+def _stderr_pipe(process: subprocess.Popen[bytes]) -> BinaryIO | None:
+    return cast("BinaryIO | None", process.stderr)
+
+
+class CancellationToken:
+    def __init__(self) -> None:
+        self._cancelled = False
+        self._process: subprocess.Popen[bytes] | None = None
+
+    def attach(self, process: subprocess.Popen[bytes]) -> None:
+        self._process = process
+
+    @property
+    def cancelled(self) -> bool:
+        return self._cancelled
+
+    @property
+    def process(self) -> subprocess.Popen[bytes] | None:
+        return self._process
+
+    def cancel(self) -> None:
+        self._cancelled = True
+
+
+def _killpg(process: subprocess.Popen[bytes], sig: int) -> None:
+    """Send a signal to the entire process group of *process*."""
+    with contextlib.suppress(OSError):
+        os.kill(-process.pid, sig)
+
+
+def create_process(
+    argv: tuple[str, ...],
+    *,
+    stdout: int = subprocess.PIPE,
+    stderr: int = subprocess.PIPE,
+    cwd: str | None = None,
+    env: dict[str, str] | None = None,
+) -> subprocess.Popen[bytes]:
+    return subprocess.Popen(
+        list(argv),
+        stdin=subprocess.PIPE,
+        stdout=stdout,
+        stderr=stderr,
+        cwd=cwd,
+        env=env,
+        start_new_session=True,
+    )
+
+
+def terminate_process(process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is not None:
+        return
+    _killpg(process, signal.SIGTERM)
+
+
+def kill_process(process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is not None:
+        return
+    _killpg(process, signal.SIGKILL)
+
+
+def _communicate_until_exit(
+    process: subprocess.Popen[bytes],
+    *,
+    poll_interval: float,
+    timeout_deadline: float | None,
+    cancel: CancellationToken | None,
+) -> tuple[bytes, bytes, bool]:
+    stdout_data = b""
+    stderr_data = b""
+    timeout_hit = False
+    terminate_reason: str | None = None
+    force_kill_at: float | None = None
+
+    while True:
+        try:
+            stdout_data, stderr_data = process.communicate(timeout=poll_interval)
+        except subprocess.TimeoutExpired:
+            now = time.monotonic()
+            cancel_hit = cancel is not None and cancel.cancelled
+            timeout_due = timeout_deadline is not None and now >= timeout_deadline
+
+            if terminate_reason is None and cancel_hit:
+                terminate_reason = "cancel"
+                terminate_process(process)
+                force_kill_at = now + 2.0
+                continue
+
+            if terminate_reason is None and timeout_due:
+                timeout_hit = True
+                terminate_reason = "timeout"
+                terminate_process(process)
+                force_kill_at = now + 2.0
+                continue
+
+            if terminate_reason is not None and force_kill_at is not None and now >= force_kill_at:
+                kill_process(process)
+                force_kill_at = None
+        else:
+            return stdout_data, stderr_data, timeout_hit
+
+
+def run_with_timeout(
+    argv: tuple[str, ...],
+    *,
+    stdin: bytes | None = None,
+    timeout: datetime.timedelta | None = None,
+    cwd: str | None = None,
+    env: dict[str, str] | None = None,
+    cancel: CancellationToken | None = None,
+) -> subprocess.CompletedProcess[bytes]:
+    if cancel is not None and cancel.cancelled:
+        raise CommandCancelledError("Command was cancelled")
+
+    process = create_process(argv, cwd=cwd, env=env)
+
+    if cancel is not None:
+        cancel.attach(process)
+
+    timeout_deadline = time.monotonic() + timeout.total_seconds() if timeout is not None else None
+
+    try:
+        stdin_pipe = _stdin_pipe(process)
+        if stdin is not None and stdin_pipe is not None:
+            stdin_pipe.write(stdin)
+            stdin_pipe.close()
+        stdout_data, stderr_data, timeout_hit = _communicate_until_exit(
+            process,
+            poll_interval=0.1,
+            timeout_deadline=timeout_deadline,
+            cancel=cancel,
+        )
+    finally:
+        stdin_pipe = _stdin_pipe(process)
+        stdout_pipe = _stdout_pipe(process)
+        stderr_pipe = _stderr_pipe(process)
+        if stdin_pipe is not None:
+            stdin_pipe.close()
+        if stdout_pipe is not None:
+            stdout_pipe.close()
+        if stderr_pipe is not None:
+            stderr_pipe.close()
+
+    rc = process.returncode if process.returncode is not None else 0
+
+    if cancel is not None and cancel.cancelled:
+        raise CommandCancelledError("Command was cancelled")
+
+    if timeout_hit:
+        raise CommandTimeoutError(f"Command timed out after {timeout}")
+
+    return subprocess.CompletedProcess(
+        args=list(argv),
+        returncode=rc,
+        stdout=stdout_data or b"",
+        stderr=stderr_data or b"",
+    )
