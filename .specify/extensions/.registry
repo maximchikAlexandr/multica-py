@@ -14,12 +14,15 @@
         "codex": [
           "speckit.agent-context.update"
         ],
+        "opencode": [
+          "speckit.agent-context.update"
+        ],
         "zed": [
           "speckit.agent-context.update"
         ]
       },
       "registered_skills": [],
-      "installed_at": "2026-07-12T13:41:54.299954+00:00"
+      "installed_at": "2026-07-12T14:38:16.302269+00:00"
     }
   }
 }

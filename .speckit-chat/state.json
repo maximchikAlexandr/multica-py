@@ -1,0 +1,18 @@
+{
+  "feature": "001-full-cli-sdk",
+  "phase": "tasks",
+  "status": "complete",
+  "next_phase": "implementation",
+  "updated_at": "2026-07-12",
+  "artifacts": [
+    "specs/001-full-cli-sdk/spec.md",
+    "specs/001-full-cli-sdk/plan.md",
+    "specs/001-full-cli-sdk/research.md",
+    "specs/001-full-cli-sdk/data-model.md",
+    "specs/001-full-cli-sdk/contracts/cli-coverage.md",
+    "specs/001-full-cli-sdk/contracts/model-source-map.md",
+    "specs/001-full-cli-sdk/contracts/public-api.md",
+    "specs/001-full-cli-sdk/quickstart.md",
+    "specs/001-full-cli-sdk/tasks.md"
+  ]
+}

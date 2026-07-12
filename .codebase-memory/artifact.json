@@ -1,11 +1,11 @@
 {
     "schema_version": 1,
-    "commit": "06eee15683a5ac4ee5ee1a964f0654cd4c3d34e1",
-    "indexed_at": "2026-07-12T13:46:20Z",
+    "commit": "71c9351b95d41f4ac7f169348496d41bb3a80b0d",
+    "indexed_at": "2026-07-12T14:44:46Z",
     "project": "Users-alexandr-local_dev-repositories-my_projects-multica-py",
-    "nodes": 333,
-    "edges": 329,
-    "original_size": 1310720,
-    "compressed_size": 28297,
-    "compression_level": 9
+    "nodes": 720,
+    "edges": 732,
+    "original_size": 2883584,
+    "compressed_size": 169008,
+    "compression_level": 3
 }
