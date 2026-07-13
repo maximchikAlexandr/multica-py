@@ -25,3 +25,6 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Codebase memory MCP index (regenerated locally)
+.codebase-memory/
