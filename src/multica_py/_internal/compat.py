@@ -49,7 +49,9 @@ def _parse_semver(version: str) -> tuple[int, int, int] | None:
     return tuple(int(part) for part in match.groups())  # type: ignore[return-value]
 
 
-def _check_supported_version_text(version: str, policy: CompatibilityPolicy) -> tuple[int, int, int]:
+def _check_supported_version_text(
+    version: str, policy: CompatibilityPolicy
+) -> tuple[int, int, int]:
     parsed = _parse_semver(version)
     if parsed is not None:
         return parsed

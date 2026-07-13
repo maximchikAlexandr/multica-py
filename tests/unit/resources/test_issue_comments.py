@@ -91,7 +91,9 @@ class TestIssueCommentResource:
                 )
             ]
         ).decode("utf-8")
-        transport.run_text.return_value = TextResult(text=payload, stderr="cursor=next_1", exit_code=0)
+        transport.run_text.return_value = TextResult(
+            text=payload, stderr="cursor=next_1", exit_code=0
+        )
         resource = IssueCommentResource(transport, ClientConfig())
 
         result = resource.list_recent(CommentListRecentRequest(issue_id="iss_1", limit=5))

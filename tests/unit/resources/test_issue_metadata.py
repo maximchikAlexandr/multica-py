@@ -71,7 +71,9 @@ class TestIssueMetadataResource:
     def test_query_repeats_predicates_and_returns_page(self) -> None:
         transport = _transport()
         payload = msgspec.json.encode([MetadataEntry(key="priority", value="high")]).decode("utf-8")
-        transport.run_text.return_value = TextResult(text=payload, stderr="next cursor cur_2", exit_code=0)
+        transport.run_text.return_value = TextResult(
+            text=payload, stderr="next cursor cur_2", exit_code=0
+        )
         resource = IssueMetadataResource(transport, ClientConfig())
 
         result = resource.query(

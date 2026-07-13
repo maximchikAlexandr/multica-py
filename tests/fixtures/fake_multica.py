@@ -34,6 +34,7 @@ class AuthStatusPayload(TypedDict):
     user_id: str | None
     token_type: str | None
 
+
 _FIXTURE_DIR = Path(__file__).resolve().parent / "json"
 _FIXTURE_PREFIXES: dict[str, str] = {
     "workspace": "workspaces",
@@ -114,9 +115,7 @@ def main() -> int:
                 "os": "linux",
                 "arch": "amd64",
             }
-            sys.stdout.write(
-                json.dumps(version_payload)
-            )
+            sys.stdout.write(json.dumps(version_payload))
         elif sys.argv[1:2] == ["auth"] and sys.argv[2:3] == ["status"]:
             auth_status: AuthStatusPayload = {
                 "authenticated": False,

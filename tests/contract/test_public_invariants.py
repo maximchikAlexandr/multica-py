@@ -104,10 +104,5 @@ def test_no_open_ended_container_fields() -> None:
         annotations = cast("dict[str, object]", obj.__annotations__)
         for fname in fields:
             ann = str(annotations.get(fname, ""))
-            if (
-                "Any" in ann
-                or "dict[" in ann
-                or ann == "typing.Any"
-                or ann == "<class 'object'>"
-            ):
+            if "Any" in ann or "dict[" in ann or ann == "typing.Any" or ann == "<class 'object'>":
                 raise TypeError(f"{name}.{fname}: {ann} is an open-ended container")

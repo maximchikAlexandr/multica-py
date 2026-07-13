@@ -42,7 +42,9 @@ def issue_from_wire(wire: IssueWire) -> Issue:
         pull_requests=wire.pull_requests,
         children=wire.children,
         labels=wire.labels,
-        metadata=tuple(IssueMetadataItem(key=key, value=value) for key, value in wire.metadata.items()),
+        metadata=tuple(
+            IssueMetadataItem(key=key, value=value) for key, value in wire.metadata.items()
+        ),
         created_at=wire.created_at,
         updated_at=wire.updated_at,
     )
