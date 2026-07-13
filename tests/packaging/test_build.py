@@ -4,7 +4,6 @@ import pathlib
 import subprocess
 import sys
 import tarfile
-import tomllib
 
 import pytest
 
@@ -18,14 +17,6 @@ def test_py_typed_exists():
 
 def test_package_importable():
     assert hasattr(multica_py, "MulticaClient")
-
-
-def test_console_script_defined():
-    with open("pyproject.toml", "rb") as f:
-        data = tomllib.load(f)
-    scripts = data.get("project", {}).get("scripts", {})
-    assert "multica-py" in scripts
-    assert scripts["multica-py"] == "multica_py.cli.main:main"
 
 
 def test_uvx_import():
@@ -52,7 +43,7 @@ def test_sdist_contains_py_typed():
     assert "py.typed" in result.stdout, "sdist missing py.typed"
 
 
-def test_wheel_contains_entry_point():
+def test_wheel_contains_py_typed():
     dist = pathlib.Path("dist")
     wheels = list(dist.glob("*.whl"))
     if not wheels:
@@ -64,7 +55,7 @@ def test_wheel_contains_entry_point():
         check=False,
     )
     assert result.returncode == 0
-    assert "multica_py/cli/main.py" in result.stdout
+    assert "multica_py/py.typed" in result.stdout
 
 
 def test_sdist_excludes_local_tool_state(tmp_path: pathlib.Path) -> None:

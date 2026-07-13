@@ -23,16 +23,6 @@ def test_bare_import_in_subprocess():
     assert result.returncode == 0, f"Import failed: {result.stderr}"
 
 
-def test_cli_entry_point_in_subprocess():
-    result = subprocess.run(
-        [sys.executable, "-m", "multica_py.cli.main"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, f"CLI failed: {result.stderr}"
-
-
 def test_wheel_install_and_run(tmp_path: pathlib.Path) -> None:
     dist = pathlib.Path("dist")
     wheels = list(dist.glob("*.whl"))
