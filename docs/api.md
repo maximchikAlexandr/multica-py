@@ -53,12 +53,3 @@ All resources accessed as attributes of `MulticaClient`:
 - `Page[T]` — immutable tuple payload with `next_cursor`
 - `ActionResult` — typed success/message container for commands that expose structured action results
 
-## CLI Console
-
-```bash
-multica-py              # show help (exit 0)
-multica-py doctor       # check Python, executable, auth
-multica-py version      # print SDK + CLI versions
-multica-py coverage     # print command coverage
-multica-py exec -- <args>  # passthrough to multica binary
-```

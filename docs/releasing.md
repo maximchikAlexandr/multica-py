@@ -6,18 +6,19 @@
 2. Commit with message `release X.Y.Z`
 3. Tag: `git tag vX.Y.Z && git push --tags`
 4. Create a GitHub Release for the tag
-5. The `.github/workflows/release.yml` workflow:
-   - Builds wheel and sdist via `uv build`
-   - Installs wheel with `uv tool install --from dist/*.whl multica-py` and runs `multica-py version`
-   - Installs in a clean venv with pip and verifies import
-   - Publishes to PyPI via `uv publish` (Trusted Publishing)
+
+The `.github/workflows/release.yml` workflow on tag push:
+- Builds wheel and sdist via `uv build`
+- Verifies the wheel installs into a clean venv and `import multica_py` works
+- Uploads the build artifacts to the GitHub Release
+
+Distribution channel: **GitHub Releases** (no PyPI publish yet). Consumers install with `uv add "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@vX.Y.Z"` or `pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@vX.Y.Z"`. See README.md.
 
 ## Release gating
 
 - Tag validation: only semver tags matching `v*` trigger the release workflow
-- Environment protection: PyPI publish requires the `pypi` environment with approval
-- Artifact reuse: workflow builds once and reuses the same artifacts for all checks
-- No long-lived tokens: uses OIDC Trusted Publishing
+- No PyPI publish in the loop — no long-lived tokens required
+- Artifact reuse: workflow builds once and reuses the same artifacts for install/import checks
 
 ## Versioning
 
@@ -26,18 +27,13 @@
 - Minor: new resource methods, backward-compatible model additions
 - Major: breaking API changes, upstream baseline change
 
-## Prerequisites
-
-- PyPI Trusted Publishing configured at https://pypi.org/manage/project/multica-py/settings/
-- GitHub environment `pypi` with `id-token: write` permission
-
 ## CI validation before release
 
 All CI jobs must pass before a release tag is created:
 - `lint`: Ruff check and format check on `src/`, `tests/`, `scripts/`
-- `types`: strict mypy on `src/` (65 files, 0 errors) and `tests/scripts` (75 files, 0 errors)
+- `types`: strict mypy on `src/` and `tests/scripts`
 - `test`: pytest on Python 3.12 and 3.13, Linux and macOS
-- `build`: wheel and sdist produced, importable, entry point verified
+- `build`: wheel and sdist produced, importable in a fresh venv
 
 ## Package provenance
 

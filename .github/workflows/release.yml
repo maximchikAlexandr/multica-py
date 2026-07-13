@@ -1,17 +1,15 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
 
 permissions:
-  id-token: write
-  contents: read
+  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    environment: pypi
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -19,7 +17,10 @@ jobs:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups
       - run: uv build
-      - run: uv tool install --from dist/*.whl multica-py
-      - run: multica-py version
-      - run: python -m venv /tmp/verify-venv && /tmp/verify-venv/bin/pip install dist/*.whl && /tmp/verify-venv/bin/python -c "import multica_py; print('import OK')"
-      - run: uv publish
+      - run: python -m venv /tmp/verify-venv && /tmp/verify-venv/bin/pip install dist/*.whl && /tmp/verify-venv/bin/python -c "import multica_py; from multica_py import ClientConfig, MulticaClient; MulticaClient(ClientConfig()); print('import OK')"
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          generate_release_notes: true
