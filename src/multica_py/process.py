@@ -22,6 +22,7 @@ def _stderr_pipe(process: subprocess.Popen[bytes]) -> BinaryIO | None:
     return cast("BinaryIO | None", process.stderr)
 
 
+# ponytail: MUST be closed (use `with`) to release the process semaphore; __del__ is a backstop, not a primary path
 class ManagedProcess:
     def __init__(
         self,

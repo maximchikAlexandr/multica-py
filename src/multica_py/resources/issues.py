@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pathlib
+
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import IssueWire, issue_from_wire
 from multica_py.config import ClientConfig
@@ -67,7 +69,7 @@ class IssueResource(BaseResource):
         if isinstance(desc, InlineDescription):
             args.extend(["--description", desc.text])
         elif isinstance(desc, FileDescription):
-            args.extend(["--description-file", desc.path])
+            args.extend(["--description-file", str(pathlib.Path(desc.path).resolve())])
         elif isinstance(desc, StdinDescription):  # type: ignore[misc]
             args.append("--description-stdin")
         if request.priority is not None:

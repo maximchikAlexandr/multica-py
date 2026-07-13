@@ -5,7 +5,9 @@ import re
 REDACTED = "***"
 
 _token_pattern = re.compile(r"--token(?:[= ])(\S+)", re.IGNORECASE)
-_token_text_pattern = re.compile(r"(?i)(--token(?:=|\s+)|token(?:=|:\s+))(\S+)")
+_token_text_pattern = re.compile(
+    r"(?i)(--token(?:=|\s+)|token(?:=|:\s+)|bearer\s+|authorization:\s*)(\S+)"
+)
 
 
 def collect_secret_values(argv: tuple[str, ...]) -> tuple[str, ...]:
@@ -42,7 +44,7 @@ def redact_text(text: str, *, secret_values: tuple[str, ...] = ()) -> str:
     redacted = _token_text_pattern.sub(_redact_token_match, text)
     for secret in secret_values:
         if secret:
-            redacted = redacted.replace(secret, REDACTED)
+            redacted = re.sub(re.escape(secret), REDACTED, redacted, flags=re.IGNORECASE)
     return redacted
 
 

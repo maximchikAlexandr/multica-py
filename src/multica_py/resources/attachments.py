@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pathlib
+
 from multica_py.models.system import AttachmentResult
 from multica_py.resources._base import BaseResource
 
@@ -10,9 +12,16 @@ class AttachmentResource(BaseResource):
 
     def upload(self, issue_id: str, file_path: str) -> AttachmentResult:
         return self._run_json_decode(
-            ("attachment", "upload", issue_id, "--file", file_path), AttachmentResult
+            ("attachment", "upload", issue_id, "--file", str(pathlib.Path(file_path).resolve())),
+            AttachmentResult,
         )
 
     def download(self, attachment_id: str, output_path: str) -> None:
-        args = ("attachment", "download", attachment_id, "--output", output_path)
+        args = (
+            "attachment",
+            "download",
+            attachment_id,
+            "--output",
+            str(pathlib.Path(output_path).resolve()),
+        )
         self._transport.run_text(args)

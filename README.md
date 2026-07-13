@@ -64,6 +64,8 @@ process.wait()
 
 ## Development
 
+Dependencies are hash-pinned in `uv.lock`; use `uv sync --frozen` for verified, reproducible installs.
+
 ```bash
 uv sync --frozen --all-groups
 uv run ruff format --check .

@@ -19,6 +19,7 @@ class AuthResource(BaseResource):
 
     def login(self, token: str | None = None) -> str | ManagedProcess:
         if token is not None:
+            # ponytail: multica binary only accepts --token on argv, visible via ps on shared hosts; redaction scrubs it from logs/errors. Env-based token not supported by upstream CLI.
             return self._transport.run_text(("auth", "login", "--token", token)).text
         return self._transport.spawn(("auth", "login"))
 

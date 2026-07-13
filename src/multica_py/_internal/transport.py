@@ -83,6 +83,7 @@ class CliTransport:
         redacted_argv = redact_argv(argv)
         secret_values = collect_secret_values(argv)
         cwd = str(self._config.cwd) if self._config.cwd else None
+        # ponytail: full parent env inherited so the multica binary can resolve PATH/HOME/etc.; callers override via ClientConfig.environment
         env = dict(os.environ)
         env.update(dict(self._config.environment))
         effective_timeout = timeout if timeout is not None else self._config.timeout
@@ -158,6 +159,7 @@ class CliTransport:
         self._check_compat()
         argv = self._build_full_argv(command_args)
         cwd = str(self._config.cwd) if self._config.cwd else None
+        # ponytail: full parent env inherited so the multica binary can resolve PATH/HOME/etc.; callers override via ClientConfig.environment
         env = dict(os.environ)
         env.update(dict(self._config.environment))
 

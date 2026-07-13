@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pathlib
+
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models.agents import Agent, AgentCreateRequest, AgentTask, AgentUpdateRequest
@@ -42,4 +44,13 @@ class AgentResource(BaseResource):
         return self._run_json_decode_list(("agent", "tasks", agent_id), AgentTask)
 
     def upload_avatar(self, agent_id: str, image_path: str) -> None:
-        self._transport.run_text(("agent", "avatar", "upload", agent_id, "--image", image_path))
+        self._transport.run_text(
+            (
+                "agent",
+                "avatar",
+                "upload",
+                agent_id,
+                "--image",
+                str(pathlib.Path(image_path).resolve()),
+            )
+        )
