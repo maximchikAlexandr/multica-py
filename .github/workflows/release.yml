@@ -1,5 +1,8 @@
 name: Release
 
+# major-version-tag-allowed: first-party actions use major version tags per
+# the repository security policy.
+
 on:
   push:
     tags: ["v*"]
@@ -11,14 +14,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups
       - run: uv build
       - run: python -m venv /tmp/verify-venv && /tmp/verify-venv/bin/pip install dist/*.whl && /tmp/verify-venv/bin/python -c "import multica_py; from multica_py import ClientConfig, MulticaClient; MulticaClient(ClientConfig()); print('import OK')"
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
           files: |
             dist/*.whl

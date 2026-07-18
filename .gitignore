@@ -28,3 +28,11 @@ Thumbs.db
 
 # Codebase memory MCP index (regenerated locally)
 .codebase-memory/
+
+# Maintainer upgrade/collect scratch (any names under artifacts/)
+artifacts/**
+!artifacts/upstream-upgrades/
+!artifacts/upstream-upgrades/.gitkeep
+
+# Ephemeral collect output (canonical path from paths.CANDIDATE_CONTRACT_REL)
+src/multica_py/_generated/upstream_candidate_contract.json

@@ -1,0 +1,1772 @@
+{
+  "schema_version": 1,
+  "decisions": [
+    {
+      "operation_id": "agents.archive",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "archive"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "agents.create",
+      "coverage_level": "typed",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "create"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "input_contract_ref": "contracts/sdk-contract.json",
+      "output_contract_ref": "contracts/output/agent-create-v1.json",
+      "test_refs": [
+        "tests/contract/test_full_cli_coverage.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_agent.go"
+      ]
+    },
+    {
+      "operation_id": "agents.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "agents.list",
+      "coverage_level": "typed",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "input_contract_ref": "contracts/sdk-contract.json",
+      "output_contract_ref": "contracts/output/agent-list-v1.json",
+      "test_refs": [
+        "tests/contract/test_full_cli_coverage.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_agent.go"
+      ]
+    },
+    {
+      "operation_id": "agents.restore",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "restore"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "agents.skills.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "skill",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "agents.skills.set",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "skill",
+            "set"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "agents.tasks",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "tasks"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "agents.update",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "update"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "agents.upload_avatar",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "agent",
+            "avatar",
+            "upload"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "attachments.download",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "attachment",
+            "download"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "attachments.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "attachment",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "attachments.upload",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "attachment",
+            "upload"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "auth.login",
+      "coverage_level": "process",
+      "bindings": [
+        {
+          "command_path": [
+            "auth",
+            "login"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ]
+    },
+    {
+      "operation_id": "auth.logout",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "auth",
+            "logout"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "auth.status",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "auth",
+            "status"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "auth.whoami",
+      "coverage_level": "unsupported",
+      "bindings": [
+        {
+          "command_path": [
+            "auth",
+            "whoami"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "reason": "Deprecated upstream, removed from command tree"
+    },
+    {
+      "operation_id": "autopilots.create",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "create"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.delete",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "delete"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.get_run",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "run",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.history",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "history"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.run",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "run"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.triggers.create",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "trigger",
+            "create"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.triggers.delete",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "trigger",
+            "delete"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.triggers.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "trigger",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "autopilots.update",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "autopilot",
+            "update"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "configuration.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "config",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "configuration.set",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "config",
+            "set"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "configuration.show",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "config",
+            "show"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "daemon.disk_usage",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "daemon",
+            "disk-usage"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "daemon.logs",
+      "coverage_level": "process",
+      "bindings": [
+        {
+          "command_path": [
+            "daemon",
+            "logs"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ]
+    },
+    {
+      "operation_id": "daemon.restart",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "daemon",
+            "restart"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "daemon.start",
+      "coverage_level": "process",
+      "bindings": [
+        {
+          "command_path": [
+            "daemon",
+            "start"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ]
+    },
+    {
+      "operation_id": "daemon.status",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "daemon",
+            "status"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "daemon.stop",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "daemon",
+            "stop"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.assign",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "assign"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.cancel_task",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "cancel-task"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.children",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "children"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.comments.add",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "comment",
+            "add"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.comments.delete",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "comment",
+            "delete"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.comments.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "comment",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.comments.reply",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "comment",
+            "reply"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.comments.resolve",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "comment",
+            "resolve"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.comments.unresolve",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "comment",
+            "unresolve"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.create",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "create"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.deprioritize",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "deprioritize"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.labels.add",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "label",
+            "add"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.labels.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "label",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.labels.remove",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "label",
+            "remove"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.list",
+      "coverage_level": "typed",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "input_contract_ref": "contracts/sdk-contract.json",
+      "output_contract_ref": "contracts/output/issue-list-v1.json",
+      "test_refs": [
+        "tests/contract/test_full_cli_coverage.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_issue.go"
+      ]
+    },
+    {
+      "operation_id": "issues.metadata.delete",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "metadata",
+            "delete"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.metadata.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "metadata",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.metadata.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "metadata",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.metadata.set",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "metadata",
+            "set"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.pull_requests",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "pull-requests"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.reorder",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "reorder"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.rerun",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "rerun"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.run_messages",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "run-messages"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.runs",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "runs"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.search",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "search"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.set_status",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "set-status"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.subscribers.add",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "subscriber",
+            "add"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.subscribers.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "subscriber",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.subscribers.remove",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "subscriber",
+            "remove"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.update",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "update"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "issues.usage",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "issue",
+            "usage"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "labels.create",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "label",
+            "create"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "labels.delete",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "label",
+            "delete"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "labels.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "label",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "labels.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "label",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "labels.update",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "label",
+            "update"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "maintenance.update",
+      "coverage_level": "process",
+      "bindings": [
+        {
+          "command_path": [
+            "update"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ]
+    },
+    {
+      "operation_id": "maintenance.version",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "version"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "projects.create",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "project",
+            "create"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "projects.delete",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "project",
+            "delete"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "projects.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "project",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "projects.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "project",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "projects.set_status",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "project",
+            "set-status"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "projects.update",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "project",
+            "update"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "repositories.checkout",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "repo",
+            "checkout"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "repositories.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "repo",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "repositories.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "repo",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "runtimes.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "runtime",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "runtimes.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "runtime",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "setup.cloud",
+      "coverage_level": "process",
+      "bindings": [
+        {
+          "command_path": [
+            "setup",
+            "cloud"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ]
+    },
+    {
+      "operation_id": "setup.self_host",
+      "coverage_level": "process",
+      "bindings": [
+        {
+          "command_path": [
+            "setup",
+            "self-host"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ]
+    },
+    {
+      "operation_id": "skills.create",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "skill",
+            "create"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "skills.delete",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "skill",
+            "delete"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "skills.files.delete",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "skill",
+            "file",
+            "delete"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "skills.files.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "skill",
+            "file",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "skills.files.upsert",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "skill",
+            "file",
+            "upsert"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "skills.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "skill",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "skills.import_from_url",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "skill",
+            "import"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "skills.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "skill",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "skills.update",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "skill",
+            "update"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "squads.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "squad",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "squads.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "squad",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "users.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "user",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "users.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "user",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "workspaces.get",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "workspace",
+            "get"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "workspaces.list",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "workspace",
+            "list"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "workspaces.members",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "workspace",
+            "members"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "workspaces.switch",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "workspace",
+            "switch"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "workspaces.unwatch",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "workspace",
+            "unwatch"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    },
+    {
+      "operation_id": "workspaces.watch",
+      "coverage_level": "raw",
+      "bindings": [
+        {
+          "command_path": [
+            "workspace",
+            "watch"
+          ],
+          "kind": "primary",
+          "since": "0.4.2",
+          "until": null
+        }
+      ],
+      "raw_argv_policy": "Sequence[str]"
+    }
+  ]
+}

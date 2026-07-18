@@ -39,6 +39,8 @@ class ClientConfig(msgspec.Struct, frozen=True, kw_only=True):
     environment: tuple[tuple[str, str], ...] = ()
     timeout: datetime.timedelta | None = None
     compatibility: CompatibilityPolicy = CompatibilityPolicy.ignore
+    min_cli_version: str | None = None
+    max_cli_version: str | None = None
     debug: bool = False
     encoding: str = "utf-8"
     max_processes: int = 4

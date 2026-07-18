@@ -1,0 +1,33 @@
+name: Upstream Contract Observer
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+  release:
+    types: [published]
+
+concurrency:
+  group: upstream-observer-${{ github.event.release.id || github.event.inputs.release_id || 'manual' }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: uv sync --frozen --all-groups
+      - name: Observer dry run
+        env:
+          RELEASE_ID: ${{ github.event.release.id || github.event.inputs.release_id || 'manual' }}
+          RELEASE_VERSION: ${{ github.event.release.tag_name || github.event.inputs.release_version || '0.0.0' }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || github.event.inputs.release_tag || 'manual' }}
+        run: uv run python -m multica_py._internal.upstream_contract.cli observe --dry-run

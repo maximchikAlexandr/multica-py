@@ -1,5 +1,9 @@
 name: CI
 
+# major-version-tag-allowed: first-party `actions/*` and `astral-sh/*` actions
+# may be referenced by major version; all third-party actions must be pinned
+# by full commit SHA per `contracts/security-and-observer.md`.
+
 on:
   pull_request:
   push:
@@ -8,9 +12,11 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups
@@ -19,9 +25,11 @@ jobs:
 
   types:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups
@@ -29,24 +37,41 @@ jobs:
       - run: uv run mypy tests scripts --ignore-missing-imports --follow-imports=silent --check-untyped-defs
 
   test:
+    permissions:
+      contents: read
     strategy:
       matrix:
         python-version: ["3.12", "3.13"]
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --frozen --all-groups
       - run: uv run pytest
 
+  upstream-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --all-groups
+      - name: Upstream contract check (offline)
+        run: uv run python -m multica_py._internal.upstream_contract.cli check --format human
+
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups
@@ -55,9 +80,11 @@ jobs:
 
   audit-source:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups

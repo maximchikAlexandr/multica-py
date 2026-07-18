@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "facts": [
+    {
+      "fact_type": "command_use",
+      "command_path": ["agent", "list"],
+      "flag_name": null,
+      "value": "list",
+      "source_ref": {"path": "cmd_agent.go", "symbol": "agentListCmd", "line_start": 10, "line_end": 10, "commit": "48b8dbf43971e5ea974bf827220cd212a1240c72", "repository": "multica-ai/multica"},
+      "review_required": false
+    },
+    {
+      "fact_type": "command_added",
+      "command_path": ["agent", "list"],
+      "flag_name": null,
+      "value": "agentListCmd",
+      "source_ref": {"path": "cmd_agent.go", "symbol": "init", "line_start": 1, "line_end": 1, "commit": "48b8dbf43971e5ea974bf827220cd212a1240c72", "repository": "multica-ai/multica"},
+      "review_required": false
+    },
+    {
+      "fact_type": "flag_string",
+      "command_path": ["agent", "list"],
+      "flag_name": "status",
+      "value": null,
+      "source_ref": {"path": "cmd_agent.go", "symbol": "agentListCmd", "line_start": 20, "line_end": 20, "commit": "48b8dbf43971e5ea974bf827220cd212a1240c72", "repository": "multica-ai/multica"},
+      "review_required": false
+    },
+    {
+      "fact_type": "constraint_markflagrequired",
+      "command_path": ["agent", "create"],
+      "flag_name": null,
+      "value": null,
+      "source_ref": {"path": "cmd_agent.go", "symbol": "agentCreateCmd", "line_start": 50, "line_end": 50, "commit": "48b8dbf43971e5ea974bf827220cd212a1240c72", "repository": "multica-ai/multica"},
+      "review_required": false
+    }
+  ],
+  "review_items": [
+    "unrecognized helper at line 75: .CustomThing(",
+    "imperative validation at line 80: if len(args) > 3 { ... }"
+  ],
+  "confidence": "high",
+  "source_refs": [
+    {"path": "cmd_agent.go", "symbol": "agentListCmd", "line_start": 10, "line_end": 20, "commit": "48b8dbf43971e5ea974bf827220cd212a1240c72", "repository": "multica-ai/multica"}
+  ]
+}

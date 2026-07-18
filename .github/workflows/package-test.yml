@@ -1,5 +1,8 @@
 name: Package Test
 
+# major-version-tag-allowed: first-party actions use major version tags per
+# the repository security policy.
+
 on:
   pull_request:
   push:
@@ -7,14 +10,16 @@ on:
 
 jobs:
   install:
+    permissions:
+      contents: read
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: ["3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --frozen --all-groups

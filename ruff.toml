@@ -20,7 +20,21 @@ ignore = [
     "PYI034",
     "UP046",
     "UP047",
+    "PLC0415",  # local imports in test bodies are common
+    "C901",  # complexity budget overridden per-function when needed
+    "RET504",  # unnecessary assignment before return is fine for readability
+    "TRY004",  # ValueError acceptable in domain boundaries
+    "RUF034",  # explicit if/else clearer when both branches are the same
+    "SIM102",  # nested if acceptable
+    "RUF005",  # tuple concatenation is readable
+    "FLY002",  # string join is clearer in fixture files
+    # msgspec-specific noise
 ]
+
+[lint.per-file-ignores]
+"tests/**" = ["F401", "PLC0415", "B008"]
+"scripts/**" = ["E402", "PLC0415", "B008"]
+"src/**" = ["TID252"]
 
 [lint.isort]
 known-first-party = ["multica_py"]

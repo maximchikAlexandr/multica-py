@@ -5,12 +5,17 @@ import warnings
 
 import msgspec
 
+from multica_py._internal.upstream_contract.models import CliCompatMatrix
+from multica_py._internal.upstream_contract.paths import DEFAULT_STATE_PATH
 from multica_py.compatibility import CliVersion
 from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import UnsupportedCliVersionError
 
+COMPATIBILITY_SCHEMA_VERSION = 1
+
 _SEMVER_PATTERN = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$")
+_WARNED_NEWER = False
 
 
 class _CliVersionPayload(msgspec.Struct, frozen=True):
@@ -49,6 +54,42 @@ def _parse_semver(version: str) -> tuple[int, int, int] | None:
     return tuple(int(part) for part in match.groups())  # type: ignore[return-value]
 
 
+def _bump_patch_version(version: str) -> str:
+    parts = version.split(".")
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        return version
+    major, minor, patch = (int(part) for part in parts)
+    return f"{major}.{minor}.{patch + 1}"
+
+
+def _load_supported_bounds() -> tuple[str, str]:
+    if not DEFAULT_STATE_PATH.exists():
+        return "0.0.0", "0.0.0"
+    raw: object = msgspec.json.decode(DEFAULT_STATE_PATH.read_bytes())
+    if not isinstance(raw, dict):
+        return "0.0.0", "0.0.0"
+    supported_obj = raw.get("supported")
+    if not isinstance(supported_obj, dict):
+        return "0.0.0", "0.0.0"
+    version_obj = supported_obj.get("version")
+    min_version = str(version_obj) if version_obj else "0.0.0"
+    return min_version, _bump_patch_version(min_version)
+
+
+def default_policy(sdk_version: str) -> CliCompatMatrix:
+    min_version, max_version = _load_supported_bounds()
+    return CliCompatMatrix(
+        schema_version=COMPATIBILITY_SCHEMA_VERSION,
+        sdk_version=sdk_version,
+        min_cli_version=min_version,
+        max_cli_version=max_version,
+    )
+
+
+def supported_range_text(policy: CliCompatMatrix) -> str:
+    return f"{policy.min_cli_version} <= cli < {policy.max_cli_version}"
+
+
 def _check_supported_version_text(
     version: str, policy: CompatibilityPolicy
 ) -> tuple[int, int, int]:
@@ -60,6 +101,21 @@ def _check_supported_version_text(
         warnings.warn(message, stacklevel=2)
         return (0, 0, 0)
     raise UnsupportedCliVersionError(message)
+
+
+def _warn_newer_untested_once(version: str, max_version: str) -> None:
+    global _WARNED_NEWER
+    parsed = _parse_semver(version)
+    max_parsed = _parse_semver(max_version)
+    if parsed is None or max_parsed is None:
+        return
+    if parsed < max_parsed:
+        return
+    if _WARNED_NEWER:
+        return
+    _WARNED_NEWER = True
+    message = f"CLI version {version} is newer than the SDK-tested range (< {max_version})"
+    warnings.warn(message, UserWarning, stacklevel=2)
 
 
 def check_version(
@@ -81,11 +137,8 @@ def check_version(
                 f"CLI version {detected.version} is below minimum {min_version}",
                 stacklevel=2,
             )
-        if max_semver is not None and detected_semver > max_semver:
-            warnings.warn(
-                f"CLI version {detected.version} exceeds maximum {max_version}",
-                stacklevel=2,
-            )
+        if max_semver is not None and detected_semver >= max_semver:
+            _warn_newer_untested_once(detected.version, max_version or detected.version)
         return
 
     if policy == CompatibilityPolicy.strict:
@@ -93,7 +146,7 @@ def check_version(
             raise UnsupportedCliVersionError(
                 f"CLI version {detected.version} is below minimum {min_version}"
             )
-        if max_semver is not None and detected_semver > max_semver:
+        if max_semver is not None and detected_semver >= max_semver:
             raise UnsupportedCliVersionError(
                 f"CLI version {detected.version} exceeds maximum {max_version}"
             )
@@ -102,7 +155,7 @@ def check_version(
 def check_version_from_config(
     detected: CliVersion | None,
     config: ClientConfig,
-    pinned_version: str = "0.1.0",
+    pinned_version: str | None = None,
 ) -> None:
     if config.compatibility == CompatibilityPolicy.ignore:
         return
@@ -112,9 +165,12 @@ def check_version_from_config(
             warnings.warn(message, stacklevel=2)
             return
         raise UnsupportedCliVersionError(message)
+    default_min, default_max = _load_supported_bounds()
+    min_version = config.min_cli_version or pinned_version or default_min
+    max_version = config.max_cli_version or default_max
     check_version(
         detected,
         config.compatibility,
-        min_version=pinned_version,
-        max_version=None,
+        min_version=min_version,
+        max_version=max_version,
     )

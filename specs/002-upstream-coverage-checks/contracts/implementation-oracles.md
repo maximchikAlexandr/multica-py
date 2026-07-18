@@ -57,8 +57,11 @@ selects one method with a command flag:
 
 1. Release asset contract: `multica-cli-contract.json`.
 2. Binary exporter: `multica __contract --format json`.
-3. Go helper/exporter built or run against the pinned full source commit.
-4. Help parser fallback.
+3. Help parser fallback.
+
+Go helper/exporter against the pinned full source commit is not in the active
+order until an implementation exists. Do not advertise it in trust/promotion
+paths while unimplemented.
 
 The first successful method becomes `collection_method`. Later methods may be
 used only for cross-checking and must not replace a higher-priority successful

@@ -189,8 +189,11 @@ As a maintainer, I can run a scheduled observer that detects new upstream releas
 - Manual source review remains required for behavior that cannot be extracted from local declarative source patterns.
 - A full source commit is required for final checked-in baseline records even when a release version, tag, or short commit is shown to users.
 - Source provenance, input/output contracts, and test evidence are required before a typed row can count as complete coverage.
-- US1 checks the supported offline baseline only; candidate diff behavior is validated in US3 and is consumed by the coverage gate only when candidate artifacts are explicitly provided. MVP-1a is US1, MVP-1b is US3 diff, and MVP-1c is explicit promotion.
-- Checked-in approved SDK decisions live in `contracts/sdk-contract.yaml`; generated runtime/provenance artifacts live under `src/multica_py/_generated/` or fixture/provenance paths and must not be confused with raw source evidence or upgrade suggestions.
+- US1 checks the supported offline baseline only; candidate diff behavior is validated in US3 and is consumed by the coverage gate only when candidate artifacts are explicitly provided (`--with-candidate` or equivalent). MVP-1a is US1, MVP-1b is US3 diff, and MVP-1c is explicit promotion. Blocking CI MUST NOT auto-diff a candidate merely because `state.candidate` is present.
+- Checked-in approved SDK decisions live in `contracts/sdk-contract.yaml` as a placeholder until feature 003; the offline coverage gate source of truth in 002 is `src/multica_py/_generated/upstream_coverage.json`. Generated runtime/provenance artifacts live under `src/multica_py/_generated/` (supported contract: `upstream_supported_contract.json`). Test fixtures under `tests/fixtures/` are copies for tests only and MUST NOT be the production `contract_ref` for supported state.
+- US5 in this feature increment is limited to non-promoting observation state updates and a dry-run scheduled workflow. Full download/verify/bundle/tracking-issue automation may remain incomplete without claiming US5/SC-014 complete.
+- Generator production emit (Python signatures, enums, validators, docs, fixtures from approved contract) is deferred to feature 003. Feature 002 may validate approved-contract boundaries only.
+- Collector method `go-helper` is not part of the active collection order until an implementation exists; trust maps MUST NOT advertise unimplemented methods as promotable paths.
 
 ## Out of Scope
 
@@ -199,3 +202,5 @@ As a maintainer, I can run a scheduled observer that detects new upstream releas
 - Implementing newly discovered Multica SDK resource methods as part of this feature.
 - Publishing a new SDK release or changing supported baseline from a scheduled workflow.
 - Building a general-purpose Go static analyzer for arbitrary data flow and control flow.
+- Production SDK code generation from `contracts/sdk-contract.yaml` (deferred to feature 003).
+- Single-source-of-truth merge of coverage manifest into approved YAML, structured landing zones, and argv-encoding oracles (deferred to feature 003).

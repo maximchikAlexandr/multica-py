@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "decisions": [
+    {
+      "operation_id": "agents.list",
+      "coverage_level": "typed",
+      "bindings": [
+        {"command_path": ["agent", "list"], "kind": "primary", "since": "0.4.2", "until": null}
+      ],
+      "input_contract_ref": "contracts/sdk-contract.json",
+      "output_contract_ref": "contracts/output/agent-list-v1.json",
+      "test_refs": ["tests/contract/test_full_cli_coverage.py"],
+      "source_refs": ["server/cmd/multica/cmd_agent.go"]
+    },
+    {
+      "operation_id": "agents.create",
+      "coverage_level": "typed",
+      "bindings": [
+        {"command_path": ["agent", "create"], "kind": "primary", "since": "0.4.2", "until": null}
+      ],
+      "input_contract_ref": "contracts/sdk-contract.json",
+      "output_contract_ref": "contracts/output/agent-create-v1.json",
+      "test_refs": ["tests/contract/test_full_cli_coverage.py"],
+      "source_refs": ["server/cmd/multica/cmd_agent.go"]
+    },
+    {
+      "operation_id": "issues.list",
+      "coverage_level": "typed",
+      "bindings": [
+        {"command_path": ["issue", "list"], "kind": "primary", "since": "0.4.2", "until": null}
+      ],
+      "input_contract_ref": "contracts/sdk-contract.json",
+      "output_contract_ref": "contracts/output/issue-list-v1.json",
+      "test_refs": ["tests/contract/test_full_cli_coverage.py"],
+      "source_refs": ["server/cmd/multica/cmd_issue.go"]
+    },
+    {
+      "operation_id": "daemon.logs",
+      "coverage_level": "process",
+      "bindings": [
+        {"command_path": ["daemon", "logs"], "kind": "primary", "since": "0.4.2", "until": null}
+      ],
+      "reason": "long-running stream"
+    },
+    {
+      "operation_id": "auth.legacy_login",
+      "coverage_level": "raw",
+      "bindings": [
+        {"command_path": ["auth", "login"], "kind": "primary", "since": "0.4.0", "until": "0.4.2"}
+      ],
+      "reason": "shell-style login retained for back-compat",
+      "raw_argv_policy": "Sequence[str]; never shell interpolation"
+    },
+    {
+      "operation_id": "auth.whoami",
+      "coverage_level": "unsupported",
+      "bindings": [
+        {"command_path": ["auth", "whoami"], "kind": "primary", "since": "0.3.0", "until": "0.4.0"}
+      ],
+      "reason": "Deprecated upstream, removed from command tree"
+    },
+    {
+      "operation_id": "agents.avatar",
+      "coverage_level": "legacy",
+      "bindings": [
+        {"command_path": ["agent", "avatar"], "kind": "primary", "since": "0.1.0", "until": "0.4.0"}
+      ],
+      "reason": "Legacy alias retained"
+    },
+    {
+      "operation_id": "experiments.create",
+      "coverage_level": "incomplete",
+      "bindings": []
+    }
+  ]
+}

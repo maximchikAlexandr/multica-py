@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "commands": [
+    {
+      "name": "agents.create",
+      "decision": "typed",
+      "binding_command_path": ["agent", "create"],
+      "input_contract_ref": "contracts/sdk-contract.json#agents.create",
+      "output_contract_ref": "contracts/output/agent-create-v1.json",
+      "test_refs": ["tests/contract/test_full_cli_coverage.py::test_agent_create_argv"]
+    },
+    {
+      "name": "agents.list",
+      "decision": "typed",
+      "binding_command_path": ["agent", "list"],
+      "input_contract_ref": "contracts/sdk-contract.json#agents.list",
+      "output_contract_ref": "contracts/output/agent-list-v1.json",
+      "test_refs": ["tests/contract/test_full_cli_coverage.py::test_agent_list_argv"]
+    }
+  ]
+}

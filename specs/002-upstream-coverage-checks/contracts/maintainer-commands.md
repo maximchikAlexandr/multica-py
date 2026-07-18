@@ -21,7 +21,8 @@ lives in the upstream-contract modules.
 
 ## Modes
 
-- `--check`: validates canonical state and never writes files.
+- `--check`: validates canonical state without writing workflow artifacts;
+  `--check --output PATH` may write a machine-readable report.
 - `--write`: atomically writes the selected artifact.
 - `--dry-run`: prints planned file changes or patch content.
 - `--format human|json`: selects presentation of the same report model.

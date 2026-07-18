@@ -1,0 +1,10 @@
+{
+  "schema_version": 2,
+  "baseline": {"state": "candidate", "version": "0.4.3", "tag": "v0.4.3", "commit": "abc1234567890abcdef1234567890abcdef12345"},
+  "artifact": {"semantic_hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999", "generator_name": "g", "generator_version": "0", "generator_commit": "abc1234567890abcdef1234567890abcdef12345", "collection_method": "help-parser", "trust_level": "help-degraded"},
+  "binary": {"asset_name": "x", "sha256": "1", "os": "linux", "arch": "amd64", "version_output": "x"},
+  "commands": [
+    {"path": ["agent", "list"], "use": "list", "args": {"min": 0, "max": 0, "grammar": null}, "flags": [], "execution": {"requires_server": true}, "output": {"mode": "none", "decoder_policy": "text-only", "confidence": "low"}}
+  ],
+  "observation": {"generated_at": "2026-07-18T00:00:00Z"}
+}

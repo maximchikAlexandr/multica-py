@@ -1,5 +1,8 @@
 name: Upstream Drift Check
 
+# major-version-tag-allowed: first-party actions are referenced by major
+# version; see repository security policy.
+
 on:
   schedule:
     - cron: "0 6 * * 1"
@@ -8,11 +11,13 @@ on:
 jobs:
   drift:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups

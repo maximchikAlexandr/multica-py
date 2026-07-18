@@ -5,7 +5,9 @@ import pytest
 from multica_py._internal.compat import (
     check_version,
     check_version_from_config,
+    default_policy,
     parse_cli_version,
+    supported_range_text,
 )
 from multica_py.compatibility import CliVersion
 from multica_py.config import ClientConfig
@@ -81,3 +83,10 @@ def test_strict_policy_rejects_unparseable_detected_version():
     config = ClientConfig(compatibility=CompatibilityPolicy.strict)
     with pytest.raises(UnsupportedCliVersionError, match="Failed to parse CLI version output"):
         check_version_from_config(None, config, pinned_version="0.1.0")
+
+
+def test_supported_range_text_includes_versions() -> None:
+    policy = default_policy("0.1.0")
+    text = supported_range_text(policy)
+    assert "0.4.2" in text
+    assert "0.4.3" in text

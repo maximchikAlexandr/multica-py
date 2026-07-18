@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "releases": [
+    {
+      "release_id": "123456789",
+      "version": "0.4.3",
+      "tag": "v0.4.3",
+      "tracking_issue_id": null,
+      "tracking_pr_id": null,
+      "status": "new",
+      "superseded_by": null
+    }
+  ]
+}

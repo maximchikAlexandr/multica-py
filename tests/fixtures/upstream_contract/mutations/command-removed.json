@@ -1,0 +1,11 @@
+{
+  "schema_version": 2,
+  "baseline": {"state": "candidate", "version": "0.4.3", "tag": "v0.4.3", "commit": "abc1234567890abcdef1234567890abcdef12345"},
+  "artifact": {"semantic_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "generator_name": "g", "generator_version": "0", "generator_commit": "abc1234567890abcdef1234567890abcdef12345", "collection_method": "binary-exporter", "trust_level": "verified"},
+  "binary": {"asset_name": "x", "sha256": "1", "os": "linux", "arch": "amd64", "version_output": "x"},
+  "commands": [
+    {"path": ["agent", "create"], "use": "create", "args": {"min": 0, "max": 0, "grammar": null}, "flags": [{"name": "name", "shorthand": "n", "type": "string", "required": true, "default": null, "enum": [], "inherited": false, "deprecated": null}], "execution": {"requires_server": true}, "output": {"mode": "json", "schema_ref": "contracts/output/agent-create-v1.json", "decoder_policy": "strict", "confidence": "high"}},
+    {"path": ["issue", "list"], "use": "list", "args": {"min": 0, "max": 0, "grammar": null}, "flags": [{"name": "status", "shorthand": null, "type": "string", "required": false, "default": "open", "enum": ["open", "closed", "all"], "inherited": false, "deprecated": null}], "execution": {"requires_server": true}, "output": {"mode": "json", "schema_ref": "contracts/output/issue-list-v1.json", "decoder_policy": "permissive-extra-fields", "confidence": "high"}}
+  ],
+  "observation": {"generated_at": "2026-07-18T00:00:00Z"}
+}

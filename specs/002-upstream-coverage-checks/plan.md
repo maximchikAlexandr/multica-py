@@ -167,11 +167,14 @@ contract. `scripts/upstream_contract.py` remains a thin adapter.
   `contracts/implementation-oracles.md`.
 - Upstream collection strategy follows this fixed order: release asset
   `multica-cli-contract.json`, binary exporter
-  `multica __contract --format json`, Go helper/exporter bound to the full
-  source commit, then help parser fallback only as non-promotable degraded
-  evidence unless cross-checked into a higher trust level.
+  `multica __contract --format json`, then help parser fallback only as
+  non-promotable degraded evidence unless cross-checked into a higher trust
+  level. Go helper is omitted from the active order until implemented.
 - Source-evidence workflow for declarative Cobra facts.
-- Approved SDK contract with parameter mapping, presence semantics, enum policy, constraints, argv tests, output fixtures, and runtime compatibility matrix.
+- Approved SDK contract with parameter mapping, presence semantics, enum policy,
+  constraints, argv tests, output fixtures, and runtime compatibility matrix.
+  Production generation from the approved contract is deferred to feature 003;
+  MVP-3 in-repo may stop at validation boundaries plus runtime matrix wiring.
 
 ## Complexity Tracking
 

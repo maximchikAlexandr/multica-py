@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "decisions": [
+    {
+      "operation_id": "agents.list",
+      "coverage_level": "typed",
+      "bindings": [
+        {"command_path": ["agent", "list"], "kind": "primary", "since": "0.4.2", "until": null}
+      ],
+      "input_contract_ref": "contracts/sdk-contract.json",
+      "output_contract_ref": "contracts/output/agent-list-v1.json",
+      "test_refs": ["tests/contract/test_full_cli_coverage.py"],
+      "source_refs": ["server/cmd/multica/cmd_agent.go"]
+    },
+    {
+      "operation_id": "agents.create",
+      "coverage_level": "typed",
+      "bindings": [
+        {"command_path": ["agent", "create"], "kind": "primary", "since": "0.4.2", "until": null}
+      ],
+      "input_contract_ref": "contracts/sdk-contract.json",
+      "output_contract_ref": "contracts/output/agent-create-v1.json",
+      "test_refs": ["tests/contract/test_full_cli_coverage.py"],
+      "source_refs": ["server/cmd/multica/cmd_agent.go"]
+    },
+    {
+      "operation_id": "issues.list",
+      "coverage_level": "typed",
+      "bindings": [
+        {"command_path": ["issue", "list"], "kind": "primary", "since": "0.4.2", "until": null}
+      ],
+      "input_contract_ref": "contracts/sdk-contract.json",
+      "output_contract_ref": "contracts/output/issue-list-v1.json",
+      "test_refs": ["tests/contract/test_full_cli_coverage.py"],
+      "source_refs": ["server/cmd/multica/cmd_issue.go"]
+    }
+  ]
+}

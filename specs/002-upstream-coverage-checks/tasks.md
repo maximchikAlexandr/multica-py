@@ -8,19 +8,21 @@
 
 **Organization**: Tasks are grouped by user story so each story can be implemented and verified as an independent increment.
 
+**Status amend (2026-07-17):** Tasks marked `[ ]` below were reopened because implementation is stub/partial relative to the task text. Production generator / SSOT / landing zones are deferred to feature 003 (see `.devlocal/tickets/003/`). US5 is scoped to state-only dry-run unless a task is re-completed with download/verify/bundle evidence.
+
 ## Phase 1: Setup (Shared Infrastructure)
 
 **Purpose**: Create the upstream-contract package skeleton and fixture/artifact locations used by every story.
 
-- [ ] T001 Create upstream-contract package directories in `src/multica_py/_internal/upstream_contract/`
-- [ ] T002 Create collector package directories in `src/multica_py/_internal/upstream_contract/collectors/`
-- [ ] T003 Create source-evidence package directories in `src/multica_py/_internal/upstream_contract/source_evidence/`
-- [ ] T004 Create generator package directories in `src/multica_py/_internal/upstream_contract/generator/`
-- [ ] T005 Create fixture directories in `tests/fixtures/upstream_contract/golden/` and `tests/fixtures/upstream_contract/mutations/`
-- [ ] T006 Create upgrade artifact placeholder directory in `artifacts/upstream-upgrades/`
-- [ ] T007 Create approved SDK contract placeholder in `contracts/sdk-contract.yaml`
-- [ ] T008 Create unified maintainer CLI adapter in `scripts/upstream_contract.py`
-- [ ] T009 Create compatibility wrapper for old drift command in `scripts/check_upstream_drift.py`
+- [X] T001 Create upstream-contract package directories in `src/multica_py/_internal/upstream_contract/`
+- [X] T002 Create collector package directories in `src/multica_py/_internal/upstream_contract/collectors/`
+- [X] T003 Create source-evidence package directories in `src/multica_py/_internal/upstream_contract/source_evidence/`
+- [X] T004 Create generator package directories in `src/multica_py/_internal/upstream_contract/generator/`
+- [X] T005 Create fixture directories in `tests/fixtures/upstream_contract/golden/` and `tests/fixtures/upstream_contract/mutations/`
+- [X] T006 Create upgrade artifact placeholder directory in `artifacts/upstream-upgrades/`
+- [X] T007 Create approved SDK contract placeholder in `contracts/sdk-contract.yaml`
+- [X] T008 Create unified maintainer CLI adapter in `scripts/upstream_contract.py`
+- [X] T009 Create compatibility wrapper for old drift command in `scripts/check_upstream_drift.py`
 
 ---
 
@@ -30,19 +32,19 @@
 
 **Critical**: No user story implementation should begin until this phase is complete.
 
-- [ ] T010 [P] Define immutable upstream contract models in `src/multica_py/_internal/upstream_contract/models.py`
-- [ ] T011 [P] Define report and exit-code models in `src/multica_py/_internal/upstream_contract/reporting.py`
-- [ ] T012 [P] Define atomic file IO and no-write helpers in `src/multica_py/_internal/upstream_contract/files.py`
-- [ ] T013 [P] Define provenance models and full-commit validators in `src/multica_py/_internal/upstream_contract/provenance.py`
-- [ ] T014 Implement schema decoding, encoding, migration, JSON Schema generation, and unknown-schema rejection in `src/multica_py/_internal/upstream_contract/schema.py`
-- [ ] T015 Implement canonical JSON serialization and semantic hashing in `src/multica_py/_internal/upstream_contract/normalize.py`
-- [ ] T016 Implement supported, observed, and candidate state loading rules in `src/multica_py/_internal/upstream_contract/state.py`
-- [ ] T017 Implement approved SDK contract loading boundaries in `src/multica_py/_internal/upstream_contract/generator/contract.py`
-- [ ] T018 Add baseline/state golden fixtures with full commits and no absolute executable paths in `tests/fixtures/upstream_contract/golden/`
-- [ ] T019 [P] Add schema and canonicalization tests in `tests/unit/test_upstream_contract_schema.py`
-- [ ] T020 [P] Add provenance validation tests in `tests/unit/test_upstream_contract_provenance.py`
-- [ ] T021 [P] Add no-write atomic file tests in `tests/unit/test_upstream_contract_files.py`
-- [ ] T022 [P] Add approved-contract boundary tests in `tests/unit/test_upstream_contract_generator.py`
+- [X] T010 [P] Define immutable upstream contract models in `src/multica_py/_internal/upstream_contract/models.py`
+- [X] T011 [P] Define report and exit-code models in `src/multica_py/_internal/upstream_contract/reporting.py`
+- [X] T012 [P] Define atomic file IO and no-write helpers in `src/multica_py/_internal/upstream_contract/files.py`
+- [X] T013 [P] Define provenance models and full-commit validators in `src/multica_py/_internal/upstream_contract/provenance.py`
+- [X] T014 Implement schema decoding, encoding, migration, JSON Schema generation, and unknown-schema rejection in `src/multica_py/_internal/upstream_contract/schema.py`
+- [X] T015 Implement canonical JSON serialization and semantic hashing in `src/multica_py/_internal/upstream_contract/normalize.py`
+- [X] T016 Implement supported, observed, and candidate state loading rules in `src/multica_py/_internal/upstream_contract/state.py`
+- [X] T017 Implement approved SDK contract loading boundaries in `src/multica_py/_internal/upstream_contract/generator/contract.py`
+- [X] T018 Add baseline/state golden fixtures with full commits and no absolute executable paths in `tests/fixtures/upstream_contract/golden/`
+- [X] T019 [P] Add schema and canonicalization tests in `tests/unit/test_upstream_contract_schema.py`
+- [X] T020 [P] Add provenance validation tests in `tests/unit/test_upstream_contract_provenance.py`
+- [X] T021 [P] Add no-write atomic file tests in `tests/unit/test_upstream_contract_files.py`
+- [X] T022 [P] Add approved-contract boundary tests in `tests/unit/test_upstream_contract_generator.py`
 
 **Checkpoint**: The repository can parse, validate, canonicalize, hash, and render upstream contract artifacts without collecting or diffing live data.
 
@@ -56,26 +58,26 @@
 
 ### Tests for User Story 1
 
-- [ ] T023 [P] [US1] Add coverage-level fixture rows for typed, raw, process, unsupported, legacy, and incomplete decisions in `tests/fixtures/upstream_contract/golden/coverage-manifest-v2.json`
-- [ ] T024 [P] [US1] Add offline supported-contract fixture with command args, flags, aliases, execution, output, and provenance in `tests/fixtures/upstream_contract/golden/supported-cli-contract-v2.json`
-- [ ] T025 [P] [US1] Add coverage policy unit tests in `tests/unit/test_upstream_contract_coverage.py`
-- [ ] T026 [P] [US1] Add machine report rendering tests in `tests/unit/test_upstream_contract_reporting.py`
-- [ ] T027 [P] [US1] Add offline gate contract tests in `tests/contract/test_upstream_contract_check.py`
-- [ ] T028 [P] [US1] Add raw coverage safety tests for `Sequence[str]` and no shell interpolation in `tests/unit/test_upstream_contract_raw.py`
-- [ ] T029 [P] [US1] Add typed argv contract tests for exact process argument sequences in `tests/contract/test_upstream_contract_argv.py`
-- [ ] T030 [P] [US1] Add typed output fixture and strict-decoder negative tests in `tests/contract/test_upstream_contract_output.py`
+- [X] T023 [P] [US1] Add coverage-level fixture rows for typed, raw, process, unsupported, legacy, and incomplete decisions in `tests/fixtures/upstream_contract/golden/coverage-manifest-v2.json`
+- [X] T024 [P] [US1] Add offline supported-contract fixture with command args, flags, aliases, execution, output, and provenance in `tests/fixtures/upstream_contract/golden/supported-cli-contract-v2.json`
+- [X] T025 [P] [US1] Add coverage policy unit tests in `tests/unit/test_upstream_contract_coverage.py`
+- [X] T026 [P] [US1] Add machine report rendering tests in `tests/unit/test_upstream_contract_reporting.py`
+- [X] T027 [P] [US1] Add offline gate contract tests in `tests/contract/test_upstream_contract_check.py`
+- [X] T028 [P] [US1] Add raw coverage safety tests for `Sequence[str]` and no shell interpolation in `tests/unit/test_upstream_contract_raw.py`
+- [X] T029 [P] [US1] Add typed argv contract tests for exact process argument sequences in `tests/contract/test_upstream_contract_argv.py`
+- [X] T030 [P] [US1] Add typed output fixture and strict-decoder negative tests in `tests/contract/test_upstream_contract_output.py`
 
 ### Implementation for User Story 1
 
-- [ ] T031 [US1] Implement coverage decision validation and coverage-level counts in `src/multica_py/_internal/upstream_contract/coverage.py`
-- [ ] T032 [US1] Implement operation ID, versioned binding, alias, and explicit shared-implementation validation in `src/multica_py/_internal/upstream_contract/coverage.py`
-- [ ] T033 [US1] Implement typed input/output contract evidence requirements in `src/multica_py/_internal/upstream_contract/coverage.py`
-- [ ] T034 [US1] Implement raw coverage safety policy in `src/multica_py/_internal/upstream_contract/coverage.py`
-- [ ] T035 [US1] Implement human output rendered from CoverageReport in `src/multica_py/_internal/upstream_contract/reporting.py`
-- [ ] T036 [US1] Implement `check` command, `--format`, `--output`, and exit-code mapping in `scripts/upstream_contract.py`
-- [ ] T037 [US1] Wire `scripts/check_upstream_drift.py` to the new offline check behavior in `scripts/check_upstream_drift.py`
-- [ ] T038 [US1] Update generated CLI manifest compatibility or migration inputs in `src/multica_py/_generated/cli_manifest.json`
-- [ ] T039 [US1] Update coverage documentation for typed/raw/process/unsupported/legacy/incomplete states in `docs/cli-coverage.md`
+- [X] T031 [US1] Implement coverage decision validation and coverage-level counts in `src/multica_py/_internal/upstream_contract/coverage.py`
+- [X] T032 [US1] Implement operation ID, versioned binding, alias, and explicit shared-implementation validation in `src/multica_py/_internal/upstream_contract/coverage.py`
+- [X] T033 [US1] Implement typed input/output contract evidence requirements in `src/multica_py/_internal/upstream_contract/coverage.py`
+- [X] T034 [US1] Implement raw coverage safety policy in `src/multica_py/_internal/upstream_contract/coverage.py`
+- [X] T035 [US1] Implement human output rendered from CoverageReport in `src/multica_py/_internal/upstream_contract/reporting.py`
+- [X] T036 [US1] Implement `check` command, `--format`, `--output`, and exit-code mapping in `scripts/upstream_contract.py`
+- [X] T037 [US1] Wire `scripts/check_upstream_drift.py` to the new offline check behavior in `scripts/check_upstream_drift.py`
+- [X] T038 [US1] Update generated CLI manifest compatibility or migration inputs in `src/multica_py/_generated/cli_manifest.json`
+- [X] T039 [US1] Update coverage documentation for typed/raw/process/unsupported/legacy/incomplete states in `docs/cli-coverage.md`
 
 **Checkpoint**: User Story 1 is complete when the offline gate is deterministic, network-free, and distinguishes unsupported/incomplete/raw rows correctly.
 
@@ -89,24 +91,24 @@
 
 ### Tests for User Story 2
 
-- [ ] T040 [P] [US2] Add fake exporter fixture for `multica __contract --format json` in `tests/fixtures/upstream_contract/golden/exporter-contract.json`
-- [ ] T041 [P] [US2] Add help-parser fallback fixture with degraded trust metadata in `tests/fixtures/upstream_contract/golden/help-parser-contract.json`
-- [ ] T042 [P] [US2] Add source-evidence fixture for declarative Cobra facts and review items in `tests/fixtures/upstream_contract/golden/source-evidence.json`
-- [ ] T043 [P] [US2] Add binary collector tests for exporter, release asset, Go helper, fallback, timeout, and incomplete traversal in `tests/unit/test_upstream_contract_collector.py`
-- [ ] T044 [P] [US2] Add source extractor tests for known declarative patterns and unknown-pattern review items in `tests/unit/test_upstream_contract_source_evidence.py`
-- [ ] T045 [P] [US2] Add collector security tests for checksum mismatch, sanitized environment, and output limits in `tests/unit/test_upstream_contract_security.py`
-- [ ] T046 [P] [US2] Add candidate determinism tests for same-input byte identity in `tests/contract/test_upstream_contract_collect.py`
+- [X] T040 [P] [US2] Add fake exporter fixture for `multica __contract --format json` in `tests/fixtures/upstream_contract/golden/exporter-contract.json`
+- [X] T041 [P] [US2] Add help-parser fallback fixture with degraded trust metadata in `tests/fixtures/upstream_contract/golden/help-parser-contract.json`
+- [X] T042 [P] [US2] Add source-evidence fixture for declarative Cobra facts and review items in `tests/fixtures/upstream_contract/golden/source-evidence.json`
+- [X] T043 [P] [US2] Add binary collector tests for exporter, release asset, Go helper, fallback, timeout, and incomplete traversal in `tests/unit/test_upstream_contract_collector.py`
+- [X] T044 [P] [US2] Add source extractor tests for known declarative patterns and unknown-pattern review items in `tests/unit/test_upstream_contract_source_evidence.py`
+- [X] T045 [P] [US2] Add collector security tests for checksum mismatch, sanitized environment, and output limits in `tests/unit/test_upstream_contract_security.py`
+- [X] T046 [P] [US2] Add candidate determinism tests for same-input byte identity in `tests/contract/test_upstream_contract_collect.py`
 
 ### Implementation for User Story 2
 
-- [ ] T047 [US2] Implement preferred exporter collection in `src/multica_py/_internal/upstream_contract/collectors/binary.py`
-- [ ] T048 [US2] Implement release asset and Go helper collection hooks with trust-level metadata in `src/multica_py/_internal/upstream_contract/collectors/binary.py`
-- [ ] T049 [US2] Implement help-parser fallback as degraded mode with review items in `src/multica_py/_internal/upstream_contract/collectors/binary.py`
-- [ ] T050 [US2] Implement collector security policy, checksum validation, timeout, environment sanitization, and output limits in `src/multica_py/_internal/upstream_contract/collectors/security.py`
-- [ ] T051 [US2] Implement source evidence extraction for declarative Cobra facts in `src/multica_py/_internal/upstream_contract/source_evidence/extract.py`
-- [ ] T052 [US2] Implement source/binary comparison and mismatch reporting in `src/multica_py/_internal/upstream_contract/collectors/source.py`
-- [ ] T053 [US2] Implement tag-to-commit verification and no absolute executable path checks in `src/multica_py/_internal/upstream_contract/provenance.py`
-- [ ] T054 [US2] Implement `collect` command, `--binary`, `--write`, `--dry-run`, `--output`, and collector exit codes in `scripts/upstream_contract.py`
+- [X] T047 [US2] Implement preferred exporter collection in `src/multica_py/_internal/upstream_contract/collectors/binary.py`
+- [X] T048 [US2] Implement release asset and Go helper collection hooks with trust-level metadata in `src/multica_py/_internal/upstream_contract/collectors/binary.py`
+- [X] T049 [US2] Implement help-parser fallback as degraded mode with review items in `src/multica_py/_internal/upstream_contract/collectors/binary.py`
+- [X] T050 [US2] Implement collector security policy, checksum validation, timeout, environment sanitization, and output limits in `src/multica_py/_internal/upstream_contract/collectors/security.py`
+- [X] T051 [US2] Implement source evidence extraction for declarative Cobra facts in `src/multica_py/_internal/upstream_contract/source_evidence/extract.py`
+- [X] T052 [US2] Implement source/binary comparison and mismatch reporting in `src/multica_py/_internal/upstream_contract/collectors/source.py`
+- [X] T053 [US2] Implement tag-to-commit verification and no absolute executable path checks in `src/multica_py/_internal/upstream_contract/provenance.py`
+- [X] T054 [US2] Implement `collect` command, `--binary`, `--write`, `--dry-run`, `--output`, and collector exit codes in `scripts/upstream_contract.py`
 
 **Checkpoint**: User Story 2 is complete when candidate collection is reproducible, provenance-rich, and unable to silently promote partial or degraded evidence.
 
@@ -122,18 +124,18 @@
 
 - [ ] T055 [P] [US3] Add mutation fixtures for command added/removed, optional flag added, required argument added, flag removed, flag renamed, type changed, default changed, alias changed, and hidden/deprecated transitions in `tests/fixtures/upstream_contract/mutations/`
 - [ ] T056 [P] [US3] Add mutation fixtures for output field added, output field removed, output type changed, documentation-only change, provenance-only change, and source/binary disagreement in `tests/fixtures/upstream_contract/mutations/`
-- [ ] T057 [P] [US3] Add semantic diff unit tests in `tests/unit/test_upstream_contract_diff.py`
-- [ ] T058 [P] [US3] Add impact-map tests linking diff entries to operation IDs and unresolved mappings in `tests/unit/test_upstream_contract_impact.py`
-- [ ] T059 [P] [US3] Add diff command contract tests for exit codes and JSON report output in `tests/contract/test_upstream_contract_diff.py`
+- [X] T057 [P] [US3] Add semantic diff unit tests in `tests/unit/test_upstream_contract_diff.py`
+- [X] T058 [P] [US3] Add impact-map tests linking diff entries to operation IDs and unresolved mappings in `tests/unit/test_upstream_contract_impact.py`
+- [X] T059 [P] [US3] Add diff command contract tests for exit codes and JSON report output in `tests/contract/test_upstream_contract_diff.py`
 
 ### Implementation for User Story 3
 
-- [ ] T060 [US3] Implement supported-to-candidate semantic diff and severity classification in `src/multica_py/_internal/upstream_contract/diff.py`
-- [ ] T061 [US3] Implement rename and move suggestion heuristics without automatic operation identity changes in `src/multica_py/_internal/upstream_contract/diff.py`
-- [ ] T062 [US3] Implement output contract change classification for optional additions, removals, and type changes in `src/multica_py/_internal/upstream_contract/diff.py`
-- [ ] T063 [US3] Implement SDK impact mapping from diff entries to operation IDs and unresolved mappings in `src/multica_py/_internal/upstream_contract/impact.py`
-- [ ] T064 [US3] Implement `diff` command, `--from`, `--to`, `--format`, and unresolved-breaking exit behavior in `scripts/upstream_contract.py`
-- [ ] T065 [US3] Update coverage gate to consume candidate diff status when candidate artifacts exist in `src/multica_py/_internal/upstream_contract/coverage.py`
+- [X] T060 [US3] Implement supported-to-candidate semantic diff and severity classification in `src/multica_py/_internal/upstream_contract/diff.py`
+- [X] T061 [US3] Implement rename and move suggestion heuristics without automatic operation identity changes in `src/multica_py/_internal/upstream_contract/diff.py`
+- [X] T062 [US3] Implement output contract change classification for optional additions, removals, and type changes in `src/multica_py/_internal/upstream_contract/diff.py`
+- [X] T063 [US3] Implement SDK impact mapping from diff entries to operation IDs and unresolved mappings in `src/multica_py/_internal/upstream_contract/impact.py`
+- [X] T064 [US3] Implement `diff` command, `--from`, `--to`, `--format`, and unresolved-breaking exit behavior in `scripts/upstream_contract.py`
+- [X] T065 [US3] Update coverage gate to consume candidate diff status when candidate artifacts exist in `src/multica_py/_internal/upstream_contract/coverage.py`
 
 **Checkpoint**: User Story 3 is complete when every semantic change appears once in the diff, has a severity, and maps to affected SDK operations or an unresolved state.
 
@@ -148,17 +150,17 @@
 ### Tests for User Story 4
 
 - [ ] T066 [P] [US4] Add upgrade bundle golden fixture layout in `tests/fixtures/upstream_contract/golden/upgrade-bundle/`
-- [ ] T067 [P] [US4] Add upgrade suggestion tests for incomplete manifest rows, test suggestions, docs suggestions, and changelog fragments in `tests/unit/test_upstream_contract_suggestions.py`
-- [ ] T068 [P] [US4] Add upgrade bundle determinism and idempotency tests in `tests/contract/test_upstream_contract_prepare_upgrade.py`
-- [ ] T069 [P] [US4] Add apply-manifest-suggestions tests proving applied rows remain incomplete in `tests/contract/test_upstream_contract_apply_suggestions.py`
+- [X] T067 [P] [US4] Add upgrade suggestion tests for incomplete manifest rows, test suggestions, docs suggestions, and changelog fragments in `tests/unit/test_upstream_contract_suggestions.py`
+- [X] T068 [P] [US4] Add upgrade bundle determinism and idempotency tests in `tests/contract/test_upstream_contract_prepare_upgrade.py`
+- [X] T069 [P] [US4] Add apply-manifest-suggestions tests proving applied rows remain incomplete in `tests/contract/test_upstream_contract_apply_suggestions.py`
 
 ### Implementation for User Story 4
 
-- [ ] T070 [US4] Implement incomplete manifest, test, documentation, and changelog suggestion generation in `src/multica_py/_internal/upstream_contract/suggestions.py`
-- [ ] T071 [US4] Implement deterministic upgrade bundle writer in `src/multica_py/_internal/upstream_contract/upgrade.py`
-- [ ] T072 [US4] Implement `prepare-upgrade` command and idempotent output handling in `scripts/upstream_contract.py`
-- [ ] T073 [US4] Implement explicit `apply-manifest-suggestions` command that keeps rows incomplete in `scripts/upstream_contract.py`
-- [ ] T074 [US4] Document generated facts versus maintainer decisions in `docs/cli-coverage.md`
+- [X] T070 [US4] Implement incomplete manifest, test, documentation, and changelog suggestion generation in `src/multica_py/_internal/upstream_contract/suggestions.py`
+- [X] T071 [US4] Implement deterministic upgrade bundle writer in `src/multica_py/_internal/upstream_contract/upgrade.py`
+- [X] T072 [US4] Implement `prepare-upgrade` command and idempotent output handling in `scripts/upstream_contract.py`
+- [X] T073 [US4] Implement explicit `apply-manifest-suggestions` command that keeps rows incomplete in `scripts/upstream_contract.py`
+- [X] T074 [US4] Document generated facts versus maintainer decisions in `docs/cli-coverage.md`
 
 **Checkpoint**: User Story 4 is complete when upgrade preparation is repeatable and creates reviewable context without approving SDK coverage.
 
@@ -172,18 +174,18 @@
 
 ### Tests for User Story 5
 
-- [ ] T075 [P] [US5] Add mocked release metadata fixtures in `tests/fixtures/upstream_contract/golden/releases.json`
-- [ ] T076 [P] [US5] Add observer idempotency and superseded-candidate tests in `tests/unit/test_upstream_contract_observer.py`
-- [ ] T077 [P] [US5] Add workflow policy tests for offline PR gate separation in `tests/contract/test_upstream_contract_workflows.py`
-- [ ] T078 [P] [US5] Add GitHub Actions static checks for labels, status, concurrency, and pinned actions in `tests/contract/test_upstream_contract_actions.py`
+- [X] T075 [P] [US5] Add mocked release metadata fixtures in `tests/fixtures/upstream_contract/golden/releases.json`
+- [X] T076 [P] [US5] Add observer idempotency and superseded-candidate tests in `tests/unit/test_upstream_contract_observer.py`
+- [X] T077 [P] [US5] Add workflow policy tests for offline PR gate separation in `tests/contract/test_upstream_contract_workflows.py`
+- [X] T078 [P] [US5] Add GitHub Actions static checks for labels, status, concurrency, and pinned actions in `tests/contract/test_upstream_contract_actions.py`
 
 ### Implementation for User Story 5
 
-- [ ] T079 [US5] Implement release observation state transitions in `src/multica_py/_internal/upstream_contract/observer.py`
+- [X] T079 [US5] Implement release observation state transitions in `src/multica_py/_internal/upstream_contract/observer.py` (state merge only; full US5 download path deferred)
 - [ ] T080 [US5] Implement deterministic issue/PR identity, `upstream-update` label, `needs-maintainer-decision` status, and superseded-candidate policy in `src/multica_py/_internal/upstream_contract/observer.py`
-- [ ] T081 [US5] Implement `observe` command with `--dry-run` and non-promoting behavior in `scripts/upstream_contract.py`
-- [ ] T082 [US5] Add non-blocking scheduled observer workflow with release-keyed concurrency in `.github/workflows/upstream-contract-observer.yml`
-- [ ] T083 [US5] Ensure existing PR/push workflows run only offline supported checks in `.github/workflows/ci.yml`
+- [X] T081 [US5] Implement `observe` command with `--dry-run` and non-promoting behavior in `scripts/upstream_contract.py` (state-only dry-run)
+- [X] T082 [US5] Add non-blocking scheduled observer workflow with release-keyed concurrency in `.github/workflows/upstream-contract-observer.yml` (dry-run; must not shell-interpolate untrusted release tags)
+- [X] T083 [US5] Ensure existing PR/push workflows run only offline supported checks in `.github/workflows/ci.yml`
 
 **Checkpoint**: User Story 5 is complete when scheduled observation can detect release lag and prepare review work without mutating supported baseline or breaking offline CI.
 
@@ -193,38 +195,38 @@
 
 **Purpose**: Runtime compatibility, documentation, end-to-end validation, and cleanup after story increments.
 
-- [ ] T084 [P] Implement runtime compatibility matrix loading in `src/multica_py/_internal/upstream_contract/compatibility.py`
-- [ ] T085 [P] Implement runtime CLI version/build metadata read-once diagnostics in `src/multica_py/compatibility.py`
-- [ ] T086 [P] Add runtime compatibility tests for read-once warning, override path, and supported range text in `tests/unit/test_compat_policy.py`
-- [ ] T087 [P] Generate compatibility documentation from the compatibility matrix in `docs/compatibility.md`
-- [ ] T088 [P] Update maintainer quickstart commands in `docs/contributing.md`
-- [ ] T089 [P] Update source-link audit coverage for semantic contract provenance in `scripts/audit_source_links.py`
-- [ ] T090 Add end-to-end quickstart validation test covering check, collect, diff, prepare-upgrade, and observe dry-run in `tests/contract/test_upstream_contract_quickstart.py`
-- [ ] T091 [P] Add readable summary and under-30-second offline gate budget tests for SC-001 in `tests/contract/test_upstream_contract_check.py`
-- [ ] T092 [P] Add approved SDK contract tests for presence semantics, enum policy, normalized imperative constraints, and positive/negative evidence for FR-028 in `tests/unit/test_upstream_contract_generator.py`
-- [ ] T093 Implement approved SDK contract validation for omitted/null/empty/zero/false semantics, enum approval, and normalized constraint categories for FR-028 in `src/multica_py/_internal/upstream_contract/generator/contract.py`
-- [ ] T094 [P] Add exporter-vs-help-parser mismatch classification tests for SC-017 in `tests/unit/test_upstream_contract_collector.py`
-- [ ] T095 Implement exporter-vs-help-parser mismatch classification separate from SDK coverage gaps for SC-017 in `src/multica_py/_internal/upstream_contract/collectors/binary.py`
-- [ ] T096 [P] Add PromotionDecision promote/reject workflow tests for FR-030 in `tests/contract/test_upstream_contract_promotion.py`
-- [ ] T097 Implement PromotionDecision artifact validation and explicit promote/reject commands for FR-030 in `src/multica_py/_internal/upstream_contract/promotion.py`
-- [ ] T098 Wire `promote` and `reject` commands to atomic state updates and refusal cases for FR-030 in `scripts/upstream_contract.py`
+- [ ] T084 [P] Implement runtime compatibility matrix loading in `src/multica_py/_internal/upstream_contract/compatibility.py` (bridge into `_internal.compat`; no parallel Client)
+- [ ] T085 [P] Implement runtime CLI version/build metadata read-once diagnostics in `src/multica_py/compatibility.py` (wire max_version + warn-once through transport)
+- [X] T086 [P] Add runtime compatibility tests for read-once warning, override path, and supported range text in `tests/unit/test_compat_policy.py`
+- [X] T087 [P] Generate compatibility documentation from the compatibility matrix in `docs/compatibility.md`
+- [X] T088 [P] Update maintainer quickstart commands in `docs/contributing.md`
+- [X] T089 [P] Update source-link audit coverage for semantic contract provenance in `scripts/audit_source_links.py`
+- [X] T090 Add end-to-end quickstart validation test covering check, collect, diff, prepare-upgrade, and observe dry-run in `tests/contract/test_upstream_contract_quickstart.py`
+- [X] T091 [P] Add readable summary and under-30-second offline gate budget tests for SC-001 in `tests/contract/test_upstream_contract_check.py`
+- [X] T092 [P] Add approved SDK contract boundary/validation tests (full FR-028 evidence matrix and production generate deferred to feature 003) in `tests/unit/test_upstream_contract_generator.py`
+- [X] T093 Implement approved SDK contract boundary validation only (production generate deferred to feature 003) in `src/multica_py/_internal/upstream_contract/generator/contract.py`
+- [X] T094 [P] Add exporter-vs-help-parser mismatch classification tests for SC-017 in `tests/unit/test_upstream_contract_collector.py`
+- [X] T095 Implement exporter-vs-help-parser mismatch classification separate from SDK coverage gaps for SC-017 in `src/multica_py/_internal/upstream_contract/collectors/binary.py`
+- [X] T096 [P] Add PromotionDecision promote/reject workflow tests for FR-030 in `tests/contract/test_upstream_contract_promotion.py`
+- [X] T097 Implement PromotionDecision artifact validation and explicit promote/reject commands for FR-030 in `src/multica_py/_internal/upstream_contract/promotion.py`
+- [X] T098 Wire `promote` and `reject` commands to atomic state updates and refusal cases for FR-030 in `scripts/upstream_contract.py`
 - [ ] T099 [P] Add failed upgrade write, superseded candidate, and rerun recovery requirement tests for FR-024 and US5 in `tests/unit/test_upstream_contract_observer.py`
 - [ ] T100 Implement recovery and superseded-candidate state rules for failed writes and reruns in `src/multica_py/_internal/upstream_contract/observer.py`
 - [ ] T101 [P] Add generated JSON Schema and external validation fixture tests for FR-017 in `tests/unit/test_upstream_contract_schema.py`
-- [ ] T102 Document checked-in artifact locations, approved contract boundaries, and generated artifact boundaries in `docs/cli-coverage.md`
-- [ ] T103 Update per-FR/SC traceability matrix for implementation-critical requirements in `specs/002-upstream-coverage-checks/tasks.md`
-- [ ] T104 [P] Add implementation oracle contract reference fixtures in `tests/fixtures/upstream_contract/golden/oracles/`
-- [ ] T105 [P] Add state transition table tests from `contracts/implementation-oracles.md` in `tests/unit/test_upstream_contract_state.py`
-- [ ] T106 Implement fixed collector method order and trust-level promotion eligibility from `contracts/implementation-oracles.md` in `src/multica_py/_internal/upstream_contract/collectors/binary.py`
+- [X] T102 Document checked-in artifact locations, approved contract boundaries, and generated artifact boundaries in `docs/cli-coverage.md`
+- [X] T103 Update per-FR/SC traceability matrix for implementation-critical requirements in `specs/002-upstream-coverage-checks/tasks.md`
+- [X] T104 [P] Add implementation oracle contract reference fixtures in `tests/fixtures/upstream_contract/golden/oracles/`
+- [X] T105 [P] Add state transition table tests from `contracts/implementation-oracles.md` in `tests/unit/test_upstream_contract_state.py`
+- [ ] T106 Implement fixed collector method order and trust-level promotion eligibility from `contracts/implementation-oracles.md` in `src/multica_py/_internal/upstream_contract/collectors/binary.py` (omit unimplemented `go-helper` from active order)
 - [ ] T107 [P] Add exhaustive diff severity table tests from `contracts/implementation-oracles.md` in `tests/unit/test_upstream_contract_diff.py`
-- [ ] T108 Implement exhaustive diff severity table from `contracts/implementation-oracles.md` in `src/multica_py/_internal/upstream_contract/diff.py`
+- [X] T108 Implement exhaustive diff severity table from `contracts/implementation-oracles.md` in `src/multica_py/_internal/upstream_contract/diff.py`
 - [ ] T109 [P] Add machine report schema file generation tests for `contracts/schema/upstream-report-v1.schema.json` in `tests/unit/test_upstream_contract_reporting.py`
-- [ ] T110 [P] Add local upgrade directory layout tests from `contracts/implementation-oracles.md` in `tests/contract/test_upstream_contract_prepare_upgrade.py`
-- [ ] T111 Run `uv run ruff format --check .` and fix formatting issues in `src/`, `tests/`, and `scripts/`
-- [ ] T112 Run `uv run ruff check .` and fix lint issues in `src/`, `tests/`, and `scripts/`
-- [ ] T113 Run `uv run mypy --namespace-packages --explicit-package-bases -p multica_py` and fix package typing issues in `src/multica_py/`
-- [ ] T114 Run `uv run mypy tests scripts --ignore-missing-imports --follow-imports=silent --check-untyped-defs` and fix typing issues in `tests/` and `scripts/`
-- [ ] T115 Run `uv run pytest` and fix any failing tests in `src/`, `tests/`, and `scripts/`
+- [X] T110 [P] Add local upgrade directory layout tests from `contracts/implementation-oracles.md` in `tests/contract/test_upstream_contract_prepare_upgrade.py`
+- [X] T111 Run `uv run ruff format --check .` and fix formatting issues in `src/`, `tests/`, and `scripts/`
+- [X] T112 Run `uv run ruff check .` and fix lint issues in `src/`, `tests/`, and `scripts/`
+- [X] T113 Run `uv run mypy --namespace-packages --explicit-package-bases -p multica_py` and fix package typing issues in `src/multica_py/`
+- [X] T114 Run `uv run mypy tests scripts --ignore-missing-imports --follow-imports=silent --check-untyped-defs` and fix typing issues in `tests/` and `scripts/`
+- [X] T115 Run `uv run pytest` and fix any failing tests in `src/`, `tests/`, and `scripts/`
 
 ---
 

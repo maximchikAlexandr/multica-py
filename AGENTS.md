@@ -55,18 +55,32 @@ decisions. Only an approved SDK contract with operation IDs, source references,
 input/output contracts, coverage level, and test references can promote a
 candidate upstream contract to supported SDK coverage.
 
-Keep the upstream-update pipeline split into three layers:
+Keep the upstream-update pipeline split into two active layers in feature 002:
 
-- `source_evidence/`: deterministic extractors and detectors that collect
-  facts and review items only.
-- `sdk-contract.yaml`: the human/agent-approved SDK contract with operation
+- `sdk-contract.json`: the human/agent-approved SDK contract with operation
   IDs, mappings, overrides, policy decisions, and source references.
 - `generator/`: deterministic generation of Python signatures, enums,
   validators, docs, fixtures, and tests from the approved contract.
 
+`source_evidence/` extractors were removed in the 002 cleanup and return in
+feature 003 when wired to landing zones. Do not treat source evidence as an
+active layer until 003 lands.
+
 The approved SDK contract is the only valid production generator input.
 Evidence files, heuristic rename suggestions, and generated upgrade bundles
 must never directly generate or modify public SDK behavior.
+
+Maintainer upgrade entrypoint:
+
+```bash
+uv run python scripts/upstream_contract.py upgrade --tag ... --version ... \
+  --commit ... --release-id ... --binary ... --asset-name ... --sha256 ... \
+  --os ... --arch ... --version-output ... --output-dir ...
+```
+
+Or `./scripts/upstream_upgrade.sh` with `TAG`, `COMMIT`, `RELEASE_ID`, `BINARY`,
+`ASSET_NAME`, `SHA256`, and `VERSION_OUTPUT` set. Verified collect/export paths:
+`tools/upstream-cli-contract/README.md` and `upstream_contract.py collect`.
 
 ## Commit Messages
 
