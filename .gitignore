@@ -26,6 +26,13 @@ Thumbs.db
 .env
 .env.local
 
+# Live integration test diagnostics and temp profiles
+.artifacts/live/
+.live-artifacts/
+tests/live/.live-home/
+tests/live/.live-diagnostics/
+tests/live/.live-artifacts/
+
 # Codebase memory MCP index (regenerated locally)
 .codebase-memory/
 

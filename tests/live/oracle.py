@@ -1,0 +1,355 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from collections.abc import Callable
+from dataclasses import dataclass
+from urllib.parse import urlencode
+
+import httpx
+
+from tests.live.resource_registry import ResourceAbsentError
+
+ALLOWLISTED_HEADERS = frozenset({"content-type", "x-request-id"})
+JsonObject = dict[str, object]
+JsonValue = object
+
+
+@dataclass(frozen=True, slots=True)
+class OracleResponse:
+    """Minimal raw HTTP response for oracle assertions."""
+
+    status_code: int
+    headers: dict[str, str]
+    json_body: JsonValue | None
+    text_excerpt: str | None
+
+
+class DirectApiOracle:
+    """Direct HTTP oracle for arrange, assert, and cleanup."""
+
+    def __init__(
+        self,
+        server_url: str,
+        *,
+        workspace_id: str,
+        pat: str,
+        timeout: float = 30.0,
+    ) -> None:
+        self._server_url = server_url.rstrip("/")
+        self._workspace_id = workspace_id
+        self._pat = pat
+        self._timeout = timeout
+        self._client = httpx.Client(base_url=self._server_url, timeout=self._timeout)
+
+    @property
+    def workspace_id(self) -> str:
+        """Return the bound workspace identifier."""
+        return self._workspace_id
+
+    def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_body: JsonObject | None = None,
+    ) -> OracleResponse:
+        """Perform one allowlisted oracle HTTP request.
+
+        Args:
+            method: HTTP method.
+            path: Relative API path.
+            json_body: Optional JSON request body.
+
+        Returns:
+            Raw oracle response without SDK normalization.
+        """
+        response = self._client.request(
+            method,
+            path,
+            headers=self._json_headers(),
+            json=json_body,
+        )
+        allowlisted = {
+            key.lower(): value
+            for key, value in response.headers.items()
+            if key.lower() in ALLOWLISTED_HEADERS
+        }
+        text_excerpt = None
+        json_payload: JsonValue | None = None
+        if response.content:
+            text_excerpt = response.text[:240]
+            content_type = response.headers.get("content-type", "")
+            if "json" in content_type.lower():
+                try:
+                    json_payload = response.json()
+                except json.JSONDecodeError:
+                    json_payload = None
+        return OracleResponse(
+            status_code=response.status_code,
+            headers=allowlisted,
+            json_body=json_payload,
+            text_excerpt=text_excerpt,
+        )
+
+    def get(self, path: str) -> JsonObject:
+        """Fetch one raw JSON object via GET."""
+        return _require_dict(self.request("GET", path), operation=f"GET {path}")
+
+    def delete(self, path: str) -> OracleResponse:
+        """Delete one resource via direct HTTP."""
+        return self.request("DELETE", path)
+
+    def assert_absent(self, path: str, resource: str) -> None:
+        """Assert that one resource is no longer readable."""
+        _assert_absent(self.request("GET", path), resource)
+
+    def delete_callback(self, path: str, resource: str) -> Callable[[], None]:
+        """Return a registry cleanup callback for one resource."""
+        return _delete_callback(lambda: self.delete(path), resource)
+
+    def create_label(self, name: str, *, color: str | None = None) -> JsonObject:
+        """Create one label via direct HTTP."""
+        body: JsonObject = {"name": name}
+        if color is not None:
+            body["color"] = color
+        response = self.request("POST", "/api/labels", json_body=body)
+        return _require_dict(response, operation="create label")
+
+    def get_label(self, label_id: str) -> JsonObject:
+        """Fetch one label without SDK normalization."""
+        return self.get(f"/api/labels/{label_id}")
+
+    def create_project(
+        self,
+        title: str,
+        *,
+        description: str | None = None,
+    ) -> JsonObject:
+        """Create one project via direct HTTP without SDK normalization."""
+        body: JsonObject = {"title": title}
+        if description is not None:
+            body["description"] = description
+        response = self.request("POST", "/api/projects", json_body=body)
+        created = _require_dict(response, operation="create project")
+        if "title" not in created and "name" in created:
+            created = {**created, "title": created["name"]}
+        return created
+
+    def get_project(self, project_id: str) -> JsonObject:
+        """Fetch one project without SDK normalization."""
+        return self.get(f"/api/projects/{project_id}")
+
+    def update_project(self, project_id: str, body: JsonObject) -> JsonObject:
+        """Update one project with a raw JSON body."""
+        response = self.request("PUT", f"/api/projects/{project_id}", json_body=body)
+        return _require_dict(response, operation="update project")
+
+    def project_title(self, body: JsonObject) -> str:
+        """Return the raw project title/name field."""
+        for key in ("title", "name"):
+            value = body.get(key)
+            if isinstance(value, str):
+                return value
+        msg = "project response missing title/name"
+        raise KeyError(msg)
+
+    def project_description(self, body: JsonObject) -> object:
+        """Return the raw project description field, including null or empty."""
+        if "description" not in body:
+            msg = "project response missing description"
+            raise KeyError(msg)
+        return body["description"]
+
+    def issue_project_id(self, body: JsonObject) -> str | None:
+        """Return the raw issue project id when present."""
+        project_id = body.get("project_id")
+        if isinstance(project_id, str):
+            return project_id
+        project = body.get("project")
+        if isinstance(project, dict):
+            value = project.get("id")
+            if isinstance(value, str):
+                return value
+        return None
+
+    def create_issue(
+        self,
+        title: str,
+        *,
+        description: str | None = None,
+        project_id: str | None = None,
+    ) -> JsonObject:
+        """Create one issue via direct HTTP."""
+        body: JsonObject = {"title": title}
+        if description is not None:
+            body["description"] = description
+        if project_id is not None:
+            body["project_id"] = project_id
+        response = self.request("POST", "/api/issues", json_body=body)
+        return _require_dict(response, operation="create issue")
+
+    def get_issue(self, issue_id: str) -> JsonObject:
+        """Fetch one issue without SDK normalization."""
+        return self.get(f"/api/issues/{issue_id}")
+
+    def list_issues_page(
+        self,
+        *,
+        limit: int | None = None,
+        cursor: str | None = None,
+        status: str | None = None,
+        label_id: str | None = None,
+    ) -> tuple[list[JsonObject], str | None]:
+        """List one issues page and return raw items plus an optional next cursor."""
+        query: dict[str, str] = {}
+        if limit is not None:
+            query["limit"] = str(limit)
+        if cursor is not None:
+            query["cursor"] = cursor
+        if status is not None:
+            query["status"] = status
+        if label_id is not None:
+            query["label"] = label_id
+        path = "/api/issues/"
+        if query:
+            path = f"{path}?{urlencode(query)}"
+        return _parse_issue_list_page(self.request("GET", path))
+
+    def list_issue_labels(self, issue_id: str) -> list[JsonObject]:
+        """List labels attached to one issue."""
+        response = self.request("GET", f"/api/issues/{issue_id}/labels")
+        return _require_object_list(response, operation="list issue labels")
+
+    def list_comments(self, issue_id: str) -> list[JsonObject]:
+        """List comments for one issue."""
+        response = self.request("GET", f"/api/issues/{issue_id}/comments")
+        return _require_object_list(response, operation="list comments")
+
+    def assert_comment_removed_from_issue(self, issue_id: str, comment_id: str) -> None:
+        """Assert that one comment no longer appears in the issue comment list."""
+        for entry in self.list_comments(issue_id):
+            if entry.get("id") == comment_id:
+                msg = f"expected comment {comment_id} to be absent from issue {issue_id}"
+                raise AssertionError(msg)
+
+    def upload_attachment(
+        self,
+        issue_id: str,
+        *,
+        filename: str,
+        content: bytes,
+    ) -> JsonObject:
+        """Upload one attachment via direct multipart HTTP."""
+        response = self._client.post(
+            "/api/upload-file",
+            headers=self._auth_headers(),
+            files={"file": (filename, content, "application/octet-stream")},
+            data={"issue_id": issue_id},
+        )
+        return _require_dict(
+            OracleResponse(
+                status_code=response.status_code,
+                headers={},
+                json_body=response.json() if response.content else None,
+                text_excerpt=response.text[:240] if response.content else None,
+            ),
+            operation="upload attachment",
+        )
+
+    def get_attachment(self, attachment_id: str) -> JsonObject:
+        """Fetch one attachment metadata record without SDK normalization."""
+        return self.get(f"/api/attachments/{attachment_id}")
+
+    def download_attachment_content(self, attachment_id: str) -> bytes:
+        """Download attachment bytes from the content route."""
+        response = self._client.get(
+            f"/api/attachments/{attachment_id}/content",
+            headers=self._auth_headers(),
+        )
+        if response.status_code != 200:
+            msg = (
+                "download attachment content failed: "
+                f"status={response.status_code} body={response.text[:240]}"
+            )
+            raise AssertionError(msg)
+        return response.content
+
+    def list_issue_attachments(self, issue_id: str) -> list[JsonObject]:
+        """List attachments attached to one issue."""
+        response = self.request("GET", f"/api/issues/{issue_id}/attachments")
+        return _require_object_list(response, operation="list issue attachments")
+
+    @staticmethod
+    def sha256_hex(content: bytes) -> str:
+        """Return the SHA-256 hex digest for attachment content."""
+        return hashlib.sha256(content).hexdigest()
+
+    def _auth_headers(self) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self._pat}",
+            "X-Workspace-ID": self._workspace_id,
+        }
+
+    def _json_headers(self) -> dict[str, str]:
+        return {**self._auth_headers(), "Content-Type": "application/json"}
+
+
+def _require_dict(response: OracleResponse, *, operation: str) -> JsonObject:
+    if response.status_code not in (200, 201) or not isinstance(response.json_body, dict):
+        msg = f"{operation} failed: status={response.status_code} body={response.text_excerpt}"
+        raise AssertionError(msg)
+    return response.json_body
+
+
+def _require_object_list(response: OracleResponse, *, operation: str) -> list[JsonObject]:
+    if response.status_code != 200 or not isinstance(response.json_body, list):
+        msg = f"{operation} failed: status={response.status_code} body={response.text_excerpt}"
+        raise AssertionError(msg)
+    items: list[JsonObject] = []
+    for entry in response.json_body:
+        if isinstance(entry, dict):
+            items.append(entry)
+    return items
+
+
+def _parse_issue_list_page(response: OracleResponse) -> tuple[list[JsonObject], str | None]:
+    if response.status_code != 200:
+        msg = f"list issues failed: status={response.status_code} body={response.text_excerpt}"
+        raise AssertionError(msg)
+    body = response.json_body
+    if not isinstance(body, dict):
+        msg = f"list issues returned unexpected body: {response.text_excerpt}"
+        raise AssertionError(msg)
+    items_value = body.get("items")
+    if not isinstance(items_value, list):
+        msg = f"list issues returned unexpected body: {response.text_excerpt}"
+        raise AssertionError(msg)
+    items = [entry for entry in items_value if isinstance(entry, dict)]
+    next_cursor = body.get("next_cursor")
+    if next_cursor is not None and not isinstance(next_cursor, str):
+        msg = f"list issues returned unexpected next_cursor: {response.text_excerpt}"
+        raise AssertionError(msg)
+    return items, next_cursor or None
+
+
+def _assert_absent(response: OracleResponse, resource: str) -> None:
+    if response.status_code == 404:
+        return
+    msg = f"expected absent {resource}, got status={response.status_code} body={response.text_excerpt}"
+    raise AssertionError(msg)
+
+
+def _delete_callback(
+    delete_fn: Callable[[], OracleResponse],
+    resource: str,
+) -> Callable[[], None]:
+    def _cleanup() -> None:
+        response = delete_fn()
+        if response.status_code == 404:
+            raise ResourceAbsentError()
+        if response.status_code not in (200, 204):
+            msg = f"delete {resource} failed: status={response.status_code} body={response.text_excerpt}"
+            raise RuntimeError(msg)
+
+    return _cleanup
