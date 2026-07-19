@@ -108,11 +108,11 @@ class IssueResource(BaseResource):
     def assign(self, request: IssueAssignmentRequest) -> Issue:
         args = ["issue", "assign", request.issue_id]
         if request.member_id is not None:
-            args.extend(["--member-id", request.member_id])
+            args.extend(["--to-id", request.member_id])
         elif request.agent_id is not None:
-            args.extend(["--agent-id", request.agent_id])
+            args.extend(["--to-id", request.agent_id])
         elif request.squad_id is not None:
-            args.extend(["--squad-id", request.squad_id])
+            args.extend(["--to-id", request.squad_id])
         elif request.unassign:
             args.append("--unassign")
         return issue_from_wire(self._run_json_decode(tuple(args), IssueWire))

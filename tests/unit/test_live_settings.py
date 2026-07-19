@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import sys
 
 import pytest
 
 from tests.live.exceptions import LiveSetupError
 from tests.live.settings import (
+    MAX_LABEL_NAME_LEN,
     LiveSettings,
     create_live_test_run,
+    label_name,
     load_compatibility_target,
     load_live_settings,
     resolve_secrets_base_dir,
+    resource_prefix,
     workspace_slug,
 )
 
@@ -86,9 +90,23 @@ def test_ci_forbids_keep_env(monkeypatch: pytest.MonkeyPatch) -> None:
         load_live_settings(repo_root=REPO_ROOT)
 
 
-def test_workspace_slug_truncation() -> None:
+def test_workspace_slug_truncates_with_hash_suffix() -> None:
     slug = workspace_slug("x" * 80, "a")
     assert len(slug) <= 48
+    assert re.search(r"-[0-9a-f]{8}$", slug)
+
+
+def test_resource_prefix_truncates_with_hash_suffix() -> None:
+    prefix = resource_prefix("y" * 80, "test-name")
+    assert len(prefix) <= 64
+    assert prefix.startswith("mpy-live-")
+    assert re.search(r"-[0-9a-f]{8}$", prefix)
+
+
+def test_label_name_respects_upstream_max_length() -> None:
+    name = label_name("mpy-live-" + ("z" * 80), "crud")
+    assert len(name) <= MAX_LABEL_NAME_LEN
+    assert name.endswith("-crud")
 
 
 def test_secrets_dir_is_outside_artifact_root(

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Fake multica executable for testing. Records argv and emits fixture responses."""
+from __future__ import annotations
 
 import json
 import os
 import sys
 from pathlib import Path
 from typing import TypedDict, cast
+
+_FIXTURE_ROOT = Path(__file__).resolve().parent
+_RECORD_ENV_ALLOWLIST = frozenset({"MULTICA_FAKE_RECORD"})
+_RECORD_DIR = _FIXTURE_ROOT / "_tmp"
+_FIXTURE_DIR = (_FIXTURE_ROOT / "json").resolve()
 
 
 class FixtureRecord(TypedDict):
@@ -35,7 +40,6 @@ class AuthStatusPayload(TypedDict):
     token_type: str | None
 
 
-_FIXTURE_DIR = Path(__file__).resolve().parent / "json"
 _FIXTURE_PREFIXES: dict[str, str] = {
     "workspace": "workspaces",
     "project": "projects",
@@ -55,6 +59,18 @@ _FIXTURE_PREFIXES: dict[str, str] = {
 }
 
 
+def _record_env() -> dict[str, str]:
+    return {key: os.environ[key] for key in _RECORD_ENV_ALLOWLIST if key in os.environ}
+
+
+def _validate_record_path(record_path: str) -> Path:
+    resolved = Path(record_path).resolve()
+    record_root = _RECORD_DIR.resolve()
+    if resolved.is_relative_to(record_root):
+        return resolved
+    raise ValueError(f"MULTICA_FAKE_RECORD must stay under {record_root}")
+
+
 def _find_fixture(argv: list[str]) -> FixtureRecord | None:
     cmd = argv[1] if len(argv) > 1 else ""
     subdir = _FIXTURE_PREFIXES.get(cmd, cmd)
@@ -71,12 +87,15 @@ def _find_fixture(argv: list[str]) -> FixtureRecord | None:
         positional.append(arg)
         i += 1
     key = "_".join(positional)
-    fixture_dir = _FIXTURE_DIR / subdir
-    if not fixture_dir.exists():
+    fixture_dir = (_FIXTURE_DIR / subdir).resolve()
+    if not fixture_dir.is_relative_to(_FIXTURE_DIR) or not fixture_dir.exists():
         return None
     for f in fixture_dir.iterdir():
+        fixture_file = f.resolve()
+        if not fixture_file.is_relative_to(_FIXTURE_DIR):
+            continue
         if key == f.stem and f.suffix == ".json":
-            with open(f, encoding="utf-8") as fh:
+            with open(fixture_file, encoding="utf-8") as fh:
                 return cast("FixtureRecord", json.load(fh))
     return None
 
@@ -84,12 +103,13 @@ def _find_fixture(argv: list[str]) -> FixtureRecord | None:
 def main() -> int:
     record_path = os.environ.get("MULTICA_FAKE_RECORD")
     if record_path:
+        record_file = _validate_record_path(record_path)
         record: RecordedInvocation = {
             "argv": list(sys.argv),
             "cwd": os.getcwd(),
-            "env": dict(os.environ),
+            "env": _record_env(),
         }
-        with open(record_path, "a", encoding="utf-8") as f:
+        with open(record_file, "a", encoding="utf-8") as f:
             json.dump(record, f)
             f.write("\n")
 

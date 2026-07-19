@@ -1,1 +1,13 @@
-{"stdout": [{"id": "ap_001", "name": "Nightly Build", "enabled": true}]}
+{
+  "stdout": {
+    "autopilots": [
+      {
+        "id": "ap_001",
+        "name": "Nightly Build",
+        "enabled": true
+      }
+    ],
+    "total": 1
+  },
+  "exit_code": 0
+}

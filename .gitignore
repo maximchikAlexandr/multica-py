@@ -32,6 +32,7 @@ Thumbs.db
 tests/live/.live-home/
 tests/live/.live-diagnostics/
 tests/live/.live-artifacts/
+tests/fixtures/_tmp/
 
 # Codebase memory MCP index (regenerated locally)
 .codebase-memory/

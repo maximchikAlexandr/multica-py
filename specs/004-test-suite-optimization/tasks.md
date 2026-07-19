@@ -126,9 +126,9 @@ Single-project layout. All changes under `tests/` and `pyproject.toml`.
 
 **Independent Test**: The five file-mutation rows each yield their expected severity; genuinely specific tests remain separate.
 
-- [ ] T028 [US5] Add a `@dataclass(frozen=True)` `MutationSeverityCase` table of exactly five file-mutation rows (`required-flag-added`, `help-text-changed` [severities ⊆ {`doc_only`,`provenance_only`}], `command-added`, `command-removed`, `optional-flag-added`) and a parametrized `test_mutation_severity` in the unit and contract diff modules (`tests/unit/test_upstream_contract_diff.py`, `tests/contract/test_upstream_contract_diff.py`) (FR-010)
-- [ ] T029 [US5] Keep the `command-renamed` rename-heuristic test, summary-reconciliation tests, and manual `SemanticCLIContract`-assembly tests as separate tests (not in the table) (FR-010)
-- [ ] T030 [US5] Verify offline suite + mypy are green
+- [X] T028 [US5] Add a `@dataclass(frozen=True)` `MutationSeverityCase` table of exactly five file-mutation rows (`required-flag-added`, `help-text-changed` [severities ⊆ {`doc_only`,`provenance_only`}], `command-added`, `command-removed`, `optional-flag-added`) and a parametrized `test_mutation_severity` in the unit and contract diff modules (`tests/unit/test_upstream_contract_diff.py`, `tests/contract/test_upstream_contract_diff.py`) (FR-010)
+- [X] T029 [US5] Keep the `command-renamed` rename-heuristic test, summary-reconciliation tests, and manual `SemanticCLIContract`-assembly tests as separate tests (not in the table) (FR-010)
+- [X] T030 [US5] Verify offline suite + mypy are green
 
 **Checkpoint**: Severity classification is one table.
 

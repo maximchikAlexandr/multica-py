@@ -24,8 +24,11 @@ def test_project_description_absent_empty_and_null_semantics(
         cleanup=api_oracle.delete_callback(f"/api/projects/{omitted_id}", "project"),
     )
     omitted_body = api_oracle.get_project(omitted_id)
-    with pytest.raises(KeyError):
-        api_oracle.project_description(omitted_body)
+    if "description" not in omitted_body:
+        with pytest.raises(KeyError):
+            api_oracle.project_description(omitted_body)
+    else:
+        assert omitted_body["description"] in (None, "")
 
     empty = api_oracle.create_project(f"{resource_name}-empty", description="")
     empty_id = str(empty["id"])

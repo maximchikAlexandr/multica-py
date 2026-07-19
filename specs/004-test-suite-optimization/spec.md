@@ -663,7 +663,7 @@ fixtures with no current test, from the resource method named by the path):
 | `configuration/config_show.json` | `c.configuration.show()` |
 | `daemon/daemon_status.json` | `c.daemon.status()` |
 | `issues/issue_deprioritize_iss_001.json` | `c.issues.deprioritize("iss_001")` |
-| `issues/issue_get.json` | `c.issues.get(...)` |
+| `issues/issue_get_iss_001.json` | `c.issues.get(...)` |
 | `issues/issue_list.json` | `c.issues.list()` |
 | `issues/issue_status_iss_001_done.json` | `c.issues.set_status("iss_001", ...)` |
 | `labels/label_list.json` | `c.labels.list()` |

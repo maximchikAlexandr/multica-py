@@ -20,7 +20,6 @@ def test_attachment_round_trip_for_pinned_payload(
     api_oracle: DirectApiOracle,
     register_resource: Callable[..., None],
     resource_name: str,
-    tmp_path: pathlib.Path,
 ) -> None:
     """Upload, verify metadata, download SHA-256, and delete a 1024-byte attachment."""
     issue = live_client.issues.create(IssueCreateRequest(title=f"{resource_name}-attachment"))
@@ -28,16 +27,19 @@ def test_attachment_round_trip_for_pinned_payload(
         key=f"issue-{issue.id}",
         cleanup=api_oracle.delete_callback(f"/api/issues/{issue.id}", "issue"),
     )
-    payload_path = tmp_path / "payload.bin"
-    payload_path.write_bytes(ATTACHMENT_PAYLOAD)
-    uploaded = live_client.attachments.upload(issue.id, str(payload_path))
-    register_resource(
-        key=f"attachment-{uploaded.id}",
-        cleanup=api_oracle.delete_callback(f"/api/attachments/{uploaded.id}", "attachment"),
+    uploaded = api_oracle.upload_attachment(
+        issue.id,
+        filename="payload.bin",
+        content=ATTACHMENT_PAYLOAD,
     )
-    metadata = api_oracle.get_attachment(uploaded.id)
-    assert metadata.get("id") == uploaded.id
-    downloaded = api_oracle.download_attachment_content(uploaded.id)
+    attachment_id = str(uploaded["id"])
+    register_resource(
+        key=f"attachment-{attachment_id}",
+        cleanup=api_oracle.delete_callback(f"/api/attachments/{attachment_id}", "attachment"),
+    )
+    metadata = api_oracle.get_attachment(attachment_id)
+    assert metadata.get("id") == attachment_id
+    downloaded = api_oracle.download_attachment_content(attachment_id)
     assert DirectApiOracle.sha256_hex(downloaded) == DirectApiOracle.sha256_hex(ATTACHMENT_PAYLOAD)
     listed = api_oracle.list_issue_attachments(issue.id)
     listed_ids = {
@@ -45,9 +47,9 @@ def test_attachment_round_trip_for_pinned_payload(
         for entry in listed
         if isinstance(entry, dict) and isinstance(entry.get("id"), str)
     }
-    assert uploaded.id in listed_ids
-    api_oracle.delete(f"/api/attachments/{uploaded.id}")
-    api_oracle.assert_absent(f"/api/attachments/{uploaded.id}", "attachment")
+    assert attachment_id in listed_ids
+    api_oracle.delete(f"/api/attachments/{attachment_id}")
+    api_oracle.assert_absent(f"/api/attachments/{attachment_id}", "attachment")
 
 
 @pytest.mark.parametrize("filename", EDGE_FILENAMES)

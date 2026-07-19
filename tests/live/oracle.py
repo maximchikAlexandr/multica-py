@@ -212,11 +212,12 @@ class DirectApiOracle:
         label_id: str | None = None,
     ) -> tuple[list[JsonObject], str | None]:
         """List one issues page and return raw items plus an optional next cursor."""
+        offset = int(cursor) if cursor is not None and cursor.isdigit() else 0
         query: dict[str, str] = {}
         if limit is not None:
             query["limit"] = str(limit)
-        if cursor is not None:
-            query["cursor"] = cursor
+        if offset:
+            query["offset"] = str(offset)
         if status is not None:
             query["status"] = status
         if label_id is not None:
@@ -224,7 +225,7 @@ class DirectApiOracle:
         path = "/api/issues/"
         if query:
             path = f"{path}?{urlencode(query)}"
-        return _parse_issue_list_page(self.request("GET", path))
+        return _parse_issue_list_page(self.request("GET", path), limit=limit, offset=offset)
 
     def list_issue_labels(self, issue_id: str) -> list[JsonObject]:
         """List labels attached to one issue."""
@@ -272,9 +273,9 @@ class DirectApiOracle:
         return self.get(f"/api/attachments/{attachment_id}")
 
     def download_attachment_content(self, attachment_id: str) -> bytes:
-        """Download attachment bytes from the content route."""
+        """Download attachment bytes from the download route."""
         response = self._client.get(
-            f"/api/attachments/{attachment_id}/content",
+            f"/api/attachments/{attachment_id}/download",
             headers=self._auth_headers(),
         )
         if response.status_code != 200:
@@ -338,7 +339,12 @@ def _require_object_list(
     return [entry for entry in nested if isinstance(entry, dict)]
 
 
-def _parse_issue_list_page(response: OracleResponse) -> tuple[list[JsonObject], str | None]:
+def _parse_issue_list_page(
+    response: OracleResponse,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> tuple[list[JsonObject], str | None]:
     if response.status_code != 200:
         msg = f"list issues failed: status={response.status_code} body={response.text_excerpt}"
         raise AssertionError(msg)
@@ -357,6 +363,12 @@ def _parse_issue_list_page(response: OracleResponse) -> tuple[list[JsonObject], 
     if next_cursor is not None and not isinstance(next_cursor, str):
         msg = f"list issues returned unexpected next_cursor: {response.text_excerpt}"
         raise AssertionError(msg)
+    if next_cursor is None:
+        total = body.get("total")
+        if isinstance(total, int) and limit is not None and items:
+            next_offset = offset + len(items)
+            if next_offset < total:
+                next_cursor = str(next_offset)
     return items, next_cursor or None
 
 
