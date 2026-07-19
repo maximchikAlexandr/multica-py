@@ -2,12 +2,33 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
+
 from multica_py._internal.upstream_contract import diff as diff_module
 from multica_py._internal.upstream_contract import schema
+from tests.contract.mutation_severity_cases import MUTATION_SEVERITY_CASES, MutationSeverityCase
 
 FIXTURES = pathlib.Path(__file__).parent.parent / "fixtures" / "upstream_contract" / "golden"
 MUTATIONS = pathlib.Path(__file__).parent.parent / "fixtures" / "upstream_contract" / "mutations"
 BASELINE = FIXTURES / "supported-cli-contract-baseline.json"
+
+
+@pytest.mark.parametrize("case", MUTATION_SEVERITY_CASES, ids=lambda c: c.id)
+def test_mutation_severity(case: MutationSeverityCase) -> None:
+    """Verify each mutation fixture produces the expected severity classification."""
+    before = schema.decode_contract(BASELINE)
+    after = schema.decode_contract(MUTATIONS / case.mutation_file)
+    diff = diff_module.diff_contracts(before, after)
+    severities = {c.severity for c in diff.changes}
+    for s in case.must_contain:
+        assert s in severities
+    for s in case.must_not_contain:
+        assert s not in severities
+    if case.id == "help-text-changed":
+        assert severities
+        assert severities <= {"doc_only", "provenance_only"}
+    if case.unresolved_breaking is not None:
+        assert diff.unresolved_breaking is case.unresolved_breaking
 
 
 def test_diff_summary_severity_counts() -> None:
@@ -18,48 +39,6 @@ def test_diff_summary_severity_counts() -> None:
     assert summary["total"] == len(diff.changes)
     for change in diff.changes:
         assert summary[change.severity] >= 1
-
-
-def test_required_flag_addition_is_breaking() -> None:
-    before = schema.decode_contract(BASELINE)
-    after = schema.decode_contract(MUTATIONS / "required-flag-added.json")
-    diff = diff_module.diff_contracts(before, after)
-    severities = [c.severity for c in diff.changes]
-    assert "breaking" in severities
-    assert diff.unresolved_breaking is True
-
-
-def test_help_text_only_is_doc_only() -> None:
-    before = schema.decode_contract(BASELINE)
-    after = schema.decode_contract(MUTATIONS / "help-text-changed.json")
-    diff = diff_module.diff_contracts(before, after)
-    severities = [c.severity for c in diff.changes]
-    assert all(s in ("doc_only", "provenance_only") for s in severities)
-
-
-def test_command_added_is_additive() -> None:
-    before = schema.decode_contract(BASELINE)
-    after = schema.decode_contract(MUTATIONS / "command-added.json")
-    diff = diff_module.diff_contracts(before, after)
-    severities = [c.severity for c in diff.changes]
-    assert "additive" in severities
-
-
-def test_command_removed_is_breaking() -> None:
-    before = schema.decode_contract(BASELINE)
-    after = schema.decode_contract(MUTATIONS / "command-removed.json")
-    diff = diff_module.diff_contracts(before, after)
-    severities = [c.severity for c in diff.changes]
-    assert "breaking" in severities
-
-
-def test_optional_flag_added_is_additive() -> None:
-    before = schema.decode_contract(BASELINE)
-    after = schema.decode_contract(MUTATIONS / "optional-flag-added.json")
-    diff = diff_module.diff_contracts(before, after)
-    severities = [c.severity for c in diff.changes]
-    assert "additive" in severities
-    assert "breaking" not in severities
 
 
 def test_diff_summary_sums_match_changes() -> None:

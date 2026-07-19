@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import sys
+from dataclasses import dataclass
 
 import pytest
 
@@ -10,7 +11,41 @@ from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
-from multica_py.exceptions import CommandExecutionError, NetworkError, UnsupportedCliVersionError
+from multica_py.exceptions import (
+    AuthenticationError,
+    CommandExecutionError,
+    NetworkError,
+    NotFoundError,
+    UnsupportedCliVersionError,
+    ValidationError,
+)
+
+
+@dataclass(frozen=True)
+class TransportErrorCase:
+    exit_code: int
+    stderr: bytes
+    expected_exc: type[Exception]
+    id: str
+
+
+_TRANSPORT_ERROR_CASES: tuple[TransportErrorCase, ...] = (
+    TransportErrorCase(
+        exit_code=2, stderr=b"error", expected_exc=NetworkError, id="exit-2-network"
+    ),
+    TransportErrorCase(
+        exit_code=3, stderr=b"error", expected_exc=AuthenticationError, id="exit-3-auth"
+    ),
+    TransportErrorCase(
+        exit_code=4, stderr=b"error", expected_exc=NotFoundError, id="exit-4-notfound"
+    ),
+    TransportErrorCase(
+        exit_code=5, stderr=b"error", expected_exc=ValidationError, id="exit-5-validation"
+    ),
+    TransportErrorCase(
+        exit_code=99, stderr=b"error", expected_exc=CommandExecutionError, id="exit-99-generic"
+    ),
+)
 
 
 def test_transport_builds_correct_argv():
@@ -52,11 +87,44 @@ def test_transport_environment_isolation():
     assert result.text.strip() == "test"
 
 
-def test_transport_exit_code_raises():
+@pytest.mark.parametrize(
+    "case",
+    _TRANSPORT_ERROR_CASES,
+    ids=lambda c: c.id,
+)
+def test_exit_code_maps_to_exception(case: TransportErrorCase) -> None:
     config = ClientConfig(executable=sys.executable)
     transport = CliTransport(config)
-    with pytest.raises(Exception):
-        transport.run_text(("-c", "exit(42)"))
+    transport._execute = lambda *args, **kwargs: RawCommandResult(  # type: ignore[method-assign]
+        argv=("multica", "project", "get", "missing"),
+        exit_code=case.exit_code,
+        stdout=b"",
+        stderr=case.stderr,
+        duration=datetime.timedelta(),
+    )
+    with pytest.raises(case.expected_exc) as excinfo:
+        transport.run_text(("project", "get", "missing"))
+    exc = excinfo.value
+    assert isinstance(exc, CommandExecutionError)
+    assert exc.exit_code == case.exit_code
+
+
+def test_exit_code_mapping_preserves_context() -> None:
+    config = ClientConfig(executable=sys.executable)
+    transport = CliTransport(config)
+    transport._execute = lambda *args, **kwargs: RawCommandResult(  # type: ignore[method-assign]
+        argv=("multica", "auth", "status"),
+        exit_code=3,
+        stdout=b"unauthorized",
+        stderr=b"forbidden",
+        duration=datetime.timedelta(),
+    )
+    with pytest.raises(AuthenticationError) as excinfo:
+        transport.run_text(("auth", "status"))
+    exc = excinfo.value
+    assert exc.stdout == "unauthorized"
+    assert exc.stderr == "forbidden"
+    assert exc.argv == ("multica", "auth", "status")
 
 
 def test_transport_stdout_stderr_capture():

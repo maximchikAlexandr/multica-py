@@ -19,6 +19,7 @@ from multica_py.models.labels import Label
 from scripts.resolve_multica_target import ResolvedTarget, build_version_report, resolve_target
 from tests.live.bootstrap import BootstrapApiClient, TestIdentity, WorkspaceContext
 from tests.live.compose import ComposeLifecycle, allocate_loopback_port
+from tests.live.context import LiveContext
 from tests.live.diagnostics import DiagnosticCollector
 from tests.live.exceptions import LiveSetupError
 from tests.live.oracle import DirectApiOracle
@@ -285,6 +286,22 @@ def register_resource(resource_registry: ResourceRegistry) -> Callable[..., None
         resource_registry.defer(key=key, cleanup=cleanup)
 
     return _register
+
+
+@pytest.fixture
+def live_ctx(
+    live_client: MulticaClient,
+    api_oracle: DirectApiOracle,
+    register_resource: Callable[..., None],
+    test_identity: TestIdentity,
+) -> LiveContext:
+    """Return a LiveContext bundling client, oracle, register, and identity."""
+    return LiveContext(
+        client=live_client,
+        oracle=api_oracle,
+        register_resource=register_resource,
+        identity=test_identity,
+    )
 
 
 @pytest.fixture(scope="session")

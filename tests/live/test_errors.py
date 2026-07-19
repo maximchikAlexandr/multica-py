@@ -5,6 +5,7 @@ import pathlib
 import subprocess
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import pytest
 
@@ -44,6 +45,47 @@ CANONICAL_ARTIFACTS = (
     "backend.log",
     "postgres.log",
 )
+
+
+@dataclass(frozen=True)
+class ErrorMappingCase:
+    """One client operation to expected exception mapping.
+
+    Attributes:
+        client_fixture_name: Fixture name resolved via request.getfixturevalue.
+        operation: The failing SDK call.
+        expected_exc: Expected public exception type.
+        id: pytest.param id.
+    """
+
+    client_fixture_name: str
+    operation: Callable[[MulticaClient], object]
+    expected_exc: type[Exception]
+    id: str
+
+
+ERROR_CASES: tuple[ErrorMappingCase, ...] = (
+    ErrorMappingCase(
+        client_fixture_name="invalid_pat_client",
+        operation=lambda c: c.workspaces.list(),
+        expected_exc=AuthenticationError,
+        id="invalid-pat",
+    ),
+    ErrorMappingCase(
+        client_fixture_name="live_client",
+        operation=lambda c: c.labels.get("00000000-0000-0000-0000-000000000000"),
+        expected_exc=NotFoundError,
+        id="missing-resource",
+    ),
+    ErrorMappingCase(
+        client_fixture_name="closed_port_client",
+        operation=lambda c: c.workspaces.list(),
+        expected_exc=NetworkError,
+        id="closed-port",
+    ),
+)
+"""Error-mapping cases for the parametrized test. Destructive, diagnostic-bundle,
+and synthetic-wrapper tests stay separate."""
 
 
 def _assert_safe_message(exc: BaseException, test_identity: TestIdentity) -> None:
@@ -140,24 +182,16 @@ def _write_exit_wrapper(tmp_path: pathlib.Path, exit_code: int) -> pathlib.Path:
     return script
 
 
-def test_invalid_pat_raises_authentication_error_with_safe_message(
-    invalid_pat_client: MulticaClient,
+@pytest.mark.parametrize("case", ERROR_CASES, ids=lambda c: c.id)
+def test_error_mapping(
+    case: ErrorMappingCase,
+    request: pytest.FixtureRequest,
     test_identity: TestIdentity,
 ) -> None:
-    """Invalid PAT must map to AuthenticationError without leaking credentials."""
-    with pytest.raises(AuthenticationError) as exc_info:
-        invalid_pat_client.workspaces.list()
-    _assert_safe_message(exc_info.value, test_identity)
-
-
-def test_missing_resource_raises_not_found_error(
-    live_client: MulticaClient,
-    missing_resource_id: str,
-    test_identity: TestIdentity,
-) -> None:
-    """Missing resource identifiers must map to NotFoundError."""
-    with pytest.raises(NotFoundError) as exc_info:
-        live_client.labels.get(missing_resource_id)
+    """Parametrized error mapping: each client operation produces the expected exception with safe message."""
+    client = request.getfixturevalue(case.client_fixture_name)
+    with pytest.raises(case.expected_exc) as exc_info:
+        case.operation(client)
     _assert_safe_message(exc_info.value, test_identity)
 
 
@@ -181,16 +215,6 @@ def test_primary_label_via_secondary_client_raises_not_found_error(
     """Cross-workspace access collapse must map to NotFoundError."""
     with pytest.raises(NotFoundError) as exc_info:
         secondary_live_client.labels.get(primary_workspace_label.id)
-    _assert_safe_message(exc_info.value, test_identity)
-
-
-def test_closed_port_raises_network_error(
-    closed_port_client: MulticaClient,
-    test_identity: TestIdentity,
-) -> None:
-    """Closed backend ports must map to NetworkError."""
-    with pytest.raises(NetworkError) as exc_info:
-        closed_port_client.workspaces.list()
     _assert_safe_message(exc_info.value, test_identity)
 
 

@@ -47,9 +47,11 @@ class CommentListRecentRequest(msgspec.Struct, frozen=True, kw_only=True):
 
 
 class Subscriber(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    name: str | None = None
-    type: str | None = None
+    user_type: str
+    user_id: str
+    issue_id: str | None = None
+    reason: str | None = None
+    created_at: str | None = None
 
 
 class MetadataEntry(msgspec.Struct, frozen=True, kw_only=True):

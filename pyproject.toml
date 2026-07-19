@@ -123,11 +123,10 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = [
     "tests.conftest",
+    "tests.contract.conftest",
     "tests.unit.*",
     "tests.integration.*",
     "tests.packaging.*",
-    "tests.typing.*",
-    "tests.contract.models.*",
     "tests.contract.test_public_invariants",
     "tests.live.*",
 ]

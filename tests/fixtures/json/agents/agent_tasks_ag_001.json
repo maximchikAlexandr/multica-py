@@ -1,0 +1,10 @@
+{
+  "stdout": [
+    {
+      "id": "task_001",
+      "status": "done",
+      "issue_id": "iss_001"
+    }
+  ],
+  "exit_code": 0
+}

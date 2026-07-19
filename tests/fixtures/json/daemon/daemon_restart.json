@@ -1,0 +1,8 @@
+{
+  "stdout": {
+    "running": true,
+    "pid": 12345,
+    "uptime": 3600.0
+  },
+  "exit_code": 0
+}

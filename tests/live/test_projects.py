@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import pytest
 
@@ -12,6 +13,45 @@ pytestmark = [pytest.mark.live, pytest.mark.live_smoke]
 
 BASE_TITLE = "base-title"
 BASE_DESCRIPTION = "keep-me"
+
+
+@dataclass(frozen=True)
+class PresenceCase:
+    """One update-request presence variant for project updates.
+
+    Attributes:
+        update_request: The SDK update payload.
+        expected_title: Expected title after update.
+        expected_description: Expected description after update.
+        id: pytest.param id.
+    """
+
+    update_request: ProjectUpdateRequest
+    expected_title: str
+    expected_description: str | None
+    id: str
+
+
+PRESENCE_CASES: tuple[PresenceCase, ...] = (
+    PresenceCase(
+        update_request=ProjectUpdateRequest(name="only-title"),
+        expected_title="only-title",
+        expected_description=BASE_DESCRIPTION,
+        id="P-OMIT",
+    ),
+    PresenceCase(
+        update_request=ProjectUpdateRequest(description=""),
+        expected_title=BASE_TITLE,
+        expected_description="",
+        id="P-EMPTY",
+    ),
+    PresenceCase(
+        update_request=ProjectUpdateRequest(description="new"),
+        expected_title=BASE_TITLE,
+        expected_description="new",
+        id="P-SET",
+    ),
+)
 
 
 def _create_presence_project(
@@ -30,37 +70,20 @@ def _create_presence_project(
     return project_id
 
 
-def test_p_omit_update_title_only_preserves_description(
+@pytest.mark.parametrize("case", PRESENCE_CASES, ids=lambda c: c.id)
+def test_project_presence(
+    case: PresenceCase,
     live_client: MulticaClient,
     api_oracle: DirectApiOracle,
     register_resource: Callable[..., None],
     resource_name: str,
 ) -> None:
-    """Case P-OMIT: updating title without description leaves description unchanged."""
+    """Parametrized presence semantics: P-OMIT, P-EMPTY, P-SET."""
     project_id = _create_presence_project(api_oracle, register_resource)
-    updated = live_client.projects.update(project_id, ProjectUpdateRequest(name="only-title"))
-    assert updated.name == "only-title"
+    live_client.projects.update(project_id, case.update_request)
     body = api_oracle.get_project(project_id)
-    assert api_oracle.project_title(body) == "only-title"
-    assert api_oracle.project_description(body) == BASE_DESCRIPTION
-
-
-def test_p_empty_clears_description_without_omit_semantics(
-    live_client: MulticaClient,
-    api_oracle: DirectApiOracle,
-    register_resource: Callable[..., None],
-    resource_name: str,
-) -> None:
-    """Case P-EMPTY: explicit empty description differs from omitted description."""
-    project_id = _create_presence_project(api_oracle, register_resource)
-    live_client.projects.update(project_id, ProjectUpdateRequest(description=""))
-    empty_body = api_oracle.get_project(project_id)
-    assert api_oracle.project_description(empty_body) == ""
-    assert api_oracle.project_title(empty_body) == BASE_TITLE
-    live_client.projects.update(project_id, ProjectUpdateRequest(name="title-after-empty"))
-    omit_body = api_oracle.get_project(project_id)
-    assert api_oracle.project_title(omit_body) == "title-after-empty"
-    assert api_oracle.project_description(omit_body) == ""
+    assert api_oracle.project_title(body) == case.expected_title
+    assert api_oracle.project_description(body) == case.expected_description
 
 
 def test_p_null_http_clears_description_via_oracle_only(
@@ -74,26 +97,3 @@ def test_p_null_http_clears_description_via_oracle_only(
     body = api_oracle.get_project(project_id)
     assert api_oracle.project_description(body) is None
     assert api_oracle.project_title(body) == BASE_TITLE
-
-
-def test_p_set_updates_description_and_updated_at_without_touching_unrelated_fields(
-    live_client: MulticaClient,
-    api_oracle: DirectApiOracle,
-    register_resource: Callable[..., None],
-    resource_name: str,
-) -> None:
-    """Case P-SET: description update preserves unrelated fields and bumps updated_at."""
-    project_id = _create_presence_project(api_oracle, register_resource)
-    before = api_oracle.get_project(project_id)
-    before_updated_at = before.get("updated_at")
-    before_status = before.get("status")
-    live_client.projects.update(project_id, ProjectUpdateRequest(description="new"))
-    after = api_oracle.get_project(project_id)
-    assert api_oracle.project_description(after) == "new"
-    assert api_oracle.project_title(after) == BASE_TITLE
-    if before_status is not None:
-        assert after.get("status") == before_status
-    if isinstance(before_updated_at, str) and isinstance(
-        after_updated_at := after.get("updated_at"), str
-    ):
-        assert after_updated_at >= before_updated_at

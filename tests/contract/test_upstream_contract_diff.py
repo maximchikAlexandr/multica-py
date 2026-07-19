@@ -6,6 +6,10 @@ import subprocess
 import sys
 from typing import cast
 
+import pytest
+
+from tests.contract.mutation_severity_cases import MUTATION_SEVERITY_CASES, MutationSeverityCase
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "upstream_contract.py"
 
@@ -23,34 +27,38 @@ def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_diff_command_required_flag_exits_unresolved_breaking() -> None:
+@pytest.mark.parametrize("case", MUTATION_SEVERITY_CASES, ids=lambda c: c.id)  # type: ignore[misc]
+def test_mutation_severity(case: MutationSeverityCase, tmp_path: pathlib.Path) -> None:
+    """Verify each mutation fixture produces the expected severity via CLI."""
+    target = tmp_path / "diff.json"
     result = _run(
         [
             "diff",
             "--from",
             str(BASELINE),
             "--to",
-            str(MUTATIONS / "required-flag-added.json"),
+            str(MUTATIONS / case.mutation_file),
             "--format",
-            "human",
+            "json",
+            "--output",
+            str(target),
         ]
     )
-    assert result.returncode == 6  # EXIT_UNRESOLVED_BREAKING
-
-
-def test_diff_command_doc_only_exits_clean() -> None:
-    result = _run(
-        [
-            "diff",
-            "--from",
-            str(BASELINE),
-            "--to",
-            str(MUTATIONS / "help-text-changed.json"),
-            "--format",
-            "human",
-        ]
-    )
-    assert result.returncode == 0
+    payload = cast("dict[str, object]", json.loads(target.read_text()))
+    changes = cast("list[dict[str, object]]", payload["changes"])
+    severities = {c["severity"] for c in changes}
+    for s in case.must_contain:
+        assert s in severities
+    for s in case.must_not_contain:
+        assert s not in severities
+    if case.id == "help-text-changed":
+        assert severities
+        assert severities <= {"doc_only", "provenance_only"}
+    if case.unresolved_breaking is not None:
+        if case.unresolved_breaking is True:
+            assert result.returncode == 6
+        else:
+            assert result.returncode != 6
 
 
 def test_diff_command_emits_valid_json() -> None:

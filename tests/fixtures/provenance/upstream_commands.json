@@ -107,7 +107,7 @@
     "version",
     "workspace get",
     "workspace list",
-    "workspace members",
+    "workspace member list",
     "workspace switch",
     "workspace unwatch",
     "workspace watch"

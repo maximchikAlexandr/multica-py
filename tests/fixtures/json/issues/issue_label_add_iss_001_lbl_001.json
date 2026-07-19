@@ -1,0 +1,10 @@
+{
+  "stdout": [
+    {
+      "id": "lbl_001",
+      "name": "bug",
+      "color": "#ff0000"
+    }
+  ],
+  "exit_code": 0
+}

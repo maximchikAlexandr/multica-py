@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
+from multica_py._internal.wire_models import AutopilotListWire
 from multica_py.config import ClientConfig
+from multica_py.exceptions import OutputShapeError
 from multica_py.models.autopilots import Autopilot, AutopilotRun
 from multica_py.resources._base import BaseResource
 from multica_py.resources.autopilot_triggers import AutopilotTriggerResource
@@ -13,7 +16,15 @@ class AutopilotResource(BaseResource):
         self.triggers = AutopilotTriggerResource(transport, config)
 
     def list(self) -> tuple[Autopilot, ...]:
-        return self._run_json_decode_list(("autopilot", "list"), Autopilot)
+        result = self._transport.run_bytes(("autopilot", "list", "--output", "json"))
+        command = " ".join(result.argv)
+        try:
+            page = decode_json(result.stdout, AutopilotListWire, command=command)
+        except OutputShapeError:
+            items = decode_json(result.stdout, list[Autopilot], command=command)
+            return tuple(items)
+        else:
+            return page.autopilots
 
     def get(self, autopilot_id: str) -> Autopilot:
         return self._run_json_decode(("autopilot", "get", autopilot_id), Autopilot)

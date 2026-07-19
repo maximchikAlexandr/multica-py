@@ -20,7 +20,7 @@ def test_issue_get_decoding() -> None:
         / "fixtures"
         / "json"
         / "issues"
-        / "issue_get.json"
+        / "issue_get_iss_001.json"
     )
     with open(fixture_path, encoding="utf-8") as f:
         wrapped: IssueFixture = json.load(f)

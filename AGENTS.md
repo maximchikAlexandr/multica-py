@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/002-upstream-coverage-checks/plan.md`
+`specs/004-test-suite-optimization/plan.md`
 <!-- SPECKIT END -->
 
 ## Multica Upstream Contract Review Rules
@@ -81,6 +81,82 @@ uv run python scripts/upstream_contract.py upgrade --tag ... --version ... \
 Or `./scripts/upstream_upgrade.sh` with `TAG`, `COMMIT`, `RELEASE_ID`, `BINARY`,
 `ASSET_NAME`, `SHA256`, and `VERSION_OUTPUT` set. Verified collect/export paths:
 `tools/upstream-cli-contract/README.md` and `upstream_contract.py collect`.
+
+## Writing Tests
+
+These rules are binding for every new or changed test (established by feature
+004). The goal: growing coverage without growing test code. Reuse before you add;
+add data rows before you add functions; add functions before you add files.
+
+### Table-driven first
+
+- Express repeated "call → assert" and "decode → check" tests as
+  `@pytest.mark.parametrize` over a case table, not as many near-identical
+  functions. Adding coverage MUST be one new row, not a new test or file.
+- Case-table containers are `@dataclass(frozen=True)`. Reuse the existing types
+  and follow their layer:
+  - unit CLI argv: `ArgvCase` (+ `DecodeCase` for model decoding) in
+    `tests/unit/resources/`;
+  - offline integration (fake CLI): `FakeCliCase` in
+    `tests/integration/resources/`;
+  - contract-diff severity: `MutationSeverityCase` in `tests/unit/`/`tests/contract/`;
+  - live CRUD: `CrudDescriptor`; live non-CRUD command: `LiveOperation` in
+    `tests/live/`.
+- Keep genuinely distinct logic (rename heuristics, summary reconciliation,
+  destructive/diagnostic-bundle flows, `P-NULL-HTTP`) as separate tests — do NOT
+  force them into a table.
+
+### Reuse shared code, don't duplicate
+
+- Use the shared fixtures and factories (`make_target`, `make_settings`,
+  `mock_transport`, the fake-CLI client fixture, `DirectApiOracle`, `live_ctx`,
+  `register_resource`, `test_identity`). Do NOT re-copy `_target()`/`_settings()`
+  style local helpers into a test module.
+- Never mutate `os.environ` directly in integration tests; use the provided
+  fixture-scoped environment control (keeps the suite parallel-safe).
+
+### Assert precisely
+
+- Verify optional-flag presence/absence with a complete `expected_argv` value,
+  not partial `in`/`not in` checks. Match the transport method exactly
+  (`run_bytes` including `stdin`/`timeout`, `run_text`).
+- No tautological, dead, or duplicate tests. Do not add comments that narrate the
+  code.
+
+### Respect the completeness guards
+
+Coverage is enforced by manifest-driven guards. When you add or change a command,
+keep the matching guard green by adding real coverage — the allowlists are a
+temporary bridge, not a dumping ground:
+
+- unit argv: `KNOWN_ARGV_GAPS`;
+- offline integration: `KNOWN_FIXTURE_GAPS`;
+- live command execution: `KNOWN_LIVE_GAPS` (runnable, not-yet-automated; goal
+  empty) and `LIVE_EXEC_EXCEPTIONS` (permanently unrunnable, with a valid
+  `LiveExecReason` code).
+
+An allowlist entry MUST carry a short inline reason and MUST be removed the moment
+real coverage exists (the guards fail on stale entries). Prefer writing the
+`ArgvCase`/`FakeCliCase`/`LiveOperation`/`CrudDescriptor` over allowlisting.
+
+### Layers and markers
+
+- Default suite is offline: `uv run pytest -m "not live"` MUST stay green and MUST
+  need no backend/network. Unit, integration (fake CLI), and contract layers stay
+  offline.
+- Live tests are gated. Markers do NOT inherit in this repo: every
+  `tests/live/*` module sets a module-level `pytestmark` including base
+  `pytest.mark.live` plus a subtag — `live_smoke` (blocking compact suite; also the
+  home of the no-backend coverage guard) or `live_extended` (scheduled/manual full
+  execution). Verify with `uv run pytest -m "not live" --collect-only` that no
+  `tests/live/*` node is collected.
+
+### Tooling gates
+
+Both `uv run mypy src` and `uv run mypy tests` MUST pass; test helpers live under
+the typed `tests.*` mypy override — no `Any` leaks. Use only stdlib + pytest; do
+NOT add third-party test frameworks or UI-automation patterns (Screenplay, Page
+Object, pytest-bdd, hypothesis, snapshot libraries).
 
 ## Commit Messages
 

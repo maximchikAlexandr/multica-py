@@ -1,0 +1,8 @@
+{
+  "stdout": {
+    "id": "tr_001",
+    "type": "webhook",
+    "config": {}
+  },
+  "exit_code": 0
+}

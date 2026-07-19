@@ -97,7 +97,7 @@
       "source_file": "cmd_workspace.go"
     },
     {
-      "command": "workspace members",
+      "command": "workspace member list",
       "sdk_method": "workspaces.members",
       "output_mode": "json",
       "aliases": [],
@@ -313,7 +313,7 @@
     {
       "command": "issue subscriber add",
       "sdk_method": "issues.subscribers.add",
-      "output_mode": "json",
+      "output_mode": "text",
       "aliases": [],
       "source_file": "cmd_issue.go"
     },

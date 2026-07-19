@@ -106,7 +106,21 @@ class BootstrapApiClient:
             pat_value = str(token_payload["token"])
             pat = SecretString(pat_value)
             self._secrets.append(pat_value)
-            user_id = str(token_payload.get("user_id") or verify_payload.get("user_id") or "")
+            user_id = _user_id_from_payloads(token_payload, verify_payload)
+            if not user_id:
+                me_payload = self._get_json(
+                    client,
+                    "/api/me",
+                    auth=f"Bearer {jwt_value}",
+                    expected_statuses={200},
+                    stage="bootstrap",
+                )
+                user_id = _user_id_from_payloads(me_payload, allow_id=True)
+            if not user_id:
+                raise LiveSetupError(
+                    "bootstrap",
+                    "could not resolve user id from verify-code, token response, or /api/me",
+                )
             primary = self._create_workspace(client, jwt_value, suffix="a", label="Primary")
             secondary = self._create_workspace(client, jwt_value, suffix="b", label="Secondary")
         identity = TestIdentity(
@@ -141,6 +155,29 @@ class BootstrapApiClient:
             profile_name=self._profile_name,
         )
 
+    def _get_json(
+        self,
+        client: httpx.Client,
+        path: str,
+        *,
+        auth: str,
+        expected_statuses: set[int],
+        stage: str,
+    ) -> dict[str, object]:
+        response = client.get(path, headers={"Authorization": auth})
+        if response.status_code not in expected_statuses:
+            excerpt = _redacted_excerpt(response.text, self._secrets)
+            raise LiveSetupError(
+                stage,
+                f"{path} returned {response.status_code}: {excerpt}",
+            )
+        if not response.content:
+            return {}
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise LiveSetupError(stage, f"{path} returned non-object JSON")
+        return payload
+
     def _post_json(
         self,
         client: httpx.Client,
@@ -167,6 +204,23 @@ class BootstrapApiClient:
         if not isinstance(payload, dict):
             raise LiveSetupError(stage, f"{path} returned non-object JSON")
         return payload
+
+
+def _user_id_from_payloads(*payloads: dict[str, object], allow_id: bool = False) -> str:
+    for payload in payloads:
+        direct = payload.get("user_id")
+        if direct:
+            return str(direct)
+        if allow_id:
+            top_level_id = payload.get("id")
+            if top_level_id:
+                return str(top_level_id)
+        user = payload.get("user")
+        if isinstance(user, dict):
+            nested_id = user.get("id")
+            if nested_id:
+                return str(nested_id)
+    return ""
 
 
 def _redacted_excerpt(text: str, secrets: list[str]) -> str:

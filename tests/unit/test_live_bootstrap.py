@@ -7,6 +7,7 @@ import pytest
 
 from tests.live.bootstrap import BootstrapApiClient, SecretString, TestIdentity
 from tests.live.exceptions import LiveSetupError
+from tests.live.resource_registry import ResourceAbsentError, ResourceRegistry
 
 
 def test_secret_string_redacts_repr_and_str() -> None:
@@ -74,9 +75,72 @@ def test_bootstrap_sequence_and_status_handling(monkeypatch: pytest.MonkeyPatch)
         "/api/workspaces",
     ]
     assert calls[1][2] == {"email": client.email, "code": "888888"}
+    assert identity.user_id == "user-1"
     assert primary.id.startswith("ws-")
     assert secondary.id.startswith("ws-")
     assert "pat-secret" not in repr(identity)
+
+
+def test_bootstrap_resolves_user_id_from_nested_verify_user(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth/send-code":
+            return httpx.Response(200, json={"ok": True})
+        if request.url.path == "/auth/verify-code":
+            return httpx.Response(
+                200,
+                json={"token": "jwt-secret", "user": {"id": "user-nested", "email": "a@b.c"}},
+            )
+        if request.url.path == "/api/tokens":
+            return httpx.Response(201, json={"token": "pat-secret", "id": "pat-1"})
+        if request.url.path == "/api/workspaces":
+            payload = json.loads(request.content.decode())
+            return httpx.Response(
+                201,
+                json={
+                    "id": f"ws-{payload['slug']}",
+                    "name": payload["name"],
+                    "slug": payload["slug"],
+                },
+            )
+        raise AssertionError(request.url.path)
+
+    _install_transport(monkeypatch, httpx.MockTransport(handler))
+    client = BootstrapApiClient("http://127.0.0.1:8080", "run123", [])
+    identity, _, _ = client.bootstrap()
+    assert identity.user_id == "user-nested"
+
+
+def test_bootstrap_resolves_user_id_from_api_me_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth/send-code":
+            return httpx.Response(200, json={"ok": True})
+        if request.url.path == "/auth/verify-code":
+            return httpx.Response(200, json={"token": "jwt-secret"})
+        if request.url.path == "/api/tokens":
+            return httpx.Response(201, json={"token": "pat-secret", "id": "pat-1"})
+        if request.url.path == "/api/me":
+            assert request.headers.get("Authorization") == "Bearer jwt-secret"
+            return httpx.Response(200, json={"id": "user-from-me", "email": "a@b.c"})
+        if request.url.path == "/api/workspaces":
+            payload = json.loads(request.content.decode())
+            return httpx.Response(
+                201,
+                json={
+                    "id": f"ws-{payload['slug']}",
+                    "name": payload["name"],
+                    "slug": payload["slug"],
+                },
+            )
+        raise AssertionError(request.url.path)
+
+    _install_transport(monkeypatch, httpx.MockTransport(handler))
+    client = BootstrapApiClient("http://127.0.0.1:8080", "run123", [])
+    identity, _, _ = client.bootstrap()
+    assert identity.user_id == "user-from-me"
 
 
 def test_bootstrap_failure_redacts_secrets_in_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -94,6 +158,35 @@ def test_bootstrap_failure_redacts_secrets_in_error(monkeypatch: pytest.MonkeyPa
     with pytest.raises(LiveSetupError) as exc:
         client.bootstrap()
     assert "jwt-secret" not in str(exc.value)
+
+
+def test_cleanup_runs_in_reverse_registration_order() -> None:
+    order: list[str] = []
+    registry = ResourceRegistry()
+    registry.defer(key="project", cleanup=lambda: order.append("project"))
+    registry.defer(key="issue", cleanup=lambda: order.append("issue"))
+    registry.cleanup_all()
+    assert order == ["issue", "project"]
+
+
+def test_already_absent_is_tolerated() -> None:
+    registry = ResourceRegistry()
+    registry.defer(
+        key="label",
+        cleanup=lambda: (_ for _ in ()).throw(ResourceAbsentError()),
+    )
+    assert registry.cleanup_all() == []
+
+
+def test_partial_failure_is_recorded() -> None:
+    registry = ResourceRegistry()
+    registry.defer(
+        key="a",
+        cleanup=lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    failures = registry.cleanup_all()
+    assert len(failures) == 1
+    assert failures[0]["key"] == "a"
 
 
 def test_bootstrap_uses_jwt_not_pat_for_workspace_create(monkeypatch: pytest.MonkeyPatch) -> None:

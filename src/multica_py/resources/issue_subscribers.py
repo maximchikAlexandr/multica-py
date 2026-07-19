@@ -13,10 +13,8 @@ class IssueSubscriberResource(BaseResource):
     def list(self, issue_id: str) -> tuple[Subscriber, ...]:
         return self._run_json_decode_list(("issue", "subscriber", "list", issue_id), Subscriber)
 
-    def add(self, issue_id: str, user_id: str) -> Subscriber:
-        return self._run_json_decode(
-            ("issue", "subscriber", "add", issue_id, "--user-id", user_id), Subscriber
-        )
+    def add(self, issue_id: str, user_id: str) -> None:
+        self._transport.run_text(("issue", "subscriber", "add", issue_id, "--user-id", user_id))
 
     def remove(self, issue_id: str, user_id: str) -> None:
         self._transport.run_text(("issue", "subscriber", "remove", issue_id, "--user-id", user_id))

@@ -5,7 +5,7 @@ import datetime
 import msgspec
 
 from multica_py.enums import IssueStatus, ProjectStatus
-from multica_py.models.autopilots import AutopilotTrigger, TriggerConfigItem
+from multica_py.models.autopilots import Autopilot, AutopilotTrigger, TriggerConfigItem
 from multica_py.models.issue_activity import Comment, CommentThread
 from multica_py.models.issues import (
     Issue,
@@ -138,3 +138,8 @@ def comment_thread_from_wire(wire: CommentThreadWire) -> CommentThread:
         resolved=wire.resolved,
         updated_at=wire.updated_at,
     )
+
+
+class AutopilotListWire(msgspec.Struct, frozen=True, kw_only=True):
+    autopilots: tuple[Autopilot, ...] = ()
+    total: int = 0

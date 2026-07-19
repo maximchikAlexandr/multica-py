@@ -12,7 +12,10 @@ class WorkspaceResource(BaseResource):
         return self._run_json_decode(("workspace", "get", workspace_id), Workspace)
 
     def members(self, workspace_id: str) -> tuple[WorkspaceMember, ...]:
-        return self._run_json_decode_list(("workspace", "members", workspace_id), WorkspaceMember)
+        return self._run_json_decode_list(
+            ("workspace", "member", "list", workspace_id),
+            WorkspaceMember,
+        )
 
     def switch(self, workspace_id: str) -> None:
         self._transport.run_text(("workspace", "switch", workspace_id))
