@@ -27,6 +27,6 @@ def create_bug_issue(title: str, description: str):
     request = IssueCreateRequest(
         title=title,
         description_input=InlineDescription(text=description),
-        label=("bug",),
+        label_ids=("00000000-0000-4000-8000-000000000001",),
     )
     return client.issues.create(request)

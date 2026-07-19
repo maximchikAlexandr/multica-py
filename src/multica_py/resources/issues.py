@@ -3,7 +3,12 @@ from __future__ import annotations
 import pathlib
 
 from multica_py._internal.transport import CliTransport
-from multica_py._internal.wire_models import IssueWire, issue_from_wire
+from multica_py._internal.wire_models import (
+    IssueListPageWire,
+    IssueWire,
+    issue_from_wire,
+    issue_summary_from_wire,
+)
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
 from multica_py.models.issue_activity import IssueUsage, RunMessage, TaskRun
@@ -45,13 +50,12 @@ class IssueResource(BaseResource):
                 args.extend(["--priority", filter.priority])
             if filter.assignee_id is not None:
                 args.extend(["--assignee-id", filter.assignee_id])
-            if filter.label is not None:
-                args.extend(["--label", filter.label])
-            if filter.cursor is not None:
-                args.extend(["--cursor", filter.cursor])
             if filter.limit is not None:
                 args.extend(["--limit", str(filter.limit)])
-        return self._run_json_decode_list(tuple(args), IssueSummary)
+        return tuple(
+            issue_summary_from_wire(item)
+            for item in self._run_json_decode(tuple(args), IssueListPageWire).issues
+        )
 
     def get(self, issue_id: str) -> Issue:
         return issue_from_wire(self._run_json_decode(("issue", "get", issue_id), IssueWire))
@@ -64,6 +68,12 @@ class IssueResource(BaseResource):
         return self._run_json_decode_list(("issue", "children", issue_id), IssueChildStageGroup)
 
     def create(self, request: IssueCreateRequest) -> Issue:
+        """Create an issue and optionally attach labels.
+
+        Creates the issue first, then attaches each ``label_ids`` entry via
+        separate ``issue label add`` calls. A failure mid-loop can leave a
+        partially labeled issue.
+        """
         args = ["issue", "create", "--title", request.title]
         desc = request.description_input
         if isinstance(desc, InlineDescription):
@@ -76,9 +86,12 @@ class IssueResource(BaseResource):
             args.extend(["--priority", request.priority])
         if request.assignee_id is not None:
             args.extend(["--assignee-id", request.assignee_id])
-        for label in request.label:
-            args.extend(["--label", label])
-        return issue_from_wire(self._run_json_decode(tuple(args), IssueWire))
+        issue = issue_from_wire(self._run_json_decode(tuple(args), IssueWire))
+        for label_id in request.label_ids:
+            self.labels.add(issue.id, label_id)
+        if request.label_ids:
+            return self.get(issue.id)
+        return issue
 
     def update(self, issue_id: str, request: IssueUpdateRequest) -> Issue:
         args = ["issue", "update", issue_id]
@@ -106,9 +119,7 @@ class IssueResource(BaseResource):
 
     def set_status(self, issue_id: str, status: IssueStatus) -> Issue:
         return issue_from_wire(
-            self._run_json_decode(
-                ("issue", "set-status", issue_id, "--status", status.value), IssueWire
-            )
+            self._run_json_decode(("issue", "status", issue_id, status.value), IssueWire)
         )
 
     def deprioritize(self, issue_id: str) -> str:

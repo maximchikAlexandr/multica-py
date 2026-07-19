@@ -104,7 +104,9 @@ def write_bundle(
     try:
         _write_bundle_contents(staging, bundle, candidate_contract)
         if output_dir.exists():
-            previous = pathlib.Path(tempfile.mkdtemp(prefix=f"{output_dir.name}.prev.", dir=str(parent)))
+            previous = pathlib.Path(
+                tempfile.mkdtemp(prefix=f"{output_dir.name}.prev.", dir=str(parent))
+            )
             os.replace(output_dir, previous)
             try:
                 os.replace(staging, output_dir)

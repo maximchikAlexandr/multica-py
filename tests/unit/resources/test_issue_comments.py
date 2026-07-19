@@ -10,11 +10,9 @@ from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models.common import Page
 from multica_py.models.issue_activity import (
-    Comment,
     CommentListFlatRequest,
     CommentListRecentRequest,
     CommentListThreadRequest,
-    CommentThread,
 )
 from multica_py.resources.issue_comments import IssueCommentResource
 
@@ -24,9 +22,9 @@ def _transport() -> MagicMock:
 
 
 class TestIssueCommentResource:
-    def test_list_flat_includes_cursor_limit_and_since(self) -> None:
+    def test_list_flat_includes_before_limit_and_since(self) -> None:
         transport = _transport()
-        payload = msgspec.json.encode([Comment(id="c1", body="hello")]).decode("utf-8")
+        payload = msgspec.json.encode([{"id": "c1", "content": "hello"}]).decode("utf-8")
         transport.run_text.return_value = TextResult(
             text=payload,
             stderr="next_cursor: cur_2",
@@ -50,7 +48,7 @@ class TestIssueCommentResource:
             "comment",
             "list",
             "iss_1",
-            "--cursor",
+            "--before",
             "cur_1",
             "--limit",
             "50",
@@ -62,12 +60,13 @@ class TestIssueCommentResource:
         assert isinstance(result, Page)
         assert result.next_cursor == "cur_2"
         assert result.items[0].id == "c1"
+        assert result.items[0].body == "hello"
 
-    def test_list_thread_includes_thread_id(self) -> None:
+    def test_list_thread_includes_thread_flag(self) -> None:
         transport = _transport()
-        payload = msgspec.json.encode([Comment(id="c1", body="reply", thread_id="th_1")]).decode(
-            "utf-8"
-        )
+        payload = msgspec.json.encode(
+            [{"id": "c1", "content": "reply", "parent_id": "th_1"}]
+        ).decode("utf-8")
         transport.run_text.return_value = TextResult(text=payload, stderr="", exit_code=0)
         resource = IssueCommentResource(transport, ClientConfig())
 
@@ -76,19 +75,21 @@ class TestIssueCommentResource:
         )
 
         args = transport.run_text.call_args[0][0]
-        assert "--thread-id" in args
-        assert args[args.index("--thread-id") + 1] == "th_1"
+        assert "--thread" in args
+        assert args[args.index("--thread") + 1] == "th_1"
+        assert "--tail" in args
+        assert args[args.index("--tail") + 1] == "10"
         assert result.items[0].thread_id == "th_1"
 
     def test_list_recent_returns_thread_page(self) -> None:
         transport = _transport()
         payload = msgspec.json.encode(
             [
-                CommentThread(
-                    id="th_1",
-                    comments=(Comment(id="c1", body="root"),),
-                    resolved=False,
-                )
+                {
+                    "id": "th_1",
+                    "comments": [{"id": "c1", "content": "root comment"}],
+                    "resolved": False,
+                }
             ]
         ).decode("utf-8")
         transport.run_text.return_value = TextResult(
@@ -100,5 +101,18 @@ class TestIssueCommentResource:
 
         args = transport.run_text.call_args[0][0]
         assert "--recent" in args
+        assert args[args.index("--recent") + 1] == "5"
         assert result.next_cursor == "next_1"
         assert result.items[0].id == "th_1"
+        assert len(result.items[0].comments) == 1
+        assert result.items[0].comments[0].body == "root comment"
+
+    def test_list_recent_uses_default_limit(self) -> None:
+        transport = _transport()
+        transport.run_text.return_value = TextResult(text="[]", stderr="", exit_code=0)
+        resource = IssueCommentResource(transport, ClientConfig())
+
+        resource.list_recent(CommentListRecentRequest(issue_id="iss_1"))
+
+        args = transport.run_text.call_args[0][0]
+        assert args[args.index("--recent") + 1] == "10"

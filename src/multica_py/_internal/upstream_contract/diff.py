@@ -85,7 +85,9 @@ def _apply_rename_heuristics(
     before_cmds: dict[tuple[str, ...], CommandContract],
     after_cmds: dict[tuple[str, ...], CommandContract],
 ) -> list[DiffEntry]:
-    removed_indices = [idx for idx, change in enumerate(changes) if change.kind == "command_removed"]
+    removed_indices = [
+        idx for idx, change in enumerate(changes) if change.kind == "command_removed"
+    ]
     added_indices = [idx for idx, change in enumerate(changes) if change.kind == "command_added"]
     if not removed_indices or not added_indices:
         return changes

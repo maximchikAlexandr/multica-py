@@ -115,8 +115,10 @@ def orchestrate_collect(
                 except CollectorError as help_exc:
                     errors.append(help_exc)
     if contract is None:
-        raise errors[-1] if errors else CollectorError(
-            "COLLECTOR_INCOMPLETE", "no collection method succeeded"
+        raise (
+            errors[-1]
+            if errors
+            else CollectorError("COLLECTOR_INCOMPLETE", "no collection method succeeded")
         )
     if contract.artifact.collection_method != "help-parser" and not local_manual:
         cross_check_exporter_help(

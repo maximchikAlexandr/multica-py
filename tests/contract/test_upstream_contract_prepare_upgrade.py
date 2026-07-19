@@ -6,12 +6,12 @@ import pathlib
 import shutil
 import subprocess
 import sys
-
-ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-SRC = ROOT / "src"
+from typing import cast
 
 from multica_py._internal.upstream_contract.paths import COVERAGE_PATH, SUPPORTED_CONTRACT_PATH
 
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+SRC = ROOT / "src"
 FIXTURES = pathlib.Path(__file__).parent.parent / "fixtures" / "upstream_contract" / "golden"
 
 
@@ -181,8 +181,17 @@ def test_apply_manifest_suggestions_keeps_rows_incomplete(tmp_path: pathlib.Path
         repo_root=fake_root,
     )
     assert result.returncode in (0, 2, 6)
-    coverage = json.loads(
-        (fake_root / "src" / "multica_py" / "_generated" / "upstream_coverage.json").read_text()
+    coverage = cast(
+        "dict[str, object]",
+        json.loads(
+            (fake_root / "src" / "multica_py" / "_generated" / "upstream_coverage.json").read_text()
+        ),
     )
-    incomplete = [d for d in coverage["decisions"] if d["coverage_level"] == "incomplete"]
+    decisions = coverage.get("decisions")
+    assert isinstance(decisions, list)
+    incomplete = [
+        item
+        for item in decisions
+        if isinstance(item, dict) and str(item.get("coverage_level")) == "incomplete"
+    ]
     assert incomplete

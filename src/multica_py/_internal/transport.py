@@ -15,10 +15,14 @@ from multica_py._internal.redaction import collect_secret_values, redact_argv, r
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py.config import ClientConfig
 from multica_py.exceptions import (
+    AuthenticationError,
     CommandExecutionError,
     CommandTimeoutError,
     ExecutableNotFoundError,
     ExecutableNotRunnableError,
+    NetworkError,
+    NotFoundError,
+    ValidationError,
 )
 from multica_py.process import ManagedProcess
 
@@ -28,6 +32,15 @@ class CliTransport:
         self._config = config
         self._semaphore = semaphore
         self._version_checked = False
+
+    def __enter__(self) -> CliTransport:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        """Release transport-owned resources after subprocess calls."""
 
     def _build_full_argv(self, command_args: tuple[str, ...]) -> tuple[str, ...]:
         executable = str(self._config.executable)
@@ -83,7 +96,6 @@ class CliTransport:
         redacted_argv = redact_argv(argv)
         secret_values = collect_secret_values(argv)
         cwd = str(self._config.cwd) if self._config.cwd else None
-        # ponytail: full parent env inherited so the multica binary can resolve PATH/HOME/etc.; callers override via ClientConfig.environment
         env = dict(os.environ)
         env.update(dict(self._config.environment))
         effective_timeout = timeout if timeout is not None else self._config.timeout
@@ -134,23 +146,33 @@ class CliTransport:
     ) -> RawCommandResult:
         result = self._execute(command_args, stdin=stdin, timeout=timeout)
         if result.exit_code != 0:
-            command = " ".join(result.argv)
-            stdout_text = redact_text(
-                decode_text(result.stdout, command=command),
-                secret_values=result.secret_values,
-            )
-            stderr_text = redact_text(
-                decode_text(result.stderr, command=command),
-                secret_values=result.secret_values,
-            )
-            raise CommandExecutionError(
-                f"Command failed with exit code {result.exit_code} [command: {command}]",
-                exit_code=result.exit_code,
-                stdout=stdout_text,
-                stderr=stderr_text,
-                argv=result.argv,
-            )
+            self._raise_command_error(result)
         return result
+
+    def _raise_command_error(self, result: RawCommandResult) -> None:
+        command = " ".join(result.argv)
+        stdout_text = redact_text(
+            decode_text(result.stdout, command=command),
+            secret_values=result.secret_values,
+        )
+        stderr_text = redact_text(
+            decode_text(result.stderr, command=command),
+            secret_values=result.secret_values,
+        )
+        message = f"Command failed with exit code {result.exit_code} [command: {command}]"
+        exc_class = {
+            2: NetworkError,
+            3: AuthenticationError,
+            4: NotFoundError,
+            5: ValidationError,
+        }.get(result.exit_code, CommandExecutionError)
+        raise exc_class(
+            message,
+            exit_code=result.exit_code,
+            stdout=stdout_text,
+            stderr=stderr_text,
+            argv=result.argv,
+        )
 
     def spawn(
         self,
@@ -159,7 +181,6 @@ class CliTransport:
         self._check_compat()
         argv = self._build_full_argv(command_args)
         cwd = str(self._config.cwd) if self._config.cwd else None
-        # ponytail: full parent env inherited so the multica binary can resolve PATH/HOME/etc.; callers override via ClientConfig.environment
         env = dict(os.environ)
         env.update(dict(self._config.environment))
 

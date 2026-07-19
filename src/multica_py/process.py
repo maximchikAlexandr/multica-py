@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import contextlib
 import datetime
 import subprocess
 from collections.abc import Iterator
 from typing import BinaryIO, cast
 
 from multica_py._internal.concurrency import ProcessSemaphore
-from multica_py._internal.processes import kill_process, terminate_process
+from multica_py._internal.processes import close_process_pipes, kill_process, terminate_process
 
 
 def _stdin_pipe(process: subprocess.Popen[bytes]) -> BinaryIO | None:
@@ -39,13 +38,7 @@ class ManagedProcess:
         if self._closed:
             return
         self._closed = True
-        stdout_pipe = _stdout_pipe(self._process)
-        stderr_pipe = _stderr_pipe(self._process)
-        stdin_pipe = _stdin_pipe(self._process)
-        for pipe in (stdout_pipe, stderr_pipe, stdin_pipe):
-            if pipe is not None:
-                with contextlib.suppress(OSError):
-                    pipe.close()
+        close_process_pipes(self._process)
         if self._semaphore is not None:
             self._semaphore.release()
 

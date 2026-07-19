@@ -5,12 +5,12 @@ import json
 import pathlib
 import subprocess
 import sys
-
-ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-SCRIPT = ROOT / "scripts" / "upstream_contract.py"
+from typing import cast
 
 from multica_py._internal.upstream_contract.paths import SUPPORTED_CONTRACT_PATH
 
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+SCRIPT = ROOT / "scripts" / "upstream_contract.py"
 FIXTURES = ROOT / "tests" / "fixtures" / "upstream_contract" / "golden"
 
 
@@ -80,7 +80,8 @@ def test_quickstart_collect(tmp_path: pathlib.Path) -> None:
         ]
     )
     assert result.returncode == 0
-    assert json.loads(out.read_text())["schema_version"] == 2
+    payload = cast("dict[str, object]", json.loads(out.read_text()))
+    assert payload["schema_version"] == 2
 
 
 def test_quickstart_diff(tmp_path: pathlib.Path) -> None:

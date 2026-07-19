@@ -725,7 +725,10 @@
           "until": null
         }
       ],
-      "raw_argv_policy": "Sequence[str]"
+      "raw_argv_policy": "Sequence[str]",
+      "shares_implementation_with": [
+        "issues.comments.add"
+      ]
     },
     {
       "operation_id": "issues.comments.resolve",

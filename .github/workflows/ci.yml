@@ -78,6 +78,113 @@ jobs:
       - run: uv build
       - run: uv run python -c "import importlib.metadata; print(importlib.metadata.version('multica-py'))"
 
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    concurrency:
+      group: live-smoke-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --all-groups
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          repository: multica-ai/multica
+          ref: 4416313f8f7f801df8b7f5072087da8a6502a89c
+          path: multica-upstream
+      - name: Pull digest-pinned backend image
+        run: |
+          docker pull ghcr.io/multica-ai/multica-backend@sha256:d8a50acac1eb674093b0e9de4afc656328ac6b37fc641f1fb4b256547f1ffe3b
+      - name: Resolve Multica CLI
+        run: |
+          CLI_PATH="$(uv run python -c "from pathlib import Path; from scripts.resolve_multica_target import resolve_target; print(resolve_target(Path('contracts/multica-live-target.toml'), None).cli_executable)")"
+          RUN_ID="live-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "MULTICA_LIVE_CLI=$CLI_PATH" >> "$GITHUB_ENV"
+          echo "MULTICA_LIVE_RESOLVE_CLI=1" >> "$GITHUB_ENV"
+          echo "MULTICA_LIVE_UPSTREAM_DIR=$GITHUB_WORKSPACE/multica-upstream" >> "$GITHUB_ENV"
+          echo "MULTICA_LIVE_ARTIFACT_DIR=$RUNNER_TEMP/multica-live-artifacts" >> "$GITHUB_ENV"
+          echo "MULTICA_LIVE_SECRETS_DIR=$RUNNER_TEMP/multica-live-secrets" >> "$GITHUB_ENV"
+          echo "MULTICA_LIVE_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+          echo "MULTICA_LIVE_JUNIT_PATH=$RUNNER_TEMP/multica-live-artifacts/$RUN_ID/junit.xml" >> "$GITHUB_ENV"
+      - name: Run live smoke tests
+        id: live_smoke
+        run: |
+          START_TIME=$(date +%s)
+          mkdir -p "$(dirname "$MULTICA_LIVE_JUNIT_PATH")"
+          uv run pytest -m live_smoke tests/live --junitxml="$MULTICA_LIVE_JUNIT_PATH" -q
+          END_TIME=$(date +%s)
+          echo "start_time=$START_TIME" >> "$GITHUB_OUTPUT"
+          echo "end_time=$END_TIME" >> "$GITHUB_OUTPUT"
+          echo "total_seconds=$((END_TIME - START_TIME))" >> "$GITHUB_OUTPUT"
+      - name: Assert SC-003 budgets
+        if: always() && steps.live_smoke.outputs.total_seconds != ''
+        run: |
+          TOTAL="${{ steps.live_smoke.outputs.total_seconds }}"
+          echo "Live smoke total wall time: ${TOTAL}s (SC-003 budget: 300s)"
+          echo "## SC-003 timing" >> "$GITHUB_STEP_SUMMARY"
+          echo "- total wall: ${TOTAL}s (budget 300s)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$TOTAL" -gt 300 ]; then
+            echo "SC-003 total wall budget exceeded"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import sys
+
+          root = pathlib.Path(os.environ["MULTICA_LIVE_ARTIFACT_DIR"])
+          runs = sorted(root.glob("*/run.json")) if root.is_dir() else []
+          if not runs:
+              print("SC-003 sub-budgets: run.json missing; cannot verify env/test splits", file=sys.stderr)
+              sys.exit(1)
+          payload = json.loads(runs[-1].read_text(encoding="utf-8"))
+          env_ready = payload.get("environment_ready_seconds")
+          test_phase = payload.get("test_phase_seconds")
+          print(f"environment_ready_seconds={env_ready} (budget 180)")
+          print(f"test_phase_seconds={test_phase} (budget 120)")
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as summary:
+                  summary.write(f"- env startup: {env_ready}s (budget 180s)\n")
+                  summary.write(f"- test phase: {test_phase}s (budget 120s)\n")
+          failures = []
+          if not isinstance(env_ready, (int, float)):
+              failures.append("environment_ready_seconds missing")
+          elif float(env_ready) > 180:
+              failures.append(f"env startup {env_ready}s exceeds 180s")
+          if not isinstance(test_phase, (int, float)):
+              failures.append("test_phase_seconds missing")
+          elif float(test_phase) > 120:
+              failures.append(f"test phase {test_phase}s exceeds 120s")
+          if failures:
+              print("; ".join(failures), file=sys.stderr)
+              sys.exit(1)
+          PY
+      - name: Scan diagnostic artifacts for secrets
+        id: scan_live_artifacts
+        if: always() && env.MULTICA_LIVE_ARTIFACT_DIR != ''
+        run: uv run python -m scripts.scan_live_artifacts "$MULTICA_LIVE_ARTIFACT_DIR"
+      - name: Upload live diagnostics
+        if: failure() && steps.scan_live_artifacts.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoke-diagnostics
+          path: ${{ env.MULTICA_LIVE_ARTIFACT_DIR }}/
+          retention-days: 7
+      - name: Upload live JUnit
+        if: failure() && steps.scan_live_artifacts.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoke-junit
+          path: ${{ env.MULTICA_LIVE_JUNIT_PATH }}
+          retention-days: 7
+
   audit-source:
     runs-on: ubuntu-latest
     permissions:

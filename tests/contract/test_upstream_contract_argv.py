@@ -5,6 +5,7 @@ import pathlib
 import subprocess
 import sys
 from collections.abc import Sequence
+from typing import cast
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 FAKE_BINARY = ROOT / "tests" / "fixtures" / "fake_multica.py"
@@ -32,8 +33,8 @@ def test_argv_contract_simple_invocation() -> None:
     assert result.returncode == 0
     lines = record.read_text().strip().splitlines()
     assert lines, "expected at least one invocation"
-    inv = json.loads(lines[0])
-    assert inv["argv"] == [str(FAKE_BINARY), "auth", "status"]
+    inv = cast("dict[str, object]", json.loads(lines[0]))
+    assert inv.get("argv") == [str(FAKE_BINARY), "auth", "status"]
     record.unlink()
 
 
@@ -44,8 +45,9 @@ def test_argv_contract_does_not_interpolate_shell() -> None:
         ["auth", "login", "; rm -rf /tmp/x"],
         env={"MULTICA_FAKE_RECORD": str(record)},
     )
-    inv = json.loads(record.read_text().strip())
-    assert inv["argv"][-1] == "; rm -rf /tmp/x"
+    inv = cast("dict[str, object]", json.loads(record.read_text().strip()))
+    argv = cast("list[str]", inv.get("argv"))
+    assert argv[-1] == "; rm -rf /tmp/x"
     record.unlink()
 
 
@@ -59,6 +61,7 @@ def test_argv_record_uses_sequence_not_str() -> None:
         check=False,
         env={"MULTICA_FAKE_RECORD": str(record)},
     )
-    inv = json.loads(record.read_text().strip())
-    assert inv["argv"][-2:] == ["--status", "open"]
+    inv = cast("dict[str, object]", json.loads(record.read_text().strip()))
+    argv = cast("list[str]", inv.get("argv"))
+    assert argv[-2:] == ["--status", "open"]
     record.unlink()

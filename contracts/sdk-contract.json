@@ -1,4 +1,237 @@
 {
   "schema_version": 1,
-  "operations": []
+  "operations": [
+    {
+      "operation_id": "issues.set_status",
+      "binding_command_path": [
+        "issue",
+        "set-status"
+      ],
+      "python_parameter": "status",
+      "cli_argument": "<status>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [
+        "backlog",
+        "todo",
+        "in_progress",
+        "in_review",
+        "done",
+        "blocked",
+        "cancelled"
+      ],
+      "constraints": [],
+      "test_refs": [
+        "tests/integration/resources/test_issues.py"
+      ]
+    },
+    {
+      "operation_id": "projects.set_status",
+      "binding_command_path": [
+        "project",
+        "set-status"
+      ],
+      "python_parameter": "status",
+      "cli_argument": "<status>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [
+        "planned",
+        "in_progress",
+        "paused",
+        "completed",
+        "cancelled"
+      ],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_projects.py"
+      ]
+    },
+    {
+      "operation_id": "issues.comments.add",
+      "binding_command_path": [
+        "issue",
+        "comment",
+        "add"
+      ],
+      "python_parameter": "body",
+      "cli_argument": "--content",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_issue_comments.py"
+      ]
+    },
+    {
+      "operation_id": "issues.comments.delete",
+      "binding_command_path": [
+        "issue",
+        "comment",
+        "delete"
+      ],
+      "python_parameter": "comment_id",
+      "cli_argument": "<comment_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_issue_comments.py"
+      ]
+    },
+    {
+      "operation_id": "issues.comments.list",
+      "binding_command_path": [
+        "issue",
+        "comment",
+        "list"
+      ],
+      "python_parameter": "issue_id",
+      "cli_argument": "<issue_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_issue_comments.py"
+      ]
+    },
+    {
+      "operation_id": "issues.labels.add",
+      "binding_command_path": [
+        "issue",
+        "label",
+        "add"
+      ],
+      "python_parameter": "label_id",
+      "cli_argument": "<label_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_issue_labels.py"
+      ]
+    },
+    {
+      "operation_id": "issues.labels.remove",
+      "binding_command_path": [
+        "issue",
+        "label",
+        "remove"
+      ],
+      "python_parameter": "label_id",
+      "cli_argument": "<label_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_issue_labels.py"
+      ]
+    },
+    {
+      "operation_id": "issues.labels.list",
+      "binding_command_path": [
+        "issue",
+        "label",
+        "list"
+      ],
+      "python_parameter": "issue_id",
+      "cli_argument": "<issue_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_issue_labels.py"
+      ]
+    },
+    {
+      "operation_id": "projects.create",
+      "binding_command_path": [
+        "project",
+        "create"
+      ],
+      "python_parameter": "name",
+      "cli_argument": "--title",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_projects.py"
+      ]
+    },
+    {
+      "operation_id": "projects.update",
+      "binding_command_path": [
+        "project",
+        "update"
+      ],
+      "python_parameter": "name",
+      "cli_argument": "--title",
+      "required": false,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_projects.py"
+      ]
+    },
+    {
+      "operation_id": "issues.create",
+      "binding_command_path": [
+        "issue",
+        "create"
+      ],
+      "python_parameter": "title",
+      "cli_argument": "--title",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_issue_labels.py"
+      ]
+    },
+    {
+      "operation_id": "issues.list",
+      "binding_command_path": [
+        "issue",
+        "list"
+      ],
+      "python_parameter": "filter.status",
+      "cli_argument": "--status",
+      "required": false,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [
+        "backlog",
+        "todo",
+        "in_progress",
+        "in_review",
+        "done",
+        "blocked",
+        "cancelled"
+      ],
+      "constraints": [],
+      "test_refs": [
+        "tests/contract/test_full_cli_coverage.py"
+      ]
+    }
+  ]
 }

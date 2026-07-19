@@ -64,7 +64,7 @@ are never generator input.
 | daemon | status, start, stop, restart, logs, disk-usage | ✅ |
 | workspaces | list, get, members, switch, watch, unwatch | ✅ |
 | issues | list, get, pull-requests, children, create, update, assign, set-status, reorder, search, runs, run-messages, usage, rerun, cancel-task | ✅ |
-| issues.comments | list, add, reply, delete, resolve, unresolve | ✅ |
+| issues.comments | list, add, delete, resolve, unresolve | ✅ (`reply` maps to `add --parent`) |
 | issues.metadata | list, get, set, delete | ✅ |
 | issues.subscribers | list, add, remove | ✅ |
 | issues.labels | list, add, remove | ✅ |

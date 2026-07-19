@@ -96,6 +96,26 @@ uv build
 
 `uv.lock` is the integrity gate — it pins exact versions and SHA-256 hashes. Use `uv sync --frozen` for verified reproducible installs.
 
+### Live integration tests
+
+Live tests exercise the SDK against a real Multica CLI and an isolated backend. Default
+`uv run pytest` excludes them via `-m "not live"`.
+
+Prerequisites: Docker, a Multica checkout at the pinned commit, and the matching CLI binary.
+See [tests/live/README.md](tests/live/README.md) for environment variables and safety rules.
+
+```bash
+export MULTICA_LIVE_UPSTREAM_DIR=/absolute/path/to/multica
+uv run python scripts/run_live_tests.py --resolve-cli
+```
+
+Blocking PR smoke (CI): `pytest -m live_smoke tests/live`. Extended compatibility tests use
+`-m "live_smoke or live_extended"` and run on a separate schedule (post-MVP).
+
+Compatibility target updates require editing `contracts/multica-live-target.toml`, running
+contract checks, extended smoke, and digest verification — see
+[tests/live/README.md](tests/live/README.md).
+
 ## License
 
 MIT

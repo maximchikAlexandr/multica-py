@@ -19,6 +19,7 @@ from multica_py._internal.upstream_contract.models import (
     UpstreamState,
 )
 from multica_py._internal.upstream_contract.normalize import semantic_hash
+from multica_py._internal.upstream_contract.paths import SUPPORTED_CONTRACT_REL
 
 _COMMIT = "abc1234567890abcdef1234567890abcdef12345"
 
@@ -71,7 +72,7 @@ def test_apply_promotion_replaces_supported() -> None:
     )
     assert new_state.supported is not None
     assert new_state.supported.version == "0.4.3"
-    assert new_state.supported.contract_ref == promotion_module.SUPPORTED_CONTRACT_REL
+    assert new_state.supported.contract_ref == SUPPORTED_CONTRACT_REL
     assert new_state.candidate is None
 
 

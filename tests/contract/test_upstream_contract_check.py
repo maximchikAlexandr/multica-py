@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import cast
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "upstream_contract.py"
@@ -57,7 +58,7 @@ def test_check_check_with_output_writes_report(tmp_path: pathlib.Path) -> None:
         ]
     )
     assert result.returncode == 0
-    data = json.loads(target.read_text())
+    data = cast("dict[str, object]", json.loads(target.read_text()))
     assert data["status"] == "clean"
 
 
@@ -74,7 +75,7 @@ def test_check_json_output_writes_file() -> None:
             ]
         )
         assert result.returncode == 0
-        data = json.loads(target.read_text())
+        data = cast("dict[str, object]", json.loads(target.read_text()))
         assert data["status"] == "clean"
         assert "coverage" in data
         assert "supported" in data
@@ -123,7 +124,7 @@ def test_check_with_candidate_missing_file_exits_three() -> None:
     state_path = ROOT / "src" / "multica_py" / "_generated" / "upstream_state.json"
     original = state_path.read_text(encoding="utf-8")
     try:
-        state = json.loads(original)
+        state = cast("dict[str, object]", json.loads(original))
         state["candidate"] = {
             "version": "0.4.3",
             "tag": "v0.4.3",
@@ -143,7 +144,7 @@ def test_check_clean_when_candidate_present_without_with_candidate() -> None:
     state_path = ROOT / "src" / "multica_py" / "_generated" / "upstream_state.json"
     original = state_path.read_text(encoding="utf-8")
     try:
-        state = json.loads(original)
+        state = cast("dict[str, object]", json.loads(original))
         state["candidate"] = {
             "version": "0.4.3",
             "tag": "v0.4.3",

@@ -78,7 +78,9 @@ def test_rename_heuristic_emits_suggestion_without_changing_identity() -> None:
     before = schema.decode_contract(BASELINE)
     after = schema.decode_contract(MUTATIONS / "command-renamed.json")
     diff = diff_module.diff_contracts(before, after)
-    rename_changes = [change for change in diff.changes if change.kind == "command_moved_or_renamed"]
+    rename_changes = [
+        change for change in diff.changes if change.kind == "command_moved_or_renamed"
+    ]
     assert rename_changes
     assert all(change.suggested_action == "review" for change in rename_changes)
     assert all(not change.affected_operations for change in rename_changes)

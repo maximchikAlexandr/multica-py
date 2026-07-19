@@ -5,6 +5,7 @@ import json
 import pathlib
 import subprocess
 import sys
+from typing import cast
 
 from multica_py._internal.upstream_contract import schema
 from multica_py._internal.upstream_contract.normalize import semantic_hash
@@ -13,6 +14,16 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "upstream_contract.py"
 STATE_REL = "src/multica_py/_generated/upstream_state.json"
 CANDIDATE_CONTRACT_REL = "src/multica_py/_generated/upstream_candidate_contract.json"
+
+
+def _json_object(raw: str) -> dict[str, object]:
+    return cast("dict[str, object]", json.loads(raw))
+
+
+def _candidate_field(state: dict[str, object], field: str) -> object:
+    candidate = state["candidate"]
+    assert isinstance(candidate, dict)
+    return candidate[field]
 
 
 def _fake_multica_with_exporter(tmp_path: pathlib.Path) -> pathlib.Path:
@@ -84,8 +95,8 @@ def test_candidate_collection_is_deterministic(tmp_path: pathlib.Path) -> None:
             text=True,
         )
         assert result.returncode == 0, result.stderr
-    payload_a = json.loads(out_a.read_text())
-    payload_b = json.loads(out_b.read_text())
+    payload_a = _json_object(out_a.read_text())
+    payload_b = _json_object(out_b.read_text())
     payload_a.pop("observation", None)
     payload_b.pop("observation", None)
     assert payload_a == payload_b
@@ -131,9 +142,9 @@ def test_collect_registers_candidate_with_verified_trust(tmp_path: pathlib.Path)
             text=True,
         )
         assert result.returncode == 0, result.stderr
-        state = json.loads(state_path.read_text(encoding="utf-8"))
-        assert state["candidate"]["trust_level"] == "verified"
-        assert state["candidate"]["contract_ref"] == CANDIDATE_CONTRACT_REL
+        state = _json_object(state_path.read_text(encoding="utf-8"))
+        assert _candidate_field(state, "trust_level") == "verified"
+        assert _candidate_field(state, "contract_ref") == CANDIDATE_CONTRACT_REL
         assert (ROOT / CANDIDATE_CONTRACT_REL).is_file()
     finally:
         state_path.write_text(original_state, encoding="utf-8")
@@ -185,14 +196,14 @@ def test_collect_persists_in_repo_output_outside_generated(tmp_path: pathlib.Pat
             text=True,
         )
         assert result.returncode == 0, result.stderr
-        canonical = json.loads((ROOT / CANDIDATE_CONTRACT_REL).read_text(encoding="utf-8"))
-        custom = json.loads(out.read_text(encoding="utf-8"))
+        canonical = _json_object((ROOT / CANDIDATE_CONTRACT_REL).read_text(encoding="utf-8"))
+        custom = _json_object(out.read_text(encoding="utf-8"))
         canonical.pop("observation", None)
         custom.pop("observation", None)
         assert canonical == custom
-        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state = _json_object(state_path.read_text(encoding="utf-8"))
         assert (
-            state["candidate"]["contract_ref"]
+            _candidate_field(state, "contract_ref")
             == "artifacts/upstream-upgrades/collect-test-candidate.json"
         )
         assert (ROOT / CANDIDATE_CONTRACT_REL).is_file()
@@ -245,31 +256,36 @@ def test_collect_verified_hash_on_disk_matches_promotion(tmp_path: pathlib.Path)
             text=True,
         )
         assert result.returncode == 0, result.stderr
-        on_disk = json.loads((ROOT / CANDIDATE_CONTRACT_REL).read_text(encoding="utf-8"))
-        disk_hash = on_disk["artifact"]["semantic_hash"]
+        on_disk = _json_object((ROOT / CANDIDATE_CONTRACT_REL).read_text(encoding="utf-8"))
+        artifact = on_disk["artifact"]
+        assert isinstance(artifact, dict)
+        disk_hash = artifact["semantic_hash"]
+        assert isinstance(disk_hash, str)
         assert disk_hash.startswith("sha256:")
         contract = schema.decode_contract(ROOT / CANDIDATE_CONTRACT_REL)
         assert disk_hash == semantic_hash(contract)
-        state = json.loads(state_path.read_text(encoding="utf-8"))
-        assert state["candidate"]["semantic_hash"] == disk_hash
-        assert state["candidate"]["trust_level"] == "verified"
+        state = _json_object(state_path.read_text(encoding="utf-8"))
+        assert _candidate_field(state, "semantic_hash") == disk_hash
+        assert _candidate_field(state, "trust_level") == "verified"
         decision_path = tmp_path / "decision.json"
-        decision_path.write_text(
-            json.dumps(
-                {
-                    "schema_version": 1,
-                    "candidate_version": "0.4.3",
-                    "candidate_tag": "v0.4.3",
-                    "candidate_commit": "abc1234567890abcdef1234567890abcdef12345",
-                    "candidate_semantic_hash": disk_hash,
-                    "previous_supported_version": state["supported"]["version"],
-                    "previous_supported_commit": state["supported"]["commit"],
-                    "clean_gate_ref": "ci/check",
-                    "reviewer": "alice",
-                }
-            ),
-            encoding="utf-8",
-        )
+        supported = state["supported"]
+        assert isinstance(supported, dict)
+        supported_version = supported.get("version")
+        supported_commit = supported.get("commit")
+        assert isinstance(supported_version, str)
+        assert isinstance(supported_commit, str)
+        decision_payload: dict[str, str | int] = {
+            "schema_version": 1,
+            "candidate_version": "0.4.3",
+            "candidate_tag": "v0.4.3",
+            "candidate_commit": "abc1234567890abcdef1234567890abcdef12345",
+            "candidate_semantic_hash": disk_hash,
+            "previous_supported_version": supported_version,
+            "previous_supported_commit": supported_commit,
+            "clean_gate_ref": "ci/check",
+            "reviewer": "alice",
+        }
+        decision_path.write_text(json.dumps(decision_payload), encoding="utf-8")
         promote = subprocess.run(
             [
                 sys.executable,

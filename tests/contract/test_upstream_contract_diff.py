@@ -4,6 +4,7 @@ import json
 import pathlib
 import subprocess
 import sys
+from typing import cast
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "upstream_contract.py"
@@ -71,6 +72,6 @@ def test_diff_command_emits_valid_json() -> None:
             ]
         )
         assert result.returncode in (2, 6)
-        payload = json.loads(target.read_text())
+        payload = cast("dict[str, object]", json.loads(target.read_text()))
         assert "changes" in payload
         assert "summary" in payload

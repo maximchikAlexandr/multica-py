@@ -10,7 +10,7 @@ from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
-from multica_py.exceptions import CommandExecutionError, UnsupportedCliVersionError
+from multica_py.exceptions import CommandExecutionError, NetworkError, UnsupportedCliVersionError
 
 
 def test_transport_builds_correct_argv():
@@ -79,7 +79,7 @@ def test_transport_redacts_secret_values_from_exception_streams():
         duration=datetime.timedelta(),
         secret_values=("secret123",),
     )
-    with pytest.raises(CommandExecutionError) as excinfo:
+    with pytest.raises(NetworkError) as excinfo:
         transport.run_text(("auth", "login", "--token", "secret123"))
     exc = excinfo.value
     assert "secret123" not in exc.stdout

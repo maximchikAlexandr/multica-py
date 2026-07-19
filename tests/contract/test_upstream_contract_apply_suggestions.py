@@ -5,10 +5,10 @@ import pathlib
 import subprocess
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-SRC = ROOT / "src"
 from multica_py._internal.upstream_contract.paths import SUPPORTED_CONTRACT_PATH
 
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+SRC = ROOT / "src"
 FIXTURES = pathlib.Path(__file__).parent.parent / "fixtures" / "upstream_contract" / "golden"
 
 

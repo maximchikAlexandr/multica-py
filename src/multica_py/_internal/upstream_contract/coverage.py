@@ -97,7 +97,8 @@ def build_coverage_report(
             ),
         )
     if diff is not None:
-        report = msgspec.structs.replace(report, upstream_diff=dict(diff.summary))
+        upstream_diff: dict[str, int] = diff.summary.copy()
+        report = msgspec.structs.replace(report, upstream_diff=upstream_diff)
     report = _evaluate(report, contract, manifest, state=state, repo_root=repo_root)
     if diff is not None and diff.unresolved_breaking:
         report = add_failure(

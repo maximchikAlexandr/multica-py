@@ -42,7 +42,7 @@ class CommentListThreadRequest(msgspec.Struct, frozen=True, kw_only=True):
 class CommentListRecentRequest(msgspec.Struct, frozen=True, kw_only=True):
     issue_id: str
     cursor: str | None = None
-    limit: int | None = None
+    limit: int = 10
     since: datetime.datetime | None = None
 
 

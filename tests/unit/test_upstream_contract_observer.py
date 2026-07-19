@@ -57,9 +57,11 @@ def test_record_failed_write_inline() -> None:
         ),
         observed=ObservedRelease(version="0.4.3", tag="v0.4.3", release_id="r", status="new"),
     )
+    observed = state.observed
+    assert observed is not None
     new_state = msgspec.structs.replace(
         state,
-        observed=msgspec.structs.replace(state.observed, status="failed:checksum-mismatch"),
+        observed=msgspec.structs.replace(observed, status="failed:checksum-mismatch"),
     )
     assert new_state.supported == state.supported
     assert "failed" in (new_state.observed.status if new_state.observed else "")
@@ -140,5 +142,6 @@ def test_observe_supersede_then_set_candidate_allows_promote() -> None:
         trust_level="verified",
     )
     state = state_module.set_candidate(state, new_candidate)
+    assert state.observed is not None
     assert state.observed.status == "candidate-available"
     assert state.candidate == new_candidate
