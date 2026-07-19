@@ -42,6 +42,16 @@ class DirectApiOracle:
         self._timeout = timeout
         self._client = httpx.Client(base_url=self._server_url, timeout=self._timeout)
 
+    def close(self) -> None:
+        """Close the underlying HTTP client and release sockets."""
+        self._client.close()
+
+    def __enter__(self) -> DirectApiOracle:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
     @property
     def workspace_id(self) -> str:
         """Return the bound workspace identifier."""
@@ -219,12 +229,12 @@ class DirectApiOracle:
     def list_issue_labels(self, issue_id: str) -> list[JsonObject]:
         """List labels attached to one issue."""
         response = self.request("GET", f"/api/issues/{issue_id}/labels")
-        return _require_object_list(response, operation="list issue labels")
+        return _require_object_list(response, key="labels", operation="list issue labels")
 
     def list_comments(self, issue_id: str) -> list[JsonObject]:
         """List comments for one issue."""
         response = self.request("GET", f"/api/issues/{issue_id}/comments")
-        return _require_object_list(response, operation="list comments")
+        return _require_object_list(response, key="comments", operation="list comments")
 
     def assert_comment_removed_from_issue(self, issue_id: str, comment_id: str) -> None:
         """Assert that one comment no longer appears in the issue comment list."""
@@ -278,7 +288,7 @@ class DirectApiOracle:
     def list_issue_attachments(self, issue_id: str) -> list[JsonObject]:
         """List attachments attached to one issue."""
         response = self.request("GET", f"/api/issues/{issue_id}/attachments")
-        return _require_object_list(response, operation="list issue attachments")
+        return _require_object_list(response, key="attachments", operation="list issue attachments")
 
     @staticmethod
     def sha256_hex(content: bytes) -> str:
@@ -302,15 +312,30 @@ def _require_dict(response: OracleResponse, *, operation: str) -> JsonObject:
     return response.json_body
 
 
-def _require_object_list(response: OracleResponse, *, operation: str) -> list[JsonObject]:
-    if response.status_code != 200 or not isinstance(response.json_body, list):
+def _require_object_list(
+    response: OracleResponse,
+    *,
+    key: str,
+    operation: str,
+) -> list[JsonObject]:
+    if response.status_code != 200:
         msg = f"{operation} failed: status={response.status_code} body={response.text_excerpt}"
         raise AssertionError(msg)
-    items: list[JsonObject] = []
-    for entry in response.json_body:
-        if isinstance(entry, dict):
-            items.append(entry)
-    return items
+    body = response.json_body
+    nested: object
+    if isinstance(body, list):
+        nested = body
+    elif isinstance(body, dict):
+        nested = body.get(key)
+    else:
+        nested = None
+    if not isinstance(nested, list):
+        msg = (
+            f"{operation} failed: expected a list or object with {key!r} list: "
+            f"{response.text_excerpt}"
+        )
+        raise AssertionError(msg)
+    return [entry for entry in nested if isinstance(entry, dict)]
 
 
 def _parse_issue_list_page(response: OracleResponse) -> tuple[list[JsonObject], str | None]:
@@ -321,7 +346,9 @@ def _parse_issue_list_page(response: OracleResponse) -> tuple[list[JsonObject], 
     if not isinstance(body, dict):
         msg = f"list issues returned unexpected body: {response.text_excerpt}"
         raise AssertionError(msg)
-    items_value = body.get("items")
+    items_value = body.get("issues")
+    if not isinstance(items_value, list):
+        items_value = body.get("items")
     if not isinstance(items_value, list):
         msg = f"list issues returned unexpected body: {response.text_excerpt}"
         raise AssertionError(msg)

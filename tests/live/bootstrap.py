@@ -48,9 +48,7 @@ class TestIdentity:
 
     def __repr__(self) -> str:
         return (
-            f"TestIdentity(email={self.email!r}, user_id={self.user_id!r}, "
-            "pat=SecretString(***)"
-            ")"
+            f"TestIdentity(email={self.email!r}, user_id={self.user_id!r}, pat=SecretString(***))"
         )
 
 

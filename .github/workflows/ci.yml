@@ -169,17 +169,17 @@ jobs:
       - name: Scan diagnostic artifacts for secrets
         id: scan_live_artifacts
         if: always() && env.MULTICA_LIVE_ARTIFACT_DIR != ''
-        run: uv run python scripts/scan_live_artifacts.py "$MULTICA_LIVE_ARTIFACT_DIR"
+        run: uv run python -m scripts.scan_live_artifacts "$MULTICA_LIVE_ARTIFACT_DIR"
       - name: Upload live diagnostics
         if: failure() && steps.scan_live_artifacts.outcome == 'success'
-        uses: actions/upload-artifact@26f96dfa697d6e8c856c5066af2774f3dce7e654
+        uses: actions/upload-artifact@v4
         with:
           name: live-smoke-diagnostics
           path: ${{ env.MULTICA_LIVE_ARTIFACT_DIR }}/
           retention-days: 7
       - name: Upload live JUnit
         if: failure() && steps.scan_live_artifacts.outcome == 'success'
-        uses: actions/upload-artifact@26f96dfa697d6e8c856c5066af2774f3dce7e654
+        uses: actions/upload-artifact@v4
         with:
           name: live-smoke-junit
           path: ${{ env.MULTICA_LIVE_JUNIT_PATH }}

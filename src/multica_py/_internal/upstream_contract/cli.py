@@ -90,7 +90,8 @@ def _arg_opt(args: argparse.Namespace, name: str) -> str | None:
 
 
 def _flag(args: argparse.Namespace, name: str) -> bool:
-    return bool(getattr(args, name, False))
+    value: object = getattr(args, name, False)
+    return bool(value)
 
 
 def _exit_code_for(report: CoverageReport) -> int:
@@ -208,7 +209,8 @@ def _persist_collect(
             unresolved_items=coverage.collect_contract_review_items(contract),
         ),
     )
-    state_bytes = normalize.canonical_bytes(msgspec.to_builtins(new_state)) + b"\n"
+    state_builtins: dict[str, object] = msgspec.to_builtins(new_state)
+    state_bytes = normalize.canonical_bytes(state_builtins) + b"\n"
     canonical_path = repo_root / CANDIDATE_CONTRACT_REL
     files.atomic_write_files({canonical_path: contract_bytes, state_path: state_bytes})
     if output.resolve() != canonical_path.resolve():

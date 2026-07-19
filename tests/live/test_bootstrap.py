@@ -33,7 +33,9 @@ def test_readyz_reports_backend_ready(
     """Smoke-test readiness, verified target, and CLI version reporting."""
     result = probe_readiness(live_environment.readiness_endpoint)
     assert is_ready(result)
-    assert compatibility_target.cli_version_actual == compatibility_target.target.cli_version_expected
+    assert (
+        compatibility_target.cli_version_actual == compatibility_target.target.cli_version_expected
+    )
     target_path = diagnostic_collector.artifact_dir / "target.json"
     assert target_path.is_file()
     report = json.loads(target_path.read_text(encoding="utf-8"))
@@ -60,7 +62,11 @@ def test_cli_profile_is_isolated_from_user_home(live_environment: LiveTestEnviro
     profile_path = profile_config_path(live_environment.home_dir, live_environment.profile_name)
     assert profile_path.is_file()
     real_profile = (
-        pathlib.Path.home() / ".multica" / "profiles" / live_environment.profile_name / "config.json"
+        pathlib.Path.home()
+        / ".multica"
+        / "profiles"
+        / live_environment.profile_name
+        / "config.json"
     )
     assert not real_profile.exists()
 
@@ -92,7 +98,9 @@ def _stop_compose_service(
         raise LiveSetupError("compose", f"docker compose stop failed: {detail}")
 
 
-def _run_not_ready_setup(monkeypatch: pytest.MonkeyPatch) -> tuple[LiveTestRun, DiagnosticCollector, ComposeLifecycle]:
+def _run_not_ready_setup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[LiveTestRun, DiagnosticCollector, ComposeLifecycle]:
     monkeypatch.setenv("MULTICA_LIVE_READY_TIMEOUT", "10")
     settings = load_live_settings(repo_root=REPO_ROOT)
     resolved = resolve_target(settings.target_file, settings.cli_executable)

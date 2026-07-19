@@ -4,6 +4,7 @@ import json
 import pathlib
 import subprocess
 import time
+from collections.abc import Callable
 
 import pytest
 
@@ -18,7 +19,7 @@ from multica_py.exceptions import (
     ValidationError,
 )
 from multica_py.models.labels import Label
-from tests.live.bootstrap import TestIdentity
+from tests.live.bootstrap import TestIdentity, WorkspaceContext
 from tests.live.compose import (
     capture_compose_diagnostics_from_environment,
     compose_argv,
@@ -73,7 +74,9 @@ def _stop_compose_service(
         msg = "compose files are unavailable for destructive backend stop"
         raise RuntimeError(msg)
     completed = subprocess.run(
-        compose_argv(live_environment.compose_files, live_environment.compose_project, "stop", service),
+        compose_argv(
+            live_environment.compose_files, live_environment.compose_project, "stop", service
+        ),
         check=False,
         capture_output=True,
         text=True,
@@ -92,7 +95,9 @@ def _start_compose_service(
         msg = "compose files are unavailable for backend restart"
         raise RuntimeError(msg)
     completed = subprocess.run(
-        compose_argv(live_environment.compose_files, live_environment.compose_project, "start", service),
+        compose_argv(
+            live_environment.compose_files, live_environment.compose_project, "start", service
+        ),
         check=False,
         capture_output=True,
         text=True,
@@ -160,7 +165,7 @@ def test_invalid_label_color_raises_validation_error(
     live_client: MulticaClient,
     resource_name: str,
     test_identity: TestIdentity,
-    register_resource,
+    register_resource: Callable[..., None],
 ) -> None:
     """Invalid field values must map to ValidationError."""
     with pytest.raises(ValidationError) as exc_info:
@@ -219,7 +224,7 @@ def test_backend_stop_mid_operation_raises_network_error_without_orphan_cli(
 )
 def test_synthetic_wrapper_exit_code_mapping(
     live_environment: LiveTestEnvironment,
-    primary_workspace,
+    primary_workspace: WorkspaceContext,
     tmp_path: pathlib.Path,
     exit_code: int,
     expected_type: type[Exception],
@@ -232,7 +237,7 @@ def test_synthetic_wrapper_exit_code_mapping(
         server_url=live_environment.server_url,
         workspace_id=primary_workspace.id,
         profile=primary_workspace.profile_name,
-        environment={"HOME": str(live_environment.home_dir)},
+        environment=(("HOME", str(live_environment.home_dir)),),
         compatibility=CompatibilityPolicy.ignore,
     )
     client = MulticaClient(config)
@@ -247,7 +252,7 @@ def test_diagnostic_bundle_has_no_registered_secret_leaks(
     diagnostic_collector: DiagnosticCollector,
     test_identity: TestIdentity,
     live_environment: LiveTestEnvironment,
-    assert_no_secret_leak,
+    assert_no_secret_leak: Callable[[], None],
 ) -> None:
     """Generated diagnostic artifacts must not contain registered secret values."""
     diagnostic_collector.register_secret(VERIFICATION_CODE)

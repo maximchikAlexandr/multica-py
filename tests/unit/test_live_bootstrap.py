@@ -51,10 +51,14 @@ def test_bootstrap_sequence_and_status_handling(monkeypatch: pytest.MonkeyPatch)
         if request.url.path == "/auth/verify-code":
             return httpx.Response(200, json={"token": "jwt-secret", "user_id": "user-1"})
         if request.url.path == "/api/tokens":
-            return httpx.Response(201, json={"token": "pat-secret", "id": "pat-1", "user_id": "user-1"})
+            return httpx.Response(
+                201, json={"token": "pat-secret", "id": "pat-1", "user_id": "user-1"}
+            )
         if request.url.path == "/api/workspaces":
             slug = payload["slug"]
-            return httpx.Response(201, json={"id": f"ws-{slug}", "name": payload["name"], "slug": slug})
+            return httpx.Response(
+                201, json={"id": f"ws-{slug}", "name": payload["name"], "slug": slug}
+            )
         raise AssertionError(request.url.path)
 
     _install_transport(monkeypatch, httpx.MockTransport(handler))
@@ -105,7 +109,9 @@ def test_bootstrap_uses_jwt_not_pat_for_workspace_create(monkeypatch: pytest.Mon
         if request.url.path == "/api/workspaces":
             auth_headers.append(request.headers.get("Authorization"))
             payload = json.loads(request.content.decode())
-            return httpx.Response(201, json={"id": "ws-1", "name": payload["name"], "slug": payload["slug"]})
+            return httpx.Response(
+                201, json={"id": "ws-1", "name": payload["name"], "slug": payload["slug"]}
+            )
         raise AssertionError(request.url.path)
 
     _install_transport(monkeypatch, httpx.MockTransport(handler))

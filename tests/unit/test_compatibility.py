@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import warnings
 
-from multica_py._internal.compat import check_version_from_config
 from multica_py._internal.compat import (
+    check_version_from_config,
     default_policy,
     supported_range_text,
 )

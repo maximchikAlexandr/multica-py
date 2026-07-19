@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from multica_py.exceptions import NotFoundError
+
 
 class ResourceRegistry:
     """LIFO registry for live test resource cleanup."""
@@ -28,7 +30,7 @@ class ResourceRegistry:
         for key, cleanup in reversed(self._cleanups):
             try:
                 cleanup()
-            except ResourceAbsentError:
+            except (ResourceAbsentError, NotFoundError):
                 continue
             except Exception as exc:
                 failures.append({"key": key, "message": str(exc)})

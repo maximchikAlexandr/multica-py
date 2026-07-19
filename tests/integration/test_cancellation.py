@@ -87,25 +87,26 @@ def test_terminate_process_kills_descendants() -> None:
             "time.sleep(60)",
         )
     )
-    assert parent.poll() is None
-    time.sleep(0.5)
-
-    assert parent.stdout is not None
-    child_pid_line = parent.stdout.readline()
-    child_pid = int(child_pid_line.strip())
-
-    terminate_process(parent)
-    parent.wait(timeout=5)
-    assert parent.poll() is not None
-    assert parent.returncode == -signal.SIGTERM  # terminated by signal
-
     try:
-        os.kill(child_pid, 0)
-        assert False, "child process still alive after parent was killed"
-    except OSError:
-        pass
+        assert parent.poll() is None
+        time.sleep(0.5)
 
-    _close_pipes(parent)
+        assert parent.stdout is not None
+        child_pid_line = parent.stdout.readline()
+        child_pid = int(child_pid_line.strip())
+
+        terminate_process(parent)
+        parent.wait(timeout=5)
+        assert parent.poll() is not None
+        assert parent.returncode == -signal.SIGTERM
+
+        try:
+            os.kill(child_pid, 0)
+            assert False, "child process still alive after parent was killed"
+        except OSError:
+            pass
+    finally:
+        _close_pipes(parent)
 
 
 def test_cancelled_process_escalates_after_sigterm_is_ignored() -> None:

@@ -37,18 +37,21 @@ def _failed_result(exit_code: int) -> RawCommandResult:
         (99, CommandExecutionError),
     ],
 )
-def test_transport_maps_exit_code_to_exception(exit_code: int, expected_exc: type[Exception]):
+def test_transport_maps_exit_code_to_exception(
+    exit_code: int,
+    expected_exc: type[Exception],
+) -> None:
     config = ClientConfig(executable=sys.executable)
     transport = CliTransport(config)
     transport._execute = lambda *args, **kwargs: _failed_result(exit_code)  # type: ignore[method-assign]
     with pytest.raises(expected_exc) as excinfo:
         transport.run_text(("project", "get", "missing"))
     exc = excinfo.value
-    assert exc.exit_code == exit_code
     assert isinstance(exc, CommandExecutionError)
+    assert exc.exit_code == exit_code
 
 
-def test_transport_exit_code_mapping_preserves_context():
+def test_transport_exit_code_mapping_preserves_context() -> None:
     config = ClientConfig(executable=sys.executable)
     transport = CliTransport(config)
     transport._execute = lambda *args, **kwargs: RawCommandResult(  # type: ignore[method-assign]

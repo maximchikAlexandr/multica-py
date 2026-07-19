@@ -13,6 +13,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Iterator
+from typing import cast
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -89,7 +90,9 @@ def _resolve_suite_mode(raw_mode: str | None) -> SuiteMode:
     if candidate not in {"smoke", "extended"}:
         msg = "suite mode must be smoke or extended"
         raise SystemExit(msg)
-    return candidate if candidate == "extended" else "smoke"
+    if candidate == "extended":
+        return "extended"
+    return "smoke"
 
 
 def _pytest_marker(mode: SuiteMode) -> str:
@@ -220,19 +223,20 @@ def run_repeat(*, resolve_cli: bool, runs: int) -> int:
 
 def run_smoke(args: argparse.Namespace) -> int:
     """Validate inputs and invoke pytest for the live suite."""
-    _validate_environment(resolve_cli=bool(args.resolve_cli))
-    suite_mode = _resolve_suite_mode(args.mode)
+    _validate_environment(resolve_cli=cast("bool", args.resolve_cli))
+    suite_mode = _resolve_suite_mode(cast("str | None", args.mode))
     marker = _pytest_marker(suite_mode)
-    pytest_args = ["-m", marker, "tests/live", *args.pytest_args]
-    if args.pytest_args and args.pytest_args[0] == "--":
-        pytest_args = ["-m", marker, "tests/live", *args.pytest_args[1:]]
+    forwarded_args = cast("list[str]", args.pytest_args)
+    pytest_args = ["-m", marker, "tests/live", *forwarded_args]
+    if forwarded_args and forwarded_args[0] == "--":
+        pytest_args = ["-m", marker, "tests/live", *forwarded_args[1:]]
     exit_code = _run_pytest(pytest_args)
     _write_compatibility_report(
         suite_mode=suite_mode,
         marker=marker,
         exit_code=exit_code,
-        report_path=args.compatibility_report,
-        observed_upstream_ref=args.observed_upstream_ref,
+        report_path=cast("pathlib.Path | None", args.compatibility_report),
+        observed_upstream_ref=cast("str | None", args.observed_upstream_ref),
     )
     return exit_code
 
@@ -283,10 +287,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """Dispatch live runner modes."""
     args = build_parser().parse_args(argv)
-    if args.mutation_check:
-        return run_mutation_check(resolve_cli=bool(args.resolve_cli))
-    if args.repeat is not None:
-        return run_repeat(resolve_cli=bool(args.resolve_cli), runs=args.repeat)
+    if cast("bool", args.mutation_check):
+        return run_mutation_check(resolve_cli=cast("bool", args.resolve_cli))
+    repeat = cast("int | None", args.repeat)
+    if repeat is not None:
+        return run_repeat(resolve_cli=cast("bool", args.resolve_cli), runs=repeat)
     return run_smoke(args)
 
 

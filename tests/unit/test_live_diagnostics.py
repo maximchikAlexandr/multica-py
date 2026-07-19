@@ -31,7 +31,13 @@ def test_primary_and_cleanup_failures_are_separate(tmp_path: pathlib.Path) -> No
     assert collector.primary_failure is not None
     assert collector.cleanup_failure is not None
     assert collector.primary_failure["message"] == "primary"
-    assert collector.cleanup_failure["failures"][0]["key"] == "label"
+    cleanup_failure = collector.cleanup_failure
+    assert cleanup_failure is not None
+    failures = cleanup_failure.get("failures")
+    assert isinstance(failures, list) and failures
+    first_failure = failures[0]
+    assert isinstance(first_failure, dict)
+    assert first_failure["key"] == "label"
 
 
 def test_write_json_redacts_before_persisting(tmp_path: pathlib.Path) -> None:

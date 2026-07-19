@@ -43,10 +43,49 @@ class CancellationToken:
         self._cancelled = True
 
 
+_TERMINATE_GRACE_SECONDS = 2.0
+
+
+def close_process_pipes(process: subprocess.Popen[bytes]) -> None:
+    """Close stdin/stdout/stderr pipes attached to *process*."""
+    for pipe in (_stdin_pipe(process), _stdout_pipe(process), _stderr_pipe(process)):
+        if pipe is not None:
+            with contextlib.suppress(OSError):
+                pipe.close()
+
+
+def _child_pids(pid: int) -> tuple[int, ...]:
+    """Return direct child PIDs of *pid* (best-effort via ``pgrep``)."""
+    try:
+        completed = subprocess.run(
+            ["pgrep", "-P", str(pid)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return ()
+    if completed.returncode not in (0, 1):
+        return ()
+    return tuple(int(line) for line in completed.stdout.splitlines() if line.strip().isdigit())
+
+
 def _killpg(process: subprocess.Popen[bytes], sig: int) -> None:
-    """Send a signal to the entire process group of *process*."""
-    with contextlib.suppress(OSError):
-        os.kill(-process.pid, sig)
+    """Signal a ``start_new_session`` process group and any direct children.
+
+    ``os.killpg`` uses the session-leader pid as the process-group id. Direct
+    children are also signaled so descendants still die when a platform fails to
+    deliver the group signal to every member.
+    """
+    pid = process.pid
+    children = _child_pids(pid)
+    with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+        os.killpg(pid, sig)
+    for child_pid in children:
+        with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+            os.kill(child_pid, sig)
+    with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+        os.kill(pid, sig)
 
 
 def create_process(
@@ -69,9 +108,15 @@ def create_process(
 
 
 def terminate_process(process: subprocess.Popen[bytes]) -> None:
+    """Terminate a process group with SIGTERM, escalating to SIGKILL if needed."""
     if process.poll() is not None:
         return
     _killpg(process, signal.SIGTERM)
+    deadline = time.monotonic() + _TERMINATE_GRACE_SECONDS
+    while process.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.05)
+    if process.poll() is None:
+        _killpg(process, signal.SIGKILL)
 
 
 def kill_process(process: subprocess.Popen[bytes]) -> None:
@@ -152,15 +197,7 @@ def run_with_timeout(
             cancel=cancel,
         )
     finally:
-        stdin_pipe = _stdin_pipe(process)
-        stdout_pipe = _stdout_pipe(process)
-        stderr_pipe = _stderr_pipe(process)
-        if stdin_pipe is not None:
-            stdin_pipe.close()
-        if stdout_pipe is not None:
-            stdout_pipe.close()
-        if stderr_pipe is not None:
-            stderr_pipe.close()
+        close_process_pipes(process)
 
     rc = process.returncode if process.returncode is not None else 0
 

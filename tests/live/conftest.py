@@ -5,8 +5,9 @@ import os
 import pathlib
 import subprocess
 import time
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
+from typing import cast
 
 import pytest
 
@@ -107,6 +108,7 @@ def live_environment(
     live_test_run: LiveTestRun,
     diagnostic_collector: DiagnosticCollector,
     resource_registry: ResourceRegistry,
+    pytestconfig: pytest.Config,
 ) -> Generator[LiveTestEnvironment, None, None]:
     """Start or attach to the live backend environment."""
     lifecycle = ComposeLifecycle(
@@ -121,7 +123,10 @@ def live_environment(
     profile_name = profile_name_for_run(live_test_run.run_id)
     compose_files: tuple[pathlib.Path, ...] = ()
     environment_ready_seconds: float | None = None
-    diagnostic_collector.write_json("target.json", build_version_report(compatibility_target))
+    diagnostic_collector.write_json(
+        "target.json",
+        cast("dict[str, object]", build_version_report(compatibility_target)),
+    )
     server_url = live_settings.existing_url or lifecycle.server_url
     try:
         if managed_compose:
@@ -162,6 +167,10 @@ def live_environment(
                 cleanup_failures.append({"key": exc.stage, "message": str(exc)})
         if cleanup_failures:
             diagnostic_collector.record_cleanup({"failures": cleanup_failures})
+        oracle = getattr(pytestconfig, "_live_api_oracle", None)
+        if oracle is not None:
+            oracle.close()
+            pytestconfig._live_api_oracle = None  # type: ignore[attr-defined]
 
 
 @pytest.fixture(scope="session")
@@ -213,13 +222,20 @@ def api_oracle(
     live_environment: LiveTestEnvironment,
     test_identity: TestIdentity,
     primary_workspace: WorkspaceContext,
-) -> DirectApiOracle:
-    """Return the direct HTTP oracle bound to the primary workspace."""
-    return DirectApiOracle(
+    pytestconfig: pytest.Config,
+) -> Generator[DirectApiOracle, None, None]:
+    """Yield the direct HTTP oracle bound to the primary workspace.
+
+    The client is closed after resource registry cleanup in ``live_environment``
+    so delete callbacks can still use the oracle HTTP session.
+    """
+    oracle = DirectApiOracle(
         live_environment.server_url,
         workspace_id=primary_workspace.id,
         pat=test_identity.pat.reveal(),
     )
+    pytestconfig._live_api_oracle = oracle  # type: ignore[attr-defined]
+    yield oracle
 
 
 def _build_client(
@@ -231,7 +247,7 @@ def _build_client(
         server_url=live_environment.server_url,
         workspace_id=workspace.id,
         profile=workspace.profile_name,
-        environment={"HOME": str(live_environment.home_dir)},
+        environment=(("HOME", str(live_environment.home_dir)),),
     )
     return MulticaClient(config)
 
@@ -262,10 +278,10 @@ def resource_name(live_test_run: LiveTestRun, request: pytest.FixtureRequest) ->
 
 
 @pytest.fixture
-def register_resource(resource_registry: ResourceRegistry):
+def register_resource(resource_registry: ResourceRegistry) -> Callable[..., None]:
     """Convenience wrapper for resource registration."""
 
-    def _register(*, key: str, cleanup) -> None:
+    def _register(*, key: str, cleanup: Callable[[], None]) -> None:
         resource_registry.defer(key=key, cleanup=cleanup)
 
     return _register
@@ -304,7 +320,7 @@ def invalid_pat_client(
         server_url=live_environment.server_url,
         workspace_id=primary_workspace.id,
         profile=invalid_profile,
-        environment={"HOME": str(live_environment.home_dir)},
+        environment=(("HOME", str(live_environment.home_dir)),),
         compatibility=CompatibilityPolicy.ignore,
     )
     return MulticaClient(config)
@@ -322,7 +338,7 @@ def closed_port_client(
         server_url=closed_port_server_url,
         workspace_id=primary_workspace.id,
         profile=primary_workspace.profile_name,
-        environment={"HOME": str(live_environment.home_dir)},
+        environment=(("HOME", str(live_environment.home_dir)),),
         compatibility=CompatibilityPolicy.ignore,
     )
     return MulticaClient(config)
@@ -332,7 +348,7 @@ def closed_port_client(
 def primary_workspace_label(
     live_client: MulticaClient,
     resource_name: str,
-    register_resource,
+    register_resource: Callable[..., None],
 ) -> Label:
     """Create one label in the primary workspace for access-collapse tests."""
     label = live_client.labels.create(label_name(resource_name, "pri"), color="#336699")
@@ -344,7 +360,9 @@ def primary_workspace_label(
 
 
 @pytest.fixture
-def assert_no_secret_leak(diagnostic_collector: DiagnosticCollector):
+def assert_no_secret_leak(
+    diagnostic_collector: DiagnosticCollector,
+) -> Callable[[], None]:
     """Assert that diagnostics contain no registered secret values."""
 
     def _assert() -> None:
@@ -363,21 +381,24 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[object]) 
     excinfo = call.excinfo
     exc_type = excinfo.type.__name__ if excinfo.type is not None else "Exception"
     message = str(excinfo.value)
-    stage = call.when
+    failure_stage: str = call.when
     operation: str | None = None
     exit_code: int | None = None
     resource: str | None = None
     if excinfo.errisinstance(LiveSetupError):
-        stage = excinfo.value.stage  # type: ignore[union-attr]
+        setup_error = excinfo.value
+        assert isinstance(setup_error, LiveSetupError)
+        failure_stage = setup_error.stage
     if excinfo.errisinstance(CommandExecutionError):
         command_error = excinfo.value
+        assert isinstance(command_error, CommandExecutionError)
         exit_code = command_error.exit_code
         if command_error.argv:
             operation = " ".join(command_error.argv)
             if len(command_error.argv) >= 2:
                 resource = command_error.argv[1]
     collector.record_failure(
-        stage=stage,
+        stage=failure_stage,
         exc_type=exc_type,
         message=message,
         operation=operation,
@@ -388,6 +409,10 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[object]) 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     """Record test-phase timing metadata and enforce cleanup/secret gates."""
+    oracle = getattr(session.config, "_live_api_oracle", None)
+    if oracle is not None:
+        oracle.close()
+        session.config._live_api_oracle = None  # type: ignore[attr-defined]
     collector = getattr(session.config, "_live_diagnostic_collector", None)
     if collector is None:
         return

@@ -18,9 +18,7 @@ def test_manifest_suggestions_are_incomplete() -> None:
     before = schema.decode_contract(FIXTURES / "supported-cli-contract-baseline.json")
     after = schema.decode_contract(FIXTURES / "candidate-cli-contract-v2.json")
     diff = diff_module.diff_contracts(before, after)
-    diff = diff_module.resolve_affected_operations(
-        diff, coverage.build_bindings_index(manifest)
-    )
+    diff = diff_module.resolve_affected_operations(diff, coverage.build_bindings_index(manifest))
     suggestions = suggestions_module.generate_manifest_suggestions(diff, manifest)
     assert suggestions
     assert all(s.coverage_level == "incomplete" for s in suggestions)
@@ -41,9 +39,7 @@ def test_apply_manifest_suggestions_keeps_rows_incomplete() -> None:
     before = schema.decode_contract(FIXTURES / "supported-cli-contract-baseline.json")
     after = schema.decode_contract(FIXTURES / "candidate-cli-contract-v2.json")
     diff = diff_module.diff_contracts(before, after)
-    diff = diff_module.resolve_affected_operations(
-        diff, coverage.build_bindings_index(manifest)
-    )
+    diff = diff_module.resolve_affected_operations(diff, coverage.build_bindings_index(manifest))
     suggestions = suggestions_module.generate_manifest_suggestions(diff, manifest)
     new_manifest = suggestions_module.apply_manifest_suggestions(manifest, suggestions)
     applied = [d for d in new_manifest.decisions if d.coverage_level == "incomplete"]

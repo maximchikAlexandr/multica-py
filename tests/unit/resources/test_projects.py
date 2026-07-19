@@ -11,9 +11,8 @@ from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import ProjectStatus
 from multica_py.exceptions import ValidationError
-from multica_py.models.projects import Project, ProjectCreateRequest, ProjectUpdateRequest
+from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
 from multica_py.resources.projects import ProjectResource
-from multica_py.sentinels import Unset
 
 
 def _make_transport() -> MagicMock:
@@ -26,6 +25,12 @@ def _result(stdout: bytes = b"", exit_code: int = 0) -> RawCommandResult:
     )
 
 
+def _project_json(*, project_id: str = "pr_1", title: str = "Alpha") -> bytes:
+    return msgspec.json.encode(
+        {"id": project_id, "title": title, "status": ProjectStatus.planned.value}
+    )
+
+
 class TestProjectModels:
     def test_project_status_enum(self):
         assert ProjectStatus.planned.value == "planned"
@@ -34,11 +39,10 @@ class TestProjectModels:
 class TestProjectCommandConstruction:
     def test_create_uses_title_flag(self):
         transport = _make_transport()
-        transport.run_bytes.return_value = _result(
-            msgspec.json.encode(Project(id="pr_1", name="Alpha", status=ProjectStatus.planned))
-        )
+        transport.run_bytes.return_value = _result(_project_json())
         resource = ProjectResource(transport, ClientConfig())
-        resource.create(ProjectCreateRequest(name="Alpha"))
+        created = resource.create(ProjectCreateRequest(name="Alpha"))
+        assert created.name == "Alpha"
         transport.run_bytes.assert_called_once_with(
             ("project", "create", "--title", "Alpha", "--output", "json"),
             stdin=None,
@@ -47,9 +51,7 @@ class TestProjectCommandConstruction:
 
     def test_create_includes_description_when_set(self):
         transport = _make_transport()
-        transport.run_bytes.return_value = _result(
-            msgspec.json.encode(Project(id="pr_1", name="Alpha", status=ProjectStatus.planned))
-        )
+        transport.run_bytes.return_value = _result(_project_json())
         resource = ProjectResource(transport, ClientConfig())
         resource.create(ProjectCreateRequest(name="Alpha", description="desc"))
         args = transport.run_bytes.call_args[0][0]
@@ -61,9 +63,7 @@ class TestProjectCommandConstruction:
 
     def test_update_omits_title_and_description_when_unset(self):
         transport = _make_transport()
-        transport.run_bytes.return_value = _result(
-            msgspec.json.encode(Project(id="pr_1", name="Alpha", status=ProjectStatus.planned))
-        )
+        transport.run_bytes.return_value = _result(_project_json())
         resource = ProjectResource(transport, ClientConfig())
         resource.update("pr_1", ProjectUpdateRequest())
         args = transport.run_bytes.call_args[0][0]
@@ -74,11 +74,10 @@ class TestProjectCommandConstruction:
 
     def test_update_includes_title_when_name_set(self):
         transport = _make_transport()
-        transport.run_bytes.return_value = _result(
-            msgspec.json.encode(Project(id="pr_1", name="New", status=ProjectStatus.planned))
-        )
+        transport.run_bytes.return_value = _result(_project_json(title="New"))
         resource = ProjectResource(transport, ClientConfig())
-        resource.update("pr_1", ProjectUpdateRequest(name="only-title"))
+        updated = resource.update("pr_1", ProjectUpdateRequest(name="only-title"))
+        assert updated.name == "New"
         args = transport.run_bytes.call_args[0][0]
         assert "--title" in args
         assert args[args.index("--title") + 1] == "only-title"
@@ -87,9 +86,7 @@ class TestProjectCommandConstruction:
 
     def test_update_includes_empty_description(self):
         transport = _make_transport()
-        transport.run_bytes.return_value = _result(
-            msgspec.json.encode(Project(id="pr_1", name="Alpha", status=ProjectStatus.planned))
-        )
+        transport.run_bytes.return_value = _result(_project_json())
         resource = ProjectResource(transport, ClientConfig())
         resource.update("pr_1", ProjectUpdateRequest(description=""))
         args = transport.run_bytes.call_args[0][0]
@@ -98,9 +95,7 @@ class TestProjectCommandConstruction:
 
     def test_update_includes_non_empty_description(self):
         transport = _make_transport()
-        transport.run_bytes.return_value = _result(
-            msgspec.json.encode(Project(id="pr_1", name="Alpha", status=ProjectStatus.planned))
-        )
+        transport.run_bytes.return_value = _result(_project_json())
         resource = ProjectResource(transport, ClientConfig())
         resource.update("pr_1", ProjectUpdateRequest(description="new"))
         args = transport.run_bytes.call_args[0][0]

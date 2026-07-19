@@ -241,20 +241,22 @@ def load_compatibility_target(path: pathlib.Path) -> CompatibilityTarget:
     if digest_amd64 is not None:
         if not DIGEST_PATTERN.match(digest_amd64):
             raise LiveSetupError("target", "backend_digest_linux_amd64 must be a concrete digest")
-    checksum_fields = {
+    checksum_fields: dict[str, object | None] = {
         "cli_release_sha256_linux_amd64": raw.get("cli_release_sha256_linux_amd64"),
         "cli_release_sha256_darwin_arm64": raw.get("cli_release_sha256_darwin_arm64"),
         "cli_release_sha256_darwin_amd64": raw.get("cli_release_sha256_darwin_amd64"),
     }
     checksums: dict[str, str | None] = {}
-    for key, value in checksum_fields.items():
-        if value is None:
-            checksums[key] = None
+    for checksum_key, checksum_raw in checksum_fields.items():
+        if checksum_raw is None:
+            checksums[checksum_key] = None
             continue
-        checksum = str(value)
+        checksum = str(checksum_raw)
         if not SHA256_PATTERN.match(checksum):
-            raise LiveSetupError("target", f"{key} must be a 64-char lowercase sha256 hex digest")
-        checksums[key] = checksum
+            raise LiveSetupError(
+                "target", f"{checksum_key} must be a 64-char lowercase sha256 hex digest"
+            )
+        checksums[checksum_key] = checksum
     if fields["cli_source"] == "release" and not any(checksums.values()):
         raise LiveSetupError(
             "target",
@@ -347,7 +349,9 @@ def load_live_settings(
     target_file = pathlib.Path(target_raw)
     if not target_file.is_absolute():
         target_file = root / target_file
-    resolve = resolve_cli if resolve_cli is not None else _parse_bool_env("MULTICA_LIVE_RESOLVE_CLI")
+    resolve = (
+        resolve_cli if resolve_cli is not None else _parse_bool_env("MULTICA_LIVE_RESOLVE_CLI")
+    )
     cli_raw = os.environ.get("MULTICA_LIVE_CLI")
     cli_executable = None if not cli_raw else pathlib.Path(cli_raw)
     if cli_executable is not None and not cli_executable.is_absolute():
@@ -369,7 +373,9 @@ def load_live_settings(
     existing_raw = os.environ.get("MULTICA_LIVE_EXISTING_URL")
     existing_url = None if not existing_raw else _validate_loopback_url(existing_raw)
     if cli_executable is None and not resolve:
-        raise LiveSetupError("target", "MULTICA_LIVE_CLI is required unless resolver mode is enabled")
+        raise LiveSetupError(
+            "target", "MULTICA_LIVE_CLI is required unless resolver mode is enabled"
+        )
     if existing_url is None and upstream_dir is None:
         raise LiveSetupError("target", "MULTICA_LIVE_UPSTREAM_DIR is required for compose mode")
     if cli_executable is not None and not os.access(cli_executable, os.X_OK):

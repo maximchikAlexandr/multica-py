@@ -21,7 +21,7 @@ def test_scan_fails_on_unredacted_env_values(tmp_path: pathlib.Path) -> None:
 def test_scan_passes_on_redacted_values(tmp_path: pathlib.Path) -> None:
     artifact_dir = tmp_path / "run-1"
     artifact_dir.mkdir()
-    (artifact_dir / "failure.json").write_text('JWT_SECRET=***\n', encoding="utf-8")
+    (artifact_dir / "failure.json").write_text("JWT_SECRET=***\n", encoding="utf-8")
     (artifact_dir / "secret-scan.json").write_text(
         json.dumps({"finding_count": 0, "registered_findings": []}),
         encoding="utf-8",

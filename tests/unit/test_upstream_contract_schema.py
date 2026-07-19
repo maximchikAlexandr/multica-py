@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+from typing import cast
 
 import pytest
 
@@ -27,7 +28,9 @@ def test_decode_state() -> None:
 
 
 def test_unknown_schema_version_rejected() -> None:
-    text = SUPPORTED_CONTRACT_PATH.read_bytes().replace(b'"schema_version":2', b'"schema_version":99')
+    text = SUPPORTED_CONTRACT_PATH.read_bytes().replace(
+        b'"schema_version":2', b'"schema_version":99'
+    )
     with pytest.raises(schema.SchemaVersionError):
         schema.decode_contract(text)
 
@@ -51,8 +54,10 @@ def test_semantic_hash_excludes_observation() -> None:
 
 
 def test_generate_schema_contains_baseline_field() -> None:
-    schema_doc = schema.generate_contract_schema()
-    contract = schema_doc["$defs"]["SemanticCLIContract"]
+    schema_doc = cast("dict[str, object]", schema.generate_contract_schema())
+    defs = schema_doc.get("$defs")
+    assert isinstance(defs, dict)
+    contract = cast("dict[str, object]", defs["SemanticCLIContract"])
     assert contract["title"] == "SemanticCLIContract"
     properties = contract.get("properties", {})
     assert isinstance(properties, dict)
@@ -60,8 +65,11 @@ def test_generate_schema_contains_baseline_field() -> None:
 
 
 def test_generate_report_schema() -> None:
-    report_schema = schema.generate_report_schema()
-    assert report_schema["$defs"]["CoverageReport"]["title"] == "CoverageReport"
+    report_schema = cast("dict[str, object]", schema.generate_report_schema())
+    report_defs = report_schema.get("$defs")
+    assert isinstance(report_defs, dict)
+    coverage_report = cast("dict[str, object]", report_defs["CoverageReport"])
+    assert coverage_report["title"] == "CoverageReport"
 
 
 def test_encoders_round_trip() -> None:
@@ -72,26 +80,34 @@ def test_encoders_round_trip() -> None:
 
 
 def test_generated_contract_schema_is_valid_json_schema() -> None:
-    doc = schema.generate_contract_schema()
-    contract = doc["$defs"]["SemanticCLIContract"]
+    doc = cast("dict[str, object]", schema.generate_contract_schema())
+    defs = doc.get("$defs")
+    assert isinstance(defs, dict)
+    contract = cast("dict[str, object]", defs["SemanticCLIContract"])
     assert contract["title"] == "SemanticCLIContract"
     assert contract["type"] == "object"
     assert "properties" in contract
-    assert "$ref" in doc
-    assert doc["$ref"].endswith("/SemanticCLIContract")
+    ref = doc.get("$ref")
+    assert isinstance(ref, str)
+    assert ref.endswith("/SemanticCLIContract")
 
 
 def test_generated_schemas_match_msgspec_models() -> None:
-    contract_doc = schema.generate_contract_schema()
-    report_doc = schema.generate_report_schema()
-    contract = contract_doc["$defs"]["SemanticCLIContract"]
-    report = report_doc["$defs"]["CoverageReport"]
+    contract_doc = cast("dict[str, object]", schema.generate_contract_schema())
+    report_doc = cast("dict[str, object]", schema.generate_report_schema())
+    contract_defs = contract_doc.get("$defs")
+    report_defs = report_doc.get("$defs")
+    assert isinstance(contract_defs, dict)
+    assert isinstance(report_defs, dict)
+    contract = cast("dict[str, object]", contract_defs["SemanticCLIContract"])
+    report = cast("dict[str, object]", report_defs["CoverageReport"])
     assert contract["title"] == "SemanticCLIContract"
     assert report["title"] == "CoverageReport"
     assert contract["type"] == "object"
     assert "properties" in contract
-    assert "$ref" in contract_doc
-    assert contract_doc["$ref"].endswith("/SemanticCLIContract")
+    contract_ref = contract_doc.get("$ref")
+    assert isinstance(contract_ref, str)
+    assert contract_ref.endswith("/SemanticCLIContract")
 
 
 def test_committed_schema_matches_generator() -> None:
@@ -99,11 +115,17 @@ def test_committed_schema_matches_generator() -> None:
     report_path = SCHEMA_DIR / "upstream-report-v1.schema.json"
     assert contract_path.is_file()
     assert report_path.is_file()
-    committed_contract = json.loads(contract_path.read_text(encoding="utf-8"))
-    committed_report = json.loads(report_path.read_text(encoding="utf-8"))
+    committed_contract = cast(
+        "dict[str, object]",
+        json.loads(contract_path.read_text(encoding="utf-8")),
+    )
+    committed_report = cast(
+        "dict[str, object]",
+        json.loads(report_path.read_text(encoding="utf-8")),
+    )
     assert normalize.canonical_bytes(committed_contract) == normalize.canonical_bytes(
-        schema.generate_contract_schema()
+        cast("dict[str, object]", schema.generate_contract_schema())
     )
     assert normalize.canonical_bytes(committed_report) == normalize.canonical_bytes(
-        schema.generate_report_schema()
+        cast("dict[str, object]", schema.generate_report_schema())
     )

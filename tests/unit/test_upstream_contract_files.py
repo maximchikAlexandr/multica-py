@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+import pathlib
+
+import pytest
+
+
 def test_writing_ok_respects_check_and_dry_run() -> None:
     from multica_py._internal.upstream_contract import files
 
@@ -7,7 +14,7 @@ def test_writing_ok_respects_check_and_dry_run() -> None:
     assert files.writing_ok(check=False, dry_run=False) is True
 
 
-def test_atomic_write_files_writes_all_paths(tmp_path) -> None:
+def test_atomic_write_files_writes_all_paths(tmp_path: pathlib.Path) -> None:
     from multica_py._internal.upstream_contract import files
 
     first = tmp_path / "a.json"

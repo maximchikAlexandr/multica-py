@@ -56,17 +56,22 @@ def test_verify_cli_version_fail_closed_on_mismatch(tmp_path: pathlib.Path) -> N
     script = tmp_path / "multica"
     script.write_text("#!/usr/bin/env true\n", encoding="utf-8")
     script.chmod(0o755)
-    with patch(
-        "scripts.resolve_multica_target.read_cli_version",
-        return_value="9.9.9",
-    ), pytest.raises(LiveSetupError, match="version mismatch"):
+    with (
+        patch(
+            "scripts.resolve_multica_target.read_cli_version",
+            return_value="9.9.9",
+        ),
+        pytest.raises(LiveSetupError, match="version mismatch"),
+    ):
         verify_cli_version(script, "0.3.35")
 
 
 def test_resolve_cli_executable_uses_explicit_path() -> None:
     target = load_compatibility_target(TARGET)
     explicit = pathlib.Path(sys.executable)
-    with patch("scripts.resolve_multica_target.verify_cli_version", return_value="0.3.35") as verify:
+    with patch(
+        "scripts.resolve_multica_target.verify_cli_version", return_value="0.3.35"
+    ) as verify:
         resolved = resolve_cli_executable(target, explicit)
     verify.assert_called_once()
     assert resolved == explicit.resolve()

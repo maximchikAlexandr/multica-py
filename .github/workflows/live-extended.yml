@@ -71,17 +71,17 @@ jobs:
       - name: Scan pinned diagnostic artifacts for secrets
         id: scan_pinned_artifacts
         if: always() && env.MULTICA_LIVE_ARTIFACT_DIR != ''
-        run: uv run python scripts/scan_live_artifacts.py "$MULTICA_LIVE_ARTIFACT_DIR"
+        run: uv run python -m scripts.scan_live_artifacts "$MULTICA_LIVE_ARTIFACT_DIR"
       - name: Upload pinned compatibility report
         if: always() && steps.scan_pinned_artifacts.outcome == 'success'
-        uses: actions/upload-artifact@26f96dfa697d6e8c856c5066af2774f3dce7e654
+        uses: actions/upload-artifact@v4
         with:
           name: live-extended-pinned-report
           path: ${{ env.MULTICA_LIVE_ARTIFACT_DIR }}/compatibility-report.json
           retention-days: 7
       - name: Upload pinned diagnostics
         if: failure() && steps.scan_pinned_artifacts.outcome == 'success'
-        uses: actions/upload-artifact@26f96dfa697d6e8c856c5066af2774f3dce7e654
+        uses: actions/upload-artifact@v4
         with:
           name: live-extended-pinned-diagnostics
           path: ${{ env.MULTICA_LIVE_ARTIFACT_DIR }}/
@@ -168,17 +168,17 @@ jobs:
       - name: Scan upstream diagnostic artifacts for secrets
         id: scan_upstream_artifacts
         if: always() && env.MULTICA_LIVE_ARTIFACT_DIR != ''
-        run: uv run python scripts/scan_live_artifacts.py "$MULTICA_LIVE_ARTIFACT_DIR"
+        run: uv run python -m scripts.scan_live_artifacts "$MULTICA_LIVE_ARTIFACT_DIR"
       - name: Upload upstream compatibility report
         if: always() && steps.scan_upstream_artifacts.outcome == 'success'
-        uses: actions/upload-artifact@26f96dfa697d6e8c856c5066af2774f3dce7e654
+        uses: actions/upload-artifact@v4
         with:
           name: live-extended-upstream-report
           path: ${{ env.MULTICA_LIVE_ARTIFACT_DIR }}/compatibility-report.json
           retention-days: 7
       - name: Upload upstream diagnostics
         if: failure() && steps.scan_upstream_artifacts.outcome == 'success'
-        uses: actions/upload-artifact@26f96dfa697d6e8c856c5066af2774f3dce7e654
+        uses: actions/upload-artifact@v4
         with:
           name: live-extended-upstream-diagnostics
           path: ${{ env.MULTICA_LIVE_ARTIFACT_DIR }}/

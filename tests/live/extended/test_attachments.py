@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pathlib
+from collections.abc import Callable
 
 import pytest
 
@@ -17,7 +18,7 @@ EDGE_FILENAMES = ("empty.bin", "file name.bin", "файл.bin")
 def test_attachment_round_trip_for_pinned_payload(
     live_client: MulticaClient,
     api_oracle: DirectApiOracle,
-    register_resource,
+    register_resource: Callable[..., None],
     resource_name: str,
     tmp_path: pathlib.Path,
 ) -> None:
@@ -40,7 +41,9 @@ def test_attachment_round_trip_for_pinned_payload(
     assert DirectApiOracle.sha256_hex(downloaded) == DirectApiOracle.sha256_hex(ATTACHMENT_PAYLOAD)
     listed = api_oracle.list_issue_attachments(issue.id)
     listed_ids = {
-        entry.get("id") for entry in listed if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+        entry.get("id")
+        for entry in listed
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
     }
     assert uploaded.id in listed_ids
     api_oracle.delete(f"/api/attachments/{uploaded.id}")
@@ -51,7 +54,7 @@ def test_attachment_round_trip_for_pinned_payload(
 def test_attachment_edge_filenames_are_supported(
     live_client: MulticaClient,
     api_oracle: DirectApiOracle,
-    register_resource,
+    register_resource: Callable[..., None],
     resource_name: str,
     tmp_path: pathlib.Path,
     filename: str,

@@ -56,8 +56,6 @@ class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
     status: IssueStatus | None = None
     priority: str | None = None
     assignee_id: str | None = None
-    label: str | None = None
-    cursor: str | None = None
     limit: int | None = None
 
 
@@ -84,11 +82,17 @@ _VALID_DESC_TYPES = (InlineDescription, FileDescription, StdinDescription, NoDes
 
 
 class IssueCreateRequest(msgspec.Struct, frozen=True, kw_only=True):
+    """Request to create an issue via the CLI.
+
+    ``label_ids`` are label UUIDs attached after creation. ``Issue.labels`` on
+    the returned issue are label names from the wire response, not these IDs.
+    """
+
     title: str
     description_input: IssueDescriptionInput = NoDescription()
     priority: str | None = None
     assignee_id: str | None = None
-    label: tuple[str, ...] = ()
+    label_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.description_input, _VALID_DESC_TYPES):  # type: ignore[misc]

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 from multica_py.client import MulticaClient
@@ -11,7 +13,7 @@ pytestmark = [pytest.mark.live, pytest.mark.live_extended]
 
 def test_project_description_absent_empty_and_null_semantics(
     api_oracle: DirectApiOracle,
-    register_resource,
+    register_resource: Callable[..., None],
     resource_name: str,
 ) -> None:
     """Verify raw project description absent, empty, and null shapes without SDK normalization."""
@@ -40,7 +42,7 @@ def test_project_description_absent_empty_and_null_semantics(
 def test_label_optional_color_and_issue_raw_fields_without_sdk_normalization(
     live_client: MulticaClient,
     api_oracle: DirectApiOracle,
-    register_resource,
+    register_resource: Callable[..., None],
     resource_name: str,
 ) -> None:
     """Verify oracle label color and raw issue fields remain visible without SDK decode."""

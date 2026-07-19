@@ -93,7 +93,9 @@ Use Conventional Commits for all repository commits:
 Allowed types: `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `build`, `ci`,
 `chore`, `style`, `revert`.
 
-The repository enforces this with `.githooks/commit-msg`. Enable it locally with:
+The repository enforces this with `.githooks/commit-msg`. Pre-commit also runs
+Ruff (`check` + `format --check`) and mypy on `src` via `.githooks/pre-commit`.
+Enable hooks locally with:
 
 ```sh
 git config core.hooksPath .githooks

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 
 import pytest
 
@@ -14,7 +15,7 @@ pytestmark = [pytest.mark.live, pytest.mark.live_smoke]
 def test_label_crud_round_trip(
     live_client: MulticaClient,
     api_oracle: DirectApiOracle,
-    register_resource,
+    register_resource: Callable[..., None],
     resource_name: str,
 ) -> None:
     """Create, read, list, update, and delete one label via SDK with oracle checks."""
@@ -46,7 +47,7 @@ def test_label_crud_round_trip(
 def test_label_unicode_emoji_spaces_and_exact_color(
     live_client: MulticaClient,
     api_oracle: DirectApiOracle,
-    register_resource,
+    register_resource: Callable[..., None],
     resource_name: str,
 ) -> None:
     """Round-trip label names with Unicode, emoji, spaces, and exact color values."""

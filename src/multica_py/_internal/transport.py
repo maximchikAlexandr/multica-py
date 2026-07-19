@@ -33,6 +33,15 @@ class CliTransport:
         self._semaphore = semaphore
         self._version_checked = False
 
+    def __enter__(self) -> CliTransport:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        """Release transport-owned resources after subprocess calls."""
+
     def _build_full_argv(self, command_args: tuple[str, ...]) -> tuple[str, ...]:
         executable = str(self._config.executable)
         global_args = build_global_args(self._config)

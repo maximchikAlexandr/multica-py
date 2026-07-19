@@ -270,7 +270,9 @@ class ComposeLifecycle:
         else:
             digest = self._target.backend_digest
         if digest is None or not digest.startswith("sha256:"):
-            raise LiveSetupError("compose", "concrete backend digest is required for compose startup")
+            raise LiveSetupError(
+                "compose", "concrete backend digest is required for compose startup"
+            )
         return digest
 
     def _pull_backend_image(self, digest: str) -> None:
@@ -287,16 +289,30 @@ class ComposeLifecycle:
             stage="compose",
         ).stdout.strip()
         if not container_id:
-            raise LiveSetupError("compose", "backend container id not found for digest verification")
-        inspect = self._run_command(
+            raise LiveSetupError(
+                "compose", "backend container id not found for digest verification"
+            )
+        image_id = self._run_command(
             ["docker", "inspect", "--format", "{{.Image}}", container_id.splitlines()[0]],
             stage="compose",
         ).stdout.strip()
+        repo_digests = self._run_command(
+            [
+                "docker",
+                "image",
+                "inspect",
+                "--format",
+                "{{range .RepoDigests}}{{println .}}{{end}}",
+                image_id,
+            ],
+            stage="compose",
+        ).stdout
         expected = digest.removeprefix("sha256:")
-        if expected not in inspect:
+        if expected not in repo_digests and expected not in image_id:
             raise LiveSetupError(
                 "compose",
-                f"backend image digest mismatch: expected {digest}, got {inspect}",
+                "backend image digest mismatch: "
+                f"expected {digest}, image={image_id}, repo_digests={repo_digests.strip()!r}",
             )
 
     def _compose_files(self) -> tuple[pathlib.Path, ...]:
@@ -482,7 +498,9 @@ def probe_readiness(endpoint: str) -> ReadinessResult:
     except ValueError:
         json_body = None
     excerpt = textwrap.shorten(response.text, width=240, placeholder="...")
-    return ReadinessResult(status_code=response.status_code, json_body=json_body, body_excerpt=excerpt)
+    return ReadinessResult(
+        status_code=response.status_code, json_body=json_body, body_excerpt=excerpt
+    )
 
 
 def is_ready(result: ReadinessResult) -> bool:

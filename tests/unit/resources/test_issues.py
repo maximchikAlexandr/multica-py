@@ -25,8 +25,8 @@ def test_issue_create_request_no_description():
 
 
 def test_issue_create_request_with_labels():
-    req = IssueCreateRequest(title="Test", label=("bug", "urgent"))
-    assert req.label == ("bug", "urgent")
+    req = IssueCreateRequest(title="Test", label_ids=("bug", "urgent"))
+    assert req.label_ids == ("bug", "urgent")
 
 
 def test_global_args_with_server_and_workspace():

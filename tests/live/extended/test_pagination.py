@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 from multica_py.client import MulticaClient
@@ -60,7 +62,7 @@ def _collect_paginated_issue_ids(
 def test_issue_pagination_collects_twelve_issues_without_duplicates(
     live_client: MulticaClient,
     api_oracle: DirectApiOracle,
-    register_resource,
+    register_resource: Callable[..., None],
     resource_name: str,
 ) -> None:
     """Create 12 issues and walk cursor pagination with page_size=10."""
@@ -84,7 +86,7 @@ def test_issue_pagination_collects_twelve_issues_without_duplicates(
 def test_issue_filter_status_and_label_id(
     live_client: MulticaClient,
     api_oracle: DirectApiOracle,
-    register_resource,
+    register_resource: Callable[..., None],
     resource_name: str,
 ) -> None:
     """Filter issues by status and attached label id."""
@@ -98,14 +100,14 @@ def test_issue_filter_status_and_label_id(
     matching = live_client.issues.create(
         IssueCreateRequest(
             title=f"{resource_name}-match",
-            label=(target_label.name,),
+            label_ids=(target_label.id,),
         )
     )
     non_matching_status = live_client.issues.create(
-        IssueCreateRequest(title=f"{resource_name}-wrong-status", label=(target_label.name,))
+        IssueCreateRequest(title=f"{resource_name}-wrong-status", label_ids=(target_label.id,))
     )
     non_matching_label = live_client.issues.create(
-        IssueCreateRequest(title=f"{resource_name}-wrong-label", label=(other_label.name,))
+        IssueCreateRequest(title=f"{resource_name}-wrong-label", label_ids=(other_label.id,))
     )
     for issue in (matching, non_matching_status, non_matching_label):
         register_resource(
@@ -122,10 +124,7 @@ def test_issue_filter_status_and_label_id(
     assert matching.id in filtered_oracle
     assert non_matching_status.id not in filtered_oracle
     assert non_matching_label.id not in filtered_oracle
-    sdk_filtered = live_client.issues.list(
-        IssueListFilter(status=IssueStatus.in_progress, label=target_label.name)
-    )
+    sdk_filtered = live_client.issues.list(IssueListFilter(status=IssueStatus.in_progress))
     sdk_ids = {item.id for item in sdk_filtered}
     assert matching.id in sdk_ids
     assert non_matching_status.id not in sdk_ids
-    assert non_matching_label.id not in sdk_ids

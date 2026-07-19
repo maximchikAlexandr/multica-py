@@ -34,11 +34,11 @@ def test_oracle_returns_raw_json_and_allowlisted_headers(monkeypatch: pytest.Mon
         )
 
     _install_transport(monkeypatch, httpx.MockTransport(handler))
-    oracle = DirectApiOracle("http://127.0.0.1:8080", workspace_id="ws-1", pat="pat-secret")
-    response = oracle.request("GET", "/api/labels/lbl-1")
-    assert response.status_code == 200
-    assert response.json_body == {"id": "lbl-1", "name": "bug"}
-    assert "authorization" not in response.headers
+    with DirectApiOracle("http://127.0.0.1:8080", workspace_id="ws-1", pat="pat-secret") as oracle:
+        response = oracle.request("GET", "/api/labels/lbl-1")
+        assert response.status_code == 200
+        assert response.json_body == {"id": "lbl-1", "name": "bug"}
+        assert "authorization" not in response.headers
 
 
 def test_list_issues_page_requires_items_and_next_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -49,10 +49,10 @@ def test_list_issues_page_requires_items_and_next_cursor(monkeypatch: pytest.Mon
         )
 
     _install_transport(monkeypatch, httpx.MockTransport(handler))
-    oracle = DirectApiOracle("http://127.0.0.1:8080", workspace_id="ws-1", pat="pat-secret")
-    items, next_cursor = oracle.list_issues_page(limit=10)
-    assert items == [{"id": "issue-1"}]
-    assert next_cursor == "cursor-2"
+    with DirectApiOracle("http://127.0.0.1:8080", workspace_id="ws-1", pat="pat-secret") as oracle:
+        items, next_cursor = oracle.list_issues_page(limit=10)
+        assert items == [{"id": "issue-1"}]
+        assert next_cursor == "cursor-2"
 
 
 def test_list_issues_page_rejects_unpinned_shape(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -60,6 +60,26 @@ def test_list_issues_page_rejects_unpinned_shape(monkeypatch: pytest.MonkeyPatch
         return httpx.Response(200, json=[{"id": "issue-1"}])
 
     _install_transport(monkeypatch, httpx.MockTransport(handler))
-    oracle = DirectApiOracle("http://127.0.0.1:8080", workspace_id="ws-1", pat="pat-secret")
-    with pytest.raises(AssertionError, match="unexpected body"):
+    with (
+        DirectApiOracle("http://127.0.0.1:8080", workspace_id="ws-1", pat="pat-secret") as oracle,
+        pytest.raises(AssertionError, match="unexpected body"),
+    ):
         oracle.list_issues_page(limit=10)
+
+
+def test_list_comments_accepts_bare_array(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=[{"id": "c1", "content": "hello"}])
+
+    _install_transport(monkeypatch, httpx.MockTransport(handler))
+    with DirectApiOracle("http://127.0.0.1:8080", workspace_id="ws-1", pat="pat-secret") as oracle:
+        assert oracle.list_comments("issue-1") == [{"id": "c1", "content": "hello"}]
+
+
+def test_list_issue_labels_accepts_wrapped_object(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"labels": [{"id": "lbl-1", "name": "bug"}]})
+
+    _install_transport(monkeypatch, httpx.MockTransport(handler))
+    with DirectApiOracle("http://127.0.0.1:8080", workspace_id="ws-1", pat="pat-secret") as oracle:
+        assert oracle.list_issue_labels("issue-1") == [{"id": "lbl-1", "name": "bug"}]

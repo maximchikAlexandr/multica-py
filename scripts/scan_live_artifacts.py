@@ -7,6 +7,7 @@ import json
 import pathlib
 import re
 import sys
+from typing import cast
 
 from tests.live.diagnostics import VERIFICATION_CODE
 
@@ -34,11 +35,15 @@ def scan_text_content(text: str, label: str) -> list[str]:
                 if value and value != REDACTED:
                     findings.append(f"{label}: {prefix[:-1]} leaked")
         token_match = TOKEN_FIELD.search(line)
-        if token_match is not None and token_match.group(1) != REDACTED:
-            findings.append(f"{label}: token field not redacted")
+        if token_match is not None:
+            token_value = cast("str", token_match.group(1))
+            if token_value != REDACTED:
+                findings.append(f"{label}: token field not redacted")
         bearer_match = BEARER_TOKEN.search(line)
-        if bearer_match is not None and bearer_match.group(1) != REDACTED:
-            findings.append(f"{label}: bearer token not redacted")
+        if bearer_match is not None:
+            bearer_value = cast("str", bearer_match.group(1))
+            if bearer_value != REDACTED:
+                findings.append(f"{label}: bearer token not redacted")
         if VERIFICATION_CODE in line:
             findings.append(f"{label}: verification code leaked")
     return findings
@@ -64,7 +69,7 @@ def scan_artifact_directory(artifact_root: pathlib.Path) -> list[str]:
         findings.extend(scan_text_content(text, str(rel)))
     scan_path = artifact_root / "secret-scan.json"
     if scan_path.is_file():
-        payload = json.loads(scan_path.read_text(encoding="utf-8"))
+        payload = cast("dict[str, object]", json.loads(scan_path.read_text(encoding="utf-8")))
         count = payload.get("finding_count")
         if isinstance(count, int) and count > 0:
             findings.append(f"secret-scan.json: {count} registered secret leak(s)")

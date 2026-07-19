@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import os
 import pathlib
@@ -12,6 +13,7 @@ import tempfile
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from typing import cast
 
 from tests.live.exceptions import LiveSetupError
 from tests.live.settings import CompatibilityTarget, load_compatibility_target
@@ -63,10 +65,17 @@ def _platform_asset_name(version: str) -> str:
 
 def _expected_release_sha256(target: CompatibilityTarget) -> str:
     spec = _platform_release_spec()
-    checksum = getattr(target, spec.checksum_field)
-    if checksum is None:
-        raise LiveSetupError("target", f"{spec.checksum_field} is required for release mode on this platform")
-    return checksum
+    checksum_by_field = {
+        "cli_release_sha256_linux_amd64": target.cli_release_sha256_linux_amd64,
+        "cli_release_sha256_darwin_arm64": target.cli_release_sha256_darwin_arm64,
+        "cli_release_sha256_darwin_amd64": target.cli_release_sha256_darwin_amd64,
+    }
+    checksum_value = checksum_by_field[spec.checksum_field]
+    if not isinstance(checksum_value, str):
+        raise LiveSetupError(
+            "target", f"{spec.checksum_field} is required for release mode on this platform"
+        )
+    return checksum_value
 
 
 def _sha256_file(path: pathlib.Path) -> str:
@@ -85,10 +94,14 @@ def _download_release_cli(target: CompatibilityTarget, destination: pathlib.Path
     url = f"{GITHUB_RELEASE_BASE}/{tag}/{asset_name}"
     archive_path = destination / asset_name
     try:
-        with urllib.request.urlopen(url, timeout=120) as response:
-            archive_path.write_bytes(response.read())
+        raw_response = urllib.request.urlopen(url, timeout=120)
     except urllib.error.URLError as exc:
         raise LiveSetupError("target", f"failed to download CLI release asset: {exc}") from exc
+    response = cast("http.client.HTTPResponse", raw_response)
+    try:
+        archive_path.write_bytes(response.read())
+    finally:
+        response.close()
     actual_sha256 = _sha256_file(archive_path)
     if actual_sha256 != expected_sha256:
         raise LiveSetupError(
@@ -111,7 +124,9 @@ def _download_release_cli(target: CompatibilityTarget, destination: pathlib.Path
     return final_path
 
 
-def resolve_cli_from_upstream(upstream_dir: pathlib.Path, destination: pathlib.Path) -> pathlib.Path:
+def resolve_cli_from_upstream(
+    upstream_dir: pathlib.Path, destination: pathlib.Path
+) -> pathlib.Path:
     """Build the Multica CLI from an upstream checkout.
 
     Args:
@@ -176,7 +191,7 @@ def read_cli_version(cli_executable: pathlib.Path) -> str:
             f"CLI version command failed with exit code {completed.returncode}",
         )
     try:
-        payload = json.loads(completed.stdout)
+        payload = cast("dict[str, object]", json.loads(completed.stdout))
     except json.JSONDecodeError as exc:
         raise LiveSetupError("target", "CLI version output is not valid JSON") from exc
     version = payload.get("version")
@@ -237,7 +252,9 @@ def resolve_cli_executable(
         return settings_cli.resolve()
     if os.environ.get("MULTICA_LIVE_CLI_SOURCE") == "upstream":
         if upstream_dir is None:
-            raise LiveSetupError("target", "MULTICA_LIVE_UPSTREAM_DIR is required for upstream CLI build")
+            raise LiveSetupError(
+                "target", "MULTICA_LIVE_UPSTREAM_DIR is required for upstream CLI build"
+            )
         destination = cache_dir or pathlib.Path(tempfile.mkdtemp(prefix="multica-live-cli-"))
         return resolve_cli_from_upstream(upstream_dir, destination)
     if target.cli_source == "local":

@@ -54,7 +54,9 @@ def _settings(tmp_path: pathlib.Path) -> LiveSettings:
 def test_compose_up_argv_uses_list_form_without_shell(tmp_path: pathlib.Path) -> None:
     settings = _settings(tmp_path)
     run = create_live_test_run(_target(), settings, run_id="abc")
-    lifecycle = ComposeLifecycle(settings, _target(), run, DiagnosticCollector(run.artifact_dir, run.run_id))
+    lifecycle = ComposeLifecycle(
+        settings, _target(), run, DiagnosticCollector(run.artifact_dir, run.run_id)
+    )
     upstream = tmp_path / "upstream"
     upstream.mkdir()
     compose_file = upstream / "docker-compose.selfhost.yml"
@@ -117,9 +119,14 @@ def test_wait_ready_respects_timeout(tmp_path: pathlib.Path) -> None:
         ready_timeout_seconds=10.0,
     )
     run = create_live_test_run(_target(), settings, run_id="abc")
-    lifecycle = ComposeLifecycle(settings, _target(), run, DiagnosticCollector(run.artifact_dir, run.run_id))
+    lifecycle = ComposeLifecycle(
+        settings, _target(), run, DiagnosticCollector(run.artifact_dir, run.run_id)
+    )
     with (
-        patch("tests.live.compose.probe_readiness", return_value=ReadinessResult(503, None, "not ready")),
+        patch(
+            "tests.live.compose.probe_readiness",
+            return_value=ReadinessResult(503, None, "not ready"),
+        ),
         patch("tests.live.compose.time.sleep", return_value=None),
         pytest.raises(LiveSetupError, match="backend not ready"),
     ):
@@ -129,7 +136,9 @@ def test_wait_ready_respects_timeout(tmp_path: pathlib.Path) -> None:
 def test_teardown_skips_when_not_started(tmp_path: pathlib.Path) -> None:
     settings = _settings(tmp_path)
     run = create_live_test_run(_target(), settings, run_id="abc")
-    lifecycle = ComposeLifecycle(settings, _target(), run, DiagnosticCollector(run.artifact_dir, run.run_id))
+    lifecycle = ComposeLifecycle(
+        settings, _target(), run, DiagnosticCollector(run.artifact_dir, run.run_id)
+    )
     with patch("tests.live.compose.subprocess.run") as run_mock:
         lifecycle.teardown()
         run_mock.assert_not_called()

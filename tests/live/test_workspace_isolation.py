@@ -3,6 +3,7 @@ from __future__ import annotations
 import pathlib
 import subprocess
 import threading
+from collections.abc import Callable
 
 import pytest
 
@@ -11,6 +12,7 @@ from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import NotFoundError
 from scripts.resolve_multica_target import resolve_target
+from tests.live.bootstrap import WorkspaceContext
 from tests.live.compose import ComposeLifecycle
 from tests.live.conftest import audit_postconditions
 from tests.live.diagnostics import DiagnosticCollector
@@ -35,7 +37,7 @@ def test_primary_label_is_invisible_from_secondary_workspace(
     live_client: MulticaClient,
     secondary_live_client: MulticaClient,
     resource_name: str,
-    register_resource,
+    register_resource: Callable[..., None],
 ) -> None:
     """Primary workspace labels must not appear in secondary workspace list/get."""
     label = live_client.labels.create(label_name(resource_name, "iso"), color="#abcdef")
@@ -53,7 +55,7 @@ def test_primary_project_is_invisible_from_secondary_workspace(
     secondary_live_client: MulticaClient,
     api_oracle: DirectApiOracle,
     resource_name: str,
-    register_resource,
+    register_resource: Callable[..., None],
 ) -> None:
     """Primary workspace projects must not appear in secondary workspace list/get."""
     project = api_oracle.create_project(f"{resource_name}-iso-project")
@@ -71,8 +73,8 @@ def test_primary_project_is_invisible_from_secondary_workspace(
 def test_parallel_read_only_calls_keep_workspace_context(
     live_client: MulticaClient,
     secondary_live_client: MulticaClient,
-    primary_workspace,
-    secondary_workspace,
+    primary_workspace: WorkspaceContext,
+    secondary_workspace: WorkspaceContext,
 ) -> None:
     """Concurrent workspace-scoped label lists must not mix primary/secondary resources."""
     primary_label = live_client.labels.create(
@@ -116,8 +118,8 @@ def test_parallel_read_only_calls_keep_workspace_context(
 
 def test_primary_client_scope_does_not_break_secondary_client(
     live_environment: LiveTestEnvironment,
-    primary_workspace,
-    secondary_workspace,
+    primary_workspace: WorkspaceContext,
+    secondary_workspace: WorkspaceContext,
     secondary_live_client: MulticaClient,
 ) -> None:
     """Releasing a scoped primary client must not break the secondary client."""
@@ -126,7 +128,7 @@ def test_primary_client_scope_does_not_break_secondary_client(
         server_url=live_environment.server_url,
         workspace_id=primary_workspace.id,
         profile=primary_workspace.profile_name,
-        environment={"HOME": str(live_environment.home_dir)},
+        environment=(("HOME", str(live_environment.home_dir)),),
         compatibility=CompatibilityPolicy.ignore,
     )
     with MulticaClient(config) as scoped_client:

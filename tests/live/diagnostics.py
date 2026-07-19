@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 import tempfile
+from typing import cast
 
 LOG_BYTE_LIMIT = 262144
 REDACTED = "***"
@@ -51,6 +52,7 @@ class DiagnosticCollector:
         for secret in sorted(self._secrets, key=len, reverse=True):
             redacted = redacted.replace(secret, REDACTED)
         redacted = redacted.replace(f'"token":"{VERIFICATION_CODE}"', '"token":"***"')
+        redacted = redacted.replace(VERIFICATION_CODE, REDACTED)
         return redacted
 
     def write_json(self, filename: str, payload: dict[str, object]) -> None:
@@ -86,7 +88,7 @@ class DiagnosticCollector:
             "resource": resource,
         }
         self._primary_failure = payload
-        self.write_json("failure.json", payload)
+        self.write_json("failure.json", cast("dict[str, object]", payload))
 
     def record_cleanup(self, payload: CleanupRecord) -> None:
         """Record cleanup metadata separately from the primary failure."""

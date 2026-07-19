@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Callable
 
 import pytest
 
 from multica_py.client import MulticaClient
-from multica_py.models.issues import IssueCreateRequest, IssueUpdateRequest
+from multica_py.models.issues import InlineDescription, IssueCreateRequest, IssueUpdateRequest
 from tests.live.oracle import DirectApiOracle
 
 pytestmark = [pytest.mark.live, pytest.mark.live_extended]
@@ -26,12 +27,15 @@ def _parse_timestamp(value: object) -> datetime.datetime:
 def test_issue_timestamps_are_timezone_aware_and_monotonic(
     live_client: MulticaClient,
     api_oracle: DirectApiOracle,
-    register_resource,
+    register_resource: Callable[..., None],
     resource_name: str,
 ) -> None:
     """Verify created_at/updated_at are timezone-aware and updated_at moves forward."""
     issue = live_client.issues.create(
-        IssueCreateRequest(title=f"{resource_name}-timestamps", description="before")
+        IssueCreateRequest(
+            title=f"{resource_name}-timestamps",
+            description_input=InlineDescription(text="before"),
+        )
     )
     register_resource(
         key=f"issue-{issue.id}",
