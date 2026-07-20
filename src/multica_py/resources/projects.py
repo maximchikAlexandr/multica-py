@@ -1,14 +1,21 @@
 from __future__ import annotations
 
+from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import ProjectWire, project_from_wire
+from multica_py.config import ClientConfig
 from multica_py.enums import ProjectStatus
 from multica_py.exceptions import ValidationError
 from multica_py.models.projects import Project, ProjectCreateRequest, ProjectUpdateRequest
 from multica_py.resources._base import BaseResource
+from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.sentinels import Unset
 
 
 class ProjectResource(BaseResource):
+    def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
+        super().__init__(transport, config)
+        self.resources = ProjectResourceCollection(transport, config)
+
     def list(self) -> tuple[Project, ...]:
         return tuple(
             project_from_wire(item)

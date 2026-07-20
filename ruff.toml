@@ -1,5 +1,11 @@
 target-version = "py312"
 line-length = 100
+exclude = [
+    "mutants",
+    ".venv",
+    "build",
+    "dist",
+]
 
 [lint]
 select = [

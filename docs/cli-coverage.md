@@ -63,12 +63,13 @@ are never generator input.
 | setup | cloud, self-host | ✅ |
 | daemon | status, start, stop, restart, logs, disk-usage | ✅ |
 | workspaces | list, get, members, switch, watch, unwatch | ✅ |
-| issues | list, get, pull-requests, children, create, update, assign, set-status, reorder, search, runs, run-messages, usage, rerun, cancel-task | ✅ |
+| issues | list, get, pull-requests, children, create, update, assign, set-status, reorder, search, runs, run-messages, usage, rerun, cancel-task | ✅ (`create`/`update` optional `--project`) |
 | issues.comments | list, add, delete, resolve, unresolve | ✅ (`reply` maps to `add --parent`) |
 | issues.metadata | list, get, set, delete | ✅ |
 | issues.subscribers | list, add, remove | ✅ |
 | issues.labels | list, add, remove | ✅ |
 | projects | list, get, create, update, delete, set-status | ✅ |
+| projects.resources | list, add, update, remove (`local_directory`) | ✅ |
 | labels | list, get, create, update, delete | ✅ |
 | agents | list, get, create, update, archive, restore, tasks, avatar | ✅ |
 | agents.skills | list, set | ✅ |
@@ -84,7 +85,7 @@ are never generator input.
 | users | list, get | ✅ |
 | maintenance | version, update | ✅ |
 
-Total: 108 manifest command rows, with 107 supported SDK rows and 1 explicit unsupported/deprecated upstream row.
+Total: 112 manifest command rows, with 111 supported SDK rows and 1 explicit unsupported/deprecated upstream row.
 
 Collector subprocesses run with an allowlisted environment only; `observe` and
 network-backed collection may still reach release hosts, so treat untrusted

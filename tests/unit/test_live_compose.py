@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from tests.live.compose import (
+from tests.live.backend import (
     ComposeLifecycle,
     ReadinessResult,
     compose_down_argv,
@@ -14,14 +14,15 @@ from tests.live.compose import (
     probe_readiness,
 )
 from tests.live.diagnostics import DiagnosticCollector
-from tests.live.exceptions import LiveSetupError
-from tests.live.settings import LiveSettings, create_live_test_run
+from tests.live.environment import LiveSettings, LiveSetupError, create_live_test_run
 from tests.unit.conftest import make_settings, make_target
+
+_TEST_RUN_ID = "0123456789abcdef0123456789abcdef"
 
 
 def test_compose_up_argv_uses_list_form_without_shell(tmp_path: pathlib.Path) -> None:
     settings = make_settings(tmp_path)
-    run = create_live_test_run(make_target(), settings, run_id="abc")
+    run = create_live_test_run(make_target(), settings, run_id=_TEST_RUN_ID)
     lifecycle = ComposeLifecycle(
         settings, make_target(), run, DiagnosticCollector(run.artifact_dir, run.run_id)
     )
@@ -50,7 +51,7 @@ def test_compose_up_argv_uses_list_form_without_shell(tmp_path: pathlib.Path) ->
 
 def test_compose_down_argv_includes_volume_removal(tmp_path: pathlib.Path) -> None:
     settings = make_settings(tmp_path)
-    run = create_live_test_run(make_target(), settings, run_id="abc")
+    run = create_live_test_run(make_target(), settings, run_id=_TEST_RUN_ID)
     compose_file = tmp_path / "docker-compose.selfhost.yml"
     argv = compose_down_argv((compose_file,), run.compose_project)
     assert argv[-3:] == ["down", "-v", "--remove-orphans"]
@@ -86,16 +87,16 @@ def test_wait_ready_respects_timeout(tmp_path: pathlib.Path) -> None:
         keep_env=settings.keep_env,
         ready_timeout_seconds=10.0,
     )
-    run = create_live_test_run(make_target(), settings, run_id="abc")
+    run = create_live_test_run(make_target(), settings, run_id=_TEST_RUN_ID)
     lifecycle = ComposeLifecycle(
         settings, make_target(), run, DiagnosticCollector(run.artifact_dir, run.run_id)
     )
     with (
         patch(
-            "tests.live.compose.probe_readiness",
+            "tests.live.backend.probe_readiness",
             return_value=ReadinessResult(503, None, "not ready"),
         ),
-        patch("tests.live.compose.time.sleep", return_value=None),
+        patch("tests.live.backend.time.sleep", return_value=None),
         pytest.raises(LiveSetupError, match="backend not ready"),
     ):
         lifecycle.wait_ready()
@@ -103,10 +104,10 @@ def test_wait_ready_respects_timeout(tmp_path: pathlib.Path) -> None:
 
 def test_teardown_skips_when_not_started(tmp_path: pathlib.Path) -> None:
     settings = make_settings(tmp_path)
-    run = create_live_test_run(make_target(), settings, run_id="abc")
+    run = create_live_test_run(make_target(), settings, run_id=_TEST_RUN_ID)
     lifecycle = ComposeLifecycle(
         settings, make_target(), run, DiagnosticCollector(run.artifact_dir, run.run_id)
     )
-    with patch("tests.live.compose.subprocess.run") as run_mock:
+    with patch("tests.live.backend.subprocess.run") as run_mock:
         lifecycle.teardown()
         run_mock.assert_not_called()

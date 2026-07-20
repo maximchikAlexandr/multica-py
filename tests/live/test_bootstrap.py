@@ -8,21 +8,22 @@ import pytest
 
 from multica_py.client import MulticaClient
 from scripts.resolve_multica_target import ResolvedTarget, build_version_report, resolve_target
-from tests.live.bootstrap import WorkspaceContext
-from tests.live.compose import ComposeLifecycle, is_ready, probe_readiness
+from tests.live.backend import ComposeLifecycle, is_ready, probe_readiness
 from tests.live.diagnostics import DiagnosticCollector
-from tests.live.exceptions import LiveSetupError
-from tests.live.profile import profile_config_path, validate_not_real_home
-from tests.live.settings import (
+from tests.live.environment import (
+    LiveSetupError,
     LiveTestEnvironment,
     LiveTestRun,
+    WorkspaceContext,
     create_live_test_run,
     load_live_settings,
+    profile_config_path,
+    validate_not_real_home,
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-pytestmark = [pytest.mark.live, pytest.mark.live_smoke]
+pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 
 
 def test_readyz_reports_backend_ready(
@@ -110,7 +111,6 @@ def _run_not_ready_setup(
     return run, diagnostics, lifecycle
 
 
-@pytest.mark.serial
 @pytest.mark.destructive
 def test_not_ready_backend_raises_live_setup_error_with_diagnostics(
     monkeypatch: pytest.MonkeyPatch,

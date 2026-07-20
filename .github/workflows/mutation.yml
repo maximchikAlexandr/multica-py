@@ -1,0 +1,31 @@
+name: Mutation Testing
+
+# Non-required diagnostic workflow per contracts/mutation-scope.md and ci-profiles.md.
+
+on:
+  schedule:
+    - cron: "0 3 * * 2"
+  workflow_dispatch:
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --group mutation --group test
+      - name: Run targeted mutation audit
+        run: uv run mutmut run
+      - name: Capture mutmut results
+        run: uv run mutmut results | tee mutmut-results.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutmut-results
+          path: mutmut-results.txt
+          retention-days: 14

@@ -23,6 +23,7 @@ from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.labels import LabelResource
 from multica_py.resources.maintenance import MaintenanceResource
+from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.resources.projects import ProjectResource
 from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
@@ -32,7 +33,7 @@ from multica_py.resources.skills import SkillResource
 from multica_py.resources.squads import SquadResource
 from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
-from tests._coverage_guard import assert_manifest_coverage
+from tests._manifest_coverage import assert_manifest_coverage
 from tests._manifest_support import guard_eligible_operations
 
 from .cases import ARGV_CASES, DECODE_CASES, ArgvCase, DecodeCase
@@ -54,6 +55,7 @@ _RESOURCE_CLASSES = {
     "labels": LabelResource,
     "maintenance": MaintenanceResource,
     "projects": ProjectResource,
+    "project_resources": ProjectResourceCollection,
     "repositories": RepositoryResource,
     "runtimes": RuntimeResource,
     "setup": SetupResource,

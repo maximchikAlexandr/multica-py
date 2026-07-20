@@ -25,8 +25,7 @@ from scripts.live_compatibility_report import (
     write_compatibility_report,
 )
 from scripts.resolve_multica_target import resolve_target
-from tests.live.exceptions import LiveSetupError
-from tests.live.settings import load_live_settings
+from tests.live.environment import LiveSetupError, load_live_settings
 
 DEFAULT_TARGET_FILE = REPO_ROOT / "contracts" / "multica-live-target.toml"
 
@@ -193,20 +192,29 @@ def run_mutation_check(*, resolve_cli: bool) -> int:
     return 0
 
 
-def run_repeat(*, resolve_cli: bool, runs: int) -> int:
+def run_repeat(*, resolve_cli: bool, runs: int, pytest_args: list[str] | None = None) -> int:
     """Run sequential live smoke runs and summarize flaky/runtime results."""
     _validate_environment(resolve_cli=resolve_cli)
     durations: list[float] = []
     failed_runs: list[int] = []
+    leftover_prefixes: set[str] = set()
+    forwarded = pytest_args or []
     for index in range(1, runs + 1):
+        run_id = os.urandom(16).hex()
+        os.environ["MULTICA_LIVE_RUN_ID"] = run_id
+        prefix = f"multica-py-live-{run_id}"
         started = time.monotonic()
-        exit_code = _run_pytest(["-m", "live_smoke", "tests/live", "-q"])
+        argv = ["-m", "live_smoke", "tests/live/test_agent_sandbox.py", *forwarded]
+        if forwarded and forwarded[0] == "--":
+            argv = ["-m", "live_smoke", "tests/live/test_agent_sandbox.py", *forwarded[1:]]
+        exit_code = _run_pytest(argv)
         elapsed = time.monotonic() - started
         durations.append(elapsed)
         status = "pass" if exit_code == 0 else "fail"
-        print(f"run {index}/{runs}: {status} in {elapsed:.1f}s")
+        print(f"run {index}/{runs}: {status} in {elapsed:.1f}s (run_id={run_id})")
         if exit_code != 0:
             failed_runs.append(index)
+        leftover_prefixes.update(_collect_leftover_prefixes(prefix))
     print(f"repeat summary: {runs - len(failed_runs)}/{runs} passed")
     if durations:
         print(
@@ -215,10 +223,34 @@ def run_repeat(*, resolve_cli: bool, runs: int) -> int:
             f"max={max(durations):.1f} "
             f"avg={sum(durations) / len(durations):.1f}"
         )
+    if leftover_prefixes:
+        print(f"managed leftovers: {sorted(leftover_prefixes)}", file=sys.stderr)
+        return 1
     if failed_runs:
         print(f"flaky or failed runs: {failed_runs}", file=sys.stderr)
         return 1
     return 0
+
+
+def _collect_leftover_prefixes(prefix: str) -> set[str]:
+    leftovers: set[str] = set()
+    ps = subprocess.run(
+        ["docker", "ps", "-a", "--filter", f"name={prefix}", "--format", "{{.Names}}"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    leftovers.update(line for line in ps.stdout.splitlines() if line.strip())
+    volumes = subprocess.run(
+        ["docker", "volume", "ls", "--filter", f"name={prefix}", "--format", "{{.Name}}"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    leftovers.update(line for line in volumes.stdout.splitlines() if line.strip())
+    return leftovers
 
 
 def run_smoke(args: argparse.Namespace) -> int:
@@ -291,7 +323,12 @@ def main(argv: list[str] | None = None) -> int:
         return run_mutation_check(resolve_cli=cast("bool", args.resolve_cli))
     repeat = cast("int | None", args.repeat)
     if repeat is not None:
-        return run_repeat(resolve_cli=cast("bool", args.resolve_cli), runs=repeat)
+        forwarded = cast("list[str]", args.pytest_args)
+        return run_repeat(
+            resolve_cli=cast("bool", args.resolve_cli),
+            runs=repeat,
+            pytest_args=forwarded,
+        )
     return run_smoke(args)
 
 

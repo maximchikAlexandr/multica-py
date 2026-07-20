@@ -84,5 +84,4 @@ class MulticaClient:
         return self
 
     def __exit__(self, *args: object) -> None:
-        """No cleanup required — SDK owns no network connections or open files.
-        Managed subprocesses are cleaned up by their own context managers."""
+        self._transport.close()

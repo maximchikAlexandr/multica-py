@@ -15,8 +15,7 @@ import urllib.request
 from dataclasses import dataclass
 from typing import cast
 
-from tests.live.exceptions import LiveSetupError
-from tests.live.settings import CompatibilityTarget, load_compatibility_target
+from tests.live.environment import CompatibilityTarget, LiveSetupError, load_compatibility_target
 
 GITHUB_RELEASE_BASE = "https://github.com/multica-ai/multica/releases/download"
 
@@ -327,3 +326,15 @@ def build_version_report(resolved: ResolvedTarget) -> dict[str, str]:
         "cli_version_actual": resolved.cli_version_actual,
         "verified_at": target.verified_at,
     }
+
+
+def load_pinned_target(target_file: pathlib.Path) -> CompatibilityTarget:
+    """Load the pinned compatibility target manifest."""
+    return load_compatibility_target(target_file)
+
+
+def workflow_backend_digest(target: CompatibilityTarget) -> str:
+    """Return the digest CI should pull on Linux runners."""
+    if target.backend_digest_linux_amd64:
+        return target.backend_digest_linux_amd64
+    return target.backend_digest

@@ -7,10 +7,10 @@ import pytest
 from multica_py.client import MulticaClient
 from multica_py.enums import IssueStatus
 from multica_py.models.issues import IssueCreateRequest, IssueListFilter
+from tests.live.environment import label_name
 from tests.live.oracle import DirectApiOracle
-from tests.live.settings import label_name
 
-pytestmark = [pytest.mark.live, pytest.mark.live_extended]
+pytestmark = [pytest.mark.live, pytest.mark.live_extended, pytest.mark.serial]
 
 PAGE_SIZE = 10
 ISSUE_COUNT = 12

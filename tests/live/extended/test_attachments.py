@@ -9,7 +9,7 @@ from multica_py.client import MulticaClient
 from multica_py.models.issues import IssueCreateRequest
 from tests.live.oracle import DirectApiOracle
 
-pytestmark = [pytest.mark.live, pytest.mark.live_extended]
+pytestmark = [pytest.mark.live, pytest.mark.live_extended, pytest.mark.serial]
 
 ATTACHMENT_PAYLOAD = b"\x00\xff" * 512
 EDGE_FILENAMES = ("empty.bin", "file name.bin", "файл.bin")

@@ -4,7 +4,7 @@ import pytest
 
 from multica_py.client import MulticaClient
 
-pytestmark = [pytest.mark.live, pytest.mark.live_extended]
+pytestmark = [pytest.mark.live, pytest.mark.live_extended, pytest.mark.serial]
 
 
 @pytest.mark.parametrize(

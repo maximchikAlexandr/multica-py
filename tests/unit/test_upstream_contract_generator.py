@@ -118,5 +118,5 @@ def test_load_approved_contract_parses_real_json() -> None:
     json_path = repo_root / "contracts" / "sdk-contract.json"
     contract = approved.load_approved_contract(json_path)
     assert contract.schema_version == 1
-    assert len(contract.operations) == 12
+    assert len(contract.operations) == 22
     approved.validate_approved(contract)

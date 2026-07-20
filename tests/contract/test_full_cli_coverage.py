@@ -7,6 +7,7 @@ from multica_py._internal.manifest import (
 )
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
+from tests._manifest_support import issue_project_sdk_methods, project_resource_sdk_methods
 
 
 def _is_type_object(value: object) -> bool:
@@ -52,7 +53,10 @@ def test_all_core_families_present() -> None:
     expected = {
         "auth status",
         "issue list",
+        "issue create",
+        "issue update",
         "project list",
+        "project resource list",
         "label list",
         "agent list",
         "skill list",
@@ -110,3 +114,16 @@ def test_every_sdk_method_resolves_on_client() -> None:
         assert not _is_type_object(resolved), (
             f"sdk_method {sdk!r} resolved to a class, expected a callable or attribute"
         )
+
+
+def test_project_resource_sdk_methods_are_manifest_mapped() -> None:
+    manifest = load_manifest()
+    mapped = {entry.sdk_method for entry in manifest if entry.sdk_method}
+    missing = project_resource_sdk_methods() - mapped
+    assert not missing, f"Missing manifest mappings for project resources: {missing}"
+
+
+def test_issue_project_paths_use_existing_issue_commands() -> None:
+    manifest = load_manifest()
+    mapped = {entry.sdk_method for entry in manifest if entry.sdk_method}
+    assert issue_project_sdk_methods().issubset(mapped)

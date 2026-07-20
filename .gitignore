@@ -22,12 +22,17 @@ Thumbs.db
 # Logs
 *.log
 
+# Coverage (pytest-cov / coverage.py)
+.coverage
+coverage.json
+coverage.xml
+
 # Environment
 .env
 .env.local
 
 # Live integration test diagnostics and temp profiles
-.artifacts/live/
+.artifacts/
 .live-artifacts/
 tests/live/.live-home/
 tests/live/.live-diagnostics/
@@ -44,3 +49,6 @@ artifacts/**
 
 # Ephemeral collect output (canonical path from paths.CANDIDATE_CONTRACT_REL)
 src/multica_py/_generated/upstream_candidate_contract.json
+
+# Mutation testing workspace
+mutants/

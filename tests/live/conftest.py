@@ -17,34 +17,58 @@ from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import CommandExecutionError
 from multica_py.models.labels import Label
 from scripts.resolve_multica_target import ResolvedTarget, build_version_report, resolve_target
-from tests.live.bootstrap import BootstrapApiClient, TestIdentity, WorkspaceContext
-from tests.live.compose import ComposeLifecycle, allocate_loopback_port
-from tests.live.context import LiveContext
+from tests.live.backend import ComposeLifecycle, allocate_loopback_port, setup_sandbox_session
 from tests.live.diagnostics import DiagnosticCollector
-from tests.live.exceptions import LiveSetupError
-from tests.live.oracle import DirectApiOracle
-from tests.live.profile import (
+from tests.live.environment import (
+    AgentSandboxSettings,
+    LiveContext,
+    LiveRunContext,
+    LiveSettings,
+    LiveSetupError,
+    LiveTestEnvironment,
+    LiveTestRun,
+    OpenCodeCanarySettings,
+    TestIdentity,
+    WorkspaceContext,
+    create_live_run_context,
+    create_live_test_run,
     ensure_temp_home,
+    label_name,
+    load_agent_sandbox_settings,
+    load_live_settings,
+    load_opencode_canary_settings,
+    profile_name_for_run,
     remove_temp_home,
+    resource_prefix,
+    skip_if_canary_environment_incomplete,
     validate_not_real_home,
     write_cli_profile,
 )
-from tests.live.resource_registry import ResourceRegistry
-from tests.live.settings import (
-    LiveSettings,
-    LiveTestEnvironment,
-    LiveTestRun,
-    create_live_test_run,
-    label_name,
-    load_live_settings,
-    profile_name_for_run,
-    resource_prefix,
+from tests.live.oracle import DirectApiOracle
+from tests.live.resources import (
+    AgentSandboxOutcome,
+    ResourceRegistry,
+    execute_agent_sandbox_workflow,
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 TEMP_HOME_BASE = REPO_ROOT / "tests" / "live" / ".live-home"
 INVALID_PAT_TOKEN = "mpy-live-invalid-pat-token"
 MISSING_RESOURCE_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _session_includes_canary(request: pytest.FixtureRequest) -> bool:
+    for item in request.session.items:
+        if item.get_closest_marker("live_opencode_canary") is not None:
+            return True
+    return False
+
+
+@pytest.fixture(scope="session")
+def canary_environment_gate(request: pytest.FixtureRequest) -> None:
+    """Skip canary tests before infrastructure when configuration is incomplete."""
+    if _session_includes_canary(request):
+        skip_if_canary_environment_incomplete()
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +81,10 @@ class BootstrapResult:
 
 
 @pytest.fixture(scope="session")
-def live_settings(pytestconfig: pytest.Config) -> LiveSettings:
+def live_settings(
+    pytestconfig: pytest.Config,
+    canary_environment_gate: None,
+) -> LiveSettings:
     """Load validated live settings from the environment."""
     settings = load_live_settings(repo_root=REPO_ROOT)
     pytestconfig._live_diagnostic_collector = None  # type: ignore[attr-defined]
@@ -110,6 +137,7 @@ def live_environment(
     diagnostic_collector: DiagnosticCollector,
     resource_registry: ResourceRegistry,
     pytestconfig: pytest.Config,
+    canary_environment_gate: None,
 ) -> Generator[LiveTestEnvironment, None, None]:
     """Start or attach to the live backend environment."""
     lifecycle = ComposeLifecycle(
@@ -182,22 +210,21 @@ def bootstrap_result(
 ) -> BootstrapResult:
     """Bootstrap authenticated test identity and workspaces."""
     secret_values: list[str] = []
-    client = BootstrapApiClient(
-        live_environment.server_url,
-        live_test_run.run_id,
-        secret_values,
-    )
-    identity, primary, secondary = client.bootstrap()
-    diagnostic_collector.register_secrets(secret_values)
-    write_cli_profile(
-        live_environment.home_dir,
-        live_environment.profile_name,
+    session = setup_sandbox_session(
         server_url=live_environment.server_url,
-        app_url=live_environment.server_url,
-        workspace_id=primary.id,
-        token=identity.pat.reveal(),
+        run_id=live_test_run.run_id,
+        cli_executable=live_environment.cli_executable,
+        home_dir=live_environment.home_dir,
+        profile_name=live_environment.profile_name,
+        secret_values=secret_values,
     )
-    return BootstrapResult(identity=identity, primary=primary, secondary=secondary)
+    diagnostic_collector.register_secrets(secret_values)
+    assert session.secondary_workspace is not None
+    return BootstrapResult(
+        identity=session.identity,
+        primary=session.workspace,
+        secondary=session.secondary_workspace,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -386,6 +413,110 @@ def assert_no_secret_leak(
         diagnostic_collector.assert_no_secret_leak()
 
     return _assert
+
+
+@pytest.fixture(scope="session")
+def agent_sandbox_settings() -> AgentSandboxSettings:
+    """Return validated deterministic agent sandbox settings."""
+    return load_agent_sandbox_settings(repo_root=REPO_ROOT)
+
+
+@pytest.fixture
+def agent_sandbox_run_context(
+    live_test_run: LiveTestRun,
+    live_settings: LiveSettings,
+) -> LiveRunContext:
+    """Create isolated temp paths for one agent sandbox run."""
+    return create_live_run_context(
+        run_id=live_test_run.run_id,
+        artifact_root=live_settings.artifact_dir,
+        temp_parent=REPO_ROOT / "tests" / "live" / ".sandbox-temp",
+    )
+
+
+@pytest.fixture
+def agent_sandbox_target_report(compatibility_target: ResolvedTarget) -> dict[str, object]:
+    """Return pinned target metadata for sandbox diagnostics."""
+    return cast("dict[str, object]", build_version_report(compatibility_target))
+
+
+@pytest.fixture
+def run_agent_sandbox(
+    live_environment: LiveTestEnvironment,
+    live_test_run: LiveTestRun,
+    agent_sandbox_run_context: LiveRunContext,
+    agent_sandbox_settings: AgentSandboxSettings,
+    diagnostic_collector: DiagnosticCollector,
+    agent_sandbox_target_report: dict[str, object],
+) -> Callable[..., AgentSandboxOutcome]:
+    """Execute the agent sandbox workflow with optional overrides."""
+    return _make_sandbox_runner(
+        live_environment=live_environment,
+        live_test_run=live_test_run,
+        run_context=agent_sandbox_run_context,
+        default_settings=agent_sandbox_settings,
+        diagnostic_collector=diagnostic_collector,
+        target_report=agent_sandbox_target_report,
+    )
+
+
+@pytest.fixture(scope="session")
+def opencode_canary_settings(canary_environment_gate: None) -> OpenCodeCanarySettings:
+    """Return validated real OpenCode canary settings."""
+    return load_opencode_canary_settings()
+
+
+@pytest.fixture
+def run_opencode_canary(
+    live_environment: LiveTestEnvironment,
+    live_test_run: LiveTestRun,
+    agent_sandbox_run_context: LiveRunContext,
+    opencode_canary_settings: OpenCodeCanarySettings,
+    diagnostic_collector: DiagnosticCollector,
+    agent_sandbox_target_report: dict[str, object],
+) -> Callable[[], AgentSandboxOutcome]:
+    """Execute the real OpenCode canary workflow."""
+    return _make_sandbox_runner(
+        live_environment=live_environment,
+        live_test_run=live_test_run,
+        run_context=agent_sandbox_run_context,
+        default_settings=opencode_canary_settings.to_sandbox_settings(),
+        diagnostic_collector=diagnostic_collector,
+        target_report=agent_sandbox_target_report,
+        canary_settings=opencode_canary_settings,
+    )
+
+
+def _make_sandbox_runner(
+    *,
+    live_environment: LiveTestEnvironment,
+    live_test_run: LiveTestRun,
+    run_context: LiveRunContext,
+    default_settings: AgentSandboxSettings,
+    diagnostic_collector: DiagnosticCollector,
+    target_report: dict[str, object],
+    canary_settings: OpenCodeCanarySettings | None = None,
+) -> Callable[..., AgentSandboxOutcome]:
+    def _run(
+        *,
+        settings: AgentSandboxSettings | None = None,
+        inject_cleanup_failure: str | None = None,
+        expect_success: bool = True,
+    ) -> AgentSandboxOutcome:
+        return execute_agent_sandbox_workflow(
+            live_environment=live_environment,
+            run_context=run_context,
+            sandbox_settings=settings or default_settings,
+            diagnostics=diagnostic_collector,
+            target_report=target_report,
+            compose_project=live_test_run.compose_project,
+            compose_files=live_environment.compose_files,
+            inject_cleanup_failure=inject_cleanup_failure,
+            expect_success=expect_success,
+            canary_settings=canary_settings,
+        )
+
+    return _run
 
 
 def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[object]) -> None:

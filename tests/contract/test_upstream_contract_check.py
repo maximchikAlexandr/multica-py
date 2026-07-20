@@ -6,6 +6,8 @@ import shutil
 import time
 from typing import cast
 
+import pytest
+
 from .conftest import ContractCliRunner
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent

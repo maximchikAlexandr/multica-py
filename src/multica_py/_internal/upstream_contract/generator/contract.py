@@ -43,6 +43,7 @@ class ApprovedOperation(msgspec.Struct, frozen=True, kw_only=True, forbid_unknow
     approved_enum: tuple[str, ...] = ()
     constraints: tuple[dict[str, str], ...] = ()
     test_refs: tuple[str, ...] = ()
+    source_refs: tuple[str, ...] = ()
 
 
 class ApprovedContract(msgspec.Struct, frozen=True, kw_only=True, forbid_unknown_fields=True):
@@ -58,11 +59,12 @@ def load_approved_contract(path: pathlib.Path) -> ApprovedContract:
 
 
 def validate_approved(contract: ApprovedContract) -> ApprovedContract:
-    seen: set[str] = set()
+    seen: set[tuple[str, str]] = set()
     for op in contract.operations:
-        if op.operation_id in seen:
-            raise ValueError(f"duplicate operation_id: {op.operation_id}")
-        seen.add(op.operation_id)
+        key = (op.operation_id, op.python_parameter)
+        if key in seen:
+            raise ValueError(f"duplicate mapping: {op.operation_id}.{op.python_parameter}")
+        seen.add(key)
         if op.presence_semantics not in PRESENCE_SEMANTICS:
             raise ValueError(
                 f"operation {op.operation_id}: presence_semantics {op.presence_semantics!r} not in {PRESENCE_SEMANTICS}"

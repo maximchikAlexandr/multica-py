@@ -18,12 +18,13 @@ All resources accessed as attributes of `MulticaClient`:
 - **setup**: `cloud()`, `self_host(url)` → both return `ManagedProcess`
 - **daemon**: `start()` → `ManagedProcess`, `status()` → `DaemonStatus`, `stop/restart()` → `DaemonStatus`, `disk_usage()` → tuple, `logs(follow?)` → `ManagedProcess`
 - **workspaces**: `list/get/members` → typed tuples/objects, `watch/unwatch` → text
-- **issues**: full CRUD + `pull_requests`, `children`, `search`, `runs`, `run_messages`, `usage`, `rerun`, `cancel_task`
+- **issues**: full CRUD + `pull_requests`, `children`, `search`, `runs`, `run_messages`, `usage`, `rerun`, `cancel_task`; create/update accept optional `project_id` (emits `--project`)
 - **issues.comments**: `list` for flat comments, `list_flat`, `list_thread`, `list_recent`, `add`, `reply`, `delete`, `resolve`, `unresolve`
 - **issues.metadata**: `list`, `query`, `get`, `set`, `set_typed`, `delete`
 - **issues.subscribers**: `list/add/remove`
 - **issues.labels**: `list/add/remove`
 - **projects**: `list/get/create/update/delete/set_status`
+- **projects.resources**: `list`, `add_local_directory`, `update_local_directory`, `remove`
 - **labels**: `list/get/create/update/delete`
 - **agents**: `list/get/create/update/archive/restore/tasks/upload_avatar`
 - **agents.skills**: `list/set`
@@ -52,4 +53,6 @@ All resources accessed as attributes of `MulticaClient`:
 
 - `Page[T]` — immutable tuple payload with `next_cursor`
 - `ActionResult` — typed success/message container for commands that expose structured action results
+- `ProjectResourceRecord`, `LocalDirectoryResourceRef`, `ProjectResourceAddLocalDirectoryRequest`, `ProjectResourceUpdateLocalDirectoryRequest` — typed project-resource models
+- `IssueUsage.cost_usd` — optional float decoded from `issue usage` JSON
 

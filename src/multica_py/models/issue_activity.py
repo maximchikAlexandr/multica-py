@@ -98,5 +98,6 @@ class RunMessage(msgspec.Struct, frozen=True, kw_only=True):
 class IssueUsage(msgspec.Struct, frozen=True, kw_only=True):
     total_runs: int = 0
     total_tokens: int | None = None
+    cost_usd: float | None = None
     period_start: datetime.datetime | None = None
     period_end: datetime.datetime | None = None

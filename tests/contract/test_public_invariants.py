@@ -12,6 +12,13 @@ import msgspec
 import multica_py.models as models_pkg
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
+from multica_py.models.project_resources import (
+    LocalDirectoryResourceRef,
+    ProjectResourceAddLocalDirectoryRequest,
+    ProjectResourceRecord,
+    ProjectResourceUpdateLocalDirectoryRequest,
+)
+from multica_py.resources.project_resources import ProjectResourceCollection
 
 
 def _assert_hint_clean(owner_name: str, callable_name: str, hints: dict[str, object]) -> None:
@@ -82,6 +89,20 @@ def test_no_any_in_public_api() -> None:
     ):
         resource = getattr(client, resource_name)
         _assert_public_methods_typed(type(resource))
+    _assert_public_methods_typed(ProjectResourceCollection)
+
+
+def test_public_model_exports() -> None:
+    import multica_py
+
+    exports = {
+        "LocalDirectoryResourceRef": LocalDirectoryResourceRef,
+        "ProjectResourceAddLocalDirectoryRequest": ProjectResourceAddLocalDirectoryRequest,
+        "ProjectResourceRecord": ProjectResourceRecord,
+        "ProjectResourceUpdateLocalDirectoryRequest": ProjectResourceUpdateLocalDirectoryRequest,
+    }
+    for name, model in exports.items():
+        assert getattr(multica_py, name) is model
 
 
 def test_models_are_frozen() -> None:

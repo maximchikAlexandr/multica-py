@@ -4,6 +4,7 @@ import pathlib
 
 import pytest
 
+from scripts.scan_live_artifacts import scan_text_content
 from tests.live.diagnostics import DiagnosticCollector, truncate_log
 
 
@@ -80,3 +81,45 @@ def test_rejects_path_traversal_filenames(tmp_path: pathlib.Path) -> None:
         collector.write_text("../escape.txt", "x")
     with pytest.raises(ValueError, match="invalid artifact filename"):
         collector.write_text("nested/escape.txt", "x")
+
+
+def test_redacts_provider_api_key_and_canary_secret(tmp_path: pathlib.Path) -> None:
+    collector = DiagnosticCollector(tmp_path, "run1")
+    collector.register_secret("sk-provider-key-12345")
+    redacted = collector.redact("Authorization: sk-provider-key-12345")
+    assert "sk-provider-key-12345" not in redacted
+    assert "***" in redacted
+
+
+def test_redacts_jwt_and_pat_tokens(tmp_path: pathlib.Path) -> None:
+    collector = DiagnosticCollector(tmp_path, "run1")
+    jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig"
+    collector.register_secret(jwt)
+    collector.register_secret("mpat_live_token_value")
+    payload = f'{{"token":"mpat_live_token_value","jwt":"{jwt}"}}'
+    redacted = collector.redact(payload)
+    assert jwt not in redacted
+    assert "mpat_live_token_value" not in redacted
+
+
+def test_scan_text_detects_database_password_and_bearer_token() -> None:
+    findings = scan_text_content(
+        "POSTGRES_PASSWORD=super-secret-db\nAuthorization: Bearer live-bearer-token",
+        "compose.env",
+    )
+    assert any("POSTGRES_PASSWORD" in item for item in findings)
+    assert any("bearer token" in item for item in findings)
+
+
+def test_scan_text_detects_unredacted_token_field() -> None:
+    findings = scan_text_content('{"token":"actual-live-token"}', "profile.json")
+    assert any("token field not redacted" in item for item in findings)
+
+
+def test_artifact_dir_scan_flags_configured_canary_secret(tmp_path: pathlib.Path) -> None:
+    collector = DiagnosticCollector(tmp_path, "run1")
+    collector.register_secret("canary-provider-secret")
+    (tmp_path / "leak.txt").write_text("provider=canary-provider-secret", encoding="utf-8")
+    assert collector.scan_artifact_dir() == 1
+    with pytest.raises(AssertionError, match="registered secret value leaked"):
+        collector.assert_no_secret_leak()

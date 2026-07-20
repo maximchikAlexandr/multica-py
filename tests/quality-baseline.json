@@ -1,0 +1,32 @@
+{
+  "collected": {
+    "component_source": 132,
+    "contract": 84,
+    "live": 74,
+    "packaging": 10,
+    "unit": 345
+  },
+  "coverage": {
+    "branch_percent": 53.890160183066364,
+    "statement_percent": 70.95217200526547,
+    "zones": {
+      "errors": 100.0,
+      "models": 100.0,
+      "resources": 93.04,
+      "transport": 84.16
+    }
+  },
+  "git_sha": "c69243c5cafe38aa26f774bb266f28a5cb883b36",
+  "loc": {
+    "resource_test_support": 209,
+    "scripts_python": 1368,
+    "tests_python": 9600
+  },
+  "mandatory_offline": 566,
+  "offline": {
+    "duration_seconds": 29.889,
+    "tests": 571
+  },
+  "package_install_paths": 12,
+  "schema": 1
+}

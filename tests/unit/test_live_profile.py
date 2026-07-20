@@ -7,8 +7,8 @@ import stat
 
 import pytest
 
-from tests.live.exceptions import LiveSetupError
-from tests.live.profile import (
+from tests.live.environment import (
+    LiveSetupError,
     ensure_temp_home,
     profile_config_path,
     remove_temp_home,

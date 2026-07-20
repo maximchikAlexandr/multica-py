@@ -4,7 +4,7 @@ import json
 import os
 import pathlib
 import tempfile
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 LOG_BYTE_LIMIT = 262144
 REDACTED = "***"
@@ -12,6 +12,11 @@ VERIFICATION_CODE = "888888"
 
 FailureRecord = dict[str, str | int | None]
 CleanupRecord = dict[str, object]
+
+if TYPE_CHECKING:
+    from tests.live.backend import DaemonLifecycle
+    from tests.live.environment import LiveRunContext
+    from tests.live.resources import FileManifest
 
 
 class DiagnosticCollector:
@@ -95,6 +100,18 @@ class DiagnosticCollector:
         self._cleanup_failure = payload
         self._cleanup_failed = bool(payload.get("failures"))
         self.write_json("cleanup.json", payload)
+        self.sync_failure_cleanup_errors(payload.get("failures", []))
+
+    def sync_failure_cleanup_errors(self, cleanup_errors: object) -> None:
+        """Merge cleanup failures into failure.json when a bundle was already written."""
+        failure_path = self._artifact_dir / "failure.json"
+        if not failure_path.is_file():
+            return
+        payload = json.loads(failure_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            return
+        payload["cleanup_errors"] = cleanup_errors
+        self.write_json("failure.json", payload)
 
     def has_secret_leak(self, text: str) -> bool:
         """Return whether text contains a registered secret value."""
@@ -203,3 +220,81 @@ def truncate_log(text: str, *, limit: int = LOG_BYTE_LIMIT) -> str:
     start = encoded[:keep].decode("utf-8", errors="replace")
     end = encoded[-keep:].decode("utf-8", errors="replace")
     return f"{start}{marker}{end}"
+
+
+class LiveDiagnosticsBundle:
+    """Writer for the canonical live failure bundle contract."""
+
+    def __init__(self, collector: DiagnosticCollector, run_id: str) -> None:
+        self._collector = collector
+        self._run_id = run_id
+
+    def write_failure_bundle(
+        self,
+        *,
+        target_report: dict[str, object],
+        run_context: LiveRunContext,
+        entities: dict[str, object],
+        runtime_state: dict[str, object],
+        run_messages: list[dict[str, object]],
+        filesystem_before: FileManifest,
+        filesystem_after: FileManifest,
+        sandbox_dir: pathlib.Path,
+        daemon: DaemonLifecycle | None,
+        compose_project: str,
+        compose_files: tuple[pathlib.Path, ...],
+        primary_failure: BaseException,
+    ) -> None:
+        """Write the required failure bundle files for one live run."""
+        from tests.live.backend import capture_compose_diagnostics
+        from tests.live.resources import manifest_to_json, unified_target_control_diff
+
+        self._collector.write_json("target.json", target_report)
+        self._collector.write_json("run-context.json", run_context.diagnostics_payload())
+        self._collector.write_json("entities.json", entities)
+        self._collector.write_json("runtime.json", runtime_state)
+        self._collector.write_json("run-messages.json", {"messages": run_messages})
+        self._collector.write_json(
+            "filesystem-before.json",
+            {"entries": manifest_to_json(filesystem_before)},
+        )
+        self._collector.write_json(
+            "filesystem-after.json",
+            {"entries": manifest_to_json(filesystem_after)},
+        )
+        self._collector.write_text(
+            "filesystem.diff",
+            unified_target_control_diff(
+                filesystem_before,
+                filesystem_after,
+                sandbox_dir=sandbox_dir,
+            ),
+        )
+        if daemon is not None:
+            self._collector.write_json("daemon-status.json", daemon.capture_status())
+            self._collector.write_text("daemon.log.tail", daemon.daemon_log_tail())
+        else:
+            self._collector.write_json("daemon-status.json", {"running": False})
+            self._collector.write_text("daemon.log.tail", "")
+        if compose_files:
+            capture_compose_diagnostics(
+                compose_files=compose_files,
+                compose_project=compose_project,
+                diagnostics=self._collector,
+            )
+        self._collector.write_json(
+            "cleanup.json",
+            {
+                "failures": [],
+                "primary_failure": self._collector.redact(str(primary_failure)),
+            },
+        )
+        self._collector.write_json(
+            "failure.json",
+            {
+                "stage": "workflow",
+                "exception_type": type(primary_failure).__name__,
+                "message": self._collector.redact(str(primary_failure)),
+                "cleanup_errors": [],
+            },
+        )

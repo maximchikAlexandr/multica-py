@@ -7,10 +7,10 @@ import sys
 
 import pytest
 
-from tests.live.exceptions import LiveSetupError
-from tests.live.settings import (
+from tests.live.environment import (
     MAX_LABEL_NAME_LEN,
     LiveSettings,
+    LiveSetupError,
     create_live_test_run,
     label_name,
     load_compatibility_target,
@@ -26,22 +26,22 @@ TARGET_FILE = REPO_ROOT / "contracts" / "multica-live-target.toml"
 
 def test_committed_target_matches_pin() -> None:
     target = load_compatibility_target(TARGET_FILE)
-    assert target.upstream_ref == "v0.3.35"
-    assert target.upstream_commit == "4416313f8f7f801df8b7f5072087da8a6502a89c"
+    assert target.upstream_ref == "v0.3.10"
+    assert target.upstream_commit == "be32e5af00c74cda60c2fe8c47d31402bc62b3a6"
     assert target.backend_digest == (
-        "sha256:656dd76e866f636863a6fc034f04165227e35f427e526914ea2c9848f8f55e30"
+        "sha256:0370ec3dd10d988f9a48c758d326680a24f51bbf4181101d403940136af983c6"
     )
     assert target.backend_digest_linux_amd64 == (
-        "sha256:d8a50acac1eb674093b0e9de4afc656328ac6b37fc641f1fb4b256547f1ffe3b"
+        "sha256:29e78b94fb260daeac9cd6b64b797221a468c17208a2f9161c1d7bd36fd9b077"
     )
     assert target.cli_release_sha256_linux_amd64 == (
-        "5bb3472eab5be4cb17a8459d7b2b1ca9bda325432f7f23966d1e81164e9e6167"
+        "cbb8cd5dad60a209455d67f5f3c844c4e418209f818c34209f7470f6ff0ebabd"
     )
 
 
 def test_rejects_latest_in_target(tmp_path: pathlib.Path) -> None:
     manifest = TARGET_FILE.read_text(encoding="utf-8").replace(
-        'upstream_ref = "v0.3.35"',
+        'upstream_ref = "v0.3.10"',
         'upstream_ref = "latest"',
         1,
     )
@@ -131,8 +131,12 @@ def test_secrets_dir_is_outside_artifact_root(
         keep_env=False,
         ready_timeout_seconds=120.0,
     )
-    run = create_live_test_run(load_compatibility_target(TARGET_FILE), settings, run_id="abc123")
-    assert run.secrets_dir == secrets_root.resolve() / "abc123"
+    run = create_live_test_run(
+        load_compatibility_target(TARGET_FILE),
+        settings,
+        run_id="abcdef0123456789abcdef0123456789",
+    )
+    assert run.secrets_dir == secrets_root.resolve() / "abcdef0123456789abcdef0123456789"
     assert not run.secrets_dir.is_relative_to(artifact_root.resolve())
 
 

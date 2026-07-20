@@ -5,9 +5,9 @@ import json
 import httpx
 import pytest
 
-from tests.live.bootstrap import BootstrapApiClient, SecretString, TestIdentity
-from tests.live.exceptions import LiveSetupError
-from tests.live.resource_registry import ResourceAbsentError, ResourceRegistry
+from tests.live.backend import BootstrapApiClient
+from tests.live.environment import LiveSetupError, ResourceAbsentError, SecretString, TestIdentity
+from tests.live.resources import ResourceRegistry
 
 
 def test_secret_string_redacts_repr_and_str() -> None:
@@ -38,7 +38,7 @@ def _install_transport(monkeypatch: pytest.MonkeyPatch, transport: httpx.MockTra
             timeout=kwargs.get("timeout", 5.0),  # type: ignore[arg-type]
         )
 
-    monkeypatch.setattr("tests.live.bootstrap.httpx.Client", factory)
+    monkeypatch.setattr("tests.live.backend.httpx.Client", factory)
 
 
 def test_bootstrap_sequence_and_status_handling(monkeypatch: pytest.MonkeyPatch) -> None:

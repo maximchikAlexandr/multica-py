@@ -12,25 +12,27 @@ from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import NotFoundError
 from scripts.resolve_multica_target import resolve_target
-from tests.live.bootstrap import WorkspaceContext
-from tests.live.compose import ComposeLifecycle
+from tests.live.backend import ComposeLifecycle
 from tests.live.conftest import audit_postconditions
 from tests.live.diagnostics import DiagnosticCollector
-from tests.live.exceptions import LiveSetupError
-from tests.live.oracle import DirectApiOracle
-from tests.live.profile import ensure_temp_home, remove_temp_home, validate_not_real_home
-from tests.live.settings import (
+from tests.live.environment import (
+    LiveSetupError,
     LiveTestEnvironment,
     LiveTestRun,
+    WorkspaceContext,
     create_live_test_run,
+    ensure_temp_home,
     label_name,
     load_live_settings,
+    remove_temp_home,
+    validate_not_real_home,
 )
+from tests.live.oracle import DirectApiOracle
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 TEMP_HOME_BASE = REPO_ROOT / "tests" / "live" / ".live-home"
 
-pytestmark = [pytest.mark.live, pytest.mark.live_smoke]
+pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 
 
 def test_primary_label_is_invisible_from_secondary_workspace(
@@ -177,7 +179,6 @@ def _run_failed_session(monkeypatch: pytest.MonkeyPatch) -> tuple[LiveTestRun, p
     return run, home_dir
 
 
-@pytest.mark.serial
 def test_failed_run_leaves_no_compose_or_profile_artifacts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

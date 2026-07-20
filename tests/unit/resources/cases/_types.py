@@ -11,6 +11,7 @@ _NESTED_RESOURCE_ATTRS: dict[tuple[str, str], str] = {
     ("issues", "metadata"): "issue_metadata",
     ("issues", "subscribers"): "issue_subscribers",
     ("autopilots", "triggers"): "autopilot_triggers",
+    ("projects", "resources"): "project_resources",
     ("skills", "files"): "skill_files",
 }
 

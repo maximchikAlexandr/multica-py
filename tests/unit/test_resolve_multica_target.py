@@ -15,8 +15,7 @@ from scripts.resolve_multica_target import (
     resolve_cli_executable,
     verify_cli_version,
 )
-from tests.live.exceptions import LiveSetupError
-from tests.live.settings import load_compatibility_target
+from tests.live.environment import LiveSetupError, load_compatibility_target
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 TARGET = REPO_ROOT / "contracts" / "multica-live-target.toml"
@@ -30,9 +29,9 @@ def test_build_version_report_contains_expected_fields() -> None:
         cli_version_actual=target.cli_version_expected,
     )
     report = build_version_report(resolved)
-    assert report["upstream_ref"] == "v0.3.35"
-    assert report["cli_version_expected"] == "0.3.35"
-    assert report["cli_version_actual"] == "0.3.35"
+    assert report["upstream_ref"] == "v0.3.10"
+    assert report["cli_version_expected"] == "0.3.10"
+    assert report["cli_version_actual"] == "0.3.10"
     assert "backend_digest" in report
 
 

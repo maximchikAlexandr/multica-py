@@ -94,7 +94,7 @@ Verified contract export paths for upstream contribution are documented in
    new `CoverageDecision` (typed/raw/process/unsupported/legacy/incomplete).
 3. Update the supported contract at
    `src/multica_py/_generated/upstream_supported_contract.json`.
-4. Add tests under `tests/unit/`, `tests/contract/`, `tests/integration/`.
+4. Add tests under `tests/unit/`, `tests/contract/`, `tests/component/`.
 5. Update `docs/cli-coverage.md` with the new state.
 
 ## Approved SDK contract
