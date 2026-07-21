@@ -28,6 +28,12 @@ from multica_py.exceptions import (
     ValidationError,
 )
 from multica_py.models.common import ActionResult, Page
+from multica_py.models.project_resources import (
+    LocalDirectoryResourceRef,
+    ProjectResourceAddLocalDirectoryRequest,
+    ProjectResourceRecord,
+    ProjectResourceUpdateLocalDirectoryRequest,
+)
 from multica_py.process import ManagedProcess
 from multica_py.sentinels import Unset
 from multica_py.types import JsonScalar, JsonValue, MetadataValue
@@ -49,6 +55,7 @@ __all__ = [
     "JsonOutputError",
     "JsonScalar",
     "JsonValue",
+    "LocalDirectoryResourceRef",
     "ManagedProcess",
     "MetadataValue",
     "MetadataValueType",
@@ -59,6 +66,9 @@ __all__ = [
     "OutputMode",
     "OutputShapeError",
     "Page",
+    "ProjectResourceAddLocalDirectoryRequest",
+    "ProjectResourceRecord",
+    "ProjectResourceUpdateLocalDirectoryRequest",
     "ProjectStatus",
     "ProtocolError",
     "UnknownCommandError",

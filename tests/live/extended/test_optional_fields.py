@@ -5,10 +5,10 @@ from collections.abc import Callable
 import pytest
 
 from multica_py.client import MulticaClient
+from tests.live.environment import label_name
 from tests.live.oracle import DirectApiOracle
-from tests.live.settings import label_name
 
-pytestmark = [pytest.mark.live, pytest.mark.live_extended]
+pytestmark = [pytest.mark.live, pytest.mark.live_extended, pytest.mark.serial]
 
 
 def test_project_description_absent_empty_and_null_semantics(

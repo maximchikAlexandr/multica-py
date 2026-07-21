@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import pathlib
 
 import msgspec
 
@@ -31,6 +32,10 @@ from multica_py.models.issues import (
     StdinDescription,
 )
 from multica_py.models.labels import Label
+from multica_py.models.project_resources import (
+    ProjectResourceAddLocalDirectoryRequest,
+    ProjectResourceUpdateLocalDirectoryRequest,
+)
 from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
 from multica_py.models.skills import Skill, SkillCreateRequest, SkillFile, SkillUpdateRequest
 from multica_py.models.system import (
@@ -48,6 +53,18 @@ from multica_py.models.workspaces import Workspace, WorkspaceMember
 
 from ._payloads import AG, AP, APRUN, AR, CMT_FLAT, CMT_RECENT, CMT_THREAD, LBL, META, REPO, RT, SK
 from ._types import A, ArgvCase
+
+_PROJECT_RESOURCE_RECORD = {
+    "id": "res_001",
+    "project_id": "pr_001",
+    "resource_type": "local_directory",
+    "resource_ref": {
+        "local_path": "/tmp/sandbox",
+        "daemon_id": "daemon-001",
+        "label": "main",
+    },
+}
+_LOCAL_DIR = pathlib.Path("/tmp/sandbox").resolve()
 
 # fmt: off
 ARGV_CASES: tuple[ArgvCase, ...] = (
@@ -67,6 +84,14 @@ ARGV_CASES: tuple[ArgvCase, ...] = (
     A("agents.create", ("agent", "create", "--name", "my-agent", "--description", "desc", "--output", "json"),
         stdout=AG,
         args=(AgentCreateRequest(name="my-agent", description="desc"),),
+    ),
+    A("agents.create", ("agent", "create", "--name", "my-agent", "--runtime-id", "rt_001", "--output", "json"),
+        stdout=AG,
+        args=(AgentCreateRequest(name="my-agent", runtime_id="rt_001"),),
+    ),
+    A("agents.create", ("agent", "create", "--name", "my-agent", "--runtime-id", "rt_001", "--model", "multica-test/fake", "--output", "json"),
+        stdout=AG,
+        args=(AgentCreateRequest(name="my-agent", runtime_id="rt_001", model="multica-test/fake"),),
     ),
     A("agents.update", ("agent", "update", "a1", "--output", "json"),
         stdout=AG,
@@ -251,6 +276,12 @@ ARGV_CASES: tuple[ArgvCase, ...] = (
         stdout=msgspec.json.encode({"id": "iss_1", "title": "Test", "status": "todo"}),
         args=(IssueCreateRequest(title="Test", description_input=StdinDescription()),),
     ),
+    A(
+        "issues.create",
+        ("issue", "create", "--title", "Test", "--project", "pr_001", "--output", "json"),
+        stdout=msgspec.json.encode({"id": "iss_1", "title": "Test", "status": "todo"}),
+        args=(IssueCreateRequest(title="Test", project_id="pr_001"),),
+    ),
     A("projects.list", ("project", "list", "--output", "json"), stdout=b"[]"),
     A("projects.get", ("project", "get", "pr_1", "--output", "json"),
         stdout=msgspec.json.encode({"id": "pr_1", "title": "Alpha", "status": "planned"}),
@@ -281,6 +312,91 @@ ARGV_CASES: tuple[ArgvCase, ...] = (
         args=("pr_1", ProjectUpdateRequest(description="new")),
     ),
     A("projects.delete", ("project", "delete", "pr_1"), args=("pr_1",)),
+    A(
+        "projects.resources.list",
+        ("project", "resource", "list", "pr_001", "--output", "json"),
+        stdout=msgspec.json.encode([_PROJECT_RESOURCE_RECORD]),
+        args=("pr_001",),
+    ),
+    A(
+        "projects.resources.add_local_directory",
+        (
+            "project",
+            "resource",
+            "add",
+            "pr_001",
+            "--type",
+            "local_directory",
+            "--local-path",
+            str(_LOCAL_DIR),
+            "--daemon-id",
+            "daemon-001",
+            "--output",
+            "json",
+        ),
+        stdout=msgspec.json.encode(_PROJECT_RESOURCE_RECORD),
+        args=(
+            "pr_001",
+            ProjectResourceAddLocalDirectoryRequest(
+                local_path="/tmp/sandbox",
+                daemon_id="daemon-001",
+            ),
+        ),
+    ),
+    A(
+        "projects.resources.add_local_directory",
+        (
+            "project",
+            "resource",
+            "add",
+            "pr_001",
+            "--type",
+            "local_directory",
+            "--local-path",
+            str(_LOCAL_DIR),
+            "--daemon-id",
+            "daemon-001",
+            "--ref-label",
+            "main",
+            "--output",
+            "json",
+        ),
+        stdout=msgspec.json.encode(_PROJECT_RESOURCE_RECORD),
+        args=(
+            "pr_001",
+            ProjectResourceAddLocalDirectoryRequest(
+                local_path="/tmp/sandbox",
+                daemon_id="daemon-001",
+                label="main",
+            ),
+        ),
+        id="projects.resources.add_local_directory.label",
+    ),
+    A(
+        "projects.resources.update_local_directory",
+        (
+            "project",
+            "resource",
+            "update",
+            "pr_001",
+            "res_001",
+            "--local-path",
+            str(_LOCAL_DIR),
+            "--output",
+            "json",
+        ),
+        stdout=msgspec.json.encode(_PROJECT_RESOURCE_RECORD),
+        args=(
+            "pr_001",
+            "res_001",
+            ProjectResourceUpdateLocalDirectoryRequest(local_path="/tmp/sandbox"),
+        ),
+    ),
+    A(
+        "projects.resources.remove",
+        ("project", "resource", "remove", "pr_001", "res_001"),
+        args=("pr_001", "res_001"),
+    ),
     A("repositories.list", ("repo", "list", "--output", "json"), stdout=b"[]"),
     A("repositories.get", ("repo", "get", "r1", "--output", "json"), stdout=REPO, args=("r1",)),
     A("repositories.checkout", ("repo", "checkout", "r1", "--branch", "main", "--output", "json"),
@@ -382,6 +498,13 @@ ARGV_CASES: tuple[ArgvCase, ...] = (
     A("issues.update", ("issue", "update", "iss_1", "--title", "Updated", "--output", "json"),
         stdout=msgspec.json.encode({"id": "iss_1", "title": "Updated", "status": "todo"}),
         args=("iss_1", IssueUpdateRequest(title="Updated")),
+    ),
+    A(
+        "issues.update",
+        ("issue", "update", "iss_1", "--project", "pr_001", "--output", "json"),
+        stdout=msgspec.json.encode({"id": "iss_1", "title": "Updated", "status": "todo"}),
+        args=("iss_1", IssueUpdateRequest(project_id="pr_001")),
+        id="issues.update.project",
     ),
     A("issues.assign", ("issue", "assign", "iss_1", "--to-id", "usr_1", "--output", "json"),
         stdout=msgspec.json.encode({"id": "iss_1", "title": "Test", "status": "todo"}),

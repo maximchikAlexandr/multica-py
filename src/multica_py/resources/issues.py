@@ -86,6 +86,8 @@ class IssueResource(BaseResource):
             args.extend(["--priority", request.priority])
         if request.assignee_id is not None:
             args.extend(["--assignee-id", request.assignee_id])
+        if request.project_id is not None:
+            args.extend(["--project", request.project_id])
         issue = issue_from_wire(self._run_json_decode(tuple(args), IssueWire))
         for label_id in request.label_ids:
             self.labels.add(issue.id, label_id)
@@ -103,6 +105,8 @@ class IssueResource(BaseResource):
             args.extend(["--priority", request.priority])
         if request.assignee_id is not None:
             args.extend(["--assignee-id", request.assignee_id])
+        if request.project_id is not None:
+            args.extend(["--project", request.project_id])
         return issue_from_wire(self._run_json_decode(tuple(args), IssueWire))
 
     def assign(self, request: IssueAssignmentRequest) -> Issue:

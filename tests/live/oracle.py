@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 
 import httpx
 
-from tests.live.resource_registry import ResourceAbsentError
+from tests.live.environment import LiveSetupError, ResourceAbsentError
 
 ALLOWLISTED_HEADERS = frozenset({"content-type", "x-request-id"})
 JsonObject = dict[str, object]
@@ -285,6 +285,132 @@ class DirectApiOracle:
             )
             raise AssertionError(msg)
         return response.content
+
+    def list_runtimes_raw(self) -> list[JsonObject]:
+        """List runtimes via direct HTTP without SDK normalization."""
+        response = self.request("GET", "/api/runtimes")
+        if response.status_code != 200:
+            return []
+        body = response.json_body
+        if isinstance(body, list):
+            return [entry for entry in body if isinstance(entry, dict)]
+        if isinstance(body, dict):
+            nested = body.get("runtimes")
+            if isinstance(nested, list):
+                return [entry for entry in nested if isinstance(entry, dict)]
+        return []
+
+    def find_online_opencode_runtime(self, daemon_id: str) -> str | None:
+        """Return one online OpenCode runtime id for a daemon when unique."""
+        matches = [
+            entry
+            for entry in self.list_runtimes_raw()
+            if str(entry.get("provider")) == "opencode"
+            and str(entry.get("daemon_id")) == daemon_id
+            and str(entry.get("status", "")).lower() in {"online", "ready", "active"}
+        ]
+        if len(matches) != 1:
+            return None
+        runtime_id = matches[0].get("id")
+        return None if runtime_id is None else str(runtime_id)
+
+    def runtime_absent_or_non_routable(
+        self,
+        daemon_id: str,
+        runtime_id: str | None,
+    ) -> bool:
+        """Return whether a runtime is absent or explicitly non-routable."""
+        runtimes = self.list_runtimes_raw()
+        for entry in runtimes:
+            entry_id = str(entry.get("id", ""))
+            entry_daemon = str(entry.get("daemon_id", ""))
+            if runtime_id is not None and entry_id == runtime_id:
+                status = str(entry.get("status", "")).lower()
+                routable = entry.get("routable")
+                return routable is False or status in {"offline", "stopped", "inactive"}
+            if entry_daemon == daemon_id:
+                status = str(entry.get("status", "")).lower()
+                routable = entry.get("routable")
+                if routable is False or status in {"offline", "stopped", "inactive"}:
+                    continue
+                return False
+        return True
+
+    def get_runtime_raw(self, runtime_id: str) -> JsonObject | None:
+        """Fetch one runtime record via direct HTTP."""
+        response = self.request("GET", f"/api/runtimes/{runtime_id}")
+        if response.status_code == 404:
+            return None
+        if response.status_code != 200 or not isinstance(response.json_body, dict):
+            return None
+        return response.json_body
+
+    def get_agent_raw(self, agent_id: str) -> JsonObject | None:
+        """Fetch one agent record via direct HTTP."""
+        response = self.request("GET", f"/api/agents/{agent_id}")
+        if response.status_code == 404:
+            return None
+        if response.status_code != 200 or not isinstance(response.json_body, dict):
+            return None
+        return response.json_body
+
+    def assert_agent_non_routable(self, agent_id: str) -> None:
+        """Assert that one agent is archived or otherwise non-routable."""
+        payload = self.get_agent_raw(agent_id)
+        if payload is None:
+            return
+        routable = payload.get("routable")
+        if routable is False:
+            return
+        status = str(payload.get("status", "")).lower()
+        if status in {"archived", "inactive"}:
+            return
+        msg = f"expected agent {agent_id} to be non-routable, got {payload!r}"
+        raise AssertionError(msg)
+
+    def assert_workspace_absent(self, workspace_id: str, pat: str) -> None:
+        """Assert that one workspace is no longer readable with the given token."""
+        response = self._client.get(
+            f"/api/workspaces/{workspace_id}",
+            headers={
+                "Authorization": f"Bearer {pat}",
+            },
+        )
+        if response.status_code == 404:
+            return
+        msg = f"expected workspace {workspace_id} to be absent, got {response.status_code}"
+        raise AssertionError(msg)
+
+    def list_project_resources_raw(self, project_id: str) -> list[JsonObject]:
+        """List project resources via direct HTTP."""
+        response = self.request("GET", f"/api/projects/{project_id}/resources")
+        if response.status_code != 200:
+            return []
+        body = response.json_body
+        if isinstance(body, list):
+            return [entry for entry in body if isinstance(entry, dict)]
+        if isinstance(body, dict):
+            nested = body.get("resources")
+            if isinstance(nested, list):
+                return [entry for entry in nested if isinstance(entry, dict)]
+        return []
+
+    def assert_project_resource_absent(self, project_id: str, resource_id: str) -> None:
+        """Assert that one project resource is no longer listable."""
+        for entry in self.list_project_resources_raw(project_id):
+            if str(entry.get("id")) == resource_id:
+                msg = f"expected project resource {resource_id} to be absent"
+                raise AssertionError(msg)
+
+    def issue_assignee_id(self, body: JsonObject) -> str | None:
+        """Return the raw issue assignee id when present."""
+        assignee = body.get("assignee")
+        if isinstance(assignee, dict):
+            value = assignee.get("id")
+            if isinstance(value, str):
+                return value
+        assignee_id = body.get("assignee_id")
+        return None if assignee_id is None else str(assignee_id)
 
     def list_issue_attachments(self, issue_id: str) -> list[JsonObject]:
         """List attachments attached to one issue."""

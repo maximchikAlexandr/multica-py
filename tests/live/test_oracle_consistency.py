@@ -6,10 +6,10 @@ import pytest
 
 from multica_py.client import MulticaClient
 from multica_py.models.projects import ProjectUpdateRequest
+from tests.live.environment import label_name
 from tests.live.oracle import DirectApiOracle
-from tests.live.settings import label_name
 
-pytestmark = [pytest.mark.live, pytest.mark.live_smoke]
+pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 
 BASE_TITLE = "oracle-base-title"
 BASE_DESCRIPTION = "oracle-keep-me"

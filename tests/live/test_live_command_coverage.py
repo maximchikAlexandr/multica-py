@@ -4,33 +4,28 @@ from typing import get_args
 
 import pytest
 
-from tests._coverage_guard import assert_manifest_coverage
+from tests._manifest_coverage import assert_manifest_coverage
 from tests._manifest_support import guard_eligible_operations
-from tests.live.context import LiveContext
-from tests.live.live_operations import (
+from tests.live.resources import (
+    AGENT_SANDBOX_LIVE_METHODS,
     KNOWN_LIVE_GAPS,
     LIVE_EXEC_EXCEPTIONS,
     LIVE_OPERATIONS,
     LiveExecReason,
-    LiveOperation,
     crud_sdk_methods,
 )
 
-pytestmark = [pytest.mark.live]
+pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 
 
-@pytest.mark.live_extended
-@pytest.mark.parametrize("op", LIVE_OPERATIONS, ids=lambda o: o.sdk_method)
-def test_live_operation_executes(op: LiveOperation, live_ctx: LiveContext) -> None:
-    """Execute one non-CRUD operation against the real backend."""
-    op.invoke(live_ctx)
-
-
-@pytest.mark.live_smoke
 def test_every_guard_eligible_operation_runs_live() -> None:
     """Guard (FR-021): each guard-eligible operation is covered, allowlisted, or a known gap."""
     eligible = guard_eligible_operations()
-    covered = frozenset(op.sdk_method for op in LIVE_OPERATIONS) | crud_sdk_methods()
+    covered = (
+        frozenset(op.sdk_method for op in LIVE_OPERATIONS)
+        | crud_sdk_methods()
+        | AGENT_SANDBOX_LIVE_METHODS
+    )
     allowlisted = KNOWN_LIVE_GAPS | frozenset(LIVE_EXEC_EXCEPTIONS)
 
     assert_manifest_coverage(

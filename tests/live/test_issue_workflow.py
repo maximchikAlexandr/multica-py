@@ -11,11 +11,11 @@ from multica_py.models.issues import (
     IssueCreateRequest,
     IssueUpdateRequest,
 )
+from tests.live.environment import label_name
 from tests.live.oracle import DirectApiOracle
-from tests.live.resource_registry import ResourceRegistry
-from tests.live.settings import label_name
+from tests.live.resources import ResourceRegistry
 
-pytestmark = [pytest.mark.live, pytest.mark.live_smoke]
+pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 
 UNICODE_DESCRIPTION = 'Unicode: 日本語\n"quotes" \\ backslash\r\nemoji: 🚀'
 

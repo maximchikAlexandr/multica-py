@@ -59,3 +59,16 @@ def test_manifest_pinned_sha_matches() -> None:
     document = load_manifest_document()
     assert len(document.meta.pinned_sha) == 40
     assert document.meta.source_base.endswith(f"{document.meta.pinned_sha}/server/cmd/multica/")
+
+
+def test_manifest_includes_project_resource_commands() -> None:
+    manifest = load_manifest()
+    commands = {entry.command for entry in manifest}
+    expected = {
+        "project resource list",
+        "project resource add",
+        "project resource update",
+        "project resource remove",
+    }
+    missing = expected - commands
+    assert not missing, f"Missing project resource commands: {missing}"

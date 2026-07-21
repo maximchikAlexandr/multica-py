@@ -9,7 +9,7 @@ from multica_py.client import MulticaClient
 from multica_py.models.issues import InlineDescription, IssueCreateRequest, IssueUpdateRequest
 from tests.live.oracle import DirectApiOracle
 
-pytestmark = [pytest.mark.live, pytest.mark.live_extended]
+pytestmark = [pytest.mark.live, pytest.mark.live_extended, pytest.mark.serial]
 
 
 def _parse_timestamp(value: object) -> datetime.datetime:

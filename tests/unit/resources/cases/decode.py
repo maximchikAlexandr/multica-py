@@ -4,6 +4,10 @@ import msgspec
 
 from multica_py.models.agents import Agent, AgentTask
 from multica_py.models.autopilots import Autopilot, AutopilotRun
+from multica_py.models.project_resources import (
+    ProjectResourceAddLocalDirectoryRequest,
+    ProjectResourceRecord,
+)
 from multica_py.models.skills import Skill
 from multica_py.models.system import (
     AttachmentResult,
@@ -84,6 +88,19 @@ def _check_users_list(result: object) -> None:
     assert len(result) == 2  # type: ignore[arg-type]
 
 
+def _check_project_resources_list(result: object) -> None:
+    assert len(result) == 1  # type: ignore[arg-type]
+    record = result[0]  # type: ignore[index]
+    assert record.resource_type == "local_directory"
+    assert record.resource_ref.daemon_id == "daemon-001"
+
+
+def _check_project_resources_add(result: object) -> None:
+    assert isinstance(result, ProjectResourceRecord)
+    assert result.id == "res_001"
+    assert result.resource_ref.local_path.endswith("sandbox")
+
+
 DECODE_CASES: tuple[DecodeCase, ...] = (
     D(
         "agents.list",
@@ -152,5 +169,45 @@ DECODE_CASES: tuple[DecodeCase, ...] = (
         "users.list",
         msgspec.json.encode([User(id="u1", name="Alice"), User(id="u2", name="Bob")]),
         _check_users_list,
+    ),
+    D(
+        "projects.resources.list",
+        msgspec.json.encode(
+            [
+                {
+                    "id": "res_001",
+                    "project_id": "pr_001",
+                    "resource_type": "local_directory",
+                    "resource_ref": {
+                        "local_path": "/tmp/sandbox",
+                        "daemon_id": "daemon-001",
+                    },
+                }
+            ]
+        ),
+        _check_project_resources_list,
+        args=("pr_001",),
+    ),
+    D(
+        "projects.resources.add_local_directory",
+        msgspec.json.encode(
+            {
+                "id": "res_001",
+                "project_id": "pr_001",
+                "resource_type": "local_directory",
+                "resource_ref": {
+                    "local_path": "/tmp/sandbox",
+                    "daemon_id": "daemon-001",
+                },
+            }
+        ),
+        _check_project_resources_add,
+        args=(
+            "pr_001",
+            ProjectResourceAddLocalDirectoryRequest(
+                local_path="/tmp/sandbox",
+                daemon_id="daemon-001",
+            ),
+        ),
     ),
 )

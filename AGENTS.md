@@ -97,8 +97,8 @@ add data rows before you add functions; add functions before you add files.
   and follow their layer:
   - unit CLI argv: `ArgvCase` (+ `DecodeCase` for model decoding) in
     `tests/unit/resources/`;
-  - offline integration (fake CLI): `FakeCliCase` in
-    `tests/integration/resources/`;
+  - component fake CLI: `CommandCase` in `tests/component/resources/cases.py`
+    (PR-03 migration from legacy `FakeCliCase` rows);
   - contract-diff severity: `MutationSeverityCase` in `tests/unit/`/`tests/contract/`;
   - live CRUD: `CrudDescriptor`; live non-CRUD command: `LiveOperation` in
     `tests/live/`.
@@ -112,7 +112,7 @@ add data rows before you add functions; add functions before you add files.
   `mock_transport`, the fake-CLI client fixture, `DirectApiOracle`, `live_ctx`,
   `register_resource`, `test_identity`). Do NOT re-copy `_target()`/`_settings()`
   style local helpers into a test module.
-- Never mutate `os.environ` directly in integration tests; use the provided
+- Never mutate `os.environ` directly in component tests; use the provided
   fixture-scoped environment control (keeps the suite parallel-safe).
 
 ### Assert precisely
@@ -130,26 +130,32 @@ keep the matching guard green by adding real coverage — the allowlists are a
 temporary bridge, not a dumping ground:
 
 - unit argv: `KNOWN_ARGV_GAPS`;
-- offline integration: `KNOWN_FIXTURE_GAPS`;
+- component fake CLI: `KNOWN_FIXTURE_GAPS` (until each legacy `FakeCliCase.id`
+  migrates to `CommandCase` in PR-03);
 - live command execution: `KNOWN_LIVE_GAPS` (runnable, not-yet-automated; goal
   empty) and `LIVE_EXEC_EXCEPTIONS` (permanently unrunnable, with a valid
   `LiveExecReason` code).
 
 An allowlist entry MUST carry a short inline reason and MUST be removed the moment
 real coverage exists (the guards fail on stale entries). Prefer writing the
-`ArgvCase`/`FakeCliCase`/`LiveOperation`/`CrudDescriptor` over allowlisting.
+`ArgvCase`/`CommandCase`/`LiveOperation`/`CrudDescriptor` over allowlisting.
 
 ### Layers and markers
 
 - Default suite is offline: `uv run pytest -m "not live"` MUST stay green and MUST
-  need no backend/network. Unit, integration (fake CLI), and contract layers stay
+  need no backend/network. Unit, contract, component, and packaging layers stay
   offline.
+- Path prefixes auto-apply layer markers (`unit`, `contract`, `component`,
+  `packaging`, `live`) via `tests/conftest.py`; see
+  `specs/005-test-suite-agent-sandbox/contracts/marker-profiles.md`.
+- `tests/component/test_process_contract.py` carries `@pytest.mark.process` and
+  `@pytest.mark.serial`; all other offline tests MUST NOT use `serial`.
 - Live tests are gated. Markers do NOT inherit in this repo: every
   `tests/live/*` module sets a module-level `pytestmark` including base
-  `pytest.mark.live` plus a subtag — `live_smoke` (blocking compact suite; also the
-  home of the no-backend coverage guard) or `live_extended` (scheduled/manual full
-  execution). Verify with `uv run pytest -m "not live" --collect-only` that no
-  `tests/live/*` node is collected.
+  `pytest.mark.live`, exactly one profile among `live_smoke`, `live_extended`, or
+  `live_opencode_canary`, and `pytest.mark.serial`. Verify with
+  `uv run pytest -m "not live" --collect-only` that no `tests/live/*` node is
+  collected.
 
 ### Tooling gates
 

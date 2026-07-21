@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import datetime
+import pathlib
 
 import msgspec
 
 from multica_py.enums import IssueStatus, ProjectStatus
+from multica_py.exceptions import OutputShapeError
 from multica_py.models.autopilots import Autopilot, AutopilotTrigger, TriggerConfigItem
 from multica_py.models.issue_activity import Comment, CommentThread
 from multica_py.models.issues import (
@@ -16,6 +18,7 @@ from multica_py.models.issues import (
     LinkedPullRequest,
 )
 from multica_py.models.labels import Label
+from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
 from multica_py.models.projects import Project
 from multica_py.types import MetadataValue
 
@@ -143,3 +146,36 @@ def comment_thread_from_wire(wire: CommentThreadWire) -> CommentThread:
 class AutopilotListWire(msgspec.Struct, frozen=True, kw_only=True):
     autopilots: tuple[Autopilot, ...] = ()
     total: int = 0
+
+
+class LocalDirectoryResourceRefWire(msgspec.Struct, frozen=True, kw_only=True):
+    local_path: str
+    daemon_id: str
+    label: str | None = None
+
+
+class ProjectResourceRecordWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    project_id: str
+    resource_type: str
+    resource_ref: LocalDirectoryResourceRefWire
+
+
+def project_resource_from_wire(wire: ProjectResourceRecordWire) -> ProjectResourceRecord:
+    if wire.resource_type != "local_directory":
+        raise OutputShapeError(
+            f"Unsupported resource_type {wire.resource_type!r}; expected 'local_directory'"
+        )
+    ref = wire.resource_ref
+    if not pathlib.Path(ref.local_path).is_absolute():
+        raise OutputShapeError("local_path must be an absolute path")
+    return ProjectResourceRecord(
+        id=wire.id,
+        project_id=wire.project_id,
+        resource_type=wire.resource_type,
+        resource_ref=LocalDirectoryResourceRef(
+            local_path=str(pathlib.Path(ref.local_path).resolve()),
+            daemon_id=ref.daemon_id,
+            label=ref.label,
+        ),
+    )

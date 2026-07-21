@@ -37,6 +37,53 @@ docker compose version
 
 See `.env.example` for a local template.
 
+## Agent sandbox workflow
+
+Deterministic agent sandbox tests live in `tests/live/test_agent_sandbox.py`.
+
+Prerequisites:
+
+- All standard live prerequisites above
+- Executable fake OpenCode at `tests/fixtures/fake_opencode.py` (default)
+- Optional `MULTICA_TEST_OPENCODE_PATH` override (must be absolute)
+
+Environment variables for sandbox control:
+
+| Variable | Values | Purpose |
+|---|---|---|
+| `MULTICA_TEST_AGENT_MODE` | `success`, `error`, `timeout`, `wrong-edit` | Fake agent behavior |
+| `MULTICA_TEST_INJECT_CLEANUP_FAILURE` | `remove-resource` | Inject cleanup failure |
+| `MULTICA_LIVE_RUN_ID` | 32-char hex | Repeat-run prefix isolation |
+
+One smoke run:
+
+```bash
+export MULTICA_LIVE_UPSTREAM_DIR=/absolute/path/to/multica
+export MULTICA_LIVE_CLI=/absolute/path/to/multica/server/bin/multica
+export MULTICA_LIVE_ARTIFACT_DIR="$PWD/.artifacts/live"
+uv run pytest -o addopts="" -v --strict-markers \
+  -m live_smoke tests/live/test_agent_sandbox.py::test_agent_executes_issue_in_local_directory
+```
+
+Twenty-repeat stability (per-run prefix isolation):
+
+```bash
+uv run python scripts/run_live_tests.py --resolve-cli --repeat 20 \
+  --pytest-args "-v --strict-markers"
+```
+
+Extended negative cases (120-second assignment deadline applies to timeout case):
+
+```bash
+uv run pytest -o addopts="" -v --strict-markers \
+  -m live_extended tests/live/test_agent_sandbox.py -k "failure"
+```
+
+Failure bundles are written under `<artifact-dir>/<run-id>/` using the filenames in
+`specs/005-test-suite-agent-sandbox/contracts/live-diagnostics-bundle.md`, including
+`run-context.json`, `filesystem-before.json`, `filesystem-after.json`, `filesystem.diff`,
+`daemon-status.json`, `daemon.log.tail`, and `failure.json`.
+
 ## Commands
 
 Default offline tests:
@@ -51,7 +98,7 @@ Explicit offline selector:
 uv run pytest -m "not live"
 ```
 
-Blocking live smoke:
+Blocking live smoke (default CI selection):
 
 ```bash
 export MULTICA_LIVE_UPSTREAM_DIR=/absolute/path/to/multica
@@ -59,17 +106,16 @@ export MULTICA_LIVE_CLI=/absolute/path/to/multica/server/bin/multica
 uv run pytest -m live_smoke tests/live -v
 ```
 
-Using the helper script:
-
-```bash
-export MULTICA_LIVE_UPSTREAM_DIR=/absolute/path/to/multica
-uv run python scripts/run_live_tests.py --resolve-cli
-```
-
-Extended suite:
+Extended live suite (smoke plus extended markers):
 
 ```bash
 uv run pytest -m "live_smoke or live_extended" tests/live -v
+```
+
+Serial live execution (required — never use xdist for live tests):
+
+```bash
+uv run pytest -m live tests/live -v
 ```
 
 ## Safe local debugging
@@ -121,50 +167,63 @@ uv run python scripts/run_live_tests.py --resolve-cli --mutation-check
 uv run python scripts/run_live_tests.py --resolve-cli --repeat 10
 ```
 
-## FR / SC traceability (MVP smoke)
+Live support modules (fixed seven-file layout):
 
-| ID | Requirement | Live tests / markers |
-|---|---|---|
-| FR-001 | Separate live suite | `tests/live/*` with `@pytest.mark.live` |
-| FR-002 | Real Multica CLI | session fixtures in `conftest.py` |
-| FR-003 | Real backend with session storage | `test_bootstrap.py` (`live`, `live_smoke`) |
-| FR-004 | Non-interactive bootstrap | `test_bootstrap.py` |
-| FR-005 | Readiness before tests | `test_bootstrap.py::test_readyz_reports_backend_ready`, `test_bootstrap.py::test_not_ready_backend_raises_live_setup_error_with_diagnostics` |
-| FR-006 | Isolated profiles/tokens/workspaces | `test_bootstrap.py`, `test_workspace_isolation.py` |
-| FR-007 | Pinned CLI/backend target | `test_bootstrap.py::test_readyz_reports_backend_ready`, `scripts/resolve_multica_target.py` |
-| FR-008 | `workspaces.list()` smoke | `test_bootstrap.py::test_workspaces_list_includes_primary_bootstrap_workspace` |
-| FR-009 | Labels CRUD | `test_labels.py` (`live_smoke`) |
-| FR-010 | Issue workflow | `test_issue_workflow.py` (`live_smoke`) |
-| FR-011 | Unicode/special strings | `test_labels.py`, `test_issue_workflow.py` |
-| FR-012 | Presence matrix | `test_projects.py`, `test_issue_workflow.py` (`C-EMPTY`) |
-| FR-013 | Unrelated fields unchanged | `test_projects.py::test_p_set_*`, `test_p_omit_*` |
-| FR-014 | Exception mapping | `test_errors.py` (`live_smoke`) |
-| FR-015 | Network vs command execution errors | `test_errors.py` |
-| FR-016 | No secret leakage | `test_errors.py` diagnostic bundle scan |
-| FR-017 | Workspace isolation | `test_workspace_isolation.py` |
-| FR-018 | No user profile mutation | `test_bootstrap.py::test_cli_profile_is_isolated_from_user_home` |
-| FR-019 | Layered cleanup | `conftest.py`, `test_workspace_isolation.py::test_failed_run_*` |
-| FR-020 | Cleanup on pass and fail | `conftest.py`, `test_workspace_isolation.py::test_failed_run_*` |
-| FR-021 | Failure diagnostics | `conftest.py`, `test_errors.py` |
-| FR-022 | Separate live invocation | `pyproject.toml` `-m "not live"`, this README |
-| FR-023 | PR smoke vs extended split | markers `live_smoke` / `live_extended` |
-| FR-024 | No frontend/daemon deps | smoke scope in `spec.md` |
-| FR-028 | Independent oracle verification | `test_oracle_consistency.py`, oracle asserts in `test_labels.py` / `test_projects.py` |
-| FR-029 | Unique run/resource naming | `settings.py`, `test_live_naming.py` (unit) |
-| FR-030 | Repeatable runs | `test_workspace_isolation.py`, `--repeat` mode |
-| SC-001 | End-to-end chain | `test_bootstrap.py`, `test_labels.py`, `test_issue_workflow.py` |
-| SC-002 | Mutation gate | `scripts/run_live_tests.py --mutation-check` |
-| SC-003 | PR smoke budgets | `.github/workflows/ci.yml` live-smoke job |
-| SC-004 | Ten-run stability | `scripts/run_live_tests.py --repeat 10` |
-| SC-005 | Post-run cleanup | `test_workspace_isolation.py::test_failed_run_*`, manual `docker ps` checks above |
-| SC-006 | Failure localization | `test_errors.py` bundle metadata |
-| SC-007 | Two-workspace isolation | `test_workspace_isolation.py` |
-| SC-008 | Presence case IDs | `test_projects.py`, `test_issue_workflow.py` |
-| SC-009 | Byte-identical special strings | `test_labels.py`, `test_issue_workflow.py` |
-| SC-010 | No token in logs/exceptions | `test_errors.py` |
+- `conftest.py` — fixture composition only
+- `environment.py` — settings, profile paths, run context, live errors
+- `backend.py` — bootstrap API client and Compose lifecycle
+- `resources.py` — cleanup registry and live operation registry
+- `crud_descriptors.py` — immutable CRUD descriptor data
+- `oracle.py` — independent HTTP verification
+- `diagnostics.py` — redaction and failure bundles
 
 Extended-only requirements (`FR-025`–`FR-027`) map to `tests/live/extended/*` with marker
 `live_extended` (post-MVP).
+
+## Real OpenCode canary
+
+The canary is a separate non-required workflow (`live-opencode-canary.yml`) that runs one
+real-provider attempt with a 15-minute timeout and a USD 0.10 cost ceiling.
+
+Required environment:
+
+| Variable | Description |
+|---|---|
+| `MULTICA_CANARY_OPENCODE_PATH` | Absolute path to real OpenCode executable |
+| `MULTICA_CANARY_MODEL` | Provider/model identifier passed to the daemon |
+| `MULTICA_CANARY_SECRET_NAMES` | Comma-separated env var names for provider credentials |
+| each named secret | Non-empty value for every name in `MULTICA_CANARY_SECRET_NAMES` |
+
+Skip behavior: if any required variable or named secret is missing or empty, the single
+canary test skips before Docker, daemon, or backend startup and reports every missing name.
+
+Standard live prerequisites (`MULTICA_LIVE_UPSTREAM_DIR`, `MULTICA_LIVE_CLI` or resolver
+mode, artifact directory) still apply when the canary runs.
+
+One local attempt:
+
+```bash
+export MULTICA_LIVE_UPSTREAM_DIR=/absolute/path/to/multica
+export MULTICA_LIVE_CLI=/absolute/path/to/multica/server/bin/multica
+export MULTICA_LIVE_ARTIFACT_DIR="$PWD/.artifacts/live"
+export MULTICA_CANARY_OPENCODE_PATH=/absolute/path/to/opencode
+export MULTICA_CANARY_MODEL=provider/model
+export MULTICA_CANARY_SECRET_NAMES=PROVIDER_API_KEY
+export PROVIDER_API_KEY=your-provider-key
+uv run pytest -o addopts="" -v --strict-markers \
+  -m live_opencode_canary tests/live/extended/test_opencode_canary.py
+```
+
+Policy:
+
+- exactly one assignment attempt;
+- workflow timeout 15 minutes;
+- fail (not skip) when `issues.usage()` is unavailable or `cost_usd` is missing;
+- fail when `cost_usd > 0.10`;
+- publish sanitized diagnostics and `canary-usage.json` on success;
+- external cleanup runs with `if: always()` via `scripts/cleanup_live_resources.py`.
+
+The canary workflow is not a required branch-protection check.
 
 ## Target update procedure
 

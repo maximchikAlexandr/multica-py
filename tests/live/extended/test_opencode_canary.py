@@ -1,0 +1,22 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+
+import pytest
+
+from tests.live.resources import AgentSandboxOutcome
+
+pytestmark = [pytest.mark.live, pytest.mark.live_opencode_canary, pytest.mark.serial]
+
+
+def test_real_opencode_executes_issue_in_local_directory(
+    run_opencode_canary: Callable[[], AgentSandboxOutcome],
+) -> None:
+    """Run the real OpenCode canary workflow once with cost verification."""
+    outcome = run_opencode_canary()
+    assert outcome.run_status == "completed"
+    assert not outcome.file_assertion_failed
+    assert outcome.primary_error is None
+    assert not outcome.cleanup_errors
+    assert outcome.cost_usd is not None
+    assert outcome.cost_usd <= 0.10

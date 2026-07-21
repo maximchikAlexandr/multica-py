@@ -232,6 +232,221 @@
       "test_refs": [
         "tests/contract/test_full_cli_coverage.py"
       ]
+    },
+    {
+      "operation_id": "projects.resources.list",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "list"
+      ],
+      "python_parameter": "project_id",
+      "cli_argument": "<project_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
+    },
+    {
+      "operation_id": "projects.resources.add_local_directory",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "add"
+      ],
+      "python_parameter": "project_id",
+      "cli_argument": "<project_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [
+        {
+          "category": "requires",
+          "target": "--type local_directory"
+        }
+      ],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
+    },
+    {
+      "operation_id": "projects.resources.add_local_directory",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "add"
+      ],
+      "python_parameter": "request.local_path",
+      "cli_argument": "--local-path",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
+    },
+    {
+      "operation_id": "projects.resources.add_local_directory",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "add"
+      ],
+      "python_parameter": "request.daemon_id",
+      "cli_argument": "--daemon-id",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
+    },
+    {
+      "operation_id": "projects.resources.add_local_directory",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "add"
+      ],
+      "python_parameter": "request.label",
+      "cli_argument": "--ref-label",
+      "required": false,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
+    },
+    {
+      "operation_id": "projects.resources.update_local_directory",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "update"
+      ],
+      "python_parameter": "project_id",
+      "cli_argument": "<project_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
+    },
+    {
+      "operation_id": "projects.resources.update_local_directory",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "update"
+      ],
+      "python_parameter": "resource_id",
+      "cli_argument": "<resource_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
+    },
+    {
+      "operation_id": "projects.resources.update_local_directory",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "update"
+      ],
+      "python_parameter": "request.local_path",
+      "cli_argument": "--local-path",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
+    },
+    {
+      "operation_id": "projects.resources.remove",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "remove"
+      ],
+      "python_parameter": "project_id",
+      "cli_argument": "<project_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
+    },
+    {
+      "operation_id": "projects.resources.remove",
+      "binding_command_path": [
+        "project",
+        "resource",
+        "remove"
+      ],
+      "python_parameter": "resource_id",
+      "cli_argument": "<resource_id>",
+      "required": true,
+      "presence_semantics": "omitted",
+      "enum_policy": "strict",
+      "approved_enum": [],
+      "constraints": [],
+      "test_refs": [
+        "tests/unit/resources/test_operations.py"
+      ],
+      "source_refs": [
+        "server/cmd/multica/cmd_project_resource.go"
+      ]
     }
   ]
 }

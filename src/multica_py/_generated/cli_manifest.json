@@ -388,6 +388,34 @@
       "source_file": "cmd_project.go"
     },
     {
+      "command": "project resource list",
+      "sdk_method": "projects.resources.list",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_project_resource.go"
+    },
+    {
+      "command": "project resource add",
+      "sdk_method": "projects.resources.add_local_directory",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_project_resource.go"
+    },
+    {
+      "command": "project resource update",
+      "sdk_method": "projects.resources.update_local_directory",
+      "output_mode": "json",
+      "aliases": [],
+      "source_file": "cmd_project_resource.go"
+    },
+    {
+      "command": "project resource remove",
+      "sdk_method": "projects.resources.remove",
+      "output_mode": "text",
+      "aliases": [],
+      "source_file": "cmd_project_resource.go"
+    },
+    {
       "command": "label list",
       "sdk_method": "labels.list",
       "output_mode": "json",

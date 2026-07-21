@@ -9,38 +9,61 @@ on:
     branches: [main]
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --all-groups
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-wheel
+          path: dist/*.whl
+          retention-days: 7
+
   install:
+    needs: build
     permissions:
       contents: read
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.12", "3.13"]
+        os:
+          - ubuntu-latest
+          - macos-latest
+        python-version:
+          - "3.12"
+          - "3.13"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: ${{ matrix.python-version }}
-      - run: uv sync --frozen --all-groups
-      - run: uv build
-
-      - name: uv add (consumer project)
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-wheel
+          path: dist
+      - name: pip install
+        run: |
+          python -m venv /tmp/test-pip-venv
+          /tmp/test-pip-venv/bin/pip install dist/*.whl
+          /tmp/test-pip-venv/bin/python -c "import multica_py; from multica_py import ClientConfig, MulticaClient; MulticaClient(ClientConfig()); print('pip install ok')"
+      - name: uv pip install
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: |
+          python -m venv /tmp/test-uv-venv
+          uv pip install --python /tmp/test-uv-venv/bin/python dist/*.whl
+          /tmp/test-uv-venv/bin/python -c "import multica_py; print('uv pip install ok')"
+      - name: uv add
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: |
           mkdir -p /tmp/consumer-project
           cd /tmp/consumer-project
           uv init --no-readme
           uv add ${{ github.workspace }}/dist/*.whl
           uv run python -c "import multica_py; from multica_py import ClientConfig, MulticaClient; MulticaClient(ClientConfig()); print('uv add ok')"
-
-      - name: uv pip install
-        run: |
-          python -m venv /tmp/test-uv-venv
-          uv pip install --python /tmp/test-uv-venv/bin/python dist/*.whl
-          /tmp/test-uv-venv/bin/python -c "import multica_py; print('uv pip install ok')"
-
-      - name: pip install
-        run: |
-          python -m venv /tmp/test-pip-venv
-          /tmp/test-pip-venv/bin/pip install dist/*.whl
-          /tmp/test-pip-venv/bin/python -c "import multica_py; print('pip install ok')"

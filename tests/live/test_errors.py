@@ -20,9 +20,8 @@ from multica_py.exceptions import (
     ValidationError,
 )
 from multica_py.models.labels import Label
-from tests.live.bootstrap import TestIdentity, WorkspaceContext
-from tests.live.compose import (
-    capture_compose_diagnostics_from_environment,
+from tests.live.backend import (
+    capture_compose_diagnostics,
     compose_argv,
     is_ready,
     probe_readiness,
@@ -32,9 +31,9 @@ from tests.live.diagnostics import (
     DiagnosticCollector,
     assert_text_excludes_secrets,
 )
-from tests.live.settings import LiveTestEnvironment, label_name
+from tests.live.environment import LiveTestEnvironment, TestIdentity, WorkspaceContext, label_name
 
-pytestmark = [pytest.mark.live, pytest.mark.live_smoke]
+pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 
 CANONICAL_ARTIFACTS = (
     "target.json",
@@ -105,7 +104,13 @@ def _capture_compose_logs(
     live_environment: LiveTestEnvironment,
     diagnostic_collector: DiagnosticCollector,
 ) -> None:
-    capture_compose_diagnostics_from_environment(live_environment, diagnostic_collector)
+    if not live_environment.managed_compose or not live_environment.compose_files:
+        return
+    capture_compose_diagnostics(
+        compose_files=live_environment.compose_files,
+        compose_project=live_environment.compose_project,
+        diagnostics=diagnostic_collector,
+    )
 
 
 def _stop_compose_service(
@@ -218,7 +223,6 @@ def test_primary_label_via_secondary_client_raises_not_found_error(
     _assert_safe_message(exc_info.value, test_identity)
 
 
-@pytest.mark.serial
 @pytest.mark.destructive
 def test_backend_stop_mid_operation_raises_network_error_without_orphan_cli(
     live_client: MulticaClient,

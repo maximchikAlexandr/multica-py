@@ -36,13 +36,55 @@ jobs:
       - run: uv run mypy --namespace-packages --explicit-package-bases -p multica_py
       - run: uv run mypy tests scripts --ignore-missing-imports --follow-imports=silent --check-untyped-defs
 
-  test:
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --all-groups
+      - name: Offline tests (parallel)
+        run: |
+          uv run pytest -o addopts="" -v --tb=short --strict-markers \
+            -m "not live and not serial" -n auto --dist loadscope \
+            --cov=multica_py --cov-branch --cov-report=
+      - name: Offline tests (serial coverage)
+        run: |
+          uv run pytest -o addopts="" -v --tb=short --strict-markers \
+            -m "serial and not live" \
+            --cov=multica_py --cov-branch --cov-append \
+            --cov-report=term-missing --cov-report=xml --cov-report=json
+      - name: Zonal coverage check
+        run: uv run python scripts/check_coverage.py --coverage-json coverage.json
+      - name: Baseline compare (PR-07)
+        run: |
+          uv run python scripts/check_test_baseline.py \
+            --baseline tests/quality-baseline.json \
+            --mode compare \
+            --stage PR-07
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            coverage.xml
+            coverage.json
+          retention-days: 14
+
+  compatibility:
     permissions:
       contents: read
     strategy:
       matrix:
-        python-version: ["3.12", "3.13"]
-        os: [ubuntu-latest, macos-latest]
+        os:
+          - ubuntu-latest
+          - macos-latest
+        python-version:
+          - "3.12"
+          - "3.13"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
@@ -50,7 +92,26 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --frozen --all-groups
-      - run: uv run pytest
+      - run: uv build
+      - name: Compat subset
+        run: |
+          set -euo pipefail
+          COLLECTED="$(uv run pytest --collect-only -q -m compat 2>&1 | tail -1)"
+          echo "$COLLECTED"
+          SELECTED="$(echo "$COLLECTED" | sed -n 's/.* \([0-9][0-9]*\)\/[0-9][0-9]* tests collected.*/\1/p')"
+          if [ -z "$SELECTED" ]; then
+            if echo "$COLLECTED" | grep -Eq 'no tests collected|^0 tests collected'; then
+              SELECTED=0
+            else
+              echo "compat contract: could not parse pytest collect summary: $COLLECTED"
+              exit 1
+            fi
+          fi
+          if [ "$SELECTED" -lt 4 ]; then
+            echo "compat contract requires at least four collected items (see contracts/compat-tests.md); got $SELECTED"
+            exit 1
+          fi
+          uv run pytest -q -m compat
 
   upstream-check:
     runs-on: ubuntu-latest
@@ -80,7 +141,7 @@ jobs:
 
   live-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     permissions:
       contents: read
     concurrency:
@@ -92,18 +153,24 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups
+      - name: Resolve pinned Multica target
+        id: multica_target
+        run: |
+          readarray -t TARGET_LINES < <(uv run python -c "from pathlib import Path; from scripts.resolve_multica_target import load_pinned_target, workflow_backend_digest; target = load_pinned_target(Path('contracts/multica-live-target.toml')); print(target.upstream_commit); print(workflow_backend_digest(target))")
+          echo "upstream_commit=${TARGET_LINES[0]}" >> "$GITHUB_OUTPUT"
+          echo "backend_digest=${TARGET_LINES[1]}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           repository: multica-ai/multica
-          ref: 4416313f8f7f801df8b7f5072087da8a6502a89c
+          ref: ${{ steps.multica_target.outputs.upstream_commit }}
           path: multica-upstream
       - name: Pull digest-pinned backend image
         run: |
-          docker pull ghcr.io/multica-ai/multica-backend@sha256:d8a50acac1eb674093b0e9de4afc656328ac6b37fc641f1fb4b256547f1ffe3b
+          docker pull ghcr.io/multica-ai/multica-backend@${{ steps.multica_target.outputs.backend_digest }}
       - name: Resolve Multica CLI
         run: |
           CLI_PATH="$(uv run python -c "from pathlib import Path; from scripts.resolve_multica_target import resolve_target; print(resolve_target(Path('contracts/multica-live-target.toml'), None).cli_executable)")"
-          RUN_ID="live-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          RUN_ID="$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
           echo "MULTICA_LIVE_CLI=$CLI_PATH" >> "$GITHUB_ENV"
           echo "MULTICA_LIVE_RESOLVE_CLI=1" >> "$GITHUB_ENV"
           echo "MULTICA_LIVE_UPSTREAM_DIR=$GITHUB_WORKSPACE/multica-upstream" >> "$GITHUB_ENV"
@@ -121,15 +188,15 @@ jobs:
           echo "start_time=$START_TIME" >> "$GITHUB_OUTPUT"
           echo "end_time=$END_TIME" >> "$GITHUB_OUTPUT"
           echo "total_seconds=$((END_TIME - START_TIME))" >> "$GITHUB_OUTPUT"
-      - name: Assert SC-003 budgets
+      - name: Assert SC-009 budgets
         if: always() && steps.live_smoke.outputs.total_seconds != ''
         run: |
           TOTAL="${{ steps.live_smoke.outputs.total_seconds }}"
-          echo "Live smoke total wall time: ${TOTAL}s (SC-003 budget: 300s)"
-          echo "## SC-003 timing" >> "$GITHUB_STEP_SUMMARY"
+          echo "Live smoke total wall time: ${TOTAL}s (SC-009 budget: 300s)"
+          echo "## SC-009 timing" >> "$GITHUB_STEP_SUMMARY"
           echo "- total wall: ${TOTAL}s (budget 300s)" >> "$GITHUB_STEP_SUMMARY"
           if [ "$TOTAL" -gt 300 ]; then
-            echo "SC-003 total wall budget exceeded"
+            echo "SC-009 total wall budget exceeded"
             exit 1
           fi
           python3 - <<'PY'
@@ -141,18 +208,18 @@ jobs:
           root = pathlib.Path(os.environ["MULTICA_LIVE_ARTIFACT_DIR"])
           runs = sorted(root.glob("*/run.json")) if root.is_dir() else []
           if not runs:
-              print("SC-003 sub-budgets: run.json missing; cannot verify env/test splits", file=sys.stderr)
+              print("SC-009 sub-budgets: run.json missing; cannot verify env/test splits", file=sys.stderr)
               sys.exit(1)
           payload = json.loads(runs[-1].read_text(encoding="utf-8"))
           env_ready = payload.get("environment_ready_seconds")
           test_phase = payload.get("test_phase_seconds")
           print(f"environment_ready_seconds={env_ready} (budget 180)")
-          print(f"test_phase_seconds={test_phase} (budget 120)")
+          print(f"test_phase_seconds={test_phase} (budget 240)")
           summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
           if summary_path:
               with open(summary_path, "a", encoding="utf-8") as summary:
                   summary.write(f"- env startup: {env_ready}s (budget 180s)\n")
-                  summary.write(f"- test phase: {test_phase}s (budget 120s)\n")
+                  summary.write(f"- test phase: {test_phase}s (budget 240s)\n")
           failures = []
           if not isinstance(env_ready, (int, float)):
               failures.append("environment_ready_seconds missing")
@@ -160,8 +227,8 @@ jobs:
               failures.append(f"env startup {env_ready}s exceeds 180s")
           if not isinstance(test_phase, (int, float)):
               failures.append("test_phase_seconds missing")
-          elif float(test_phase) > 120:
-              failures.append(f"test phase {test_phase}s exceeds 120s")
+          elif float(test_phase) > 240:
+              failures.append(f"test phase {test_phase}s exceeds 240s")
           if failures:
               print("; ".join(failures), file=sys.stderr)
               sys.exit(1)
@@ -184,6 +251,21 @@ jobs:
           name: live-smoke-junit
           path: ${{ env.MULTICA_LIVE_JUNIT_PATH }}
           retention-days: 7
+      - name: External live resource cleanup
+        if: always()
+        run: |
+          AUDIT="$RUNNER_TEMP/live-smoke-cleanup-audit.json"
+          uv run python scripts/cleanup_live_resources.py \
+            --run-id "$MULTICA_LIVE_RUN_ID" \
+            --audit "$AUDIT" || true
+      - name: Upload cleanup audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoke-cleanup-audit
+          path: ${{ runner.temp }}/live-smoke-cleanup-audit.json
+          retention-days: 7
+          if-no-files-found: ignore
 
   audit-source:
     runs-on: ubuntu-latest

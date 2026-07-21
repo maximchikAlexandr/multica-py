@@ -6,7 +6,8 @@ from typing import TypedDict
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.manifest import CLI_MANIFEST_PATH
 from multica_py._internal.wire_models import IssueWire, issue_from_wire
-from multica_py.models.issues import IssueSummary
+from multica_py.models.issue_activity import IssueUsage
+from multica_py.models.issues import IssueCreateRequest, IssueSummary, IssueUpdateRequest
 
 
 class IssueFixture(TypedDict):
@@ -56,3 +57,26 @@ def test_issue_list_decoding() -> None:
         summary = decode_json(json.dumps(item).encode(), IssueSummary)
         assert summary.id
         assert summary.title
+
+
+def test_issue_usage_decodes_cost_usd() -> None:
+    usage = decode_json(b'{"total_runs": 2, "cost_usd": 0.08}', IssueUsage)
+    assert usage.cost_usd == 0.08
+
+
+def test_issue_create_request_rejects_empty_project_id() -> None:
+    try:
+        IssueCreateRequest(title="Test", project_id="")
+    except ValueError as exc:
+        assert "project_id" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_issue_update_request_rejects_empty_project_id() -> None:
+    try:
+        IssueUpdateRequest(project_id="")
+    except ValueError as exc:
+        assert "project_id" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
