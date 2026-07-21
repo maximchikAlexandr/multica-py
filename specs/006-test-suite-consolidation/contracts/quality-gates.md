@@ -1,6 +1,6 @@
 # Contract: Quality and Architecture Gates
 
-## PR 1 capture order
+## Stage pr1 capture order
 
 1. Исправить process tests.
 2. Заменить offline network smoke hard prohibition test-ом.
@@ -29,12 +29,12 @@ Stage fails, если выполняется любое условие:
 - offline duration больше `max(45.0, baseline * 1.5)`;
 - stage LOC/package/file limit нарушен.
 
-Baseline behavior fingerprint содержит operation dimension pairs и invariant keys, но не invariant node paths. Traced rename обновляет node path и duplicate map без изменения required contract fingerprint. Collected count печатается и не сравнивается как minimum. Добавление stage-gated invariant keys на stage `pr3` (data-model §7 правило 5) — единственное разрешённое изменение behavior fingerprint после PR 1; оно выполняется последним коммитом PR 3 после готовности guard-тестов T046/T050/T053.
+Baseline behavior fingerprint содержит operation dimension pairs и invariant keys, но не invariant node paths. Traced rename обновляет node path и duplicate map без изменения required contract fingerprint. Collected count печатается и не сравнивается как minimum. Добавление stage-gated invariant keys на stage `pr3` (data-model §7 правило 5) — единственное разрешённое изменение behavior fingerprint после stage `pr1`; оно выполняется последним коммитом stage `pr3` после готовности guard-тестов T046/T050/T053.
 
 ## Stage limits
 
 - `pr1`: фиксирует baseline; без нового LOC target.
-- `pr2`: tests LOC не выше PR 1 baseline.
+- `pr2`: tests LOC не выше stage `pr1` baseline.
 - `pr3`: tests LOC `<=11000`; fixture tree отсутствует; package paths `=6`.
 - `pr4`: live support LOC `<=3000`.
 - `final`: tests LOC `<=10500`; live support LOC `<=2500`; max file LOC `<=800`.
@@ -56,7 +56,7 @@ Baseline behavior fingerprint содержит operation dimension pairs и inva
 11. Missing/multiple live owner для operation.
 12. Default execution с selected live или packaging node.
 13. Stage LOC/file/package violation.
-14. `tests/fixtures/json/` после PR 3.
+14. `tests/fixtures/json/` после stage `pr3`.
 15. Payload размером `>4096` bytes в `tests/cases/payloads.py` или один payload, хранящийся одновременно в Python и `tests/fixtures/golden/`.
 
 ## Detection mechanism
@@ -74,7 +74,7 @@ Baseline behavior fingerprint содержит operation dimension pairs и inva
 | Stage | Активируемые проверки |
 |---|---|
 | `pr1` | №8, №12 + baseline self-check |
-| `pr2` | №1–5, №11, №15 + tests LOC не выше PR-1 baseline |
+| `pr2` | №1–5, №11, №15 + tests LOC не выше `pr1` baseline |
 | `pr3` | №6, №7, №14 + tests LOC `<=11000` + package paths `=6` |
 | `pr4` | №9, №10 + live support LOC `<=3000` |
 | `final` | №13 (все финальные лимиты) |

@@ -141,7 +141,7 @@ Rules:
 2. Dimension arrays non-empty, sorted, unique и используют closed enum.
 3. Actual operation dimensions генерируются из `OPERATION_CASES`, `ERROR_CASES` и `LivePolicy`.
 4. Required set MUST быть subset actual set; stale actual operation ID запрещён.
-5. `invariants` содержит на PR 1 минимум:
+5. `invariants` содержит на stage `pr1` минимум:
    - `network.offline-hard-fail`
    - `process.cancellation`
    - `process.timeout`
@@ -154,9 +154,9 @@ Rules:
    - `sandbox.deterministic`
    - `sandbox.provider-canary`
 
-   Stage-gated keys `packaging.artifact-required`, `packaging.single-build` и `tooling.no-tests-import` обязательны начиная со stage `pr3` и добавляются в manifest последним коммитом PR 3 после готовности guard-тестов (T046, T050, T053): до `pr3` их guard-узлы не существуют (scripts сегодня импортируют `tests.*`, packaging-тесты содержат skips). Отдельные коммиты задач разрешены, при условии что ключи добавляются последним коммитом PR 3, когда T046/T050/T053 guard-узлы уже присутствуют в дереве; промежуточные коммиты PR 3, где manifest уже содержит ключи, но guard-узлы отсутствуют, запрещены.
+   Stage-gated keys `packaging.artifact-required`, `packaging.single-build` и `tooling.no-tests-import` обязательны начиная со stage `pr3` и добавляются в manifest последним коммитом stage `pr3` после готовности guard-тестов (T046, T050, T053): до `pr3` их guard-узлы не существуют (scripts сегодня импортируют `tests.*`, packaging-тесты содержат skips). Отдельные коммиты задач разрешены, при условии что ключи добавляются последним коммитом stage `pr3`, когда T046/T050/T053 guard-узлы уже присутствуют в дереве; промежуточные коммиты stage `pr3`, где manifest уже содержит ключи, но guard-узлы отсутствуют, запрещены.
 6. Каждый invariant value является существующим node ID из full collection с `-o addopts=""`.
-7. Operation dimension arrays и invariant keys immutable после PR 1; invariant node value меняется только вместе с duplicate-removal record. Единственное исключение — добавление stage-gated keys по правилу 5.
+7. Operation dimension arrays и invariant keys immutable после stage `pr1`; invariant node value меняется только вместе с duplicate-removal record. Единственное исключение — добавление stage-gated keys по правилу 5.
 
 ## 8. Duplicate removal map schema 1
 
@@ -240,7 +240,7 @@ Metric definitions:
 - Mutation fingerprint: canonical JSON of `[tool.mutmut]` after `tomllib` parsing.
 - Serialization: UTF-8, `indent=2`, `sort_keys=True`, one trailing newline.
 
-State transition: source snapshot → process-fixed green PR 1 → immutable schema-2 baseline → stage comparisons.
+State transition: source snapshot → process-fixed green stage `pr1` → immutable schema-2 baseline → stage comparisons.
 
 ## 10. CrudDescriptor[T]
 

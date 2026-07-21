@@ -24,7 +24,7 @@ NO_COLOR=1 uv run mutmut run
 NO_COLOR=1 uv run mutmut results --all > .artifacts/mutation/results.txt
 ```
 
-## PR 1 — baseline-process
+## Stage pr1 — baseline-process
 
 ```bash
 uv run pytest -o addopts="" -q -m "process and serial" \
@@ -51,7 +51,7 @@ uv run python scripts/check_test_baseline.py \
 
 Expected: process IDs `cancellation`, `timeout`, `sigterm-escalation`, `descendant-cleanup` pass; baseline schema 2 is committed and remains unchanged afterward.
 
-## PR 2 — operation-catalog
+## Stage pr2 — operation-catalog
 
 ```bash
 uv run pytest -q tests/unit/resources/test_operations.py
@@ -70,7 +70,7 @@ uv run python scripts/check_test_baseline.py \
 
 Expected: 111 unique operation IDs; only `OperationCase`; old case catalogs absent.
 
-## PR 3 — offline-cleanup
+## Stage pr3 — offline-cleanup
 
 ```bash
 uv build
@@ -86,7 +86,7 @@ uv run python scripts/check_test_baseline.py \
 
 Expected: `tests/fixtures/json/` absent; six upstream contract modules; packaging skips zero; package install paths six; test LOC `<=11000`.
 
-## PR 4 — live-core
+## Stage pr4 — live-core
 
 ```bash
 uv run python scripts/run_live_tests.py --resolve-cli --mode smoke -- --timeout=0 -q
@@ -102,10 +102,10 @@ uv run python scripts/check_test_baseline.py \
 
 Expected: labels/projects use one branch-free CRUD algorithm; four public contexts; one HTTP client; live support LOC `<=3000`.
 
-## PR 5 — sandbox-final
+## Stage pr5 — sandbox-final
 
 ```bash
-# deterministic sandbox + extended failure scenarios (через live runner, как в PR 4).
+# deterministic sandbox + extended failure scenarios (через live runner, как в stage pr4).
 uv run python scripts/run_live_tests.py --resolve-cli --mode extended -- \
   --timeout=0 -q -k agent_sandbox
 uv run ruff format --check .

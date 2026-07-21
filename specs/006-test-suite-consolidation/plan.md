@@ -6,7 +6,7 @@
 
 ## Summary
 
-Рефакторинг выполняется пятью последовательными PR. PR 1 восстанавливает process signal и quality baseline. PR 2 создаёт единственный `OperationCase` catalog. PR 3 удаляет fixture/contract/packaging/tooling duplication. PR 4 упрощает live core и делает CRUD полностью декларативным. PR 5 изолирует agent sandbox и включает финальные budgets. PR нельзя объединять или менять местами.
+Рефакторинг выполняется одним PR в пять последовательных stages. Stage `pr1` восстанавливает process signal и quality baseline. Stage `pr2` создаёт единственный `OperationCase` catalog. Stage `pr3` удаляет fixture/contract/packaging/tooling duplication. Stage `pr4` упрощает live core и делает CRUD полностью декларативным. Stage `pr5` изолирует agent sandbox и включает финальные budgets. Stages нельзя менять местами; весь рефакторинг — один PR.
 
 ## Technical Context
 
@@ -58,9 +58,9 @@ tests/cases/
 
 ### 2. Behavioral and quality artifacts
 
-- `tests/behavioral-coverage.json`: immutable required operation dimensions и named invariants после PR 1.
+- `tests/behavioral-coverage.json`: immutable required operation dimensions и named invariants после stage `pr1`.
 - `tests/duplicate-removal-map.json`: machine-validated migration каждой удалённой проверки.
-- `tests/quality-baseline.json`: immutable schema 2 baseline после PR 1.
+- `tests/quality-baseline.json`: immutable schema 2 baseline после stage `pr1`.
 - `scripts/check_test_architecture.py`: structural/behavior checks.
 - `scripts/check_test_baseline.py`: coverage, mutation, duration, LOC и package-path comparisons.
 
@@ -187,7 +187,7 @@ Separate operation-ID lists (`LIVE_OPERATIONS`, `LIVE_EXEC_EXCEPTIONS`, CRUD/san
 | Stage | Обязательный результат |
 |---|---|
 | `pr1` | Green process/offline suite; behavior manifest и schema-2 baseline зафиксированы. |
-| `pr2` | Один `OperationCase` registry; все 111 IDs и required dimensions сохранены; tests LOC не выше PR-1 baseline. |
+| `pr2` | Один `OperationCase` registry; все 111 IDs и required dimensions сохранены; tests LOC не выше `pr1` baseline. |
 | `pr3` | `tests_python<=11000`; fixture tree отсутствует; packaging без skip; scripts/src не импортируют tests. |
 | `pr4` | Declarative CRUD; 4 contexts; 1 HTTP boundary; live support `<=3000`. |
 | `final` | `tests_python<=10500`; live support `<=2500`; каждый file `<=800`; live/canary gates green. |
@@ -196,10 +196,10 @@ Offline duration на всех compare stages: `current <= max(45.0, baseline * 
 
 ## Последовательность delivery
 
-1. **PR 1 — `baseline-process`**: timeout dependency, process harness/state, hard network prohibition, behavioral manifest, schema-2 baseline, architecture/quality gates.
-2. **PR 2 — `operation-catalog`**: `OperationCase`, unit executor, programmable fake CLI, component round trip, `ERROR_CASES`, удаление старых catalogs.
-3. **PR 3 — `offline-cleanup`**: fixture deletion, dead/duplicate cleanup, six contract modules, package single-build, `tools/live_support`.
-4. **PR 4 — `live-core`**: `LiveApiClient`, four contexts, declarative CRUD, live policy ownership, ExitStack cleanup.
-5. **PR 5 — `sandbox-final`**: isolated sandbox phases, final LOC/file gates, complete offline/live/package/canary evidence.
+1. **Stage pr1 — `baseline-process`**: timeout dependency, process harness/state, hard network prohibition, behavioral manifest, schema-2 baseline, architecture/quality gates.
+2. **Stage pr2 — `operation-catalog`**: `OperationCase`, unit executor, programmable fake CLI, component round trip, `ERROR_CASES`, удаление старых catalogs.
+3. **Stage pr3 — `offline-cleanup`**: fixture deletion, dead/duplicate cleanup, six contract modules, package single-build, `tools/live_support`.
+4. **Stage pr4 — `live-core`**: `LiveApiClient`, four contexts, declarative CRUD, live policy ownership, ExitStack cleanup.
+5. **Stage pr5 — `sandbox-final`**: isolated sandbox phases, final LOC/file gates, complete offline/live/package/canary evidence.
 
-Каждый PR MUST пройти свой gate до начала следующего. Изменение порядка запрещено.
+Каждый stage MUST пройти свой gate до начала следующего. Изменение порядка запрещено. Весь рефакторинг доставляется одним PR.

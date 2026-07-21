@@ -6,11 +6,11 @@
 ## Execution Rules
 
 - Выполнять phases и tasks строго по порядку, кроме явно отмеченных `[P]`.
-- Не начинать следующий PR, пока exit gate текущего PR не прошёл.
+- Не начинать следующий stage, пока exit gate текущего stage не пройден.
 - Удаление test node и запись в `tests/duplicate-removal-map.json` выполняются одним commit.
 - Не снижать assertions, coverage config, mutation config или behavioral manifest ради прохождения gate.
 - Не создавать compatibility aliases для удалённых registries/types.
-- Если stage gate падает после merge dedup-PR — остановить дедупликацию, revert PR или восстановить retained coverage по `tests/duplicate-removal-map.json` до продолжения (FR-032).
+- Если stage gate падает после commit-а дедупликации — остановить дедупликацию, revert commit или восстановить retained coverage по `tests/duplicate-removal-map.json` до продолжения (FR-032).
 - Каждый новый или существенно переписанный test/support Python file должен иметь `<=800` logical lines.
 
 ## Phase 1: Setup
@@ -30,7 +30,7 @@
 
 **Foundation exit gate:** T001–T009 проходят; tooling готово принять repaired baseline, но baseline ещё не зафиксирован.
 
-## Phase 3: User Story 1 — Reliable Gate and Safe Deduplication (P1, PR 1)
+## Phase 3: User Story 1 — Reliable Gate and Safe Deduplication (P1, stage pr1)
 
 **Goal:** исправить process signal, заменить weak network smoke и зафиксировать immutable quality/behavior baseline.
 
@@ -45,14 +45,14 @@
 - [ ] T016 [US1] Запустить repaired offline suite и branch coverage; сохранить JUnit и coverage outputs в `.artifacts/test-suite-consolidation/offline-junit.xml` и `coverage.json`.
 - [ ] T017 [US1] Запустить полный configured mutmut scope и сохранить `mutmut results --all` в `.artifacts/mutation/results.txt`; unknown status должен считаться failure.
 - [ ] T018 [US1] Создать reviewed `tests/behavioral-coverage.json` с ровно 111 operation keys, closed dimensions и обязательными named invariants из `data-model.md`.
-- [ ] T019 [US1] Сгенерировать и commit immutable schema-2 `tests/quality-baseline.json` из T016–T018; `git_sha` должен указывать на green repaired PR-1 commit.
+- [ ] T019 [US1] Сгенерировать и commit immutable schema-2 `tests/quality-baseline.json` из T016–T018; `git_sha` должен указывать на green repaired stage-`pr1` commit.
 - [ ] T020 [US1] Реализовать stage `pr1` согласно stage-activation table в `contracts/quality-gates.md`: process markers (проверка №8), default live/packaging exclusion (№12), manifest invariants и baseline self-check в `scripts/check_test_architecture.py`; фактическое отсутствие running descendants обеспечивается process-тестами T013 и в architecture gate не дублируется.
 - [ ] T021 [US1] Добавить unit/contract/component run, process run, hard-network test, architecture `pr1`, coverage, mutation artifact и baseline compare в quality job `.github/workflows/ci.yml`; добавить `tools` в scope types job (`mypy tests scripts tools --ignore-missing-imports --follow-imports=silent --check-untyped-defs`).
-- [ ] T022 [US1] Выполнить весь PR-1 quickstart и сохранить combined output в `.artifacts/test-suite-consolidation/pr1-gate.txt`.
+- [ ] T022 [US1] Выполнить весь stage-`pr1` quickstart и сохранить combined output в `.artifacts/test-suite-consolidation/pr1-gate.txt`.
 
 **US1 exit gate:** offline suite green; zombie false failures отсутствуют; raw node count не является gate; baseline/manifest committed; coverage, mutation и required contracts защищены.
 
-## Phase 4: User Story 2 — One OperationCase Catalog (P1, PR 2)
+## Phase 4: User Story 2 — One OperationCase Catalog (P1, stage pr2)
 
 **Goal:** заменить unit/component catalogs одним `OperationCase` source и одним real fake-CLI round trip.
 
@@ -73,11 +73,11 @@
 - [ ] T035 [US2] Добавить direct protocol tests response/stderr/exit/record/invalid-path/invalid-base64 в `tests/component/test_fake_cli.py`.
 - [ ] T036 [US2] Удалить `tests/unit/resources/cases/`, `tests/component/command_cases.py`, `tests/component/resource_payloads.py`, `tests/component/resource_support.py` и `tests/component/resources/`; в `tests/unit/test_project_resource_models.py` переименовать локальный класс `DecodeCase` в `ProjectResourceDecodeCase` и `_DECODE_CASES` в `_PROJECT_RESOURCE_DECODE_CASES` (содержимое cases и assertions не меняется, node IDs сохраняются, запись в duplicate map не добавляется); записать removed node mappings в `tests/duplicate-removal-map.json`.
 - [ ] T037 [P] [US2] Удалить canonical-operation duplicates из `tests/component/test_issue_project_assignment.py` и `tests/component/test_project_resources.py`, сохранив только multi-operation/stateful scenarios; обновить `tests/duplicate-removal-map.json`.
-- [ ] T038 [US2] Реализовать stage `pr2` согласно stage-activation table в `contracts/quality-gates.md`; обновить manifest consumers `tests/contract/test_full_cli_coverage.py` и `tests/_manifest_support.py` на `OPERATION_CASES`/`ERROR_CASES` и добавить проверку соответствия `LivePolicy` в `OPERATION_CASES` текущим ID-наборам `tests/live/resources.py`; `tests/live/test_live_command_coverage.py` в PR 2 НЕ изменяется (полная замена guard и удаление ID-наборов — T064/T065); выполнить PR-2 quickstart и сохранить `.artifacts/test-suite-consolidation/pr2-gate.txt`.
+- [ ] T038 [US2] Реализовать stage `pr2` согласно stage-activation table в `contracts/quality-gates.md`; обновить manifest consumers `tests/contract/test_full_cli_coverage.py` и `tests/_manifest_support.py` на `OPERATION_CASES`/`ERROR_CASES` и добавить проверку соответствия `LivePolicy` в `OPERATION_CASES` текущим ID-наборам `tests/live/resources.py`; `tests/live/test_live_command_coverage.py` на stage `pr2` НЕ изменяется (полная замена guard и удаление ID-наборов — T064/T065); выполнить stage-`pr2` quickstart и сохранить `.artifacts/test-suite-consolidation/pr2-gate.txt`.
 
-**US2 exit gate:** ровно 111 operation IDs; stale case types/registries отсутствуют; unit/component используют один catalog; coverage/mutation/behavior не ниже PR-1 baseline; tests LOC не выше PR-1 baseline.
+**US2 exit gate:** ровно 111 operation IDs; stale case types/registries отсутствуют; unit/component используют один catalog; coverage/mutation/behavior не ниже `pr1` baseline; tests LOC не выше `pr1` baseline.
 
-## Phase 5: User Story 3 — Offline Contracts, Tooling and Packaging (P2, PR 3)
+## Phase 5: User Story 3 — Offline Contracts, Tooling and Packaging (P2, stage pr3)
 
 **Goal:** удалить fixture/low-signal шум, оставить шесть upstream boundary modules и один package build contour.
 
@@ -97,13 +97,13 @@
 - [ ] T050 [US3] Обновить `tests/contract/test_ci_profiles.py` assertions: one build, six paths, zero packaging skips, no CI compatibility build. `test_package_workflow_builds_wheel_once` — guard-узел invariant `packaging.single-build` (используется в manifest-расширении T053).
 - [ ] T051 [P] [US3] Создать canonical shared environment/target models and parsers в `tools/live_support/environment.py` с limit `<=450` logical lines и exports в `tools/live_support/__init__.py`.
 - [ ] T052 [P] [US3] Создать canonical shared scan/redaction functions и `VERIFICATION_CODE` в `tools/live_support/diagnostics.py`.
-- [ ] T053 [US3] Перевести `scripts/resolve_multica_target.py`, `scripts/run_live_tests.py`, `scripts/scan_live_artifacts.py` на imports только из `tools.live_support`; imports `tests.*` удалить; создать pytest guard `tests/unit/test_test_architecture.py::test_no_tests_import`, вызывающий `check_test_architecture.py --stage pr3` (проверка №6); добавить stage-gated keys `packaging.artifact-required`, `packaging.single-build`, `tooling.no-tests-import` в `tests/behavioral-coverage.json` последним коммитом PR 3 (после готовности guard-узлов T046/T050 и данного guard) с отображением на guard-узлы `tests/packaging/test_artifacts.py::test_dist_contains_one_wheel_and_one_sdist`, `tests/contract/test_ci_profiles.py::test_package_workflow_builds_wheel_once` и `tests/unit/test_test_architecture.py::test_no_tests_import` соответственно (формат по data-model §7 правило 6) — sanctioned fingerprint migration по data-model §7 правило 5. Зависит от T046 и T050.
+- [ ] T053 [US3] Перевести `scripts/resolve_multica_target.py`, `scripts/run_live_tests.py`, `scripts/scan_live_artifacts.py` на imports только из `tools.live_support`; imports `tests.*` удалить; создать pytest guard `tests/unit/test_test_architecture.py::test_no_tests_import`, вызывающий `check_test_architecture.py --stage pr3` (проверка №6); добавить stage-gated keys `packaging.artifact-required`, `packaging.single-build`, `tooling.no-tests-import` в `tests/behavioral-coverage.json` последним коммитом stage `pr3` (после готовности guard-узлов T046/T050 и данного guard) с отображением на guard-узлы `tests/packaging/test_artifacts.py::test_dist_contains_one_wheel_and_one_sdist`, `tests/contract/test_ci_profiles.py::test_package_workflow_builds_wheel_once` и `tests/unit/test_test_architecture.py::test_no_tests_import` соответственно (формат по data-model §7 правило 6) — sanctioned fingerprint migration по data-model §7 правило 5. Зависит от T046 и T050.
 - [ ] T054 [US3] Создать consolidated tests shared tools в `tests/unit/test_live_support_tools.py`, удалить superseded `tests/unit/test_resolve_multica_target.py` и `tests/unit/test_scan_live_artifacts.py`, перенести `tests/unit/test_live_mutation_cases.py` в `tests/unit/test_live_support_tools.py`, обновить duplicate map.
 - [ ] T055 [US3] Реализовать stage `pr3` согласно stage-activation table в `contracts/quality-gates.md`, выполнить offline/contract/package quickstart и сохранить `.artifacts/test-suite-consolidation/pr3-gate.txt`.
 
 **US3 exit gate:** fixture tree отсутствует; шесть contract modules; packaging skip zero; one build/six install paths; no scripts/src imports from tests; tests LOC `<=11000`.
 
-## Phase 6: User Story 4 — Declarative Live Core (P2, PR 4)
+## Phase 6: User Story 4 — Declarative Live Core (P2, stage pr4)
 
 **Goal:** один HTTP boundary, четыре contexts, fully declarative CRUD и immediate LIFO cleanup.
 
@@ -133,7 +133,7 @@
 
 **US4 exit gate:** one HTTP client; four fixtures; branch-free CRUD; immediate LIFO cleanup; live support `<=3000`; smoke/extended contracts green.
 
-## Phase 7: User Story 5 — Isolated Sandbox and Final Gates (P3, PR 5)
+## Phase 7: User Story 5 — Isolated Sandbox and Final Gates (P3, stage pr5)
 
 **Goal:** изолировать sandbox domain и достигнуть финальных LOC/file budgets без потери deterministic/canary behavior.
 
@@ -145,7 +145,7 @@
 - [ ] T073 [US5] Добавить phase-transition, cleanup-order, filesystem-policy, diagnostics и no-ordinary-session-side-effect tests в `tests/unit/test_live_sandbox.py`.
 - [ ] T074 [US5] Удалить migrated sandbox code и final temporary `tests/live/resources.py`; удалить superseded sandbox helper tests и обновить `tests/duplicate-removal-map.json`.
 - [ ] T075 [US5] Реализовать final architecture limits `tests_python<=10500`, `live_support_python<=2500`, max file `<=800`, no stale files/types/imports/skips согласно stage-activation table в `contracts/quality-gates.md` в `scripts/check_test_architecture.py`.
-- [ ] T076 [US5] Обновить final test architecture, five-PR commands и deletion rules в `README.md`, `AGENTS.md`, `tests/live/README.md`.
+- [ ] T076 [US5] Обновить final test architecture, five-stage commands и deletion rules в `README.md`, `AGENTS.md`, `tests/live/README.md`.
 - [ ] T077 [US5] Выполнить Ruff, strict mypy, full offline, architecture, coverage, mutation, package, live smoke, live extended и real-provider canary; сохранить `.artifacts/test-suite-consolidation/final-gate.txt`.
 - [ ] T078 [US5] Записать final measured metrics и source/baseline SHAs в `.artifacts/test-suite-consolidation/final-metrics.json`; `tests/quality-baseline.json` не изменять.
 
@@ -179,5 +179,5 @@ MVP = Phase 1 + Phase 2 + US1 + US2. Он даёт green process boundary, behav
 1. Сначала исправить достоверность измерений.
 2. Создать нового consumer до удаления старого source.
 3. Удалять duplicate вместе с traceability record.
-4. Не смешивать два PR в одном repair cycle.
+4. Не смешивать два stage в одном repair cycle.
 5. После каждого task group выполнять ближайший targeted test; после phase — полный exit gate.
