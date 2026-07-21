@@ -157,6 +157,8 @@ Comparison policy:
 - `control.txt`: no field may change;
 - `AGENTS.md`: create/update allowed;
 - `.multica/**`: create/update allowed;
+- `.opencode/**`: create/update allowed (OpenCode native skills tree);
+- `.agent_context/**`: create/update allowed (issue context files);
 - every other path: create/remove/update forbidden.
 
 ## 12. CleanupAction

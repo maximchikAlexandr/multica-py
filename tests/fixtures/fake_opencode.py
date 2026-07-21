@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import subprocess
 import sys
 import time
 from dataclasses import dataclass
@@ -14,6 +16,7 @@ from typing import cast
 _EXIT_USAGE = 64
 _EXIT_INSTRUCTION = 2
 _EXIT_AGENT_ERROR = 1
+_FAKE_VERSION = "1.0.0"
 _REQUIRED_MODEL = "multica-test/fake"
 _ACTION_PREFIX = "MULTICA_TEST_ACTION="
 _INSTRUCTION_KEYS = frozenset({"schema", "path", "before", "after"})
@@ -24,6 +27,9 @@ _TEXT_EVENT = (
 )
 _STEP_FINISH = '{"type":"step_finish","sessionID":"multica-test","part":{"reason":"stop","tokens":{"input":0,"output":0}}}'
 _ERROR_NAME = "MulticaTestInstructionError"
+_UUID = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+_ISSUE_ID_RE = re.compile(rf"Your assigned issue ID is:\s*({_UUID})")
+_ISSUE_GET_RE = re.compile(rf"multica issue get\s+({_UUID})")
 
 
 @dataclass(frozen=True)
@@ -114,8 +120,86 @@ def parse_canonical_argv(argv: list[str]) -> ParsedArgv:
     return ParsedArgv(work_dir=resolved_dir, prompt=prompt)
 
 
-def extract_action_line(prompt: str) -> str:
-    """Return the compact JSON payload from the prompt action line.
+def extract_action_line(text: str) -> str:
+    """Return the compact JSON payload from a MULTICA_TEST_ACTION line.
+
+    Args:
+        text: Prompt or issue description text.
+
+    Returns:
+        Compact JSON object text following MULTICA_TEST_ACTION=.
+
+    Raises:
+        InstructionError: When the text does not contain exactly one action line.
+    """
+    matches = [
+        line[len(_ACTION_PREFIX) :] for line in text.splitlines() if line.startswith(_ACTION_PREFIX)
+    ]
+    if len(matches) != 1:
+        raise InstructionError("prompt must contain exactly one MULTICA_TEST_ACTION line")
+    return matches[0]
+
+
+def extract_issue_id(prompt: str) -> str:
+    """Return the assigned issue ID from a Multica daemon bootstrap prompt.
+
+    Args:
+        prompt: Final OpenCode prompt text from Multica ``BuildPrompt``.
+
+    Returns:
+        Issue UUID embedded in the bootstrap prompt.
+
+    Raises:
+        InstructionError: When no assigned issue ID can be parsed.
+    """
+    match = _ISSUE_ID_RE.search(prompt) or _ISSUE_GET_RE.search(prompt)
+    if match is None:
+        raise InstructionError("prompt must contain an assigned issue ID")
+    return match.group(1)
+
+
+def fetch_issue_description(issue_id: str) -> str:
+    """Fetch issue description via the Multica CLI in the agent environment.
+
+    Args:
+        issue_id: Issue UUID to fetch.
+
+    Returns:
+        Issue description text.
+
+    Raises:
+        InstructionError: When the CLI call fails or description is missing.
+    """
+    try:
+        completed = subprocess.run(
+            ["multica", "issue", "get", issue_id, "--output", "json"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise InstructionError("failed to fetch issue description") from exc
+    if completed.returncode != 0:
+        raise InstructionError(f"failed to fetch issue description (exit {completed.returncode})")
+    try:
+        payload: object = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise InstructionError("invalid issue get JSON") from exc
+    if not isinstance(payload, dict):
+        raise InstructionError("invalid issue get JSON")
+    description = payload.get("description")
+    if not isinstance(description, str):
+        raise InstructionError("issue description missing")
+    return description
+
+
+def resolve_action_payload(prompt: str) -> str:
+    """Resolve MULTICA_TEST_ACTION from the prompt or issue description.
+
+    Multica's daemon bootstrap prompt tells the agent to run ``issue get`` and
+    does not embed the issue body. Prefer an inline action line when present
+    (unit/component fixtures); otherwise fetch the description via Multica CLI.
 
     Args:
         prompt: Final OpenCode prompt text.
@@ -124,16 +208,18 @@ def extract_action_line(prompt: str) -> str:
         Compact JSON object text following MULTICA_TEST_ACTION=.
 
     Raises:
-        InstructionError: When the prompt does not contain exactly one action line.
+        InstructionError: When the action cannot be resolved.
     """
     matches = [
         line[len(_ACTION_PREFIX) :]
         for line in prompt.splitlines()
         if line.startswith(_ACTION_PREFIX)
     ]
-    if len(matches) != 1:
+    if len(matches) > 1:
         raise InstructionError("prompt must contain exactly one MULTICA_TEST_ACTION line")
-    return matches[0]
+    if len(matches) == 1:
+        return matches[0]
+    return extract_action_line(fetch_issue_description(extract_issue_id(prompt)))
 
 
 def parse_instruction_json(payload: str) -> dict[str, object]:
@@ -282,9 +368,8 @@ def extract_run_id(before: str) -> str:
 
 
 def parse_and_validate_instruction(prompt: str, work_dir: Path) -> AgentSandboxInstruction:
-    """Extract, parse, and validate MULTICA_TEST_ACTION from a prompt."""
-    payload = extract_action_line(prompt)
-    data = parse_instruction_json(payload)
+    """Extract, parse, and validate MULTICA_TEST_ACTION from a prompt or issue."""
+    data = parse_instruction_json(resolve_action_payload(prompt))
     return validate_instruction(data, work_dir)
 
 
@@ -304,9 +389,6 @@ def run_instruction(
 ) -> int:
     """Execute the requested agent mode for a validated instruction."""
     target = _resolve_contained_path(work_dir, instruction.path)
-    if mode == "error":
-        emit_error("agent mode error")
-        return _EXIT_AGENT_ERROR
     if mode == "timeout":
         emit_step_start()
         while True:
@@ -321,8 +403,23 @@ def run_instruction(
     return 0
 
 
+def print_version() -> None:
+    """Write the semver line expected by multica daemon version detection."""
+    sys.stdout.write(f"{_FAKE_VERSION}\n")
+    sys.stdout.flush()
+
+
+def is_version_probe(argv: list[str]) -> bool:
+    """Return whether argv is the daemon's ``--version`` probe."""
+    return len(argv) == 2 and argv[1] == "--version"
+
+
 def main() -> int:
     """Run the deterministic OpenCode-compatible executable."""
+    if is_version_probe(sys.argv):
+        print_version()
+        return 0
+
     try:
         parsed = parse_canonical_argv(sys.argv)
     except ArgvError:

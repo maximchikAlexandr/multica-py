@@ -9,6 +9,7 @@ import pathlib
 import re
 import sys
 import tomllib
+from typing import cast
 
 
 def _repo_root() -> pathlib.Path:
@@ -17,16 +18,33 @@ def _repo_root() -> pathlib.Path:
 
 def _load_coverage_config(repo_root: pathlib.Path) -> tuple[dict[str, str], dict[str, float]]:
     pyproject = repo_root / "pyproject.toml"
-    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-    coverage = data.get("tool", {}).get("coverage", {})
-    regexs = coverage.get("regexs", {})
-    thresholds = coverage.get("thresholds", {})
-    if not isinstance(regexs, dict) or not isinstance(thresholds, dict):
+    parsed: object = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    if not isinstance(parsed, dict):
+        raise SystemExit("pyproject.toml root must be a table")
+    data = cast("dict[str, object]", parsed)
+    tool_obj = data.get("tool")
+    if not isinstance(tool_obj, dict):
+        raise SystemExit("pyproject.toml missing [tool.coverage]")
+    tool = cast("dict[str, object]", tool_obj)
+    coverage_obj = tool.get("coverage")
+    if not isinstance(coverage_obj, dict):
+        raise SystemExit("pyproject.toml missing [tool.coverage]")
+    coverage = cast("dict[str, object]", coverage_obj)
+    regexs_obj = coverage.get("regexs")
+    thresholds_obj = coverage.get("thresholds")
+    if not isinstance(regexs_obj, dict) or not isinstance(thresholds_obj, dict):
         raise SystemExit(
             "pyproject.toml missing [tool.coverage.regexs] or [tool.coverage.thresholds]"
         )
+    regexs = cast("dict[str, object]", regexs_obj)
+    thresholds = cast("dict[str, object]", thresholds_obj)
     zone_regexs = {str(name): str(pattern) for name, pattern in regexs.items()}
-    zone_thresholds = {str(name): float(value) for name, value in thresholds.items()}
+    zone_thresholds: dict[str, float] = {}
+    for name, value in thresholds.items():
+        if isinstance(value, (int, float, str)):
+            zone_thresholds[str(name)] = float(value)
+        else:
+            raise SystemExit(f"invalid threshold for {name!r}")
     return zone_regexs, zone_thresholds
 
 
@@ -83,9 +101,10 @@ def check_coverage(coverage_path: pathlib.Path, repo_root: pathlib.Path) -> int:
         Exit code 0 on success, 1 when a zone is missing or below threshold.
     """
     zone_regexs, zone_thresholds = _load_coverage_config(repo_root)
-    payload = json.loads(coverage_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
+    parsed: object = json.loads(coverage_path.read_text(encoding="utf-8"))
+    if not isinstance(parsed, dict):
         raise SystemExit("coverage JSON root must be an object")
+    payload = cast("dict[str, object]", parsed)
     percentages = _zone_percentages(payload, zone_regexs)
     failed = False
     for zone in sorted(zone_regexs):
@@ -108,8 +127,9 @@ def check_coverage(coverage_path: pathlib.Path, repo_root: pathlib.Path) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate zonal statement coverage.")
     parser.add_argument("--coverage-json", required=True, type=pathlib.Path)
-    args = parser.parse_args(argv)
-    return check_coverage(args.coverage_json.resolve(), _repo_root())
+    namespace = parser.parse_args(argv)
+    coverage_json = cast("pathlib.Path", namespace.coverage_json)
+    return check_coverage(coverage_json.resolve(), _repo_root())
 
 
 if __name__ == "__main__":

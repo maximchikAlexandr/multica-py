@@ -501,7 +501,6 @@ def _make_sandbox_runner(
         *,
         settings: AgentSandboxSettings | None = None,
         inject_cleanup_failure: str | None = None,
-        expect_success: bool = True,
     ) -> AgentSandboxOutcome:
         return execute_agent_sandbox_workflow(
             live_environment=live_environment,
@@ -512,7 +511,6 @@ def _make_sandbox_runner(
             compose_project=live_test_run.compose_project,
             compose_files=live_environment.compose_files,
             inject_cleanup_failure=inject_cleanup_failure,
-            expect_success=expect_success,
             canary_settings=canary_settings,
         )
 

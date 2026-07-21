@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+from typing import cast
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -27,17 +28,11 @@ ALLOWED_DIFF_PATHS = frozenset(
         "tests/quality-baseline.json",
     }
 )
-EXCLUDED_NODE_IDS = (
-    "tests/integration/test_issue_workflows.py::test_client_construction",
-    "tests/integration/test_issue_workflows.py::test_client_context_manager",
-    "tests/integration/test_streaming_commands.py::test_managed_process_argv",
-    "tests/integration/test_streaming_commands.py::test_managed_process_stdout_lines",
-    "tests/integration/test_streaming_commands.py::test_managed_process_consumes_partial_output",
-)
+EXCLUDED_NODE_IDS: tuple[str, ...] = ()
 COLLECT_LAYERS = (
     ("unit", "tests/unit"),
     ("contract", "tests/contract"),
-    ("component_source", "tests/integration"),
+    ("component_source", "tests/component"),
     ("packaging", "tests/packaging"),
     ("live", "tests/live"),
 )
@@ -122,7 +117,7 @@ def _validate_excluded_nodes(node_ids: list[str]) -> None:
         raise SystemExit("excluded node validation failed: " + "; ".join(problems))
 
 
-def _mandatory_offline(collected: dict[str, int], node_ids: list[str]) -> int:
+def _mandatory_offline(collected: dict[str, int]) -> int:
     offline_total = (
         collected["unit"]
         + collected["contract"]
@@ -150,9 +145,10 @@ def _parse_junit(junit_path: pathlib.Path) -> tuple[int, float]:
 
 
 def _coverage_metrics(coverage_path: pathlib.Path, repo_root: pathlib.Path) -> dict[str, object]:
-    payload = json.loads(coverage_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
+    parsed: object = json.loads(coverage_path.read_text(encoding="utf-8"))
+    if not isinstance(parsed, dict):
         raise SystemExit("coverage JSON root must be an object")
+    payload = cast("dict[str, object]", parsed)
     totals = payload.get("totals")
     if not isinstance(totals, dict):
         raise SystemExit("coverage JSON missing totals")
@@ -197,12 +193,12 @@ def _build_baseline(
         "schema": BASELINE_SCHEMA,
         "git_sha": source_sha,
         "collected": collected,
-        "mandatory_offline": _mandatory_offline(collected, integration_nodes),
+        "mandatory_offline": _mandatory_offline(collected),
         "loc": {
             "tests_python": _glob_logical_lines(repo_root / "tests", "**/*.py"),
             "scripts_python": _glob_logical_lines(repo_root / "scripts", "*.py"),
             "resource_test_support": _glob_logical_lines(
-                repo_root / "tests" / "integration" / "resources",
+                repo_root / "tests" / "component" / "resources",
                 "**/*.py",
             ),
         },
@@ -257,12 +253,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--coverage-json", required=True, type=pathlib.Path)
     parser.add_argument("--junit-xml", required=True, type=pathlib.Path)
     parser.add_argument("--output", required=True, type=pathlib.Path)
-    args = parser.parse_args(argv)
+    namespace = parser.parse_args(argv)
     return capture_baseline(
-        args.source_sha,
-        args.coverage_json.resolve(),
-        args.junit_xml.resolve(),
-        args.output.resolve(),
+        cast("str", namespace.source_sha),
+        cast("pathlib.Path", namespace.coverage_json).resolve(),
+        cast("pathlib.Path", namespace.junit_xml).resolve(),
+        cast("pathlib.Path", namespace.output).resolve(),
         REPO_ROOT,
     )
 

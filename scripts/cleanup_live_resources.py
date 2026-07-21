@@ -57,6 +57,28 @@ def _docker_lines(command: list[str]) -> list[str]:
     return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
 
 
+def _remove_docker_names(
+    names: list[str],
+    remove_cmd: list[str],
+    kind: str,
+) -> tuple[list[str], list[str]]:
+    removed: list[str] = []
+    errors: list[str] = []
+    for name in names:
+        completed = subprocess.run(
+            [*remove_cmd, name],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if completed.returncode == 0:
+            removed.append(name)
+        else:
+            errors.append(f"{kind} {name}: {completed.stderr.strip() or completed.stdout.strip()}")
+    return removed, errors
+
+
 def _remove_docker_containers(prefix: str) -> tuple[list[str], list[str]]:
     filters = [f"name={prefix}"]
     if PREFIX_PATTERN.match(prefix):
@@ -76,66 +98,21 @@ def _remove_docker_containers(prefix: str) -> tuple[list[str], list[str]]:
                 ]
             )
         )
-    unique_names = sorted(set(names))
-    removed: list[str] = []
-    errors: list[str] = []
-    for name in unique_names:
-        completed = subprocess.run(
-            ["docker", "rm", "-f", name],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        if completed.returncode == 0:
-            removed.append(name)
-        else:
-            errors.append(
-                f"container {name}: {completed.stderr.strip() or completed.stdout.strip()}"
-            )
-    return removed, errors
+    return _remove_docker_names(sorted(set(names)), ["docker", "rm", "-f"], "container")
 
 
 def _remove_docker_networks(prefix: str) -> tuple[list[str], list[str]]:
     names = _docker_lines(
         ["docker", "network", "ls", "--filter", f"name={prefix}", "--format", "{{.Name}}"]
     )
-    removed: list[str] = []
-    errors: list[str] = []
-    for name in names:
-        completed = subprocess.run(
-            ["docker", "network", "rm", name],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        if completed.returncode == 0:
-            removed.append(name)
-        else:
-            errors.append(f"network {name}: {completed.stderr.strip() or completed.stdout.strip()}")
-    return removed, errors
+    return _remove_docker_names(names, ["docker", "network", "rm"], "network")
 
 
 def _remove_docker_volumes(prefix: str) -> tuple[list[str], list[str]]:
     names = _docker_lines(
         ["docker", "volume", "ls", "--filter", f"name={prefix}", "--format", "{{.Name}}"]
     )
-    removed: list[str] = []
-    errors: list[str] = []
-    for name in names:
-        completed = subprocess.run(
-            ["docker", "volume", "rm", name],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        if completed.returncode == 0:
-            removed.append(name)
-        else:
-            errors.append(f"volume {name}: {completed.stderr.strip() or completed.stdout.strip()}")
-    return removed, errors
+    return _remove_docker_names(names, ["docker", "volume", "rm"], "volume")
 
 
 def _docker_container_pids(compose_project: str) -> list[int]:
@@ -169,8 +146,6 @@ def _docker_container_pids(compose_project: str) -> list[int]:
 
 def _terminate_processes(prefix: str) -> tuple[list[int], list[str]]:
     if prefix == RUN_PREFIX_ROOT:
-        return [], []
-    if not PREFIX_PATTERN.match(prefix):
         return [], []
     own_pid = os.getpid()
     candidate_pids = set(_docker_container_pids(prefix))
@@ -261,11 +236,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     """Run external live resource cleanup."""
-    args = build_parser().parse_args(argv)
-    run_id = cast("str | None", args.run_id)
-    prefix = cast("str | None", args.prefix)
-    allow_all = bool(args.all)
-    audit_path = cast("pathlib.Path | None", args.audit)
+    namespace = build_parser().parse_args(argv)
+    run_id = cast("str | None", namespace.run_id)
+    prefix = cast("str | None", namespace.prefix)
+    allow_all = cast("bool", namespace.all)
+    audit_path = cast("pathlib.Path | None", namespace.audit)
     payload = cleanup_live_resources(run_id=run_id, prefix=prefix, allow_all=allow_all)
     if audit_path is not None:
         write_audit(audit_path, payload)

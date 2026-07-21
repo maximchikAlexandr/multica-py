@@ -70,20 +70,29 @@ def _child_pids(pid: int) -> tuple[int, ...]:
     return tuple(int(line) for line in completed.stdout.splitlines() if line.strip().isdigit())
 
 
-def _killpg(process: subprocess.Popen[bytes], sig: int) -> None:
-    """Signal a ``start_new_session`` process group and any direct children.
+def _descendant_pids(pid: int) -> tuple[int, ...]:
+    """Return all descendant PIDs of *pid* (depth-first, children before parents)."""
+    descendants: list[int] = []
+    for child_pid in _child_pids(pid):
+        descendants.extend(_descendant_pids(child_pid))
+        descendants.append(child_pid)
+    return tuple(descendants)
 
-    ``os.killpg`` uses the session-leader pid as the process-group id. Direct
-    children are also signaled so descendants still die when a platform fails to
-    deliver the group signal to every member.
+
+def _killpg(process: subprocess.Popen[bytes], sig: int) -> None:
+    """Signal a ``start_new_session`` process group and any descendants.
+
+    ``os.killpg`` uses the session-leader pid as the process-group id. Descendants
+    are collected before signaling so detached session children still receive
+    an explicit signal when group delivery is incomplete.
     """
     pid = process.pid
-    children = _child_pids(pid)
+    descendants = _descendant_pids(pid)
     with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
         os.killpg(pid, sig)
-    for child_pid in children:
+    for descendant_pid in reversed(descendants):
         with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
-            os.kill(child_pid, sig)
+            os.kill(descendant_pid, sig)
     with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
         os.kill(pid, sig)
 
@@ -111,12 +120,16 @@ def terminate_process(process: subprocess.Popen[bytes]) -> None:
     """Terminate a process group with SIGTERM, escalating to SIGKILL if needed."""
     if process.poll() is not None:
         return
+    descendants = _descendant_pids(process.pid)
     _killpg(process, signal.SIGTERM)
     deadline = time.monotonic() + _TERMINATE_GRACE_SECONDS
     while process.poll() is None and time.monotonic() < deadline:
         time.sleep(0.05)
     if process.poll() is None:
         _killpg(process, signal.SIGKILL)
+    for descendant_pid in reversed(descendants):
+        with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+            os.kill(descendant_pid, signal.SIGKILL)
 
 
 def kill_process(process: subprocess.Popen[bytes]) -> None:

@@ -5,6 +5,8 @@ from collections.abc import Callable
 
 import pytest
 
+from tests.live.backend import DaemonLifecycle, daemon_status_payload_is_running
+from tests.live.diagnostics import DiagnosticCollector
 from tests.live.environment import (
     LiveSetupError,
     create_live_run_context,
@@ -118,7 +120,7 @@ def test_load_agent_sandbox_settings_rejects_unknown_mode(
         load_agent_sandbox_settings(repo_root=REPO_ROOT)
 
 
-def test_manifest_allows_agents_and_multica_paths(tmp_path: pathlib.Path) -> None:
+def test_manifest_allows_agents_and_provider_context_paths(tmp_path: pathlib.Path) -> None:
     run_id = "d" * 32
     sandbox = tmp_path / "sandbox"
     write_initial_sandbox_files(sandbox, run_id)
@@ -127,7 +129,49 @@ def test_manifest_allows_agents_and_multica_paths(tmp_path: pathlib.Path) -> Non
     multica_dir = sandbox / ".multica" / "cache"
     multica_dir.mkdir(parents=True)
     (multica_dir / "state.json").write_text("{}", encoding="utf-8")
+    opencode_skill = sandbox / ".opencode" / "skills" / "demo"
+    opencode_skill.mkdir(parents=True)
+    (opencode_skill / "SKILL.md").write_text("skill", encoding="utf-8")
+    agent_context = sandbox / ".agent_context"
+    agent_context.mkdir(parents=True)
+    (agent_context / "issue_context.md").write_text("issue", encoding="utf-8")
     after = build_file_manifest(sandbox)
     assert_manifest_policy(before, after, run_id, expect_target_change=False)
     assert after["AGENTS.md"].kind == "file"
     assert after[".multica/cache/state.json"].kind == "file"
+    assert after[".opencode/skills/demo/SKILL.md"].kind == "file"
+    assert after[".agent_context/issue_context.md"].kind == "file"
+
+
+def test_daemon_status_payload_is_running_accepts_status_field() -> None:
+    assert daemon_status_payload_is_running({"status": "running", "pid": 3004}) is True
+    assert daemon_status_payload_is_running({"running": True}) is True
+    assert daemon_status_payload_is_running({"status": "stopped"}) is False
+
+
+def test_daemon_cli_argv_includes_profile_flag(tmp_path: pathlib.Path) -> None:
+    cli = tmp_path / "multica"
+    cli.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    cli.chmod(0o755)
+    home = tmp_path / "home"
+    home.mkdir()
+    daemon = DaemonLifecycle(
+        cli_executable=cli,
+        home_dir=home,
+        profile_name="live-deadbeef",
+        daemon_id="daemon-1",
+        workspaces_root=tmp_path / "workspaces",
+        opencode_path=cli,
+        opencode_model="multica-test/fake",
+        agent_mode="success",
+        diagnostics=DiagnosticCollector(tmp_path / "artifacts", "deadbeef" * 2),
+    )
+    assert daemon._daemon_argv("daemon", "status", "--output", "json") == [
+        str(cli),
+        "daemon",
+        "status",
+        "--output",
+        "json",
+        "--profile",
+        "live-deadbeef",
+    ]

@@ -25,7 +25,12 @@
 - required check: yes
 - runner: Ubuntu
 - selection: `-m live_smoke tests/live`
-- job timeout budget: 300 seconds (assert in workflow; maps to SC-009)
+- job timeout budget: 300 seconds (assert in workflow; maps to SC-009 suite ceiling)
+- sub-budgets asserted from `run.json`:
+  - env startup (`environment_ready_seconds`) ≤ 180s
+  - test phase (`test_phase_seconds`) ≤ 240s
+- the 120s figure in SC-009 applies to one deterministic agent sandbox workflow
+  (assignment → terminal), not the full smoke suite wall time
 - includes exactly one new deterministic agent sandbox case
 - final cleanup: `if: always()`
 

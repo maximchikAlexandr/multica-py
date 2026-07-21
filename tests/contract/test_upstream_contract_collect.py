@@ -14,6 +14,8 @@ STATE_REL = "src/multica_py/_generated/upstream_state.json"
 CANDIDATE_CONTRACT_REL = "src/multica_py/_generated/upstream_candidate_contract.json"
 SCRIPT = ROOT / "scripts" / "upstream_contract.py"
 
+pytestmark = pytest.mark.serial
+
 
 @pytest.mark.parametrize(
     "output_rel",

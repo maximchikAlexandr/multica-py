@@ -60,9 +60,9 @@
 
 ## R-008. Unexpected files
 
-**Decision:** allow mutations only for `target.txt`, `AGENTS.md`, `.multica/**`; require `control.txt` unchanged.
+**Decision:** allow mutations for `target.txt`, `AGENTS.md`, `.multica/**`, `.opencode/**`, and `.agent_context/**`; require `control.txt` unchanged.
 
-**Rationale:** Multica intentionally writes provider instructions and project resource metadata in the local directory.
+**Rationale:** Multica intentionally writes provider instructions, OpenCode skill discovery trees, issue context, and project resource metadata into the local directory.
 
 **Rejected:** assert entire directory byte-identical except target; ignore every dotfile; allow arbitrary generated files.
 

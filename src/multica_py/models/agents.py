@@ -15,6 +15,8 @@ class Agent(msgspec.Struct, frozen=True, kw_only=True):
 class AgentCreateRequest(msgspec.Struct, frozen=True, kw_only=True):
     name: str
     description: str | None = None
+    runtime_id: str | None = None
+    model: str | None = None
 
 
 class AgentUpdateRequest(msgspec.Struct, frozen=True, kw_only=True):

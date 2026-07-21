@@ -49,6 +49,7 @@ artifacts/**
 
 # Ephemeral collect output (canonical path from paths.CANDIDATE_CONTRACT_REL)
 src/multica_py/_generated/upstream_candidate_contract.json
+src/multica_py/_generated/.upstream_test.lock
 
 # Mutation testing workspace
 mutants/

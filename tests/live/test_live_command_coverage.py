@@ -7,6 +7,7 @@ import pytest
 from tests._manifest_coverage import assert_manifest_coverage
 from tests._manifest_support import guard_eligible_operations
 from tests.live.resources import (
+    AGENT_SANDBOX_LIVE_METHODS,
     KNOWN_LIVE_GAPS,
     LIVE_EXEC_EXCEPTIONS,
     LIVE_OPERATIONS,
@@ -20,7 +21,11 @@ pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 def test_every_guard_eligible_operation_runs_live() -> None:
     """Guard (FR-021): each guard-eligible operation is covered, allowlisted, or a known gap."""
     eligible = guard_eligible_operations()
-    covered = frozenset(op.sdk_method for op in LIVE_OPERATIONS) | crud_sdk_methods()
+    covered = (
+        frozenset(op.sdk_method for op in LIVE_OPERATIONS)
+        | crud_sdk_methods()
+        | AGENT_SANDBOX_LIVE_METHODS
+    )
     allowlisted = KNOWN_LIVE_GAPS | frozenset(LIVE_EXEC_EXCEPTIONS)
 
     assert_manifest_coverage(

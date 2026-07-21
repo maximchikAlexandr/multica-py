@@ -5,7 +5,6 @@ import hashlib
 import json
 import os
 import pathlib
-import subprocess
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
@@ -13,10 +12,11 @@ from typing import Literal
 
 from multica_py.client import MulticaClient
 from multica_py.enums import IssueStatus, ProjectStatus
-from multica_py.exceptions import NotFoundError
+from multica_py.exceptions import CommandExecutionError, NotFoundError
 from multica_py.models.agents import AgentCreateRequest
 from multica_py.models.issue_activity import TaskRun
 from multica_py.models.issues import (
+    FileDescription,
     InlineDescription,
     IssueAssignmentRequest,
     IssueCreateRequest,
@@ -305,6 +305,7 @@ LIVE_EXEC_EXCEPTIONS: Mapping[str, LiveExecReason] = {
         "issues.search",
         "issues.usage",
         "maintenance.version",
+        "projects.resources.update_local_directory",
         "repositories.checkout",
         "repositories.get",
         "runtimes.get",
@@ -338,6 +339,14 @@ def crud_sdk_methods() -> frozenset[str]:
 
 KNOWN_LIVE_GAPS: frozenset[str] = frozenset()
 
+AGENT_SANDBOX_LIVE_METHODS: frozenset[str] = frozenset(
+    {
+        "projects.resources.add_local_directory",
+        "projects.resources.list",
+        "projects.resources.remove",
+    }
+)
+
 
 class LiveCleanupError(RuntimeError):
     """Raised when an injected cleanup step fails deterministically."""
@@ -358,11 +367,13 @@ class FileManifestEntry:
     size: int
     sha256: str | None = None
     symlink_target: str | None = None
+    text: str | None = None
 
 
 FileManifest = dict[str, FileManifestEntry]
 ALLOWLIST_FILES = frozenset({"AGENTS.md"})
-ALLOWLIST_PREFIXES = (".multica/",)
+ALLOWLIST_ROOTS = frozenset({".multica", ".opencode", ".agent_context"})
+ALLOWLIST_PREFIXES = (".multica/", ".opencode/", ".agent_context/")
 USER_FILES = frozenset({"target.txt", "control.txt"})
 RUN_ASSIGNMENT_TIMEOUT_SECONDS = 120.0
 CANCEL_WAIT_TIMEOUT_SECONDS = 10.0
@@ -438,10 +449,12 @@ def build_file_manifest(root: pathlib.Path) -> FileManifest:
             continue
         if path.is_file():
             content = path.read_bytes()
+            text = content.decode("utf-8") if relative in USER_FILES else None
             manifest[relative] = FileManifestEntry(
                 kind="file",
                 size=len(content),
                 sha256=hashlib.sha256(content).hexdigest(),
+                text=text,
             )
     return manifest
 
@@ -466,17 +479,13 @@ def unified_target_control_diff(
     sandbox_dir: pathlib.Path,
 ) -> str:
     """Return a unified diff for target.txt and control.txt only."""
+    del sandbox_dir
     chunks: list[str] = []
     for name in ("target.txt", "control.txt"):
         before_entry = before.get(name)
         after_entry = after.get(name)
-        before_text = ""
-        after_text = ""
-        file_path = sandbox_dir / name
-        if before_entry is not None and file_path.is_file():
-            before_text = (sandbox_dir / name).read_text(encoding="utf-8")
-        if after_entry is not None and file_path.is_file():
-            after_text = file_path.read_text(encoding="utf-8")
+        before_text = before_entry.text if before_entry is not None and before_entry.text else ""
+        after_text = after_entry.text if after_entry is not None and after_entry.text else ""
         diff = difflib.unified_diff(
             before_text.splitlines(keepends=True),
             after_text.splitlines(keepends=True),
@@ -488,9 +497,9 @@ def unified_target_control_diff(
 
 
 def _path_allowed_to_change(relative: str) -> bool:
-    if relative in ALLOWLIST_FILES:
+    if relative in ALLOWLIST_FILES or relative in ALLOWLIST_ROOTS:
         return True
-    return relative == ".multica" or relative.startswith(".multica/")
+    return any(relative.startswith(prefix) for prefix in ALLOWLIST_PREFIXES)
 
 
 def assert_manifest_policy(
@@ -545,7 +554,14 @@ def write_initial_sandbox_files(sandbox_dir: pathlib.Path, run_id: str) -> None:
 
 
 def issue_description_for_run(run_id: str) -> str:
-    """Build the deterministic issue description for one sandbox run."""
+    """Build the deterministic issue description for one sandbox run.
+
+    The embedded ``MULTICA_TEST_ACTION`` JSON contains literal ``\\n`` escapes
+    for exact file contents. Callers MUST create the issue via
+    ``FileDescription`` / ``--description-file`` (or stdin). Inline
+    ``--description`` runs Multica's ``UnescapeBackslashEscapes`` and corrupts
+    those escapes before the agent can read them.
+    """
     action = json.dumps(
         {
             "schema": 1,
@@ -672,8 +688,6 @@ def _poll_issue_run(
     selected: TaskRun | None = None
     while time.monotonic() < deadline:
         runs = client.issues.runs(issue_id)
-        for run in runs:
-            first_seen.setdefault(run.id, time.monotonic())
         selected, previous_selected = _select_post_assignment_run(
             runs,
             assigned_at=assigned_at,
@@ -703,7 +717,6 @@ def _sandbox_expectation(
     *,
     is_canary: bool,
     agent_mode: str,
-    expect_success: bool,
 ) -> SandboxExpectation:
     if is_canary:
         return SandboxExpectation(
@@ -713,7 +726,7 @@ def _sandbox_expectation(
             expect_file_assertion_failure=False,
             record_canary_cost=True,
         )
-    if agent_mode == "success" and expect_success:
+    if agent_mode == "success":
         return SandboxExpectation("completed", True, False, False)
     if agent_mode == "error":
         return SandboxExpectation("failed", False, False, False)
@@ -746,38 +759,28 @@ def _apply_sandbox_expectation(
         )
     if expectation.expect_cancelled:
         assert cancelled, "expected timeout cancellation"
-    if expectation.expect_file_assertion_failure:
-        try:
-            assert_manifest_policy(
-                manifest_before,
-                manifest_after,
-                run_id,
-                expect_target_change=True,
-            )
+    try:
+        assert_manifest_policy(
+            manifest_before,
+            manifest_after,
+            run_id,
+            expect_target_change=expectation.expect_target_change,
+        )
+        if expectation.expect_file_assertion_failure:
             assert False, "expected file assertion failure for wrong-edit mode"
-        except AssertionError as exc:
-            file_assertion_failed = True
-            primary_error = str(exc)
-            cleanup.set_primary_failure(exc)
+    except AssertionError as exc:
+        file_assertion_failed = True
+        primary_error = str(exc)
+        cleanup.set_primary_failure(exc)
+        if not expectation.expect_file_assertion_failure:
+            return file_assertion_failed, primary_error, cost_usd
     else:
-        try:
-            assert_manifest_policy(
-                manifest_before,
-                manifest_after,
-                run_id,
-                expect_target_change=expectation.expect_target_change,
+        if expectation.record_canary_cost:
+            cost_usd = _assert_canary_usage_cost(client, issue_id)
+            diagnostics.write_json(
+                "canary-usage.json",
+                {"issue_id": issue_id, "cost_usd": cost_usd},
             )
-        except AssertionError as exc:
-            file_assertion_failed = True
-            primary_error = str(exc)
-            cleanup.set_primary_failure(exc)
-        else:
-            if expectation.record_canary_cost:
-                cost_usd = _assert_canary_usage_cost(client, issue_id)
-                diagnostics.write_json(
-                    "canary-usage.json",
-                    {"issue_id": issue_id, "cost_usd": cost_usd},
-                )
     return file_assertion_failed, primary_error, cost_usd
 
 
@@ -814,7 +817,6 @@ def execute_agent_sandbox_workflow(
     compose_project: str,
     compose_files: tuple[pathlib.Path, ...],
     inject_cleanup_failure: str | None = None,
-    expect_success: bool = True,
     canary_settings: OpenCodeCanarySettings | None = None,
 ) -> AgentSandboxOutcome:
     """Execute the agent sandbox workflow end to end."""
@@ -871,7 +873,13 @@ def execute_agent_sandbox_workflow(
         )
         daemon.start()
         ids.runtime_id = poll_runtime_online(oracle, daemon_id=run_context.daemon_id)
-        agent = client.agents.create(AgentCreateRequest(name=f"{run_context.prefix}-agent"))
+        agent = client.agents.create(
+            AgentCreateRequest(
+                name=f"{run_context.prefix}-agent",
+                runtime_id=ids.runtime_id,
+                model=sandbox_settings.opencode_model,
+            )
+        )
         ids.agent_id = agent.id
         project = client.projects.create(ProjectCreateRequest(name=f"{run_context.prefix}-project"))
         ids.project_id = project.id
@@ -880,15 +888,21 @@ def execute_agent_sandbox_workflow(
             if is_canary
             else f"Agent sandbox edit {run_context.run_id}"
         )
-        issue_description = (
-            canary_issue_description_for_run(run_context.run_id)
-            if is_canary
-            else issue_description_for_run(run_context.run_id)
-        )
+        if is_canary:
+            description_input: FileDescription | InlineDescription = InlineDescription(
+                text=canary_issue_description_for_run(run_context.run_id)
+            )
+        else:
+            description_path = run_context.home / "sandbox-issue-description.txt"
+            description_path.write_text(
+                issue_description_for_run(run_context.run_id),
+                encoding="utf-8",
+            )
+            description_input = FileDescription(path=str(description_path))
         issue = client.issues.create(
             IssueCreateRequest(
                 title=issue_title,
-                description_input=InlineDescription(text=issue_description),
+                description_input=description_input,
                 project_id=project.id,
             )
         )
@@ -929,7 +943,6 @@ def execute_agent_sandbox_workflow(
         expectation = _sandbox_expectation(
             is_canary=is_canary,
             agent_mode=sandbox_settings.agent_mode,
-            expect_success=expect_success,
         )
         file_assertion_failed, primary_error, cost_usd = _apply_sandbox_expectation(
             expectation,
@@ -992,8 +1005,6 @@ def execute_agent_sandbox_workflow(
                 daemon=daemon,
                 bootstrap_client=bootstrap_client,
                 run_context=ids.merge(run_context),
-                live_environment=live_environment,
-                compose_project=compose_project,
                 inject_cleanup_failure=inject_cleanup_failure,
             )
             cleanup_errors = cleanup.execute_all()
@@ -1006,14 +1017,9 @@ def execute_agent_sandbox_workflow(
                 }
             )
             oracle.close()
-    return AgentSandboxOutcome(
-        run_status=outcome.run_status,
-        run_id=outcome.run_id,
-        file_assertion_failed=outcome.file_assertion_failed,
-        primary_error=outcome.primary_error,
+    return replace(
+        outcome,
         cleanup_errors=tuple(item["message"] for item in cleanup_errors),
-        cancelled=outcome.cancelled,
-        cost_usd=outcome.cost_usd,
     )
 
 
@@ -1058,7 +1064,13 @@ def _collect_run_messages(
 ) -> list[dict[str, object]]:
     if client is None or run_context.issue_id is None or run_context.run_execution_id is None:
         return []
-    messages = client.issues.run_messages(run_context.issue_id, run_context.run_execution_id)
+    try:
+        messages = client.issues.run_messages(
+            run_context.issue_id,
+            run_context.run_execution_id,
+        )
+    except (CommandExecutionError, NotFoundError):
+        return []
     return [
         {
             "id": message.id,
@@ -1079,8 +1091,6 @@ def _register_sandbox_cleanup(
     daemon: DaemonLifecycle,
     bootstrap_client: BootstrapApiClient,
     run_context: LiveRunContext,
-    live_environment: LiveTestEnvironment,
-    compose_project: str,
     inject_cleanup_failure: str | None,
 ) -> None:
     issue_id = run_context.issue_id
@@ -1164,26 +1174,6 @@ def _register_sandbox_cleanup(
         if run_context.temp_root.exists():
             msg = f"temp root still exists: {run_context.temp_root}"
             raise LiveSetupError("audit", msg)
-        if live_environment.managed_compose:
-            ps = subprocess.run(
-                [
-                    "docker",
-                    "ps",
-                    "-a",
-                    "--filter",
-                    f"label=com.docker.compose.project={compose_project}",
-                    "--format",
-                    "{{.Names}}",
-                ],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            names = [line for line in ps.stdout.splitlines() if line.strip()]
-            if names:
-                msg = f"docker objects remain for compose project {compose_project}: {names}"
-                raise LiveSetupError("audit", msg)
 
     cleanup.register("cancel-run", _cancel_run)
     cleanup.register("remove-resource", _remove_resource)

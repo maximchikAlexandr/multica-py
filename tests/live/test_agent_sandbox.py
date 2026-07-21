@@ -15,6 +15,6 @@ def test_agent_executes_issue_in_local_directory(
     """Run the deterministic agent sandbox success workflow."""
     outcome = run_agent_sandbox()
     assert outcome.run_status == "completed"
-    assert not outcome.file_assertion_failed
+    assert not outcome.file_assertion_failed, outcome.primary_error
     assert outcome.primary_error is None
     assert not outcome.cleanup_errors

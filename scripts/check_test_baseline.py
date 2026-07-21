@@ -9,6 +9,7 @@ import pathlib
 import re
 import subprocess
 import sys
+from typing import cast
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -19,14 +20,15 @@ from scripts.check_coverage import check_coverage
 
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 COMPARE_STAGES = frozenset({"PR-02", "PR-03", "PR-07", "final"})
+STAGE_CHOICES: tuple[str, ...] = ("PR-02", "PR-03", "PR-07", "final")
 BASELINE_REL_PATH = "tests/quality-baseline.json"
 
 
 def _load_baseline(path: pathlib.Path) -> dict[str, object]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
+    parsed: object = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(parsed, dict):
         raise SystemExit("baseline root must be an object")
-    return payload
+    return cast("dict[str, object]", parsed)
 
 
 def _serialize_baseline(payload: dict[str, object]) -> bytes:
@@ -127,47 +129,47 @@ def _assert_baseline_bytes_unchanged(baseline_path: pathlib.Path, repo_root: pat
 
 
 def _current_mandatory_offline(repo_root: pathlib.Path) -> int:
-    layer_paths = ["tests/unit", "tests/contract", "tests/packaging"]
-    if (repo_root / "tests" / "component").is_dir():
-        layer_paths.insert(2, "tests/component")
-    elif (repo_root / "tests" / "integration").is_dir():
-        layer_paths.insert(2, "tests/integration")
+    layer_paths = ["tests/unit", "tests/contract", "tests/component", "tests/packaging"]
     total = sum(_collect_layer_count(layer_path, repo_root)[0] for layer_path in layer_paths)
     return total - len(EXCLUDED_NODE_IDS)
 
 
 def _resource_support_loc(repo_root: pathlib.Path) -> int:
     component_resources = repo_root / "tests" / "component" / "resources"
-    if component_resources.is_dir():
-        total = 0
-        for path in sorted(component_resources.glob("**/*.py")):
-            if path.is_file():
-                total += _logical_lines(path)
-        return total
-    integration_resources = repo_root / "tests" / "integration" / "resources"
     total = 0
-    for path in sorted(integration_resources.glob("**/*.py")):
+    for path in sorted(component_resources.glob("**/*.py")):
         if path.is_file():
             total += _logical_lines(path)
     return total
 
 
+def _regex_count(pattern: str, content: str) -> int:
+    matches = cast("list[str]", re.compile(pattern).findall(content))
+    return len(matches)
+
+
 def _count_package_install_paths(repo_root: pathlib.Path) -> int:
     workflow = repo_root / ".github" / "workflows" / "package-test.yml"
     content = workflow.read_text(encoding="utf-8")
-    os_values = re.findall(r"^\s*-\s*(ubuntu-latest|macos-latest)\s*$", content, re.MULTILINE)
-    py_values = re.findall(r'^\s*-\s*"(\d+\.\d+)"\s*$', content, re.MULTILINE)
+    os_values = cast(
+        "list[str]",
+        re.compile(r"^\s*-\s*(ubuntu-latest|macos-latest)\s*$", re.MULTILINE).findall(content),
+    )
+    py_values = cast(
+        "list[str]",
+        re.compile(r'^\s*-\s*"(\d+\.\d+)"\s*$', re.MULTILINE).findall(content),
+    )
     matrix_size = max(1, len(os_values) * len(py_values))
     uv_conditional = bool(
         re.search(r"name:\s*uv pip install\b[\s\S]*?\n\s*if:", content)
         or re.search(r"name:\s*uv add\b[\s\S]*?\n\s*if:", content)
     )
-    pip_steps = len(re.findall(r"name:\s*pip install\b", content))
-    uv_pip_steps = len(re.findall(r"name:\s*uv pip install\b", content))
-    uv_add_steps = len(re.findall(r"name:\s*uv add\b", content))
+    pip_steps = _regex_count(r"name:\s*pip install\b", content)
+    uv_pip_steps = _regex_count(r"name:\s*uv pip install\b", content)
+    uv_add_steps = _regex_count(r"name:\s*uv add\b", content)
     if uv_conditional:
         return matrix_size * pip_steps + uv_pip_steps + uv_add_steps
-    install_steps = len(re.findall(r"name:\s*(?:pip install|uv pip install|uv add)\b", content))
+    install_steps = _regex_count(r"name:\s*(?:pip install|uv pip install|uv add)\b", content)
     return matrix_size * install_steps
 
 
@@ -211,7 +213,10 @@ def compare_baseline(
     """
     payload = _load_baseline(baseline_path)
     _assert_baseline_bytes_unchanged(baseline_path, repo_root)
-    baseline_mandatory = int(payload["mandatory_offline"])
+    mandatory_raw = payload["mandatory_offline"]
+    if not isinstance(mandatory_raw, int):
+        raise SystemExit("baseline mandatory_offline must be an integer")
+    baseline_mandatory = mandatory_raw
     current_mandatory = _current_mandatory_offline(repo_root)
     if current_mandatory < baseline_mandatory:
         raise SystemExit(
@@ -252,21 +257,24 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate or compare test baseline.")
     parser.add_argument("--baseline", required=True, type=pathlib.Path)
     parser.add_argument("--mode", required=True, choices=("self-check", "compare"))
-    parser.add_argument("--stage", choices=sorted(COMPARE_STAGES))
+    parser.add_argument("--stage", choices=STAGE_CHOICES)
     parser.add_argument("--coverage-json", type=pathlib.Path)
-    args = parser.parse_args(argv)
-    baseline_path = args.baseline.resolve()
-    if args.mode == "self-check":
-        return self_check(baseline_path, REPO_ROOT)
-    if args.stage is None:
+    namespace = parser.parse_args(argv)
+    baseline_path = cast("pathlib.Path", namespace.baseline)
+    mode = cast("str", namespace.mode)
+    stage = cast("str | None", namespace.stage)
+    coverage_json = cast("pathlib.Path | None", namespace.coverage_json)
+    if mode == "self-check":
+        return self_check(baseline_path.resolve(), REPO_ROOT)
+    if stage is None:
         return 2
-    if args.stage not in COMPARE_STAGES:
+    if stage not in COMPARE_STAGES:
         return 2
     return compare_baseline(
-        baseline_path,
-        args.stage,
+        baseline_path.resolve(),
+        stage,
         REPO_ROOT,
-        coverage_json=args.coverage_json.resolve() if args.coverage_json else None,
+        coverage_json=coverage_json.resolve() if coverage_json is not None else None,
     )
 
 

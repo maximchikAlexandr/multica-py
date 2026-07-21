@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import json
 import os
 import pathlib
-import uuid
 from collections.abc import Callable
 from unittest.mock import MagicMock
 
@@ -28,14 +26,6 @@ def fake_cli_client(
     return MulticaClient(config)
 
 
-@pytest.fixture
-def fake_record_path(request: pytest.FixtureRequest) -> pathlib.Path:
-    """Return a writable fake-cli record path under the fixture tmp root."""
-    record_dir = pathlib.Path(request.config.rootpath) / "tests" / "fixtures" / "_tmp"
-    record_dir.mkdir(parents=True, exist_ok=True)
-    return record_dir / f"record-{uuid.uuid4().hex}.jsonl"
-
-
 def patch_client_transport(client: MulticaClient, transport: MagicMock) -> None:
     """Replace transport instances on the client resource tree."""
     for name in dir(client):
@@ -50,13 +40,6 @@ def patch_client_transport(client: MulticaClient, transport: MagicMock) -> None:
             child = getattr(resource, child_name, None)
             if child is not None and hasattr(child, "_transport"):
                 object.__setattr__(child, "_transport", transport)
-
-
-def read_recorded_argv(record_path: pathlib.Path) -> tuple[str, ...]:
-    """Return command tokens from the last fake-cli record entry."""
-    lines = record_path.read_text(encoding="utf-8").strip().splitlines()
-    payload = json.loads(lines[-1])
-    return tuple(str(part) for part in payload["argv"][1:])
 
 
 def _transport_error(case: CommandCase, argv: tuple[str, ...]) -> BaseException:

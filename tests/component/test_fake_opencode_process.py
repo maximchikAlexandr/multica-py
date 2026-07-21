@@ -11,12 +11,26 @@ import pytest
 from tests.fixtures.fake_opencode_helpers import (
     InstructionPayload,
     canonical_argv,
+    fake_opencode_path,
     prepare_instruction_workspace,
 )
 
 pytestmark = [pytest.mark.component, pytest.mark.process]
 
 _RUN_ID = "b" * 32
+
+
+def test_subprocess_version_probe_exits_zero() -> None:
+    """The executable supports daemon ``--version`` registration probes."""
+    result = subprocess.run(
+        [str(fake_opencode_path()), "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert result.stdout == "1.0.0\n"
+    assert result.stderr == ""
 
 
 def test_subprocess_success_with_canonical_argv(tmp_path: pathlib.Path) -> None:

@@ -24,6 +24,10 @@ class AgentResource(BaseResource):
         args = ["agent", "create", "--name", request.name]
         if request.description is not None:
             args.extend(["--description", request.description])
+        if request.runtime_id is not None:
+            args.extend(["--runtime-id", request.runtime_id])
+        if request.model is not None:
+            args.extend(["--model", request.model])
         return self._run_json_decode(tuple(args), Agent)
 
     def update(self, agent_id: str, request: AgentUpdateRequest) -> Agent:

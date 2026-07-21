@@ -8,7 +8,7 @@ import pytest
 
 from multica_py._internal.redaction import redact_argv, redact_text
 from multica_py._internal.specs import RawCommandResult
-from multica_py._internal.transport import CliTransport
+from multica_py._internal.transport import CliTransport, classify_cli_failure
 from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import (
@@ -45,6 +45,13 @@ _TRANSPORT_ERROR_CASES: tuple[TransportErrorCase, ...] = (
     TransportErrorCase(
         exit_code=99, stderr=b"error", expected_exc=CommandExecutionError, id="exit-99-generic"
     ),
+)
+
+_LEGACY_ERROR_CASES: tuple[tuple[int, bytes, type[Exception], int], ...] = (
+    (1, b"Error: GET /api/labels/x returned 404: missing", NotFoundError, 4),
+    (1, b"Error: GET /api/workspaces returned 401: unauthorized", AuthenticationError, 3),
+    (1, b"Error: POST /api/labels returned 422: invalid", ValidationError, 5),
+    (1, b"dial tcp 127.0.0.1:58553: connect: connection refused", NetworkError, 2),
 )
 
 
@@ -107,6 +114,42 @@ def test_exit_code_maps_to_exception(case: TransportErrorCase) -> None:
     exc = excinfo.value
     assert isinstance(exc, CommandExecutionError)
     assert exc.exit_code == case.exit_code
+
+
+@pytest.mark.parametrize(
+    ("exit_code", "stderr", "expected_exc", "reported_exit_code"),
+    _LEGACY_ERROR_CASES,
+)
+def test_legacy_exit_code_one_classifies_from_stderr(
+    exit_code: int,
+    stderr: bytes,
+    expected_exc: type[Exception],
+    reported_exit_code: int,
+) -> None:
+    config = ClientConfig(executable=sys.executable)
+    transport = CliTransport(config)
+    transport._execute = lambda *args, **kwargs: RawCommandResult(  # type: ignore[method-assign]
+        argv=("multica", "label", "get", "missing"),
+        exit_code=exit_code,
+        stdout=b"",
+        stderr=stderr,
+        duration=datetime.timedelta(),
+    )
+    with pytest.raises(expected_exc) as excinfo:
+        transport.run_text(("label", "get", "missing"))
+    exc = excinfo.value
+    assert isinstance(exc, CommandExecutionError)
+    assert exc.exit_code == reported_exit_code
+
+
+def test_classify_cli_failure_maps_http_status() -> None:
+    exc_class, reported = classify_cli_failure(
+        exit_code=1,
+        stdout="",
+        stderr="Error: GET /api/labels/x returned 404: missing",
+    )
+    assert exc_class is NotFoundError
+    assert reported == 4
 
 
 def test_exit_code_mapping_preserves_context() -> None:

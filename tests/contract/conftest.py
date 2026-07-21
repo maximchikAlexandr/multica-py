@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import pathlib
@@ -14,6 +15,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 SCRIPT = ROOT / "scripts" / "upstream_contract.py"
 STATE_REL = "src/multica_py/_generated/upstream_state.json"
 CANDIDATE_CONTRACT_REL = "src/multica_py/_generated/upstream_candidate_contract.json"
+GENERATED_LOCK_REL = "src/multica_py/_generated/.upstream_test.lock"
 
 
 def json_object(raw: str) -> dict[str, object]:
@@ -118,12 +120,23 @@ def contract_cli(fake_upstream_cli: pathlib.Path) -> ContractCliRunner:
     return ContractCliRunner(fake_upstream_cli)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def preserved_generated_state() -> Iterator[None]:
+    lock_path = ROOT / GENERATED_LOCK_REL
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
     state_path = ROOT / STATE_REL
-    original_state = state_path.read_text(encoding="utf-8")
-    yield
-    state_path.write_text(original_state, encoding="utf-8")
     generated = ROOT / CANDIDATE_CONTRACT_REL
-    if generated.exists():
-        generated.unlink()
+    with lock_path.open("w") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        original_state = state_path.read_text(encoding="utf-8")
+        generated_existed = generated.is_file()
+        generated_bytes = generated.read_bytes() if generated_existed else b""
+        try:
+            yield
+        finally:
+            state_path.write_text(original_state, encoding="utf-8")
+            if generated_existed:
+                generated.write_bytes(generated_bytes)
+            elif generated.exists():
+                generated.unlink()
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)

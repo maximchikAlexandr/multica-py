@@ -21,7 +21,7 @@ from multica_py.exceptions import (
 )
 from multica_py.models.labels import Label
 from tests.live.backend import (
-    capture_compose_diagnostics_from_environment,
+    capture_compose_diagnostics,
     compose_argv,
     is_ready,
     probe_readiness,
@@ -104,7 +104,13 @@ def _capture_compose_logs(
     live_environment: LiveTestEnvironment,
     diagnostic_collector: DiagnosticCollector,
 ) -> None:
-    capture_compose_diagnostics_from_environment(live_environment, diagnostic_collector)
+    if not live_environment.managed_compose or not live_environment.compose_files:
+        return
+    capture_compose_diagnostics(
+        compose_files=live_environment.compose_files,
+        compose_project=live_environment.compose_project,
+        diagnostics=diagnostic_collector,
+    )
 
 
 def _stop_compose_service(

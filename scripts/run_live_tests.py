@@ -68,9 +68,9 @@ MUTATION_CASES = (
     MutationCase(
         name="not-found-exit-mapping",
         path=TRANSPORT,
-        original="            4: NotFoundError,",
-        mutated="            4: CommandExecutionError,",
-        pytest_target="tests/live/test_errors.py::test_missing_resource_raises_not_found_error",
+        original="    4: NotFoundError,",
+        mutated="    4: CommandExecutionError,",
+        pytest_target="tests/live/test_errors.py::test_error_mapping[missing-resource]",
     ),
 )
 

@@ -11,7 +11,7 @@ import tempfile
 import tomllib
 import uuid
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlparse
 
@@ -471,11 +471,8 @@ def write_cli_profile(
     Raises:
         LiveSetupError: If the profile would be written outside the temp HOME.
     """
-    real_home = pathlib.Path.home().resolve()
-    resolved_home = home_dir.resolve()
-    if resolved_home == real_home:
-        raise LiveSetupError("profile", "refusing to write profile into the real HOME directory")
-    profile_dir = resolved_home / ".multica" / "profiles" / profile_name
+    validate_not_real_home(home_dir)
+    profile_dir = home_dir.resolve() / ".multica" / "profiles" / profile_name
     profile_dir.mkdir(parents=True, exist_ok=True)
     config_path = profile_dir / "config.json"
     payload = {
@@ -514,8 +511,7 @@ def ensure_temp_home(base_dir: pathlib.Path, run_id: str) -> pathlib.Path:
     """
     home_dir = base_dir / f"home-{run_id}"
     home_dir.mkdir(parents=True, exist_ok=False)
-    if home_dir.resolve() == pathlib.Path.home().resolve():
-        raise LiveSetupError("profile", "temp HOME resolved to the real HOME directory")
+    validate_not_real_home(home_dir)
     return home_dir
 
 
@@ -579,11 +575,6 @@ class TestIdentity:
     user_id: str
     pat: SecretString
 
-    def __repr__(self) -> str:
-        return (
-            f"TestIdentity(email={self.email!r}, user_id={self.user_id!r}, pat=SecretString(***))"
-        )
-
 
 @dataclass(frozen=True, slots=True)
 class LiveContext:
@@ -640,22 +631,8 @@ class LiveRunContext:
     def diagnostics_payload(self) -> dict[str, object]:
         """Return a redaction-safe snapshot for diagnostic bundles."""
         return {
-            "run_id": self.run_id,
-            "prefix": self.prefix,
-            "temp_root": str(self.temp_root),
-            "home": str(self.home),
-            "workspaces_root": str(self.workspaces_root),
-            "sandbox_dir": str(self.sandbox_dir),
-            "profile_name": self.profile_name,
-            "daemon_id": self.daemon_id,
-            "artifact_dir": str(self.artifact_dir),
-            "workspace_id": self.workspace_id,
-            "project_id": self.project_id,
-            "resource_id": self.resource_id,
-            "runtime_id": self.runtime_id,
-            "agent_id": self.agent_id,
-            "issue_id": self.issue_id,
-            "run_execution_id": self.run_execution_id,
+            key: str(value) if isinstance(value, pathlib.Path) else value
+            for key, value in asdict(self).items()
         }
 
 
@@ -800,31 +777,8 @@ class OpenCodeCanarySettings:
 
 
 def _parse_canary_secret_names(raw: str) -> tuple[str, ...] | None:
-    names = [part.strip() for part in raw.split(",") if part.strip()]
-    if not names:
-        return None
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for name in names:
-        if name in seen:
-            continue
-        seen.add(name)
-        deduped.append(name)
-    return tuple(deduped)
-
-
-def _canary_opencode_missing(environ: Mapping[str, str]) -> str | None:
-    raw = environ.get(CANARY_ENV_OPENCODE_PATH)
-    if raw is None or not raw.strip():
-        return CANARY_ENV_OPENCODE_PATH
-    path = pathlib.Path(raw.strip())
-    if not path.is_absolute():
-        return CANARY_ENV_OPENCODE_PATH
-    if not path.is_file():
-        return CANARY_ENV_OPENCODE_PATH
-    if not os.access(path, os.X_OK):
-        return CANARY_ENV_OPENCODE_PATH
-    return None
+    names = tuple(dict.fromkeys(part.strip() for part in raw.split(",") if part.strip()))
+    return names or None
 
 
 def collect_missing_canary_variables(
@@ -840,7 +794,16 @@ def collect_missing_canary_variables(
     """
     source = os.environ if environ is None else environ
     missing: list[str] = []
-    if _canary_opencode_missing(source) is not None:
+    raw_opencode = source.get(CANARY_ENV_OPENCODE_PATH)
+    opencode_path = (
+        pathlib.Path(raw_opencode.strip()) if raw_opencode and raw_opencode.strip() else None
+    )
+    if (
+        opencode_path is None
+        or not opencode_path.is_absolute()
+        or not opencode_path.is_file()
+        or not os.access(opencode_path, os.X_OK)
+    ):
         missing.append(CANARY_ENV_OPENCODE_PATH)
     model_raw = source.get(CANARY_ENV_MODEL)
     if model_raw is None or not model_raw.strip():

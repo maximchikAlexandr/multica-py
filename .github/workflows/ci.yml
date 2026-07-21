@@ -98,8 +98,17 @@ jobs:
           set -euo pipefail
           COLLECTED="$(uv run pytest --collect-only -q -m compat 2>&1 | tail -1)"
           echo "$COLLECTED"
-          if echo "$COLLECTED" | grep -Eq '0 tests collected|no tests collected'; then
-            echo "compat contract requires at least four collected items (see contracts/compat-tests.md)"
+          SELECTED="$(echo "$COLLECTED" | sed -n 's/.* \([0-9][0-9]*\)\/[0-9][0-9]* tests collected.*/\1/p')"
+          if [ -z "$SELECTED" ]; then
+            if echo "$COLLECTED" | grep -Eq 'no tests collected|^0 tests collected'; then
+              SELECTED=0
+            else
+              echo "compat contract: could not parse pytest collect summary: $COLLECTED"
+              exit 1
+            fi
+          fi
+          if [ "$SELECTED" -lt 4 ]; then
+            echo "compat contract requires at least four collected items (see contracts/compat-tests.md); got $SELECTED"
             exit 1
           fi
           uv run pytest -q -m compat
@@ -205,12 +214,12 @@ jobs:
           env_ready = payload.get("environment_ready_seconds")
           test_phase = payload.get("test_phase_seconds")
           print(f"environment_ready_seconds={env_ready} (budget 180)")
-          print(f"test_phase_seconds={test_phase} (budget 120)")
+          print(f"test_phase_seconds={test_phase} (budget 240)")
           summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
           if summary_path:
               with open(summary_path, "a", encoding="utf-8") as summary:
                   summary.write(f"- env startup: {env_ready}s (budget 180s)\n")
-                  summary.write(f"- test phase: {test_phase}s (budget 120s)\n")
+                  summary.write(f"- test phase: {test_phase}s (budget 240s)\n")
           failures = []
           if not isinstance(env_ready, (int, float)):
               failures.append("environment_ready_seconds missing")
@@ -218,8 +227,8 @@ jobs:
               failures.append(f"env startup {env_ready}s exceeds 180s")
           if not isinstance(test_phase, (int, float)):
               failures.append("test_phase_seconds missing")
-          elif float(test_phase) > 120:
-              failures.append(f"test phase {test_phase}s exceeds 120s")
+          elif float(test_phase) > 240:
+              failures.append(f"test phase {test_phase}s exceeds 240s")
           if failures:
               print("; ".join(failures), file=sys.stderr)
               sys.exit(1)

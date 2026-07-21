@@ -23,7 +23,17 @@ Rules:
 5. `--model` is required and must equal `multica-test/fake`.
 6. Final positional argument is the prompt.
 7. No other option is accepted; any additional option exits 64.
-8. The prompt must contain exactly one line beginning `MULTICA_TEST_ACTION=`.
+8. Resolve exactly one `MULTICA_TEST_ACTION=` line:
+   - Prefer an inline action line in the prompt (fixture / unit path).
+   - Otherwise parse the assigned issue ID from Multica's bootstrap prompt
+     (`Your assigned issue ID is: <uuid>` or `multica issue get <uuid>`),
+     run `multica issue get <uuid> --output json` using the agent environment
+     (`MULTICA_TOKEN`, `MULTICA_SERVER_URL`, `MULTICA_WORKSPACE_ID`, PATH),
+     and extract the action line from the issue `description`.
+   - Live sandbox issue creation MUST use `--description-file` (not inline
+     `--description`) so Multica does not run `UnescapeBackslashEscapes` on
+     the literal `\n` sequences inside the action JSON.
+9. Missing or ambiguous action resolution exits 2 with one JSONL error event.
 
 ## Environment
 

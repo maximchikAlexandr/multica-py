@@ -4,10 +4,12 @@ import json
 import os
 import pathlib
 import platform
+import random
 import secrets as secrets_module
 import shutil
 import socket
 import subprocess
+import sys
 import textwrap
 import time
 from collections.abc import Callable
@@ -17,7 +19,7 @@ import httpx
 
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
-from tests.live.diagnostics import DiagnosticCollector
+from tests.live.diagnostics import VERIFICATION_CODE, DiagnosticCollector
 from tests.live.environment import (
     CompatibilityTarget,
     LiveSettings,
@@ -57,58 +59,45 @@ class BootstrapApiClient:
         """Return the bootstrap email address."""
         return self._email
 
-    def bootstrap(self) -> tuple[TestIdentity, WorkspaceContext, WorkspaceContext]:
+    def bootstrap(
+        self, *, secondary: bool = True
+    ) -> tuple[TestIdentity, WorkspaceContext, WorkspaceContext | None]:
         """Run the canonical bootstrap HTTP sequence.
 
+        Args:
+            secondary: When true, also create the secondary workspace.
+
         Returns:
-            Test identity and primary/secondary workspace contexts.
+            Test identity, primary workspace, and optional secondary workspace.
 
         Raises:
             LiveSetupError: If any bootstrap step fails.
         """
         with httpx.Client(base_url=self._server_url, timeout=30.0) as client:
             jwt_value, pat, user_id = self._authenticate(client)
-            primary = self._create_workspace(client, jwt_value, suffix="a", label="Primary")
-            secondary = self._create_workspace(client, jwt_value, suffix="b", label="Secondary")
-        identity = TestIdentity(
-            email=self._email,
-            user_id=user_id,
-            pat=pat,
-        )
-        return identity, primary, secondary
-
-    def bootstrap_sandbox(self) -> tuple[TestIdentity, WorkspaceContext]:
-        """Run bootstrap for one isolated sandbox workspace.
-
-        Returns:
-            Test identity and sandbox workspace context.
-
-        Raises:
-            LiveSetupError: If any bootstrap step fails.
-        """
-        with httpx.Client(base_url=self._server_url, timeout=30.0) as client:
-            jwt_value, pat, user_id = self._authenticate(client)
-            workspace = self._create_workspace(client, jwt_value, suffix="sb", label="Sandbox")
+            if secondary:
+                primary = self._create_workspace(client, jwt_value, suffix="a", label="Primary")
+                secondary_workspace = self._create_workspace(
+                    client, jwt_value, suffix="b", label="Secondary"
+                )
+            else:
+                primary = self._create_workspace(client, jwt_value, suffix="sb", label="Sandbox")
+                secondary_workspace = None
         identity = TestIdentity(email=self._email, user_id=user_id, pat=pat)
-        return identity, workspace
+        return identity, primary, secondary_workspace
 
     def _authenticate(self, client: httpx.Client) -> tuple[str, SecretString, str]:
-        self._post_json(
-            client,
-            "/auth/send-code",
-            {"email": self._email},
-            auth=None,
-            expected_statuses={200, 201, 202, 204},
-            stage="bootstrap",
-        )
-        verify_payload = self._post_json(
-            client,
-            "/auth/verify-code",
-            {"email": self._email, "code": "888888"},
-            auth=None,
-            expected_statuses={200, 201},
-            stage="bootstrap",
-        )
+        verify_payload = self._try_verify_code(client)
+        if verify_payload is None:
+            self._send_code_with_retry(client)
+            verify_payload = self._post_json(
+                client,
+                "/auth/verify-code",
+                {"email": self._email, "code": VERIFICATION_CODE},
+                auth=None,
+                expected_statuses={200, 201},
+                stage="bootstrap",
+            )
         jwt_value = str(verify_payload["token"])
         self._secrets.append(jwt_value)
         token_payload = self._post_json(
@@ -187,16 +176,61 @@ class BootstrapApiClient:
             profile_name=self._profile_name,
         )
 
-    def _get_json(
+    def _try_verify_code(self, client: httpx.Client) -> dict[str, object] | None:
+        response = client.post(
+            "/auth/verify-code",
+            json={"email": self._email, "code": VERIFICATION_CODE},
+        )
+        if response.status_code not in {200, 201}:
+            return None
+        if not response.content:
+            return None
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise LiveSetupError("bootstrap", "/auth/verify-code returned non-object JSON")
+        if payload.get("token") in {None, ""}:
+            return None
+        return payload
+
+    def _send_code_with_retry(self, client: httpx.Client) -> None:
+        max_attempts = _send_code_max_attempts()
+        for attempt in range(max_attempts):
+            response = client.post("/auth/send-code", json={"email": self._email})
+            if response.status_code in {200, 201, 202, 204}:
+                return
+            if response.status_code == 429 and attempt + 1 < max_attempts:
+                detail = _http_response_excerpt(response, self._secrets)
+                sys.stderr.write(
+                    f"bootstrap: /auth/send-code rate limited (attempt {attempt + 1}/"
+                    f"{max_attempts}): {detail}\n"
+                )
+                time.sleep(_send_code_retry_delay(attempt, response))
+                continue
+            detail = _http_response_excerpt(response, self._secrets)
+            raise LiveSetupError(
+                "bootstrap",
+                f"/auth/send-code returned {response.status_code}: {detail}",
+            )
+
+    def _request_json(
         self,
         client: httpx.Client,
+        method: str,
         path: str,
         *,
-        auth: str,
+        body: dict[str, object] | None = None,
+        auth: str | None,
         expected_statuses: set[int],
         stage: str,
     ) -> dict[str, object]:
-        response = client.get(path, headers={"Authorization": auth})
+        headers: dict[str, str] = {}
+        content: str | None = None
+        if body is not None:
+            headers["Content-Type"] = "application/json"
+            content = json.dumps(body)
+        if auth is not None:
+            headers["Authorization"] = auth
+        response = client.request(method, path, headers=headers, content=content)
         if response.status_code not in expected_statuses:
             excerpt = _redacted_excerpt(response.text, self._secrets)
             raise LiveSetupError(
@@ -210,6 +244,24 @@ class BootstrapApiClient:
             raise LiveSetupError(stage, f"{path} returned non-object JSON")
         return payload
 
+    def _get_json(
+        self,
+        client: httpx.Client,
+        path: str,
+        *,
+        auth: str,
+        expected_statuses: set[int],
+        stage: str,
+    ) -> dict[str, object]:
+        return self._request_json(
+            client,
+            "GET",
+            path,
+            auth=auth,
+            expected_statuses=expected_statuses,
+            stage=stage,
+        )
+
     def _post_json(
         self,
         client: httpx.Client,
@@ -220,22 +272,15 @@ class BootstrapApiClient:
         expected_statuses: set[int],
         stage: str,
     ) -> dict[str, object]:
-        headers = {"Content-Type": "application/json"}
-        if auth is not None:
-            headers["Authorization"] = auth
-        response = client.post(path, headers=headers, content=json.dumps(body))
-        if response.status_code not in expected_statuses:
-            excerpt = _redacted_excerpt(response.text, self._secrets)
-            raise LiveSetupError(
-                stage,
-                f"{path} returned {response.status_code}: {excerpt}",
-            )
-        if not response.content:
-            return {}
-        payload = response.json()
-        if not isinstance(payload, dict):
-            raise LiveSetupError(stage, f"{path} returned non-object JSON")
-        return payload
+        return self._request_json(
+            client,
+            "POST",
+            path,
+            body=body,
+            auth=auth,
+            expected_statuses=expected_statuses,
+            stage=stage,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -281,11 +326,7 @@ def setup_sandbox_session(
         secrets,
         profile_name=profile_name,
     )
-    secondary: WorkspaceContext | None = None
-    if sandbox_bootstrap:
-        identity, workspace = bootstrap_client.bootstrap_sandbox()
-    else:
-        identity, workspace, secondary = bootstrap_client.bootstrap()
+    identity, workspace, secondary = bootstrap_client.bootstrap(secondary=not sandbox_bootstrap)
     write_cli_profile(
         home_dir,
         profile_name,
@@ -343,6 +384,39 @@ def _redacted_excerpt(text: str, secrets: list[str]) -> str:
     if len(redacted) > 240:
         return redacted[:240] + "..."
     return redacted
+
+
+def _parse_retry_after(response: httpx.Response) -> float | None:
+    raw = response.headers.get("Retry-After")
+    if raw is None:
+        return None
+    value = raw.strip()
+    if value.isdigit():
+        return float(value)
+    return None
+
+
+def _http_response_excerpt(response: httpx.Response, secrets: list[str]) -> str:
+    header_parts = [f"{name}={value}" for name, value in response.headers.items()]
+    headers = _redacted_excerpt("; ".join(header_parts), secrets)
+    body = _redacted_excerpt(response.text, secrets)
+    return f"headers=[{headers}] body={body}"
+
+
+def _send_code_retry_delay(attempt: int, response: httpx.Response) -> float:
+    retry_after = _parse_retry_after(response)
+    if retry_after is not None:
+        return retry_after + random.uniform(0.0, 0.5)
+    return min(2**attempt, 60.0) + random.uniform(0.0, 1.0)
+
+
+def _send_code_max_attempts() -> int:
+    raw = os.environ.get("MULTICA_LIVE_SEND_CODE_MAX_ATTEMPTS", "8")
+    try:
+        attempts = int(raw)
+    except ValueError:
+        return 8
+    return max(1, attempts)
 
 
 READINESS_INTERVALS = (0.5, 1.0, 2.0)
@@ -734,25 +808,6 @@ def capture_compose_diagnostics(
         diagnostics.write_log(filename, logs.stdout)
 
 
-def capture_compose_diagnostics_from_environment(
-    live_environment: LiveTestEnvironment,
-    diagnostics: DiagnosticCollector,
-) -> None:
-    """Capture compose diagnostics for a started live test environment.
-
-    Args:
-        live_environment: Started live backend environment metadata.
-        diagnostics: Diagnostic collector receiving captured output.
-    """
-    if not live_environment.managed_compose or not live_environment.compose_files:
-        return
-    capture_compose_diagnostics(
-        compose_files=live_environment.compose_files,
-        compose_project=live_environment.compose_project,
-        diagnostics=diagnostics,
-    )
-
-
 def _resolve_compose_file(upstream: pathlib.Path, compose_file: str) -> pathlib.Path:
     candidate = (upstream / compose_file).resolve()
     upstream_root = upstream.resolve()
@@ -769,10 +824,13 @@ def compose_up_argv(
     env_file: pathlib.Path,
 ) -> list[str]:
     """Build argv for ``docker compose up`` without invoking a shell."""
-    argv = compose_argv(compose_files, compose_project, "up", "-d", "postgres", "backend")
-    project_index = argv.index(compose_project)
-    insert_at = project_index + 1
-    return [*argv[:insert_at], "--env-file", str(env_file), *argv[insert_at:]]
+    argv = ["docker", "compose"]
+    for compose_file in compose_files:
+        argv.extend(["-f", str(compose_file)])
+    argv.extend(
+        ["-p", compose_project, "--env-file", str(env_file), "up", "-d", "postgres", "backend"]
+    )
+    return argv
 
 
 def compose_down_argv(
@@ -871,6 +929,15 @@ RUNTIME_POLL_INTERVAL_SECONDS = 1.0
 TERMINAL_RUN_STATUSES = frozenset({"completed", "failed", "cancelled", "timed_out", "canceled"})
 
 
+def daemon_status_payload_is_running(payload: object) -> bool:
+    """Return whether daemon status JSON indicates a running daemon."""
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("running") is True:
+        return True
+    return payload.get("status") == "running"
+
+
 @dataclass(slots=True)
 class DaemonLifecycle:
     """Foreground daemon process lifecycle for agent sandbox tests."""
@@ -913,26 +980,24 @@ class DaemonLifecycle:
         log_handle = log_path.open("a", encoding="utf-8")
         try:
             self._process = subprocess.Popen(
-                [str(self.cli_executable), "daemon", "start", "--foreground"],
+                self._daemon_argv("daemon", "start", "--foreground"),
                 env=env,
                 stdout=log_handle,
                 stderr=subprocess.STDOUT,
                 text=True,
             )
         except OSError as exc:
-            log_handle.close()
             raise LiveSetupError("daemon", f"failed to start daemon subprocess: {exc}") from exc
+        finally:
+            log_handle.close()
         deadline = time.monotonic() + DAEMON_READY_TIMEOUT_SECONDS
         while time.monotonic() < deadline:
             if self._process.poll() is not None:
-                raise LiveSetupError(
-                    "daemon",
-                    f"daemon exited before ready with code {self._process.returncode}",
-                )
+                raise LiveSetupError("daemon", self._daemon_start_failure_detail())
             if self._daemon_status_running():
                 return
             time.sleep(0.5)
-        raise LiveSetupError("daemon", "daemon status did not report running within 10 seconds")
+        raise LiveSetupError("daemon", self._daemon_start_failure_detail(timeout=True))
 
     def stop(self) -> None:
         """Stop the daemon with graceful CLI stop and process escalation."""
@@ -997,14 +1062,35 @@ class DaemonLifecycle:
             payload = json.loads(completed.stdout)
         except json.JSONDecodeError:
             return False
-        return isinstance(payload, dict) and payload.get("running") is True
+        return daemon_status_payload_is_running(payload)
+
+    def _daemon_start_failure_detail(self, *, timeout: bool = False) -> str:
+        parts: list[str] = []
+        if timeout:
+            parts.append("daemon status did not report running within 10 seconds")
+        elif self._process is not None:
+            parts.append(f"daemon exited before ready with code {self._process.returncode}")
+        status = self._run_daemon_cli(["daemon", "status", "--output", "json"], check=False)
+        if status.stdout.strip():
+            parts.append(f"daemon status stdout={status.stdout.strip()}")
+        if status.stderr.strip():
+            parts.append(f"daemon status stderr={status.stderr.strip()}")
+        if status.returncode not in {0, None}:
+            parts.append(f"daemon status exit={status.returncode}")
+        log_tail = self.daemon_log_tail(lines=50)
+        if log_tail.strip():
+            parts.append(f"daemon.log tail:\n{log_tail.rstrip()}")
+        return "; ".join(parts) if parts else "daemon failed to start"
+
+    def _daemon_argv(self, *parts: str) -> list[str]:
+        return [str(self.cli_executable), *parts, "--profile", self.profile_name]
 
     def _run_daemon_cli(self, args: list[str], *, check: bool) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env["HOME"] = str(self.home_dir)
         env["MULTICA_PROFILE"] = self.profile_name
         completed = subprocess.run(
-            [str(self.cli_executable), *args],
+            self._daemon_argv(*args),
             env=env,
             check=False,
             capture_output=True,

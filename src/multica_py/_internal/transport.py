@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import os
+import re
 
 from multica_py._internal.argv import build_global_args
 from multica_py._internal.compat import check_version_from_config, parse_cli_version
@@ -25,6 +26,60 @@ from multica_py.exceptions import (
     ValidationError,
 )
 from multica_py.process import ManagedProcess
+
+_EXIT_CODE_EXCEPTIONS: dict[int, type[CommandExecutionError]] = {
+    2: NetworkError,
+    3: AuthenticationError,
+    4: NotFoundError,
+    5: ValidationError,
+}
+_HTTP_STATUS_PATTERN = re.compile(r"returned (\d{3})\b")
+_NETWORK_MARKERS = (
+    "connection refused",
+    "dial tcp",
+    "no such host",
+    "i/o timeout",
+    "connection reset",
+    "network is unreachable",
+    "tls:",
+)
+
+
+def _semantic_exit_code_for_http_status(status: int) -> int | None:
+    if status in (401, 403):
+        return 3
+    if status == 404:
+        return 4
+    if status in (400, 422):
+        return 5
+    return None
+
+
+def classify_cli_failure(
+    *,
+    exit_code: int,
+    stdout: str,
+    stderr: str,
+) -> tuple[type[CommandExecutionError], int]:
+    """Map CLI process failure to a public exception and reported exit code."""
+    exc_class = _EXIT_CODE_EXCEPTIONS.get(exit_code)
+    reported_exit_code = exit_code
+    if exc_class is not None:
+        return exc_class, reported_exit_code
+
+    combined = f"{stdout}\n{stderr}"
+    status_match = _HTTP_STATUS_PATTERN.search(combined)
+    if status_match is not None:
+        semantic_exit = _semantic_exit_code_for_http_status(int(status_match.group(1)))
+        if semantic_exit is not None:
+            exc_class = _EXIT_CODE_EXCEPTIONS[semantic_exit]
+            return exc_class, semantic_exit
+
+    lowered = combined.lower()
+    if any(marker in lowered for marker in _NETWORK_MARKERS):
+        return NetworkError, 2
+
+    return CommandExecutionError, exit_code
 
 
 class CliTransport:
@@ -159,16 +214,15 @@ class CliTransport:
             decode_text(result.stderr, command=command),
             secret_values=result.secret_values,
         )
+        exc_class, reported_exit_code = classify_cli_failure(
+            exit_code=result.exit_code,
+            stdout=stdout_text,
+            stderr=stderr_text,
+        )
         message = f"Command failed with exit code {result.exit_code} [command: {command}]"
-        exc_class = {
-            2: NetworkError,
-            3: AuthenticationError,
-            4: NotFoundError,
-            5: ValidationError,
-        }.get(result.exit_code, CommandExecutionError)
         raise exc_class(
             message,
-            exit_code=result.exit_code,
+            exit_code=reported_exit_code,
             stdout=stdout_text,
             stderr=stderr_text,
             argv=result.argv,

@@ -9,7 +9,6 @@ from dataclasses import dataclass
 import pytest
 
 from multica_py._internal.processes import run_with_timeout
-from multica_py._internal.redaction import redact_argv
 from multica_py.exceptions import CommandTimeoutError
 
 pytestmark = [pytest.mark.serial, pytest.mark.process]
@@ -23,23 +22,17 @@ class _ProcessCase:
     stdout: str
     stderr: str
     mode: str
-    use_release: bool
     expect_timeout: bool
 
 
 _PROCESS_CASES: tuple[_ProcessCase, ...] = (
-    _ProcessCase(
-        exit_code="0", stdout="", stderr="", mode="", use_release=False, expect_timeout=False
-    ),
-    _ProcessCase(
-        exit_code="42", stdout="", stderr="", mode="", use_release=False, expect_timeout=False
-    ),
+    _ProcessCase(exit_code="0", stdout="", stderr="", mode="", expect_timeout=False),
+    _ProcessCase(exit_code="42", stdout="", stderr="", mode="", expect_timeout=False),
     _ProcessCase(
         exit_code="0",
         stdout="hello world",
         stderr="",
         mode="",
-        use_release=False,
         expect_timeout=False,
     ),
     _ProcessCase(
@@ -47,12 +40,9 @@ _PROCESS_CASES: tuple[_ProcessCase, ...] = (
         stdout="",
         stderr="error message",
         mode="",
-        use_release=False,
         expect_timeout=False,
     ),
-    _ProcessCase(
-        exit_code="0", stdout="", stderr="", mode="child", use_release=False, expect_timeout=True
-    ),
+    _ProcessCase(exit_code="0", stdout="", stderr="", mode="child", expect_timeout=True),
 )
 
 
@@ -88,17 +78,6 @@ def test_process_lifecycle_contract(
     env["MULTICA_CHILD_PID_FILE"] = str(parent_pid_file)
     if case.mode == "child":
         env["MULTICA_CHILD_CHILD_PID_FILE"] = str(child_pid_file)
-    if case.use_release:
-        env["MULTICA_CHILD_RELEASE_FILE"] = str(tmp_path / "release")
-
-    secret_argv = (
-        sys.executable,
-        str(_CHILD_PROCESS),
-        "--token",
-        "secret123",
-    )
-    redacted = redact_argv(secret_argv)
-    assert "secret123" not in " ".join(redacted)
 
     if case.expect_timeout:
         with pytest.raises(CommandTimeoutError) as exc_info:

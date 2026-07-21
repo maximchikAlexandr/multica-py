@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import sys
 from dataclasses import dataclass
 
 import pytest
@@ -55,6 +56,19 @@ def test_parse_canonical_argv_rejects_unsupported_option(tmp_path: pathlib.Path)
     argv[2:2] = ["--verbose"]
     with pytest.raises(fake_opencode.ArgvError):
         fake_opencode.parse_canonical_argv(argv)
+
+
+def test_version_probe_prints_semver(capsys: pytest.CaptureFixture[str]) -> None:
+    """Daemon version detection expects ``--version`` to print a semver line."""
+    assert fake_opencode.is_version_probe(["fake_opencode.py", "--version"])
+    fake_opencode.print_version()
+    assert capsys.readouterr().out == "1.0.0\n"
+
+
+def test_main_handles_version_probe(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The executable answers ``--version`` without entering run mode."""
+    monkeypatch.setattr(sys, "argv", ["fake_opencode.py", "--version"])
+    assert fake_opencode.main() == 0
 
 
 def test_success_replaces_file_atomically(tmp_path: pathlib.Path) -> None:
@@ -149,3 +163,49 @@ def test_error_event_line_is_sanitized_json() -> None:
             "message": "before content mismatch",
         },
     }
+
+
+def test_extract_issue_id_from_daemon_bootstrap_prompt() -> None:
+    """Daemon bootstrap prompts expose the assigned issue UUID."""
+    issue_id = "0767bc72-5680-41d8-9b68-4b30557a7ada"
+    prompt = (
+        "You are running as a local coding agent for a Multica workspace.\n\n"
+        f"Your assigned issue ID is: {issue_id}\n\n"
+        f"Start by running `multica issue get {issue_id} --output json` "
+        "to understand your task, then complete it.\n"
+    )
+    assert fake_opencode.extract_issue_id(prompt) == issue_id
+
+
+def test_resolve_action_payload_fetches_issue_description(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When the prompt has no action line, fetch it from issue description."""
+    issue_id = "0767bc72-5680-41d8-9b68-4b30557a7ada"
+    prompt = f"Your assigned issue ID is: {issue_id}\n"
+    action = InstructionPayload(run_id=_RUN_ID).compact_json()
+
+    def _fetch(fetched_id: str) -> str:
+        assert fetched_id == issue_id
+        return f"Edit target.txt.\nMULTICA_TEST_ACTION={action}"
+
+    monkeypatch.setattr(fake_opencode, "fetch_issue_description", _fetch)
+    assert fake_opencode.resolve_action_payload(prompt) == action
+
+
+def test_resolve_action_payload_prefers_inline_action() -> None:
+    """Inline MULTICA_TEST_ACTION wins over issue-get resolution."""
+    payload = InstructionPayload(run_id=_RUN_ID)
+    assert fake_opencode.resolve_action_payload(payload.prompt()) == payload.compact_json()
+
+
+def test_issue_description_action_json_keeps_literal_newline_escapes() -> None:
+    """Sandbox action JSON must keep literal \\n so exact file contents round-trip."""
+    from tests.live.resources import issue_description_for_run
+
+    description = issue_description_for_run(_RUN_ID)
+    action = fake_opencode.extract_action_line(description)
+    parsed = fake_opencode.parse_instruction_json(action)
+    assert parsed["before"] == f"before:{_RUN_ID}\n"
+    assert parsed["after"] == f"after:{_RUN_ID}\n"
+    assert "\\n" in description.split("MULTICA_TEST_ACTION=", 1)[1]

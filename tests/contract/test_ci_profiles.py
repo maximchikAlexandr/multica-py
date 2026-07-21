@@ -91,7 +91,7 @@ def test_compatibility_matrix_has_four_cells() -> None:
 def test_compatibility_job_runs_compat_marker_only() -> None:
     compat = _compatibility_job(_workflow_text(CI_WORKFLOW))
     assert "-m compat" in compat
-    assert "not live" not in compat or "-m compat" in compat
+    assert "not live" not in compat
     assert "live_smoke" not in compat
 
 
@@ -99,6 +99,16 @@ def test_live_smoke_job_timeout_budget_is_300_seconds() -> None:
     content = _workflow_text(CI_WORKFLOW)
     live = _job_block(content, "live-smoke")
     assert "timeout-minutes: 5" in live or "timeout-minutes: 300" in live
+
+
+def test_live_smoke_sc009_sub_budgets_match_agent_sandbox_suite() -> None:
+    """Suite test-phase budget must fit agent sandbox plus remaining smoke cases."""
+    live = _job_block(_workflow_text(CI_WORKFLOW), "live-smoke")
+    assert "budget 240" in live
+    assert "float(test_phase) > 240" in live
+    assert "float(env_ready) > 180" in live
+    assert "TOTAL" in live and "300" in live
+    assert "float(test_phase) > 120" not in live
 
 
 def test_package_workflow_has_six_install_paths() -> None:
@@ -165,6 +175,11 @@ def test_compat_marker_collects_at_least_four_items() -> None:
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    match = re.search(r"(\d+) tests? collected", result.stdout)
-    assert match is not None, result.stdout
-    assert int(match.group(1)) >= 4
+    selected_match = re.search(r"(\d+)/(\d+) tests collected", result.stdout)
+    if selected_match is not None:
+        collected = int(selected_match.group(1))
+    else:
+        fallback = re.search(r"(\d+) tests? collected", result.stdout)
+        assert fallback is not None, result.stdout
+        collected = int(fallback.group(1))
+    assert collected >= 4

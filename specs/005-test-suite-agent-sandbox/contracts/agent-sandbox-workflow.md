@@ -67,7 +67,7 @@ Every step executes even if a prior step failed. Cleanup errors are accumulated.
 
 ## Postcondition audit
 
-Assert:
+Assert workflow-owned leftovers are gone:
 
 - daemon PID absent;
 - matching runtime absent or explicitly offline/non-routable;
@@ -75,9 +75,11 @@ Assert:
 - project resource not listable;
 - project not gettable;
 - workspace not returned by bootstrap oracle;
-- isolated paths absent;
-- no Docker object with compose project label equal to `LiveRunContext.prefix`;
+- isolated paths absent.
 
+Compose backend lifecycle is session-scoped (`live_environment` fixture). Per-workflow
+audit MUST NOT require compose project absence; session teardown runs
+`audit_postconditions` after `compose down`.
 ## Failure variants
 
 | Case ID | Configuration | Expected terminal run | Expected pytest outcome | Required diagnostics |

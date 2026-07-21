@@ -56,7 +56,6 @@ class DiagnosticCollector:
         redacted = text
         for secret in sorted(self._secrets, key=len, reverse=True):
             redacted = redacted.replace(secret, REDACTED)
-        redacted = redacted.replace(f'"token":"{VERIFICATION_CODE}"', '"token":"***"')
         redacted = redacted.replace(VERIFICATION_CODE, REDACTED)
         return redacted
 
