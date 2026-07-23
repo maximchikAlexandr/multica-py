@@ -201,7 +201,7 @@ def test_resolve_action_payload_prefers_inline_action() -> None:
 
 def test_issue_description_action_json_keeps_literal_newline_escapes() -> None:
     """Sandbox action JSON must keep literal \\n so exact file contents round-trip."""
-    from tests.live.resources import issue_description_for_run
+    from tests.live.sandbox import issue_description_for_run
 
     description = issue_description_for_run(_RUN_ID)
     action = fake_opencode.extract_action_line(description)

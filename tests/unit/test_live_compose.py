@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.live._live_helpers import create_live_test_run
 from tests.live.backend import (
     ComposeLifecycle,
     ReadinessResult,
@@ -14,8 +15,8 @@ from tests.live.backend import (
     probe_readiness,
 )
 from tests.live.diagnostics import DiagnosticCollector
-from tests.live.environment import LiveSettings, LiveSetupError, create_live_test_run
 from tests.unit.conftest import make_settings, make_target
+from tools.live_support.environment import LiveSettings, LiveSetupError
 
 _TEST_RUN_ID = "0123456789abcdef0123456789abcdef"
 

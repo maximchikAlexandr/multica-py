@@ -1,32 +1,42 @@
 {
-  "collected": {
-    "component_source": 132,
-    "contract": 84,
-    "live": 74,
-    "packaging": 10,
-    "unit": 345
+  "behavior": {
+    "invariants": 5,
+    "operation_pairs": 0,
+    "requirements_sha256": "sha256:0d95b6b02ceaad4c22a2da0c02a68b9ddc57e9b1479203e0c9e8a5ef18bdfaac"
   },
   "coverage": {
-    "branch_percent": 53.890160183066364,
-    "statement_percent": 70.95217200526547,
+    "branch_percent": 55.856832971800436,
+    "config_sha256": "sha256:8e0d6bd135da18d8c3706f061d28229c3708f2199f95f7d94fa2690235bad512",
+    "statement_percent": 71.92502106149958,
     "zones": {
       "errors": 100.0,
-      "models": 100.0,
-      "resources": 93.04,
-      "transport": 84.16
+      "models": 99.42,
+      "resources": 93.4,
+      "transport": 86.82
     }
   },
-  "git_sha": "c69243c5cafe38aa26f774bb266f28a5cb883b36",
+  "git_sha": "60b1f63d64eaf860f66b1b0b8af8640e2716b4f9",
   "loc": {
-    "resource_test_support": 209,
-    "scripts_python": 1368,
-    "tests_python": 9600
+    "live_support_python": 4153,
+    "max_test_support_file": 1054,
+    "scripts_python": 2018,
+    "tests_python": 14577
   },
-  "mandatory_offline": 566,
+  "mutation": {
+    "config_sha256": "sha256:62cfb55254aea2cd3e7895e3a0cca9414b158cd74ed59a6a99354c4bac53e7cd",
+    "killed": 371,
+    "no_tests": 2,
+    "score_percent": 100.0,
+    "skipped": 0,
+    "survived": 0,
+    "suspicious": 0,
+    "timeout": 0
+  },
   "offline": {
-    "duration_seconds": 29.889,
-    "tests": 571
+    "collected": {},
+    "duration_seconds": 15.284
   },
-  "package_install_paths": 12,
-  "schema": 1
+  "package_install_paths": 6,
+  "schema": 2,
+  "source_snapshot": "b3a299b36d1ad5bc386b5e4517d2a348d53db31c"
 }

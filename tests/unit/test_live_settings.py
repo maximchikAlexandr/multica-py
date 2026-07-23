@@ -7,17 +7,19 @@ import sys
 
 import pytest
 
-from tests.live.environment import (
+from tests.live._live_helpers import (
     MAX_LABEL_NAME_LEN,
-    LiveSettings,
-    LiveSetupError,
     create_live_test_run,
     label_name,
-    load_compatibility_target,
-    load_live_settings,
     resolve_secrets_base_dir,
     resource_prefix,
     workspace_slug,
+)
+from tools.live_support.environment import (
+    LiveSettings,
+    LiveSetupError,
+    load_compatibility_target,
+    load_live_settings,
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]

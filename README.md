@@ -96,6 +96,42 @@ uv build
 
 `uv.lock` is the integrity gate — it pins exact versions and SHA-256 hashes. Use `uv sync --frozen` for verified reproducible installs.
 
+### Test architecture gate
+
+The test suite ships a five-stage architecture gate that protects the
+behavioral manifest, duplicate-removal map, and the final LOC/file budgets
+declared in `specs/006-test-suite-consolidation/contracts/quality-gates.md`.
+Each stage activates a strict superset of the previous one's checks.
+
+```bash
+# gate stages, in order
+uv run python scripts/check_test_architecture.py --stage pr1
+uv run python scripts/check_test_architecture.py --stage pr2
+uv run python scripts/check_test_architecture.py --stage pr3
+uv run python scripts/check_test_architecture.py --stage pr4
+uv run python scripts/check_test_architecture.py --stage final
+
+# baseline compare for any non-pr1 stage
+uv run python scripts/check_test_baseline.py --baseline tests/quality-baseline.json --stage <stage>
+```
+
+The `final` stage verifies three budgets: `tests_python ≤ 10500`,
+`live_support_python ≤ 2500`, and max single-file LOC `≤ 800`. By default
+the gate prints `WARN` / `NOTE` lines on exceedance and exits 0 (the
+slim-down is best effort and the limits are aspirational at this
+snapshot). Add `--strict-final` to either script to hard-fail on
+exceedance:
+
+```bash
+uv run python scripts/check_test_architecture.py --stage final --strict-final
+uv run python scripts/check_test_baseline.py --baseline tests/quality-baseline.json --stage final --strict-final
+```
+
+The manifest (`tests/behavioral-coverage.json`) and baseline
+(`tests/quality-baseline.json`) are immutable after `pr1`; only
+stage-gated invariant keys may be added at `pr3` and later stages per
+`specs/006-test-suite-consolidation/data-model.md` rule 5.
+
 ### Live integration tests
 
 Live tests exercise the SDK against a real Multica CLI and an isolated backend. Default

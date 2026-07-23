@@ -10,6 +10,12 @@ def guard_eligible_operations() -> frozenset[str]:
     )
 
 
+def operation_case_sdk_methods() -> frozenset[str]:
+    from tests.cases.operations import OPERATION_CASES
+
+    return frozenset(c.sdk_method for c in OPERATION_CASES)
+
+
 def project_resource_sdk_methods() -> frozenset[str]:
     return frozenset(
         {

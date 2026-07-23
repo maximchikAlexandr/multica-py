@@ -1,0 +1,13 @@
+{
+  "_comment": "TODO: populate one response per operation_id once OPERATION_CASES stabilizes. Naming: <operation_id_with_underscores>.json. This file is the canonical example referenced by tests/fixtures/fake_multica/__init__.py docstring.",
+  "schema": 1,
+  "stdout_b64": "eyJhdXRoZW50aWNhdGVkIjogdHJ1ZSwgInVzZXJfaWQiOiAidXNyXzAwMSIsICJ0b2tlbl90eXBlIjogImJlYXJlciJ9Cg==",
+  "stderr_b64": "IA==",
+  "exit_code": 0,
+  "record": {
+    "argv": ["/abs/path/to/fake_multica/__main__.py", "auth", "status"],
+    "cwd": "/abs/path/to/working/dir",
+    "env": {"MULTICA_API_KEY": "***"},
+    "timestamp": "2024-01-01T00:00:00Z"
+  }
+}

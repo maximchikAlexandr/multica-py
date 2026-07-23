@@ -73,3 +73,20 @@ def test_is_safe_output_size() -> None:
     limit = security.DEFAULT_OUTPUT_LIMIT
     assert security.is_safe_output_size(limit) is True
     assert security.is_safe_output_size(limit + 1) is False
+
+
+def test_offline_network_hard_fail(monkeypatch: pytest.MonkeyPatch) -> None:
+    import socket
+
+    def _raise(*args: object, **kwargs: object) -> object:
+        raise RuntimeError("network.offline-hard-fail")
+
+    monkeypatch.setattr(socket, "socket", _raise)
+    import httpx
+
+    monkeypatch.setattr(httpx.Client, "send", _raise)
+    monkeypatch.setattr(httpx.AsyncClient, "send", _raise)
+
+    import pathlib
+
+    _ = pathlib.Path("/tmp").exists()

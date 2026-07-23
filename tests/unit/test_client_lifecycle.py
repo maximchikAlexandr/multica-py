@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pytest
 
@@ -16,27 +16,16 @@ class _CloseTracker:
         self.count += 1
 
 
-@dataclass
-class _LifecycleCase:
-    body_raises: bool
-    tracker: _CloseTracker = field(default_factory=_CloseTracker)
-
-
-_LIFECYCLE_CASES: tuple[_LifecycleCase, ...] = (
-    _LifecycleCase(body_raises=False),
-    _LifecycleCase(body_raises=True),
-)
-
-
-@pytest.mark.parametrize("case", _LIFECYCLE_CASES, ids=["normal-exit", "exception-exit"])
-def test_client_context_manager_lifecycle(case: _LifecycleCase) -> None:
+@pytest.mark.parametrize("body_raises", [False, True], ids=["normal-exit", "exception-exit"])
+def test_client_context_manager_lifecycle(body_raises: bool) -> None:
     """Verify one transport close per context and body exception propagation."""
+    tracker = _CloseTracker()
     client = MulticaClient(ClientConfig())
-    object.__setattr__(client, "_transport", case.tracker)
-    if case.body_raises:
+    object.__setattr__(client, "_transport", tracker)
+    if body_raises:
         with pytest.raises(RuntimeError, match="body failed"), client:
             raise RuntimeError("body failed")
     else:
         with client:
             pass
-    assert case.tracker.count == 1
+    assert tracker.count == 1

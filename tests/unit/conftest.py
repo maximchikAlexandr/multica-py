@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pathlib
 
-from tests.live.environment import CompatibilityTarget, LiveSettings
+from tools.live_support.environment import CompatibilityTarget, LiveSettings
 
 
 def make_target(**overrides: object) -> CompatibilityTarget:

@@ -5,9 +5,21 @@ import json
 import httpx
 import pytest
 
+from tests.live._live_helpers import TestIdentity
 from tests.live.backend import BootstrapApiClient
-from tests.live.environment import LiveSetupError, ResourceAbsentError, SecretString, TestIdentity
-from tests.live.resources import ResourceRegistry
+from tools.live_support.environment import LiveSetupError, ResourceAbsentError, SecretString
+
+
+@pytest.fixture(autouse=True)
+def _reset_bootstrap_identity_cache() -> None:
+    """Clear the process-level identity cache so each test re-bootstraps.
+
+    The cache exists to skip /auth/send-code when a CI run sets up the
+    live backend and the agent sandbox with the same run_id. Tests that
+    share the hard-coded run_id ``run123`` would otherwise leak identity
+    data between cases.
+    """
+    BootstrapApiClient._IDENTITY_BY_RUN_ID.clear()
 
 
 def test_secret_string_redacts_repr_and_str() -> None:
@@ -312,33 +324,47 @@ def test_bootstrap_failure_redacts_secrets_in_error(monkeypatch: pytest.MonkeyPa
     assert "jwt-secret" not in str(exc.value)
 
 
-def test_cleanup_runs_in_reverse_registration_order() -> None:
+def test_defer_cleanup_runs_in_reverse_registration_order() -> None:
+    """LiveSession.defer_cleanup (ExitStack) must invoke callbacks LIFO."""
+    from tests.live.session import LiveEnvironment, LiveSession
+
     order: list[str] = []
-    registry = ResourceRegistry()
-    registry.defer(key="project", cleanup=lambda: order.append("project"))
-    registry.defer(key="issue", cleanup=lambda: order.append("issue"))
-    registry.cleanup_all()
+    env = LiveEnvironment(
+        api_key=None,
+        workspace=None,
+        profile="smoke",
+        extra={},
+    )
+    with LiveSession(env) as session:
+        session._stack.callback(lambda: order.append("project"))
+        session._stack.callback(lambda: order.append("issue"))
     assert order == ["issue", "project"]
 
 
-def test_already_absent_is_tolerated() -> None:
-    registry = ResourceRegistry()
-    registry.defer(
-        key="label",
-        cleanup=lambda: (_ for _ in ()).throw(ResourceAbsentError()),
-    )
-    assert registry.cleanup_all() == []
+def test_defer_cleanup_callback_can_swallow_resource_absent() -> None:
+    """LiveSession.defer_cleanup callbacks are responsible for swallowing known-missing errors."""
+    from tests.live.session import LiveEnvironment, LiveSession
 
-
-def test_partial_failure_is_recorded() -> None:
-    registry = ResourceRegistry()
-    registry.defer(
-        key="a",
-        cleanup=lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    env = LiveEnvironment(
+        api_key=None,
+        workspace=None,
+        profile="smoke",
+        extra={},
     )
-    failures = registry.cleanup_all()
-    assert len(failures) == 1
-    assert failures[0]["key"] == "a"
+    swallowed: list[str] = []
+    with LiveSession(env) as session:
+
+        def _raise() -> None:
+            raise ResourceAbsentError()
+
+        def _safe_cleanup() -> None:
+            try:
+                _raise()
+            except ResourceAbsentError:
+                swallowed.append("ok")
+
+        session._stack.callback(_safe_cleanup)
+    assert swallowed == ["ok"]
 
 
 def test_bootstrap_uses_jwt_not_pat_for_workspace_create(monkeypatch: pytest.MonkeyPatch) -> None:

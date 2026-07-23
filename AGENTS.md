@@ -164,6 +164,65 @@ the typed `tests.*` mypy override — no `Any` leaks. Use only stdlib + pytest; 
 NOT add third-party test frameworks or UI-automation patterns (Screenplay, Page
 Object, pytest-bdd, hypothesis, snapshot libraries).
 
+## Test architecture gate (feature 006)
+
+`scripts/check_test_architecture.py` and `scripts/check_test_baseline.py`
+enforce a five-stage gate. Each stage activates a strict superset of the
+previous one's checks (see
+`specs/006-test-suite-consolidation/contracts/quality-gates.md`):
+
+| Stage | Activates |
+|---|---|
+| `pr1` | process markers, default live/packaging exclusion, baseline self-check |
+| `pr2` | registry-name checks, exactly-one `OPERATION_CASES` / `ERROR_CASES`, 111 unique IDs, payload size, tests LOC ≤ pr1 baseline |
+| `pr3` | no `from tests` / `import tests` in `scripts/` or `src/`, no pytest.skip in `tests/packaging/`, no `tests/fixtures/json/`, tests LOC ≤ 11000, package paths = 6 |
+| `pr4` | no `getfixturevalue` in `tests/live/`, no resource-identity branch in `tests/live/test_crud.py`, live_support_python ≤ 3000 |
+| `final` | tests_python ≤ 10500, live_support_python ≤ 2500, max file LOC ≤ 800 (best effort; `--strict-final` flips to hard fail) |
+
+Five-stage invocation:
+
+```bash
+for s in pr1 pr2 pr3 pr4 final; do
+  uv run python scripts/check_test_architecture.py --stage "$s"
+  uv run python scripts/check_test_baseline.py --baseline tests/quality-baseline.json --stage "$s"
+done
+```
+
+## Deletion rules (FR-032)
+
+These rules apply whenever a test, fixture, or support module is removed
+or merged (per `specs/006-test-suite-consolidation/tasks.md` execution
+rules and `data-model.md` rule 7):
+
+1. **Pair deletion with traceability.** Removing a test node MUST add a
+   record to `tests/duplicate-removal-map.json` in the same commit. The
+   record carries `removed_node_id`, `retained_node_id`, and
+   `protected_contract` (one of `operation:<sdk>:<dim>` or
+   `invariant:<key>`).
+2. **No compatibility aliases.** Do not add `*Compat` re-exports, legacy
+   module shims, or back-port imports for removed registries or types.
+   Callers must use the canonical replacement; if a name is reused, the
+   previous owner is gone for good.
+3. **Stop on a red gate.** If a stage gate fails after a deduplication
+   commit, stop the deduplication and either revert the commit or
+   restore retained coverage via `tests/duplicate-removal-map.json` before
+   continuing. Never lower assertions, coverage config, mutation config,
+   or the behavioral manifest to make a gate pass.
+4. **Keep node IDs stable when consolidating content.** Merging cases or
+   assertions into an existing case table MUST preserve the retained
+   `test_id[case_id]` so the duplicate map and behavior fingerprint stay
+   green. Local-class renames (e.g. `DecodeCase → ProjectResourceDecodeCase`)
+   inside a single test module do not need duplicate-map records because
+   no node ID changes.
+5. **Stay under the file cap.** Every new or substantially rewritten
+   test/support Python file MUST be `<= 800` logical lines. The final-stage
+   gate hard-fails over 800.
+6. **Final LOC budgets.** The `final` stage is best effort by default
+   (`tests_python ≤ 10500`, `live_support_python ≤ 2500`). Adding test
+   code that pushes either budget further above the cap requires either
+   completing the T068/T074 slim-down or accepting `--strict-final` as a
+   red gate.
+
 ## Commit Messages
 
 Use Conventional Commits for all repository commits:

@@ -36,11 +36,15 @@
 
 **Independent test:** удалить один duplicate mapping после его регистрации и убедиться, что architecture gate падает; вернуть mapping и убедиться, что gate проходит при неизменных coverage/mutation/behavior metrics.
 
-- [ ] T010 [US1] Создать `ProcessState`, Linux `/proc` adapter, macOS `ps` adapter и bounded wait helpers в `tests/fixtures/process_state.py` с deadline 2.0 seconds и interval 0.02 seconds.
-- [ ] T011 [US1] Добавить running/zombie/absent parsing и wait deadline tests в `tests/unit/test_process_state.py`.
-- [ ] T012 [US1] Расширить `tests/fixtures/child_process.py` ready/release, ignore-SIGTERM, descendant, parent-PID и descendant-PID modes; удалить fixed 30/60-second sleeps.
-- [ ] T013 [US1] Переписать `tests/component/test_process_contract.py` как единственную функцию `test_process_contract`, параметризованную ровно четырьмя IDs `cancellation`, `timeout`, `sigterm-escalation`, `descendant-cleanup`; применить module markers `process`, `serial` и timeout 20 seconds; реализовать bounded finalizer по `contracts/process-harness.md` (закрытие pipes, завершение process group, повторная проверка отсутствия потомков).
-- [ ] T014 [US1] Удалить `tests/component/test_cancellation.py` после T013 и записать все removed/retained contracts в `tests/duplicate-removal-map.json`.
+- [x] T010 [US1] Создать `ProcessState`, Linux `/proc` adapter, macOS `ps` adapter и bounded wait helpers в `tests/fixtures/process_state.py` с deadline 2.0 seconds и interval 0.02 seconds.
+- [x] T011 [US1] Добавить running/zombie/absent parsing и wait deadline tests в `tests/unit/test_process_state.py`.
+- [x] T012 [US1] Расширить `tests/fixtures/child_process.py` ready/release, ignore-SIGTERM, descendant, parent-PID и descendant-PID modes; удалить fixed 30/60-second sleeps.
+- [x] T013 [US1] Переписать `tests/component/test_process_contract.py` как единственную функцию `test_process_contract`, параметризованную ровно четырьмя IDs `cancellation`, `timeout`, `sigterm-escalation`, `descendant-cleanup`; применить module markers `process`, `serial` и timeout 20 seconds; реализовать bounded finalizer по `contracts/process-harness.md` (закрытие pipes, завершение process group, повторная проверка отсутствия потомков).  
+  **GAP FIXED:** `proc: Popen | None = None` в `finally` был мёртвым кодом — всегда `None`.  
+  `run_with_timeout` уже закрывает pipes (свой `finally` на строке 213) и завершает process group  
+  через `terminate_process`/`kill_process` в `_communicate_until_exit`. Убрал мёртвый `proc` guard;  
+  финализатор теперь полагается на release file + `wait_absent(parent_pid)` / `wait_absent(child_pid)`.
+- [x] T014 [US1] Удалить `tests/component/test_cancellation.py` после T013 и записать все removed/retained contracts в `tests/duplicate-removal-map.json`.
 - [ ] T015 [US1] Заменить `test_check_offline_does_not_touch_network` hard socket/httpx prohibition test-ом (invariant `network.offline-hard-fail`) в `tests/unit/test_upstream_contract_security.py`, удалить старый test из `tests/contract/test_upstream_contract_check.py` и записать mapping в `tests/duplicate-removal-map.json`.
 - [ ] T016 [US1] Запустить repaired offline suite и branch coverage; сохранить JUnit и coverage outputs в `.artifacts/test-suite-consolidation/offline-junit.xml` и `coverage.json`.
 - [ ] T017 [US1] Запустить полный configured mutmut scope и сохранить `mutmut results --all` в `.artifacts/mutation/results.txt`; unknown status должен считаться failure.

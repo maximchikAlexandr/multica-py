@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://multica.local/schemas/response_v1.json",
+  "title": "FakeMultica response/record v1",
+  "description": "Explicit fixture for the fake multica CLI: a response (stdout/stderr/exit_code) and a record (argv/cwd/env/timestamp). stdout and stderr are base64-encoded UTF-8 bytes to make binary-safe fixtures explicit. Top-level schema version pins the contract to v1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "stdout_b64", "stderr_b64", "exit_code", "record"],
+  "properties": {
+    "schema": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version; always 1."
+    },
+    "stdout_b64": {
+      "type": "string",
+      "description": "Base64-encoded UTF-8 bytes written to the child's stdout."
+    },
+    "stderr_b64": {
+      "type": "string",
+      "description": "Base64-encoded UTF-8 bytes written to the child's stderr."
+    },
+    "exit_code": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "Process exit code. 0 means success; 64 (EX_USAGE) means a missing/corrupt record path."
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "cwd", "env", "timestamp"],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1,
+          "description": "Absolute argv the child was invoked with (argv[0] is the script path, not the package name)."
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Absolute working directory the child observed at invocation."
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {"type": "string"},
+          "description": "Allowlisted env vars captured at invocation. Values are redacted where required."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 UTC timestamp of the invocation."
+        }
+      }
+    }
+  }
+}

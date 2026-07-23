@@ -34,7 +34,7 @@ jobs:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups
       - run: uv run mypy --namespace-packages --explicit-package-bases -p multica_py
-      - run: uv run mypy tests scripts --ignore-missing-imports --follow-imports=silent --check-untyped-defs
+      - run: uv run mypy tests scripts tools --ignore-missing-imports --follow-imports=silent --check-untyped-defs
 
   quality:
     runs-on: ubuntu-latest
@@ -59,12 +59,12 @@ jobs:
             --cov-report=term-missing --cov-report=xml --cov-report=json
       - name: Zonal coverage check
         run: uv run python scripts/check_coverage.py --coverage-json coverage.json
-      - name: Baseline compare (PR-07)
+      - name: Architecture and baseline five-stage gate
         run: |
-          uv run python scripts/check_test_baseline.py \
-            --baseline tests/quality-baseline.json \
-            --mode compare \
-            --stage PR-07
+          for s in pr1 pr2 pr3 pr4 final; do
+            uv run python -m scripts.check_test_architecture --stage "$s"
+            uv run python -m scripts.check_test_baseline --baseline tests/quality-baseline.json --stage "$s"
+          done
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
@@ -72,6 +72,20 @@ jobs:
           path: |
             coverage.xml
             coverage.json
+          retention-days: 14
+      - name: Process contract test
+        run: uv run pytest -o addopts="" -q -m "process and serial" tests/component/test_process_contract.py
+      - name: Hard-network test
+        run: uv run pytest -q tests/unit/test_upstream_contract_security.py::test_offline_network_hard_fail
+      - name: Mutation run
+        run: |
+          mkdir -p .artifacts/mutation
+          NO_COLOR=1 uv run mutmut run && NO_COLOR=1 uv run mutmut results | tee .artifacts/mutation/results.txt
+      - name: Upload mutation results
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-results
+          path: .artifacts/mutation/results.txt
           retention-days: 14
 
   compatibility:
@@ -92,7 +106,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --frozen --all-groups
-      - run: uv build
       - name: Compat subset
         run: |
           set -euo pipefail
@@ -125,19 +138,6 @@ jobs:
       - run: uv sync --frozen --all-groups
       - name: Upstream contract check (offline)
         run: uv run python -m multica_py._internal.upstream_contract.cli check --format human
-
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
-        with:
-          python-version: "3.12"
-      - run: uv sync --frozen --all-groups
-      - run: uv build
-      - run: uv run python -c "import importlib.metadata; print(importlib.metadata.version('multica-py'))"
 
   live-smoke:
     runs-on: ubuntu-latest

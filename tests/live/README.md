@@ -167,15 +167,33 @@ uv run python scripts/run_live_tests.py --resolve-cli --mutation-check
 uv run python scripts/run_live_tests.py --resolve-cli --repeat 10
 ```
 
-Live support modules (fixed seven-file layout):
+Live support modules (US4 stage pr4 layout, B-4a/b foundation):
 
-- `conftest.py` — fixture composition only
-- `environment.py` — settings, profile paths, run context, live errors
-- `backend.py` — bootstrap API client and Compose lifecycle
-- `resources.py` — cleanup registry and live operation registry
-- `crud_descriptors.py` — immutable CRUD descriptor data
-- `oracle.py` — independent HTTP verification
-- `diagnostics.py` — redaction and failure bundles
+- `conftest.py` — public fixture surface (`live_environment`, `live_session`, `live_case`, `sandbox_session`) plus pytest hooks; no `getfixturevalue` calls.
+- `session.py` — `LiveEnvironment`, `LiveSession` (one `ExitStack` for LIFO cleanup), `LiveCase`, `SandboxSession`. `register_resource` is a thin facade over `defer_cleanup`.
+- `api.py` — single `LiveApiClient` (idempotent delete, redaction, typed request helpers).
+- `compose.py` — `ImagePolicy`, `ComposeLifecycle`, `ReadinessResult`, `compose_argv`, `probe_readiness`. Re-exported through `backend.py` for backward compatibility.
+- `backend.py` — `BootstrapApiClient`, `setup_sandbox_session`, `SandboxSession`, `DaemonLifecycle`, runtime poll helpers. ≤650 logical lines.
+- `_bootstrap.py` — `bootstrap_live_environment` (composes compose + sandbox session into a `LiveEnvironment`).
+- `crud_descriptors.py` — `CRUD_CASES: tuple[CrudDescriptor[object], ...]` (the only CRUD registry).
+- `operations.py` — `DIRECT_EXECUTORS: Mapping[str, Callable]` built from `OPERATION_CASES` with `mode == "extended"` and `owner.startswith("direct:")`.
+- `sandbox/` — three-phase agent sandbox (`prepare_sandbox` / `run_assignment` / `verify_sandbox`) plus `PreparedSandbox`, `CompletedAssignment`, `SandboxVerification`, filesystem policy, and exports. Replaces the temporary `tests/live/resources.py` module.
+- `diagnostics.py` — test-only diagnostics hooks (`DiagnosticCollector`, `truncate_log`, `assert_text_excludes_secrets`, `VERIFICATION_CODE`); the failure-bundle writer is sandbox-only and lives in `tests/live/sandbox/workflow.py`.
+- `environment.py` / `oracle.py` — settings, target, run-context, and HTTP oracle. Final deletion + replacement with `tools.live_support` helpers lands in US5 (`tests_python ≤ 10500`, `live_support_python ≤ 2500`).
+- `tests/cases/live_policy.json` — canonical source for the 111-`OperationCase` `LivePolicy` (mode / owner / `unrunnable_reason`); `test_live_command_coverage.py` enforces closed enum and owner resolution.
+
+Live ownership routing:
+
+- `direct:<sdk_method>` → callable in `DIRECT_EXECUTORS`; one executor per operation, signature `(LiveSession, LiveCase) -> None`.
+- `crud:<resource_id>` → descriptor in `CRUD_CASES`; one descriptor per resource, branch-free 11-step round trip in `test_crud.py`.
+- `sandbox` → `sandbox_session` fixture and the `execute_agent_sandbox_workflow` runtime.
+- `unrunnable` (closed enum: `destructive-irrecoverable`, `interactive-or-foreground`, `process-or-daemon-control`, `requires-external-infra`) → expected to skip with `LiveSetupError` or `pytest.skip`.
+
+Cleanup contract (per `contracts/live-core.md`):
+
+- `LiveSession` owns one `ExitStack`; `defer_cleanup` registers a callback that runs LIFO at session exit.
+- `test_crud.py` registers cleanup immediately after each successful side effect and re-runs `delete` explicitly; the explicit delete is idempotent so the registered cleanup is safe.
+- The sandbox workflow keeps its `CleanupRegistry` for fixed-order teardown (cancel-run → remove-resource → archive-agent → delete-project → stop-daemon → wait-runtime-deregister → delete-workspace → remove-temp-paths → postcondition-audit). Extracted in US5.
 
 Extended-only requirements (`FR-025`–`FR-027`) map to `tests/live/extended/*` with marker
 `live_extended` (post-MVP).

@@ -1,31 +1,29 @@
 from __future__ import annotations
 
 import json
-from typing import TypedDict
 
 from multica_py._internal.decoders import decode_json
-from multica_py._internal.manifest import CLI_MANIFEST_PATH
 from multica_py._internal.wire_models import IssueWire, issue_from_wire
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.issues import IssueCreateRequest, IssueSummary, IssueUpdateRequest
 
 
-class IssueFixture(TypedDict):
-    stdout: object
-
-
 def test_issue_get_decoding() -> None:
-    fixture_path = (
-        CLI_MANIFEST_PATH.parent.parent.parent.parent
-        / "tests"
-        / "fixtures"
-        / "json"
-        / "issues"
-        / "issue_get_iss_001.json"
-    )
-    with open(fixture_path, encoding="utf-8") as f:
-        wrapped: IssueFixture = json.load(f)
-    data = wrapped["stdout"]
+    data = {
+        "id": "iss_001",
+        "title": "Test issue",
+        "description": "A test issue description",
+        "status": "todo",
+        "priority": "high",
+        "assignee": {"id": "usr_001", "name": "Test User", "type": "member"},
+        "pull_requests": [],
+        "children": [],
+        "labels": [{"id": "lbl_001", "name": "bug", "color": "#ff0000"}],
+        "metadata": {},
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-02T00:00:00Z",
+        "unknown_field": "should be ignored by msgspec",
+    }
 
     wire = decode_json(json.dumps(data).encode(), IssueWire)
     issue = issue_from_wire(wire)
@@ -35,17 +33,11 @@ def test_issue_get_decoding() -> None:
 
 
 def test_issue_additive_fields_ignored() -> None:
-    data = {
-        "id": "iss_001",
-        "title": "Test",
-        "description": "Desc",
-        "status": "todo",
-        "unknown_field": "should_be_ignored",
-    }
-    wire = decode_json(json.dumps(data).encode(), IssueWire)
-    issue = issue_from_wire(wire)
-    assert issue.title == "Test"
-    assert hasattr(issue, "title")
+    wire = decode_json(
+        b'{"id":"iss_001","title":"T","description":"D","status":"todo","unknown":"x"}',
+        IssueWire,
+    )
+    assert issue_from_wire(wire).title == "T"
 
 
 def test_issue_list_decoding() -> None:

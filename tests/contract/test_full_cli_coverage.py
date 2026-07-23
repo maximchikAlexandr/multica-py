@@ -7,7 +7,11 @@ from multica_py._internal.manifest import (
 )
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
-from tests._manifest_support import issue_project_sdk_methods, project_resource_sdk_methods
+from tests._manifest_support import (
+    issue_project_sdk_methods,
+    operation_case_sdk_methods,
+    project_resource_sdk_methods,
+)
 
 
 def _is_type_object(value: object) -> bool:
@@ -81,12 +85,6 @@ def test_aliases_are_registered() -> None:
     assert len(all_aliases) > 0, "No aliases registered in manifest"
 
 
-def test_manifest_has_no_unknown_fields() -> None:
-    document = load_manifest_document()
-    assert document.meta.pinned_sha
-    assert document.meta.source_base
-
-
 def test_manifest_has_meta() -> None:
     document = load_manifest_document()
     assert document.meta.pinned_sha, "Manifest meta missing pinned_sha"
@@ -127,3 +125,9 @@ def test_issue_project_paths_use_existing_issue_commands() -> None:
     manifest = load_manifest()
     mapped = {entry.sdk_method for entry in manifest if entry.sdk_method}
     assert issue_project_sdk_methods().issubset(mapped)
+
+
+def test_operation_cases_cover_guard_eligible_manifest() -> None:
+    manifest = load_manifest()
+    mapped = {entry.sdk_method for entry in manifest if entry.sdk_method}
+    assert operation_case_sdk_methods().issubset(mapped)

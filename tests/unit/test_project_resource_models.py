@@ -19,7 +19,7 @@ from multica_py.models.project_resources import (
 
 
 @dataclass(frozen=True)
-class DecodeCase:
+class ProjectResourceDecodeCase:
     """One project resource wire decode scenario."""
 
     id: str
@@ -36,8 +36,8 @@ class RejectCase:
     match: str
 
 
-_DECODE_CASES = (
-    DecodeCase(
+_PROJECT_RESOURCE_DECODE_CASES = (
+    ProjectResourceDecodeCase(
         "with-label",
         {
             "id": "res_001",
@@ -51,7 +51,7 @@ _DECODE_CASES = (
         },
         "main",
     ),
-    DecodeCase(
+    ProjectResourceDecodeCase(
         "without-label",
         {
             "id": "res_001",
@@ -67,8 +67,8 @@ _DECODE_CASES = (
 )
 
 
-@pytest.mark.parametrize("case", _DECODE_CASES, ids=lambda case: case.id)
-def test_decode_local_directory_record(case: DecodeCase) -> None:
+@pytest.mark.parametrize("case", _PROJECT_RESOURCE_DECODE_CASES, ids=lambda case: case.id)
+def test_decode_local_directory_record(case: ProjectResourceDecodeCase) -> None:
     record = project_resource_from_wire(
         decode_json(json.dumps(case.payload).encode(), ProjectResourceRecordWire)
     )
