@@ -5,7 +5,7 @@ import sys
 
 from scripts.live_compatibility_report import build_compatibility_report
 from scripts.resolve_multica_target import ResolvedTarget
-from tests.live.environment import load_compatibility_target
+from tools.live_support.environment import load_compatibility_target
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 TARGET = REPO_ROOT / "contracts" / "multica-live-target.toml"

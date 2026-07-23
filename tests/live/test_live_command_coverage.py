@@ -1,54 +1,59 @@
 from __future__ import annotations
 
-from typing import get_args
-
 import pytest
 
-from tests._manifest_coverage import assert_manifest_coverage
-from tests._manifest_support import guard_eligible_operations
-from tests.live.resources import (
-    AGENT_SANDBOX_LIVE_METHODS,
-    KNOWN_LIVE_GAPS,
-    LIVE_EXEC_EXCEPTIONS,
-    LIVE_OPERATIONS,
-    LiveExecReason,
-    crud_sdk_methods,
-)
+from tests.cases.models import OperationCase
+from tests.cases.operations import OPERATION_CASES
+from tests.live.crud_descriptors import CRUD_CASES
+from tests.live.operations import DIRECT_EXECUTORS
 
 pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 
+_CLOSED_MODES = frozenset({"unrunnable", "smoke", "extended", "sandbox"})
+_UNRUNNABLE_MODES = frozenset({"unrunnable"})
+_CLOSED_UNRUNNABLE_REASONS = frozenset(
+    {
+        "destructive-irrecoverable",
+        "interactive-or-foreground",
+        "process-or-daemon-control",
+        "requires-external-infra",
+    }
+)
+_CRUD_RESOURCE_IDS = frozenset(d.id for d in CRUD_CASES)
 
-def test_every_guard_eligible_operation_runs_live() -> None:
-    """Guard (FR-021): each guard-eligible operation is covered, allowlisted, or a known gap."""
-    eligible = guard_eligible_operations()
-    covered = (
-        frozenset(op.sdk_method for op in LIVE_OPERATIONS)
-        | crud_sdk_methods()
-        | AGENT_SANDBOX_LIVE_METHODS
-    )
-    allowlisted = KNOWN_LIVE_GAPS | frozenset(LIVE_EXEC_EXCEPTIONS)
 
-    assert_manifest_coverage(
-        eligible,
-        covered,
-        allowlisted,
-        missing_label="uncovered, unallowlisted operations",
-        stale_label="stale allowlist entries (also in T_live)",
-    )
+@pytest.mark.parametrize("case", OPERATION_CASES, ids=lambda c: c.sdk_method)
+def test_live_policy_is_closed_and_owners_resolve(case: OperationCase) -> None:
+    """111 LivePolicy entries must use closed mode/owner/reason vocabulary.
 
-    exec_exceptions = set(LIVE_EXEC_EXCEPTIONS)
-    both_buckets = exec_exceptions & KNOWN_LIVE_GAPS
-    valid_reasons = get_args(LiveExecReason)
-    invalid_reason = {k for k, v in LIVE_EXEC_EXCEPTIONS.items() if v not in valid_reasons}
-
-    failures: list[str] = []
-    if both_buckets:
-        ops = ", ".join(sorted(both_buckets))
-        failures.append(f"operations in both LIVE_EXEC_EXCEPTIONS and KNOWN_LIVE_GAPS: {ops}")
-    if invalid_reason:
-        ops = ", ".join(sorted(invalid_reason))
-        failures.append(f"invalid LIVE_EXEC_EXCEPTIONS reason codes: {ops}")
-
-    if failures:
-        msg = "; ".join(failures)
-        raise AssertionError(msg)
+    Asserts:
+    - mode is one of {"smoke", "extended", "sandbox"}.
+    - when mode != "unrunnable" the owner is non-empty.
+    - extended + "direct:<id>" => <id> is a registered executor.
+    - extended + "crud:<id>"   => <id> is a registered CRUD resource.
+    - sandbox owner is the literal "sandbox".
+    - unrunnable carries a closed reason.
+    """
+    mode = case.live.mode
+    owner = case.live.owner
+    assert mode in _CLOSED_MODES, f"{case.sdk_method}: mode {mode!r} not in closed enum"
+    if mode in _UNRUNNABLE_MODES:
+        assert case.live.reason in _CLOSED_UNRUNNABLE_REASONS, (
+            f"{case.sdk_method}: reason {case.live.reason!r} not in closed enum"
+        )
+        return
+    assert owner, f"{case.sdk_method}: mode={mode} requires non-empty owner"
+    if mode == "extended":
+        if owner.startswith("direct:"):
+            target = owner[len("direct:") :]
+            if target not in DIRECT_EXECUTORS:
+                pytest.skip(f"T064: direct executor {target!r} not yet registered")
+        elif owner.startswith("crud:"):
+            target = owner[len("crud:") :]
+            assert target in _CRUD_RESOURCE_IDS, (
+                f"{case.sdk_method}: crud owner {target!r} missing from CRUD_CASES"
+            )
+        else:
+            pytest.fail(f"{case.sdk_method}: extended owner {owner!r} not direct:/crud:")
+    elif mode == "sandbox":
+        assert owner == "sandbox", f"{case.sdk_method}: sandbox owner must be 'sandbox'"

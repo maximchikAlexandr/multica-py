@@ -6,7 +6,7 @@ import pytest
 
 from multica_py._internal.upstream_contract import diff as diff_module
 from multica_py._internal.upstream_contract import schema
-from tests.contract.mutation_severity_cases import MUTATION_SEVERITY_CASES, MutationSeverityCase
+from tests.unit.mutation_severity_cases import MUTATION_SEVERITY_CASES, MutationSeverityCase
 
 FIXTURES = pathlib.Path(__file__).parent.parent / "fixtures" / "upstream_contract" / "golden"
 MUTATIONS = pathlib.Path(__file__).parent.parent / "fixtures" / "upstream_contract" / "mutations"

@@ -6,20 +6,17 @@ import subprocess
 
 import pytest
 
-from multica_py.client import MulticaClient
 from scripts.resolve_multica_target import ResolvedTarget, build_version_report, resolve_target
-from tests.live.backend import ComposeLifecycle, is_ready, probe_readiness
-from tests.live.diagnostics import DiagnosticCollector
-from tests.live.environment import (
-    LiveSetupError,
-    LiveTestEnvironment,
+from tests.live._live_helpers import (
     LiveTestRun,
-    WorkspaceContext,
     create_live_test_run,
-    load_live_settings,
     profile_config_path,
     validate_not_real_home,
 )
+from tests.live.backend import ComposeLifecycle, is_ready, probe_readiness
+from tests.live.diagnostics import DiagnosticCollector
+from tests.live.session import LiveEnvironment, LiveSession
+from tools.live_support.environment import LiveSetupError, load_live_settings
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
@@ -27,36 +24,32 @@ pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 
 
 def test_readyz_reports_backend_ready(
-    live_environment: LiveTestEnvironment,
-    compatibility_target: ResolvedTarget,
-    diagnostic_collector: DiagnosticCollector,
+    live_environment: LiveEnvironment,
 ) -> None:
     """Smoke-test readiness, verified target, and CLI version reporting."""
+    target: ResolvedTarget = live_environment.target
     result = probe_readiness(live_environment.readiness_endpoint)
     assert is_ready(result)
-    assert (
-        compatibility_target.cli_version_actual == compatibility_target.target.cli_version_expected
-    )
-    target_path = diagnostic_collector.artifact_dir / "target.json"
+    assert target.cli_version_actual == target.target.cli_version_expected
+    target_path = live_environment.diagnostics.artifact_dir / "target.json"
     assert target_path.is_file()
     report = json.loads(target_path.read_text(encoding="utf-8"))
-    expected = build_version_report(compatibility_target)
+    expected = build_version_report(target)
     assert report["cli_version_actual"] == expected["cli_version_actual"]
     assert report["cli_version_expected"] == expected["cli_version_expected"]
-    assert report["upstream_ref"] == compatibility_target.target.upstream_ref
+    assert report["upstream_ref"] == target.target.upstream_ref
 
 
 def test_workspaces_list_includes_primary_bootstrap_workspace(
-    live_client: MulticaClient,
-    primary_workspace: WorkspaceContext,
+    live_session: LiveSession,
 ) -> None:
     """Smoke-test SDK workspace list includes the primary bootstrap workspace."""
-    workspaces = live_client.workspaces.list()
+    workspaces = live_session.client.workspaces.list()
     workspace_ids = {workspace.id for workspace in workspaces}
-    assert primary_workspace.id in workspace_ids
+    assert live_session.primary_workspace.id in workspace_ids
 
 
-def test_cli_profile_is_isolated_from_user_home(live_environment: LiveTestEnvironment) -> None:
+def test_cli_profile_is_isolated_from_user_home(live_environment: LiveEnvironment) -> None:
     """Smoke-test that the session uses a temp HOME and not the user profile."""
     validate_not_real_home(live_environment.home_dir)
     assert live_environment.home_dir.resolve() != pathlib.Path.home().resolve()

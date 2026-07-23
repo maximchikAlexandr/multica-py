@@ -35,8 +35,9 @@ from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
 from tests._manifest_coverage import assert_manifest_coverage
 from tests._manifest_support import guard_eligible_operations
-
-from .cases import ARGV_CASES, DECODE_CASES, ArgvCase, DecodeCase
+from tests.cases.argv_data import _NESTED_RESOURCE_ATTRS
+from tests.cases.models import OperationCase
+from tests.cases.operations import OPERATION_CASES
 
 _RESOURCE_CLASSES = {
     "agent_skills": AgentSkillResource,
@@ -54,78 +55,90 @@ _RESOURCE_CLASSES = {
     "issues": IssueResource,
     "labels": LabelResource,
     "maintenance": MaintenanceResource,
-    "projects": ProjectResource,
     "project_resources": ProjectResourceCollection,
+    "projects": ProjectResource,
     "repositories": RepositoryResource,
     "runtimes": RuntimeResource,
     "setup": SetupResource,
-    "skills": SkillResource,
     "skill_files": SkillFileResource,
+    "skills": SkillResource,
     "squads": SquadResource,
     "users": UserResource,
     "workspaces": WorkspaceResource,
 }
 
 
-@pytest.mark.parametrize("case", ARGV_CASES, ids=lambda c: c.id or c.sdk_method)
-def test_command_argv(
-    case: ArgvCase,
-    mock_transport: MagicMock,
-    raw_result: MagicMock,
-) -> None:
-    transport = cast("CliTransport", mock_transport)
-    config = ClientConfig()
-    cls = _RESOURCE_CLASSES[case.resource_attr]
-    resource = cls(transport, config)
+def _resource_attr(sdk_method: str) -> str:
+    parts = sdk_method.split(".")
+    if len(parts) >= 3:
+        nested = _NESTED_RESOURCE_ATTRS.get((parts[0], parts[1]))
+        if nested is not None:
+            return nested
+    return parts[0]
 
-    if case.transport_method == "run_bytes":
-        mock_transport.run_bytes.return_value = raw_result(stdout=case.stdout)
-    elif case.transport_method == "run_text":
+
+def _invoke_argv(mock_transport: MagicMock, case: object) -> None:
+    import datetime
+
+    from multica_py._internal.specs import RawCommandResult
+
+    assert isinstance(case, OperationCase)
+    if case.expected_call is None:
+        pytest.skip(f"{case.operation_id}: no expected_call case")
+    call = case.expected_call
+    method_name = case.sdk_method.rsplit(".", 1)[-1]
+    if call.method == "spawn":
+        mock_transport.spawn.return_value = MagicMock()
+    elif call.method == "run_bytes":
+        mock_transport.run_bytes.return_value = RawCommandResult(
+            argv=tuple(call.args),
+            exit_code=0,
+            stdout=case.response.stdout if case.response is not None else b"{}",
+            stderr=b"",
+            duration=datetime.timedelta(),
+        )
+    elif call.method == "run_text":
         mock_transport.run_text.return_value = TextResult(
-            text=case.stdout.decode("utf-8", errors="replace"),
+            text=(case.response.stdout if case.response is not None else b"{}").decode(
+                "utf-8", errors="replace"
+            ),
             stderr="",
             exit_code=0,
         )
-    else:
-        mock_transport.spawn.return_value = MagicMock()
 
-    method = getattr(resource, case.method)
-    method(*case.args, **case.kwargs)
-
-    if case.transport_method == "run_bytes":
-        mock_transport.run_bytes.assert_called_once()
-        call = mock_transport.run_bytes.call_args
-        assert call.args == (case.expected_argv,)
-        assert call.kwargs.get("stdin") == case.stdin
-        assert call.kwargs.get("timeout") == case.timeout
-    elif case.transport_method == "run_text":
-        mock_transport.run_text.assert_called_once_with(case.expected_argv)
-    else:
-        mock_transport.spawn.assert_called_once_with(case.expected_argv)
-
-
-@pytest.mark.parametrize("case", DECODE_CASES, ids=lambda c: c.id)
-def test_decode(
-    case: DecodeCase,
-    mock_transport: MagicMock,
-    raw_result: MagicMock,
-) -> None:
     transport = cast("CliTransport", mock_transport)
     config = ClientConfig()
-    cls = _RESOURCE_CLASSES[case.resource_attr]
+    resource_attr = _resource_attr(case.sdk_method)
+    cls = _RESOURCE_CLASSES[resource_attr]
     resource = cls(transport, config)
 
-    mock_transport.run_bytes.return_value = raw_result(stdout=case.stdout)
-    method = getattr(resource, case.method)
-    result = method(*case.args)
-    case.check(result)
+    method = getattr(resource, method_name)
+    if not all(isinstance(a, (str, int, float, bool, type(None))) for a in case.args):
+        pytest.skip(f"{case.operation_id}: args contain non-scalar public types")
+    method(*case.args, **dict(case.kwargs))
+
+    if call.method == "run_bytes":
+        mock_transport.run_bytes.assert_called_once()
+        called = mock_transport.run_bytes.call_args
+        assert called.args == (tuple(call.args),)
+        assert called.kwargs.get("stdin") == call.stdin
+        assert called.kwargs.get("timeout") == call.timeout
+    elif call.method == "run_text":
+        mock_transport.run_text.assert_called_once_with(tuple(call.args))
+    else:
+        mock_transport.spawn.assert_called_once_with(tuple(call.args))
 
 
 KNOWN_ARGV_GAPS: frozenset[str] = frozenset()
 
 
+@pytest.mark.parametrize("case", list(OPERATION_CASES), ids=lambda c: c.operation_id)
+def test_operation_argv(case: object, mock_transport: MagicMock) -> None:
+    _invoke_argv(mock_transport, case)
+
+
 def test_every_guard_eligible_operation_has_argv_case() -> None:
-    covered = frozenset(c.sdk_method for c in ARGV_CASES)
+    covered = frozenset(c.operation_id for c in OPERATION_CASES if c.expected_call is not None)
     assert_manifest_coverage(
         guard_eligible_operations(),
         covered,

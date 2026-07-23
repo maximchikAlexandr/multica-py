@@ -1,0 +1,300 @@
+{
+  "schema": 1,
+  "records": [
+    {
+      "removed_node_id": "tests/component/test_cancellation.py::test_run_with_timeout_raises_cancelled_for_real_process",
+      "retained_node_id": "tests/component/test_process_contract.py::test_process_contract[cancellation]",
+      "protected_contract": "invariant:process.cancellation"
+    },
+    {
+      "removed_node_id": "tests/component/test_cancellation.py::test_precancelled_token_raises_immediately",
+      "retained_node_id": "tests/component/test_process_contract.py::test_process_contract[cancellation]",
+      "protected_contract": "invariant:process.cancellation"
+    },
+    {
+      "removed_node_id": "tests/component/test_cancellation.py::test_uncancelled_token_does_not_raise",
+      "retained_node_id": "tests/component/test_process_contract.py::test_process_contract[cancellation]",
+      "protected_contract": "invariant:process.cancellation"
+    },
+    {
+      "removed_node_id": "tests/component/test_cancellation.py::test_terminate_process_kills_descendants",
+      "retained_node_id": "tests/component/test_process_contract.py::test_process_contract[descendant-cleanup]",
+      "protected_contract": "invariant:process.descendant-cleanup"
+    },
+    {
+      "removed_node_id": "tests/component/test_cancellation.py::test_cancelled_process_escalates_after_sigterm_is_ignored",
+      "retained_node_id": "tests/component/test_process_contract.py::test_process_contract[sigterm-escalation]",
+      "protected_contract": "invariant:process.sigterm-escalation"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_check.py::test_check_offline_does_not_touch_network",
+      "retained_node_id": "tests/unit/test_upstream_contract_security.py::test_offline_network_hard_fail",
+      "protected_contract": "invariant:network.offline-hard-fail"
+    },
+    {
+      "removed_node_id": "tests/component/command_cases.py",
+      "retained_node_id": "tests/cases/operations.py::OPERATION_CASES",
+      "protected_contract": "operation:agents.list:component-roundtrip"
+    },
+    {
+      "removed_node_id": "tests/component/resources/test_commands.py",
+      "retained_node_id": "tests/cases/operations.py::OPERATION_CASES",
+      "protected_contract": "operation:agents.list:argv"
+    },
+    {
+      "removed_node_id": "tests/component/resources/test_decoding.py",
+      "retained_node_id": "tests/cases/operations.py::OPERATION_CASES",
+      "protected_contract": "operation:agents.list:decode"
+    },
+    {
+      "removed_node_id": "tests/component/resources/test_errors.py",
+      "retained_node_id": "tests/cases/errors.py::ERROR_CASES",
+      "protected_contract": "operation:labels.get:component-roundtrip"
+    },
+    {
+      "removed_node_id": "tests/component/resources/test_presence_semantics.py",
+      "retained_node_id": "tests/cases/operations.py::OPERATION_CASES",
+      "protected_contract": "operation:projects.update:component-roundtrip"
+    },
+    {
+      "removed_node_id": "tests/component/test_project_resources.py",
+      "retained_node_id": "tests/cases/operations.py::OPERATION_CASES",
+      "protected_contract": "operation:projects.resources.list:component-roundtrip"
+    },
+    {
+      "removed_node_id": "tests/component/test_issue_project_assignment.py::test_issue_project_assignment",
+      "retained_node_id": "tests/cases/operations.py::OPERATION_CASES",
+      "protected_contract": "operation:issues.create:component-roundtrip"
+    },
+    {
+      "removed_node_id": "tests/unit/resources/cases/argv.py",
+      "retained_node_id": "tests/cases/argv_data.py::ARGV_CASES",
+      "protected_contract": "operation:agents.list:argv"
+    },
+    {
+      "removed_node_id": "tests/unit/resources/cases/decode.py",
+      "retained_node_id": "tests/cases/argv_data.py::DECODE_CASES",
+      "protected_contract": "operation:agents.list:decode"
+    },
+    {
+      "removed_node_id": "tests/fixtures/json/",
+      "retained_node_id": "tests/cases/argv_data.py::ARGV_CASES (inlined stdout bytes)",
+      "protected_contract": "operation:auth.status:argv"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_check.py::test_check_runs_under_30_seconds",
+      "retained_node_id": "tests/quality-baseline.json::loc.tests_python (perf budget)",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/contract/test_issue_models.py::test_issue_additive_fields_ignored::assert hasattr(issue, 'title')",
+      "retained_node_id": "tests/contract/test_issue_models.py::test_issue_additive_fields_ignored::assert issue.title == 'Test'",
+      "protected_contract": "operation:issues.get:component-roundtrip"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_actions.py",
+      "retained_node_id": "tests/contract/test_ci_profiles.py (workflow pinning + actions SHA coverage)",
+      "protected_contract": "invariant:packaging.single-build"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_workflows.py",
+      "retained_node_id": "tests/contract/test_ci_profiles.py (PR-only-check + observer-separation)",
+      "protected_contract": "invariant:packaging.single-build"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_inventory.py",
+      "retained_node_id": "tests/contract/test_cli_manifest.py (raw inventory vs manifest mapping)",
+      "protected_contract": "invariant:packaging.artifact-required"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_argv.py",
+      "retained_node_id": "tests/component/test_fake_cli.py (record/path/allowlist/absolute-paths)",
+      "protected_contract": "operation:agents.list:component-roundtrip"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_apply_suggestions.py",
+      "retained_node_id": "tests/contract/upstream/test_upgrade_cli.py (apply-manifest dry-run + idempotency)",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_check.py",
+      "retained_node_id": "tests/contract/upstream/test_check_cli.py (human/json/invalid-state/--check/missing-coverage/--with-candidate)",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_collect.py",
+      "retained_node_id": "tests/contract/upstream/test_collect_cli.py (deterministic/verified-trust/custom-output)",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_diff.py",
+      "retained_node_id": "tests/unit/test_upstream_contract_diff.py + tests/contract/upstream/test_diff_cli.py (parametric mutations via diff_contracts + 3 CLI smoke cases)",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_output.py",
+      "retained_node_id": "tests/unit/test_upstream_contract_schema.py::test_strict_decoder_policy_field_is_preserved",
+      "protected_contract": "operation:issues.get:component-roundtrip"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_prepare_upgrade.py",
+      "retained_node_id": "tests/contract/upstream/test_upgrade_cli.py (mandatory-layout + apply-manifest-keep-rows-incomplete)",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_promotion.py",
+      "retained_node_id": "tests/unit/test_upstream_contract_promotion.py (validate/apply/refuse/replace logic)",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/contract/test_upstream_contract_quickstart.py",
+      "retained_node_id": "tests/contract/upstream/test_{check,collect,diff,observer,upgrade}_cli.py (one boundary per subcommand)",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/contract/conftest.py::preserved_generated_state",
+      "retained_node_id": "tests/contract/conftest.py::repo_factory (per-test git init in tmp_path)",
+      "protected_contract": "invariant:network.offline-hard-fail"
+    },
+    {
+      "removed_node_id": "tests/contract/conftest.py::fcntl.flock",
+      "retained_node_id": "tests/contract/conftest.py (removed; tmp_path isolation is enough)",
+      "protected_contract": "invariant:network.offline-hard-fail"
+    },
+    {
+      "removed_node_id": "tests/packaging/test_artifact_contents.py",
+      "retained_node_id": "tests/packaging/test_artifacts.py::test_dist_contains_one_wheel_and_one_sdist (py.typed co-located with src/multica_py/py.typed)",
+      "protected_contract": "invariant:packaging.artifact-required"
+    },
+    {
+      "removed_node_id": "tests/packaging/test_build.py",
+      "retained_node_id": "tests/packaging/test_artifacts.py::test_dist_contains_one_wheel_and_one_sdist (sdist/wheel contents in one test)",
+      "protected_contract": "invariant:packaging.single-build"
+    },
+    {
+      "removed_node_id": "tests/packaging/test_import_smoke.py",
+      "retained_node_id": ".github/workflows/package-test.yml::install (verify import across 6 install paths)",
+      "protected_contract": "invariant:packaging.artifact-required"
+    },
+    {
+      "removed_node_id": "tests/packaging/test_installation.py",
+      "retained_node_id": ".github/workflows/package-test.yml::install (wheel install across 6 matrix paths)",
+      "protected_contract": "invariant:packaging.artifact-required"
+    },
+    {
+      "removed_node_id": "tests/packaging/test_wheel_install.py",
+      "retained_node_id": ".github/workflows/package-test.yml::install (wheel path via system-python cell)",
+      "protected_contract": "invariant:packaging.artifact-required"
+    },
+    {
+      "removed_node_id": "tests/unit/test_resolve_multica_target.py",
+      "retained_node_id": "tools/live_support/environment.py (scripts import from tools.live_support, not tests.live)",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/unit/test_scan_live_artifacts.py",
+      "retained_node_id": "tools/live_support/diagnostics.py (shared scan/redaction helpers)",
+      "protected_contract": "invariant:live.secret-scan"
+    },
+    {
+      "removed_node_id": "tests/unit/test_live_mutation_cases.py",
+      "retained_node_id": "tests/unit/test_live_support_tools.py::test_mutation_case_originals_exist_in_pinned_sources",
+      "protected_contract": "invariant:tooling.no-tests-import"
+    },
+    {
+      "removed_node_id": "tests/live/test_crud.py::test_crud_round_trip[labels.unicode]",
+      "retained_node_id": "tests/live/test_crud.py::test_crud_round_trip[labels]",
+      "protected_contract": "operation:labels.create:live-extended"
+    },
+    {
+      "removed_node_id": "tests/live/test_crud.py::test_crud_round_trip[projects.unicode]",
+      "retained_node_id": "tests/live/test_crud.py::test_crud_round_trip[projects]",
+      "protected_contract": "operation:projects.create:live-extended"
+    },
+    {
+      "removed_node_id": "tests/live/test_live_command_coverage.py::test_every_guard_eligible_operation_runs_live",
+      "retained_node_id": "tests/live/test_live_command_coverage.py::test_live_policy_is_closed_and_owners_resolve",
+      "protected_contract": "operation:agents.list:live-extended"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::LIVE_OPERATIONS",
+      "retained_node_id": "tests/cases/operations.py::OPERATION_CASES (live policy drives execution)",
+      "protected_contract": "operation:agents.list:live-extended"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::LIVE_EXEC_EXCEPTIONS",
+      "retained_node_id": "tests/cases/live_policy.json (mode=unrunnable + unrunnable_reason)",
+      "protected_contract": "operation:agents.create:component-roundtrip"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::KNOWN_LIVE_GAPS",
+      "retained_node_id": "tests/cases/operations.py::OPERATION_CASES (no manual gap sets remain)",
+      "protected_contract": "operation:agents.list:live-extended"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::AGENT_SANDBOX_LIVE_METHODS",
+      "retained_node_id": "tests/cases/live_policy.json (mode=sandbox)",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    },
+    {
+      "removed_node_id": "tests/live/diagnostics.py::LiveDiagnosticsBundle",
+      "retained_node_id": "tests/live/resources.py::_SandboxDiagnosticsBundle (sandbox-only)",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    },
+    {
+      "removed_node_id": "tests/live/backend.py::ImagePolicy, ComposeLifecycle, capture_compose_diagnostics, compose_argv, probe_readiness",
+      "retained_node_id": "tests/live/compose.py (extracted compose lifecycle, re-exported via tests.live.backend)",
+      "protected_contract": "invariant:sandbox.deterministic"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::execute_agent_sandbox_workflow",
+      "retained_node_id": "tests/live/sandbox/workflow.py (three-phase: prepare_sandbox + run_assignment + verify_sandbox)",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::AgentSandboxOutcome",
+      "retained_node_id": "tests/live/sandbox/models.py::CompletedAssignment",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::FileManifest, FileManifestEntry, build_file_manifest, manifest_to_json",
+      "retained_node_id": "tests/live/sandbox/models.py (FileManifest + build_file_manifest + manifest_to_json)",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::ALLOWLIST_FILES, ALLOWLIST_ROOTS, ALLOWLIST_PREFIXES, USER_FILES, assert_manifest_policy, write_initial_sandbox_files, issue_description_for_run, canary_issue_title_for_run, canary_issue_description_for_run, unified_target_control_diff",
+      "retained_node_id": "tests/live/sandbox/policy.py (filesystem policy + deterministic issue descriptions)",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::CleanupRegistry, LiveCleanupError",
+      "retained_node_id": "tests/live/sandbox/workflow.py::SandboxCleanupRegistry, LiveCleanupError",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::ResourceRegistry",
+      "retained_node_id": "tests/live/registry.py::ResourceRegistry (legacy LIFO registry for non-session tests)",
+      "protected_contract": "operation:labels.create:live-extended"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::_SandboxDiagnosticsBundle",
+      "retained_node_id": "tests/live/sandbox/diagnostics.py (sandbox-only failure bundle; T068 still in scope for stage final)",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    },
+    {
+      "removed_node_id": "tests/live/resources.py::TERMINAL_RUN_STATUSES (re-export)",
+      "retained_node_id": "tests/live/backend.py::TERMINAL_RUN_STATUSES (canonical home)",
+      "protected_contract": "invariant:sandbox.deterministic"
+    },
+    {
+      "removed_node_id": "tests/unit/test_live_sandbox_support.py",
+      "retained_node_id": "tests/unit/test_live_sandbox.py (phase transition, cleanup order, filesystem policy, diagnostics, no-ordinary-session-side-effect)",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    },
+    {
+      "removed_node_id": "tests/live/session.py::LiveEnvironment.run_agent_sandbox / run_opencode_canary",
+      "retained_node_id": "tests/live/sandbox/workflow.py::prepare_sandbox / run_assignment / verify_sandbox (tests call three phases directly with sandbox_session fixture)",
+      "protected_contract": "operation:agents.create:live-sandbox"
+    }
+  ]
+}

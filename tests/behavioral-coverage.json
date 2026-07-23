@@ -1,0 +1,515 @@
+{
+  "invariants": {
+    "live.cleanup-lifo": "tests/live/session.py::LiveSession::defer_cleanup",
+    "live.oracle-consistency": "tests/live/test_oracle_consistency.py::test_sdk_create_label_fields_match_oracle_read",
+    "live.secret-scan": "tests/live/test_errors.py::test_diagnostic_bundle_has_no_registered_secret_leaks",
+    "live.workspace-isolation": "tests/live/test_workspace_isolation.py::test_primary_label_is_invisible_from_secondary_workspace",
+    "network.offline-hard-fail": "tests/unit/test_upstream_contract_security.py::test_offline_network_hard_fail",
+    "packaging.artifact-required": "tests/packaging/test_artifacts.py::test_dist_contains_one_wheel_and_one_sdist",
+    "packaging.single-build": "tests/contract/test_ci_profiles.py::test_package_workflow_builds_wheel_once",
+    "process.cancellation": "tests/component/test_process_contract.py::test_process_contract[cancellation]",
+    "process.descendant-cleanup": "tests/component/test_process_contract.py::test_process_contract[descendant-cleanup]",
+    "process.sigterm-escalation": "tests/component/test_process_contract.py::test_process_contract[sigterm-escalation]",
+    "process.timeout": "tests/component/test_process_contract.py::test_process_contract[timeout]",
+    "sandbox.deterministic": "tests/unit/test_live_sandbox.py::test_phase_transitions_are_ordered",
+    "sandbox.provider-canary": "tests/live/extended/test_opencode_canary.py::test_real_opencode_canary_assignment",
+    "tooling.no-tests-import": "tests/unit/test_test_architecture.py::test_no_tests_import"
+  },
+  "operations": {
+    "agents.archive": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "agents.create": [
+      "argv",
+      "component-roundtrip",
+      "live-sandbox"
+    ],
+    "agents.get": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "agents.list": [
+      "argv",
+      "component-roundtrip",
+      "decode",
+      "live-extended"
+    ],
+    "agents.restore": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "agents.skills.list": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "agents.skills.set": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "agents.tasks": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "agents.update": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "agents.upload_avatar": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "attachments.download": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "attachments.list": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "attachments.upload": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "auth.login": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "auth.logout": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "auth.status": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "autopilots.create": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "autopilots.delete": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "autopilots.get": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "autopilots.get_run": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "autopilots.history": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "autopilots.list": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "autopilots.run": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "autopilots.triggers.create": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "autopilots.triggers.delete": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "autopilots.triggers.list": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "autopilots.update": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "configuration.get": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "configuration.set": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "configuration.show": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "daemon.disk_usage": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "daemon.logs": [
+      "argv"
+    ],
+    "daemon.restart": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "daemon.start": [
+      "argv"
+    ],
+    "daemon.status": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "daemon.stop": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.assign": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.cancel_task": [
+      "argv",
+      "component-roundtrip",
+      "live-sandbox"
+    ],
+    "issues.children": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.comments.add": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.comments.delete": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.comments.list": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.comments.reply": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.comments.resolve": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.comments.unresolve": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.create": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.deprioritize": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.get": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.labels.add": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.labels.list": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.labels.remove": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.list": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.metadata.delete": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.metadata.get": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.metadata.list": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.metadata.set": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.pull_requests": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.reorder": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.rerun": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.run_messages": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.runs": [
+      "argv",
+      "component-roundtrip",
+      "live-sandbox"
+    ],
+    "issues.search": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "issues.set_status": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.subscribers.add": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.subscribers.list": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.subscribers.remove": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.update": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "issues.usage": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "labels.create": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "labels.delete": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "labels.get": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "labels.list": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "labels.update": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "maintenance.update": [
+      "argv"
+    ],
+    "maintenance.version": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "projects.create": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "projects.delete": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "projects.get": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "projects.list": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "projects.resources.add_local_directory": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "projects.resources.list": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "projects.resources.remove": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "projects.resources.update_local_directory": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "projects.set_status": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "projects.update": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "repositories.checkout": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "repositories.get": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "repositories.list": [
+      "argv",
+      "component-roundtrip",
+      "decode",
+      "live-extended"
+    ],
+    "runtimes.get": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "runtimes.list": [
+      "argv",
+      "component-roundtrip",
+      "decode",
+      "live-extended"
+    ],
+    "setup.cloud": [
+      "argv"
+    ],
+    "setup.self_host": [
+      "argv"
+    ],
+    "skills.create": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "skills.delete": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "skills.files.delete": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "skills.files.list": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "skills.files.upsert": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "skills.get": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "skills.import_from_url": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "skills.list": [
+      "argv",
+      "component-roundtrip",
+      "decode",
+      "live-extended"
+    ],
+    "skills.update": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "squads.get": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "squads.list": [
+      "argv",
+      "component-roundtrip",
+      "decode",
+      "live-extended"
+    ],
+    "users.get": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "users.list": [
+      "argv",
+      "component-roundtrip",
+      "decode"
+    ],
+    "workspaces.get": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "workspaces.list": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "workspaces.members": [
+      "argv",
+      "component-roundtrip",
+      "live-extended"
+    ],
+    "workspaces.switch": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "workspaces.unwatch": [
+      "argv",
+      "component-roundtrip"
+    ],
+    "workspaces.watch": [
+      "argv",
+      "component-roundtrip"
+    ]
+  },
+  "schema": 1,
+  "source_snapshot": "b3a299b36d1ad5bc386b5e4517d2a348d53db31c"
+}

@@ -1,22 +1,44 @@
+"""Test-only diagnostics hooks over ``tools.live_support.diagnostics``.
+
+Exports the minimum surface live tests need on top of the canonical scan /
+redaction helpers in ``tools.live_support.diagnostics``:
+
+  - ``VERIFICATION_CODE``: canonical canary code (also re-exported by
+    ``tools.live_support.diagnostics``; defined here for backward compatibility
+    with imports that reach into ``tests.live.diagnostics``).
+  - ``DiagnosticCollector``: allowlist-based writer with secret redaction,
+    primary-failure / cleanup-failure recording, atomic write, and path-traversal
+    safety.
+  - ``assert_text_excludes_secrets``: assert no exact secret values appear in text.
+  - ``truncate_log``: bounded log truncation with start/end markers.
+
+The full ``LiveDiagnosticsBundle`` failure-bundle writer was sandbox-only and
+moves with the agent-sandbox workflow to ``tests/live/sandbox/`` in US5.
+"""
+
 from __future__ import annotations
 
 import json
 import os
 import pathlib
 import tempfile
-from typing import TYPE_CHECKING, cast
+from typing import cast
+
+from tools.live_support.diagnostics import VERIFICATION_CODE
 
 LOG_BYTE_LIMIT = 262144
 REDACTED = "***"
-VERIFICATION_CODE = "888888"
 
 FailureRecord = dict[str, str | int | None]
 CleanupRecord = dict[str, object]
 
-if TYPE_CHECKING:
-    from tests.live.backend import DaemonLifecycle
-    from tests.live.environment import LiveRunContext
-    from tests.live.resources import FileManifest
+__all__ = [
+    "REDACTED",
+    "VERIFICATION_CODE",
+    "DiagnosticCollector",
+    "assert_text_excludes_secrets",
+    "truncate_log",
+]
 
 
 class DiagnosticCollector:
@@ -33,26 +55,21 @@ class DiagnosticCollector:
 
     @property
     def artifact_dir(self) -> pathlib.Path:
-        """Return the artifact directory root."""
         return self._artifact_dir
 
     @property
     def cleanup_failed(self) -> bool:
-        """Return whether session cleanup failed."""
         return self._cleanup_failed
 
     def register_secret(self, value: str) -> None:
-        """Register an exact secret value for redaction."""
         if value:
             self._secrets.add(value)
 
     def register_secrets(self, values: list[str]) -> None:
-        """Register multiple exact secret values for redaction."""
         for value in values:
             self.register_secret(value)
 
     def redact(self, text: str) -> str:
-        """Redact registered secrets from text."""
         redacted = text
         for secret in sorted(self._secrets, key=len, reverse=True):
             redacted = redacted.replace(secret, REDACTED)
@@ -60,16 +77,13 @@ class DiagnosticCollector:
         return redacted
 
     def write_json(self, filename: str, payload: dict[str, object]) -> None:
-        """Write one redacted JSON artifact atomically."""
         serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
         self._atomic_write(filename, self.redact(serialized))
 
     def write_text(self, filename: str, text: str) -> None:
-        """Write one redacted text artifact atomically."""
         self._atomic_write(filename, self.redact(text))
 
     def write_log(self, filename: str, text: str) -> None:
-        """Write one bounded, redacted log artifact atomically."""
         self.write_text(filename, truncate_log(text))
 
     def record_failure(
@@ -82,7 +96,6 @@ class DiagnosticCollector:
         exit_code: int | None = None,
         resource: str | None = None,
     ) -> None:
-        """Record the primary failure metadata."""
         payload: FailureRecord = {
             "stage": stage,
             "exception_type": exc_type,
@@ -95,14 +108,12 @@ class DiagnosticCollector:
         self.write_json("failure.json", cast("dict[str, object]", payload))
 
     def record_cleanup(self, payload: CleanupRecord) -> None:
-        """Record cleanup metadata separately from the primary failure."""
         self._cleanup_failure = payload
         self._cleanup_failed = bool(payload.get("failures"))
         self.write_json("cleanup.json", payload)
         self.sync_failure_cleanup_errors(payload.get("failures", []))
 
     def sync_failure_cleanup_errors(self, cleanup_errors: object) -> None:
-        """Merge cleanup failures into failure.json when a bundle was already written."""
         failure_path = self._artifact_dir / "failure.json"
         if not failure_path.is_file():
             return
@@ -113,21 +124,18 @@ class DiagnosticCollector:
         self.write_json("failure.json", payload)
 
     def has_secret_leak(self, text: str) -> bool:
-        """Return whether text contains a registered secret value."""
         for secret in self._secrets:
             if secret and secret in text:
                 return True
         return VERIFICATION_CODE in text
 
     def scan_text(self, text: str) -> int:
-        """Return the number of registered secret matches found in text."""
         count = sum(1 for secret in self._secrets if secret and secret in text)
         if VERIFICATION_CODE in text:
             count += 1
         return count
 
     def scan_artifact_dir(self) -> int:
-        """Return the number of registered secret matches found in artifacts."""
         total = 0
         for path in self._artifact_dir.rglob("*"):
             if not path.is_file():
@@ -136,7 +144,6 @@ class DiagnosticCollector:
         return total
 
     def assert_no_secret_leak(self, text: str | None = None) -> None:
-        """Raise when registered secrets leak into text or the artifact directory."""
         if text is not None:
             if self.has_secret_leak(text):
                 raise AssertionError("registered secret value leaked")
@@ -145,7 +152,6 @@ class DiagnosticCollector:
             raise AssertionError("registered secret value leaked")
 
     def write_secret_scan_report(self) -> None:
-        """Write a redaction-safe secret scan report for CI follow-up."""
         finding_count = self.scan_artifact_dir()
         payload = {
             "run_id": self._run_id,
@@ -156,12 +162,10 @@ class DiagnosticCollector:
 
     @property
     def primary_failure(self) -> FailureRecord | None:
-        """Return recorded primary failure metadata."""
         return self._primary_failure
 
     @property
     def cleanup_failure(self) -> CleanupRecord | None:
-        """Return recorded cleanup failure metadata."""
         return self._cleanup_failure
 
     def _atomic_write(self, filename: str, content: str) -> None:
@@ -184,32 +188,20 @@ class DiagnosticCollector:
             or (os.altsep is not None and os.altsep in filename)
             or ".." in pathlib.PurePosixPath(filename).parts
         ):
-            msg = f"invalid artifact filename: {filename!r}"
-            raise ValueError(msg)
+            raise ValueError(f"invalid artifact filename: {filename!r}")
         target = (self._artifact_dir / filename).resolve()
         if not target.is_relative_to(self._artifact_dir.resolve()):
-            msg = f"artifact filename escapes artifact dir: {filename!r}"
-            raise ValueError(msg)
+            raise ValueError(f"artifact filename escapes artifact dir: {filename!r}")
         return target
 
 
 def assert_text_excludes_secrets(text: str, *secret_values: str | None) -> None:
-    """Raise AssertionError when text contains a secret without echoing the value.
-
-    Args:
-        text: Text that must not contain registered secret values.
-        secret_values: Exact secret strings to search for.
-
-    Raises:
-        AssertionError: When any secret value appears in ``text``.
-    """
     for secret in secret_values:
         if secret and secret in text:
             raise AssertionError("text contains a registered secret value")
 
 
 def truncate_log(text: str, *, limit: int = LOG_BYTE_LIMIT) -> str:
-    """Truncate a log to the configured byte limit with markers."""
     encoded = text.encode("utf-8", errors="replace")
     if len(encoded) <= limit:
         return text
@@ -219,81 +211,3 @@ def truncate_log(text: str, *, limit: int = LOG_BYTE_LIMIT) -> str:
     start = encoded[:keep].decode("utf-8", errors="replace")
     end = encoded[-keep:].decode("utf-8", errors="replace")
     return f"{start}{marker}{end}"
-
-
-class LiveDiagnosticsBundle:
-    """Writer for the canonical live failure bundle contract."""
-
-    def __init__(self, collector: DiagnosticCollector, run_id: str) -> None:
-        self._collector = collector
-        self._run_id = run_id
-
-    def write_failure_bundle(
-        self,
-        *,
-        target_report: dict[str, object],
-        run_context: LiveRunContext,
-        entities: dict[str, object],
-        runtime_state: dict[str, object],
-        run_messages: list[dict[str, object]],
-        filesystem_before: FileManifest,
-        filesystem_after: FileManifest,
-        sandbox_dir: pathlib.Path,
-        daemon: DaemonLifecycle | None,
-        compose_project: str,
-        compose_files: tuple[pathlib.Path, ...],
-        primary_failure: BaseException,
-    ) -> None:
-        """Write the required failure bundle files for one live run."""
-        from tests.live.backend import capture_compose_diagnostics
-        from tests.live.resources import manifest_to_json, unified_target_control_diff
-
-        self._collector.write_json("target.json", target_report)
-        self._collector.write_json("run-context.json", run_context.diagnostics_payload())
-        self._collector.write_json("entities.json", entities)
-        self._collector.write_json("runtime.json", runtime_state)
-        self._collector.write_json("run-messages.json", {"messages": run_messages})
-        self._collector.write_json(
-            "filesystem-before.json",
-            {"entries": manifest_to_json(filesystem_before)},
-        )
-        self._collector.write_json(
-            "filesystem-after.json",
-            {"entries": manifest_to_json(filesystem_after)},
-        )
-        self._collector.write_text(
-            "filesystem.diff",
-            unified_target_control_diff(
-                filesystem_before,
-                filesystem_after,
-                sandbox_dir=sandbox_dir,
-            ),
-        )
-        if daemon is not None:
-            self._collector.write_json("daemon-status.json", daemon.capture_status())
-            self._collector.write_text("daemon.log.tail", daemon.daemon_log_tail())
-        else:
-            self._collector.write_json("daemon-status.json", {"running": False})
-            self._collector.write_text("daemon.log.tail", "")
-        if compose_files:
-            capture_compose_diagnostics(
-                compose_files=compose_files,
-                compose_project=compose_project,
-                diagnostics=self._collector,
-            )
-        self._collector.write_json(
-            "cleanup.json",
-            {
-                "failures": [],
-                "primary_failure": self._collector.redact(str(primary_failure)),
-            },
-        )
-        self._collector.write_json(
-            "failure.json",
-            {
-                "stage": "workflow",
-                "exception_type": type(primary_failure).__name__,
-                "message": self._collector.redact(str(primary_failure)),
-                "cleanup_errors": [],
-            },
-        )

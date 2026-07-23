@@ -9,7 +9,7 @@ import re
 import sys
 from typing import cast
 
-from tests.live.diagnostics import VERIFICATION_CODE
+from tools.live_support.diagnostics import VERIFICATION_CODE
 
 REDACTED = "***"
 ENV_SECRET_PREFIXES = ("POSTGRES_PASSWORD=", "JWT_SECRET=")

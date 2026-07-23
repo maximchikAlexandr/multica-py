@@ -25,7 +25,7 @@ from scripts.live_compatibility_report import (
     write_compatibility_report,
 )
 from scripts.resolve_multica_target import resolve_target
-from tests.live.environment import LiveSetupError, load_live_settings
+from tools.live_support.environment import LiveSetupError, load_live_settings
 
 DEFAULT_TARGET_FILE = REPO_ROOT / "contracts" / "multica-live-target.toml"
 

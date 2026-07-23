@@ -7,14 +7,14 @@ import stat
 
 import pytest
 
-from tests.live.environment import (
-    LiveSetupError,
+from tests.live._live_helpers import (
     ensure_temp_home,
     profile_config_path,
     remove_temp_home,
     validate_not_real_home,
     write_cli_profile,
 )
+from tools.live_support.environment import LiveSetupError
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 HOME_BASE = REPO_ROOT / "tests" / "live" / ".live-home"

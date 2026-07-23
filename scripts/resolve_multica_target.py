@@ -15,7 +15,11 @@ import urllib.request
 from dataclasses import dataclass
 from typing import cast
 
-from tests.live.environment import CompatibilityTarget, LiveSetupError, load_compatibility_target
+from tools.live_support.environment import (
+    CompatibilityTarget,
+    LiveSetupError,
+    load_compatibility_target,
+)
 
 GITHUB_RELEASE_BASE = "https://github.com/multica-ai/multica/releases/download"
 

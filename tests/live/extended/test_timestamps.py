@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable
 
 import pytest
 
-from multica_py.client import MulticaClient
 from multica_py.models.issues import InlineDescription, IssueCreateRequest, IssueUpdateRequest
-from tests.live.oracle import DirectApiOracle
+from tests.live.session import LiveCase, LiveSession
 
 pytestmark = [pytest.mark.live, pytest.mark.live_extended, pytest.mark.serial]
 
@@ -25,29 +23,24 @@ def _parse_timestamp(value: object) -> datetime.datetime:
 
 
 def test_issue_timestamps_are_timezone_aware_and_monotonic(
-    live_client: MulticaClient,
-    api_oracle: DirectApiOracle,
-    register_resource: Callable[..., None],
-    resource_name: str,
+    live_session: LiveSession,
+    live_case: LiveCase,
 ) -> None:
     """Verify created_at/updated_at are timezone-aware and updated_at moves forward."""
-    issue = live_client.issues.create(
+    issue = live_session.client.issues.create(
         IssueCreateRequest(
-            title=f"{resource_name}-timestamps",
+            title=f"{live_case.unique_name}-timestamps",
             description_input=InlineDescription(text="before"),
         )
     )
-    register_resource(
-        key=f"issue-{issue.id}",
-        cleanup=api_oracle.delete_callback(f"/api/issues/{issue.id}", "issue"),
-    )
-    created_body = api_oracle.get_issue(issue.id)
+    live_case.defer_cleanup(live_session.oracle.delete_callback(f"/api/issues/{issue.id}", "issue"))
+    created_body = live_session.oracle.get_issue(issue.id)
     created_at = _parse_timestamp(created_body.get("created_at"))
     updated_at = _parse_timestamp(created_body.get("updated_at"))
     assert created_at <= updated_at
 
-    live_client.issues.update(issue.id, IssueUpdateRequest(description="after"))
-    updated_body = api_oracle.get_issue(issue.id)
+    live_session.client.issues.update(issue.id, IssueUpdateRequest(description="after"))
+    updated_body = live_session.oracle.get_issue(issue.id)
     created_after = _parse_timestamp(updated_body.get("created_at"))
     updated_after = _parse_timestamp(updated_body.get("updated_at"))
     assert created_after == created_at
