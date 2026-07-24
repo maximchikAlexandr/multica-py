@@ -5,6 +5,9 @@ exclude = [
     ".venv",
     "build",
     "dist",
+    "src/multica_py/_generated",
+    "tests/cases/generated",
+    "docs/generated",
 ]
 
 [lint]

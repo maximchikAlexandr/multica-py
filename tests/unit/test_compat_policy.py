@@ -88,5 +88,5 @@ def test_strict_policy_rejects_unparseable_detected_version():
 def test_supported_range_text_includes_versions() -> None:
     policy = default_policy("0.1.0")
     text = supported_range_text(policy)
-    assert "0.4.2" in text
-    assert "0.4.3" in text
+    assert "0.4.9" in text
+    assert "0.4.10" in text

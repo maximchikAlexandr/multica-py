@@ -42,7 +42,7 @@ class ProjectResourceCollection(BaseResource):
             "--daemon-id",
             request.daemon_id,
         ]
-        if request.label is not None:
+        if request.label is not None and request.label.strip():
             args.extend(["--ref-label", request.label])
         return project_resource_from_wire(
             self._run_json_decode(tuple(args), ProjectResourceRecordWire)

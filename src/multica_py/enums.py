@@ -2,6 +2,18 @@ from __future__ import annotations
 
 import enum
 
+from multica_py._generated.approved_sdk_enums import IssueSort, SortDirection
+
+__all__ = [
+    "CompatibilityPolicy",
+    "IssueSort",
+    "IssueStatus",
+    "MetadataValueType",
+    "OutputMode",
+    "ProjectStatus",
+    "SortDirection",
+]
+
 
 class IssueStatus(enum.StrEnum):
     backlog = "backlog"

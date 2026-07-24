@@ -77,3 +77,29 @@ def replace_supported(
 ) -> UpstreamState:
     validate_supported(supported)
     return msgspec.structs.replace(state, supported=supported, candidate=None)
+
+
+def stage_reviewed_candidate(
+    state: UpstreamState,
+    *,
+    version: str,
+    tag: str | None,
+    commit: str,
+    evidence_trust: str,
+    evidence_semantic_hash: str,
+    evidence_contract_ref: str,
+    expected_evidence_trust: str = "help-degraded",
+) -> UpstreamState:
+    if evidence_trust != expected_evidence_trust:
+        raise ProvenanceError(
+            f"evidence trust_level must be {expected_evidence_trust!r}, got {evidence_trust!r}"
+        )
+    candidate = CandidateBaseline(
+        version=version,
+        tag=tag,
+        commit=commit,
+        semantic_hash=evidence_semantic_hash,
+        contract_ref=evidence_contract_ref,
+        trust_level="approved-contract-bound",
+    )
+    return set_candidate(state, candidate)

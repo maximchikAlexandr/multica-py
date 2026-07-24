@@ -8,6 +8,7 @@ and delegates.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import pathlib
@@ -19,6 +20,7 @@ import msgspec
 
 from multica_py._internal.compat import default_policy, supported_range_text
 from multica_py._internal.upstream_contract import (
+    coherence,
     coverage,
     files,
     normalize,
@@ -41,6 +43,9 @@ from multica_py._internal.upstream_contract import (
     provenance as provenance_module,
 )
 from multica_py._internal.upstream_contract import (
+    source_validation as source_validation_module,
+)
+from multica_py._internal.upstream_contract import (
     state as state_module,
 )
 from multica_py._internal.upstream_contract import (
@@ -52,11 +57,25 @@ from multica_py._internal.upstream_contract import (
 from multica_py._internal.upstream_contract.collectors import (
     binary as binary_collector,
 )
+from multica_py._internal.upstream_contract.generator.renderer import (
+    GeneratedOutput,
+    render_outputs,
+)
+from multica_py._internal.upstream_contract.generator.schema import (
+    ApprovedContractV2,
+)
+from multica_py._internal.upstream_contract.generator.validation import (
+    load_approved_contract_v2,
+    validate_approved_v2,
+)
+from multica_py._internal.upstream_contract.generator.writer import check_outputs, write_outputs
 from multica_py._internal.upstream_contract.models import (
     BinaryRef,
     CandidateBaseline,
+    CoverageDecision,
     CoverageManifest,
     CoverageReport,
+    OperationBinding,
     ReportFailure,
     SemanticCLIContract,
     UpstreamContractDiff,
@@ -237,6 +256,20 @@ def _require_coverage_manifest(repo_root: pathlib.Path) -> CoverageManifest:
     return schema.decode_coverage(path)
 
 
+def _governed_scope(
+    repo_root: pathlib.Path,
+) -> tuple[frozenset[str], frozenset[tuple[str, ...]]] | None:
+    approved_path = repo_root / "contracts" / "sdk-contract.json"
+    if not approved_path.is_file():
+        return None
+    approved = validate_approved_v2(load_approved_contract_v2(approved_path))
+    paths: set[tuple[str, ...]] = set()
+    for operation in approved.operations:
+        for entrypoint in operation.entrypoints:
+            paths.add(tuple(approved.catalogs.bindings[entrypoint.binding_id].command))
+    return frozenset(operation.operation_id for operation in approved.operations), frozenset(paths)
+
+
 def _invalid_report(code: str, message: str) -> CoverageReport:
     report = reporting.empty_report(status="invalid")
     return reporting.add_failure(
@@ -262,11 +295,22 @@ def cmd_check(args: argparse.Namespace) -> int:
             _invalid_report("INVALID_ARTIFACT", f"failed to load supported contract: {exc}"),
         )
     try:
+        coherence.validate_supported_target(repo_root)
+    except coherence.InvalidArtifactError as exc:
+        return _emit(args, _invalid_report("INVALID_ARTIFACT", f"coherence check failed: {exc}"))
+    try:
         manifest = _require_coverage_manifest(repo_root)
     except (schema.SchemaError, msgspec.DecodeError, FileNotFoundError) as exc:
         return _emit(
             args,
             _invalid_report("INVALID_ARTIFACT", f"failed to load coverage manifest: {exc}"),
+        )
+    try:
+        governed_scope = _governed_scope(repo_root)
+    except (ValueError, msgspec.DecodeError) as exc:
+        return _emit(
+            args,
+            _invalid_report("INVALID_ARTIFACT", f"failed to load approved contract: {exc}"),
         )
     diff = None
     if _flag(args, "with_candidate"):
@@ -301,6 +345,8 @@ def cmd_check(args: argparse.Namespace) -> int:
         diff=diff,
         state=state,
         repo_root=repo_root,
+        governed_operation_ids=None if governed_scope is None else governed_scope[0],
+        governed_command_paths=None if governed_scope is None else governed_scope[1],
     )
     return _emit(args, report, human_fn=_default_human)
 
@@ -488,6 +534,25 @@ def cmd_observe(args: argparse.Namespace) -> int:
     return reporting.EXIT_CLEAN
 
 
+def _render_promotion_contents(
+    repo_root: pathlib.Path,
+    candidate_contract: SemanticCLIContract,
+    new_state: UpstreamState,
+) -> tuple[bytes, bytes, bytes, bytes, bytes]:
+    contract_payload: dict[str, object] = msgspec.to_builtins(candidate_contract)
+    contract_bytes = normalize.canonical_bytes(contract_payload) + b"\n"
+    state_payload: dict[str, object] = msgspec.to_builtins(new_state)
+    state_bytes = normalize.canonical_bytes(state_payload) + b"\n"
+    coverage_path = repo_root / COVERAGE_REL
+    coverage_bytes = coverage_path.read_bytes() if coverage_path.is_file() else b""
+    dests = promotion_module.PROMOTION_DESTINATIONS
+    manifest_bytes = (
+        (repo_root / dests[3]).read_bytes() if (repo_root / dests[3]).is_file() else b""
+    )
+    live_bytes = (repo_root / dests[4]).read_bytes() if (repo_root / dests[4]).is_file() else b""
+    return contract_bytes, state_bytes, coverage_bytes, manifest_bytes, live_bytes
+
+
 def cmd_promote(args: argparse.Namespace) -> int:
     repo_root = pathlib.Path(_arg(args, "repo_root"))
     state_path = _state_path(args)
@@ -525,16 +590,27 @@ def cmd_promote(args: argparse.Namespace) -> int:
     except ValueError as exc:
         sys.stderr.write(f"promotion refused: {exc}\n")
         return reporting.EXIT_UNRESOLVED_BREAKING
-    if files.writing_ok(check=_flag(args, "check"), dry_run=_flag(args, "dry_run")):
-        promotion_module.write_promoted_artifacts(
-            repo_root=repo_root,
-            new_state=new_state,
-            candidate_contract=candidate_contract,
-            state_path=state_path,
-        )
-        sys.stdout.write(f"promoted {candidate.version} as supported\n")
-    else:
+    # Render all 5 promotion destinations
+    contents = _render_promotion_contents(repo_root, candidate_contract, new_state)
+    projected = tuple(
+        GeneratedOutput(pathlib.Path(d), c)
+        for d, c in zip(promotion_module.PROMOTION_DESTINATIONS, contents)
+    )
+    try:
+        coherence.validate_promotion_projection(repo_root, projected)
+    except coherence.InvalidArtifactError as exc:
+        sys.stderr.write(f"promotion projection validation failed: {exc}\n")
+        return reporting.EXIT_INVALID_ARTIFACT
+    if _skip_writes(args):
         sys.stdout.write(f"would promote {candidate.version} as supported\n")
+        return reporting.EXIT_CLEAN
+    try:
+        txn = promotion_module.PromotionTransaction(repo_root)
+        txn.run(*contents)
+    except promotion_module.PromotionTransactionError as exc:
+        sys.stderr.write(f"promotion transaction failed: {exc}\n")
+        return reporting.EXIT_INVALID_ARTIFACT
+    sys.stdout.write(f"promoted {candidate.version} as supported\n")
     return reporting.EXIT_CLEAN
 
 
@@ -624,6 +700,172 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
         check=_flag(args, "check"),
     )
     return cmd_prepare_upgrade(prep_args)
+
+
+def cmd_validate_source(args: argparse.Namespace) -> int:
+    return source_validation_module.validate_source_cli(args)
+
+
+def _generate_governed_coverage(
+    contract: ApprovedContractV2,
+    coverage_path: pathlib.Path,
+) -> CoverageManifest:
+    decisions: list[CoverageDecision] = []
+    for op in contract.operations:
+        bindings_list: list[OperationBinding] = []
+        for ep in op.entrypoints:
+            bp = contract.catalogs.bindings.get(ep.binding_id)
+            if bp is not None:
+                bindings_list.append(OperationBinding(command_path=bp.command))
+        decisions.append(
+            CoverageDecision(
+                operation_id=op.operation_id,
+                coverage_level="raw",
+                bindings=tuple(bindings_list),
+                source_refs=op.source_ref_ids,
+                test_refs=op.test_ref_ids,
+                raw_argv_policy="Sequence[str]",
+            )
+        )
+    decisions.sort(key=lambda d: d.operation_id)
+    manifest = CoverageManifest(schema_version=1, decisions=tuple(decisions))
+    if coverage_path.is_file():
+        existing = msgspec.json.decode(coverage_path.read_bytes(), type=CoverageManifest)
+        merged: dict[str, CoverageDecision] = {}
+        for d in existing.decisions:
+            merged[d.operation_id] = d
+        for d in manifest.decisions:
+            merged[d.operation_id] = d
+        all_vals: list[CoverageDecision] = list(merged.values())
+        all_vals.sort(key=lambda x: x.operation_id)
+        manifest = CoverageManifest(schema_version=1, decisions=tuple(all_vals))
+    return manifest
+
+
+def cmd_generate(args: argparse.Namespace) -> int:
+    approved_path = pathlib.Path(_arg(args, "approved"))
+    path_str = str(approved_path)
+    if "candidate" in path_str or "evidence" in path_str or "suggestion" in path_str:
+        print(f"REJECTED: {approved_path} appears to be a candidate/evidence/suggestion file")
+        return 1
+    contract = load_approved_contract_v2(approved_path)
+    outputs = render_outputs(contract)
+    if _flag(args, "check"):
+        return check_outputs(outputs, ROOT)
+    write_outputs(outputs, ROOT)
+    coverage_path = ROOT / "src/multica_py/_generated/upstream_coverage.json"
+    manifest = _generate_governed_coverage(contract, coverage_path)
+    manifest_builtins: dict[str, object] = msgspec.to_builtins(manifest)
+    manifest_bytes = normalize.canonical_bytes(manifest_builtins) + b"\n"
+    files.atomic_write_bytes(coverage_path, manifest_bytes)
+    print(f"generated {len(outputs)} outputs from {approved_path}")
+    print(f"updated coverage manifest at {coverage_path} with {len(manifest.decisions)} decisions")
+    return 0
+
+
+def cmd_stage_reviewed_candidate(args: argparse.Namespace) -> int:
+    repo_root = pathlib.Path(_arg(args, "repo_root"))
+    state_path = repo_root / STATE_REL
+
+    approved_path = pathlib.Path(_arg(args, "approved"))
+    try:
+        approved = load_approved_contract_v2(approved_path)
+        validate_approved_v2(approved)
+    except (ValueError, msgspec.DecodeError) as exc:
+        sys.stderr.write(f"invalid approved contract: {exc}\n")
+        return reporting.EXIT_INVALID_ARTIFACT
+
+    evidence_path = pathlib.Path(_arg(args, "evidence"))
+    try:
+        evidence = schema.decode_contract(evidence_path)
+    except (schema.SchemaError, msgspec.DecodeError) as exc:
+        sys.stderr.write(f"invalid evidence: {exc}\n")
+        return reporting.EXIT_INVALID_ARTIFACT
+
+    expected_trust = _arg(args, "expected_evidence_trust")
+    if evidence.artifact.trust_level != expected_trust:
+        sys.stderr.write(
+            f"evidence trust_level {evidence.artifact.trust_level!r} != "
+            f"expected {expected_trust!r}\n"
+        )
+        return reporting.EXIT_INVALID_ARTIFACT
+
+    approved_bytes = approved_path.read_bytes()
+    approved_hash = hashlib.sha256(approved_bytes).hexdigest()
+
+    prov_path = pathlib.Path(_arg(args, "release_provenance"))
+    try:
+        prov_data: dict[str, object] = msgspec.json.decode(prov_path.read_bytes())
+    except (ValueError, msgspec.DecodeError, OSError) as exc:
+        sys.stderr.write(f"invalid release provenance: {exc}\n")
+        return reporting.EXIT_INVALID_ARTIFACT
+
+    stored_approved = prov_data.get("approved_contract_sha256", "")
+    if isinstance(stored_approved, str) and stored_approved:
+        if stored_approved != approved_hash:
+            sys.stderr.write(
+                f"release provenance approved_contract_sha256 mismatch: "
+                f"stored {stored_approved!r} != computed {approved_hash!r}\n"
+            )
+            return reporting.EXIT_INVALID_ARTIFACT
+
+    output_path = pathlib.Path(_arg(args, "output"))
+    resolved_root = repo_root.resolve()
+    resolved_output = output_path.resolve()
+    if resolved_output.is_relative_to(resolved_root):
+        contract_ref = str(resolved_output.relative_to(resolved_root))
+    else:
+        contract_ref = CANDIDATE_CONTRACT_REL
+
+    try:
+        state = state_module.load_state(state_path, repo_root=repo_root)
+    except Exception as exc:
+        sys.stderr.write(f"failed to load state: {exc}\n")
+        return reporting.EXIT_INVALID_ARTIFACT
+
+    try:
+        new_state = state_module.stage_reviewed_candidate(
+            state,
+            version=evidence.baseline.version,
+            tag=evidence.baseline.tag,
+            commit=evidence.baseline.commit,
+            evidence_trust=evidence.artifact.trust_level,
+            evidence_semantic_hash=evidence.artifact.semantic_hash,
+            evidence_contract_ref=contract_ref,
+            expected_evidence_trust=expected_trust,
+        )
+    except provenance_module.ProvenanceError as exc:
+        sys.stderr.write(f"staging refused: {exc}\n")
+        return reporting.EXIT_INVALID_ARTIFACT
+
+    updated_evidence = msgspec.structs.replace(
+        evidence,
+        artifact=msgspec.structs.replace(evidence.artifact, trust_level="approved-contract-bound"),
+    )
+    evidence_builtins: dict[str, object] = msgspec.to_builtins(updated_evidence)
+    contract_bytes = normalize.canonical_bytes(evidence_builtins) + b"\n"
+    state_builtins: dict[str, object] = msgspec.to_builtins(new_state)
+    state_bytes = normalize.canonical_bytes(state_builtins) + b"\n"
+
+    if _skip_writes(args):
+        sys.stdout.write(
+            f"would stage reviewed candidate (trust=approved-contract-bound) "
+            f"for {evidence.baseline.version}\n"
+        )
+    else:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(contract_bytes)
+        canonical_path = repo_root / CANDIDATE_CONTRACT_REL
+        canonical_path.parent.mkdir(parents=True, exist_ok=True)
+        canonical_path.write_bytes(contract_bytes)
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_bytes(state_bytes)
+        sys.stdout.write(
+            f"staged reviewed candidate (trust=approved-contract-bound) "
+            f"for {evidence.baseline.version}\n"
+        )
+
+    return reporting.EXIT_CLEAN
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -756,6 +998,47 @@ def build_parser() -> argparse.ArgumentParser:
         help="validate upgrade workflow without writing artifacts",
     )
     p_upgrade.set_defaults(func=cmd_upgrade)
+
+    p_gen = sub.add_parser("generate", parents=[common])
+    p_gen.add_argument("--approved", required=True, help="path to approved SDK contract JSON")
+    p_gen.add_argument(
+        "--check",
+        action="store_true",
+        help="check outputs against existing files without writing",
+    )
+    p_gen.set_defaults(func=cmd_generate)
+
+    p_val = sub.add_parser("validate-source", parents=[common])
+    p_val.add_argument("--approved", required=True, help="path to approved contract JSON")
+    p_val.add_argument(
+        "--source-root",
+        required=True,
+        help="path to pinned upstream checkout",
+    )
+    p_val.set_defaults(func=cmd_validate_source)
+
+    p_stage = sub.add_parser("stage-reviewed-candidate", parents=[common])
+    p_stage.add_argument("--evidence", required=True, help="path to evidence contract JSON")
+    p_stage.add_argument("--approved", required=True, help="path to approved SDK contract JSON")
+    p_stage.add_argument(
+        "--release-provenance",
+        required=True,
+        dest="release_provenance",
+        help="path to release provenance JSON",
+    )
+    p_stage.add_argument(
+        "--expected-evidence-trust",
+        default="help-degraded",
+        help="expected trust level for evidence (default: help-degraded)",
+    )
+    p_stage.add_argument("--output", required=True, help="path to write candidate contract")
+    p_stage.add_argument("--dry-run", action="store_true")
+    p_stage.add_argument(
+        "--check",
+        action="store_true",
+        help="validate staging without writing artifacts",
+    )
+    p_stage.set_defaults(func=cmd_stage_reviewed_candidate)
 
     return parser
 

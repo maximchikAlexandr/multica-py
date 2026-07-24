@@ -39,15 +39,26 @@ RAW_ARGV_POLICY_TOKENS: tuple[str, ...] = (
 )
 
 
-def coverage_counts(manifest: CoverageManifest) -> dict[str, int]:
+def coverage_counts(
+    manifest: CoverageManifest,
+    *,
+    operation_ids: frozenset[str] | None = None,
+) -> dict[str, int]:
     counts = dict.fromkeys(COVERAGE_LEVELS, 0)
-    for decision in manifest.decisions:
+    decisions = (
+        manifest.decisions
+        if operation_ids is None
+        else tuple(
+            decision for decision in manifest.decisions if decision.operation_id in operation_ids
+        )
+    )
+    for decision in decisions:
         level = decision.coverage_level
         if level in counts:
             counts[level] += 1
         else:
             counts["incomplete"] += 1
-    counts["manifest_rows"] = len(manifest.decisions)
+    counts["manifest_rows"] = len(decisions)
     return counts
 
 
@@ -58,9 +69,11 @@ def build_coverage_report(
     diff: UpstreamContractDiff | None = None,
     state: UpstreamState | None = None,
     repo_root: pathlib.Path | None = None,
+    governed_operation_ids: frozenset[str] | None = None,
+    governed_command_paths: frozenset[tuple[str, ...]] | None = None,
 ) -> CoverageReport:
     report = empty_report(status="clean")
-    counts = coverage_counts(manifest)
+    counts = coverage_counts(manifest, operation_ids=governed_operation_ids)
     report = msgspec.structs.replace(report, coverage=counts)
     report = msgspec.structs.replace(
         report,
@@ -99,7 +112,15 @@ def build_coverage_report(
     if diff is not None:
         upstream_diff: dict[str, int] = diff.summary.copy()
         report = msgspec.structs.replace(report, upstream_diff=upstream_diff)
-    report = _evaluate(report, contract, manifest, state=state, repo_root=repo_root)
+    report = _evaluate(
+        report,
+        contract,
+        manifest,
+        state=state,
+        repo_root=repo_root,
+        governed_operation_ids=governed_operation_ids,
+        governed_command_paths=governed_command_paths,
+    )
     if diff is not None and diff.unresolved_breaking:
         report = add_failure(
             report,
@@ -137,6 +158,8 @@ def _evaluate(
     *,
     state: UpstreamState | None = None,
     repo_root: pathlib.Path | None = None,
+    governed_operation_ids: frozenset[str] | None = None,
+    governed_command_paths: frozenset[tuple[str, ...]] | None = None,
 ) -> CoverageReport:
     if state is not None and state.supported is not None:
         if state.supported.semantic_hash != contract.artifact.semantic_hash:
@@ -152,9 +175,25 @@ def _evaluate(
                 ),
             )
             report = msgspec.structs.replace(report, status="invalid")
-    bindings_index = build_bindings_index(manifest)
-    contract_paths = {command.path for command in contract.commands}
-    for decision_entry in manifest.decisions:
+    scoped_decisions = (
+        manifest.decisions
+        if governed_operation_ids is None
+        else tuple(
+            decision
+            for decision in manifest.decisions
+            if decision.operation_id in governed_operation_ids
+        )
+    )
+    scoped_manifest = CoverageManifest(
+        schema_version=manifest.schema_version, decisions=scoped_decisions
+    )
+    bindings_index = build_bindings_index(scoped_manifest)
+    contract_paths = (
+        {command.path for command in contract.commands}
+        if governed_command_paths is None
+        else set(governed_command_paths)
+    )
+    for decision_entry in scoped_decisions:
         if not _decision_is_complete(decision_entry, repo_root=repo_root):
             report = add_failure(
                 report,
@@ -183,7 +222,7 @@ def _evaluate(
                     ),
                 )
     for path, op_ids in bindings_index.items():
-        if len(op_ids) > 1 and not _duplicate_ownership_allowed(manifest, op_ids):
+        if len(op_ids) > 1 and not _duplicate_ownership_allowed(scoped_manifest, op_ids):
             report = add_failure(
                 report,
                 ReportFailure(
@@ -198,8 +237,7 @@ def _evaluate(
                     ),
                 ),
             )
-    for command in contract.commands:
-        path = command.path
+    for path in contract_paths:
         op_ids = bindings_index.get(path, ())
         if not op_ids:
             report = add_failure(
@@ -215,7 +253,7 @@ def _evaluate(
             )
             continue
         for op_id in op_ids:
-            decision: CoverageDecision | None = _lookup(manifest, op_id)
+            decision: CoverageDecision | None = _lookup(scoped_manifest, op_id)
             if decision is None:
                 continue
             if decision.coverage_level == "incomplete":
@@ -346,7 +384,7 @@ def build_bindings_index(
     for decision in manifest.decisions:
         for binding in decision.bindings:
             index.setdefault(binding.command_path, []).append(decision.operation_id)
-    return {path: tuple(ids) for path, ids in index.items()}
+    return {path: tuple(sorted(set(ids))) for path, ids in index.items()}
 
 
 def collect_contract_review_items(contract: SemanticCLIContract) -> tuple[str, ...]:

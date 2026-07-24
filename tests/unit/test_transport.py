@@ -14,6 +14,7 @@ from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import (
     AuthenticationError,
     CommandExecutionError,
+    CommandTimeoutError,
     NetworkError,
     NotFoundError,
     UnsupportedCliVersionError,
@@ -218,3 +219,15 @@ def test_redact_text_redacts_embedded_token_value():
     redacted = redact_text("token: secret123", secret_values=("secret123",))
     assert "secret123" not in redacted
     assert "***" in redacted
+
+
+def test_transport_command_timeout_propagates() -> None:
+    config = ClientConfig(executable=sys.executable)
+    transport = CliTransport(config)
+
+    def _raise_timeout(*args: object, **kwargs: object) -> object:
+        raise CommandTimeoutError()
+
+    transport._execute = _raise_timeout  # type: ignore[assignment,method-assign]
+    with pytest.raises(CommandTimeoutError):
+        transport.run_text(("issue", "list"))

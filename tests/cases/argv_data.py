@@ -12,6 +12,7 @@ from multica_py.enums import IssueStatus, MetadataValueType, ProjectStatus
 from multica_py.models.agents import Agent, AgentCreateRequest, AgentUpdateRequest
 from multica_py.models.autopilots import Autopilot, AutopilotRun
 from multica_py.models.issue_activity import (
+    CommentCursor,
     CommentListFlatRequest,
     CommentListRecentRequest,
     CommentListThreadRequest,
@@ -268,13 +269,15 @@ ARGV_CASES: tuple[ArgvSpec, ...] = (
     A("configuration.show", ("config", "show")),
     A("configuration.get", ("config", "get", "key"), args=("key",)),
     A("configuration.set", ("config", "set", "key", "val"), args=("key", "val")),
-    A("issues.comments.list", ("issue", "comment", "list", "iss_1", "--before", "cur_1", "--limit", "50", "--since", "2026-07-12T10:00:00+00:00", "--output", "json"),
+    A("issues.comments.list", ("issue", "comment", "list", "iss_1", "--output", "json"),
+        stdout=b"[]", args=("iss_1",),
+        id="issues.comments.list.basic",
+    ),
+    A("issues.comments.list", ("issue", "comment", "list", "iss_1", "--since", "2026-07-12T10:00:00+00:00", "--output", "json"),
         stdout=CMT_FLAT,
         args=(
             CommentListFlatRequest(
                 issue_id="iss_1",
-                cursor="cur_1",
-                limit=50,
                 since=datetime.datetime(2026, 7, 12, 10, 0, tzinfo=datetime.UTC),
             ),
         ),
@@ -285,6 +288,10 @@ ARGV_CASES: tuple[ArgvSpec, ...] = (
     A("issues.comments.list", ("issue", "comment", "list", "iss_1", "--thread", "th_1", "--tail", "10", "--output", "json"),
         stdout=CMT_THREAD, args=(CommentListThreadRequest(issue_id="iss_1", thread_id="th_1", limit=10),),
         method="list_thread", transport="run_text", id="issues.comments.list.thread",
+    ),
+    A("issues.comments.list", ("issue", "comment", "list", "iss_1", "--thread", "th_1", "--before", "cur_b", "--before-id", "cur_id", "--tail", "10", "--output", "json"),
+        stdout=CMT_THREAD, args=(CommentListThreadRequest(issue_id="iss_1", thread_id="th_1", cursor=CommentCursor(before="cur_b", before_id="cur_id"), limit=10),),
+        method="list_thread", transport="run_text", id="issues.comments.list.thread.cursor",
     ),
     A("issues.comments.list", ("issue", "comment", "list", "iss_1", "--recent", "5", "--output", "json"),
         stdout=CMT_RECENT, args=(CommentListRecentRequest(issue_id="iss_1", limit=5),), method="list_recent",

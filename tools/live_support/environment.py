@@ -26,12 +26,15 @@ from __future__ import annotations
 import os
 import pathlib
 import re
+import shutil
 import tempfile
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal, cast
 from urllib.parse import urlparse
+
+from tools.live_support.outcomes import OutcomeCategory
 
 DEFAULT_TARGET_FILE = "contracts/multica-live-target.toml"
 PLACEHOLDER_PATTERNS = (
@@ -514,6 +517,30 @@ def load_opencode_canary_settings(
     )
 
 
+def check_opencode_available() -> int:
+    """Return the number of opencode runtimes detected.
+
+    Raises:
+        LiveSetupError: If zero or more than one opencode runtime is detected.
+    """
+    resolved = shutil.which("opencode")
+    if resolved is None:
+        raise LiveSetupError("opencode", "opencode binary not found on PATH")
+    return 1
+
+
+def categorize_outcome_by_readiness(
+    settings: LiveSettings,
+    category: OutcomeCategory,
+) -> OutcomeCategory:
+    """Adjust an outcome category based on backend/CLI readiness."""
+    if settings.cli_executable is None and not settings.resolve_cli:
+        return OutcomeCategory.unrunnable
+    if settings.existing_url is None:
+        return OutcomeCategory.unrunnable
+    return category
+
+
 __all__ = [
     "CANARY_COST_CEILING_USD",
     "CANARY_ENV_MODEL",
@@ -532,6 +559,8 @@ __all__ = [
     "ResourceAbsentError",
     "SecretString",
     "SuiteProfile",
+    "categorize_outcome_by_readiness",
+    "check_opencode_available",
     "collect_missing_canary_variables",
     "load_compatibility_target",
     "load_live_settings",

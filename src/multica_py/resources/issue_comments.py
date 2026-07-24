@@ -50,10 +50,6 @@ class IssueCommentResource(BaseResource):
 
     def list_flat(self, request: CommentListFlatRequest) -> Page[Comment]:
         args = ["issue", "comment", "list", request.issue_id]
-        if request.cursor is not None:
-            args.extend(["--before", request.cursor])
-        if request.limit is not None:
-            args.extend(["--limit", str(request.limit)])
         since = _format_since(request.since)
         if since is not None:
             args.extend(["--since", since])
@@ -73,7 +69,8 @@ class IssueCommentResource(BaseResource):
             request.thread_id,
         ]
         if request.cursor is not None:
-            args.extend(["--before", request.cursor])
+            args.extend(["--before", request.cursor.before])
+            args.extend(["--before-id", request.cursor.before_id])
         if request.limit is not None:
             args.extend(["--tail", str(request.limit)])
         since = _format_since(request.since)
@@ -88,7 +85,8 @@ class IssueCommentResource(BaseResource):
     def list_recent(self, request: CommentListRecentRequest) -> Page[CommentThread]:
         args = ["issue", "comment", "list", request.issue_id, "--recent", str(request.limit)]
         if request.cursor is not None:
-            args.extend(["--before", request.cursor])
+            args.extend(["--before", request.cursor.before])
+            args.extend(["--before-id", request.cursor.before_id])
         since = _format_since(request.since)
         if since is not None:
             args.extend(["--since", since])
