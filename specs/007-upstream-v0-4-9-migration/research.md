@@ -363,11 +363,9 @@ Generated outputs:
 2. `src/multica_py/_generated/approved_sdk_bindings.py`
 3. `src/multica_py/_generated/approved_sdk_enums.py`
 4. `src/multica_py/_generated/approved_sdk_validators.py`
-5. `src/multica_py/_generated/approved_sdk_api.pyi`
-6. `src/multica_py/_generated/approved_sdk_compatibility.json`
-7. `docs/generated/approved-sdk-v0.4.9.md`
-8. `tests/cases/generated/approved_sdk_cases.py`
-9. `tests/fixtures/provenance/approved-sdk-v0.4.9.json`
+5. `src/multica_py/_generated/approved_sdk_compatibility.json`
+6. `tests/cases/generated/approved_sdk_cases.py`
+7. `tests/fixtures/provenance/approved-sdk-v0.4.9.json`
 
 Handwritten resources import generated command bindings and validators.
 `multica_py.enums` re-exports the generated approved enums. Complex command

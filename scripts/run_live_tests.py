@@ -11,9 +11,12 @@ import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 import time
 from collections.abc import Iterator
 from typing import cast
+
+import msgspec
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -26,6 +29,7 @@ from scripts.live_compatibility_report import (
 )
 from scripts.resolve_multica_target import resolve_target
 from tools.live_support.environment import LiveSetupError, load_live_settings
+from tools.live_support.outcomes import MutationOutcome, OutcomeCategory, TargetFingerprint
 
 DEFAULT_TARGET_FILE = REPO_ROOT / "contracts" / "multica-live-target.toml"
 
@@ -42,7 +46,8 @@ class MutationCase:
     path: pathlib.Path
     original: str
     mutated: str
-    pytest_target: str
+    pytest_target: str = ""
+    inline_test: str = ""
 
 
 MUTATION_CASES = (
@@ -71,6 +76,54 @@ MUTATION_CASES = (
         original="    4: NotFoundError,",
         mutated="    4: CommandExecutionError,",
         pytest_target="tests/live/test_errors.py::test_error_mapping[missing-resource]",
+    ),
+)
+
+_INLINE_UPDATE_TITLE_TEST = """\
+from __future__ import annotations
+import datetime, json
+from unittest.mock import MagicMock as _M
+from multica_py._internal.specs import RawCommandResult as _R
+from multica_py._internal.transport import CliTransport as _T
+from multica_py.resources.projects import ProjectResource as _P
+from multica_py.config import ClientConfig as _C
+from multica_py.models.projects import ProjectUpdateRequest as _U
+_WIRE = json.dumps({"id":"pr_1","title":"test-title","status":"planned"}).encode()
+def test_update_title():
+    t = _M(spec=_T)
+    t.run_bytes.return_value = _R(
+        argv=(), exit_code=0, stdout=_WIRE, stderr=b"", duration=datetime.timedelta(),
+    )
+    r = _P(t, _C())
+    r.update("pr_1", _U(name="test-title"))
+    a = t.run_bytes.call_args[0][0]
+    assert "--title" in a, f"--title not in argv: {a}"
+"""
+
+UNIT_MUTATION_CASES = (
+    MutationCase(
+        name="project-update-title-flag-unit",
+        path=PROJECTS_UPDATE_TITLE,
+        original='            args.extend(["--title", request.name])',
+        mutated='            args.extend(["--name", request.name])',
+        inline_test=_INLINE_UPDATE_TITLE_TEST,
+    ),
+    MutationCase(
+        name="label-get-decoder-unit",
+        path=LABELS_RESOURCE,
+        original='        return self._run_json_decode(("label", "get", label_id), Label)',
+        mutated=(
+            "        from multica_py.exceptions import OutputShapeError\n"
+            '        raise OutputShapeError("mutation check forced decoder failure")'
+        ),
+        pytest_target="tests/unit/resources/test_operations.py::test_operation_argv[labels.get]",
+    ),
+    MutationCase(
+        name="not-found-exit-mapping-unit",
+        path=TRANSPORT,
+        original="    4: NotFoundError,",
+        mutated="    4: CommandExecutionError,",
+        pytest_target="tests/unit/test_transport.py::test_exit_code_maps_to_exception[exit-4-notfound]",
     ),
 )
 
@@ -140,6 +193,30 @@ def _patched_source(path: pathlib.Path, original: str, mutated: str) -> Iterator
             raise SystemExit(f"failed to restore original content for {path}")
 
 
+def _compute_source_sha256(path: pathlib.Path) -> str:
+    content = path.read_text(encoding="utf-8")
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+@contextlib.contextmanager
+def _mutated_context(path: pathlib.Path, original: str, mutated: str) -> Iterator[None]:
+    full_path = path if path.is_absolute() else REPO_ROOT / path
+    content = full_path.read_text(encoding="utf-8")
+    if original not in content:
+        msg = f"mutation anchor not found in {path}"
+        raise SystemExit(msg)
+    original_content = content
+    original_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    full_path.write_text(content.replace(original, mutated, 1), encoding="utf-8")
+    try:
+        yield
+    finally:
+        full_path.write_text(original_content, encoding="utf-8")
+        restored = full_path.read_text(encoding="utf-8")
+        if hashlib.sha256(restored.encode("utf-8")).hexdigest() != original_hash:
+            raise SystemExit(f"failed to restore original content for {path}")
+
+
 def _write_compatibility_report(
     *,
     suite_mode: SuiteMode,
@@ -147,6 +224,7 @@ def _write_compatibility_report(
     exit_code: int,
     report_path: pathlib.Path | None,
     observed_upstream_ref: str | None,
+    outcome_category: OutcomeCategory | None = None,
 ) -> None:
     if report_path is None and suite_mode != "extended":
         return
@@ -172,23 +250,74 @@ def _write_compatibility_report(
         )
         / "compatibility-report.json"
     )
+    if outcome_category is not None:
+        report["outcome_category"] = outcome_category.value
     write_compatibility_report(destination, report)
 
 
-def run_mutation_check(*, resolve_cli: bool) -> int:
-    """Run SC-002 mutation gate: each mutation must break its target live test."""
-    _validate_environment(resolve_cli=resolve_cli)
+def run_mutation_check(args: argparse.Namespace) -> int:
+    """Run SC-002 mutation gate against unit (default) or live tests."""
+    scope = cast("str", args.mutation_scope)
+    if scope == "live":
+        _validate_environment(resolve_cli=cast("bool", args.resolve_cli))
+    cases = MUTATION_CASES if scope == "live" else UNIT_MUTATION_CASES
+    mutation_results = cast("pathlib.Path | None", args.mutation_results)
+    artifact_dir = REPO_ROOT / ".test-artifacts" / "mutation"
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    outcomes: list[MutationOutcome] = []
     failures: list[str] = []
-    for case in MUTATION_CASES:
-        with _patched_source(case.path, case.original, case.mutated):
-            exit_code = _run_pytest(["-m", "live_smoke", case.pytest_target, "-q"])
-        if exit_code == 0:
-            failures.append(f"{case.name}: target test still passed with mutation applied")
+    marker: list[str] = ["-m", "live_smoke"] if scope == "live" else []
+    for case in cases:
+        control_xml = artifact_dir / f"{case.name}-control.xml"
+        mutated_xml = artifact_dir / f"{case.name}-mutated.xml"
+        if case.inline_test:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                test_file = pathlib.Path(tmpdir) / "test_mutation.py"
+                test_file.write_text(case.inline_test, encoding="utf-8")
+                target = str(test_file)
+                _run_pytest([*marker, target, "-q", "-x", "--junitxml", str(control_xml)])
+                control_sha256 = _compute_source_sha256(REPO_ROOT / case.path)
+                with _mutated_context(case.path, case.original, case.mutated):
+                    exit_code = _run_pytest(
+                        [*marker, target, "-q", "-x", "--junitxml", str(mutated_xml)]
+                    )
+                    mutated_sha256 = _compute_source_sha256(REPO_ROOT / case.path)
+        else:
+            _run_pytest([*marker, case.pytest_target, "-q", "-x", "--junitxml", str(control_xml)])
+            control_sha256 = _compute_source_sha256(REPO_ROOT / case.path)
+            with _mutated_context(case.path, case.original, case.mutated):
+                exit_code = _run_pytest(
+                    [*marker, case.pytest_target, "-q", "-x", "--junitxml", str(mutated_xml)]
+                )
+                mutated_sha256 = _compute_source_sha256(REPO_ROOT / case.path)
+        killed = exit_code != 0
+        outcomes.append(
+            MutationOutcome(
+                target=case.name,
+                control_fingerprint=TargetFingerprint(
+                    version="", tag="", commit="", sha256=control_sha256
+                ),
+                mutated_fingerprint=TargetFingerprint(
+                    version="", tag="", commit="", sha256=mutated_sha256
+                ),
+                killed=killed,
+                control_path=str(control_xml),
+                mutated_path=str(mutated_xml),
+            )
+        )
+        if not killed:
+            failures.append(f"{case.name}: mutation survived (test passed with mutation)")
+    if mutation_results is not None:
+        mutation_results.parent.mkdir(parents=True, exist_ok=True)
+        mutation_results.write_text(msgspec.json.encode(outcomes).decode("utf-8"), encoding="utf-8")
+        print(f"mutation results written to {mutation_results}")
     if failures:
         for item in failures:
             print(item, file=sys.stderr)
         return 1
-    print("mutation check passed: all targeted live tests failed under mutation")
+    killed_count = sum(1 for o in outcomes if o.killed)
+    survivors = len(outcomes) - killed_count
+    print(f"mutation check passed: {killed_count} killed, {survivors} survived, 0 invalid")
     return 0
 
 
@@ -263,12 +392,14 @@ def run_smoke(args: argparse.Namespace) -> int:
     if forwarded_args and forwarded_args[0] == "--":
         pytest_args = ["-m", marker, "tests/live", *forwarded_args[1:]]
     exit_code = _run_pytest(pytest_args)
+    category = OutcomeCategory.passed if exit_code == 0 else OutcomeCategory.failed
     _write_compatibility_report(
         suite_mode=suite_mode,
         marker=marker,
         exit_code=exit_code,
         report_path=cast("pathlib.Path | None", args.compatibility_report),
         observed_upstream_ref=cast("str | None", args.observed_upstream_ref),
+        outcome_category=category,
     )
     return exit_code
 
@@ -300,7 +431,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--mutation-check",
         action="store_true",
-        help="Run SC-002 mutation gate against targeted live smoke tests.",
+        help="Run SC-002 mutation gate against targeted unit or live tests.",
+    )
+    parser.add_argument(
+        "--mutation-results",
+        type=pathlib.Path,
+        help="Write mutation results JSON to this path.",
+    )
+    parser.add_argument(
+        "--mutation-scope",
+        choices=("live", "unit"),
+        default="unit",
+        help="Which mutation cases to run: live (existing SC-002) or unit (default).",
     )
     parser.add_argument(
         "--repeat",
@@ -320,7 +462,7 @@ def main(argv: list[str] | None = None) -> int:
     """Dispatch live runner modes."""
     args = build_parser().parse_args(argv)
     if cast("bool", args.mutation_check):
-        return run_mutation_check(resolve_cli=cast("bool", args.resolve_cli))
+        return run_mutation_check(args)
     repeat = cast("int | None", args.repeat)
     if repeat is not None:
         forwarded = cast("list[str]", args.pytest_args)

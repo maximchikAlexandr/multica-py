@@ -4,7 +4,7 @@ import datetime
 
 import msgspec
 
-from multica_py.enums import IssueStatus
+from multica_py.enums import IssueSort, IssueStatus, SortDirection
 from multica_py.types import MetadataValue
 
 
@@ -57,6 +57,8 @@ class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
     priority: str | None = None
     assignee_id: str | None = None
     limit: int | None = None
+    sort: IssueSort | None = None
+    direction: SortDirection | None = None
 
 
 class InlineDescription(msgspec.Struct, frozen=True, kw_only=True):

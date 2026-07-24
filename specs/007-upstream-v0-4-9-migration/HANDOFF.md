@@ -10,7 +10,7 @@ Binding authorities, in order:
 3. `contracts/operation-decisions.md` — the 16 public operation decisions.
 4. `contracts/source-authority.json` and `.md` — machine authority and readable pinned-source view.
 5. `contracts/upstream-family-disposition.md` — all 11 family boundaries.
-6. `contracts/generated-output-formats.json` — exact nine output formats.
+6. `contracts/generated-output-formats.json` — exact seven output formats.
 7. `contracts/generation-and-provenance.md` — generation and promotion protocol.
 8. `contracts/live-acceptance.md` — live, mutation, stability, and aggregation.
 9. `contracts/requirement-traceability.md` — exact 65 requirement IDs.

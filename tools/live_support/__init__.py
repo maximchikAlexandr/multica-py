@@ -11,6 +11,6 @@ that both scripts and live tests rely on. Submodules:
 
 from __future__ import annotations
 
-from tools.live_support import diagnostics, environment
+from tools.live_support import diagnostics, environment, outcomes
 
-__all__ = ["diagnostics", "environment"]
+__all__ = ["diagnostics", "environment", "outcomes"]

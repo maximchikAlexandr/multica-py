@@ -34,9 +34,9 @@ def test_compatibility_policy_values():
 
 def test_default_policy_uses_supported_state_bounds():
     policy = default_policy("0.1.0")
-    assert policy.min_cli_version == "0.4.2"
-    assert policy.max_cli_version == "0.4.3"
-    assert "0.4.2" in supported_range_text(policy)
+    assert policy.min_cli_version == "0.4.9"
+    assert policy.max_cli_version == "0.4.10"
+    assert "0.4.9" in supported_range_text(policy)
 
 
 def test_check_version_from_config_warns_once_for_newer_cli():
@@ -45,7 +45,7 @@ def test_check_version_from_config_warns_once_for_newer_cli():
     compat_module._WARNED_NEWER = False
     config = ClientConfig(
         compatibility=_EnumPolicy.warn,
-        min_cli_version="0.4.2",
+        min_cli_version="0.4.9",
         max_cli_version="0.4.3",
     )
     detected = CliVersion(

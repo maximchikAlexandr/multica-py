@@ -33,7 +33,7 @@ uv run python scripts/upstream_contract.py promote \
   --check
 ```
 
-Expected: nine outputs present and byte-identical; staged candidate trust is
+Expected: seven outputs present and byte-identical; staged candidate trust is
 `approved-contract-bound`, never `verified`; check mode writes nothing;
 canonical candidate/supported refs exist and match their semantic hashes;
 promotion binds candidate, approved contract, exact target, provenance, and

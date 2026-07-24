@@ -6,8 +6,8 @@ from typing import Protocol, cast
 
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py.client import MulticaClient
-from multica_py.exceptions import CommandExecutionError, OutputShapeError
-from tests.cases.models import ErrorCase, OperationCase
+from multica_py.exceptions import CommandExecutionError
+from tests.cases.models import ErrorCase, FakeCliResponse, OperationCase
 
 
 class _MutableAttr(Protocol):
@@ -99,9 +99,8 @@ def _configure_error_transport(transport: _SideEffectTransport, case: ErrorCase)
     exc_type = case.exception_type
     is_summable = isinstance(exc_type, type) and issubclass(exc_type, CommandExecutionError)
     if not is_summable:
-        err = OutputShapeError(f"output shape mismatch for {case.operation.sdk_method}")
-        transport.run_bytes.side_effect = _raise_bytes_shape(err)
-        transport.run_text.side_effect = _raise_text_shape(err)
+        transport.run_bytes.side_effect = _raw_bytes_response(case.response)
+        transport.run_text.side_effect = _raw_text_response(case.response)
         return
     exc_class = cast("type[CommandExecutionError]", exc_type)
     exit_code = case.response.exit_code
@@ -110,30 +109,36 @@ def _configure_error_transport(transport: _SideEffectTransport, case: ErrorCase)
     transport.run_text.side_effect = _raise_text(exc_class, message, exit_code)
 
 
-def _raise_bytes_shape(
-    err: OutputShapeError,
-) -> Callable[..., RawCommandResult]:
-    def raise_bytes(
+def _raw_bytes_response(response: FakeCliResponse) -> Callable[..., RawCommandResult]:
+    def run_bytes(
         argv: tuple[str, ...],
         stdin: bytes | None = None,
         timeout: datetime.timedelta | None = None,
     ) -> RawCommandResult:
-        raise err
+        return RawCommandResult(
+            argv=argv,
+            exit_code=response.exit_code,
+            stdout=response.stdout,
+            stderr=response.stderr,
+            duration=datetime.timedelta(),
+        )
 
-    return raise_bytes
+    return run_bytes
 
 
-def _raise_text_shape(
-    err: OutputShapeError,
-) -> Callable[..., TextResult]:
-    def raise_text(
+def _raw_text_response(response: FakeCliResponse) -> Callable[..., TextResult]:
+    def run_text(
         argv: tuple[str, ...],
         stdin: bytes | None = None,
         timeout: datetime.timedelta | None = None,
     ) -> TextResult:
-        raise err
+        return TextResult(
+            text=response.stdout.decode("utf-8"),
+            stderr=response.stderr.decode("utf-8"),
+            exit_code=response.exit_code,
+        )
 
-    return raise_text
+    return run_text
 
 
 def _raise_bytes(

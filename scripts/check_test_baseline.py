@@ -477,15 +477,15 @@ def main(argv: list[str] | None = None) -> int:
         cast("str", namespace.stage),
         pathlib.Path(__file__).resolve().parents[1],
         coverage_json=cast("pathlib.Path", namespace.coverage_json).resolve()
-        if namespace.coverage_json  # type: ignore[misc]
+        if namespace.coverage_json
         else None,
         junit_xml=cast("pathlib.Path", namespace.junit_xml).resolve()
-        if namespace.junit_xml  # type: ignore[misc]
+        if namespace.junit_xml
         else None,
         mutation_results=cast("pathlib.Path", namespace.mutation_results).resolve()
-        if namespace.mutation_results  # type: ignore[misc]
+        if namespace.mutation_results
         else None,
-        strict_final=bool(namespace.strict_final),  # type: ignore[misc]
+        strict_final=bool(namespace.strict_final),
     )
 
 

@@ -11,7 +11,7 @@ Migrate the 16 operation IDs governed by `contracts/sdk-contract.json` from the
 historical live baseline `v0.3.10` to exact upstream `v0.4.9` at commit
 `ecbdbda09e7b2be56cd9ccc55cee1ee360222d18` without automatically expanding the
 public SDK to the target's 35 new command paths. Replace the flat approved
-contract with a closed schema-v2 operation model, generate nine deterministic
+contract with a closed schema-v2 operation model, generate seven deterministic
 SDK/metadata/test artifacts only from that contract, integrate approved
 bindings and validators into handwritten resources, repair candidate and
 promotion identity, and enforce one fail-closed cross-artifact coherence gate.
@@ -56,7 +56,7 @@ public promotion, or live acceptance before contract/coherence gates pass.
 
 **Scale/Scope**: Exactly 16 governed operation IDs, 15 compatible and one
 intentionally changed; 11 upstream families classified; 35 target additions
-remain unapproved; nine governed generated outputs; one canonical candidate,
+remain unapproved; seven governed generated outputs; one canonical candidate,
 one canonical supported contract, and one target provenance.
 
 ## Constitution Check
@@ -166,7 +166,7 @@ This ownership is binding; do not introduce alternate modules.
 | --- | --- |
 | `src/multica_py/_internal/upstream_contract/generator/schema.py` | Own all closed schema-v2 structs and catalog reference types |
 | `src/multica_py/_internal/upstream_contract/generator/validation.py` | Own `load_approved_contract()` and `validate_approved()` |
-| `src/multica_py/_internal/upstream_contract/generator/renderer.py` | Define frozen `GeneratedOutput(path: pathlib.Path, content: bytes)` and render the nine exact manifest outputs |
+| `src/multica_py/_internal/upstream_contract/generator/renderer.py` | Define frozen `GeneratedOutput(path: pathlib.Path, content: bytes)` and render the seven exact manifest outputs |
 | `src/multica_py/_internal/upstream_contract/generator/writer.py` | Define same-directory staged output writes and non-writing complete diff reporting |
 | `src/multica_py/_internal/upstream_contract/generator/__init__.py` | Export only approved contract load/validate/render/write/check API |
 | `src/multica_py/_internal/upstream_contract/coherence.py` | Define `validate_supported_target(repo_root) -> None` for active files and `validate_promotion_projection(repo_root, projected_outputs) -> None` for in-memory promotion bytes; raise `InvalidArtifactError` when any compared artifact is invalid |
@@ -225,7 +225,7 @@ item, unknown field, or new operation ID exists.
 4. Implement deterministic rendering and same-directory staged writes under
    `src/multica_py/_internal/upstream_contract/generator/`; expose `generate`
    and `generate --check` through `scripts/upstream_contract.py`.
-5. Generate the nine outputs specified in
+5. Generate the seven outputs specified in
    [generation-and-provenance.md](./contracts/generation-and-provenance.md).
 6. Re-export generated enums, import generated bindings/validators in governed
    handwritten resources, and keep multi-step issue creation and decoding

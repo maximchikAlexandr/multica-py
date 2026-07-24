@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 import datetime
+from typing import Generic, TypeVar
 
 import msgspec
 
 from multica_py.enums import MetadataValueType
 from multica_py.types import MetadataValue
+
+T = TypeVar("T")
+
+
+class CommentCursor(msgspec.Struct, frozen=True, kw_only=True, forbid_unknown_fields=True):
+    before: str
+    before_id: str
 
 
 class Comment(msgspec.Struct, frozen=True, kw_only=True):
@@ -24,24 +32,27 @@ class CommentThread(msgspec.Struct, frozen=True, kw_only=True):
     updated_at: datetime.datetime | None = None
 
 
+class Page(msgspec.Struct, Generic[T], frozen=True, kw_only=True):
+    items: tuple[T, ...]
+    total_count: int | None = None
+
+
 class CommentListFlatRequest(msgspec.Struct, frozen=True, kw_only=True):
     issue_id: str
-    cursor: str | None = None
-    limit: int | None = None
     since: datetime.datetime | None = None
 
 
 class CommentListThreadRequest(msgspec.Struct, frozen=True, kw_only=True):
     issue_id: str
     thread_id: str
-    cursor: str | None = None
+    cursor: CommentCursor | None = None
     limit: int | None = None
     since: datetime.datetime | None = None
 
 
 class CommentListRecentRequest(msgspec.Struct, frozen=True, kw_only=True):
     issue_id: str
-    cursor: str | None = None
+    cursor: CommentCursor | None = None
     limit: int = 10
     since: datetime.datetime | None = None
 

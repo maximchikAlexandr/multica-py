@@ -44,6 +44,10 @@ class IssueResource(BaseResource):
     def list(self, filter: IssueListFilter | None = None) -> tuple[IssueSummary, ...]:
         args = ["issue", "list"]
         if filter is not None:
+            if filter.direction is not None and filter.sort is None:
+                raise ValueError(
+                    "IssueResource.list: direction requires sort (direction_requires_sort)"
+                )
             if filter.status is not None:
                 args.extend(["--status", filter.status.value])
             if filter.priority is not None:
@@ -52,6 +56,10 @@ class IssueResource(BaseResource):
                 args.extend(["--assignee-id", filter.assignee_id])
             if filter.limit is not None:
                 args.extend(["--limit", str(filter.limit)])
+            if filter.sort is not None:
+                args.extend(["--sort", filter.sort.value])
+            if filter.direction is not None:
+                args.extend(["--direction", filter.direction.value])
         return tuple(
             issue_summary_from_wire(item)
             for item in self._run_json_decode(tuple(args), IssueListPageWire).issues

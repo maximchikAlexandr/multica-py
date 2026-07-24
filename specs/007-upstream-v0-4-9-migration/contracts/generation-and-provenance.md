@@ -27,19 +27,17 @@ non-zero on any difference.
 2. `src/multica_py/_generated/approved_sdk_bindings.py`
 3. `src/multica_py/_generated/approved_sdk_enums.py`
 4. `src/multica_py/_generated/approved_sdk_validators.py`
-5. `src/multica_py/_generated/approved_sdk_api.pyi`
-6. `src/multica_py/_generated/approved_sdk_compatibility.json`
-7. `docs/generated/approved-sdk-v0.4.9.md`
-8. `tests/cases/generated/approved_sdk_cases.py`
-9. `tests/fixtures/provenance/approved-sdk-v0.4.9.json`
+5. `src/multica_py/_generated/approved_sdk_compatibility.json`
+6. `tests/cases/generated/approved_sdk_cases.py`
+7. `tests/fixtures/provenance/approved-sdk-v0.4.9.json`
 
 `contracts/generated-output-formats.json` is the byte-format authority. Python
 outputs export only the listed symbols in listed order. JSON is UTF-8,
-two-space indented, key-sorted, and has one trailing LF. Markdown uses its
-listed headings, LF, and one trailing LF. No output contains timestamps.
+two-space indented, key-sorted, and has one trailing LF. No output contains
+timestamps.
 Golden files use the destination path below
 `tests/fixtures/upstream_contract/v2/` plus suffix `.golden`. T009 creates all
-nine goldens before renderer implementation; `generate --check` compares
+seven goldens before renderer implementation; `generate --check` compares
 bytes, not parsed values.
 
 Render all bytes in memory first. A write run creates same-directory temporary
@@ -51,7 +49,6 @@ or validation failure, no destination changes.
 - `multica_py.enums` re-exports generated approved enums.
 - Governed handwritten resources import generated bindings and validators.
 - Complex command sequences and response decoding remain handwritten.
-- The generated stub and contract tests validate public signatures.
 - Generated cases feed existing table-driven runners.
 - Entire resource modules are not generated because they contain unrelated
   operations outside the 16-ID boundary.

@@ -13,7 +13,21 @@
     "process.timeout": "tests/component/test_process_contract.py::test_process_contract[timeout]",
     "sandbox.deterministic": "tests/unit/test_live_sandbox.py::test_phase_transitions_are_ordered",
     "sandbox.provider-canary": "tests/live/extended/test_opencode_canary.py::test_real_opencode_canary_assignment",
-    "tooling.no-tests-import": "tests/unit/test_test_architecture.py::test_no_tests_import"
+    "tooling.no-tests-import": "tests/unit/test_test_architecture.py::test_no_tests_import",
+    "transport.error-mapping": "tests/unit/test_transport.py::test_exit_code_maps_to_exception",
+    "transport.malformed-output": "tests/component/test_cli_errors.py::test_cli_error_round_trip[agents.list.shape]",
+    "upstream.approved-contract-hash": "tests/unit/test_upstream_contract_state.py::test_stage_reviewed_candidate_rejects_approved_hash_mismatch[same-length-hash]",
+    "upstream.approved-contract-validation": "tests/unit/test_upstream_contract_generator.py::test_approved_v2_validate_passes_on_seed",
+    "upstream.compatibility-disposition": "tests/unit/test_upstream_contract_coherence.py::test_exact_16_id_equality_across_artifacts",
+    "upstream.family-dispositions": "tests/contract/upstream/test_family_dispositions.py::test_family_dispositions_names",
+    "upstream.generated-output-manifest": "tests/unit/test_upstream_contract_generator.py::test_renderer_fixed_order",
+    "upstream.promotion-rollback": "tests/unit/test_upstream_contract_promotion.py::test_promotion_injected_failure_before_ordinal[4]",
+    "upstream.requirement-traceability": "tests/contract/upstream/test_requirement_traceability.py::test_traceability_requirement_set_is_exact",
+    "upstream.semantic-hash": "tests/unit/test_upstream_contract_schema.py::test_semantic_hash_excludes_observation",
+    "upstream.source-authority": "tests/contract/upstream/test_source_authority.py::test_source_authority_commit_verified",
+    "upstream.release-provenance-validation": "tests/unit/test_upstream_contract_state.py::test_stage_reviewed_candidate_rejects_approved_hash_mismatch[short-hash]",
+    "upstream.target-identity": "tests/unit/test_upstream_contract_generator.py::test_approved_v2_validate_passes_on_seed",
+    "upstream.validator-constraint-coverage": "tests/unit/resources/test_operations.py::test_generated_constraint"
   },
   "operations": {
     "agents.archive": [

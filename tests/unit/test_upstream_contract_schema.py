@@ -16,15 +16,15 @@ SCHEMA_DIR = pathlib.Path(__file__).resolve().parents[2] / "contracts" / "schema
 def test_decode_supported_contract() -> None:
     contract = schema.decode_contract(SUPPORTED_CONTRACT_PATH)
     assert contract.schema_version == 2
-    assert contract.baseline.version == "0.4.2"
-    assert contract.baseline.commit == "48b8dbf43971e5ea974bf827220cd212a1240c72"
-    assert len(contract.commands) == 107
+    assert contract.baseline.version == "0.4.9"
+    assert contract.baseline.commit == "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18"
+    assert len(contract.commands) == 3
 
 
 def test_decode_state() -> None:
     state = schema.decode_state(FIXTURES / "upstream-state.json")
     assert state.supported is not None
-    assert state.supported.version == "0.4.2"
+    assert state.supported.version == "0.4.9"
 
 
 def test_unknown_schema_version_rejected() -> None:

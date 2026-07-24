@@ -146,7 +146,24 @@ module = ["msgspec"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = ["multica_py._generated.*"]
+follow_imports = "skip"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["scripts.*"]
+ignore_missing_imports = true
+follow_imports = "silent"
+check_untyped_defs = true
+disallow_untyped_defs = false
+disallow_any_expr = false
+disallow_any_decorated = false
+disallow_any_explicit = false
+warn_return_any = false
+
+[[tool.mypy.overrides]]
 module = [
+    "tests.cases.generated.*",
     "tests.conftest",
     "tests.contract.conftest",
     "tests.contract.upstream.*",

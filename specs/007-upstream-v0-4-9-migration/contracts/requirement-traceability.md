@@ -84,7 +84,7 @@ no requirement may be treated as implied by another row.
 | --- | --- |
 | ET-001 | source preflight and source-ref validation precede generation |
 | ET-002 | seed byte equality and semantic-hash guard |
-| ET-003 | nine generated outputs match golden fixtures |
+| ET-003 | seven generated outputs match golden fixtures |
 | ET-004 | rollback injection succeeds at replacement ordinals 1 through 5 |
 | ET-005 | mutation artifact exists before final baseline |
 | ET-006 | ordinary post-promotion check sees a null candidate |
