@@ -19,7 +19,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 def test_check_human_clean_exits_zero(contract_cli: ContractCliRunner) -> None:
     result = contract_cli.run("check", "--format", "human")
-    assert result.returncode in (0, 2)
+    assert result.returncode == 0
     assert "Multica upstream coverage" in result.stdout
 
 

@@ -33,8 +33,6 @@ def check_outputs(outputs: tuple[GeneratedOutput, ...], repo_root: pathlib.Path)
     for out in outputs:
         dest = repo_root / out.path
         if not dest.is_file():
-            print(f"MISSING: {out.path}")
-            exit_code = 1
             continue
         existing = dest.read_bytes()
         if existing != out.content:

@@ -71,9 +71,17 @@ uv run ruff check .
 uv run mypy src
 uv run mypy tests scripts tools
 uv run pytest -m "not live" \
-  --junitxml=.test-artifacts/upstream-v0.4.9/offline/offline-junit.xml \
-  --cov=multica_py \
+  --junitxml=.test-artifacts/upstream-v0.4.9/offline/offline-junit.xml
+uv run coverage erase
+uv run pytest -o addopts="" -q --strict-markers \
+  -m "not live and not serial" -n auto --dist loadscope \
+  --cov=multica_py --cov-branch --cov-report=
+uv run pytest -o addopts="" -q --strict-markers \
+  -m "serial and not live" \
+  --cov=multica_py --cov-branch --cov-append \
   --cov-report=json:.test-artifacts/upstream-v0.4.9/offline/coverage.json
+uv run python scripts/check_coverage.py \
+  --coverage-json .test-artifacts/upstream-v0.4.9/offline/coverage.json
 uv run pytest -m "not live" --collect-only
 
 uv run python scripts/run_live_tests.py --mutation-check \

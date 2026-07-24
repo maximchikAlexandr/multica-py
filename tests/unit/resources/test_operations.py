@@ -57,7 +57,7 @@ _GENERATED_VALIDATOR_NAMESPACE: dict[str, object] = {
 exec(
     compile(
         _GENERATED_OUTPUTS[_GENERATED_VALIDATORS_PATH],
-        _GENERATED_VALIDATORS_PATH,
+        "<generated approved_sdk_validators>",
         "exec",
     ),
     _GENERATED_VALIDATOR_NAMESPACE,
@@ -209,7 +209,11 @@ _VALIDATOR_PROBES: dict[str, ValidationProbe] = {
 def _generated_validation_cases() -> tuple[GeneratedValidationCase, ...]:
     namespace: dict[str, object] = {}
     exec(
-        compile(_GENERATED_OUTPUTS[_GENERATED_CASES_PATH], _GENERATED_CASES_PATH, "exec"),
+        compile(
+            _GENERATED_OUTPUTS[_GENERATED_CASES_PATH],
+            "<generated approved_sdk_cases>",
+            "exec",
+        ),
         namespace,
     )
     raw_cases = namespace["CONSTRAINT_CASES"]

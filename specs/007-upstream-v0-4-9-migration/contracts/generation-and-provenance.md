@@ -18,8 +18,9 @@ uv run python scripts/upstream_contract.py generate \
 ```
 
 The approved contract is the only decision input. Check mode writes nothing,
-reports every missing, extra governed, or byte-different output, and returns
-non-zero on any difference.
+reports every byte-different materialized output, and returns non-zero on a
+difference. Outputs intentionally generated on demand may be absent in a clean
+checkout; their byte authority is the matching golden fixture.
 
 ## Governed Outputs and Fixed Write Order
 

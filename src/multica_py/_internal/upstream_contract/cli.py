@@ -256,6 +256,20 @@ def _require_coverage_manifest(repo_root: pathlib.Path) -> CoverageManifest:
     return schema.decode_coverage(path)
 
 
+def _governed_scope(
+    repo_root: pathlib.Path,
+) -> tuple[frozenset[str], frozenset[tuple[str, ...]]] | None:
+    approved_path = repo_root / "contracts" / "sdk-contract.json"
+    if not approved_path.is_file():
+        return None
+    approved = validate_approved_v2(load_approved_contract_v2(approved_path))
+    paths: set[tuple[str, ...]] = set()
+    for operation in approved.operations:
+        for entrypoint in operation.entrypoints:
+            paths.add(tuple(approved.catalogs.bindings[entrypoint.binding_id].command))
+    return frozenset(operation.operation_id for operation in approved.operations), frozenset(paths)
+
+
 def _invalid_report(code: str, message: str) -> CoverageReport:
     report = reporting.empty_report(status="invalid")
     return reporting.add_failure(
@@ -291,6 +305,13 @@ def cmd_check(args: argparse.Namespace) -> int:
             args,
             _invalid_report("INVALID_ARTIFACT", f"failed to load coverage manifest: {exc}"),
         )
+    try:
+        governed_scope = _governed_scope(repo_root)
+    except (ValueError, msgspec.DecodeError) as exc:
+        return _emit(
+            args,
+            _invalid_report("INVALID_ARTIFACT", f"failed to load approved contract: {exc}"),
+        )
     diff = None
     if _flag(args, "with_candidate"):
         if state.candidate is None:
@@ -324,6 +345,8 @@ def cmd_check(args: argparse.Namespace) -> int:
         diff=diff,
         state=state,
         repo_root=repo_root,
+        governed_operation_ids=None if governed_scope is None else governed_scope[0],
+        governed_command_paths=None if governed_scope is None else governed_scope[1],
     )
     return _emit(args, report, human_fn=_default_human)
 

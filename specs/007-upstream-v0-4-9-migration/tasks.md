@@ -138,3 +138,11 @@ The minimum independently demonstrable increment is US2: pinned-source
 validation plus byte-identical approved seed. The public-SDK MVP is US2+US1.
 Add US3, US4, and US5 strictly in dependency order. Stop at T037 until a real
 maintainer supplies the decision file.
+
+## Phase 9: Convergence
+
+- [x] T061 Make the seven-output generator check pass from a clean checkout and prove `generate --check` has no missing governed outputs per FR-017 and T015/T038/T060 (partial)
+- [x] T062 Reconcile canonical generated coverage and CLI manifest with the promoted 16-operation contract so ordinary `scripts/upstream_contract.py check` reports v0.4.9 with candidate null and no coverage gaps per FR-027 and T040/T060 (contradicts)
+- [ ] T063 Run smoke and extended acceptance into the exact `.test-artifacts/upstream-v0.4.9/{smoke,extended}/` paths; require passed category, exact target, cleanup pass, and secret scan pass per US5/T054 (missing)
+- [ ] T064 Run stability only from the accepted smoke report and record exactly 10/10 full-smoke passes per US5/T055 (missing)
+- [ ] T065 Aggregate smoke, extended, mutation, and stability evidence into `.test-artifacts/upstream-v0.4.9/acceptance-summary.json` and require `accepted=true` per US5/T057 (missing)

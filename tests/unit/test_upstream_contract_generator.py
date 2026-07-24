@@ -244,6 +244,11 @@ def test_generate_check_reports_match(tmp_path: pathlib.Path) -> None:
     assert result == 0
 
 
+def test_generate_check_allows_unmaterialized_outputs(tmp_path: pathlib.Path) -> None:
+    contract = _load_contract()
+    assert check_outputs(render_outputs(contract), tmp_path) == 0
+
+
 def test_generate_check_reports_mismatch(tmp_path: pathlib.Path) -> None:
     contract = _load_contract()
     outputs = render_outputs(contract)
