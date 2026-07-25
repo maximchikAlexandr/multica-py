@@ -32,7 +32,7 @@ FINAL_KNOWN_GAPS: dict[str, str] = {
         "US5 best-effort: sandbox/workflow.py (685 lines) and argv_data.py "
         "are the largest remaining test files; bringing tests_python below "
         "10500 requires T068/T074 slim-down. Tracked in "
-        "specs/006-test-suite-consolidation/tasks.md T068/T074."
+        "the planned T068/T074 slim-down."
     ),
     "live_support_python": (
         "US5 best-effort: live_support_python is the sum of tests/live "

@@ -100,7 +100,7 @@ uv build
 
 The test suite ships a five-stage architecture gate that protects the
 behavioral manifest, duplicate-removal map, and the final LOC/file budgets
-declared in `specs/006-test-suite-consolidation/contracts/quality-gates.md`.
+declared in `openspec/specs/verification-and-release/spec.md`.
 Each stage activates a strict superset of the previous one's checks.
 
 ```bash
@@ -130,7 +130,7 @@ uv run python scripts/check_test_baseline.py --baseline tests/quality-baseline.j
 The manifest (`tests/behavioral-coverage.json`) and baseline
 (`tests/quality-baseline.json`) are immutable after `pr1`; only
 stage-gated invariant keys may be added at `pr3` and later stages per
-`specs/006-test-suite-consolidation/data-model.md` rule 5.
+`openspec/specs/verification-and-release/spec.md`.
 
 ### Live integration tests
 

@@ -80,7 +80,7 @@ uv run pytest -o addopts="" -v --strict-markers \
 ```
 
 Failure bundles are written under `<artifact-dir>/<run-id>/` using the filenames in
-`specs/005-test-suite-agent-sandbox/contracts/live-diagnostics-bundle.md`, including
+`specs/008-reduce-nonprod-complexity/contracts/verification.md`, including
 `run-context.json`, `filesystem-before.json`, `filesystem-after.json`, `filesystem.diff`,
 `daemon-status.json`, `daemon.log.tail`, and `failure.json`.
 

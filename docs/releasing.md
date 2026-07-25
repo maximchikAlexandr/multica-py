@@ -38,7 +38,7 @@ All CI jobs must pass before a release tag is created:
 ## Package provenance
 
 All model and command coverage is traceable to the pinned upstream source:
-- `specs/001-full-cli-sdk/contracts/cli-coverage.md` — command-to-SDK mapping with upstream source URLs
-- `specs/001-full-cli-sdk/contracts/model-source-map.md` — model struct mapping with Go source paths
+- `openspec/specs/sdk-surface/spec.md` — retained command-to-SDK surface requirement
+- `openspec/specs/upstream-contract/spec.md` — retained source and mapping review requirements
 - `src/multica_py/_generated/cli_manifest.json` — machine-readable command manifest with output modes and SDK methods
 - `tests/fixtures/json/` — fixture responses with known exit codes and stdout shapes

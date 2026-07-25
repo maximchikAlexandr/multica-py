@@ -4,7 +4,7 @@ Pinned upstream: `multica-ai/multica@48b8dbf43971e5ea974bf827220cd212a1240c72`
 
 ## Coverage Matrix
 
-See `specs/001-full-cli-sdk/contracts/cli-coverage.md` for the full 108-row manifest-backed matrix with command-level source locations, output modes, aliases, and unsupported rows.
+See `openspec/specs/sdk-surface/spec.md` for the retained public SDK surface requirement and the canonical operation table for executable coverage.
 
 ## Coverage Levels
 

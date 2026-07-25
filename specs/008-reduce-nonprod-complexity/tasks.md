@@ -24,9 +24,9 @@ stated prerequisite is already complete.
 **Purpose**: Establish the immutable baseline and working boundaries before any
 deletion.
 
-- [ ] T001 Record baseline tree `b3a299b36d1ad5bc386b5e4517d2a348d53db31c` in the implementation PR description; use, but do not duplicate, the staged-tree physical-line command already fixed in `specs/008-reduce-nonprod-complexity/quickstart.md`.
-- [ ] T002 Inventory every path in groups A–F of `specs/008-reduce-nonprod-complexity/contracts/reduction-map.md` and mark each as create, rewrite, delete, or retain in the implementation PR description; do not add a repository inventory file.
-- [ ] T003 Run `uv run pytest -m "not live"`, `uv run mypy src`, `uv run mypy tests`, and `git diff --check`; paste the four command outcomes into the implementation PR description linked from `specs/008-reduce-nonprod-complexity/tasks.md` before changing code.
+- [X] T001 Record baseline tree `b3a299b36d1ad5bc386b5e4517d2a348d53db31c` in the implementation PR description; use, but do not duplicate, the staged-tree physical-line command already fixed in `specs/008-reduce-nonprod-complexity/quickstart.md`.
+- [X] T002 Inventory every path in groups A–F of `specs/008-reduce-nonprod-complexity/contracts/reduction-map.md` and mark each as create, rewrite, delete, or retain in the implementation PR description; do not add a repository inventory file.
+- [X] T003 Run `uv run pytest -m "not live"`, `uv run mypy src`, `uv run mypy tests`, and `git diff --check`; paste the four command outcomes into the implementation PR description linked from `specs/008-reduce-nonprod-complexity/tasks.md` before changing code.
 
 ---
 
@@ -38,11 +38,11 @@ knowledge before removing their predecessors.
 **⚠️ CRITICAL**: Complete this phase before deleting any file named by groups
 A–F.
 
-- [ ] T004 Create the four baseline capability files exactly at `openspec/specs/sdk-surface/spec.md`, `openspec/specs/subprocess-transport/spec.md`, `openspec/specs/upstream-contract/spec.md`, and `openspec/specs/verification-and-release/spec.md` from the closed matrix in `specs/008-reduce-nonprod-complexity/contracts/historical-baseline.md`.
-- [ ] T005 Create `tests/contract/test_baseline_specs.py` to enforce the exact `## ADDED Requirements` → `### Requirement:` → `#### Scenario:` grammar and every source-to-destination row in `specs/008-reduce-nonprod-complexity/contracts/historical-baseline.md`.
-- [ ] T006 Update `AGENTS.md`, `README.md`, `docs/cli-coverage.md`, `docs/releasing.md`, and `scripts/audit_source_links.py` to point only to the four baseline specifications instead of `specs/001-*` through `specs/006-*`.
-- [ ] T007 Delete `specs/001-full-cli-sdk/`, `specs/002-upstream-coverage-checks/`, `specs/003-multica-live-integration-tests/`, `specs/004-test-suite-optimization/`, `specs/005-test-suite-agent-sandbox/`, and `specs/006-test-suite-consolidation/`; retain `specs/007-upstream-v0-4-9-migration/` and `specs/008-reduce-nonprod-complexity/`.
-- [ ] T008 Run the Group-A `git grep` guard from `specs/008-reduce-nonprod-complexity/contracts/reduction-map.md`, `uv run pytest tests/contract/test_baseline_specs.py`, and `uv run pytest -m "not live"`; fix every non-feature-008 stale reference before continuing.
+- [X] T004 Create the four baseline capability files exactly at `openspec/specs/sdk-surface/spec.md`, `openspec/specs/subprocess-transport/spec.md`, `openspec/specs/upstream-contract/spec.md`, and `openspec/specs/verification-and-release/spec.md` from the closed matrix in `specs/008-reduce-nonprod-complexity/contracts/historical-baseline.md`.
+- [X] T005 Create `tests/contract/test_baseline_specs.py` to enforce the exact `## ADDED Requirements` → `### Requirement:` → `#### Scenario:` grammar and every source-to-destination row in `specs/008-reduce-nonprod-complexity/contracts/historical-baseline.md`.
+- [X] T006 Update `AGENTS.md`, `README.md`, `docs/cli-coverage.md`, `docs/releasing.md`, and `scripts/audit_source_links.py` to point only to the four baseline specifications instead of `specs/001-*` through `specs/006-*`.
+- [X] T007 Delete `specs/001-full-cli-sdk/`, `specs/002-upstream-coverage-checks/`, `specs/003-multica-live-integration-tests/`, `specs/004-test-suite-optimization/`, `specs/005-test-suite-agent-sandbox/`, and `specs/006-test-suite-consolidation/`; retain `specs/007-upstream-v0-4-9-migration/` and `specs/008-reduce-nonprod-complexity/`.
+- [X] T008 Run the Group-A `git grep` guard from `specs/008-reduce-nonprod-complexity/contracts/reduction-map.md`, `uv run pytest tests/contract/test_baseline_specs.py`, and `uv run pytest -m "not live"`; fix every non-feature-008 stale reference before continuing.
 
 **Checkpoint**: Active historical requirements exist in four OpenSpec-compatible
 baseline specifications and no deleted feature directory remains referenced.

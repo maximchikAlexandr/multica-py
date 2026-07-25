@@ -147,7 +147,7 @@ real coverage exists (the guards fail on stale entries). Prefer writing the
   offline.
 - Path prefixes auto-apply layer markers (`unit`, `contract`, `component`,
   `packaging`, `live`) via `tests/conftest.py`; see
-  `specs/005-test-suite-agent-sandbox/contracts/marker-profiles.md`.
+  `openspec/specs/verification-and-release/spec.md`.
 - `tests/component/test_process_contract.py` carries `@pytest.mark.process` and
   `@pytest.mark.serial`; all other offline tests MUST NOT use `serial`.
 - Live tests are gated. Markers do NOT inherit in this repo: every
@@ -169,7 +169,7 @@ Object, pytest-bdd, hypothesis, snapshot libraries).
 `scripts/check_test_architecture.py` and `scripts/check_test_baseline.py`
 enforce a five-stage gate. Each stage activates a strict superset of the
 previous one's checks (see
-`specs/006-test-suite-consolidation/contracts/quality-gates.md`):
+`openspec/specs/verification-and-release/spec.md`):
 
 | Stage | Activates |
 |---|---|
@@ -191,7 +191,7 @@ done
 ## Deletion rules (FR-032)
 
 These rules apply whenever a test, fixture, or support module is removed
-or merged (per `specs/006-test-suite-consolidation/tasks.md` execution
+or merged (per `openspec/specs/verification-and-release/spec.md` execution
 rules and `data-model.md` rule 7):
 
 1. **Pair deletion with traceability.** Removing a test node MUST add a
