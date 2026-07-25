@@ -1,2 +1,0 @@
-# Upgrade artifact placeholder. Each candidate release gets its own deterministic
-# directory under v<from>..<to>/ produced by `prepare-upgrade`.

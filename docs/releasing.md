@@ -1,44 +1,28 @@
 # Releasing
 
-## Release workflow
+## Release gates
 
-1. Update version in `pyproject.toml` `[project] version = "X.Y.Z"`
-2. Commit with message `release X.Y.Z`
-3. Tag: `git tag vX.Y.Z && git push --tags`
-4. Create a GitHub Release for the tag
+Before a release, run the Ruff, mypy, offline pytest, coverage, contract, and
+wheel/package checks from `docs/contributing.md`. The package must import from
+a clean isolated wheel without the repository on `PYTHONPATH`.
 
-The `.github/workflows/release.yml` workflow on tag push:
-- Builds wheel and sdist via `uv build`
-- Verifies the wheel installs into a clean venv and `import multica_py` works
-- Uploads the build artifacts to the GitHub Release
+## Upstream contract review
 
-Distribution channel: **GitHub Releases** (no PyPI publish yet). Consumers install with `uv add "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@vX.Y.Z"` or `pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@vX.Y.Z"`. See README.md.
+For a pinned upstream release, maintainers collect review evidence, edit the
+approved contract in Git, validate the pinned source, render the generated
+runtime, and run the deterministic check:
 
-## Release gating
+```text
+collect → validate --source-checkout → render → check
+```
 
-- Tag validation: only semver tags matching `v*` trigger the release workflow
-- No PyPI publish in the loop — no long-lived tokens required
-- Artifact reuse: workflow builds once and reuses the same artifacts for install/import checks
-
-## Versioning
-
-- SDK `1.x` targets pinned upstream `multica-ai/multica@48b8dbf`
-- Patch: bug fixes, test additions, documentation
-- Minor: new resource methods, backward-compatible model additions
-- Major: breaking API changes, upstream baseline change
-
-## CI validation before release
-
-All CI jobs must pass before a release tag is created:
-- `lint`: Ruff check and format check on `src/`, `tests/`, `scripts/`
-- `types`: strict mypy on `src/` and `tests/scripts`
-- `test`: pytest on Python 3.12 and 3.13, Linux and macOS
-- `build`: wheel and sdist produced, importable in a fresh venv
+Git review and merge are the only promotion action. The repository keeps one
+committed generated runtime projection; transient documentation, compatibility,
+provenance, evidence, and build outputs are not golden copies.
 
 ## Package provenance
 
-All model and command coverage is traceable to the pinned upstream source:
-- `openspec/specs/sdk-surface/spec.md` — retained command-to-SDK surface requirement
-- `openspec/specs/upstream-contract/spec.md` — retained source and mapping review requirements
-- `src/multica_py/_generated/cli_manifest.json` — machine-readable command manifest with output modes and SDK methods
-- `tests/fixtures/json/` — fixture responses with known exit codes and stdout shapes
+The published distribution is `multica-py`, imported as `multica_py`. Public
+operation coverage and approved source references are recorded in
+`contracts/sdk-contract.json` and the baseline specifications under
+`openspec/specs/`.

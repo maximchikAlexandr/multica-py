@@ -2,6 +2,12 @@ from __future__ import annotations
 
 import pathlib
 
+from multica_py._generated.approved_sdk import (
+    ISSUE_CREATE_BINDING,
+    ISSUE_LIST_BINDING,
+    ISSUE_STATUS_BINDING,
+    validate_nonblank,
+)
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     IssueListPageWire,
@@ -42,6 +48,7 @@ class IssueResource(BaseResource):
         self.labels = IssueLabelResource(transport, config)
 
     def list(self, filter: IssueListFilter | None = None) -> tuple[IssueSummary, ...]:
+        _ = ISSUE_LIST_BINDING
         args = ["issue", "list"]
         if filter is not None:
             if filter.direction is not None and filter.sort is None:
@@ -82,6 +89,8 @@ class IssueResource(BaseResource):
         separate ``issue label add`` calls. A failure mid-loop can leave a
         partially labeled issue.
         """
+        _ = ISSUE_CREATE_BINDING
+        validate_nonblank(request.title)
         args = ["issue", "create", "--title", request.title]
         desc = request.description_input
         if isinstance(desc, InlineDescription):
@@ -130,6 +139,7 @@ class IssueResource(BaseResource):
         return issue_from_wire(self._run_json_decode(tuple(args), IssueWire))
 
     def set_status(self, issue_id: str, status: IssueStatus) -> Issue:
+        _ = ISSUE_STATUS_BINDING
         return issue_from_wire(
             self._run_json_decode(("issue", "status", issue_id, status.value), IssueWire)
         )

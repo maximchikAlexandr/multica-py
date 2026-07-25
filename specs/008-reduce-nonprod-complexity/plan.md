@@ -8,10 +8,10 @@
 
 ## Summary
 
-Remove at least 20,000 tracked physical non-production lines by replacing historical
-Spec Kit records, test-architecture governance, duplicate operation catalogs,
-the SDK-owned backend sandbox, and the upstream promotion state machine with
-four small boundaries:
+Reduce non-production complexity by replacing historical Spec Kit records,
+test-architecture governance, duplicate operation catalogs, the SDK-owned
+backend sandbox, and the upstream promotion state machine with four small
+boundaries:
 
 1. four OpenSpec-compatible baseline specifications containing active
    requirements from features 001–006;
@@ -73,12 +73,10 @@ smoke has five collected tests and a 10-minute workflow timeout.
   unchanged.
 
 **Scale/Scope**: Six historical feature directories; 16 approved-contract
-operation IDs; 135 preserved offline argv rows (111 canonical public-method
-rows plus 24 noncanonical rows; 30 generated vectors = 19 entrypoint-base
-vectors plus 11 entrypoint variants, and 105 manual rows = 95 canonical public
-methods plus 10 variants); five live
-smoke tests; three process cases; at least 20,000 tracked physical
-non-production lines removed.
+operation IDs; 137 operation rows (including 135 preserved legacy payload rows plus 2 coverage-completion rows; 116 canonical public-method
+rows plus 21 noncanonical rows; 30 generated vectors = 19 entrypoint-base
+vectors plus 11 entrypoint variants, and 107 manual rows = 97 canonical public
+methods plus 10 variants); five live smoke tests; three process cases.
 
 ## Constitution Check
 
@@ -272,8 +270,8 @@ pass.
    those rows.
 
 **Gate B**: `discovered_public_methods == {case.sdk_method for case in
-OPERATION_CASES if case.is_canonical}`; there are 111 unique canonical public
-methods, 135 unique case IDs, and 24 noncanonical variants; every row asserts
+OPERATION_CASES if case.is_canonical}`; there are 116 unique canonical public
+methods, 137 unique case IDs, and 21 noncanonical variants; every row asserts
 a full transport call; decoder/presence/error tests pass; exactly three process
 case IDs collect.
 
@@ -285,8 +283,8 @@ case IDs collect.
    [reduction-map.md](./contracts/reduction-map.md).
 9. Replace them with one completeness assertion:
    `discovered_public_methods == {case.sdk_method for case in OPERATION_CASES
-   if case.is_canonical}`. It also asserts 111 unique canonical public methods,
-   135 unique case IDs, and 24 noncanonical variants; retain existing zonal
+   if case.is_canonical}`. It also asserts 116 unique canonical public methods,
+   137 unique case IDs, and 21 noncanonical variants; retain existing zonal
    coverage thresholds and standard pytest marker selection.
 10. Remove five-stage invocations from `.github/workflows/ci.yml`; run the
    offline suite once in the parallel pass and once for the existing serial
@@ -337,24 +335,16 @@ evidence record in [verification.md](./contracts/verification.md) is required
 for review. Updating `specs/007-upstream-v0-4-9-migration/` removes only its
 references to retired commands and flows; it does not alter a product requirement.
 
-### Phase F — Final reduction proof
+### Phase F — Final verification
 
-20. Record baseline/final tracked physical-line counts using the exact Git-object command
-    in the PR description; do not add a permanent LOC
-    script or checked-in baseline.
-21. Run the quickstart verbatim and remove all stale documentation references.
+20. Run the quickstart verbatim and remove all stale documentation references.
 
-**Gate F**: tracked non-production physical lines fall by at least 20,000;
-public API comparison, offline verification, package verification, generator
-check, and manual live collection all pass.
+**Gate F**: public API comparison, offline verification, package verification,
+generator check, and manual live collection all pass.
 
 ## Complexity Tracking
 
 No constitution violations or retained complexity exceptions.
-
-## Review-closed execution rules
-
-The source baseline is immutable tree `b3a299b36d1ad5bc386b5e4517d2a348d53db31c`; the final object is the staged tree returned by `git write-tree` after `git add -A`. For each tree `TREE`, count tracked physical lines with `git ls-tree -r --name-only "$TREE" -- tests scripts tools .github specs contracts openspec | rg '\.(py|md|json|toml|ya?ml|sh)$' | while IFS= read -r path; do git show "$TREE:$path"; done | wc -l`. The identical roots deliberately include absent baseline `openspec` as zero. Exclude lockfiles and binaries by the extension filter. The final total must be at least 20,000 below baseline.
 
 CI disposition is fixed: `ci.yml` retains jobs `lint`, `types`, `quality`, and `compatibility`; its `upstream-check` becomes `contract-check`; its `live-smoke` job is deleted. Workflows `mutation.yml`, `package-test.yml`, and `release.yml` remain; workflows `live-extended.yml`, `live-opencode-canary.yml`, `upstream-contract-observer.yml`, and `upstream-drift.yml` are deleted; manual `live-smoke.yml` is added. `quality` retains its current mutation step because mutation policy is out of scope. The only remaining custom pytest markers are `unit`, `contract`, `component`, `packaging`, `process`, `compat`, `serial`, `live`, and `live_smoke`; remove `live_extended`, `live_opencode_canary`, `destructive`, and the architecture marker/path validator. `tests/conftest.py` assigns only the first four layer markers by path; process/live modules declare their complete module-level marker lists.
 

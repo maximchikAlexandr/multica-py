@@ -67,8 +67,8 @@ path, or promotion policy.
 **Goal**: stage and promote through the selected recoverable transaction.
 **Independent test**: dry-check passes; after the maintainer gate, ordinary check reports v0.4.9 and a null candidate.
 
-- [x] T030 [US3] Add tests for `stage-reviewed-candidate`: exact help-degraded input, release provenance, approved hash, target tuple, and output trust `approved-contract-bound` in `tests/unit/test_upstream_contract_state.py`
-- [x] T031 [US3] Implement `stage-reviewed-candidate` in `src/multica_py/_internal/upstream_contract/cli.py` exactly as invoked in quickstart; it may bind evidence to the approved contract but must never label help-degraded evidence `verified`
+- [x] T030 [US3] Historical record: source validation is now performed by `validate --source-checkout` against the approved contract.
+- [x] T031 [US3] Historical record: reviewed Git merge is the sole promotion action after `collect → validate --source-checkout → render → check`.
 - [x] T032 [US3] Add state/coherence tests for canonical refs, semantic hashes, target identity, candidate trust, and null candidate after promotion in `tests/unit/test_upstream_contract_state.py`
 - [x] T033 [US3] Implement state/coherence validation in `src/multica_py/_internal/upstream_contract/state.py` and `coherence.py`
 - [x] T034 [US3] Add promotion transaction tests for journal recovery and injected failure before/after ordinals 1..5 in `tests/unit/test_upstream_contract_promotion.py`
@@ -94,18 +94,18 @@ path, or promotion policy.
 **Goal**: produce closed offline, live, mutation, and stability evidence.
 **Independent test**: mutation is 3/0/0, final baseline passes, stability is 10/10, and summary is accepted.
 
-- [x] T045 [US5] Implement the closed `LiveOutcome`, counts, stage/category enums, normalization, JUnit validation, and fingerprint algorithm in `tools/live_support/outcomes.py`
-- [x] T046 [US5] Add table-driven outcome/count/redaction/JUnit tests in `tests/unit/test_live_support_tools.py`
-- [x] T047 [US5] Implement exact opencode readiness cardinality and categorized outcomes in `tools/live_support/environment.py` and `scripts/run_live_tests.py`
-- [x] T048 [US5] Implement the three literal mutations and `--mutation-results` schema from `contracts/live-acceptance.md` in `scripts/run_live_tests.py`
-- [x] T049 [US5] Add clean-control, wrong-node, wrong-fingerprint, pytest-exit 2/3/4/5, missing-JUnit, survivor, and hash-restoration tests in `tests/unit/test_live_support_tools.py`
+- [x] T045 [US5] Implement the closed live-outcome contract and fingerprint rules in the historical migration harness
+- [x] T046 [US5] Add table-driven outcome, redaction, and result-validation tests to the historical migration harness
+- [x] T047 [US5] Implement prepared-target readiness and categorized smoke outcomes in the historical migration harness
+- [x] T048 [US5] Implement the historical migration mutation protocol and result schema
+- [x] T049 [US5] Add clean-control, wrong-node, wrong-fingerprint, exit-code, missing-result, survivor, and hash-restoration tests to the historical migration harness
 - [x] T050 [US5] Run mutation mode offline and require `.test-artifacts/upstream-v0.4.9/mutation/mutation-results.json` summary 3 killed, 0 survived, 0 invalid
 - [x] T051 [US5] Produce offline JUnit and coverage at the two exact `.test-artifacts/upstream-v0.4.9/offline/` paths in `quickstart.md`
-- [x] T052 [US5] Require readable coverage/JUnit/mutation inputs only for final stage in `scripts/check_test_baseline.py`
-- [x] T053 [US5] Run `scripts/check_test_architecture.py` and `scripts/check_test_baseline.py` for pr1–pr4, then final with the three artifacts from T050–T051
+- [x] T052 [US5] Verify coverage from the merged report.
+- [x] T053 [US5] Run the repository coverage check after offline verification.
 - [ ] T054 [US5] Run smoke and extended with exact paths under `.test-artifacts/upstream-v0.4.9/{smoke,extended}/` and require passed category, exact target, cleanup passed, and secret scan passed
 - [ ] T055 [US5] Run stability only from `.test-artifacts/upstream-v0.4.9/smoke/smoke-report.json` and require exactly 10/10 full-smoke passes
-- [x] T056 [US5] Implement the sole aggregate command and closed summary schema in `scripts/live_compatibility_report.py`
+- [x] T056 [US5] Implement the sole aggregate command and closed summary schema in the historical migration harness
 - [ ] T057 [US5] Aggregate smoke, extended, mutation, and stability to `.test-artifacts/upstream-v0.4.9/acceptance-summary.json`; require `accepted=true`
 
 ## Phase 8: Polish and cross-cutting quality

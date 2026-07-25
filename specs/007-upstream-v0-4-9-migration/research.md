@@ -45,7 +45,7 @@ the following 16 existing operation IDs:
 The contract is an approved typed-operation subset, not an inventory of every
 public/raw/process operation currently present in the SDK. Existing operations
 outside this set remain unchanged by this migration. Their presence in source
-or `upstream_coverage.json` does not grant them schema-v2 approval.
+or a historical coverage projection does not grant them schema-v2 approval.
 
 **Rationale**: The current contract has 22 flat parameter rows but 16 unique
 operation IDs. The repository's semantic coverage contains 108 operation
@@ -351,21 +351,17 @@ the thin-wrapper principle.
 
 ## Decision 11: Deterministic Generator
 
-**Decision**: Implement a real generator under
-`src/multica_py/_internal/upstream_contract/generator/`. Its only decision input
-is a decoded and validated `contracts/sdk-contract.json`. Evidence bundles,
-candidate contracts, manifest suggestions, and source-delta files are never
-accepted generator inputs.
+**Decision (superseded by feature 008)**: the active generator is
+`tools/upstream_contract/`; its only decision input is a decoded and validated
+`contracts/sdk-contract.json`. Evidence bundles, candidate contracts, manifest
+suggestions, and source-delta files are never accepted generator inputs.
 
 Generated outputs:
 
-1. `src/multica_py/_generated/approved_sdk_contract.json`
-2. `src/multica_py/_generated/approved_sdk_bindings.py`
-3. `src/multica_py/_generated/approved_sdk_enums.py`
-4. `src/multica_py/_generated/approved_sdk_validators.py`
-5. `src/multica_py/_generated/approved_sdk_compatibility.json`
-6. `tests/cases/generated/approved_sdk_cases.py`
-7. `tests/fixtures/provenance/approved-sdk-v0.4.9.json`
+1. `src/multica_py/_generated/approved_sdk.py` (committed runtime)
+2. transient `docs/approved-sdk.md`
+3. transient `reports/compatibility.json`
+4. transient `reports/provenance.json`
 
 Handwritten resources import generated command bindings and validators.
 `multica_py.enums` re-exports the generated approved enums. Complex command
@@ -375,16 +371,17 @@ verified against generated entrypoint/signature and case metadata.
 The generator exposes:
 
 ```text
-uv run python scripts/upstream_contract.py generate \
-  --approved contracts/sdk-contract.json
+uv run python scripts/upstream_contract.py render \
+  --approved contracts/sdk-contract.json \
+  --runtime-output src/multica_py/_generated/approved_sdk.py \
+  --transient-output /absolute/ignored/output
 ```
 
 and a non-writing exact-byte gate:
 
 ```text
-uv run python scripts/upstream_contract.py generate \
-  --approved contracts/sdk-contract.json \
-  --check
+uv run python scripts/upstream_contract.py check \
+  --approved contracts/sdk-contract.json
 ```
 
 All outputs are rendered in memory before any write. A write run writes
@@ -414,13 +411,14 @@ The output contract and consistency rules are defined in
 
 **Decision**:
 
-- Candidate state always references the canonical path
-  `src/multica_py/_generated/upstream_candidate_contract.json`.
+- Historical candidate state formerly referenced the canonical path
+  `src/multica_py/_generated/upstream_candidate_contract.json`; feature 008
+  removed that state machine.
 - A caller-supplied `--output` receives a byte-identical convenience copy but is
   never written into state.
 - State validation requires the canonical referenced file to exist, decode,
   match state kind/version/tag/commit, and reproduce the recorded semantic hash.
-- Supported state always references
+- Historical supported state formerly referenced
   `src/multica_py/_generated/upstream_supported_contract.json`.
 - A promotion decision binds the semantic candidate hash, approved contract
   hash, target identity, and release provenance reference.
@@ -597,9 +595,7 @@ does not verify a preceding successful smoke.
 - An explicitly supplied missing file is a hard invalid-input error.
 - Final baseline comparison requires all three files; it cannot silently skip
   them.
-- `scripts/check_test_architecture.py` and `tests/quality-baseline.json` are
-  present in current `main`; their absence in the older evidence package is a
-  historical blocker already resolved by feature 006.
+- Coverage is verified from the merged offline report.
 
 **Rationale**: Current CI produces coverage and mutation output, but the
 five-stage baseline command does not pass them to `check_test_baseline`, so

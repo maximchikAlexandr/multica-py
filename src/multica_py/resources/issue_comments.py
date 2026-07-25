@@ -3,6 +3,14 @@ from __future__ import annotations
 import datetime
 import re
 
+from multica_py._generated.approved_sdk import (
+    COMMENT_ADD_BINDING,
+    COMMENT_DELETE_BINDING,
+    COMMENT_LIST_BINDING,
+    COMMENT_LIST_FLAT_BINDING,
+    COMMENT_LIST_RECENT_BINDING,
+    COMMENT_LIST_THREAD_BINDING,
+)
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
@@ -41,6 +49,7 @@ class IssueCommentResource(BaseResource):
         super().__init__(transport, config)
 
     def list(self, issue_id: str) -> tuple[Comment, ...]:
+        _ = COMMENT_LIST_BINDING
         return tuple(
             comment_from_wire(item)
             for item in self._run_json_decode_list(
@@ -49,6 +58,7 @@ class IssueCommentResource(BaseResource):
         )
 
     def list_flat(self, request: CommentListFlatRequest) -> Page[Comment]:
+        _ = COMMENT_LIST_FLAT_BINDING
         args = ["issue", "comment", "list", request.issue_id]
         since = _format_since(request.since)
         if since is not None:
@@ -60,6 +70,7 @@ class IssueCommentResource(BaseResource):
         )
 
     def list_thread(self, request: CommentListThreadRequest) -> Page[Comment]:
+        _ = COMMENT_LIST_THREAD_BINDING
         args = [
             "issue",
             "comment",
@@ -83,6 +94,7 @@ class IssueCommentResource(BaseResource):
         )
 
     def list_recent(self, request: CommentListRecentRequest) -> Page[CommentThread]:
+        _ = COMMENT_LIST_RECENT_BINDING
         args = ["issue", "comment", "list", request.issue_id, "--recent", str(request.limit)]
         if request.cursor is not None:
             args.extend(["--before", request.cursor.before])
@@ -97,6 +109,7 @@ class IssueCommentResource(BaseResource):
         )
 
     def add(self, issue_id: str, body: str) -> Comment:
+        _ = COMMENT_ADD_BINDING
         return comment_from_wire(
             self._run_json_decode(
                 ("issue", "comment", "add", issue_id, "--content", body), CommentWire
@@ -121,6 +134,7 @@ class IssueCommentResource(BaseResource):
         )
 
     def delete(self, comment_id: str) -> None:
+        _ = COMMENT_DELETE_BINDING
         self._transport.run_text(("issue", "comment", "delete", comment_id))
 
     def resolve(self, thread_id: str) -> None:

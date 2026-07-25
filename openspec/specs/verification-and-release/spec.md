@@ -11,7 +11,7 @@ CI MUST run Ruff, configured mypy, offline pytest, coverage, contract check, pac
 Every public SDK method MUST have exactly one canonical success operation row with complete transport behavior.
 #### Scenario: Public methods have canonical operation coverage
 - **WHEN** `discovered_public_methods` is compared to `{case.sdk_method for case in OPERATION_CASES if case.is_canonical}`
-- **THEN** the sets are equal, with 111 unique canonical methods, 135 unique case IDs, and 24 noncanonical variants.
+- **THEN** the sets are equal, with 116 unique canonical methods, 137 unique case IDs, and 21 noncanonical variants; 135 historic payload rows remain a migration subset.
 <!-- Source IDs: 001:FR-060–FR-066,004:FR-004–FR-008,FR-017,006:FR-011–FR-013 -->
 
 ### Requirement: Focused process and offline checks

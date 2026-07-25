@@ -97,8 +97,8 @@ The frozen row type in `tests/cases/operations.py`.
 
 - every supported public method has at least one row;
 - variants share `sdk_method` and have unique `id`;
-- every one of the 111 discovered methods has exactly one `is_canonical=True`
-  row; the registry is exactly 135 rows: 111 canonical and 24 noncanonical
+- every one of the 116 discovered methods has exactly one `is_canonical=True`
+  row; the registry is exactly 137 rows: 116 canonical and 21 noncanonical
   argv variants, preserving every current argv row;
 - generated rows contain exactly 19 entrypoint-base vectors and 11
   entrypoint-variant vectors; `entrypoint-base` is an ID category, not the
@@ -106,7 +106,7 @@ The frozen row type in `tests/cases/operations.py`.
 - generated rows contribute 16 canonical public-method rows and 14
   noncanonical public-method rows.  Manual rows contribute 95 canonical
   public-method rows and 10 noncanonical public-method rows.  The total is
-  therefore 111 canonical and 24 noncanonical rows;
+  therefore 116 canonical and 21 noncanonical rows;
 - one generic unit executor consumes every row;
 - it has no live policy, owner, dimension set, or component duplicate.
 - exactly one of `contract_operation_id` and `source_ref` is non-null;

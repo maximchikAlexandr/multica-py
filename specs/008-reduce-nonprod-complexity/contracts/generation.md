@@ -184,7 +184,7 @@ The fixed constructor catalog is: `CommentListFlatRequest(issue_id,since)`; `Com
 
 ## Exact generated operation rows
 
-`tests/cases/operations.py` defines the sole registry as `tuple(sorted((*MANUAL_OPERATION_CASES, *generated_operation_cases(catalog)), key=lambda c: c.id))`. It has exactly 135 rows: 111 canonical public-method rows and 24 noncanonical argv variants, preserving every current argv row. `MANUAL_OPERATION_CASES` contains exactly 105 ungoverned rows (95 canonical public-method rows and 10 variants). `generated_operation_cases(catalog)` produces exactly 30 governed rows (19 entrypoint-base vectors and 11 entrypoint variants; 16 canonical public-method rows and 14 noncanonical rows). There are exactly 111 distinct supported `sdk_method` values. The unit executor is the only success consumer; no generated test file exists.
+`tests/cases/operations.py` defines the sole registry as `tuple(sorted((*MANUAL_OPERATION_CASES, *generated_operation_cases(catalog)), key=lambda c: c.id))`. It has exactly 137 rows: 116 canonical public-method rows and 21 noncanonical argv variants, preserving every current argv row. `MANUAL_OPERATION_CASES` contains exactly 107 ungoverned rows (97 canonical public-method rows and 10 variants). `generated_operation_cases(catalog)` produces exactly 30 governed rows (19 entrypoint-base vectors and 11 entrypoint variants; 16 canonical public-method rows and 14 noncanonical rows). There are exactly 116 distinct supported `sdk_method` values. The unit executor is the only success consumer; no generated test file exists.
 
 ### Closed legacy-row mapping
 
@@ -230,7 +230,7 @@ For every row not named in the table, the mapping value is
 `sdk_method` in source order, otherwise
 `manual:<sdk_method>:variant:<nn>` where `<nn>` is its two-digit ordinal among
 subsequent remaining rows of that `sdk_method`. This rule and the bounded
-source set make all 105 manual mappings exact. The only ten manual variants
+source set make all 105 migrated manual mappings exact. The only ten manual variants
 proved by the current tuple are: `legacy:005` →
 `manual:agents.create:variant:01`, `legacy:006` →
 `manual:agents.create:variant:02`, `legacy:007` →
@@ -294,7 +294,13 @@ Each vector has exactly the v3 object shape above. Its `assertion.id` is `assert
 
 `evidence.json` has sorted keys `schema_version`, `target`, `binary`, `facts`. `target` contains tag/version/commit/release_id; `binary` contains asset_name, sha256, os, arch, version_output_sha256; every fact has kind, command_path, value, and source `{path,symbol,line_start,line_end}`. Facts sort by kind, command path, source path, line start, and canonical value JSON. `review-items.json` has `schema_version` and sorted items with code, message, and source. Codes are exactly `UNKNOWN_PATTERN`, `UNRESOLVED_HELPER`, `DYNAMIC_ENUM`, `IMPERATIVE_VALIDATION`, `PRESENCE_SENSITIVE`, and `UNRESOLVED_MAPPING`.
 
-Only Cobra literals, AddCommand, known flag registrations, known declarative validators, and source locations create facts. Any other relevant syntax creates a review item. `validate --source-checkout ROOT` requires every contract ref path under ROOT, `git -C ROOT rev-parse HEAD` equal to each ref commit, symbol text inside its inclusive line range, and a matching evidence fact or an explicit contract `manual` source reference.
+Only closed Cobra literals, closed `AddCommand` identifier lists, known flag
+registrations, known declarative validators, and source locations create facts.
+Any other relevant syntax creates a review item. Collection and
+`validate --source-checkout ROOT` read source text only as Git blobs from the
+pinned target commit; they never trust worktree files. Validation requires every
+contract ref path under ROOT, the checkout HEAD and every source-ref commit to
+equal the target commit, and symbol text inside its inclusive blob line range.
 
 ## Command modes and retired-flow migration
 

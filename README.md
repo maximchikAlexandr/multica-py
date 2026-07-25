@@ -96,61 +96,15 @@ uv build
 
 `uv.lock` is the integrity gate — it pins exact versions and SHA-256 hashes. Use `uv sync --frozen` for verified reproducible installs.
 
-### Test architecture gate
+### Live smoke
 
-The test suite ships a five-stage architecture gate that protects the
-behavioral manifest, duplicate-removal map, and the final LOC/file budgets
-declared in `openspec/specs/verification-and-release/spec.md`.
-Each stage activates a strict superset of the previous one's checks.
-
-```bash
-# gate stages, in order
-uv run python scripts/check_test_architecture.py --stage pr1
-uv run python scripts/check_test_architecture.py --stage pr2
-uv run python scripts/check_test_architecture.py --stage pr3
-uv run python scripts/check_test_architecture.py --stage pr4
-uv run python scripts/check_test_architecture.py --stage final
-
-# baseline compare for any non-pr1 stage
-uv run python scripts/check_test_baseline.py --baseline tests/quality-baseline.json --stage <stage>
-```
-
-The `final` stage verifies three budgets: `tests_python ≤ 10500`,
-`live_support_python ≤ 2500`, and max single-file LOC `≤ 800`. By default
-the gate prints `WARN` / `NOTE` lines on exceedance and exits 0 (the
-slim-down is best effort and the limits are aspirational at this
-snapshot). Add `--strict-final` to either script to hard-fail on
-exceedance:
+Live smoke uses a prepared target and the public SDK only. Default `uv run pytest` excludes
+it via `-m "not live"`. Set the five runner values documented in
+[tests/live/README.md](tests/live/README.md), then run:
 
 ```bash
-uv run python scripts/check_test_architecture.py --stage final --strict-final
-uv run python scripts/check_test_baseline.py --baseline tests/quality-baseline.json --stage final --strict-final
+uv run pytest -o addopts="" -q -m live_smoke tests/live/test_smoke.py
 ```
-
-The manifest (`tests/behavioral-coverage.json`) and baseline
-(`tests/quality-baseline.json`) are immutable after `pr1`; only
-stage-gated invariant keys may be added at `pr3` and later stages per
-`openspec/specs/verification-and-release/spec.md`.
-
-### Live integration tests
-
-Live tests exercise the SDK against a real Multica CLI and an isolated backend. Default
-`uv run pytest` excludes them via `-m "not live"`.
-
-Prerequisites: Docker, a Multica checkout at the pinned commit, and the matching CLI binary.
-See [tests/live/README.md](tests/live/README.md) for environment variables and safety rules.
-
-```bash
-export MULTICA_LIVE_UPSTREAM_DIR=/absolute/path/to/multica
-uv run python scripts/run_live_tests.py --resolve-cli
-```
-
-Blocking PR smoke (CI): `pytest -m live_smoke tests/live`. Extended compatibility tests use
-`-m "live_smoke or live_extended"` and run on a separate schedule (post-MVP).
-
-Compatibility target updates require editing `contracts/multica-live-target.toml`, running
-contract checks, extended smoke, and digest verification — see
-[tests/live/README.md](tests/live/README.md).
 
 ## License
 

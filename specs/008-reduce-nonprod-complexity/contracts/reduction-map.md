@@ -37,10 +37,9 @@ Remove associated five-stage calls and artifact wiring from
 
 Replacement:
 
-- `discovered_public_methods == {case.sdk_method for case in OPERATION_CASES if case.is_canonical}`, with 111 unique canonical methods, 135 unique IDs, and 24 noncanonical variants;
+- `discovered_public_methods == {case.sdk_method for case in OPERATION_CASES if case.is_canonical}`, with 116 unique canonical methods, 137 unique IDs, and 21 noncanonical variants;
 - existing coverage thresholds enforced by `scripts/check_coverage.py`;
 - Ruff, mypy, offline pytest, package tests, marker selection;
-- one-time line reduction reported in the feature handoff, not checked in.
 
 ## Group C — Duplicate Operation Harnesses
 
@@ -108,6 +107,11 @@ Delete all `tests/unit/test_upstream_contract_*.py` and
 focused unit module using stdlib socket prohibition; it must not retain
 `httpx`.
 
+The deleted `tests/contract/conftest.py` and `tests/unit/conftest.py` supplied
+only removed upstream-state fixtures and local helper aliases. Their retained
+coverage is bound to the repository-level marker fixture in `tests/conftest.py`
+and the focused contract/unit modules above; no fixture consumer remains.
+
 Replace contributing/coverage/compatibility docs with the four-command flow.
 Do not retain deprecated command aliases.
 
@@ -134,6 +138,11 @@ Replacement:
 
 Remove `httpx` from `pyproject.toml`; refresh `uv.lock` mechanically with
 `uv lock`.
+
+Delete `tests/live/.env.example`: it described the retired SDK-owned backend
+bootstrap. The required externally prepared target inputs are documented and
+validated by `tests/live/README.md`, `tests/live/conftest.py`, and the manual
+`live-smoke.yml` workflow.
 
 ## Group F — Workflow Text Tests
 

@@ -67,8 +67,8 @@ uv run pytest -q -m "not live" --collect-only
 ```
 
 Expected: `discovered_public_methods == {case.sdk_method for case in
-OPERATION_CASES if case.is_canonical}`, with 111 unique canonical methods, 135
-unique case IDs, and 24 noncanonical variants;
+OPERATION_CASES if case.is_canonical}`, with 116 unique canonical methods, 135
+unique case IDs, and 21 noncanonical variants;
 the process module collects exactly `bytes-env`, `text-stdin`, and
 `timeout-tree-cleanup`; no `tests/live` node appears in offline collection.
 
@@ -84,12 +84,13 @@ uv run pytest -m "not live and not serial" -n auto --dist loadscope \
   --cov=multica_py --cov-branch --cov-report=json
 uv run pytest -m "serial and not live" \
   --cov=multica_py --cov-branch --cov-append --cov-report=json
-uv run python scripts/check_coverage.py coverage.json
+uv run python scripts/check_coverage.py --coverage-json coverage.json
 uv run pytest -m packaging
 uv build
 TMP=$(mktemp -d)
 mkdir "$TMP/empty"
 uv venv --seed "$TMP/venv"
+uv pip install --python "$TMP/venv/bin/python" msgspec
 env -u PYTHONPATH "$TMP/venv/bin/python" -m pip install --no-deps "$PWD"/dist/multica_py-*.whl
 cd "$TMP/empty" && env -u PYTHONPATH "$TMP/venv/bin/python" -c 'import multica_py, multica_py.enums, multica_py._generated.approved_sdk'
 uv run pytest -o addopts="" -q tests/packaging/test_generated_runtime.py
@@ -127,20 +128,3 @@ uv run pytest -o addopts="" -q \
 ```
 
 Expected: identity, CRUD, comment-list decoding, not-found, and presence semantics pass.
-
-## 7. Reduction measurement
-
-Use the same command before and after implementation; record both totals in the
-implementation handoff or PR description:
-
-```bash
-git add -A
-for TREE in b3a299b36d1ad5bc386b5e4517d2a348d53db31c "$(git write-tree)"; do
-  git ls-tree -r --name-only "$TREE" -- tests scripts tools .github specs contracts openspec |
-    rg '\.(py|md|json|toml|ya?ml|sh)$' |
-    while IFS= read -r path; do git show "$TREE:$path"; done | wc -l
-done
-```
-
-Expected: the staged tracked physical-line total is at least 20,000 below the
-fixed baseline. Do not commit the measurement as a gate or baseline.

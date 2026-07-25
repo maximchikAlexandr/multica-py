@@ -37,7 +37,16 @@ def _macos_categorize(pid: int) -> str | None:
             check=False,
         )
     except (subprocess.TimeoutExpired, OSError):
-        return None
+        # Sandboxed macOS test runners can deny execution of ``ps`` even for
+        # child processes.  ``kill(pid, 0)`` remains a portable existence probe
+        # and preserves the binding absence assertion after the parent is reaped.
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return "absent"
+        except PermissionError:
+            return None
+        return "running"
     output = result.stdout.strip()
     if not output:
         return "absent"

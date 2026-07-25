@@ -67,9 +67,7 @@ Focused authorities are:
 - `tests/unit/test_path_normalization.py`;
 - `tests/unit/test_transport.py`;
 - `tests/component/test_process_contract.py`;
-- `tests/live/test_issue_workflow.py`;
-- `tests/live/test_projects.py`;
-- `tests/live/extended/test_pagination.py`.
+- `tests/live/test_smoke.py`.
 
 Every changed constraint requires a valid and invalid case. Optional flag
 behavior uses complete expected argv.

@@ -1,0 +1,40 @@
+name: Live smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  live-smoke:
+    # The environment is protected in repository settings and requires approval.
+    # Never run prepared credentials against a contributor-selected dispatch ref.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: [self-hosted, multica-live]
+    environment: multica-live
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      MULTICA_LIVE_CLI: ${{ vars.MULTICA_LIVE_CLI }}
+      MULTICA_LIVE_EXPECTED_VERSION: ${{ vars.MULTICA_LIVE_EXPECTED_VERSION }}
+      MULTICA_LIVE_SERVER_URL: ${{ vars.MULTICA_LIVE_SERVER_URL }}
+      MULTICA_LIVE_WORKSPACE_ID: ${{ vars.MULTICA_LIVE_WORKSPACE_ID }}
+      MULTICA_LIVE_PROFILE: ${{ vars.MULTICA_LIVE_PROFILE }}
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --all-groups
+      - name: Verify prepared environment
+        run: |
+          set -eu
+          test -n "$MULTICA_LIVE_CLI"
+          test -n "$MULTICA_LIVE_EXPECTED_VERSION"
+          test -n "$MULTICA_LIVE_SERVER_URL"
+          test -n "$MULTICA_LIVE_WORKSPACE_ID"
+          test -n "$MULTICA_LIVE_PROFILE"
+      - run: |
+          uv run pytest -o addopts="" -q \
+            -m live_smoke tests/live/test_smoke.py

@@ -1,39 +1,47 @@
-# Verified upstream CLI contract export
+# Verified upstream CLI contract evidence
 
-Maintainers need machine-readable CLI contracts with verified provenance.
-Use the Python collector (never a shell wrapper):
+The approved SDK contract is maintained in `contracts/sdk-contract.json`.
+Evidence collection is fail-closed and never changes public SDK behavior.
+
+Validate the approved contract and, when reviewing a pinned checkout, verify
+its source references:
+
+```bash
+uv run python scripts/upstream_contract.py validate \
+  --approved contracts/sdk-contract.json \
+  --source-checkout .devlocal/upstream/multica-v0.4.9
+```
+
+Collect declarative facts from a pinned source checkout and verified release
+binary into a caller-supplied ignored directory:
 
 ```bash
 uv run python scripts/upstream_contract.py collect \
-  --binary "$(command -v multica)" \
-  --version 0.4.2 \
-  --tag v0.4.2 \
-  --commit 48b8dbf43971e5ea974bf827220cd212a1240c72 \
-  --asset-name multica-cli-0.4.2-linux-amd64.tar.gz \
-  --sha256 "<release-sha256>" \
-  --os linux \
-  --arch amd64 \
-  --version-output "multica 0.4.2" \
-  --output /tmp/candidate.json
+  --source-checkout .devlocal/upstream/multica-v0.4.9 \
+  --binary /path/to/multica \
+  --tag v0.4.9 --version 0.4.9 --commit <full-commit> \
+  --release-id <release-id> --asset-name <asset-name> \
+  --sha256 <sha256> --os darwin --arch arm64 \
+  --version-output /path/to/version-output.json \
+  --output-dir /private/tmp/upstream-contract-evidence
 ```
 
-The collector tries verified paths in fixed order:
+The collector writes only `evidence.json` and `review-items.json`. Unknown
+source patterns, unresolved helpers, imperative validation, and
+presence-sensitive behavior become review items; they cannot generate or
+modify the approved contract.
 
-1. Release asset `multica-cli-contract.json` bundled with the pinned CLI release.
-2. Hidden exporter command: `multica __contract --format json`.
-3. Help-parser fallback (degraded trust; requires checksum unless `--local-manual`).
+After a reviewed contract change, render the committed runtime projection and
+transient documentation/reports, then check the repository:
 
-Neither verified interface exists in upstream `multica-ai/multica` v0.4.x today.
+```bash
+uv run python scripts/upstream_contract.py render \
+  --approved contracts/sdk-contract.json \
+  --runtime-output src/multica_py/_generated/approved_sdk.py \
+  --transient-output /private/tmp/upstream-contract-render
+uv run python scripts/upstream_contract.py check \
+  --approved contracts/sdk-contract.json
+```
 
-## Upstream contribution target
-
-Contribute to `multica-ai/multica` (preferred options):
-
-- Add `__contract --format json` that walks the Cobra command tree and emits
-  JSON matching `RawExporterPayload` in
-  `src/multica_py/_internal/upstream_contract/collectors/_raw_payloads.py`.
-- Or attach `multica-cli-contract.json` to GoReleaser release assets.
-
-When working against a pinned multica checkout, implement the exporter in the
-upstream repository and wire it to Cobra registration code. Do not add parallel
-collect logic in this Python SDK repository.
+The pinned upstream CLI source and release binary are evidence sources only.
+The approved contract is the sole production generator input.

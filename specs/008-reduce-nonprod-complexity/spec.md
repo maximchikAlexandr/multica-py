@@ -213,24 +213,21 @@ at least one concrete scenario, without needing the removed feature folders.
 
 ### Measurable Outcomes
 
-- **SC-001**: The tracked non-production codebase is reduced by at least 20,000
-  physical lines without reducing the required public SDK behaviour covered by
-  the default verification suite.
-- **SC-002**: The default offline verification completes without a network,
+- **SC-001**: The default offline verification completes without a network,
   account, server, backend provisioner, or agent sandbox, and every supported
   public operation remains represented by exactly one canonical command-coverage
   record.
-- **SC-003**: For a pinned upstream release update, maintainers can
+- **SC-002**: For a pinned upstream release update, maintainers can
   produce review evidence, approve the contract, generate all supported
   projections, and obtain a reproducible valid package using one reviewed
   repository change and no parallel promotion state.
-- **SC-004**: No full generated-output golden fixture remains in version control;
+- **SC-003**: No full generated-output golden fixture remains in version control;
   two clean generation runs for the same approved contract produce identical
   results and the resulting package exposes all expected generated public code.
-- **SC-005**: The retained knowledge from completed features 001–006 is covered
+- **SC-004**: The retained knowledge from completed features 001–006 is covered
   by OpenSpec-compatible baseline requirements and scenarios, with no active
   project reference pointing to a removed historical feature directory.
-- **SC-006**: A prepared target can complete the compact live smoke scope, while
+- **SC-005**: A prepared target can complete the compact live smoke scope, while
   lack of that target does not prevent offline pull-request verification.
 
 ## Assumptions

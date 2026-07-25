@@ -97,7 +97,7 @@ golden do not add independent evidence when they restate the same SDK call.
 
 - Keep `cli_manifest.json` as authority: rejected because it is another
   generated catalog and does not execute the public method.
-- Derive all 111 rows from the 16-operation approved contract: rejected
+- Derive all 116 rows from the 16-operation approved contract: rejected
   because the current approved migration scope does not govern all public
   operations.
 - Keep unit and mocked component executors: rejected because both use the same
@@ -221,7 +221,7 @@ the removed supported-state model.
 
 **Decision**: Install each replacement before deleting its source. The fixed
 order is baseline specs, meta-gates, operation table, upstream pipeline, live
-suite, workflow-text tests, final reference/LOC audit.
+suite, workflow-text tests, and final reference audit.
 
 **Rationale**: Each phase has an executable gate and can be reviewed without
 temporarily losing a product guarantee.

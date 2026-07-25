@@ -5,41 +5,32 @@
 Writing:
 
 ```bash
-uv run python scripts/upstream_contract.py generate \
-  --approved contracts/sdk-contract.json
+uv run python scripts/upstream_contract.py render \
+  --approved contracts/sdk-contract.json \
+  --runtime-output src/multica_py/_generated/approved_sdk.py \
+  --transient-output /absolute/ignored/output
 ```
 
 Checking:
 
 ```bash
-uv run python scripts/upstream_contract.py generate \
-  --approved contracts/sdk-contract.json \
-  --check
+uv run python scripts/upstream_contract.py check \
+  --approved contracts/sdk-contract.json
 ```
 
-The approved contract is the only decision input. Check mode writes nothing,
-reports every byte-different materialized output, and returns non-zero on a
-difference. Outputs intentionally generated on demand may be absent in a clean
-checkout; their byte authority is the matching golden fixture.
+The approved contract is the only decision input. `check` compares the one
+committed runtime projection and validates the three transient projections.
 
 ## Governed Outputs and Fixed Write Order
 
-1. `src/multica_py/_generated/approved_sdk_contract.json`
-2. `src/multica_py/_generated/approved_sdk_bindings.py`
-3. `src/multica_py/_generated/approved_sdk_enums.py`
-4. `src/multica_py/_generated/approved_sdk_validators.py`
-5. `src/multica_py/_generated/approved_sdk_compatibility.json`
-6. `tests/cases/generated/approved_sdk_cases.py`
-7. `tests/fixtures/provenance/approved-sdk-v0.4.9.json`
+1. `src/multica_py/_generated/approved_sdk.py` (committed runtime projection)
+2. `docs/approved-sdk.md` (transient)
+3. `reports/compatibility.json` (transient)
+4. `reports/provenance.json` (transient)
 
-`contracts/generated-output-formats.json` is the byte-format authority. Python
-outputs export only the listed symbols in listed order. JSON is UTF-8,
-two-space indented, key-sorted, and has one trailing LF. No output contains
-timestamps.
-Golden files use the destination path below
-`tests/fixtures/upstream_contract/v2/` plus suffix `.golden`. T009 creates all
-seven goldens before renderer implementation; `generate --check` compares
-bytes, not parsed values.
+`contracts/generated-output-formats.json` records the retained projection
+layout. Python and JSON output is UTF-8 with one trailing LF; no output
+contains timestamps.
 
 Render all bytes in memory first. A write run creates same-directory temporary
 files, fsyncs/closes them, then replaces destinations in this order. On render
@@ -54,20 +45,15 @@ or validation failure, no destination changes.
 - Entire resource modules are not generated because they contain unrelated
   operations outside the 16-ID boundary.
 
-## Canonical Active Paths
+## Active Paths
 
-- state: `src/multica_py/_generated/upstream_state.json`;
-- candidate: `src/multica_py/_generated/upstream_candidate_contract.json`;
-- supported: `src/multica_py/_generated/upstream_supported_contract.json`;
-- coverage: `src/multica_py/_generated/upstream_coverage.json`.
-
-Collection always materializes the canonical candidate. Caller `--output`
-receives byte-identical convenience output but state always records the
-canonical path.
+Feature 008 retired candidate, supported, state, and coverage projections.
+The approved contract and the four projections listed above are the only active
+generation boundary.
 
 For this release, raw collection is not promotable because the binary lacks
 `__contract` and the captured evidence is `help-degraded`. The sole staging
-path is the exact `stage-reviewed-candidate` command in `quickstart.md`. It:
+path is the exact `validate --source-checkout` command in `quickstart.md`. It:
 
 1. requires evidence trust exactly `help-degraded`;
 2. verifies archive SHA-256
@@ -84,10 +70,9 @@ path is the exact `stage-reviewed-candidate` command in `quickstart.md`. It:
 5. writes a candidate containing both evidence and approved semantic hashes
    with trust exactly `approved-contract-bound`.
 
-`approved-contract-bound` is promotable only with the maintainer decision
-below. It is never renamed to `verified`.
+PR review and merge are the only promotion action.
 
-## Promotion Preconditions
+## Historical Promotion Preconditions
 
 Promotion dry-check must verify:
 
@@ -107,7 +92,7 @@ tuple, provenance ref/hash, previous supported identity, and
 `review_ref="specs/007-upstream-v0-4-9-migration/contracts/operation-decisions.md"`.
 Automation and implementation agents must not create or edit it.
 
-Successful promotion uses a rollback-capable transaction to replace the
+This historical section is retained for context only. Successful promotion used a rollback-capable transaction to replace the
 canonical supported artifact/state
 and their approved coverage, CLI-manifest, and live-target projections, then
 clears candidate state. The five promotion destinations are:
