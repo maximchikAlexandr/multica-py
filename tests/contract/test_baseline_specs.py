@@ -194,7 +194,7 @@ BASELINE_PATHS: tuple[str, ...] = (
     "openspec/specs/verification-and-release/spec.md",
 )
 HEADING_RE: re.Pattern[str] = re.compile(
-    r"^(## ADDED Requirements|### Requirement: .+|#### Scenario: .+)$"
+    r"^(## Purpose|## Requirements|### Requirement: .+|#### Scenario: .+)$"
 )
 
 
@@ -213,8 +213,9 @@ def test_baseline_heading_grammar(relative_path: str) -> None:
     document = _read_baseline(relative_path)
     headings = [line for line in document.splitlines() if line.startswith("#")]
     assert headings
-    assert document.count("## ADDED Requirements") == 1
-    assert headings[0] == "## ADDED Requirements"
+    assert document.count("## Purpose") == 1
+    assert document.count("## Requirements") == 1
+    assert headings[:2] == ["## Purpose", "## Requirements"]
     assert all(HEADING_RE.fullmatch(line) for line in headings)
     expected = tuple(case for case in BASELINE_CASES if case.relative_path == relative_path)
     assert _heading_titles(document, "### Requirement: ") == tuple(case.title for case in expected)

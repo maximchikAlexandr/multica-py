@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Define the public synchronous SDK surface, its type guarantees, and its
+distribution boundary.
+
+## Requirements
 
 ### Requirement: Synchronous resource client
 The SDK MUST expose one synchronous `MulticaClient` with stateless domain resources and immutable typed models.

@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Define the controlled subprocess boundary used for all Multica CLI operations.
+
+## Requirements
 
 ### Requirement: CLI-only transport
 The SDK MUST invoke Multica through one shell-free controlled subprocess transport.

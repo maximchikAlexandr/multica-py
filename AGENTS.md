@@ -1,9 +1,3 @@
-<!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
-at specs/008-reduce-nonprod-complexity/plan.md
-<!-- SPECKIT END -->
-
 ## Multica Upstream Contract Review Rules
 
 When updating the SDK from upstream `multica-ai/multica`, treat the pinned
