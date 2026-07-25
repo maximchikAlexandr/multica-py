@@ -29,14 +29,8 @@ def test_dist_contains_one_wheel_and_one_sdist() -> None:
 
     with zipfile.ZipFile(wheel_path) as zf:
         wheel_names = zf.namelist()
-    assert not any("tools/live_support" in n for n in wheel_names), (
-        "tools/live_support must not be in wheel"
-    )
     assert any("multica_py" in n for n in wheel_names), "wheel must include multica_py package"
 
     with tarfile.open(sdist_path) as tf:
         sdist_names = tf.getnames()
-    assert any("tools/live_support" in n for n in sdist_names), (
-        "tools/live_support must be in sdist"
-    )
     assert any("src/multica_py" in n for n in sdist_names), "sdist must include src/multica_py"

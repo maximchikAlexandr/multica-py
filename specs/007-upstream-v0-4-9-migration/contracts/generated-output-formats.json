@@ -1,24 +1,17 @@
 {
   "schema_version": 1,
   "outputs": [
-    {"path":"src/multica_py/_generated/approved_sdk_contract.json","format":"canonical_json","root_keys":["schema_version","target","catalogs","source_refs","test_refs","scope","operations","traceability"]},
-    {"path":"src/multica_py/_generated/approved_sdk_bindings.py","format":"python","exports":["OPERATION_BINDINGS"]},
-    {"path":"src/multica_py/_generated/approved_sdk_enums.py","format":"python","exports":["IssueSort","SortDirection"]},
-    {"path":"src/multica_py/_generated/approved_sdk_validators.py","format":"python","exports":["validate_comment_cursor","validate_description_input","validate_issue_sort","validate_issue_status","validate_nonblank","validate_nonnegative_limit","validate_optional_label","validate_positive_limit","validate_project_status","validate_project_update","validate_resource_update"]},
-    {"path":"src/multica_py/_generated/approved_sdk_compatibility.json","format":"canonical_json","root_keys":["target","compatible","intentionally_changed","explicitly_unsupported"]},
-    {"path":"tests/cases/generated/approved_sdk_cases.py","format":"python","exports":["ARGV_CASES","CONSTRAINT_CASES","PRESENCE_CASES","RESPONSE_CASES"]},
-    {"path":"tests/fixtures/provenance/approved-sdk-v0.4.9.json","format":"canonical_json","root_keys":["target","approved_contract_sha256","release_provenance_sha256"]}
+    {"path":"src/multica_py/_generated/approved_sdk.py","format":"python","exports":["TARGET_VERSION","MIN_CLI_VERSION","MAX_CLI_VERSION","OPERATION_BINDINGS"]},
+    {"path":"docs/approved-sdk.md","format":"markdown","transient":true},
+    {"path":"reports/compatibility.json","format":"canonical_json","transient":true},
+    {"path":"reports/provenance.json","format":"canonical_json","transient":true}
   ],
   "symbol_shapes": {
-    "OPERATION_BINDINGS":"tuple[GeneratedBinding(operation_id:str, entrypoint_id:str, command:tuple[str,...], mappings:tuple[GeneratedMapping,...]), ...] sorted by operation_id/entrypoint_id",
+    "approved_sdk.py":"one committed runtime projection containing version constants, approved enums, binding descriptors, validators, and OPERATION_BINDINGS",
     "GeneratedMapping":"(python_path:str, cli_binding:str, destination:str)",
     "IssueSort":"StrEnum(position,title,created_at,start_date,due_date,priority) in this order",
     "SortDirection":"StrEnum(asc,desc) in this order",
-    "validators":"functions named in exports; each returns None and raises ValueError with stable validator ID prefix",
-    "ARGV_CASES":"tuple[ArgvCase,...] sorted by case id",
-    "CONSTRAINT_CASES":"tuple[ValidationCase,...] sorted by validator ID then valid before invalid",
-    "PRESENCE_CASES":"tuple[PresenceCase,...] sorted by operation/input/state",
-    "RESPONSE_CASES":"tuple[DecodeCase,...] sorted by operation/entrypoint"
+    "validators":"functions in approved_sdk.py; each returns None or raises ValueError"
   },
   "serialization":{"encoding":"utf-8","newline":"lf","trailing_newline":true,"json_indent":2,"json_sort_keys":true,"timestamps_forbidden":true}
 }

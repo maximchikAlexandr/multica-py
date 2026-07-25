@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "target": {
     "version": "0.4.9",
     "tag": "v0.4.9",
@@ -52,202 +52,4406 @@
       "project_update": "(project_id: str, request: ProjectUpdateRequest) -> Project"
     },
     "bindings": {
-      "comment_add": {"command":["issue","comment","add"],"output":"json","mappings":[["issue_id","pos:0","path:issue_id"],["body","--content","json_body:content"]],"constraints":["nonblank:body"]},
-      "comment_delete": {"command":["issue","comment","delete"],"output":"none","mappings":[["comment_id","pos:0","path:comment_id"]],"constraints":["nonblank:comment_id"]},
-      "comment_list": {"command":["issue","comment","list"],"output":"json","mappings":[["issue_id","pos:0","path:issue_id"]],"constraints":["nonblank:issue_id"]},
-      "comment_list_flat": {"command":["issue","comment","list"],"output":"json","mappings":[["request.issue_id","pos:0","path:issue_id"],["request.since","--since","query:since"]],"constraints":[]},
-      "comment_list_thread": {"command":["issue","comment","list"],"output":"json","mappings":[["request.issue_id","pos:0","path:issue_id"],["request.thread_id","--thread","query:thread"],["request.limit","--tail","query:tail"],["request.cursor.before","--before","query:before"],["request.cursor.before_id","--before-id","query:before_id"]],"constraints":["cursor_pair","cursor_requires_limit","limit_nonnegative"]},
-      "comment_list_recent": {"command":["issue","comment","list"],"output":"json","mappings":[["request.issue_id","pos:0","path:issue_id"],["request.limit","--recent","query:recent"],["request.cursor.before","--before","query:before"],["request.cursor.before_id","--before-id","query:before_id"]],"constraints":["cursor_pair","limit_positive"]},
-      "issue_create": {"command":["issue","create"],"output":"json","mappings":[["request.title","--title","json_body:title"],["request.description_input","description-selector","local_control:description"],["request.priority","--priority","json_body:priority"],["request.assignee_id","--assignee-id","json_body:assignee_id"],["request.project_id","--project","json_body:project_id"],["request.label_ids","repeat:issue label add","json_body:label_id"]],"constraints":["nonblank:request.title","description_exactly_one"]},
-      "issue_labels_add": {"command":["issue","label","add"],"output":"json","mappings":[["issue_id","pos:0","path:issue_id"],["label_id","pos:1","json_body:label_id"]],"constraints":["nonblank:issue_id","nonblank:label_id"]},
-      "issue_labels_list": {"command":["issue","label","list"],"output":"json","mappings":[["issue_id","pos:0","path:issue_id"]],"constraints":["nonblank:issue_id"]},
-      "issue_labels_remove": {"command":["issue","label","remove"],"output":"json","mappings":[["issue_id","pos:0","path:issue_id"],["label_id","pos:1","path:label_id"]],"constraints":["nonblank:issue_id","nonblank:label_id"]},
-      "issue_list": {"command":["issue","list"],"output":"json","mappings":[["filter.status","--status","query:status"],["filter.priority","--priority","query:priority"],["filter.assignee_id","--assignee-id","query:assignee_id"],["filter.limit","--limit","query:limit"],["filter.sort","--sort","query:sort"],["filter.direction","--direction","query:direction"]],"constraints":["direction_requires_sort","position_forbids_direction"]},
-      "issue_status": {"command":["issue","status"],"output":"json","mappings":[["issue_id","pos:0","path:issue_id"],["status","pos:1","json_body:status"]],"constraints":["strict:IssueStatus"]},
-      "project_create": {"command":["project","create"],"output":"json","mappings":[["request.name","--title","json_body:title"],["request.description","--description","json_body:description"]],"constraints":["nonblank:request.name"]},
-      "project_resource_add": {"command":["project","resource","add"],"output":"json","mappings":[["project_id","pos:0","path:project_id"],["request.local_path","--local-path","local_control:absolute_path"],["request.daemon_id","--daemon-id","json_body:daemon_id"],["request.label","--ref-label","json_body:label"],["literal.local_directory","--type","json_body:type"]],"constraints":["nonblank:project_id","nonblank:request.local_path","nonblank:request.daemon_id","blank_label_omitted"]},
-      "project_resource_list": {"command":["project","resource","list"],"output":"json","mappings":[["project_id","pos:0","path:project_id"]],"constraints":["nonblank:project_id"]},
-      "project_resource_remove": {"command":["project","resource","remove"],"output":"none","mappings":[["project_id","pos:0","path:project_id"],["resource_id","pos:1","path:resource_id"]],"constraints":["nonblank:project_id","nonblank:resource_id"]},
-      "project_resource_update": {"command":["project","resource","update"],"output":"json","mappings":[["project_id","pos:0","path:project_id"],["resource_id","pos:1","path:resource_id"],["request.local_path","--local-path","local_control:absolute_path"]],"constraints":["nonblank:project_id","nonblank:resource_id","nonblank:request.local_path","preserve_daemon_and_label"]},
-      "project_status": {"command":["project","status"],"output":"json","mappings":[["project_id","pos:0","path:project_id"],["status","pos:1","json_body:status"]],"constraints":["strict:ProjectStatus"]},
-      "project_update": {"command":["project","update"],"output":"json","mappings":[["project_id","pos:0","path:project_id"],["request.name","--title","json_body:title"],["request.description","--description","json_body:description"]],"constraints":["at_least_one:name_description","description_none_rejected","unset_omits","empty_emits"]}
+      "comment_add": {
+        "command": [
+          "issue",
+          "comment",
+          "add"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "body",
+            "--content",
+            "json_body:content"
+          ]
+        ],
+        "constraints": [
+          "nonblank:body"
+        ]
+      },
+      "comment_delete": {
+        "command": [
+          "issue",
+          "comment",
+          "delete"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "comment_id",
+            "pos:0",
+            "path:comment_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:comment_id"
+        ]
+      },
+      "comment_list": {
+        "command": [
+          "issue",
+          "comment",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "comment_list_flat": {
+        "command": [
+          "issue",
+          "comment",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "request.issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "request.since",
+            "--since",
+            "query:since"
+          ]
+        ],
+        "constraints": []
+      },
+      "comment_list_thread": {
+        "command": [
+          "issue",
+          "comment",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "request.issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "request.thread_id",
+            "--thread",
+            "query:thread"
+          ],
+          [
+            "request.limit",
+            "--tail",
+            "query:tail"
+          ],
+          [
+            "request.cursor.before",
+            "--before",
+            "query:before"
+          ],
+          [
+            "request.cursor.before_id",
+            "--before-id",
+            "query:before_id"
+          ]
+        ],
+        "constraints": [
+          "cursor_pair",
+          "cursor_requires_limit",
+          "limit_nonnegative"
+        ]
+      },
+      "comment_list_recent": {
+        "command": [
+          "issue",
+          "comment",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "request.issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "request.limit",
+            "--recent",
+            "query:recent"
+          ],
+          [
+            "request.cursor.before",
+            "--before",
+            "query:before"
+          ],
+          [
+            "request.cursor.before_id",
+            "--before-id",
+            "query:before_id"
+          ]
+        ],
+        "constraints": [
+          "cursor_pair",
+          "limit_positive"
+        ]
+      },
+      "issue_create": {
+        "command": [
+          "issue",
+          "create"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "request.title",
+            "--title",
+            "json_body:title"
+          ],
+          [
+            "request.description_input",
+            "description-selector",
+            "local_control:description"
+          ],
+          [
+            "request.priority",
+            "--priority",
+            "json_body:priority"
+          ],
+          [
+            "request.assignee_id",
+            "--assignee-id",
+            "json_body:assignee_id"
+          ],
+          [
+            "request.project_id",
+            "--project",
+            "json_body:project_id"
+          ],
+          [
+            "request.label_ids",
+            "repeat:issue label add",
+            "json_body:label_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:request.title",
+          "description_exactly_one"
+        ]
+      },
+      "issue_labels_add": {
+        "command": [
+          "issue",
+          "label",
+          "add"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "label_id",
+            "pos:1",
+            "json_body:label_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:label_id"
+        ]
+      },
+      "issue_labels_list": {
+        "command": [
+          "issue",
+          "label",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_labels_remove": {
+        "command": [
+          "issue",
+          "label",
+          "remove"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "label_id",
+            "pos:1",
+            "path:label_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:label_id"
+        ]
+      },
+      "issue_list": {
+        "command": [
+          "issue",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "filter.status",
+            "--status",
+            "query:status"
+          ],
+          [
+            "filter.priority",
+            "--priority",
+            "query:priority"
+          ],
+          [
+            "filter.assignee_id",
+            "--assignee-id",
+            "query:assignee_id"
+          ],
+          [
+            "filter.limit",
+            "--limit",
+            "query:limit"
+          ],
+          [
+            "filter.sort",
+            "--sort",
+            "query:sort"
+          ],
+          [
+            "filter.direction",
+            "--direction",
+            "query:direction"
+          ]
+        ],
+        "constraints": [
+          "direction_requires_sort",
+          "position_forbids_direction"
+        ]
+      },
+      "issue_status": {
+        "command": [
+          "issue",
+          "status"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "status",
+            "pos:1",
+            "json_body:status"
+          ]
+        ],
+        "constraints": [
+          "strict:IssueStatus"
+        ]
+      },
+      "project_create": {
+        "command": [
+          "project",
+          "create"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "request.name",
+            "--title",
+            "json_body:title"
+          ],
+          [
+            "request.description",
+            "--description",
+            "json_body:description"
+          ]
+        ],
+        "constraints": [
+          "nonblank:request.name"
+        ]
+      },
+      "project_resource_add": {
+        "command": [
+          "project",
+          "resource",
+          "add"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "project_id",
+            "pos:0",
+            "path:project_id"
+          ],
+          [
+            "request.local_path",
+            "--local-path",
+            "local_control:absolute_path"
+          ],
+          [
+            "request.daemon_id",
+            "--daemon-id",
+            "json_body:daemon_id"
+          ],
+          [
+            "request.label",
+            "--ref-label",
+            "json_body:label"
+          ],
+          [
+            "literal.local_directory",
+            "--type",
+            "json_body:type"
+          ]
+        ],
+        "constraints": [
+          "nonblank:project_id",
+          "nonblank:request.local_path",
+          "nonblank:request.daemon_id",
+          "blank_label_omitted"
+        ]
+      },
+      "project_resource_list": {
+        "command": [
+          "project",
+          "resource",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "project_id",
+            "pos:0",
+            "path:project_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:project_id"
+        ]
+      },
+      "project_resource_remove": {
+        "command": [
+          "project",
+          "resource",
+          "remove"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "project_id",
+            "pos:0",
+            "path:project_id"
+          ],
+          [
+            "resource_id",
+            "pos:1",
+            "path:resource_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:project_id",
+          "nonblank:resource_id"
+        ]
+      },
+      "project_resource_update": {
+        "command": [
+          "project",
+          "resource",
+          "update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "project_id",
+            "pos:0",
+            "path:project_id"
+          ],
+          [
+            "resource_id",
+            "pos:1",
+            "path:resource_id"
+          ],
+          [
+            "request.local_path",
+            "--local-path",
+            "local_control:absolute_path"
+          ]
+        ],
+        "constraints": [
+          "nonblank:project_id",
+          "nonblank:resource_id",
+          "nonblank:request.local_path",
+          "preserve_daemon_and_label"
+        ]
+      },
+      "project_status": {
+        "command": [
+          "project",
+          "status"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "project_id",
+            "pos:0",
+            "path:project_id"
+          ],
+          [
+            "status",
+            "pos:1",
+            "json_body:status"
+          ]
+        ],
+        "constraints": [
+          "strict:ProjectStatus"
+        ]
+      },
+      "project_update": {
+        "command": [
+          "project",
+          "update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "project_id",
+            "pos:0",
+            "path:project_id"
+          ],
+          [
+            "request.name",
+            "--title",
+            "json_body:title"
+          ],
+          [
+            "request.description",
+            "--description",
+            "json_body:description"
+          ]
+        ],
+        "constraints": [
+          "at_least_one:name_description",
+          "description_none_rejected",
+          "unset_omits",
+          "empty_emits"
+        ]
+      }
     },
     "binding_source_refs": {
-      "comment_add":["S-ISSUE","S-CLIENT"],"comment_delete":["S-ISSUE","S-CLIENT"],
-      "comment_list":["S-ISSUE","S-CLIENT"],"comment_list_flat":["S-ISSUE","S-CLIENT"],
-      "comment_list_thread":["S-ISSUE","S-CLIENT"],"comment_list_recent":["S-ISSUE","S-CLIENT"],
-      "issue_create":["S-ISSUE"],"issue_labels_add":["S-LABEL"],
-      "issue_labels_list":["S-LABEL"],"issue_labels_remove":["S-LABEL"],
-      "issue_list":["S-ISSUE"],"issue_status":["S-ISSUE"],
-      "project_create":["S-PROJECT"],"project_resource_add":["S-PROJECT"],
-      "project_resource_list":["S-PROJECT"],"project_resource_remove":["S-PROJECT"],
-      "project_resource_update":["S-PROJECT"],"project_status":["S-PROJECT"],
-      "project_update":["S-PROJECT"]
+      "comment_add": [
+        "S-ISSUE",
+        "S-CLIENT"
+      ],
+      "comment_delete": [
+        "S-ISSUE",
+        "S-CLIENT"
+      ],
+      "comment_list": [
+        "S-ISSUE",
+        "S-CLIENT"
+      ],
+      "comment_list_flat": [
+        "S-ISSUE",
+        "S-CLIENT"
+      ],
+      "comment_list_thread": [
+        "S-ISSUE",
+        "S-CLIENT"
+      ],
+      "comment_list_recent": [
+        "S-ISSUE",
+        "S-CLIENT"
+      ],
+      "issue_create": [
+        "S-ISSUE"
+      ],
+      "issue_labels_add": [
+        "S-LABEL"
+      ],
+      "issue_labels_list": [
+        "S-LABEL"
+      ],
+      "issue_labels_remove": [
+        "S-LABEL"
+      ],
+      "issue_list": [
+        "S-ISSUE"
+      ],
+      "issue_status": [
+        "S-ISSUE"
+      ],
+      "project_create": [
+        "S-PROJECT"
+      ],
+      "project_resource_add": [
+        "S-PROJECT"
+      ],
+      "project_resource_list": [
+        "S-PROJECT"
+      ],
+      "project_resource_remove": [
+        "S-PROJECT"
+      ],
+      "project_resource_update": [
+        "S-PROJECT"
+      ],
+      "project_status": [
+        "S-PROJECT"
+      ],
+      "project_update": [
+        "S-PROJECT"
+      ]
     },
     "presence": {
-      "required_nonblank":{"omitted":"reject","null":"reject","empty":"reject","zero":"not_applicable","false":"not_applicable"},
-      "required_value":{"omitted":"reject","null":"reject","empty":"emit","zero":"emit","false":"emit"},
-      "optional_omit":{"omitted":"omit","null":"omit","empty":"emit","zero":"emit","false":"emit"},
-      "optional_blank_omit":{"omitted":"omit","null":"omit","empty":"omit","zero":"not_applicable","false":"not_applicable"},
-      "update_text":{"omitted":"omit","null":"reject","empty":"emit","zero":"not_applicable","false":"not_applicable"},
-      "literal":{"omitted":"not_applicable","null":"not_applicable","empty":"not_applicable","zero":"not_applicable","false":"not_applicable"}
+      "required_nonblank": {
+        "omitted": "reject",
+        "null": "reject",
+        "empty": "reject",
+        "zero": "not_applicable",
+        "false": "not_applicable"
+      },
+      "required_value": {
+        "omitted": "reject",
+        "null": "reject",
+        "empty": "emit",
+        "zero": "emit",
+        "false": "emit"
+      },
+      "optional_omit": {
+        "omitted": "omit",
+        "null": "omit",
+        "empty": "emit",
+        "zero": "emit",
+        "false": "emit"
+      },
+      "optional_blank_omit": {
+        "omitted": "omit",
+        "null": "omit",
+        "empty": "omit",
+        "zero": "not_applicable",
+        "false": "not_applicable"
+      },
+      "update_text": {
+        "omitted": "omit",
+        "null": "reject",
+        "empty": "emit",
+        "zero": "not_applicable",
+        "false": "not_applicable"
+      },
+      "literal": {
+        "omitted": "not_applicable",
+        "null": "not_applicable",
+        "empty": "not_applicable",
+        "zero": "not_applicable",
+        "false": "not_applicable"
+      }
     },
     "mapping_presence": {
-      "comment_add":["required_nonblank","required_nonblank"],
-      "comment_delete":["required_nonblank"],
-      "comment_list":["required_nonblank"],
-      "comment_list_flat":["required_nonblank","optional_omit"],
-      "comment_list_thread":["required_nonblank","required_nonblank","optional_omit","optional_omit","optional_omit"],
-      "comment_list_recent":["required_nonblank","required_value","optional_omit","optional_omit"],
-      "issue_create":["required_nonblank","optional_omit","optional_omit","optional_omit","optional_omit","optional_omit"],
-      "issue_labels_add":["required_nonblank","required_nonblank"],
-      "issue_labels_list":["required_nonblank"],
-      "issue_labels_remove":["required_nonblank","required_nonblank"],
-      "issue_list":["optional_omit","optional_omit","optional_omit","optional_omit","optional_omit","optional_omit"],
-      "issue_status":["required_nonblank","required_value"],
-      "project_create":["required_nonblank","optional_blank_omit"],
-      "project_resource_add":["required_nonblank","required_nonblank","required_nonblank","optional_blank_omit","literal"],
-      "project_resource_list":["required_nonblank"],
-      "project_resource_remove":["required_nonblank","required_nonblank"],
-      "project_resource_update":["required_nonblank","required_nonblank","required_nonblank"],
-      "project_status":["required_nonblank","required_value"],
-      "project_update":["required_nonblank","update_text","update_text"]
+      "comment_add": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "comment_delete": [
+        "required_nonblank"
+      ],
+      "comment_list": [
+        "required_nonblank"
+      ],
+      "comment_list_flat": [
+        "required_nonblank",
+        "optional_omit"
+      ],
+      "comment_list_thread": [
+        "required_nonblank",
+        "required_nonblank",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit"
+      ],
+      "comment_list_recent": [
+        "required_nonblank",
+        "required_value",
+        "optional_omit",
+        "optional_omit"
+      ],
+      "issue_create": [
+        "required_nonblank",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit"
+      ],
+      "issue_labels_add": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "issue_labels_list": [
+        "required_nonblank"
+      ],
+      "issue_labels_remove": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "issue_list": [
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit"
+      ],
+      "issue_status": [
+        "required_nonblank",
+        "required_value"
+      ],
+      "project_create": [
+        "required_nonblank",
+        "optional_blank_omit"
+      ],
+      "project_resource_add": [
+        "required_nonblank",
+        "required_nonblank",
+        "required_nonblank",
+        "optional_blank_omit",
+        "literal"
+      ],
+      "project_resource_list": [
+        "required_nonblank"
+      ],
+      "project_resource_remove": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "project_resource_update": [
+        "required_nonblank",
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "project_status": [
+        "required_nonblank",
+        "required_value"
+      ],
+      "project_update": [
+        "required_nonblank",
+        "update_text",
+        "update_text"
+      ]
     },
     "responses": {
-      "comment": {"public_type_id":"comment","wire_type_id":"comment_wire","decoder_id":"decode_comment","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "comments": {"public_type_id":"comments","wire_type_id":"comments_wire","decoder_id":"decode_comments","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "comment_page": {"public_type_id":"comment_page","wire_type_id":"comments_wire","decoder_id":"decode_comment_page","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "comment_thread_page": {"public_type_id":"comment_thread_page","wire_type_id":"comment_threads_wire","decoder_id":"decode_comment_thread_page","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "issue": {"public_type_id":"issue","wire_type_id":"issue_wire","decoder_id":"decode_issue","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "issue_summaries": {"public_type_id":"issue_summaries","wire_type_id":"issue_list_page_wire","decoder_id":"decode_issue_summaries","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "labels": {"public_type_id":"labels","wire_type_id":"labels_wire","decoder_id":"decode_labels","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "none": {"public_type_id":"none","wire_type_id":null,"decoder_id":"decode_none","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "project": {"public_type_id":"project","wire_type_id":"project_wire","decoder_id":"decode_project","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "project_resource": {"public_type_id":"project_resource","wire_type_id":"project_resource_wire","decoder_id":"decode_project_resource","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"},
-      "project_resources": {"public_type_id":"project_resources","wire_type_id":"project_resources_wire","decoder_id":"decode_project_resources","success_exit_codes":[0],"malformed_output":"raise_output_shape_or_decode_error"}
+      "comment": {
+        "public_type_id": "comment",
+        "wire_type_id": "comment_wire",
+        "decoder_id": "decode_comment",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "comments": {
+        "public_type_id": "comments",
+        "wire_type_id": "comments_wire",
+        "decoder_id": "decode_comments",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "comment_page": {
+        "public_type_id": "comment_page",
+        "wire_type_id": "comments_wire",
+        "decoder_id": "decode_comment_page",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "comment_thread_page": {
+        "public_type_id": "comment_thread_page",
+        "wire_type_id": "comment_threads_wire",
+        "decoder_id": "decode_comment_thread_page",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue": {
+        "public_type_id": "issue",
+        "wire_type_id": "issue_wire",
+        "decoder_id": "decode_issue",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_summaries": {
+        "public_type_id": "issue_summaries",
+        "wire_type_id": "issue_list_page_wire",
+        "decoder_id": "decode_issue_summaries",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "labels": {
+        "public_type_id": "labels",
+        "wire_type_id": "labels_wire",
+        "decoder_id": "decode_labels",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "none": {
+        "public_type_id": "none",
+        "wire_type_id": null,
+        "decoder_id": "decode_none",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "project": {
+        "public_type_id": "project",
+        "wire_type_id": "project_wire",
+        "decoder_id": "decode_project",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "project_resource": {
+        "public_type_id": "project_resource",
+        "wire_type_id": "project_resource_wire",
+        "decoder_id": "decode_project_resource",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "project_resources": {
+        "public_type_id": "project_resources",
+        "wire_type_id": "project_resources_wire",
+        "decoder_id": "decode_project_resources",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      }
     },
     "decoders": {
-      "decode_comment":"multica_py._internal.wire_models.comment_from_wire",
-      "decode_comments":"multica_py.resources.issue_comments.IssueCommentResource._run_decode_comments",
-      "decode_comment_page":"multica_py.resources.issue_comments.IssueCommentResource._decode_comment_page",
-      "decode_comment_thread_page":"multica_py.resources.issue_comments.IssueCommentResource._decode_comment_thread_page",
-      "decode_issue":"multica_py._internal.wire_models.issue_from_wire",
-      "decode_issue_summaries":"multica_py._internal.wire_models.issue_summary_from_wire",
-      "decode_labels":"multica_py.resources.issue_labels._decode_labels",
-      "decode_none":"multica_py.resources._base.decode_none",
-      "decode_project":"multica_py._internal.wire_models.project_from_wire",
-      "decode_project_resource":"multica_py._internal.wire_models.project_resource_from_wire",
-      "decode_project_resources":"multica_py.resources.project_resources._decode_project_resources"
+      "decode_comment": "multica_py._internal.wire_models.comment_from_wire",
+      "decode_comments": "multica_py.resources.issue_comments.IssueCommentResource._run_decode_comments",
+      "decode_comment_page": "multica_py.resources.issue_comments.IssueCommentResource._decode_comment_page",
+      "decode_comment_thread_page": "multica_py.resources.issue_comments.IssueCommentResource._decode_comment_thread_page",
+      "decode_issue": "multica_py._internal.wire_models.issue_from_wire",
+      "decode_issue_summaries": "multica_py._internal.wire_models.issue_summary_from_wire",
+      "decode_labels": "multica_py.resources.issue_labels._decode_labels",
+      "decode_none": "multica_py.resources._base.decode_none",
+      "decode_project": "multica_py._internal.wire_models.project_from_wire",
+      "decode_project_resource": "multica_py._internal.wire_models.project_resource_from_wire",
+      "decode_project_resources": "multica_py.resources.project_resources._decode_project_resources"
     },
     "validators": {
-      "at_least_one:name_description":"multica_py._generated.validators.validate_project_update",
-      "blank_label_omitted":"multica_py._generated.validators.normalize_optional_label",
-      "cursor_pair":"multica_py._generated.validators.validate_comment_cursor",
-      "cursor_requires_limit":"multica_py._generated.validators.validate_thread_cursor_limit",
-      "description_exactly_one":"multica_py._generated.validators.validate_description_input",
-      "description_none_rejected":"multica_py._generated.validators.validate_project_description",
-      "direction_requires_sort":"multica_py._generated.validators.validate_issue_sort",
-      "empty_emits":"multica_py._generated.validators.validate_project_update",
-      "limit_nonnegative":"multica_py._generated.validators.validate_nonnegative_limit",
-      "limit_positive":"multica_py._generated.validators.validate_positive_limit",
-      "nonblank:body":"multica_py._generated.validators.validate_nonblank",
-      "nonblank:comment_id":"multica_py._generated.validators.validate_nonblank",
-      "nonblank:issue_id":"multica_py._generated.validators.validate_nonblank",
-      "nonblank:label_id":"multica_py._generated.validators.validate_nonblank",
-      "nonblank:project_id":"multica_py._generated.validators.validate_nonblank",
-      "nonblank:request.daemon_id":"multica_py._generated.validators.validate_nonblank",
-      "nonblank:request.local_path":"multica_py._generated.validators.validate_nonblank",
-      "nonblank:request.name":"multica_py._generated.validators.validate_nonblank",
-      "nonblank:request.title":"multica_py._generated.validators.validate_nonblank",
-      "nonblank:resource_id":"multica_py._generated.validators.validate_nonblank",
-      "position_forbids_direction":"multica_py._generated.validators.validate_issue_sort",
-      "preserve_daemon_and_label":"multica_py._generated.validators.validate_resource_update",
-      "strict:IssueStatus":"multica_py._generated.validators.validate_issue_status",
-      "strict:ProjectStatus":"multica_py._generated.validators.validate_project_status",
-      "unset_omits":"multica_py._generated.validators.validate_project_update"
+      "at_least_one:name_description": "multica_py._generated.validators.validate_project_update",
+      "blank_label_omitted": "multica_py._generated.validators.normalize_optional_label",
+      "cursor_pair": "multica_py._generated.validators.validate_comment_cursor",
+      "cursor_requires_limit": "multica_py._generated.validators.validate_thread_cursor_limit",
+      "description_exactly_one": "multica_py._generated.validators.validate_description_input",
+      "description_none_rejected": "multica_py._generated.validators.validate_project_description",
+      "direction_requires_sort": "multica_py._generated.validators.validate_issue_sort",
+      "empty_emits": "multica_py._generated.validators.validate_project_update",
+      "limit_nonnegative": "multica_py._generated.validators.validate_nonnegative_limit",
+      "limit_positive": "multica_py._generated.validators.validate_positive_limit",
+      "nonblank:body": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:comment_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:issue_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:label_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:project_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:request.daemon_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:request.local_path": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:request.name": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:request.title": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:resource_id": "multica_py._generated.validators.validate_nonblank",
+      "position_forbids_direction": "multica_py._generated.validators.validate_issue_sort",
+      "preserve_daemon_and_label": "multica_py._generated.validators.validate_resource_update",
+      "strict:IssueStatus": "multica_py._generated.validators.validate_issue_status",
+      "strict:ProjectStatus": "multica_py._generated.validators.validate_project_status",
+      "unset_omits": "multica_py._generated.validators.validate_project_update"
     },
     "validator_evidence": {
-      "at_least_one:name_description":{"positive_case_id":"at-least-one-name-description-valid","negative_case_id":"at-least-one-name-description-invalid"},
-      "blank_label_omitted":{"positive_case_id":"blank-label-omitted-valid","negative_case_id":"blank-label-omitted-invalid"},
-      "cursor_pair":{"positive_case_id":"cursor-pair-valid","negative_case_id":"cursor-pair-invalid"},
-      "cursor_requires_limit":{"positive_case_id":"cursor-requires-limit-valid","negative_case_id":"cursor-requires-limit-invalid"},
-      "description_exactly_one":{"positive_case_id":"description-exactly-one-valid","negative_case_id":"description-exactly-one-invalid"},
-      "description_none_rejected":{"positive_case_id":"description-none-rejected-valid","negative_case_id":"description-none-rejected-invalid"},
-      "direction_requires_sort":{"positive_case_id":"direction-requires-sort-valid","negative_case_id":"direction-requires-sort-invalid"},
-      "empty_emits":{"positive_case_id":"empty-emits-valid","negative_case_id":"empty-emits-invalid"},
-      "limit_nonnegative":{"positive_case_id":"limit-nonnegative-valid","negative_case_id":"limit-nonnegative-invalid"},
-      "limit_positive":{"positive_case_id":"limit-positive-valid","negative_case_id":"limit-positive-invalid"},
-      "nonblank:body":{"positive_case_id":"nonblank-body-valid","negative_case_id":"nonblank-body-invalid"},
-      "nonblank:comment_id":{"positive_case_id":"nonblank-comment-id-valid","negative_case_id":"nonblank-comment-id-invalid"},
-      "nonblank:issue_id":{"positive_case_id":"nonblank-issue-id-valid","negative_case_id":"nonblank-issue-id-invalid"},
-      "nonblank:label_id":{"positive_case_id":"nonblank-label-id-valid","negative_case_id":"nonblank-label-id-invalid"},
-      "nonblank:project_id":{"positive_case_id":"nonblank-project-id-valid","negative_case_id":"nonblank-project-id-invalid"},
-      "nonblank:request.daemon_id":{"positive_case_id":"nonblank-request-daemon-id-valid","negative_case_id":"nonblank-request-daemon-id-invalid"},
-      "nonblank:request.local_path":{"positive_case_id":"nonblank-request-local-path-valid","negative_case_id":"nonblank-request-local-path-invalid"},
-      "nonblank:request.name":{"positive_case_id":"nonblank-request-name-valid","negative_case_id":"nonblank-request-name-invalid"},
-      "nonblank:request.title":{"positive_case_id":"nonblank-request-title-valid","negative_case_id":"nonblank-request-title-invalid"},
-      "nonblank:resource_id":{"positive_case_id":"nonblank-resource-id-valid","negative_case_id":"nonblank-resource-id-invalid"},
-      "position_forbids_direction":{"positive_case_id":"position-forbids-direction-valid","negative_case_id":"position-forbids-direction-invalid"},
-      "preserve_daemon_and_label":{"positive_case_id":"preserve-daemon-label-valid","negative_case_id":"preserve-daemon-label-invalid"},
-      "strict:IssueStatus":{"positive_case_id":"strict-issue-status-valid","negative_case_id":"strict-issue-status-invalid"},
-      "strict:ProjectStatus":{"positive_case_id":"strict-project-status-valid","negative_case_id":"strict-project-status-invalid"},
-      "unset_omits":{"positive_case_id":"unset-omits-valid","negative_case_id":"unset-omits-invalid"}
+      "at_least_one:name_description": {
+        "positive_case_id": "at-least-one-name-description-valid",
+        "negative_case_id": "at-least-one-name-description-invalid"
+      },
+      "blank_label_omitted": {
+        "positive_case_id": "blank-label-omitted-valid",
+        "negative_case_id": "blank-label-omitted-invalid"
+      },
+      "cursor_pair": {
+        "positive_case_id": "cursor-pair-valid",
+        "negative_case_id": "cursor-pair-invalid"
+      },
+      "cursor_requires_limit": {
+        "positive_case_id": "cursor-requires-limit-valid",
+        "negative_case_id": "cursor-requires-limit-invalid"
+      },
+      "description_exactly_one": {
+        "positive_case_id": "description-exactly-one-valid",
+        "negative_case_id": "description-exactly-one-invalid"
+      },
+      "description_none_rejected": {
+        "positive_case_id": "description-none-rejected-valid",
+        "negative_case_id": "description-none-rejected-invalid"
+      },
+      "direction_requires_sort": {
+        "positive_case_id": "direction-requires-sort-valid",
+        "negative_case_id": "direction-requires-sort-invalid"
+      },
+      "empty_emits": {
+        "positive_case_id": "empty-emits-valid",
+        "negative_case_id": "empty-emits-invalid"
+      },
+      "limit_nonnegative": {
+        "positive_case_id": "limit-nonnegative-valid",
+        "negative_case_id": "limit-nonnegative-invalid"
+      },
+      "limit_positive": {
+        "positive_case_id": "limit-positive-valid",
+        "negative_case_id": "limit-positive-invalid"
+      },
+      "nonblank:body": {
+        "positive_case_id": "nonblank-body-valid",
+        "negative_case_id": "nonblank-body-invalid"
+      },
+      "nonblank:comment_id": {
+        "positive_case_id": "nonblank-comment-id-valid",
+        "negative_case_id": "nonblank-comment-id-invalid"
+      },
+      "nonblank:issue_id": {
+        "positive_case_id": "nonblank-issue-id-valid",
+        "negative_case_id": "nonblank-issue-id-invalid"
+      },
+      "nonblank:label_id": {
+        "positive_case_id": "nonblank-label-id-valid",
+        "negative_case_id": "nonblank-label-id-invalid"
+      },
+      "nonblank:project_id": {
+        "positive_case_id": "nonblank-project-id-valid",
+        "negative_case_id": "nonblank-project-id-invalid"
+      },
+      "nonblank:request.daemon_id": {
+        "positive_case_id": "nonblank-request-daemon-id-valid",
+        "negative_case_id": "nonblank-request-daemon-id-invalid"
+      },
+      "nonblank:request.local_path": {
+        "positive_case_id": "nonblank-request-local-path-valid",
+        "negative_case_id": "nonblank-request-local-path-invalid"
+      },
+      "nonblank:request.name": {
+        "positive_case_id": "nonblank-request-name-valid",
+        "negative_case_id": "nonblank-request-name-invalid"
+      },
+      "nonblank:request.title": {
+        "positive_case_id": "nonblank-request-title-valid",
+        "negative_case_id": "nonblank-request-title-invalid"
+      },
+      "nonblank:resource_id": {
+        "positive_case_id": "nonblank-resource-id-valid",
+        "negative_case_id": "nonblank-resource-id-invalid"
+      },
+      "position_forbids_direction": {
+        "positive_case_id": "position-forbids-direction-valid",
+        "negative_case_id": "position-forbids-direction-invalid"
+      },
+      "preserve_daemon_and_label": {
+        "positive_case_id": "preserve-daemon-label-valid",
+        "negative_case_id": "preserve-daemon-label-invalid"
+      },
+      "strict:IssueStatus": {
+        "positive_case_id": "strict-issue-status-valid",
+        "negative_case_id": "strict-issue-status-invalid"
+      },
+      "strict:ProjectStatus": {
+        "positive_case_id": "strict-project-status-valid",
+        "negative_case_id": "strict-project-status-invalid"
+      },
+      "unset_omits": {
+        "positive_case_id": "unset-omits-valid",
+        "negative_case_id": "unset-omits-invalid"
+      }
+    },
+    "enum_definitions": [
+      {
+        "enum_id": "issue_sort",
+        "public_name": "IssueSort",
+        "members": [
+          {
+            "name": "position",
+            "value": "position"
+          },
+          {
+            "name": "title",
+            "value": "title"
+          },
+          {
+            "name": "created_at",
+            "value": "created_at"
+          },
+          {
+            "name": "start_date",
+            "value": "start_date"
+          },
+          {
+            "name": "due_date",
+            "value": "due_date"
+          },
+          {
+            "name": "priority",
+            "value": "priority"
+          }
+        ]
+      },
+      {
+        "enum_id": "sort_direction",
+        "public_name": "SortDirection",
+        "members": [
+          {
+            "name": "asc",
+            "value": "asc"
+          },
+          {
+            "name": "desc",
+            "value": "desc"
+          }
+        ]
+      }
+    ],
+    "validator_definitions": [
+      {
+        "validator_id": "at_least_one:name_description",
+        "name": "validate_project_update",
+        "parameter_name": "value",
+        "body_kind": "project_update"
+      },
+      {
+        "validator_id": "blank_label_omitted",
+        "name": "normalize_optional_label",
+        "parameter_name": "value",
+        "body_kind": "project_update"
+      },
+      {
+        "validator_id": "cursor_pair",
+        "name": "validate_comment_cursor",
+        "parameter_name": "value",
+        "body_kind": "project_update"
+      },
+      {
+        "validator_id": "cursor_requires_limit",
+        "name": "validate_thread_cursor_limit",
+        "parameter_name": "value",
+        "body_kind": "positive_int"
+      },
+      {
+        "validator_id": "description_exactly_one",
+        "name": "validate_description_input",
+        "parameter_name": "value",
+        "body_kind": "project_update"
+      },
+      {
+        "validator_id": "description_none_rejected",
+        "name": "validate_project_description",
+        "parameter_name": "value",
+        "body_kind": "project_update"
+      },
+      {
+        "validator_id": "direction_requires_sort",
+        "name": "validate_issue_sort",
+        "parameter_name": "value",
+        "body_kind": "project_update"
+      },
+      {
+        "validator_id": "empty_emits",
+        "name": "validate_project_update",
+        "parameter_name": "value",
+        "body_kind": "project_update"
+      },
+      {
+        "validator_id": "limit_nonnegative",
+        "name": "validate_nonnegative_limit",
+        "parameter_name": "value",
+        "body_kind": "nonnegative_int"
+      },
+      {
+        "validator_id": "limit_positive",
+        "name": "validate_positive_limit",
+        "parameter_name": "value",
+        "body_kind": "positive_int"
+      },
+      {
+        "validator_id": "nonblank:body",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:comment_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:issue_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:label_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:project_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:request.daemon_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:request.local_path",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:request.name",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:request.title",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:resource_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "position_forbids_direction",
+        "name": "validate_issue_sort",
+        "parameter_name": "value",
+        "body_kind": "project_update"
+      },
+      {
+        "validator_id": "preserve_daemon_and_label",
+        "name": "validate_resource_update",
+        "parameter_name": "value",
+        "body_kind": "resource_update"
+      },
+      {
+        "validator_id": "strict:IssueStatus",
+        "name": "validate_issue_status",
+        "parameter_name": "value",
+        "body_kind": "one_of:IssueStatus"
+      },
+      {
+        "validator_id": "strict:ProjectStatus",
+        "name": "validate_project_status",
+        "parameter_name": "value",
+        "body_kind": "one_of:ProjectStatus"
+      },
+      {
+        "validator_id": "unset_omits",
+        "name": "validate_project_update",
+        "parameter_name": "value",
+        "body_kind": "project_update"
+      }
+    ],
+    "binding_descriptors": [
+      {
+        "descriptor_id": "comment_add",
+        "operation_id": "issues.comments.add",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "comment",
+          "add"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "body",
+            "binding": "--content",
+            "destination": "json_body:content"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:body"
+        ]
+      },
+      {
+        "descriptor_id": "comment_delete",
+        "operation_id": "issues.comments.delete",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "comment",
+          "delete"
+        ],
+        "mappings": [
+          {
+            "source": "comment_id",
+            "binding": "pos:0",
+            "destination": "path:comment_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:comment_id"
+        ]
+      },
+      {
+        "descriptor_id": "comment_list",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "direct",
+        "command": [
+          "issue",
+          "comment",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id"
+        ]
+      },
+      {
+        "descriptor_id": "comment_list_flat",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "flat",
+        "command": [
+          "issue",
+          "comment",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "request.issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "request.since",
+            "binding": "--since",
+            "destination": "query:since"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "comment_list_thread",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "thread",
+        "command": [
+          "issue",
+          "comment",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "request.issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "request.thread_id",
+            "binding": "--thread",
+            "destination": "query:thread"
+          },
+          {
+            "source": "request.limit",
+            "binding": "--tail",
+            "destination": "query:tail"
+          },
+          {
+            "source": "request.cursor.before",
+            "binding": "--before",
+            "destination": "query:before"
+          },
+          {
+            "source": "request.cursor.before_id",
+            "binding": "--before-id",
+            "destination": "query:before_id"
+          }
+        ],
+        "validator_ids": [
+          "cursor_pair",
+          "cursor_requires_limit",
+          "limit_nonnegative"
+        ]
+      },
+      {
+        "descriptor_id": "comment_list_recent",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "recent",
+        "command": [
+          "issue",
+          "comment",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "request.issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "request.limit",
+            "binding": "--recent",
+            "destination": "query:recent"
+          },
+          {
+            "source": "request.cursor.before",
+            "binding": "--before",
+            "destination": "query:before"
+          },
+          {
+            "source": "request.cursor.before_id",
+            "binding": "--before-id",
+            "destination": "query:before_id"
+          }
+        ],
+        "validator_ids": [
+          "cursor_pair",
+          "limit_positive"
+        ]
+      },
+      {
+        "descriptor_id": "issue_create",
+        "operation_id": "issues.create",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "create"
+        ],
+        "mappings": [
+          {
+            "source": "request.title",
+            "binding": "--title",
+            "destination": "json_body:title"
+          },
+          {
+            "source": "request.description_input",
+            "binding": "description-selector",
+            "destination": "local_control:description"
+          },
+          {
+            "source": "request.priority",
+            "binding": "--priority",
+            "destination": "json_body:priority"
+          },
+          {
+            "source": "request.assignee_id",
+            "binding": "--assignee-id",
+            "destination": "json_body:assignee_id"
+          },
+          {
+            "source": "request.project_id",
+            "binding": "--project",
+            "destination": "json_body:project_id"
+          },
+          {
+            "source": "request.label_ids",
+            "binding": "repeat:issue label add",
+            "destination": "json_body:label_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:request.title",
+          "description_exactly_one"
+        ]
+      },
+      {
+        "descriptor_id": "issue_labels_add",
+        "operation_id": "issues.labels.add",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "label",
+          "add"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "label_id",
+            "binding": "pos:1",
+            "destination": "json_body:label_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id",
+          "nonblank:label_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_labels_list",
+        "operation_id": "issues.labels.list",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "label",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_labels_remove",
+        "operation_id": "issues.labels.remove",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "label",
+          "remove"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "label_id",
+            "binding": "pos:1",
+            "destination": "path:label_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id",
+          "nonblank:label_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_list",
+        "operation_id": "issues.list",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "filter.status",
+            "binding": "--status",
+            "destination": "query:status"
+          },
+          {
+            "source": "filter.priority",
+            "binding": "--priority",
+            "destination": "query:priority"
+          },
+          {
+            "source": "filter.assignee_id",
+            "binding": "--assignee-id",
+            "destination": "query:assignee_id"
+          },
+          {
+            "source": "filter.limit",
+            "binding": "--limit",
+            "destination": "query:limit"
+          },
+          {
+            "source": "filter.sort",
+            "binding": "--sort",
+            "destination": "query:sort"
+          },
+          {
+            "source": "filter.direction",
+            "binding": "--direction",
+            "destination": "query:direction"
+          }
+        ],
+        "validator_ids": [
+          "direction_requires_sort",
+          "position_forbids_direction"
+        ]
+      },
+      {
+        "descriptor_id": "issue_status",
+        "operation_id": "issues.set_status",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "status"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "status",
+            "binding": "pos:1",
+            "destination": "json_body:status"
+          }
+        ],
+        "validator_ids": [
+          "strict:IssueStatus"
+        ]
+      },
+      {
+        "descriptor_id": "project_create",
+        "operation_id": "projects.create",
+        "entrypoint_id": "default",
+        "command": [
+          "project",
+          "create"
+        ],
+        "mappings": [
+          {
+            "source": "request.name",
+            "binding": "--title",
+            "destination": "json_body:title"
+          },
+          {
+            "source": "request.description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:request.name"
+        ]
+      },
+      {
+        "descriptor_id": "project_resource_add",
+        "operation_id": "projects.resources.add_local_directory",
+        "entrypoint_id": "default",
+        "command": [
+          "project",
+          "resource",
+          "add"
+        ],
+        "mappings": [
+          {
+            "source": "project_id",
+            "binding": "pos:0",
+            "destination": "path:project_id"
+          },
+          {
+            "source": "request.local_path",
+            "binding": "--local-path",
+            "destination": "local_control:absolute_path"
+          },
+          {
+            "source": "request.daemon_id",
+            "binding": "--daemon-id",
+            "destination": "json_body:daemon_id"
+          },
+          {
+            "source": "request.label",
+            "binding": "--ref-label",
+            "destination": "json_body:label"
+          },
+          {
+            "source": "literal.local_directory",
+            "binding": "--type",
+            "destination": "json_body:type"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:project_id",
+          "nonblank:request.local_path",
+          "nonblank:request.daemon_id",
+          "blank_label_omitted"
+        ]
+      },
+      {
+        "descriptor_id": "project_resource_list",
+        "operation_id": "projects.resources.list",
+        "entrypoint_id": "default",
+        "command": [
+          "project",
+          "resource",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "project_id",
+            "binding": "pos:0",
+            "destination": "path:project_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:project_id"
+        ]
+      },
+      {
+        "descriptor_id": "project_resource_remove",
+        "operation_id": "projects.resources.remove",
+        "entrypoint_id": "default",
+        "command": [
+          "project",
+          "resource",
+          "remove"
+        ],
+        "mappings": [
+          {
+            "source": "project_id",
+            "binding": "pos:0",
+            "destination": "path:project_id"
+          },
+          {
+            "source": "resource_id",
+            "binding": "pos:1",
+            "destination": "path:resource_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:project_id",
+          "nonblank:resource_id"
+        ]
+      },
+      {
+        "descriptor_id": "project_resource_update",
+        "operation_id": "projects.resources.update_local_directory",
+        "entrypoint_id": "default",
+        "command": [
+          "project",
+          "resource",
+          "update"
+        ],
+        "mappings": [
+          {
+            "source": "project_id",
+            "binding": "pos:0",
+            "destination": "path:project_id"
+          },
+          {
+            "source": "resource_id",
+            "binding": "pos:1",
+            "destination": "path:resource_id"
+          },
+          {
+            "source": "request.local_path",
+            "binding": "--local-path",
+            "destination": "local_control:absolute_path"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:project_id",
+          "nonblank:resource_id",
+          "nonblank:request.local_path",
+          "preserve_daemon_and_label"
+        ]
+      },
+      {
+        "descriptor_id": "project_status",
+        "operation_id": "projects.set_status",
+        "entrypoint_id": "default",
+        "command": [
+          "project",
+          "status"
+        ],
+        "mappings": [
+          {
+            "source": "project_id",
+            "binding": "pos:0",
+            "destination": "path:project_id"
+          },
+          {
+            "source": "status",
+            "binding": "pos:1",
+            "destination": "json_body:status"
+          }
+        ],
+        "validator_ids": [
+          "strict:ProjectStatus"
+        ]
+      },
+      {
+        "descriptor_id": "project_update",
+        "operation_id": "projects.update",
+        "entrypoint_id": "default",
+        "command": [
+          "project",
+          "update"
+        ],
+        "mappings": [
+          {
+            "source": "project_id",
+            "binding": "pos:0",
+            "destination": "path:project_id"
+          },
+          {
+            "source": "request.name",
+            "binding": "--title",
+            "destination": "json_body:title"
+          },
+          {
+            "source": "request.description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          }
+        ],
+        "validator_ids": [
+          "at_least_one:name_description",
+          "description_none_rejected",
+          "unset_omits",
+          "empty_emits"
+        ]
+      }
+    ],
+    "test_vectors": {
+      "generated:issues.comments.list:direct:canonical": {
+        "vector_id": "generated:issues.comments.list:direct:canonical",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "direct",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "comment",
+          "list",
+          "iss_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.comments.list:direct:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.comments.list:flat:canonical": {
+        "vector_id": "generated:issues.comments.list:flat:canonical",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "flat",
+        "is_canonical": false,
+        "args": [
+          {
+            "kind": "request",
+            "type": "CommentListFlatRequest",
+            "fields": [
+              [
+                "issue_id",
+                {
+                  "kind": "primitive",
+                  "value": "iss_1"
+                }
+              ],
+              [
+                "since",
+                {
+                  "kind": "datetime",
+                  "value": "2026-07-12T10:00:00+00:00"
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W3siaWQiOiJjMSIsImNvbnRlbnQiOiJoZWxsbyJ9XQ==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_text",
+        "expected_argv": [
+          "issue",
+          "comment",
+          "list",
+          "iss_1",
+          "--since",
+          "2026-07-12T10:00:00+00:00",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.comments.list:flat:canonical",
+          "kind": "page_items",
+          "expected": {
+            "kind": "list",
+            "items": [
+              {
+                "kind": "primitive",
+                "value": "c1"
+              }
+            ]
+          }
+        }
+      },
+      "generated:issues.comments.list:thread:canonical": {
+        "vector_id": "generated:issues.comments.list:thread:canonical",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "thread",
+        "is_canonical": false,
+        "args": [
+          {
+            "kind": "request",
+            "type": "CommentListThreadRequest",
+            "fields": [
+              [
+                "issue_id",
+                {
+                  "kind": "primitive",
+                  "value": "iss_1"
+                }
+              ],
+              [
+                "thread_id",
+                {
+                  "kind": "primitive",
+                  "value": "th_1"
+                }
+              ],
+              [
+                "limit",
+                {
+                  "kind": "primitive",
+                  "value": 10
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W3siaWQiOiJjMSIsImNvbnRlbnQiOiJyZXBseSIsInBhcmVudF9pZCI6InRoXzEifV0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_text",
+        "expected_argv": [
+          "issue",
+          "comment",
+          "list",
+          "iss_1",
+          "--thread",
+          "th_1",
+          "--tail",
+          "10",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.comments.list:thread:canonical",
+          "kind": "page_items",
+          "expected": {
+            "kind": "list",
+            "items": [
+              {
+                "kind": "primitive",
+                "value": "c1"
+              }
+            ]
+          }
+        }
+      },
+      "generated:issues.comments.list:thread:variant:01": {
+        "vector_id": "generated:issues.comments.list:thread:variant:01",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "thread",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "request",
+            "type": "CommentListThreadRequest",
+            "fields": [
+              [
+                "issue_id",
+                {
+                  "kind": "primitive",
+                  "value": "iss_1"
+                }
+              ],
+              [
+                "thread_id",
+                {
+                  "kind": "primitive",
+                  "value": "th_1"
+                }
+              ],
+              [
+                "cursor",
+                {
+                  "kind": "comment_cursor",
+                  "before": "cur_b",
+                  "before_id": "cur_id"
+                }
+              ],
+              [
+                "limit",
+                {
+                  "kind": "primitive",
+                  "value": 10
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W3siaWQiOiJjMSIsImNvbnRlbnQiOiJyZXBseSIsInBhcmVudF9pZCI6InRoXzEifV0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_text",
+        "expected_argv": [
+          "issue",
+          "comment",
+          "list",
+          "iss_1",
+          "--thread",
+          "th_1",
+          "--before",
+          "cur_b",
+          "--before-id",
+          "cur_id",
+          "--tail",
+          "10",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.comments.list:thread:variant:01",
+          "kind": "page_items",
+          "expected": {
+            "kind": "list",
+            "items": [
+              {
+                "kind": "primitive",
+                "value": "c1"
+              }
+            ]
+          }
+        }
+      },
+      "generated:issues.comments.list:recent:canonical": {
+        "vector_id": "generated:issues.comments.list:recent:canonical",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "recent",
+        "is_canonical": false,
+        "args": [
+          {
+            "kind": "request",
+            "type": "CommentListRecentRequest",
+            "fields": [
+              [
+                "issue_id",
+                {
+                  "kind": "primitive",
+                  "value": "iss_1"
+                }
+              ],
+              [
+                "limit",
+                {
+                  "kind": "primitive",
+                  "value": 5
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W3siaWQiOiJ0aF8xIiwiY29tbWVudHMiOlt7ImlkIjoiYzEiLCJjb250ZW50Ijoicm9vdCBjb21tZW50In1dLCJyZXNvbHZlZCI6ZmFsc2V9XQ==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_text",
+        "expected_argv": [
+          "issue",
+          "comment",
+          "list",
+          "iss_1",
+          "--recent",
+          "5",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.comments.list:recent:canonical",
+          "kind": "page_items",
+          "expected": {
+            "kind": "list",
+            "items": [
+              {
+                "kind": "primitive",
+                "value": "th_1"
+              }
+            ]
+          }
+        }
+      },
+      "generated:issues.comments.list:recent:variant:01": {
+        "vector_id": "generated:issues.comments.list:recent:variant:01",
+        "operation_id": "issues.comments.list",
+        "entrypoint_id": "recent",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "request",
+            "type": "CommentListRecentRequest",
+            "fields": [
+              [
+                "issue_id",
+                {
+                  "kind": "primitive",
+                  "value": "iss_1"
+                }
+              ],
+              [
+                "limit",
+                {
+                  "kind": "primitive",
+                  "value": 10
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_text",
+        "expected_argv": [
+          "issue",
+          "comment",
+          "list",
+          "iss_1",
+          "--recent",
+          "10",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.comments.list:recent:variant:01",
+          "kind": "page_items",
+          "expected": {
+            "kind": "list",
+            "items": []
+          }
+        }
+      },
+      "generated:issues.labels.add:default:canonical": {
+        "vector_id": "generated:issues.labels.add:default:canonical",
+        "operation_id": "issues.labels.add",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          },
+          {
+            "kind": "primitive",
+            "value": "lbl_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W3siaWQiOiJsYmxfMSIsIm5hbWUiOiJidWciLCJjb2xvciI6IiNmZjAwMDAifV0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "label",
+          "add",
+          "iss_1",
+          "lbl_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.labels.add:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.labels.remove:default:canonical": {
+        "vector_id": "generated:issues.labels.remove:default:canonical",
+        "operation_id": "issues.labels.remove",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          },
+          {
+            "kind": "primitive",
+            "value": "lbl_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "label",
+          "remove",
+          "iss_1",
+          "lbl_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.labels.remove:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.labels.list:default:canonical": {
+        "vector_id": "generated:issues.labels.list:default:canonical",
+        "operation_id": "issues.labels.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W3siaWQiOiJsYmxfMSIsIm5hbWUiOiJidWciLCJjb2xvciI6IiNmZjAwMDAifV0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "label",
+          "list",
+          "iss_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.labels.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.list:default:canonical": {
+        "vector_id": "generated:issues.list:default:canonical",
+        "operation_id": "issues.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "eyJpc3N1ZXMiOltdfQ==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.create:default:canonical": {
+        "vector_id": "generated:issues.create:default:canonical",
+        "operation_id": "issues.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "request",
+            "type": "IssueCreateRequest",
+            "fields": [
+              [
+                "title",
+                {
+                  "kind": "primitive",
+                  "value": "Test"
+                }
+              ],
+              [
+                "label_ids",
+                {
+                  "kind": "list",
+                  "items": []
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "create",
+          "--title",
+          "Test",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.create:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.issues.Issue"
+          }
+        }
+      },
+      "generated:issues.create:default:variant:01": {
+        "vector_id": "generated:issues.create:default:variant:01",
+        "operation_id": "issues.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "request",
+            "type": "IssueCreateRequest",
+            "fields": [
+              [
+                "title",
+                {
+                  "kind": "primitive",
+                  "value": "Test"
+                }
+              ],
+              [
+                "description_input",
+                {
+                  "kind": "inline_description",
+                  "text": "hello"
+                }
+              ],
+              [
+                "label_ids",
+                {
+                  "kind": "list",
+                  "items": []
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "create",
+          "--title",
+          "Test",
+          "--description",
+          "hello",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.create:default:variant:01",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.issues.Issue"
+          }
+        }
+      },
+      "generated:issues.create:default:variant:02": {
+        "vector_id": "generated:issues.create:default:variant:02",
+        "operation_id": "issues.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "request",
+            "type": "IssueCreateRequest",
+            "fields": [
+              [
+                "title",
+                {
+                  "kind": "primitive",
+                  "value": "Test"
+                }
+              ],
+              [
+                "description_input",
+                {
+                  "kind": "file_description",
+                  "path": "/nonexistent/desc.txt"
+                }
+              ],
+              [
+                "label_ids",
+                {
+                  "kind": "list",
+                  "items": []
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "create",
+          "--title",
+          "Test",
+          "--description-file",
+          "/nonexistent/desc.txt",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.create:default:variant:02",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.issues.Issue"
+          }
+        }
+      },
+      "generated:issues.create:default:variant:03": {
+        "vector_id": "generated:issues.create:default:variant:03",
+        "operation_id": "issues.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "request",
+            "type": "IssueCreateRequest",
+            "fields": [
+              [
+                "title",
+                {
+                  "kind": "primitive",
+                  "value": "Test"
+                }
+              ],
+              [
+                "description_input",
+                {
+                  "kind": "stdin_description"
+                }
+              ],
+              [
+                "label_ids",
+                {
+                  "kind": "list",
+                  "items": []
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "create",
+          "--title",
+          "Test",
+          "--description-stdin",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.create:default:variant:03",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.issues.Issue"
+          }
+        }
+      },
+      "generated:issues.create:default:variant:04": {
+        "vector_id": "generated:issues.create:default:variant:04",
+        "operation_id": "issues.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "request",
+            "type": "IssueCreateRequest",
+            "fields": [
+              [
+                "title",
+                {
+                  "kind": "primitive",
+                  "value": "Test"
+                }
+              ],
+              [
+                "project_id",
+                {
+                  "kind": "primitive",
+                  "value": "pr_001"
+                }
+              ],
+              [
+                "label_ids",
+                {
+                  "kind": "list",
+                  "items": []
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "create",
+          "--title",
+          "Test",
+          "--project",
+          "pr_001",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.create:default:variant:04",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.issues.Issue"
+          }
+        }
+      },
+      "generated:projects.create:default:canonical": {
+        "vector_id": "generated:projects.create:default:canonical",
+        "operation_id": "projects.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "request",
+            "type": "ProjectCreateRequest",
+            "fields": [
+              [
+                "name",
+                {
+                  "kind": "primitive",
+                  "value": "Alpha"
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6IkFscGhhIiwic3RhdHVzIjoicGxhbm5lZCJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "create",
+          "--title",
+          "Alpha",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.create:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.projects.Project"
+          }
+        }
+      },
+      "generated:projects.create:default:variant:01": {
+        "vector_id": "generated:projects.create:default:variant:01",
+        "operation_id": "projects.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "request",
+            "type": "ProjectCreateRequest",
+            "fields": [
+              [
+                "name",
+                {
+                  "kind": "primitive",
+                  "value": "Alpha"
+                }
+              ],
+              [
+                "description",
+                {
+                  "kind": "primitive",
+                  "value": "desc"
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6IkFscGhhIiwic3RhdHVzIjoicGxhbm5lZCJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "create",
+          "--title",
+          "Alpha",
+          "--description",
+          "desc",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.create:default:variant:01",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.projects.Project"
+          }
+        }
+      },
+      "generated:projects.update:default:canonical": {
+        "vector_id": "generated:projects.update:default:canonical",
+        "operation_id": "projects.update",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_1"
+          },
+          {
+            "kind": "request",
+            "type": "ProjectUpdateRequest",
+            "fields": []
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6IkFscGhhIiwic3RhdHVzIjoicGxhbm5lZCJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "update",
+          "pr_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.update:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.projects.Project"
+          }
+        }
+      },
+      "generated:projects.update:default:variant:01": {
+        "vector_id": "generated:projects.update:default:variant:01",
+        "operation_id": "projects.update",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_1"
+          },
+          {
+            "kind": "request",
+            "type": "ProjectUpdateRequest",
+            "fields": [
+              [
+                "name",
+                {
+                  "kind": "primitive",
+                  "value": "only-title"
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6Ik5ldyIsInN0YXR1cyI6InBsYW5uZWQifQ==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "update",
+          "pr_1",
+          "--title",
+          "only-title",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.update:default:variant:01",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.projects.Project"
+          }
+        }
+      },
+      "generated:projects.update:default:variant:02": {
+        "vector_id": "generated:projects.update:default:variant:02",
+        "operation_id": "projects.update",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_1"
+          },
+          {
+            "kind": "request",
+            "type": "ProjectUpdateRequest",
+            "fields": [
+              [
+                "description",
+                {
+                  "kind": "primitive",
+                  "value": ""
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6IkFscGhhIiwic3RhdHVzIjoicGxhbm5lZCJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "update",
+          "pr_1",
+          "--description",
+          "",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.update:default:variant:02",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.projects.Project"
+          }
+        }
+      },
+      "generated:projects.update:default:variant:03": {
+        "vector_id": "generated:projects.update:default:variant:03",
+        "operation_id": "projects.update",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_1"
+          },
+          {
+            "kind": "request",
+            "type": "ProjectUpdateRequest",
+            "fields": [
+              [
+                "description",
+                {
+                  "kind": "primitive",
+                  "value": "new"
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6IkFscGhhIiwic3RhdHVzIjoicGxhbm5lZCJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "update",
+          "pr_1",
+          "--description",
+          "new",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.update:default:variant:03",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.projects.Project"
+          }
+        }
+      },
+      "generated:projects.resources.list:default:canonical": {
+        "vector_id": "generated:projects.resources.list:default:canonical",
+        "operation_id": "projects.resources.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_001"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W3siaWQiOiJyZXNfMDAxIiwicHJvamVjdF9pZCI6InByXzAwMSIsInJlc291cmNlX3R5cGUiOiJsb2NhbF9kaXJlY3RvcnkiLCJyZXNvdXJjZV9yZWYiOnsibG9jYWxfcGF0aCI6Ii90bXAvc2FuZGJveCIsImRhZW1vbl9pZCI6ImRhZW1vbi0wMDEiLCJsYWJlbCI6Im1haW4ifX1d",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "resource",
+          "list",
+          "pr_001",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.resources.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:projects.resources.add_local_directory:default:canonical": {
+        "vector_id": "generated:projects.resources.add_local_directory:default:canonical",
+        "operation_id": "projects.resources.add_local_directory",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_001"
+          },
+          {
+            "kind": "request",
+            "type": "ProjectResourceAddLocalDirectoryRequest",
+            "fields": [
+              [
+                "local_path",
+                {
+                  "kind": "path",
+                  "value": "/tmp/sandbox"
+                }
+              ],
+              [
+                "daemon_id",
+                {
+                  "kind": "primitive",
+                  "value": "daemon-001"
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InJlc18wMDEiLCJwcm9qZWN0X2lkIjoicHJfMDAxIiwicmVzb3VyY2VfdHlwZSI6ImxvY2FsX2RpcmVjdG9yeSIsInJlc291cmNlX3JlZiI6eyJsb2NhbF9wYXRoIjoiL3RtcC9zYW5kYm94IiwiZGFlbW9uX2lkIjoiZGFlbW9uLTAwMSIsImxhYmVsIjoibWFpbiJ9fQ==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "resource",
+          "add",
+          "pr_001",
+          "--type",
+          "local_directory",
+          "--local-path",
+          "/private/tmp/sandbox",
+          "--daemon-id",
+          "daemon-001",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.resources.add_local_directory:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.project_resources.ProjectResourceRecord"
+          }
+        }
+      },
+      "generated:projects.resources.add_local_directory:default:variant:01": {
+        "vector_id": "generated:projects.resources.add_local_directory:default:variant:01",
+        "operation_id": "projects.resources.add_local_directory",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_001"
+          },
+          {
+            "kind": "request",
+            "type": "ProjectResourceAddLocalDirectoryRequest",
+            "fields": [
+              [
+                "local_path",
+                {
+                  "kind": "path",
+                  "value": "/tmp/sandbox"
+                }
+              ],
+              [
+                "daemon_id",
+                {
+                  "kind": "primitive",
+                  "value": "daemon-001"
+                }
+              ],
+              [
+                "label",
+                {
+                  "kind": "primitive",
+                  "value": "main"
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InJlc18wMDEiLCJwcm9qZWN0X2lkIjoicHJfMDAxIiwicmVzb3VyY2VfdHlwZSI6ImxvY2FsX2RpcmVjdG9yeSIsInJlc291cmNlX3JlZiI6eyJsb2NhbF9wYXRoIjoiL3RtcC9zYW5kYm94IiwiZGFlbW9uX2lkIjoiZGFlbW9uLTAwMSIsImxhYmVsIjoibWFpbiJ9fQ==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "resource",
+          "add",
+          "pr_001",
+          "--type",
+          "local_directory",
+          "--local-path",
+          "/private/tmp/sandbox",
+          "--daemon-id",
+          "daemon-001",
+          "--ref-label",
+          "main",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.resources.add_local_directory:default:variant:01",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.project_resources.ProjectResourceRecord"
+          }
+        }
+      },
+      "generated:projects.resources.update_local_directory:default:canonical": {
+        "vector_id": "generated:projects.resources.update_local_directory:default:canonical",
+        "operation_id": "projects.resources.update_local_directory",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_001"
+          },
+          {
+            "kind": "primitive",
+            "value": "res_001"
+          },
+          {
+            "kind": "request",
+            "type": "ProjectResourceUpdateLocalDirectoryRequest",
+            "fields": [
+              [
+                "local_path",
+                {
+                  "kind": "path",
+                  "value": "/tmp/sandbox"
+                }
+              ]
+            ]
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InJlc18wMDEiLCJwcm9qZWN0X2lkIjoicHJfMDAxIiwicmVzb3VyY2VfdHlwZSI6ImxvY2FsX2RpcmVjdG9yeSIsInJlc291cmNlX3JlZiI6eyJsb2NhbF9wYXRoIjoiL3RtcC9zYW5kYm94IiwiZGFlbW9uX2lkIjoiZGFlbW9uLTAwMSIsImxhYmVsIjoibWFpbiJ9fQ==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "resource",
+          "update",
+          "pr_001",
+          "res_001",
+          "--local-path",
+          "/private/tmp/sandbox",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.resources.update_local_directory:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.project_resources.ProjectResourceRecord"
+          }
+        }
+      },
+      "generated:projects.resources.remove:default:canonical": {
+        "vector_id": "generated:projects.resources.remove:default:canonical",
+        "operation_id": "projects.resources.remove",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_001"
+          },
+          {
+            "kind": "primitive",
+            "value": "res_001"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_text",
+        "expected_argv": [
+          "project",
+          "resource",
+          "remove",
+          "pr_001",
+          "res_001"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.resources.remove:default:canonical",
+          "kind": "none",
+          "expected": {
+            "kind": "primitive",
+            "value": null
+          }
+        }
+      },
+      "generated:issues.set_status:default:canonical": {
+        "vector_id": "generated:issues.set_status:default:canonical",
+        "operation_id": "issues.set_status",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_001"
+          },
+          {
+            "kind": "enum",
+            "type": "IssueStatus",
+            "member": "done"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6Imlzc18wMDEiLCJ0aXRsZSI6IlRlc3QgaXNzdWUiLCJzdGF0dXMiOiJkb25lIn0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "status",
+          "iss_001",
+          "done",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.set_status:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.issues.Issue"
+          }
+        }
+      },
+      "generated:projects.set_status:default:canonical": {
+        "vector_id": "generated:projects.set_status:default:canonical",
+        "operation_id": "projects.set_status",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "pr_001"
+          },
+          {
+            "kind": "enum",
+            "type": "ProjectStatus",
+            "member": "completed"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InByXzAwMSIsInRpdGxlIjoiUHJvamVjdCBBbHBoYSIsInN0YXR1cyI6ImNvbXBsZXRlZCJ9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "status",
+          "pr_001",
+          "completed",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.set_status:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.projects.Project"
+          }
+        }
+      },
+      "generated:issues.comments.add:default:canonical": {
+        "vector_id": "generated:issues.comments.add:default:canonical",
+        "operation_id": "issues.comments.add",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          },
+          {
+            "kind": "primitive",
+            "value": "hello"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6ImNtdF8xIiwiY29udGVudCI6ImhlbGxvIn0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "comment",
+          "add",
+          "iss_1",
+          "--content",
+          "hello",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.comments.add:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.issue_activity.Comment"
+          }
+        }
+      },
+      "generated:issues.comments.delete:default:canonical": {
+        "vector_id": "generated:issues.comments.delete:default:canonical",
+        "operation_id": "issues.comments.delete",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "cmt_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_text",
+        "expected_argv": [
+          "issue",
+          "comment",
+          "delete",
+          "cmt_1"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.comments.delete:default:canonical",
+          "kind": "none",
+          "expected": {
+            "kind": "primitive",
+            "value": null
+          }
+        }
+      }
     }
   },
   "source_refs": [
-    {"source_ref_id":"S-ISSUE","repository":"multica-ai/multica","commit":"ecbdbda09e7b2be56cd9ccc55cee1ee360222d18","path":"server/cmd/multica/cmd_issue.go","symbol":"issueStatusCmd/issueCommentListCmd/issueCommentAddCmd/issueCommentDeleteCmd/runIssueCreate/runIssueUpdate/runIssueStatus/runIssueCommentList/runIssueCommentAdd/runIssueCommentDelete","line_start":20,"line_end":2010},
-    {"source_ref_id":"S-LABEL","repository":"multica-ai/multica","commit":"ecbdbda09e7b2be56cd9ccc55cee1ee360222d18","path":"server/cmd/multica/cmd_issue_label.go","symbol":"issueLabelListCmd/issueLabelAddCmd/issueLabelRemoveCmd/runIssueLabelList/runIssueLabelAdd/runIssueLabelRemove","line_start":16,"line_end":139},
-    {"source_ref_id":"S-PROJECT","repository":"multica-ai/multica","commit":"ecbdbda09e7b2be56cd9ccc55cee1ee360222d18","path":"server/cmd/multica/cmd_project.go","symbol":"projectStatusCmd/projectResourceListCmd/projectResourceAddCmd/projectResourceUpdateCmd/projectResourceRemoveCmd/runProjectCreate/runProjectUpdate/runProjectStatus/runProjectResourceList/runProjectResourceAdd/runProjectResourceUpdate/runProjectResourceRemove","line_start":27,"line_end":934},
-    {"source_ref_id":"S-CLIENT","repository":"multica-ai/multica","commit":"ecbdbda09e7b2be56cd9ccc55cee1ee360222d18","path":"server/internal/cli/client.go","symbol":"APIContext/newHTTPError","line_start":72,"line_end":540},
-    {"source_ref_id":"S-ERRORS","repository":"multica-ai/multica","commit":"ecbdbda09e7b2be56cd9ccc55cee1ee360222d18","path":"server/internal/cli/errors.go","symbol":"ErrorKind/NetworkError/UserMessageError/HTTPError/classifyNetworkError/wrapTransport","line_start":1,"line_end":492}
+    {
+      "source_ref_id": "S-ISSUE",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueStatusCmd/issueCommentListCmd/issueCommentAddCmd/issueCommentDeleteCmd/runIssueCreate/runIssueUpdate/runIssueStatus/runIssueCommentList/runIssueCommentAdd/runIssueCommentDelete",
+      "line_start": 20,
+      "line_end": 2010
+    },
+    {
+      "source_ref_id": "S-LABEL",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_issue_label.go",
+      "symbol": "issueLabelListCmd/issueLabelAddCmd/issueLabelRemoveCmd/runIssueLabelList/runIssueLabelAdd/runIssueLabelRemove",
+      "line_start": 16,
+      "line_end": 139
+    },
+    {
+      "source_ref_id": "S-PROJECT",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectStatusCmd/projectResourceListCmd/projectResourceAddCmd/projectResourceUpdateCmd/projectResourceRemoveCmd/runProjectCreate/runProjectUpdate/runProjectStatus/runProjectResourceList/runProjectResourceAdd/runProjectResourceUpdate/runProjectResourceRemove",
+      "line_start": 27,
+      "line_end": 934
+    },
+    {
+      "source_ref_id": "S-CLIENT",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/internal/cli/client.go",
+      "symbol": "APIContext/newHTTPError",
+      "line_start": 72,
+      "line_end": 540
+    },
+    {
+      "source_ref_id": "S-ERRORS",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/internal/cli/errors.go",
+      "symbol": "ErrorKind/NetworkError/UserMessageError/HTTPError/classifyNetworkError/wrapTransport",
+      "line_start": 1,
+      "line_end": 492
+    }
   ],
   "test_refs": [
-    {"test_ref_id":"T-ARGV","path":"tests/unit/resources/test_operations.py","node_id":null},
-    {"test_ref_id":"T-COMPONENT","path":"tests/component/test_cli_roundtrip.py","node_id":null},
-    {"test_ref_id":"T-TRANSPORT","path":"tests/unit/test_transport.py","node_id":null},
-    {"test_ref_id":"T-CONTRACT","path":"tests/contract/test_full_cli_coverage.py","node_id":null}
+    {
+      "test_ref_id": "T-OPERATION",
+      "path": "tests/unit/resources/test_operations.py",
+      "node_id": "test_operation"
+    },
+    {
+      "test_ref_id": "T-CONTRACT",
+      "path": "tests/contract/test_sdk_contract.py",
+      "node_id": "test_sdk_contract"
+    }
   ],
   "scope": {
-    "operation_ids": ["issues.comments.add","issues.comments.delete","issues.comments.list","issues.create","issues.labels.add","issues.labels.list","issues.labels.remove","issues.list","issues.set_status","projects.create","projects.resources.add_local_directory","projects.resources.list","projects.resources.remove","projects.resources.update_local_directory","projects.set_status","projects.update"],
+    "operation_ids": [
+      "issues.comments.add",
+      "issues.comments.delete",
+      "issues.comments.list",
+      "issues.create",
+      "issues.labels.add",
+      "issues.labels.list",
+      "issues.labels.remove",
+      "issues.list",
+      "issues.set_status",
+      "projects.create",
+      "projects.resources.add_local_directory",
+      "projects.resources.list",
+      "projects.resources.remove",
+      "projects.resources.update_local_directory",
+      "projects.set_status",
+      "projects.update"
+    ],
     "ungoverned_policy": "existing_unrelated_operations_unchanged",
     "source_authority_ref": "specs/007-upstream-v0-4-9-migration/contracts/source-authority.json",
     "family_disposition_ref": "specs/007-upstream-v0-4-9-migration/contracts/upstream-family-disposition.md",
     "family_dispositions": [
-      {"family":"agent-settings-and-skills","disposition":"deferred_owner_decision","required_operation_ids":[],"source_ref_ids":["F-AGENT-PERM","F-AGENT-RUN","F-AGENT-SKILL","F-AGENT-SKILL-RUN"],"rationale":"No governed agent mutation operation."},
-      {"family":"attachments-and-client-transport","disposition":"required_subset_plus_deferred_extension","required_operation_ids":["issues.comments.add","issues.create"],"source_ref_ids":["F-ATTACHMENT","F-UPLOAD"],"rationale":"Only attachment effects on governed create/comment paths are reviewed."},
-      {"family":"chat-read","disposition":"separate_extension_candidate","required_operation_ids":[],"source_ref_ids":["F-CHAT-HISTORY","F-CHAT-READ","F-CHAT-THREAD"],"rationale":"No governed chat operation."},
-      {"family":"issue-existing-changes","disposition":"required_compatibility","required_operation_ids":["issues.comments.add","issues.comments.list","issues.create","issues.list"],"source_ref_ids":["F-ISSUE-CREATE","F-ISSUE-DECL","F-ISSUE-UPDATE"],"rationale":"Existing governed issue behavior must remain compatible."},
-      {"family":"issue-new-commands","disposition":"required_subset_plus_extension_candidates","required_operation_ids":["issues.set_status"],"source_ref_ids":["F-ISSUE-NEW-DECL","F-ISSUE-NEW-RUN","F-ISSUE-REORDER"],"rationale":"Only governed status behavior is admitted."},
-      {"family":"project-and-root-registration","disposition":"required_subset_plus_cli_only","required_operation_ids":["projects.create","projects.resources.add_local_directory","projects.resources.list","projects.resources.remove","projects.resources.update_local_directory","projects.set_status","projects.update"],"source_ref_ids":["F-PROJECT-FLAGS","F-PROJECT-RUN","F-ROOT"],"rationale":"Governed project operations are required; root flags remain CLI control."},
-      {"family":"runtime-and-local-control","disposition":"cli_only_plus_deferred_extension","required_operation_ids":[],"source_ref_ids":["F-DAEMON","F-RUNTIME","F-RUNTIME-PROFILE"],"rationale":"Local controls are not public SDK operations."},
-      {"family":"skills-squads-and-autopilots","disposition":"deferred_owner_decision","required_operation_ids":[],"source_ref_ids":["F-AUTOPILOT","F-SKILL","F-SKILL-RUN","F-SQUAD"],"rationale":"No governed operation."},
-      {"family":"transport-error-contract","disposition":"required_compatibility","required_operation_ids":["issues.comments.add","issues.comments.delete","issues.comments.list","issues.create","issues.labels.add","issues.labels.list","issues.labels.remove","issues.list","issues.set_status","projects.create","projects.resources.add_local_directory","projects.resources.list","projects.resources.remove","projects.resources.update_local_directory","projects.set_status","projects.update"],"source_ref_ids":["F-CLIENT-ERROR","F-CLIENT-UPLOAD","F-ERRORS"],"rationale":"All governed operations preserve SDK error mapping."},
-      {"family":"workspace-properties","disposition":"separate_extension_candidate","required_operation_ids":[],"source_ref_ids":["F-ISSUE-PROPERTY","F-PROPERTY-DECL","F-PROPERTY-RUN"],"rationale":"Requires separate schema approval."},
-      {"family":"workspace-repository-management","disposition":"deferred_owner_decision","required_operation_ids":[],"source_ref_ids":["F-REPO-DECL","F-REPO-RUN","F-WORKSPACE-DECL"],"rationale":"Workspace repositories are not project resources."}
+      {
+        "family": "agent-settings-and-skills",
+        "disposition": "deferred_owner_decision",
+        "required_operation_ids": [],
+        "source_ref_ids": [
+          "F-AGENT-PERM",
+          "F-AGENT-RUN",
+          "F-AGENT-SKILL",
+          "F-AGENT-SKILL-RUN"
+        ],
+        "rationale": "No governed agent mutation operation."
+      },
+      {
+        "family": "attachments-and-client-transport",
+        "disposition": "required_subset_plus_deferred_extension",
+        "required_operation_ids": [
+          "issues.comments.add",
+          "issues.create"
+        ],
+        "source_ref_ids": [
+          "F-ATTACHMENT",
+          "F-UPLOAD"
+        ],
+        "rationale": "Only attachment effects on governed create/comment paths are reviewed."
+      },
+      {
+        "family": "chat-read",
+        "disposition": "separate_extension_candidate",
+        "required_operation_ids": [],
+        "source_ref_ids": [
+          "F-CHAT-HISTORY",
+          "F-CHAT-READ",
+          "F-CHAT-THREAD"
+        ],
+        "rationale": "No governed chat operation."
+      },
+      {
+        "family": "issue-existing-changes",
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "issues.comments.add",
+          "issues.comments.list",
+          "issues.create",
+          "issues.list"
+        ],
+        "source_ref_ids": [
+          "F-ISSUE-CREATE",
+          "F-ISSUE-DECL",
+          "F-ISSUE-UPDATE"
+        ],
+        "rationale": "Existing governed issue behavior must remain compatible."
+      },
+      {
+        "family": "issue-new-commands",
+        "disposition": "required_subset_plus_extension_candidates",
+        "required_operation_ids": [
+          "issues.set_status"
+        ],
+        "source_ref_ids": [
+          "F-ISSUE-NEW-DECL",
+          "F-ISSUE-NEW-RUN",
+          "F-ISSUE-REORDER"
+        ],
+        "rationale": "Only governed status behavior is admitted."
+      },
+      {
+        "family": "project-and-root-registration",
+        "disposition": "required_subset_plus_cli_only",
+        "required_operation_ids": [
+          "projects.create",
+          "projects.resources.add_local_directory",
+          "projects.resources.list",
+          "projects.resources.remove",
+          "projects.resources.update_local_directory",
+          "projects.set_status",
+          "projects.update"
+        ],
+        "source_ref_ids": [
+          "F-PROJECT-FLAGS",
+          "F-PROJECT-RUN",
+          "F-ROOT"
+        ],
+        "rationale": "Governed project operations are required; root flags remain CLI control."
+      },
+      {
+        "family": "runtime-and-local-control",
+        "disposition": "cli_only_plus_deferred_extension",
+        "required_operation_ids": [],
+        "source_ref_ids": [
+          "F-DAEMON",
+          "F-RUNTIME",
+          "F-RUNTIME-PROFILE"
+        ],
+        "rationale": "Local controls are not public SDK operations."
+      },
+      {
+        "family": "skills-squads-and-autopilots",
+        "disposition": "deferred_owner_decision",
+        "required_operation_ids": [],
+        "source_ref_ids": [
+          "F-AUTOPILOT",
+          "F-SKILL",
+          "F-SKILL-RUN",
+          "F-SQUAD"
+        ],
+        "rationale": "No governed operation."
+      },
+      {
+        "family": "transport-error-contract",
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "issues.comments.add",
+          "issues.comments.delete",
+          "issues.comments.list",
+          "issues.create",
+          "issues.labels.add",
+          "issues.labels.list",
+          "issues.labels.remove",
+          "issues.list",
+          "issues.set_status",
+          "projects.create",
+          "projects.resources.add_local_directory",
+          "projects.resources.list",
+          "projects.resources.remove",
+          "projects.resources.update_local_directory",
+          "projects.set_status",
+          "projects.update"
+        ],
+        "source_ref_ids": [
+          "F-CLIENT-ERROR",
+          "F-CLIENT-UPLOAD",
+          "F-ERRORS"
+        ],
+        "rationale": "All governed operations preserve SDK error mapping."
+      },
+      {
+        "family": "workspace-properties",
+        "disposition": "separate_extension_candidate",
+        "required_operation_ids": [],
+        "source_ref_ids": [
+          "F-ISSUE-PROPERTY",
+          "F-PROPERTY-DECL",
+          "F-PROPERTY-RUN"
+        ],
+        "rationale": "Requires separate schema approval."
+      },
+      {
+        "family": "workspace-repository-management",
+        "disposition": "deferred_owner_decision",
+        "required_operation_ids": [],
+        "source_ref_ids": [
+          "F-REPO-DECL",
+          "F-REPO-RUN",
+          "F-WORKSPACE-DECL"
+        ],
+        "rationale": "Workspace repositories are not project resources."
+      }
     ]
   },
   "operations": [
-    {"operation_id":"issues.comments.add","compatibility":"compatible","rationale":"Existing inline comment add remains supported.","source_ref_ids":["S-CLIENT","S-ISSUE"],"test_ref_ids":["T-ARGV","T-COMPONENT"],"entrypoints":[{"entrypoint_id":"add","public_symbol":"multica_py.resources.issue_comments.IssueCommentResource.add","signature_id":"comment_add","binding_id":"comment_add","response_id":"comment","errors":"standard"}]},
-    {"operation_id":"issues.comments.delete","compatibility":"compatible","rationale":"Delete remains a no-output operation.","source_ref_ids":["S-CLIENT","S-ISSUE"],"test_ref_ids":["T-ARGV","T-TRANSPORT"],"entrypoints":[{"entrypoint_id":"delete","public_symbol":"multica_py.resources.issue_comments.IssueCommentResource.delete","signature_id":"comment_delete","binding_id":"comment_delete","response_id":"none","errors":"standard"}]},
-    {"operation_id":"issues.comments.list","compatibility":"intentionally_changed","rationale":"Cursor pair replaces the obsolete scalar cursor contract.","source_ref_ids":["S-CLIENT","S-ISSUE"],"test_ref_ids":["T-ARGV","T-COMPONENT"],"entrypoints":[{"entrypoint_id":"list","public_symbol":"multica_py.resources.issue_comments.IssueCommentResource.list","signature_id":"comment_list","binding_id":"comment_list","response_id":"comments","errors":"standard"},{"entrypoint_id":"list_flat","public_symbol":"multica_py.resources.issue_comments.IssueCommentResource.list_flat","signature_id":"comment_list_flat","binding_id":"comment_list_flat","response_id":"comment_page","errors":"standard"},{"entrypoint_id":"list_thread","public_symbol":"multica_py.resources.issue_comments.IssueCommentResource.list_thread","signature_id":"comment_list_thread","binding_id":"comment_list_thread","response_id":"comment_page","errors":"standard"},{"entrypoint_id":"list_recent","public_symbol":"multica_py.resources.issue_comments.IssueCommentResource.list_recent","signature_id":"comment_list_recent","binding_id":"comment_list_recent","response_id":"comment_thread_page","errors":"standard"}]},
-    {"operation_id":"issues.create","compatibility":"compatible","rationale":"Existing create plus ordered label attachment is preserved.","source_ref_ids":["S-ISSUE"],"test_ref_ids":["T-ARGV","T-COMPONENT"],"entrypoints":[{"entrypoint_id":"create","public_symbol":"multica_py.resources.issues.IssueResource.create","signature_id":"issue_create","binding_id":"issue_create","response_id":"issue","errors":"standard"}]},
-    {"operation_id":"issues.labels.add","compatibility":"compatible","rationale":"Existing label relation add remains idempotent.","source_ref_ids":["S-LABEL"],"test_ref_ids":["T-ARGV","T-COMPONENT"],"entrypoints":[{"entrypoint_id":"add","public_symbol":"multica_py.resources.issue_labels.IssueLabelResource.add","signature_id":"issue_labels_add","binding_id":"issue_labels_add","response_id":"labels","errors":"standard"}]},
-    {"operation_id":"issues.labels.list","compatibility":"compatible","rationale":"Existing label list remains supported.","source_ref_ids":["S-LABEL"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"list","public_symbol":"multica_py.resources.issue_labels.IssueLabelResource.list","signature_id":"issue_labels_list","binding_id":"issue_labels_list","response_id":"labels","errors":"standard"}]},
-    {"operation_id":"issues.labels.remove","compatibility":"compatible","rationale":"Existing label relation remove remains idempotent.","source_ref_ids":["S-LABEL"],"test_ref_ids":["T-ARGV","T-COMPONENT"],"entrypoints":[{"entrypoint_id":"remove","public_symbol":"multica_py.resources.issue_labels.IssueLabelResource.remove","signature_id":"issue_labels_remove","binding_id":"issue_labels_remove","response_id":"labels","errors":"standard"}]},
-    {"operation_id":"issues.list","compatibility":"compatible","rationale":"Existing filters plus reviewed sort/direction remain supported.","source_ref_ids":["S-ISSUE"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"list","public_symbol":"multica_py.resources.issues.IssueResource.list","signature_id":"issue_list","binding_id":"issue_list","response_id":"issue_summaries","errors":"standard"}]},
-    {"operation_id":"issues.set_status","compatibility":"compatible","rationale":"Only target issue status command is emitted.","source_ref_ids":["S-ISSUE"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"set_status","public_symbol":"multica_py.resources.issues.IssueResource.set_status","signature_id":"issue_status","binding_id":"issue_status","response_id":"issue","errors":"standard"}]},
-    {"operation_id":"projects.create","compatibility":"compatible","rationale":"Public name maps to target title.","source_ref_ids":["S-PROJECT"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"create","public_symbol":"multica_py.resources.projects.ProjectResource.create","signature_id":"project_create","binding_id":"project_create","response_id":"project","errors":"standard"}]},
-    {"operation_id":"projects.resources.add_local_directory","compatibility":"compatible","rationale":"Path and daemon are required; None or blank label is omitted.","source_ref_ids":["S-PROJECT"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"add_local_directory","public_symbol":"multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory","signature_id":"project_resource_add","binding_id":"project_resource_add","response_id":"project_resource","errors":"standard"}]},
-    {"operation_id":"projects.resources.list","compatibility":"compatible","rationale":"Project-scoped resource list remains supported.","source_ref_ids":["S-PROJECT"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"list","public_symbol":"multica_py.resources.project_resources.ProjectResourceCollection.list","signature_id":"project_resource_list","binding_id":"project_resource_list","response_id":"project_resources","errors":"standard"}]},
-    {"operation_id":"projects.resources.remove","compatibility":"compatible","rationale":"Project/resource scoped delete remains no-output.","source_ref_ids":["S-PROJECT"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"remove","public_symbol":"multica_py.resources.project_resources.ProjectResourceCollection.remove","signature_id":"project_resource_remove","binding_id":"project_resource_remove","response_id":"none","errors":"standard"}]},
-    {"operation_id":"projects.resources.update_local_directory","compatibility":"compatible","rationale":"Only a nonblank local path is public; daemon and label are preserved internally and cannot be cleared.","source_ref_ids":["S-PROJECT"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"update_local_directory","public_symbol":"multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory","signature_id":"project_resource_update","binding_id":"project_resource_update","response_id":"project_resource","errors":"standard"}]},
-    {"operation_id":"projects.set_status","compatibility":"compatible","rationale":"Only target project status command is emitted.","source_ref_ids":["S-PROJECT"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"set_status","public_symbol":"multica_py.resources.projects.ProjectResource.set_status","signature_id":"project_status","binding_id":"project_status","response_id":"project","errors":"standard"}]},
-    {"operation_id":"projects.update","compatibility":"compatible","rationale":"Unset omits, empty clears, None rejects, and an all-omitted request rejects.","source_ref_ids":["S-PROJECT"],"test_ref_ids":["T-ARGV"],"entrypoints":[{"entrypoint_id":"update","public_symbol":"multica_py.resources.projects.ProjectResource.update","signature_id":"project_update","binding_id":"project_update","response_id":"project","errors":"standard"}]}
+    {
+      "operation_id": "issues.comments.add",
+      "compatibility": "compatible",
+      "rationale": "Existing inline comment add remains supported.",
+      "source_ref_ids": [
+        "S-CLIENT",
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.add",
+          "signature_id": "comment_add",
+          "binding_id": "comment_add",
+          "response_id": "comment",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.comments.delete",
+      "compatibility": "compatible",
+      "rationale": "Delete remains a no-output operation.",
+      "source_ref_ids": [
+        "S-CLIENT",
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.delete",
+          "signature_id": "comment_delete",
+          "binding_id": "comment_delete",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.comments.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Cursor pair replaces the obsolete scalar cursor contract.",
+      "source_ref_ids": [
+        "S-CLIENT",
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "direct",
+          "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list",
+          "signature_id": "comment_list",
+          "binding_id": "comment_list",
+          "response_id": "comments",
+          "errors": "standard"
+        },
+        {
+          "entrypoint_id": "flat",
+          "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_flat",
+          "signature_id": "comment_list_flat",
+          "binding_id": "comment_list_flat",
+          "response_id": "comment_page",
+          "errors": "standard"
+        },
+        {
+          "entrypoint_id": "thread",
+          "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_thread",
+          "signature_id": "comment_list_thread",
+          "binding_id": "comment_list_thread",
+          "response_id": "comment_page",
+          "errors": "standard"
+        },
+        {
+          "entrypoint_id": "recent",
+          "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_recent",
+          "signature_id": "comment_list_recent",
+          "binding_id": "comment_list_recent",
+          "response_id": "comment_thread_page",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.create",
+      "compatibility": "compatible",
+      "rationale": "Existing create plus ordered label attachment is preserved.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.create",
+          "signature_id": "issue_create",
+          "binding_id": "issue_create",
+          "response_id": "issue",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.labels.add",
+      "compatibility": "compatible",
+      "rationale": "Existing label relation add remains idempotent.",
+      "source_ref_ids": [
+        "S-LABEL"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.add",
+          "signature_id": "issue_labels_add",
+          "binding_id": "issue_labels_add",
+          "response_id": "labels",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.labels.list",
+      "compatibility": "compatible",
+      "rationale": "Existing label list remains supported.",
+      "source_ref_ids": [
+        "S-LABEL"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.list",
+          "signature_id": "issue_labels_list",
+          "binding_id": "issue_labels_list",
+          "response_id": "labels",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.labels.remove",
+      "compatibility": "compatible",
+      "rationale": "Existing label relation remove remains idempotent.",
+      "source_ref_ids": [
+        "S-LABEL"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.remove",
+          "signature_id": "issue_labels_remove",
+          "binding_id": "issue_labels_remove",
+          "response_id": "labels",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.list",
+      "compatibility": "compatible",
+      "rationale": "Existing filters plus reviewed sort/direction remain supported.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.list",
+          "signature_id": "issue_list",
+          "binding_id": "issue_list",
+          "response_id": "issue_summaries",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.set_status",
+      "compatibility": "compatible",
+      "rationale": "Only target issue status command is emitted.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.set_status",
+          "signature_id": "issue_status",
+          "binding_id": "issue_status",
+          "response_id": "issue",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.create",
+      "compatibility": "compatible",
+      "rationale": "Public name maps to target title.",
+      "source_ref_ids": [
+        "S-PROJECT"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.ProjectResource.create",
+          "signature_id": "project_create",
+          "binding_id": "project_create",
+          "response_id": "project",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.resources.add_local_directory",
+      "compatibility": "compatible",
+      "rationale": "Path and daemon are required; None or blank label is omitted.",
+      "source_ref_ids": [
+        "S-PROJECT"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory",
+          "signature_id": "project_resource_add",
+          "binding_id": "project_resource_add",
+          "response_id": "project_resource",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.resources.list",
+      "compatibility": "compatible",
+      "rationale": "Project-scoped resource list remains supported.",
+      "source_ref_ids": [
+        "S-PROJECT"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.list",
+          "signature_id": "project_resource_list",
+          "binding_id": "project_resource_list",
+          "response_id": "project_resources",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.resources.remove",
+      "compatibility": "compatible",
+      "rationale": "Project/resource scoped delete remains no-output.",
+      "source_ref_ids": [
+        "S-PROJECT"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.remove",
+          "signature_id": "project_resource_remove",
+          "binding_id": "project_resource_remove",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.resources.update_local_directory",
+      "compatibility": "compatible",
+      "rationale": "Only a nonblank local path is public; daemon and label are preserved internally and cannot be cleared.",
+      "source_ref_ids": [
+        "S-PROJECT"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory",
+          "signature_id": "project_resource_update",
+          "binding_id": "project_resource_update",
+          "response_id": "project_resource",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.set_status",
+      "compatibility": "compatible",
+      "rationale": "Only target project status command is emitted.",
+      "source_ref_ids": [
+        "S-PROJECT"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.ProjectResource.set_status",
+          "signature_id": "project_status",
+          "binding_id": "project_status",
+          "response_id": "project",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.update",
+      "compatibility": "compatible",
+      "rationale": "Unset omits, empty clears, None rejects, and an all-omitted request rejects.",
+      "source_ref_ids": [
+        "S-PROJECT"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.ProjectResource.update",
+          "signature_id": "project_update",
+          "binding_id": "project_update",
+          "response_id": "project",
+          "errors": "standard"
+        }
+      ]
+    }
   ],
   "traceability": [
-    {"requirement_id":"FR-001","authority_ref":"target","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-002","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-003","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-004","authority_ref":"generation","test_ref_ids":["T-ARGV"]},{"requirement_id":"FR-005","authority_ref":"operation:issues.comments.list","test_ref_ids":["T-ARGV"]},{"requirement_id":"FR-006","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-007","authority_ref":"generation","test_ref_ids":["T-ARGV"]},{"requirement_id":"FR-008","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-009","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-010","authority_ref":"generation","test_ref_ids":["T-ARGV"]},{"requirement_id":"FR-011","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-012","authority_ref":"operation:projects.update","test_ref_ids":["T-ARGV"]},{"requirement_id":"FR-013","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-014","authority_ref":"generation","test_ref_ids":["T-ARGV"]},{"requirement_id":"FR-015","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-016","authority_ref":"coherence","test_ref_ids":["T-TRANSPORT"]},{"requirement_id":"FR-017","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-018","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-019","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-020","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-021","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-022","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-023","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-024","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-025","authority_ref":"target","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-026","authority_ref":"coherence","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-027","authority_ref":"coherence","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-028","authority_ref":"coherence","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-029","authority_ref":"generation","test_ref_ids":["T-ARGV"]},{"requirement_id":"FR-030","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-031","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-032","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-033","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-034","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-035","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-036","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-037","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-038","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-039","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"FR-040","authority_ref":"coherence","test_ref_ids":["T-CONTRACT"]},
-    {"requirement_id":"BC-001","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"BC-002","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"BC-003","authority_ref":"generation","test_ref_ids":["T-ARGV"]},{"requirement_id":"BC-004","authority_ref":"coherence","test_ref_ids":["T-TRANSPORT"]},{"requirement_id":"BC-005","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"BC-006","authority_ref":"coherence","test_ref_ids":["T-CONTRACT"]},
-    {"requirement_id":"SC-001","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-002","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-003","authority_ref":"generation","test_ref_ids":["T-ARGV"]},{"requirement_id":"SC-004","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-005","authority_ref":"coherence","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-006","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-007","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-008","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-009","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-010","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-011","authority_ref":"scope","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"SC-012","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},
-    {"requirement_id":"ET-001","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"ET-002","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"ET-003","authority_ref":"generation","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"ET-004","authority_ref":"coherence","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"ET-005","authority_ref":"live","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"ET-006","authority_ref":"coherence","test_ref_ids":["T-CONTRACT"]},{"requirement_id":"ET-007","authority_ref":"coherence","test_ref_ids":["T-CONTRACT"]}
-  ]
+    {
+      "requirement_id": "FR-001",
+      "authority_ref": "target",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-002",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-003",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-004",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "FR-005",
+      "authority_ref": "operation:issues.comments.list",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "FR-006",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-007",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "FR-008",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-009",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-010",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "FR-011",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-012",
+      "authority_ref": "operation:projects.update",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "FR-013",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-014",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "FR-015",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-016",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "FR-017",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-018",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-019",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-020",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-021",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-022",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-023",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-024",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-025",
+      "authority_ref": "target",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-026",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-027",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-028",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-029",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "FR-030",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-031",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-032",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-033",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-034",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-035",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-036",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-037",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-038",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-039",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "FR-040",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "BC-001",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "BC-002",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "BC-003",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "BC-004",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "BC-005",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "BC-006",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-001",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-002",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-003",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-OPERATION"
+      ]
+    },
+    {
+      "requirement_id": "SC-004",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-005",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-006",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-007",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-008",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-009",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-010",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-011",
+      "authority_ref": "scope",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "SC-012",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "ET-001",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "ET-002",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "ET-003",
+      "authority_ref": "generation",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "ET-004",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "ET-005",
+      "authority_ref": "live",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "ET-006",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    },
+    {
+      "requirement_id": "ET-007",
+      "authority_ref": "coherence",
+      "test_ref_ids": [
+        "T-CONTRACT"
+      ]
+    }
+  ],
+  "legacy_argv_migration": {
+    "legacy:001": "manual:agents.list:canonical",
+    "legacy:002": "manual:agents.get:canonical",
+    "legacy:003": "manual:agents.skills.list:canonical",
+    "legacy:004": "manual:agents.create:canonical",
+    "legacy:005": "manual:agents.create:variant:01",
+    "legacy:006": "manual:agents.create:variant:02",
+    "legacy:007": "manual:agents.create:variant:03",
+    "legacy:008": "manual:agents.update:canonical",
+    "legacy:009": "manual:agents.update:variant:01",
+    "legacy:010": "manual:agents.archive:canonical",
+    "legacy:011": "manual:agents.restore:canonical",
+    "legacy:012": "manual:agents.tasks:canonical",
+    "legacy:013": "manual:agents.upload_avatar:canonical",
+    "legacy:014": "manual:attachments.list:canonical",
+    "legacy:015": "manual:attachments.upload:canonical",
+    "legacy:016": "manual:attachments.download:canonical",
+    "legacy:017": "manual:autopilots.list:canonical",
+    "legacy:018": "manual:autopilots.get:canonical",
+    "legacy:019": "manual:autopilots.create:canonical",
+    "legacy:020": "manual:autopilots.update:canonical",
+    "legacy:021": "manual:autopilots.update:variant:01",
+    "legacy:022": "manual:autopilots.update:variant:02",
+    "legacy:023": "manual:autopilots.delete:canonical",
+    "legacy:024": "manual:autopilots.run:canonical",
+    "legacy:025": "manual:autopilots.history:canonical",
+    "legacy:026": "manual:autopilots.get_run:canonical",
+    "legacy:027": "manual:configuration.show:canonical",
+    "legacy:028": "manual:configuration.get:canonical",
+    "legacy:029": "manual:configuration.set:canonical",
+    "legacy:030": "generated:issues.comments.list:direct:canonical",
+    "legacy:031": "generated:issues.comments.list:flat:canonical",
+    "legacy:032": "generated:issues.comments.list:thread:canonical",
+    "legacy:033": "generated:issues.comments.list:thread:variant:01",
+    "legacy:034": "generated:issues.comments.list:recent:canonical",
+    "legacy:035": "generated:issues.comments.list:recent:variant:01",
+    "legacy:036": "generated:issues.labels.add:default:canonical",
+    "legacy:037": "generated:issues.labels.remove:default:canonical",
+    "legacy:038": "generated:issues.labels.list:default:canonical",
+    "legacy:039": "manual:issues.metadata.set:canonical",
+    "legacy:040": "manual:issues.metadata.set:variant:01",
+    "legacy:041": "manual:issues.metadata.list:canonical",
+    "legacy:042": "manual:issues.metadata.get:canonical",
+    "legacy:043": "manual:issues.metadata.delete:canonical",
+    "legacy:044": "manual:issues.subscribers.list:canonical",
+    "legacy:045": "manual:issues.subscribers.add:canonical",
+    "legacy:046": "manual:issues.subscribers.remove:canonical",
+    "legacy:047": "generated:issues.list:default:canonical",
+    "legacy:048": "manual:issues.get:canonical",
+    "legacy:049": "generated:issues.create:default:canonical",
+    "legacy:050": "generated:issues.create:default:variant:01",
+    "legacy:051": "generated:issues.create:default:variant:02",
+    "legacy:052": "generated:issues.create:default:variant:03",
+    "legacy:053": "generated:issues.create:default:variant:04",
+    "legacy:054": "manual:projects.list:canonical",
+    "legacy:055": "manual:projects.get:canonical",
+    "legacy:056": "generated:projects.create:default:canonical",
+    "legacy:057": "generated:projects.create:default:variant:01",
+    "legacy:058": "generated:projects.update:default:canonical",
+    "legacy:059": "generated:projects.update:default:variant:01",
+    "legacy:060": "generated:projects.update:default:variant:02",
+    "legacy:061": "generated:projects.update:default:variant:03",
+    "legacy:062": "manual:projects.delete:canonical",
+    "legacy:063": "generated:projects.resources.list:default:canonical",
+    "legacy:064": "generated:projects.resources.add_local_directory:default:canonical",
+    "legacy:065": "generated:projects.resources.add_local_directory:default:variant:01",
+    "legacy:066": "generated:projects.resources.update_local_directory:default:canonical",
+    "legacy:067": "generated:projects.resources.remove:default:canonical",
+    "legacy:068": "manual:repositories.list:canonical",
+    "legacy:069": "manual:repositories.get:canonical",
+    "legacy:070": "manual:repositories.checkout:canonical",
+    "legacy:071": "manual:runtimes.list:canonical",
+    "legacy:072": "manual:runtimes.get:canonical",
+    "legacy:073": "manual:skills.list:canonical",
+    "legacy:074": "manual:skills.get:canonical",
+    "legacy:075": "manual:skills.create:canonical",
+    "legacy:076": "manual:skills.create:variant:01",
+    "legacy:077": "manual:skills.update:canonical",
+    "legacy:078": "manual:skills.update:variant:01",
+    "legacy:079": "manual:skills.delete:canonical",
+    "legacy:080": "manual:skills.import_from_url:canonical",
+    "legacy:081": "manual:squads.list:canonical",
+    "legacy:082": "manual:squads.get:canonical",
+    "legacy:083": "manual:users.list:canonical",
+    "legacy:084": "manual:users.get:canonical",
+    "legacy:085": "manual:auth.login:canonical",
+    "legacy:086": "manual:auth.status:canonical",
+    "legacy:087": "manual:auth.logout:canonical",
+    "legacy:088": "manual:daemon.status:canonical",
+    "legacy:089": "manual:issues.deprioritize:canonical",
+    "legacy:090": "generated:issues.set_status:default:canonical",
+    "legacy:091": "manual:labels.list:canonical",
+    "legacy:092": "manual:labels.get:canonical",
+    "legacy:093": "manual:labels.create:canonical",
+    "legacy:094": "manual:labels.update:canonical",
+    "legacy:095": "manual:labels.delete:canonical",
+    "legacy:096": "generated:projects.set_status:default:canonical",
+    "legacy:097": "manual:workspaces.list:canonical",
+    "legacy:098": "manual:workspaces.get:canonical",
+    "legacy:099": "manual:issues.update:canonical",
+    "legacy:100": "manual:issues.update:variant:01",
+    "legacy:101": "manual:issues.assign:canonical",
+    "legacy:102": "manual:issues.reorder:canonical",
+    "legacy:103": "manual:issues.search:canonical",
+    "legacy:104": "manual:issues.children:canonical",
+    "legacy:105": "manual:issues.pull_requests:canonical",
+    "legacy:106": "manual:issues.runs:canonical",
+    "legacy:107": "manual:issues.usage:canonical",
+    "legacy:108": "generated:issues.comments.add:default:canonical",
+    "legacy:109": "generated:issues.comments.delete:default:canonical",
+    "legacy:110": "manual:issues.comments.resolve:canonical",
+    "legacy:111": "manual:issues.comments.unresolve:canonical",
+    "legacy:112": "manual:workspaces.members:canonical",
+    "legacy:113": "manual:autopilots.triggers.list:canonical",
+    "legacy:114": "manual:autopilots.triggers.delete:canonical",
+    "legacy:115": "manual:skills.files.list:canonical",
+    "legacy:116": "manual:skills.files.delete:canonical",
+    "legacy:117": "manual:daemon.disk_usage:canonical",
+    "legacy:118": "manual:agents.skills.set:canonical",
+    "legacy:119": "manual:autopilots.triggers.create:canonical",
+    "legacy:120": "manual:daemon.start:canonical",
+    "legacy:121": "manual:daemon.stop:canonical",
+    "legacy:122": "manual:daemon.restart:canonical",
+    "legacy:123": "manual:daemon.logs:canonical",
+    "legacy:124": "manual:issues.cancel_task:canonical",
+    "legacy:125": "manual:issues.comments.reply:canonical",
+    "legacy:126": "manual:issues.rerun:canonical",
+    "legacy:127": "manual:issues.run_messages:canonical",
+    "legacy:128": "manual:maintenance.update:canonical",
+    "legacy:129": "manual:setup.cloud:canonical",
+    "legacy:130": "manual:setup.self_host:canonical",
+    "legacy:131": "manual:skills.files.upsert:canonical",
+    "legacy:132": "manual:workspaces.switch:canonical",
+    "legacy:133": "manual:workspaces.watch:canonical",
+    "legacy:134": "manual:workspaces.unwatch:canonical",
+    "legacy:135": "manual:maintenance.version:canonical"
+  }
 }

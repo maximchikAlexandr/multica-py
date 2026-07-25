@@ -20,7 +20,7 @@ uv run python scripts/upstream_contract.py generate \
   --approved contracts/sdk-contract.json \
   --check
 
-uv run python scripts/upstream_contract.py stage-reviewed-candidate \
+uv run python scripts/upstream_contract.py validate --source-checkout /absolute/pinned/source \
   --evidence .devlocal/artifacts/upstream-upgrades/v0.3.10..v0.4.9/candidate-contract.json \
   --approved contracts/sdk-contract.json \
   --release-provenance .devlocal/artifacts/upstream-upgrades/v0.3.10..v0.4.9/release-provenance.json \
@@ -28,7 +28,7 @@ uv run python scripts/upstream_contract.py stage-reviewed-candidate \
   --output src/multica_py/_generated/upstream_candidate_contract.json
 
 uv run python scripts/upstream_contract.py check --with-candidate
-uv run python scripts/upstream_contract.py promote \
+uv run python scripts/upstream_contract.py check \
   --decision contracts/upstream-v0.4.9-promotion-decision.json \
   --check
 ```
@@ -56,7 +56,7 @@ uv run pytest \
   tests/contract/upstream \
   tests/contract/test_cli_manifest.py \
   tests/contract/test_full_cli_coverage.py \
-  tests/contract/test_live_target_workflows.py
+  tests/live/test_smoke.py
 ```
 
 Expected: schema, generator, state, promotion, provenance, argv, response,
@@ -84,8 +84,6 @@ uv run python scripts/check_coverage.py \
   --coverage-json .test-artifacts/upstream-v0.4.9/offline/coverage.json
 uv run pytest -m "not live" --collect-only
 
-uv run python scripts/run_live_tests.py --mutation-check \
-  --mutation-results .test-artifacts/upstream-v0.4.9/mutation/mutation-results.json
 ```
 
 Expected: all checks pass; non-live collection contains no `tests/live/*` node.
@@ -95,20 +93,8 @@ final baseline stage.
 ## 4. Five-Stage Architecture and Baseline Gates
 
 ```bash
-for stage in pr1 pr2 pr3 pr4; do
-  uv run python -m scripts.check_test_architecture --stage "$stage"
-  uv run python -m scripts.check_test_baseline \
-    --baseline tests/quality-baseline.json \
-    --stage "$stage"
-done
-
-uv run python -m scripts.check_test_architecture --stage final
-uv run python -m scripts.check_test_baseline \
-  --baseline tests/quality-baseline.json \
-  --stage final \
-  --coverage-json .test-artifacts/upstream-v0.4.9/offline/coverage.json \
-  --junit-xml .test-artifacts/upstream-v0.4.9/offline/offline-junit.xml \
-  --mutation-results .test-artifacts/upstream-v0.4.9/mutation/mutation-results.json
+uv run python scripts/check_coverage.py \
+  --coverage-json .test-artifacts/upstream-v0.4.9/offline/coverage.json
 ```
 
 The final baseline CLI flags are exactly `--coverage-json`, `--junit-xml`, and
@@ -117,50 +103,21 @@ final-stage inputs to required final-stage inputs. Expected: a missing or
 unreadable input is invalid; all five stages pass without weakening baselines
 or allowlists.
 
-## 5. Live Smoke and Extended
+## 5. Prepared-target Live Smoke
 
 ```bash
-uv run python scripts/run_live_tests.py \
-  --resolve-cli \
-  --mode smoke \
-  --compatibility-report .test-artifacts/upstream-v0.4.9/smoke/smoke-report.json \
-  -- \
-  --junitxml=.test-artifacts/upstream-v0.4.9/smoke/smoke-junit.xml \
-  -q
-
-uv run python scripts/run_live_tests.py \
-  --resolve-cli \
-  --mode extended \
-  --compatibility-report .test-artifacts/upstream-v0.4.9/extended/extended-report.json \
-  -- \
-  --junitxml=.test-artifacts/upstream-v0.4.9/extended/extended-junit.xml \
-  -q
+uv run pytest -o addopts="" -q \
+  -m live_smoke tests/live/test_smoke.py
 ```
 
-Expected for acceptance: category `passed`; exact `v0.4.9` fingerprint;
-operations reached; no infrastructure/auth false positives; cleanup and secret
-scan green.
+The runner supplies the five prepared-target variables documented in
+`tests/live/README.md`; no backend or CLI resolver is owned by this repository.
 
 ## 6. Stability
 
-```bash
-uv run python scripts/run_live_tests.py \
-  --resolve-cli \
-  --repeat 10 \
-  --stability-report .test-artifacts/upstream-v0.4.9/stability/stability-report.json \
-  --prerequisite-report .test-artifacts/upstream-v0.4.9/smoke/smoke-report.json
-
-uv run python scripts/live_compatibility_report.py aggregate \
-  --smoke .test-artifacts/upstream-v0.4.9/smoke/smoke-report.json \
-  --extended .test-artifacts/upstream-v0.4.9/extended/extended-report.json \
-  --mutation .test-artifacts/upstream-v0.4.9/mutation/mutation-results.json \
-  --stability .test-artifacts/upstream-v0.4.9/stability/stability-report.json \
-  --output .test-artifacts/upstream-v0.4.9/acceptance-summary.json
-```
-
-Expected: stability runs only after a passed identical-target smoke, completes
-10/10 full-smoke passes with unique artifacts and zero leftovers, and the
-aggregated summary has `accepted=true`.
+Stability and extended live orchestration are outside the prepared-target SDK
+scope. Use repeated manual smoke runs when the environment owner requires
+additional confidence.
 
 ## Stop Conditions
 

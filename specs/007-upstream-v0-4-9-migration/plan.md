@@ -124,21 +124,13 @@ src/multica_py/
 
 scripts/
 ├── upstream_contract.py
-├── run_live_tests.py
-├── live_compatibility_report.py
-├── check_test_architecture.py
-└── check_test_baseline.py
-
-tools/live_support/
-├── outcomes.py                       # typed JUnit/result parsing authority
-├── environment.py
-└── oracle.py
+└── check_coverage.py
 
 tests/
 ├── cases/
 │   ├── argv_data.py
 │   ├── operations.py
-│   └── generated/approved_sdk_cases.py
+│   └── operations.py
 ├── fixtures/provenance/
 ├── unit/
 ├── component/
@@ -147,16 +139,15 @@ tests/
 
 .github/workflows/
 ├── ci.yml
-└── live-extended.yml
+└── live-smoke.yml
 ```
 
 **Structure Decision**: Retain the single-package SDK and existing test
 architecture. Add the generator inside the existing internal upstream-contract
 package. Keep sequencing/decoding handwritten and integrate generated bindings,
 validators, enums, signatures, cases, documentation, and
-compatibility/provenance projections. Put shared typed live result and JUnit
-parsing in `tools/live_support/outcomes.py`, so production SDK code never
-depends on tests or scripts.
+compatibility/provenance projections. Keep live acceptance in the prepared
+target smoke suite, so production SDK code never depends on tests or scripts.
 
 ## Exact Implementation Ownership
 
@@ -174,11 +165,8 @@ This ownership is binding; do not introduce alternate modules.
 | `src/multica_py/_internal/upstream_contract/models.py` | Extend `PromotionDecision` with `approved_contract_hash`, `target_version`, `target_tag`, `target_commit`, `release_provenance_ref`, and `release_provenance_hash`; do not store these identities in arbitrary resolution dictionaries |
 | `src/multica_py/_internal/upstream_contract/state.py` | Validate canonical refs, existence, decoded kind/identity, and recomputed semantic hashes in `validate_state`; clear candidate only through successful `replace_supported` |
 | `src/multica_py/_internal/upstream_contract/promotion.py` | Implement only the lock/journal/backup/replace/rollback/recovery transaction specified in `generation-and-provenance.md` |
-| `tools/live_support/outcomes.py` | Define `OutcomeCategory`, `OutcomeStage`, `TargetFingerprint`, `JUnitCounts`, `LiveOutcome`, `MutationOutcome`, `parse_junit`, `normalize_message`, and `compare_candidate_to_control` |
-| `scripts/live_compatibility_report.py` | Replace schema-1 dictionary inference with schema-2 serialization of `LiveOutcome`; do not maintain a second category implementation |
-| `scripts/run_live_tests.py` | Use `tools.live_support.outcomes`; implement mutation control/mutated protocol, exact full-smoke repeat, per-run artifacts, and exits 0/1/2 |
-| `tests/live/backend/lifecycle.py` | Make `poll_runtime_online` apply the same provider/daemon/status predicate as `DirectApiOracle.find_online_opencode_runtime` and reject zero/multiple matching opencode runtimes |
-| `scripts/check_test_baseline.py` | Keep flags `--coverage-json`, `--junit-xml`, and `--mutation-results`; require all three only for `--stage final`; reject any explicitly supplied missing/unreadable file |
+| `tests/live/test_smoke.py` | Execute the five prepared-target smoke scenarios through the public SDK |
+| `scripts/check_coverage.py` | Enforce coverage thresholds from the merged report. |
 
 New focused test modules are fixed to:
 
@@ -243,7 +231,7 @@ mypy, focused unit/component/contract tests, and completeness guards pass.
 ### Phase C — Candidate, promotion, and coherence
 
 9. Stage the existing help-degraded evidence only through
-   `stage-reviewed-candidate`; bind it to the approved/source-validated
+   `validate --source-checkout`; bind it to the approved/source-validated
    contract with trust `approved-contract-bound`, never `verified`.
 10. Validate canonical paths, existence, strict decode, kind, target identity,
     and recomputed semantic hashes.
@@ -262,17 +250,10 @@ mypy, focused unit/component/contract tests, and completeness guards pass.
 
 ### Phase D — Interpretable live harness
 
-14. Add closed typed outcomes and JUnit parsing in
-    `tools/live_support/outcomes.py`; make both live scripts use it.
-15. Count exactly one online `opencode` runtime for the selected daemon while
-    retaining other providers only in redacted diagnostics. Categorize backend
-    readiness and authentication rate limiting separately.
-16. Replace exit-code-only compatibility inference with category,
-    reachability, stage, exception, and normalized-fingerprint comparison.
-17. Run mutation clean controls and mutated exact nodes with distinct JUnit,
-    expected fingerprints, source-hash restoration, and gate exits 0/1/2.
-18. Require an exact-target successful smoke report and `--repeat 10`; run the
-    complete `live_smoke` profile per repetition.
+14. Keep live acceptance to the five prepared-target smoke scenarios in
+    `tests/live/test_smoke.py`.
+15. Leave backend lifecycle, credentials, workspace preparation, and provider
+    readiness to the prepared environment owner.
 19. Produce the mutation result first, then require offline JUnit, coverage
     JSON, and that mutation JSON as explicit final-baseline inputs; missing or
     unreadable input is invalid.

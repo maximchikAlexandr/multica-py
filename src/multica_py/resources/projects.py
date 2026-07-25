@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from multica_py._generated.approved_sdk import (
+    PROJECT_CREATE_BINDING,
+    PROJECT_STATUS_BINDING,
+    PROJECT_UPDATE_BINDING,
+    validate_nonblank,
+)
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import ProjectWire, project_from_wire
 from multica_py.config import ClientConfig
@@ -26,12 +32,15 @@ class ProjectResource(BaseResource):
         return project_from_wire(self._run_json_decode(("project", "get", project_id), ProjectWire))
 
     def create(self, request: ProjectCreateRequest) -> Project:
+        _ = PROJECT_CREATE_BINDING
+        validate_nonblank(request.name)
         args = ["project", "create", "--title", request.name]
         if request.description is not None:
             args.extend(["--description", request.description])
         return project_from_wire(self._run_json_decode(tuple(args), ProjectWire))
 
     def update(self, project_id: str, request: ProjectUpdateRequest) -> Project:
+        _ = PROJECT_UPDATE_BINDING
         args = ["project", "update", project_id]
         if request.name is not Unset:
             args.extend(["--title", request.name])
@@ -47,6 +56,7 @@ class ProjectResource(BaseResource):
         self._transport.run_text(("project", "delete", project_id))
 
     def set_status(self, project_id: str, status: ProjectStatus) -> Project:
+        _ = PROJECT_STATUS_BINDING
         return project_from_wire(
             self._run_json_decode(("project", "status", project_id, status.value), ProjectWire)
         )

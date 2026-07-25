@@ -5,8 +5,12 @@ import warnings
 
 import msgspec
 
-from multica_py._internal.upstream_contract.models import CliCompatMatrix
-from multica_py._internal.upstream_contract.paths import DEFAULT_STATE_PATH
+from multica_py._generated.approved_sdk import (
+    MAX_CLI_VERSION,
+    MIN_CLI_VERSION,
+    TARGET_VERSION,
+)
+from multica_py._internal.compatibility_models import CliCompatMatrix
 from multica_py.compatibility import CliVersion
 from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
@@ -54,33 +58,15 @@ def _parse_semver(version: str) -> tuple[int, int, int] | None:
     return tuple(int(part) for part in match.groups())  # type: ignore[return-value]
 
 
-def _bump_patch_version(version: str) -> str:
-    parts = version.split(".")
-    if len(parts) != 3 or not all(part.isdigit() for part in parts):
-        return version
-    major, minor, patch = (int(part) for part in parts)
-    return f"{major}.{minor}.{patch + 1}"
-
-
 def _load_supported_bounds() -> tuple[str, str]:
-    if not DEFAULT_STATE_PATH.exists():
-        return "0.0.0", "0.0.0"
-    raw: object = msgspec.json.decode(DEFAULT_STATE_PATH.read_bytes())
-    if not isinstance(raw, dict):
-        return "0.0.0", "0.0.0"
-    supported_obj = raw.get("supported")
-    if not isinstance(supported_obj, dict):
-        return "0.0.0", "0.0.0"
-    version_obj = supported_obj.get("version")
-    min_version = str(version_obj) if version_obj else "0.0.0"
-    return min_version, _bump_patch_version(min_version)
+    return MIN_CLI_VERSION, MAX_CLI_VERSION
 
 
 def default_policy(sdk_version: str) -> CliCompatMatrix:
     min_version, max_version = _load_supported_bounds()
     return CliCompatMatrix(
         schema_version=COMPATIBILITY_SCHEMA_VERSION,
-        sdk_version=sdk_version,
+        sdk_version=sdk_version or TARGET_VERSION,
         min_cli_version=min_version,
         max_cli_version=max_version,
     )

@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/007-upstream-v0-4-9-migration/plan.md
+at specs/008-reduce-nonprod-complexity/plan.md
 <!-- SPECKIT END -->
 
 ## Multica Upstream Contract Review Rules
@@ -70,17 +70,25 @@ The approved SDK contract is the only valid production generator input.
 Evidence files, heuristic rename suggestions, and generated upgrade bundles
 must never directly generate or modify public SDK behavior.
 
-Maintainer upgrade entrypoint:
+Maintainer upstream-contract flow:
 
 ```bash
-uv run python scripts/upstream_contract.py upgrade --tag ... --version ... \
-  --commit ... --release-id ... --binary ... --asset-name ... --sha256 ... \
-  --os ... --arch ... --version-output ... --output-dir ...
+uv run python scripts/upstream_contract.py collect \
+  --source-checkout /absolute/pinned/source \
+  --binary /absolute/verified/multica \
+  --tag ... --version ... --commit ... --release-id ... \
+  --asset-name ... --sha256 ... --os ... --arch ... \
+  --version-output /absolute/version.json --output-dir /absolute/evidence
+uv run python scripts/upstream_contract.py validate --approved contracts/sdk-contract.json \
+  --source-checkout /absolute/pinned/source
+uv run python scripts/upstream_contract.py render --approved contracts/sdk-contract.json \
+  --runtime-output src/multica_py/_generated/approved_sdk.py \
+  --transient-output /absolute/ignored/output
+uv run python scripts/upstream_contract.py check --approved contracts/sdk-contract.json
 ```
 
-Or `./scripts/upstream_upgrade.sh` with `TAG`, `COMMIT`, `RELEASE_ID`, `BINARY`,
-`ASSET_NAME`, `SHA256`, and `VERSION_OUTPUT` set. Verified collect/export paths:
-`tools/upstream-cli-contract/README.md` and `upstream_contract.py collect`.
+Evidence is review-only. Only the approved contract may change public generated
+behaviour; all transient output belongs outside tracked directories.
 
 ## Writing Tests
 
@@ -100,8 +108,7 @@ add data rows before you add functions; add functions before you add files.
   - component fake CLI: `CommandCase` in `tests/component/resources/cases.py`
     (PR-03 migration from legacy `FakeCliCase` rows);
   - contract-diff severity: `MutationSeverityCase` in `tests/unit/`/`tests/contract/`;
-  - live CRUD: `CrudDescriptor`; live non-CRUD command: `LiveOperation` in
-    `tests/live/`.
+  - live smoke: public SDK calls in `tests/live/test_smoke.py`.
 - Keep genuinely distinct logic (rename heuristics, summary reconciliation,
   destructive/diagnostic-bundle flows, `P-NULL-HTTP`) as separate tests — do NOT
   force them into a table.
@@ -109,9 +116,9 @@ add data rows before you add functions; add functions before you add files.
 ### Reuse shared code, don't duplicate
 
 - Use the shared fixtures and factories (`make_target`, `make_settings`,
-  `mock_transport`, the fake-CLI client fixture, `DirectApiOracle`, `live_ctx`,
-  `register_resource`, `test_identity`). Do NOT re-copy `_target()`/`_settings()`
-  style local helpers into a test module.
+  `mock_transport`, the fake-CLI client fixture, `register_resource`,
+  `test_identity`). Do NOT re-copy `_target()`/`_settings()` style local helpers
+  into a test module.
 - Never mutate `os.environ` directly in component tests; use the provided
   fixture-scoped environment control (keeps the suite parallel-safe).
 
@@ -123,22 +130,12 @@ add data rows before you add functions; add functions before you add files.
 - No tautological, dead, or duplicate tests. Do not add comments that narrate the
   code.
 
-### Respect the completeness guards
+### Completeness assertion
 
-Coverage is enforced by manifest-driven guards. When you add or change a command,
-keep the matching guard green by adding real coverage — the allowlists are a
-temporary bridge, not a dumping ground:
-
-- unit argv: `KNOWN_ARGV_GAPS`;
-- component fake CLI: `KNOWN_FIXTURE_GAPS` (until each legacy `FakeCliCase.id`
-  migrates to `CommandCase` in PR-03);
-- live command execution: `KNOWN_LIVE_GAPS` (runnable, not-yet-automated; goal
-  empty) and `LIVE_EXEC_EXCEPTIONS` (permanently unrunnable, with a valid
-  `LiveExecReason` code).
-
-An allowlist entry MUST carry a short inline reason and MUST be removed the moment
-real coverage exists (the guards fail on stale entries). Prefer writing the
-`ArgvCase`/`CommandCase`/`LiveOperation`/`CrudDescriptor` over allowlisting.
+`tests/unit/resources/test_operations.py::test_discovered_public_methods`
+asserts `discovered_public_methods == {case.sdk_method for case in
+OPERATION_CASES if case.is_canonical}` with 116 unique canonical methods,
+137 unique case IDs, and 21 noncanonical variants; 135 legacy payload rows are a migration subset. No allowlist is accepted.
 
 ### Layers and markers
 
@@ -147,13 +144,12 @@ real coverage exists (the guards fail on stale entries). Prefer writing the
   offline.
 - Path prefixes auto-apply layer markers (`unit`, `contract`, `component`,
   `packaging`, `live`) via `tests/conftest.py`; see
-  `specs/005-test-suite-agent-sandbox/contracts/marker-profiles.md`.
+  `openspec/specs/verification-and-release/spec.md`.
 - `tests/component/test_process_contract.py` carries `@pytest.mark.process` and
   `@pytest.mark.serial`; all other offline tests MUST NOT use `serial`.
 - Live tests are gated. Markers do NOT inherit in this repo: every
-  `tests/live/*` module sets a module-level `pytestmark` including base
-  `pytest.mark.live`, exactly one profile among `live_smoke`, `live_extended`, or
-  `live_opencode_canary`, and `pytest.mark.serial`. Verify with
+  `tests/live/*` test module sets `pytestmark = [pytest.mark.live,
+  pytest.mark.live_smoke, pytest.mark.serial]`. Verify with
   `uv run pytest -m "not live" --collect-only` that no `tests/live/*` node is
   collected.
 
@@ -163,65 +159,6 @@ Both `uv run mypy src` and `uv run mypy tests` MUST pass; test helpers live unde
 the typed `tests.*` mypy override — no `Any` leaks. Use only stdlib + pytest; do
 NOT add third-party test frameworks or UI-automation patterns (Screenplay, Page
 Object, pytest-bdd, hypothesis, snapshot libraries).
-
-## Test architecture gate (feature 006)
-
-`scripts/check_test_architecture.py` and `scripts/check_test_baseline.py`
-enforce a five-stage gate. Each stage activates a strict superset of the
-previous one's checks (see
-`specs/006-test-suite-consolidation/contracts/quality-gates.md`):
-
-| Stage | Activates |
-|---|---|
-| `pr1` | process markers, default live/packaging exclusion, baseline self-check |
-| `pr2` | registry-name checks, exactly-one `OPERATION_CASES` / `ERROR_CASES`, 111 unique IDs, payload size, tests LOC ≤ pr1 baseline |
-| `pr3` | no `from tests` / `import tests` in `scripts/` or `src/`, no pytest.skip in `tests/packaging/`, no `tests/fixtures/json/`, tests LOC ≤ 11000, package paths = 6 |
-| `pr4` | no `getfixturevalue` in `tests/live/`, no resource-identity branch in `tests/live/test_crud.py`, live_support_python ≤ 3000 |
-| `final` | tests_python ≤ 10500, live_support_python ≤ 2500, max file LOC ≤ 800 (best effort; `--strict-final` flips to hard fail) |
-
-Five-stage invocation:
-
-```bash
-for s in pr1 pr2 pr3 pr4 final; do
-  uv run python scripts/check_test_architecture.py --stage "$s"
-  uv run python scripts/check_test_baseline.py --baseline tests/quality-baseline.json --stage "$s"
-done
-```
-
-## Deletion rules (FR-032)
-
-These rules apply whenever a test, fixture, or support module is removed
-or merged (per `specs/006-test-suite-consolidation/tasks.md` execution
-rules and `data-model.md` rule 7):
-
-1. **Pair deletion with traceability.** Removing a test node MUST add a
-   record to `tests/duplicate-removal-map.json` in the same commit. The
-   record carries `removed_node_id`, `retained_node_id`, and
-   `protected_contract` (one of `operation:<sdk>:<dim>` or
-   `invariant:<key>`).
-2. **No compatibility aliases.** Do not add `*Compat` re-exports, legacy
-   module shims, or back-port imports for removed registries or types.
-   Callers must use the canonical replacement; if a name is reused, the
-   previous owner is gone for good.
-3. **Stop on a red gate.** If a stage gate fails after a deduplication
-   commit, stop the deduplication and either revert the commit or
-   restore retained coverage via `tests/duplicate-removal-map.json` before
-   continuing. Never lower assertions, coverage config, mutation config,
-   or the behavioral manifest to make a gate pass.
-4. **Keep node IDs stable when consolidating content.** Merging cases or
-   assertions into an existing case table MUST preserve the retained
-   `test_id[case_id]` so the duplicate map and behavior fingerprint stay
-   green. Local-class renames (e.g. `DecodeCase → ProjectResourceDecodeCase`)
-   inside a single test module do not need duplicate-map records because
-   no node ID changes.
-5. **Stay under the file cap.** Every new or substantially rewritten
-   test/support Python file MUST be `<= 800` logical lines. The final-stage
-   gate hard-fails over 800.
-6. **Final LOC budgets.** The `final` stage is best effort by default
-   (`tests_python ≤ 10500`, `live_support_python ≤ 2500`). Adding test
-   code that pushes either budget further above the cap requires either
-   completing the T068/T074 slim-down or accepting `--strict-final` as a
-   red gate.
 
 ## Commit Messages
 
