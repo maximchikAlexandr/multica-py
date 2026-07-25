@@ -13,7 +13,14 @@ venv/
 .vscode/
 .idea/
 .devlocal/
-.opencode/
+.opencode/*
+!.opencode/commands/
+!.opencode/skills/
+.opencode/commands/*
+.opencode/skills/*
+!.opencode/commands/opsx-*.md
+!.opencode/skills/openspec-*/
+!.opencode/skills/openspec-*/SKILL.md
 
 # OS
 .DS_Store

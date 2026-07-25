@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Define the offline, packaging, live-smoke, and release checks required for the
+SDK.
+
+## Requirements
 
 ### Requirement: Offline quality and release
 CI MUST run Ruff, configured mypy, offline pytest, coverage, contract check, package validation, and approved release validation through `uv`.

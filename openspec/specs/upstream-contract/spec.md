@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Define how reviewed upstream CLI evidence becomes deterministic public SDK
+behavior.
+
+## Requirements
 
 ### Requirement: Pinned source authority
 The approved contract MUST cite full pinned source commits and locations, while extraction records only declared declarative facts.

@@ -50,7 +50,6 @@ exclude = [
     ".codebase-memory/**",
     ".devlocal/**",
     ".opencode/**",
-    ".speckit-chat/**",
     "**/__pycache__/**",
     "**/*.pyc",
     "**/node_modules/**",
