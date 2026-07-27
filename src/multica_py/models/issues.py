@@ -50,6 +50,10 @@ class Issue(msgspec.Struct, frozen=True, kw_only=True):
     metadata: tuple[IssueMetadataItem, ...] = ()
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
+    parent_id: str | None = None
+    project_id: str | None = None
+    creator_id: str | None = None
+    creator_type: str | None = None
 
 
 class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
@@ -96,6 +100,7 @@ class IssueCreateRequest(msgspec.Struct, frozen=True, kw_only=True):
     assignee_id: str | None = None
     label_ids: tuple[str, ...] = ()
     project_id: str | None = None
+    parent_id: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.description_input, _VALID_DESC_TYPES):  # type: ignore[misc]
@@ -105,6 +110,8 @@ class IssueCreateRequest(msgspec.Struct, frozen=True, kw_only=True):
             )
         if self.project_id is not None and not self.project_id.strip():
             raise ValueError("project_id must be non-empty when set")
+        if self.parent_id is not None and not self.parent_id.strip():
+            raise ValueError("parent_id must be non-empty when set")
 
 
 class IssueUpdateRequest(msgspec.Struct, frozen=True, kw_only=True):
@@ -113,10 +120,13 @@ class IssueUpdateRequest(msgspec.Struct, frozen=True, kw_only=True):
     priority: str | None = None
     assignee_id: str | None = None
     project_id: str | None = None
+    parent_id: str | None = None
 
     def __post_init__(self) -> None:
         if self.project_id is not None and not self.project_id.strip():
             raise ValueError("project_id must be non-empty when set")
+        if self.parent_id is not None and not self.parent_id.strip():
+            raise ValueError("parent_id must be non-empty when set")
 
 
 class IssueReorderRequest(msgspec.Struct, frozen=True, kw_only=True):

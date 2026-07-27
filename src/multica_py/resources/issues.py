@@ -105,6 +105,8 @@ class IssueResource(BaseResource):
             args.extend(["--assignee-id", request.assignee_id])
         if request.project_id is not None:
             args.extend(["--project", request.project_id])
+        if request.parent_id is not None:
+            args.extend(["--parent", request.parent_id])
         issue = issue_from_wire(self._run_json_decode(tuple(args), IssueWire))
         for label_id in request.label_ids:
             self.labels.add(issue.id, label_id)
@@ -124,6 +126,8 @@ class IssueResource(BaseResource):
             args.extend(["--assignee-id", request.assignee_id])
         if request.project_id is not None:
             args.extend(["--project", request.project_id])
+        if request.parent_id is not None:
+            args.extend(["--parent", request.parent_id])
         return issue_from_wire(self._run_json_decode(tuple(args), IssueWire))
 
     def assign(self, request: IssueAssignmentRequest) -> Issue:
