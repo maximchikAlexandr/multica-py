@@ -239,6 +239,11 @@
             "json_body:project_id"
           ],
           [
+            "request.parent_id",
+            "--parent",
+            "json_body:parent_issue_id"
+          ],
+          [
             "request.label_ids",
             "repeat:issue label add",
             "json_body:label_id"
@@ -708,6 +713,7 @@
       ],
       "issue_create": [
         "required_nonblank",
+        "optional_omit",
         "optional_omit",
         "optional_omit",
         "optional_omit",
@@ -1411,6 +1417,11 @@
             "source": "request.project_id",
             "binding": "--project",
             "destination": "json_body:project_id"
+          },
+          {
+            "source": "request.parent_id",
+            "binding": "--parent",
+            "destination": "json_body:parent_issue_id"
           },
           {
             "source": "request.label_ids",

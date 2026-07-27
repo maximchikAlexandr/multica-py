@@ -65,7 +65,7 @@ COMMENT_LIST_THREAD_BINDING = GeneratedBinding(
 
 ISSUE_CREATE_BINDING = GeneratedBinding(
     'issues.create', 'default', ('issue', 'create'),
-    (GeneratedMapping('request.title', '--title', 'json_body:title'), GeneratedMapping('request.description_input', 'description-selector', 'local_control:description'), GeneratedMapping('request.priority', '--priority', 'json_body:priority'), GeneratedMapping('request.assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('request.project_id', '--project', 'json_body:project_id'), GeneratedMapping('request.label_ids', 'repeat:issue label add', 'json_body:label_id'),), ('nonblank:request.title', 'description_exactly_one'),
+    (GeneratedMapping('request.title', '--title', 'json_body:title'), GeneratedMapping('request.description_input', 'description-selector', 'local_control:description'), GeneratedMapping('request.priority', '--priority', 'json_body:priority'), GeneratedMapping('request.assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('request.project_id', '--project', 'json_body:project_id'), GeneratedMapping('request.parent_id', '--parent', 'json_body:parent_issue_id'), GeneratedMapping('request.label_ids', 'repeat:issue label add', 'json_body:label_id'),), ('nonblank:request.title', 'description_exactly_one'),
 )
 
 ISSUE_LABELS_ADD_BINDING = GeneratedBinding(

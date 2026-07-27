@@ -56,6 +56,12 @@ class IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     metadata: dict[str, MetadataValue] = msgspec.field(default_factory=dict)
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
+    parent_issue_id: str | None = None
+    project_id: str | None = None
+    creator_id: str | None = None
+    creator_type: str | None = (
+        None  # ponytail: free string, no enum — upstream values not stabilised; add CreatorType enum when they are
+    )
 
 
 def issue_from_wire(wire: IssueWire) -> Issue:
@@ -74,6 +80,10 @@ def issue_from_wire(wire: IssueWire) -> Issue:
         ),
         created_at=wire.created_at,
         updated_at=wire.updated_at,
+        parent_id=wire.parent_issue_id,
+        project_id=wire.project_id,
+        creator_id=wire.creator_id,
+        creator_type=wire.creator_type,
     )
 
 

@@ -421,6 +421,9 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:133": "manual:workspaces.watch:canonical",
     "legacy:134": "manual:workspaces.unwatch:canonical",
     "legacy:135": "manual:maintenance.version:canonical",
+    "legacy:136": "manual:issues.create:variant:05",
+    "legacy:137": "manual:issues.create:variant:06",
+    "legacy:138": "manual:issues.update:variant:02",
 }
 
 
@@ -1130,6 +1133,31 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="generated:issues.create:default:variant:04",
         ),
         _c(
+            "issues.create",
+            ("issue", "create", "--title", "Test", "--parent", "iss_parent", "--output", "json"),
+            args=(IssueCreateRequest(title="Test", parent_id="iss_parent"),),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.create:variant:05",
+        ),
+        _c(
+            "issues.create",
+            (
+                "issue",
+                "create",
+                "--title",
+                "Test",
+                "--project",
+                "pr_001",
+                "--parent",
+                "iss_parent",
+                "--output",
+                "json",
+            ),
+            args=(IssueCreateRequest(title="Test", parent_id="iss_parent", project_id="pr_001"),),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.create:variant:06",
+        ),
+        _c(
             "projects.list",
             ("project", "list", "--output", "json"),
             stdout=b"[]",
@@ -1495,6 +1523,13 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("iss_1", IssueUpdateRequest(project_id="pr_001")),
             stdout=b'{"id":"iss_1","title":"Updated","status":"todo"}',
             id="manual:issues.update:variant:01",
+        ),
+        _c(
+            "issues.update",
+            ("issue", "update", "iss_1", "--parent", "iss_parent", "--output", "json"),
+            args=("iss_1", IssueUpdateRequest(parent_id="iss_parent")),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.update:variant:02",
         ),
         _c(
             "issues.assign",
