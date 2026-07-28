@@ -5,11 +5,18 @@ import datetime
 import msgspec
 
 
+class AgentSkill(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    name: str
+    enabled: bool
+
+
 class Agent(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     name: str
     description: str | None = None
-    skills: tuple[str, ...] = ()
+    skills: tuple[AgentSkill, ...] = ()
+    archived_at: datetime.datetime | None = None
 
 
 class AgentCreateRequest(msgspec.Struct, frozen=True, kw_only=True):

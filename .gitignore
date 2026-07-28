@@ -60,3 +60,5 @@ reports/**
 mutants/
 
 # The approved runtime projection is intentionally committed.
+.multica/
+.agent_context/
