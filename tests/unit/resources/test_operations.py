@@ -80,14 +80,14 @@ def test_discovered_public_methods() -> None:
     discovered = discover_public_methods()
     canonical = {c.sdk_method for c in OPERATION_CASES if c.is_canonical}
     assert discovered == canonical
-    assert len(discovered) == 116
-    assert len(OPERATION_CASES) == 140
-    assert sum(1 for c in OPERATION_CASES if c.is_canonical) == 116
+    assert len(discovered) == 117
+    assert len(OPERATION_CASES) == 141
+    assert sum(1 for c in OPERATION_CASES if c.is_canonical) == 117
     assert sum(1 for c in OPERATION_CASES if not c.is_canonical) == 24
     generated = tuple(c for c in OPERATION_CASES if c.contract_operation_id is not None)
     manual = tuple(c for c in OPERATION_CASES if c.contract_operation_id is None)
     assert len(generated) == 30
-    assert len(manual) == 110
+    assert len(manual) == 111
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
     assert all(

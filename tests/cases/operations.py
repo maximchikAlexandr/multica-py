@@ -29,6 +29,7 @@ from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.setup import SetupResource
 from multica_py.resources.skill_files import SkillFileResource
 from multica_py.resources.skills import SkillResource
+from multica_py.resources.squad_members import SquadMemberResource
 from multica_py.resources.squads import SquadResource
 from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
@@ -80,6 +81,7 @@ RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("skill_files", SkillFileResource),
     ("skills", SkillResource),
     ("squads", SquadResource),
+    ("squads_members", SquadMemberResource),
     ("users", UserResource),
     ("workspaces", WorkspaceResource),
 )
@@ -93,6 +95,7 @@ _NESTED_RESOURCE_ATTRS: dict[tuple[str, str], str] = {
     ("autopilots", "triggers"): "autopilot_triggers",
     ("projects", "resources"): "project_resources",
     ("skills", "files"): "skill_files",
+    ("squads", "members"): "squads_members",
 }
 
 _NESTED_DOTTED_PREFIXES: dict[str, str] = {
@@ -434,7 +437,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
     import msgspec
 
     from multica_py.enums import IssueStatus, MetadataValueType, ProjectStatus
-    from multica_py.models.agents import Agent, AgentCreateRequest, AgentUpdateRequest
+    from multica_py.models.agents import Agent, AgentCreateRequest, AgentSkill, AgentUpdateRequest
     from multica_py.models.autopilots import Autopilot, AutopilotRun
     from multica_py.models.issue_activity import (
         CommentCursor,
@@ -477,6 +480,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         RepositoryCheckoutResult,
         RuntimeDefinition,
         Squad,
+        SquadMember,
         User,
     )
     from multica_py.models.workspaces import Workspace, WorkspaceMember
@@ -501,6 +505,10 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
     }
     _PR_RES_BYTES = msgspec.json.encode(_PR_RES)
     _SQ = msgspec.json.encode(Squad(id="s1", name="S"))
+    _SQ_MEMBERS = msgspec.json.encode(
+        [SquadMember(member_id="a1", member_type="agent", role="architecture-reviewer")]
+    )
+    _AG_SKILLS = msgspec.json.encode([AgentSkill(id="sk_1", name="openspec-propose", enabled=True)])
     _USR = msgspec.json.encode(User(id="u1", name="Alice"))
     _WS_LIST = msgspec.json.encode([Workspace(id="ws_001", name="Main Workspace")])
     _WS = msgspec.json.encode(Workspace(id="ws_001", name="Main Workspace"))
@@ -615,7 +623,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             "agents.skills.list",
             ("agent", "skill", "list", "a1", "--output", "json"),
             args=("a1",),
-            stdout=b"[]",
+            stdout=_AG_SKILLS,
             id="manual:agents.skills.list:canonical",
         ),
         _c(
@@ -1403,6 +1411,14 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("s1",),
             stdout=_SQ,
             id="manual:squads.get:canonical",
+        ),
+        _c(
+            "squads.members.list",
+            ("squad", "member", "list", "s1", "--output", "json"),
+            args=("s1",),
+            stdout=_SQ_MEMBERS,
+            id="manual:squads.members.list:canonical",
+            source_ref="manual:squads.members.list:canonical",
         ),
         _c(
             "users.list",
