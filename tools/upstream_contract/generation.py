@@ -24,6 +24,7 @@ _ONE_OF_VALUES = {
         {"backlog", "todo", "in_progress", "in_review", "done", "blocked", "cancelled"}
     ),
     "ProjectStatus": frozenset({"planned", "in_progress", "paused", "completed", "cancelled"}),
+    "AutopilotExecutionMode": frozenset({"create_issue", "run_only"}),
 }
 
 
@@ -91,11 +92,12 @@ def _runtime(catalog: ContractCatalog) -> bytes:
             f"GeneratedMapping({source!r}, {binding!r}, {destination!r})"
             for source, binding, destination in descriptor.mappings
         )
+        mappings_tup = f"({mappings},)" if mappings else "()"
         lines.extend(
             [
                 f"{binding_names[descriptor.descriptor_id]} = GeneratedBinding(",
                 f"    {descriptor.operation_id!r}, {descriptor.entrypoint_id!r}, {descriptor.command!r},",
-                f"    ({mappings},), {descriptor.validator_ids!r},",
+                f"    {mappings_tup}, {descriptor.validator_ids!r},",
                 ")",
                 "",
             ]

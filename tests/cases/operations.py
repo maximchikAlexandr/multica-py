@@ -146,7 +146,13 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
     import datetime
     from base64 import b64decode
 
-    from multica_py.enums import IssueSort, IssueStatus, ProjectStatus, SortDirection
+    from multica_py.enums import (
+        AutopilotExecutionMode,
+        IssueSort,
+        IssueStatus,
+        ProjectStatus,
+        SortDirection,
+    )
     from multica_py.models.common import Page
     from multica_py.models.issue_activity import (
         CommentCursor,
@@ -186,6 +192,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         "SortDirection": SortDirection,
         "IssueStatus": IssueStatus,
         "ProjectStatus": ProjectStatus,
+        "AutopilotExecutionMode": AutopilotExecutionMode,
     }
 
     def materialize(tagged: dict[str, object]) -> object:
@@ -305,15 +312,15 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:014": "manual:attachments.list:canonical",
     "legacy:015": "manual:attachments.upload:canonical",
     "legacy:016": "manual:attachments.download:canonical",
-    "legacy:017": "manual:autopilots.list:canonical",
-    "legacy:018": "manual:autopilots.get:canonical",
-    "legacy:019": "manual:autopilots.create:canonical",
-    "legacy:020": "manual:autopilots.update:canonical",
+    "legacy:017": "generated:autopilots.list:default:canonical",
+    "legacy:018": "generated:autopilots.get:default:canonical",
+    "legacy:019": "generated:autopilots.create:default:canonical",
+    "legacy:020": "generated:autopilots.update:default:canonical",
     "legacy:021": "manual:autopilots.update:variant:01",
     "legacy:022": "manual:autopilots.update:variant:02",
-    "legacy:023": "manual:autopilots.delete:canonical",
-    "legacy:024": "manual:autopilots.run:canonical",
-    "legacy:025": "manual:autopilots.history:canonical",
+    "legacy:023": "generated:autopilots.delete:default:canonical",
+    "legacy:024": "generated:autopilots.run:default:canonical",
+    "legacy:025": "generated:autopilots.history:default:canonical",
     "legacy:026": "manual:autopilots.get_run:canonical",
     "legacy:027": "manual:configuration.show:canonical",
     "legacy:028": "manual:configuration.get:canonical",
@@ -427,6 +434,11 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:136": "manual:issues.create:variant:05",
     "legacy:137": "manual:issues.create:variant:06",
     "legacy:138": "manual:issues.update:variant:02",
+    "legacy:139": "manual:autopilots.history:variant:01",
+    "legacy:140": "manual:autopilots.history:variant:02",
+    "legacy:141": "manual:autopilots.history:variant:03",
+    "legacy:142": "manual:autopilots.update:variant:03",
+    "legacy:143": "manual:autopilots.create:variant:01",
 }
 
 
@@ -436,9 +448,20 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
 
     import msgspec
 
-    from multica_py.enums import IssueStatus, MetadataValueType, ProjectStatus
+    from multica_py.enums import (
+        AutopilotExecutionMode,
+        IssueStatus,
+        MetadataValueType,
+        ProjectStatus,
+    )
     from multica_py.models.agents import Agent, AgentCreateRequest, AgentSkill, AgentUpdateRequest
-    from multica_py.models.autopilots import Autopilot, AutopilotRun
+    from multica_py.models.autopilots import (
+        Autopilot,
+        AutopilotListPage,
+        AutopilotRun,
+        AutopilotRunListPage,
+        AutopilotSubscriber,
+    )
     from multica_py.models.issue_activity import (
         CommentCursor,
         CommentListFlatRequest,
@@ -490,8 +513,22 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
 
     # Pre-encode common payloads to match legacy ARGV_CASES
     _AG = msgspec.json.encode(Agent(id="a1", name="n"))
-    _AP = msgspec.json.encode(Autopilot(id="a1", name="AP"))
-    _APRUN = msgspec.json.encode(AutopilotRun(id="r1", status="running"))
+    _AP = msgspec.json.encode(
+        Autopilot(
+            id="a1",
+            workspace_id="w1",
+            title="AP",
+            assignee_type="member",
+            assignee_id="u1",
+            status="active",
+            execution_mode="create_issue",
+            created_by_type="member",
+            created_by_id="u1",
+        )
+    )
+    _APRUN = msgspec.json.encode(
+        AutopilotRun(id="r1", autopilot_id="a1", source="manual", status="running")
+    )
     _AR = msgspec.json.encode(AttachmentResult(id="a1", filename="f.txt"))
     _LBL = msgspec.json.encode([Label(id="lbl_1", name="bug", color="#ff0000")])
     _REPO = msgspec.json.encode(Repository(id="r1", name="repo1"))
@@ -548,6 +585,13 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             "generated:projects.set_status:default:canonical",
             "generated:issues.comments.add:default:canonical",
             "generated:issues.comments.delete:default:canonical",
+            "generated:autopilots.list:default:canonical",
+            "generated:autopilots.get:default:canonical",
+            "generated:autopilots.create:default:canonical",
+            "generated:autopilots.update:default:canonical",
+            "generated:autopilots.delete:default:canonical",
+            "generated:autopilots.run:default:canonical",
+            "generated:autopilots.history:default:canonical",
         }
     )
 
@@ -729,66 +773,86 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "autopilots.list",
             ("autopilot", "list", "--output", "json"),
-            stdout=b"[]",
-            id="manual:autopilots.list:canonical",
+            stdout=b'{"autopilots":[],"total":0}',
+            method="list",
+            id="generated:autopilots.list:default:canonical",
         ),
         _c(
             "autopilots.get",
             ("autopilot", "get", "a1", "--output", "json"),
             args=("a1",),
             stdout=_AP,
-            id="manual:autopilots.get:canonical",
+            id="generated:autopilots.get:default:canonical",
         ),
         _c(
             "autopilots.create",
-            ("autopilot", "create", "--name", "my-ap", "--output", "json"),
+            (
+                "autopilot",
+                "create",
+                "--title",
+                "my-ap",
+                "--agent",
+                "ag1",
+                "--mode",
+                "create_issue",
+                "--priority",
+                "none",
+                "--output",
+                "json",
+            ),
             args=("my-ap",),
+            kwargs=(("agent", "ag1"), ("execution_mode", AutopilotExecutionMode.create_issue)),
             stdout=_AP,
-            id="manual:autopilots.create:canonical",
+            method="create",
+            id="generated:autopilots.create:default:canonical",
         ),
         _c(
             "autopilots.update",
-            ("autopilot", "update", "a1", "--name", "new", "--output", "json"),
+            ("autopilot", "update", "a1", "--output", "json"),
             args=("a1",),
-            kwargs=(("name", "new"),),
             stdout=_AP,
-            id="manual:autopilots.update:canonical",
+            method="update",
+            id="generated:autopilots.update:default:canonical",
         ),
         _c(
             "autopilots.update",
-            ("autopilot", "update", "a1", "--enabled", "true", "--output", "json"),
+            ("autopilot", "update", "a1", "--title", "new", "--output", "json"),
             args=("a1",),
-            kwargs=(("enabled", True),),
+            kwargs=(("title", "new"),),
             stdout=_AP,
+            method="update",
             id="manual:autopilots.update:variant:01",
         ),
         _c(
             "autopilots.update",
-            ("autopilot", "update", "a1", "--name", "n", "--enabled", "false", "--output", "json"),
+            ("autopilot", "update", "a1", "--status", "active", "--output", "json"),
             args=("a1",),
-            kwargs=(("enabled", False), ("name", "n")),
+            kwargs=(("status", "active"),),
             stdout=_AP,
+            method="update",
             id="manual:autopilots.update:variant:02",
         ),
         _c(
             "autopilots.delete",
             ("autopilot", "delete", "a1"),
             args=("a1",),
-            id="manual:autopilots.delete:canonical",
+            id="generated:autopilots.delete:default:canonical",
         ),
         _c(
             "autopilots.run",
             ("autopilot", "run", "a1", "--output", "json"),
             args=("a1",),
             stdout=_APRUN,
-            id="manual:autopilots.run:canonical",
+            method="run",
+            id="generated:autopilots.run:default:canonical",
         ),
         _c(
             "autopilots.history",
-            ("autopilot", "history", "a1", "--output", "json"),
+            ("autopilot", "runs", "a1", "--output", "json"),
             args=("a1",),
-            stdout=b"[]",
-            id="manual:autopilots.history:canonical",
+            stdout=b'{"runs":[],"total":0}',
+            method="history",
+            id="generated:autopilots.history:default:canonical",
         ),
         _c(
             "autopilots.get_run",
@@ -796,6 +860,81 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("r1",),
             stdout=_APRUN,
             id="manual:autopilots.get_run:canonical",
+        ),
+        _c(
+            "autopilots.history",
+            ("autopilot", "runs", "a1", "--limit", "10", "--output", "json"),
+            args=("a1",),
+            kwargs=(("limit", 10), ("offset", None)),
+            stdout=b'{"runs":[],"total":0}',
+            method="history",
+            id="manual:autopilots.history:variant:01",
+        ),
+        _c(
+            "autopilots.history",
+            ("autopilot", "runs", "a1", "--offset", "20", "--output", "json"),
+            args=("a1",),
+            kwargs=(("offset", 20), ("limit", None)),
+            stdout=b'{"runs":[],"total":0}',
+            method="history",
+            id="manual:autopilots.history:variant:02",
+        ),
+        _c(
+            "autopilots.history",
+            ("autopilot", "runs", "a1", "--limit", "10", "--offset", "20", "--output", "json"),
+            args=("a1",),
+            kwargs=(("limit", 10), ("offset", 20)),
+            stdout=b'{"runs":[],"total":0}',
+            method="history",
+            id="manual:autopilots.history:variant:03",
+        ),
+        _c(
+            "autopilots.update",
+            ("autopilot", "update", "a1", "--project", "", "--output", "json"),
+            args=("a1",),
+            kwargs=(("project_id", ""),),
+            stdout=_AP,
+            method="update",
+            id="manual:autopilots.update:variant:03",
+        ),
+        _c(
+            "autopilots.create",
+            (
+                "autopilot",
+                "create",
+                "--title",
+                "my-ap",
+                "--agent",
+                "ag1",
+                "--mode",
+                "create_issue",
+                "--priority",
+                "none",
+                "--description",
+                "desc",
+                "--project",
+                "p1",
+                "--issue-title-template",
+                "{{title}}",
+                "--subscriber",
+                "u1",
+                "--subscriber",
+                "u2",
+                "--output",
+                "json",
+            ),
+            args=("my-ap",),
+            kwargs=(
+                ("agent", "ag1"),
+                ("execution_mode", AutopilotExecutionMode.create_issue),
+                ("description", "desc"),
+                ("project_id", "p1"),
+                ("issue_title_template", "{{title}}"),
+                ("subscribers", ("u1", "u2")),
+            ),
+            stdout=_AP,
+            method="create",
+            id="manual:autopilots.create:variant:01",
         ),
         _c("configuration.show", ("config", "show"), id="manual:configuration.show:canonical"),
         _c(

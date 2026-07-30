@@ -7,6 +7,10 @@ TARGET_VERSION = '0.4.9'
 MIN_CLI_VERSION = TARGET_VERSION
 MAX_CLI_VERSION = '0.4.10'
 
+class AutopilotExecutionMode(StrEnum):
+    create_issue = 'create_issue'
+    run_only = 'run_only'
+
 class IssueSort(StrEnum):
     position = 'position'
     title = 'title'
@@ -32,6 +36,41 @@ class GeneratedBinding:
     command: tuple[str, ...]
     mappings: tuple[GeneratedMapping, ...]
     validator_ids: tuple[str, ...]
+
+AUTOPILOT_CREATE_BINDING = GeneratedBinding(
+    'autopilots.create', 'default', ('autopilot', 'create'),
+    (GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'json_body:description'), GeneratedMapping('agent', '--agent', 'json_body:assignee_id'), GeneratedMapping('execution_mode', '--mode', 'json_body:execution_mode'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('issue_title_template', '--issue-title-template', 'json_body:issue_title_template'), GeneratedMapping('subscribers', 'repeat:--subscriber', 'json_body:subscribers'),), ('nonblank:title', 'nonblank:agent'),
+)
+
+AUTOPILOT_DELETE_BINDING = GeneratedBinding(
+    'autopilots.delete', 'default', ('autopilot', 'delete'),
+    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'),), ('nonblank:autopilot_id',),
+)
+
+AUTOPILOT_GET_BINDING = GeneratedBinding(
+    'autopilots.get', 'default', ('autopilot', 'get'),
+    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'),), ('nonblank:autopilot_id',),
+)
+
+AUTOPILOT_HISTORY_BINDING = GeneratedBinding(
+    'autopilots.history', 'default', ('autopilot', 'runs'),
+    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('limit', '--limit', 'query:limit'), GeneratedMapping('offset', '--offset', 'query:offset'),), ('nonblank:autopilot_id',),
+)
+
+AUTOPILOT_LIST_BINDING = GeneratedBinding(
+    'autopilots.list', 'default', ('autopilot', 'list'),
+    (), (),
+)
+
+AUTOPILOT_RUN_BINDING = GeneratedBinding(
+    'autopilots.run', 'default', ('autopilot', 'run'),
+    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'),), ('nonblank:autopilot_id',),
+)
+
+AUTOPILOT_UPDATE_BINDING = GeneratedBinding(
+    'autopilots.update', 'default', ('autopilot', 'update'),
+    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'json_body:description'), GeneratedMapping('agent', '--agent', 'json_body:assignee_id'), GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('status', '--status', 'json_body:status'), GeneratedMapping('execution_mode', '--mode', 'json_body:execution_mode'), GeneratedMapping('issue_title_template', '--issue-title-template', 'json_body:issue_title_template'), GeneratedMapping('subscribers', 'repeat:--subscriber', 'json_body:subscribers'), GeneratedMapping('clear_subscribers', '--clear-subscribers', 'json_body:clear_subscribers'),), ('nonblank:autopilot_id',),
+)
 
 COMMENT_ADD_BINDING = GeneratedBinding(
     'issues.comments.add', 'default', ('issue', 'comment', 'add'),
@@ -129,6 +168,13 @@ PROJECT_UPDATE_BINDING = GeneratedBinding(
 )
 
 OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
+    AUTOPILOT_CREATE_BINDING,
+    AUTOPILOT_DELETE_BINDING,
+    AUTOPILOT_GET_BINDING,
+    AUTOPILOT_HISTORY_BINDING,
+    AUTOPILOT_LIST_BINDING,
+    AUTOPILOT_RUN_BINDING,
+    AUTOPILOT_UPDATE_BINDING,
     COMMENT_ADD_BINDING,
     COMMENT_DELETE_BINDING,
     COMMENT_LIST_BINDING,
@@ -202,4 +248,4 @@ def validate_thread_cursor_limit(value: object) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ValueError('value must be a positive integer')
 
-__all__ = ('TARGET_VERSION', 'MIN_CLI_VERSION', 'MAX_CLI_VERSION', 'IssueSort', 'SortDirection', 'GeneratedMapping', 'GeneratedBinding', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_STATUS_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'OPERATION_BINDINGS', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_limit', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_thread_cursor_limit')
+__all__ = ('TARGET_VERSION', 'MIN_CLI_VERSION', 'MAX_CLI_VERSION', 'AutopilotExecutionMode', 'IssueSort', 'SortDirection', 'GeneratedMapping', 'GeneratedBinding', 'AUTOPILOT_CREATE_BINDING', 'AUTOPILOT_DELETE_BINDING', 'AUTOPILOT_GET_BINDING', 'AUTOPILOT_HISTORY_BINDING', 'AUTOPILOT_LIST_BINDING', 'AUTOPILOT_RUN_BINDING', 'AUTOPILOT_UPDATE_BINDING', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_STATUS_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'OPERATION_BINDINGS', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_limit', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_thread_cursor_limit')

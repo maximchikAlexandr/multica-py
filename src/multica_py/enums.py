@@ -5,6 +5,7 @@ import enum
 from multica_py._generated.approved_sdk import IssueSort, SortDirection
 
 __all__ = [
+    "AutopilotExecutionMode",
     "CompatibilityPolicy",
     "IssueSort",
     "IssueStatus",
@@ -31,6 +32,11 @@ class ProjectStatus(enum.StrEnum):
     paused = "paused"
     completed = "completed"
     cancelled = "cancelled"
+
+
+class AutopilotExecutionMode(enum.StrEnum):
+    create_issue = "create_issue"
+    run_only = "run_only"
 
 
 class OutputMode(enum.StrEnum):
