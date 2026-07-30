@@ -1,6 +1,6 @@
 ## 1. Models
 
-- [ ] 1.1 In `src/multica_py/models/autopilots.py`, replace the `Autopilot`
+- [x] 1.1 In `src/multica_py/models/autopilots.py`, replace the `Autopilot`
   struct (line 8-11) with a widened frozen `msgspec.Struct`: fields
   `id: str`, `workspace_id: str`, `title: str`,
   `description: str | None = None`, `project_id: str | None = None`,
@@ -16,13 +16,13 @@
   `subscribers: tuple[AutopilotSubscriber, ...] = ()`,
   `can_write: bool | None = None`, `can_manage_access: bool | None = None`.
   Drop `name` and `enabled`. `kw_only=True`, `frozen=True`.
-- [ ] 1.2 In `src/multica_py/models/autopilots.py`, add a new
+- [x] 1.2 In `src/multica_py/models/autopilots.py`, add a new
   `AutopilotSubscriber(msgspec.Struct, frozen=True, kw_only=True)` with
   fields `user_type: str`, `user_id: str`,
   `created_at: datetime.datetime | None = None` (matching
   `AutopilotSubscriberEntry` at server/internal/handler/autopilot.go:62-66).
   Place it before `Autopilot`.
-- [ ] 1.3 In `src/multica_py/models/autopilots.py`, replace the `AutopilotRun`
+- [x] 1.3 In `src/multica_py/models/autopilots.py`, replace the `AutopilotRun`
   struct (line 14-18) with: `id: str`, `autopilot_id: str`,
   `trigger_id: str | None = None`, `source: str`, `status: str`,
   `issue_id: str | None = None`, `task_id: str | None = None`,
@@ -33,28 +33,27 @@
   `result: object | None = None`,
   `created_at: datetime.datetime | None = None`. Drop `started_at` (no
   upstream backing). `kw_only=True`, `frozen=True`.
-- [ ] 1.4 In `src/multica_py/models/autopilots.py`, add
+- [x] 1.4 In `src/multica_py/models/autopilots.py`, add
   `AutopilotListPage(msgspec.Struct, frozen=True, kw_only=True)` with
   `autopilots: tuple[Autopilot, ...] = ()` and `total: int = 0`.
-- [ ] 1.5 In `src/multica_py/models/autopilots.py`, add
+- [x] 1.5 In `src/multica_py/models/autopilots.py`, add
   `AutopilotRunListPage(msgspec.Struct, frozen=True, kw_only=True)` with
   `runs: tuple[AutopilotRun, ...] = ()`, `total: int = 0`,
   `limit: int | None = None`, `offset: int | None = None`,
   `has_more: bool = False`.
-- [ ] 1.6 In `src/multica_py/enums.py`, add `AutopilotExecutionMode` enum
-  with members `CREATE_ISSUE = "create_issue"` and `RUN_ONLY = "run_only"`
+- [x] 1.6 In `src/multica_py/enums.py`, add `AutopilotExecutionMode` enum
+  with members `create_issue = "create_issue"` and `run_only = "run_only"`
   (matching the upstream validation at cmd_autopilot.go:253-258 and
-  cmd_autopilot.go:388-392). Follow the existing `IssueStatus`/`ProjectStatus`
-  enum style.
+  cmd_autopilot.go:388-392).
 
 ## 2. Wire
 
-- [ ] 2.1 In `src/multica_py/_internal/wire_models.py`, add an
+- [x] 2.1 In `src/multica_py/_internal/wire_models.py`, add an
   `AutopilotSubscriberWire(msgspec.Struct, frozen=True, kw_only=True)` with
   `user_type: str`, `user_id: str`,
   `created_at: datetime.datetime | None = None`. Place it near the existing
   `AutopilotListWire` (line 156).
-- [ ] 2.2 In `src/multica_py/_internal/wire_models.py`, add an
+- [x] 2.2 In `src/multica_py/_internal/wire_models.py`, add an
   `AutopilotWire(msgspec.Struct, frozen=True, kw_only=True)` carrying the
   upstream `AutopilotResponse` JSON names: `id: str`,
   `workspace_id: str`, `title: str`, `description: str | None = None`,
@@ -71,13 +70,13 @@
   `can_write: bool | None = None`, `can_manage_access: bool | None = None`.
   Import `AutopilotSubscriberWire` is local; the public `Autopilot` import
   is already present (line 10).
-- [ ] 2.3 In `src/multica_py/_internal/wire_models.py`, add
+- [x] 2.3 In `src/multica_py/_internal/wire_models.py`, add
   `autopilot_from_wire(wire: AutopilotWire) -> Autopilot` returning an
   `Autopilot` with `subscribers` mapped via
   `tuple(AutopilotSubscriber(user_type=s.user_type, user_id=s.user_id,
   created_at=s.created_at) for s in wire.subscribers)`. Import
   `AutopilotSubscriber` from `multica_py.models.autopilots` (extend line 10).
-- [ ] 2.4 In `src/multica_py/_internal/wire_models.py`, add an
+- [x] 2.4 In `src/multica_py/_internal/wire_models.py`, add an
   `AutopilotRunWire(msgspec.Struct, frozen=True, kw_only=True)` with the
   upstream `AutopilotRunResponse` JSON names: `id: str`, `autopilot_id: str`,
   `trigger_id: str | None = None`, `source: str`, `status: str`,
@@ -87,10 +86,10 @@
   `failure_reason: str | None = None`, `reason_code: str | None = None`,
   `trigger_payload: object | None = None`, `result: object | None = None`,
   `created_at: datetime.datetime | None = None`.
-- [ ] 2.5 In `src/multica_py/_internal/wire_models.py`, add
+- [x] 2.5 In `src/multica_py/_internal/wire_models.py`, add
   `autopilot_run_from_wire(wire: AutopilotRunWire) -> AutopilotRun`.
   Import `AutopilotRun` is already present (line 10).
-- [ ] 2.6 In `src/multica_py/_internal/wire_models.py`, widen
+- [x] 2.6 In `src/multica_py/_internal/wire_models.py`, widen
   `AutopilotListWire` (line 156-158) — it already has
   `autopilots: tuple[Autopilot, ...] = ()` and `total: int = 0`; change the
   `autopilots` element type to `AutopilotWire` and add
@@ -98,7 +97,7 @@
   returning `AutopilotListPage(autopilots=tuple(autopilot_from_wire(a) for a
   in wire.autopilots), total=wire.total)`. Import `AutopilotListPage` from
   `multica_py.models.autopilots` (extend line 10).
-- [ ] 2.7 In `src/multica_py/_internal/wire_models.py`, add an
+- [x] 2.7 In `src/multica_py/_internal/wire_models.py`, add an
   `AutopilotRunListPageWire(msgspec.Struct, frozen=True, kw_only=True)` with
   `runs: tuple[AutopilotRunWire, ...] = ()` and `total: int = 0`, and
   `autopilot_run_list_page_from_wire(wire: AutopilotRunListPageWire, limit:
@@ -108,7 +107,7 @@
 
 ## 3. Resource
 
-- [ ] 3.1 In `src/multica_py/resources/autopilots.py`, replace the `list`
+- [x] 3.1 In `src/multica_py/resources/autopilots.py`, replace the `list`
   method (line 18-27) body to return
   `autopilot_list_page_from_wire(self._run_json_decode(("autopilot", "list",
   "--output", "json"), AutopilotListWire))`. Add a bare-array fallback:
@@ -118,10 +117,10 @@
   `autopilot_list_page_from_wire`, `autopilot_from_wire`, `AutopilotWire`
   from `wire_models`; `AutopilotListPage` from `models.autopilots`. Return
   type annotation `-> AutopilotListPage`.
-- [ ] 3.2 In `src/multica_py/resources/autopilots.py`, change `get`
+- [x] 3.2 In `src/multica_py/resources/autopilots.py`, change `get`
   (line 29-30) to decode via wire: `return autopilot_from_wire(
   self._run_json_decode(("autopilot", "get", autopilot_id), AutopilotWire))`.
-- [ ] 3.3 In `src/multica_py/resources/autopilots.py`, change `create`
+- [x] 3.3 In `src/multica_py/resources/autopilots.py`, change `create`
   (line 32-33) signature to
   `create(self, title: str, *, description: str | None = None,
   agent: str, execution_mode: AutopilotExecutionMode, priority: str = "none",
@@ -133,7 +132,7 @@
   `--subscriber <ref>` repeated for each subscriber. Append
   `["--output", "json"]`. Decode via `autopilot_from_wire(... AutopilotWire)`.
   Import `AutopilotExecutionMode` from `multica_py.enums`.
-- [ ] 3.4 In `src/multica_py/resources/autopilots.py`, change `update`
+- [x] 3.4 In `src/multica_py/resources/autopilots.py`, change `update`
   (line 35-43) signature to
   `update(self, autopilot_id: str, *, title: str | None = None,
   description: str | None = None, agent: str | None = None,
@@ -153,7 +152,7 @@
   `subscribers is not None` (and not clear), append `--subscriber <ref>`
   repeated. Append `["--output", "json"]`. Decode via
   `autopilot_from_wire(... AutopilotWire)`.
-- [ ] 3.5 In `src/multica_py/resources/autopilots.py`, change `run`
+- [x] 3.5 In `src/multica_py/resources/autopilots.py`, change `run`
   (line 48-49) to decode via wire: `return autopilot_run_from_wire(
   self._run_json_decode(("autopilot", "run", autopilot_id, "--output",
   "json"), AutopilotRunWire))`. Note upstream `autopilot trigger <id>` is
@@ -162,7 +161,7 @@
   cmd_autopilot.go:56-60 which uses `autopilot trigger <id>` — if the SDK
   argv diverges, this is a pre-existing defect NOT in scope for this change;
   leave argv as-is and file a follow-up).
-- [ ] 3.6 In `src/multica_py/resources/autopilots.py`, replace `history`
+- [x] 3.6 In `src/multica_py/resources/autopilots.py`, replace `history`
   (line 51-52) signature with `history(self, autopilot_id: str, *,
   limit: int | None = None, offset: int | None = None) ->
   AutopilotRunListPage`. Add a nonnegative guard at the top:
@@ -175,27 +174,27 @@
   defect, see design D9), append `--limit <n>` / `--offset <n>` when provided,
   append `["--output", "json"]`. Decode via `AutopilotRunListPageWire` and
   return `autopilot_run_list_page_from_wire(page, limit=limit, offset=offset)`.
-- [ ] 3.7 In `src/multica_py/resources/autopilots.py`, leave `get_run`
+- [x] 3.7 In `src/multica_py/resources/autopilots.py`, leave `get_run`
   (line 54-55) UNCHANGED: it stays an ungoverned hand-written method emitting
   `("autopilot","run","get",run_id,"--output","json")` against a non-existent
   upstream command (design D10). Do NOT add a contract binding for it; do NOT
   widen its decode path (it continues to use `AutopilotRun` directly via
   `_run_json_decode`). A follow-up will fix or remove this defect.
-- [ ] 3.8 In `src/multica_py/resources/autopilots.py`, `delete` (line 45-46)
+- [x] 3.8 In `src/multica_py/resources/autopilots.py`, `delete` (line 45-46)
   is unchanged (no body, `run_text`).
 
 ## 4. Approved contract
 
-- [ ] 4.1 In `contracts/sdk-contract.json`, add a source ref `S-AUTO` to the
+- [x] 4.1 In `contracts/sdk-contract.json`, add a source ref `S-AUTO` to the
   `source_refs` catalog covering `server/cmd/multica/cmd_autopilot.go`.
-- [ ] 4.2 In `contracts/sdk-contract.json`, add the following types to the
+- [x] 4.2 In `contracts/sdk-contract.json`, add the following types to the
   `types` catalog: `autopilot`, `autopilot_wire`, `autopilot_subscriber`,
   `autopilot_subscriber_wire`, `autopilot_run`, `autopilot_run_wire`,
   `autopilot_list_page`, `autopilot_list_page_wire`,
   `autopilot_run_list_page`, `autopilot_run_list_page_wire`. Values are the
   public/wire class names (e.g. `"autopilot": "Autopilot"`,
   `"autopilot_wire": "AutopilotWire"`, etc.).
-- [ ] 4.3 In `contracts/sdk-contract.json`, add signatures to the
+- [x] 4.3 In `contracts/sdk-contract.json`, add signatures to the
   `signatures` catalog: `autopilot_list` `(-> AutopilotListPage)`,
   `autopilot_get` `((autopilot_id: str) -> Autopilot)`,
   `autopilot_create` `((title: str, *, description: str | None, agent: str,
@@ -208,7 +207,7 @@
   `autopilot_history` `((autopilot_id: str, *, limit: int | None,
   offset: int | None) -> AutopilotRunListPage)`. Do NOT add an
   `autopilot_get_run` signature (D10: `get_run` is not governed).
-- [ ] 4.4 In `contracts/sdk-contract.json`, add responses to the `responses`
+- [x] 4.4 In `contracts/sdk-contract.json`, add responses to the `responses`
   catalog: `autopilot` (`public_type_id autopilot`, `wire_type_id
   autopilot_wire`, `decoder_id decode_autopilot`, `success_exit_codes [0]`,
   `malformed_output raise_output_shape_or_decode_error`), `autopilot_run`
@@ -217,13 +216,13 @@
   (`wire_type_id autopilot_run_list_page_wire`, `decoder_id
   decode_autopilot_run_list_page`), `none` for delete (reuse existing `none`
   if present).
-- [ ] 4.5 In `contracts/sdk-contract.json`, add decoders to the `decoders`
+- [x] 4.5 In `contracts/sdk-contract.json`, add decoders to the `decoders`
   map: `decode_autopilot` ->
   `multica_py._internal.wire_models.autopilot_from_wire`,
   `decode_autopilot_run` -> `autopilot_run_from_wire`,
   `decode_autopilot_list_page` -> `autopilot_list_page_from_wire`,
   `decode_autopilot_run_list_page` -> `autopilot_run_list_page_from_wire`.
-- [ ] 4.6 In `contracts/sdk-contract.json`, add binding descriptors to the
+- [x] 4.6 In `contracts/sdk-contract.json`, add binding descriptors to the
   `binding_descriptors` array for `autopilot_list`, `autopilot_get`,
   `autopilot_create`, `autopilot_update`, `autopilot_delete`,
   `autopilot_run`, `autopilot_history` (7 descriptors — NO
@@ -243,7 +242,7 @@
   `autopilot_run`: the `command` stays `"autopilot run"` (the pre-existing
   argv defect vs upstream `autopilot trigger <id>` is deferred, D11); mark
   the operation `intentionally_changed` with that rationale.
-- [ ] 4.7 In `contracts/sdk-contract.json`, add `mapping_presence` entries
+- [x] 4.7 In `contracts/sdk-contract.json`, add `mapping_presence` entries
   for each new binding: `autopilot_create` (required: title/agent/
   execution_mode; optional_omit: description/project_id/priority/
   issue_title_template/subscribers), `autopilot_update` (optional_omit for
@@ -255,7 +254,7 @@
   `optional_blank_omit`, `update_text`, `literal` (catalogs.presence in
   sdk-contract.json); `optional_omit` has `"empty": "emit"` matching the
   clear-on-empty semantics, so `project_id` -> `optional_omit` (NOT `empty`).
-- [ ] 4.8 In `contracts/sdk-contract.json`, add operation entries to the
+- [x] 4.8 In `contracts/sdk-contract.json`, add operation entries to the
   `operations` array: `autopilots.list`, `autopilots.get`,
   `autopilots.create`, `autopilots.update`, `autopilots.delete`,
   `autopilots.run`, `autopilots.history` (7 operations — NO
@@ -266,7 +265,7 @@
   `autopilot trigger <id>` argv divergence), `source_ref_ids: ["S-AUTO"]`,
   `entrypoints` (binding + response), and `test_ref_ids` pointing to the
   relevant `manual:autopilots.*` / `generated:autopilots.*` test vectors.
-- [ ] 4.9 In `contracts/sdk-contract.json`, split the
+- [x] 4.9 In `contracts/sdk-contract.json`, split the
   `skills-squads-and-autopilots` family entry (disposition
   `deferred_owner_decision`, `required_operation_ids: []`, `source_ref_ids:
   ["F-AUTOPILOT","F-SKILL","F-SKILL-RUN","F-SQUAD"]`) into two
@@ -287,7 +286,7 @@
   Remove the old `skills-squads-and-autopilots` entry. Add the 7 autopilot
   operation ids to the top-level `scope.operation_ids` array (alphabetically
   grouped under `autopilots.*`).
-- [ ] 4.10 In `tools/upstream_contract/contract.py`, add the new auxiliary
+- [x] 4.10 In `tools/upstream_contract/contract.py`, add the new auxiliary
   catalog keys to `_AUXILIARY_CATALOG_KEYS`: extend `types` frozenset
   (line 84) with `autopilot`, `autopilot_wire`, `autopilot_subscriber`,
   `autopilot_subscriber_wire`, `autopilot_run`, `autopilot_run_wire`,
@@ -301,12 +300,12 @@
   `decode_autopilot_run_list_page`. Add `AutopilotExecutionMode` to
   `_ENUM_TYPES` (line 45) and `_VALIDATOR_ENUM_IDS` (line 71) if the enum is
   used in validators.
-- [ ] 4.11 In `tools/upstream_contract/contract.py`, add any request field
+- [x] 4.11 In `tools/upstream_contract/contract.py`, add any request field
   order entries needed for the autopilot request structs in
   `_REQUEST_FIELD_ORDER` (line 49) if new request types are introduced (the
   create/update use kwargs directly; add only if the contract introduces
   typed request structs).
-- [ ] 4.12 Update the `generated:autopilots.list:default:canonical` (and
+- [x] 4.12 Update the `generated:autopilots.list:default:canonical` (and
   other generated autopilot) test vectors in `contracts/sdk-contract.json`
   `test_vectors` to reflect the new envelope stdout
   (`{"autopilots":[],"total":0}` for list; `{"runs":[],"total":0}` for
@@ -315,22 +314,22 @@
 
 ## 5. Generator output
 
-- [ ] 5.1 Run
+- [x] 5.1 Run
   `uv run python scripts/upstream_contract.py validate --approved
   contracts/sdk-contract.json --source-checkout /Users/alexandr/local_dev/repositories/gen_dev/multica`
   (the `S-AUTO` source ref needs the upstream checkout). Must pass.
-- [ ] 5.2 Run
+- [x] 5.2 Run
   `uv run python scripts/upstream_contract.py render --approved
   contracts/sdk-contract.json --runtime-output
   src/multica_py/_generated/approved_sdk.py --transient-output
   /tmp/multica-transient`. The transient path MUST be outside tracked dirs.
-- [ ] 5.3 Re-run the render and confirm
+- [x] 5.3 Re-run the render and confirm
   `git diff --stat src/multica_py/_generated/approved_sdk.py` is empty
   (idempotent). Remove `/tmp/multica-transient`.
 
 ## 6. Tests
 
-- [ ] 6.1 In `tests/cases/operations.py`, update the autopilot rows
+- [x] 6.1 In `tests/cases/operations.py`, update the autopilot rows
   (lines 730-800) to reflect the new signatures and envelopes:
   - `manual:autopilots.list:canonical` — `stdout` changes from `b"[]"` to
     `b'{"autopilots":[],"total":0}'` and the result is decoded as
@@ -344,7 +343,7 @@
     `("autopilot","create","--name","my-ap",...)` to
     `("autopilot","create","--title","my-ap","--agent","ag1","--mode","create_issue","--priority","none","--output","json")`;
     `args=("my-ap",)` becomes
-    `args=("my-ap",)` with `kwargs=(("agent","ag1"),("execution_mode",AutopilotExecutionMode.CREATE_ISSUE))`.
+    `args=("my-ap",)` with `kwargs=(("agent","ag1"),("execution_mode",AutopilotExecutionMode.create_issue))`.
   - `manual:autopilots.update:canonical` and variants — argv/kwargs change
     from `--name`/`--enabled` to `--title`/`--status`; `kwargs` use the new
     keyword-only form.
@@ -378,7 +377,7 @@
   (lines ~441-465): add `AutopilotListPage, AutopilotRunListPage,
   AutopilotSubscriber` from `multica_py.models.autopilots` and
   `AutopilotExecutionMode` from `multica_py.enums`.
-- [ ] 6.2 In `tests/cases/operations.py`, add the 5 new variant rows to
+- [x] 6.2 In `tests/cases/operations.py`, add the 5 new variant rows to
   `LEGACY_ARGV_MIGRATION` continuing after the current max `legacy:138`
   (this branch is off `main`, where `LEGACY_ARGV_MIGRATION` max is 138):
   `"legacy:139": "manual:autopilots.history:variant:01"`,
@@ -389,13 +388,13 @@
   with the issue-list-pagination branch at merge time (that branch adds
   legacy:139-141; renumber this branch's new entries to start after the
   merged max — the final absolute indices may shift, but the count is +5).
-- [ ] 6.3 In `tests/cases/legacy_payloads.py`, append 5 fingerprints for
+- [x] 6.3 In `tests/cases/legacy_payloads.py`, append 5 fingerprints for
   `legacy:139`–`legacy:143` computed with the existing helper formula
   `hashlib.sha256(repr(payload(case)).encode()).hexdigest()` where `payload`
   is the tuple from
   `tests/unit/resources/test_operations.py::test_legacy_payload_bijection`
   (lines 103-114). The fingerprint list grows 138 → 143.
-- [ ] 6.4 In `tests/unit/resources/test_operations.py::test_discovered_public_methods`
+- [x] 6.4 In `tests/unit/resources/test_operations.py::test_discovered_public_methods`
   (lines 79-95), recompute the counter assertions against the actual edited
   `OPERATION_CASES`. Exact final invariants (see design §Migration):
   - `len(discovered) == 117` (canonical public method set unchanged; `get_run`
@@ -409,14 +408,14 @@
   - `len(manual) == 109` (111 − 7 flipped + 5 new variants).
   These are exact invariants — recompute against the actual edited
   `OPERATION_CASES` before committing; no allowlist.
-- [ ] 6.5 In `tests/unit/resources/test_operations.py::test_legacy_payload_bijection`
+- [x] 6.5 In `tests/unit/resources/test_operations.py::test_legacy_payload_bijection`
   (lines 116-119), update `range(1, 139)` to `range(1, 144)` (5 new legacy
   entries: legacy:139-143), `len(LEGACY_PAYLOAD_FINGERPRINTS) == 143` (was
   138), and the bijection length `== 143` (was 138). `LEGACY_ARGV_MIGRATION`
   max becomes `legacy:143`. Reconcile the absolute indices with the
   issue-list-pagination branch at merge time (that branch also adds legacy
   entries; the +5 count is fixed).
-- [ ] 6.6 Create `tests/contract/test_autopilot_models.py` with
+- [x] 6.6 Create `tests/contract/test_autopilot_models.py` with
   table-driven decode tests:
   - `test_autopilot_decoding` `@pytest.mark.parametrize` over: full
     `AutopilotResponse` JSON → all fields; minimal JSON → optional fields
@@ -436,7 +435,7 @@
   Use `decode_json` from `multica_py._internal.decoders` and the wire
   converters. Use `mock_transport`/`ClientConfig()` fixtures for the
   resource-level tests.
-- [ ] 6.7 In `tests/contract/test_autopilot_models.py`, add
+- [x] 6.7 In `tests/contract/test_autopilot_models.py`, add
   `@pytest.mark.parametrize` rejection tests:
   - `test_history_rejects_negative_limit` over `(-1, -5)` — call
     `AutopilotResource(mock_transport, ClientConfig()).history("a1", limit=v)`,
@@ -463,15 +462,15 @@
 
 ## 7. Verification
 
-- [ ] 7.1 `uv run pytest -m "not live"` green.
-- [ ] 7.2 `uv run mypy src` and `uv run mypy tests` green.
-- [ ] 7.3 `uv run ruff check` and `uv run ruff format --check` green.
-- [ ] 7.4 `uv run pytest tests/unit/resources/test_operations.py::test_discovered_public_methods`
+- [x] 7.1 `uv run pytest -m "not live"` green.
+- [x] 7.2 `uv run mypy src` and `uv run mypy tests` green.
+- [x] 7.3 `uv run ruff check` and `uv run ruff format --check` green.
+- [x] 7.4 `uv run pytest tests/unit/resources/test_operations.py::test_discovered_public_methods`
   asserts the canonical method set is unchanged (117 methods) and the exact
   counters: `len(OPERATION_CASES) == 146`, canonical `== 117`, noncanonical
   `== 29`, `len(generated) == 37`, `len(manual) == 109` — no allowlist.
-- [ ] 7.5 `uv run pytest tests/unit/resources/test_operations.py::test_legacy_payload_bijection`
+- [x] 7.5 `uv run pytest tests/unit/resources/test_operations.py::test_legacy_payload_bijection`
   green with 143 legacy fingerprints (`range(1, 144)`,
   `len(LEGACY_PAYLOAD_FINGERPRINTS) == 143`).
-- [ ] 7.6 `uv run openspec change validate autopilot-list-pagination --strict`
+- [x] 7.6 `uv run openspec change validate autopilot-list-pagination --strict`
   green.

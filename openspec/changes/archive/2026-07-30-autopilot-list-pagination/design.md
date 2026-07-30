@@ -112,8 +112,7 @@ with the same nullable semantics, add `triggered_at`.
 Upstream `autopilot runs --output json` returns `{"runs":[...],"total":N}`
 with no `has_more` (cmd_autopilot.go:484-492). To give callers a usable
 page-end signal, `AutopilotResource.history` computes
-`has_more = offset is not None and (offset + len(runs)) < total` (or
-`len(runs) < total` when `offset is None`), mirroring the `issue list`
+`has_more = (offset or 0) + len(runs) < total`, mirroring the `issue list`
 precedent where the CLI itself derives `has_more`. `limit`/`offset` on the
 returned page echo the request values (or the upstream defaults 20/0 when
 omitted) so callers can resume.

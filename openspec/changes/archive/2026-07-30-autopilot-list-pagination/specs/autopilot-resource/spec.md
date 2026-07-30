@@ -100,12 +100,6 @@ The legacy fields `started_at` MUST NOT be present; `completed_at` remains.
 - **THEN** the result is an `AutopilotListPage` with `autopilots == ()` and
   `total == 0`.
 
-#### Scenario: Bare array backward compatibility
-
-- **WHEN** the CLI returns a bare JSON array `[{"id":"a1",...}]` (older output)
-- **THEN** `AutopilotResource.list` decodes it as a fallback and returns an
-  `AutopilotListPage` with the decoded items and `total == len(autopilots)`.
-
 ### Requirement: Autopilot history supports limit/offset and returns a page
 
 `AutopilotResource.history` MUST accept `limit: int | None` and
@@ -166,13 +160,13 @@ has_more)`. `has_more` MUST be computed Python-side as `len(runs) < total` when
 
 #### Scenario: Create emits required and optional flags
 
-- **WHEN** `client.autopilots.create("My AP", description="d", agent="ag1", execution_mode=AutopilotExecutionMode.CREATE_ISSUE, priority="high", project_id="p1", issue_title_template="{{date}}", subscribers=("u1","u2"))` is called
+- **WHEN** `client.autopilots.create("My AP", description="d", agent="ag1", execution_mode=AutopilotExecutionMode.create_issue, priority="high", project_id="p1", issue_title_template="{{date}}", subscribers=("u1","u2"))` is called
 - **THEN** the transport receives the argv
   `("autopilot", "create", "--title", "My AP", "--description", "d", "--agent", "ag1", "--mode", "create_issue", "--priority", "high", "--project", "p1", "--issue-title-template", "{{date}}", "--subscriber", "u1", "--subscriber", "u2", "--output", "json")`.
 
 #### Scenario: Create minimal
 
-- **WHEN** `client.autopilots.create("My AP", agent="ag1", execution_mode=AutopilotExecutionMode.RUN_ONLY)` is called
+- **WHEN** `client.autopilots.create("My AP", agent="ag1", execution_mode=AutopilotExecutionMode.run_only)` is called
 - **THEN** the transport receives the argv
   `("autopilot", "create", "--title", "My AP", "--agent", "ag1", "--mode", "run_only", "--priority", "none", "--output", "json")` and no `--description`/`--project`/`--issue-title-template`/`--subscriber` flags.
 

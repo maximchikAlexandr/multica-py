@@ -9,6 +9,16 @@
   },
   "catalogs": {
     "types": {
+      "autopilot": "Autopilot",
+      "autopilot_wire": "AutopilotWire",
+      "autopilot_subscriber": "AutopilotSubscriber",
+      "autopilot_subscriber_wire": "AutopilotSubscriberWire",
+      "autopilot_run": "AutopilotRun",
+      "autopilot_run_wire": "AutopilotRunWire",
+      "autopilot_list_page": "AutopilotListPage",
+      "autopilot_list_page_wire": "AutopilotListWire",
+      "autopilot_run_list_page": "AutopilotRunListPage",
+      "autopilot_run_list_page_wire": "AutopilotRunListPageWire",
       "comment": "Comment",
       "comment_wire": "CommentWire",
       "comments": "tuple[Comment, ...]",
@@ -31,6 +41,13 @@
       "project_resources_wire": "list[ProjectResourceRecordWire]"
     },
     "signatures": {
+      "autopilot_list": "() -> AutopilotListPage",
+      "autopilot_get": "(autopilot_id: str) -> Autopilot",
+      "autopilot_create": "(title: str, *, description: str | None, agent: str, execution_mode: AutopilotExecutionMode, priority: str, project_id: str | None, issue_title_template: str | None, subscribers: tuple[str, ...]) -> Autopilot",
+      "autopilot_update": "(autopilot_id: str, *, title: str | None, description: str | None, agent: str | None, project_id: str | None, priority: str | None, status: str | None, execution_mode: AutopilotExecutionMode | None, issue_title_template: str | None, subscribers: tuple[str, ...] | None, clear_subscribers: bool) -> Autopilot",
+      "autopilot_delete": "(autopilot_id: str) -> None",
+      "autopilot_run": "(autopilot_id: str) -> AutopilotRun",
+      "autopilot_history": "(autopilot_id: str, *, limit: int | None, offset: int | None) -> AutopilotRunListPage",
       "comment_add": "(issue_id: str, body: str) -> Comment",
       "comment_delete": "(comment_id: str) -> None",
       "comment_list": "(issue_id: str) -> tuple[Comment, ...]",
@@ -572,9 +589,237 @@
           "unset_omits",
           "empty_emits"
         ]
+      },
+      "autopilot_list": {
+        "command": [
+          "autopilot",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "autopilot_get": {
+        "command": [
+          "autopilot",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      "autopilot_create": {
+        "command": [
+          "autopilot",
+          "create"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "title",
+            "--title",
+            "json_body:title"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ],
+          [
+            "agent",
+            "--agent",
+            "json_body:assignee_id"
+          ],
+          [
+            "execution_mode",
+            "--mode",
+            "json_body:execution_mode"
+          ],
+          [
+            "priority",
+            "--priority",
+            "json_body:priority"
+          ],
+          [
+            "project_id",
+            "--project",
+            "json_body:project_id"
+          ],
+          [
+            "issue_title_template",
+            "--issue-title-template",
+            "json_body:issue_title_template"
+          ],
+          [
+            "subscribers",
+            "repeat:--subscriber",
+            "json_body:subscribers"
+          ]
+        ],
+        "constraints": [
+          "nonblank:title",
+          "nonblank:agent"
+        ]
+      },
+      "autopilot_update": {
+        "command": [
+          "autopilot",
+          "update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ],
+          [
+            "title",
+            "--title",
+            "json_body:title"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ],
+          [
+            "agent",
+            "--agent",
+            "json_body:assignee_id"
+          ],
+          [
+            "project_id",
+            "--project",
+            "json_body:project_id"
+          ],
+          [
+            "priority",
+            "--priority",
+            "json_body:priority"
+          ],
+          [
+            "status",
+            "--status",
+            "json_body:status"
+          ],
+          [
+            "execution_mode",
+            "--mode",
+            "json_body:execution_mode"
+          ],
+          [
+            "issue_title_template",
+            "--issue-title-template",
+            "json_body:issue_title_template"
+          ],
+          [
+            "subscribers",
+            "repeat:--subscriber",
+            "json_body:subscribers"
+          ],
+          [
+            "clear_subscribers",
+            "--clear-subscribers",
+            "json_body:clear_subscribers"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      "autopilot_delete": {
+        "command": [
+          "autopilot",
+          "delete"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      "autopilot_run": {
+        "command": [
+          "autopilot",
+          "run"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      "autopilot_history": {
+        "command": [
+          "autopilot",
+          "runs"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ],
+          [
+            "limit",
+            "--limit",
+            "query:limit"
+          ],
+          [
+            "offset",
+            "--offset",
+            "query:offset"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id"
+        ]
       }
     },
     "binding_source_refs": {
+      "autopilot_list": [
+        "S-AUTO"
+      ],
+      "autopilot_get": [
+        "S-AUTO"
+      ],
+      "autopilot_create": [
+        "S-AUTO"
+      ],
+      "autopilot_update": [
+        "S-AUTO"
+      ],
+      "autopilot_delete": [
+        "S-AUTO"
+      ],
+      "autopilot_run": [
+        "S-AUTO"
+      ],
+      "autopilot_history": [
+        "S-AUTO"
+      ],
       "comment_add": [
         "S-ISSUE",
         "S-CLIENT"
@@ -684,6 +929,44 @@
       }
     },
     "mapping_presence": {
+      "autopilot_list": [],
+      "autopilot_get": [
+        "required_nonblank"
+      ],
+      "autopilot_create": [
+        "required_nonblank",
+        "optional_omit",
+        "required_nonblank",
+        "required_nonblank",
+        "required_value",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit"
+      ],
+      "autopilot_update": [
+        "required_nonblank",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit"
+      ],
+      "autopilot_delete": [
+        "required_nonblank"
+      ],
+      "autopilot_run": [
+        "required_nonblank"
+      ],
+      "autopilot_history": [
+        "required_nonblank",
+        "optional_omit",
+        "optional_omit"
+      ],
       "comment_add": [
         "required_nonblank",
         "required_nonblank"
@@ -777,6 +1060,42 @@
       ]
     },
     "responses": {
+      "autopilot": {
+        "public_type_id": "autopilot",
+        "wire_type_id": "autopilot_wire",
+        "decoder_id": "decode_autopilot",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "autopilot_run": {
+        "public_type_id": "autopilot_run",
+        "wire_type_id": "autopilot_run_wire",
+        "decoder_id": "decode_autopilot_run",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "autopilot_list_page": {
+        "public_type_id": "autopilot_list_page",
+        "wire_type_id": "autopilot_list_page_wire",
+        "decoder_id": "decode_autopilot_list_page",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "autopilot_run_list_page": {
+        "public_type_id": "autopilot_run_list_page",
+        "wire_type_id": "autopilot_run_list_page_wire",
+        "decoder_id": "decode_autopilot_run_list_page",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
       "comment": {
         "public_type_id": "comment",
         "wire_type_id": "comment_wire",
@@ -878,6 +1197,10 @@
       }
     },
     "decoders": {
+      "decode_autopilot": "multica_py._internal.wire_models.autopilot_from_wire",
+      "decode_autopilot_run": "multica_py._internal.wire_models.autopilot_run_from_wire",
+      "decode_autopilot_list_page": "multica_py._internal.wire_models.autopilot_list_page_from_wire",
+      "decode_autopilot_run_list_page": "multica_py._internal.wire_models.autopilot_run_list_page_from_wire",
       "decode_comment": "multica_py._internal.wire_models.comment_from_wire",
       "decode_comments": "multica_py.resources.issue_comments.IssueCommentResource._run_decode_comments",
       "decode_comment_page": "multica_py.resources.issue_comments.IssueCommentResource._decode_comment_page",
@@ -911,6 +1234,10 @@
       "nonblank:request.name": "multica_py._generated.validators.validate_nonblank",
       "nonblank:request.title": "multica_py._generated.validators.validate_nonblank",
       "nonblank:resource_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:autopilot_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:title": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:agent": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:subscriber": "multica_py._generated.validators.validate_nonblank",
       "position_forbids_direction": "multica_py._generated.validators.validate_issue_sort",
       "preserve_daemon_and_label": "multica_py._generated.validators.validate_resource_update",
       "strict:IssueStatus": "multica_py._generated.validators.validate_issue_status",
@@ -998,6 +1325,22 @@
         "positive_case_id": "nonblank-resource-id-valid",
         "negative_case_id": "nonblank-resource-id-invalid"
       },
+      "nonblank:agent": {
+        "positive_case_id": "nonblank-agent-valid",
+        "negative_case_id": "nonblank-agent-invalid"
+      },
+      "nonblank:autopilot_id": {
+        "positive_case_id": "nonblank-autopilot-id-valid",
+        "negative_case_id": "nonblank-autopilot-id-invalid"
+      },
+      "nonblank:title": {
+        "positive_case_id": "nonblank-title-valid",
+        "negative_case_id": "nonblank-title-invalid"
+      },
+      "nonblank:subscriber": {
+        "positive_case_id": "nonblank-subscriber-valid",
+        "negative_case_id": "nonblank-subscriber-invalid"
+      },
       "position_forbids_direction": {
         "positive_case_id": "position-forbids-direction-valid",
         "negative_case_id": "position-forbids-direction-invalid"
@@ -1061,6 +1404,20 @@
           {
             "name": "desc",
             "value": "desc"
+          }
+        ]
+      },
+      {
+        "enum_id": "autopilot_execution_mode",
+        "public_name": "AutopilotExecutionMode",
+        "members": [
+          {
+            "name": "create_issue",
+            "value": "create_issue"
+          },
+          {
+            "name": "run_only",
+            "value": "run_only"
           }
         ]
       }
@@ -1182,6 +1539,30 @@
       },
       {
         "validator_id": "nonblank:resource_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:autopilot_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:title",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:agent",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:subscriber",
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
@@ -1775,6 +2156,227 @@
           "description_none_rejected",
           "unset_omits",
           "empty_emits"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_list",
+        "operation_id": "autopilots.list",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "autopilot_get",
+        "operation_id": "autopilots.get",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_create",
+        "operation_id": "autopilots.create",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "create"
+        ],
+        "mappings": [
+          {
+            "source": "title",
+            "binding": "--title",
+            "destination": "json_body:title"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          },
+          {
+            "source": "agent",
+            "binding": "--agent",
+            "destination": "json_body:assignee_id"
+          },
+          {
+            "source": "execution_mode",
+            "binding": "--mode",
+            "destination": "json_body:execution_mode"
+          },
+          {
+            "source": "priority",
+            "binding": "--priority",
+            "destination": "json_body:priority"
+          },
+          {
+            "source": "project_id",
+            "binding": "--project",
+            "destination": "json_body:project_id"
+          },
+          {
+            "source": "issue_title_template",
+            "binding": "--issue-title-template",
+            "destination": "json_body:issue_title_template"
+          },
+          {
+            "source": "subscribers",
+            "binding": "repeat:--subscriber",
+            "destination": "json_body:subscribers"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:title",
+          "nonblank:agent"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_update",
+        "operation_id": "autopilots.update",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "update"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          },
+          {
+            "source": "title",
+            "binding": "--title",
+            "destination": "json_body:title"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          },
+          {
+            "source": "agent",
+            "binding": "--agent",
+            "destination": "json_body:assignee_id"
+          },
+          {
+            "source": "project_id",
+            "binding": "--project",
+            "destination": "json_body:project_id"
+          },
+          {
+            "source": "priority",
+            "binding": "--priority",
+            "destination": "json_body:priority"
+          },
+          {
+            "source": "status",
+            "binding": "--status",
+            "destination": "json_body:status"
+          },
+          {
+            "source": "execution_mode",
+            "binding": "--mode",
+            "destination": "json_body:execution_mode"
+          },
+          {
+            "source": "issue_title_template",
+            "binding": "--issue-title-template",
+            "destination": "json_body:issue_title_template"
+          },
+          {
+            "source": "subscribers",
+            "binding": "repeat:--subscriber",
+            "destination": "json_body:subscribers"
+          },
+          {
+            "source": "clear_subscribers",
+            "binding": "--clear-subscribers",
+            "destination": "json_body:clear_subscribers"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_delete",
+        "operation_id": "autopilots.delete",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "delete"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_run",
+        "operation_id": "autopilots.run",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "run"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_history",
+        "operation_id": "autopilots.history",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "runs"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          },
+          {
+            "source": "limit",
+            "binding": "--limit",
+            "destination": "query:limit"
+          },
+          {
+            "source": "offset",
+            "binding": "--offset",
+            "destination": "query:offset"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:autopilot_id"
         ]
       }
     ],
@@ -3256,10 +3858,272 @@
             "value": null
           }
         }
+      },
+      "generated:autopilots.list:default:canonical": {
+        "vector_id": "generated:autopilots.list:default:canonical",
+        "operation_id": "autopilots.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "eyJhdXRvcGlsb3RzIjpbXSwidG90YWwiOjB9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "autopilot",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:autopilots.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.autopilots.AutopilotListPage"
+          }
+        }
+      },
+      "generated:autopilots.get:default:canonical": {
+        "vector_id": "generated:autopilots.get:default:canonical",
+        "operation_id": "autopilots.get",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "a1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6ImExIiwid29ya3NwYWNlX2lkIjoidzEiLCJ0aXRsZSI6IkFQIiwiYXNzaWduZWVfdHlwZSI6Im1lbWJlciIsImFzc2lnbmVlX2lkIjoidTEiLCJzdGF0dXMiOiJhY3RpdmUiLCJleGVjdXRpb25fbW9kZSI6ImNyZWF0ZV9pc3N1ZSIsImNyZWF0ZWRfYnlfdHlwZSI6Im1lbWJlciIsImNyZWF0ZWRfYnlfaWQiOiJ1MSIsInN1YnNjcmliZXJzIjpbXX0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "autopilot",
+          "get",
+          "a1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:autopilots.get:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.autopilots.Autopilot"
+          }
+        }
+      },
+      "generated:autopilots.create:default:canonical": {
+        "vector_id": "generated:autopilots.create:default:canonical",
+        "operation_id": "autopilots.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "my-ap"
+          }
+        ],
+        "kwargs": [
+          [
+            "agent",
+            {
+              "kind": "primitive",
+              "value": "ag1"
+            }
+          ],
+          [
+            "execution_mode",
+            {
+              "kind": "enum",
+              "type": "AutopilotExecutionMode",
+              "member": "create_issue"
+            }
+          ]
+        ],
+        "stdout_base64": "eyJpZCI6ImExIiwid29ya3NwYWNlX2lkIjoidzEiLCJ0aXRsZSI6IkFQIiwiYXNzaWduZWVfdHlwZSI6Im1lbWJlciIsImFzc2lnbmVlX2lkIjoidTEiLCJzdGF0dXMiOiJhY3RpdmUiLCJleGVjdXRpb25fbW9kZSI6ImNyZWF0ZV9pc3N1ZSIsImNyZWF0ZWRfYnlfdHlwZSI6Im1lbWJlciIsImNyZWF0ZWRfYnlfaWQiOiJ1MSIsInN1YnNjcmliZXJzIjpbXX0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "autopilot",
+          "create",
+          "--title",
+          "my-ap",
+          "--agent",
+          "ag1",
+          "--mode",
+          "create_issue",
+          "--priority",
+          "none",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:autopilots.create:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.autopilots.Autopilot"
+          }
+        }
+      },
+      "generated:autopilots.update:default:canonical": {
+        "vector_id": "generated:autopilots.update:default:canonical",
+        "operation_id": "autopilots.update",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "a1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6ImExIiwid29ya3NwYWNlX2lkIjoidzEiLCJ0aXRsZSI6IkFQIiwiYXNzaWduZWVfdHlwZSI6Im1lbWJlciIsImFzc2lnbmVlX2lkIjoidTEiLCJzdGF0dXMiOiJhY3RpdmUiLCJleGVjdXRpb25fbW9kZSI6ImNyZWF0ZV9pc3N1ZSIsImNyZWF0ZWRfYnlfdHlwZSI6Im1lbWJlciIsImNyZWF0ZWRfYnlfaWQiOiJ1MSIsInN1YnNjcmliZXJzIjpbXX0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "autopilot",
+          "update",
+          "a1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:autopilots.update:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.autopilots.Autopilot"
+          }
+        }
+      },
+      "generated:autopilots.delete:default:canonical": {
+        "vector_id": "generated:autopilots.delete:default:canonical",
+        "operation_id": "autopilots.delete",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "a1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_text",
+        "expected_argv": [
+          "autopilot",
+          "delete",
+          "a1"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:autopilots.delete:default:canonical",
+          "kind": "none",
+          "expected": {
+            "kind": "primitive",
+            "value": null
+          }
+        }
+      },
+      "generated:autopilots.run:default:canonical": {
+        "vector_id": "generated:autopilots.run:default:canonical",
+        "operation_id": "autopilots.run",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "a1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6InIxIiwiYXV0b3BpbG90X2lkIjoiYTEiLCJzb3VyY2UiOiJtYW51YWwiLCJzdGF0dXMiOiJydW5uaW5nIn0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "autopilot",
+          "run",
+          "a1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:autopilots.run:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.autopilots.AutopilotRun"
+          }
+        }
+      },
+      "generated:autopilots.history:default:canonical": {
+        "vector_id": "generated:autopilots.history:default:canonical",
+        "operation_id": "autopilots.history",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "a1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJydW5zIjpbXSwidG90YWwiOjB9",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "autopilot",
+          "runs",
+          "a1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:autopilots.history:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.models.autopilots.AutopilotRunListPage"
+          }
+        }
       }
     }
   },
   "source_refs": [
+    {
+      "source_ref_id": "S-AUTO",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotListCmd/autopilotGetCmd/autopilotCreateCmd/autopilotUpdateCmd/autopilotDeleteCmd/autopilotTriggerCmd/autopilotRunsCmd/runAutopilotList/runAutopilotGet/runAutopilotCreate/runAutopilotUpdate/runAutopilotDelete/runAutopilotTrigger/runAutopilotRuns",
+      "line_start": 18,
+      "line_end": 540
+    },
     {
       "source_ref_id": "S-ISSUE",
       "repository": "multica-ai/multica",
@@ -3320,6 +4184,13 @@
   ],
   "scope": {
     "operation_ids": [
+      "autopilots.create",
+      "autopilots.delete",
+      "autopilots.get",
+      "autopilots.history",
+      "autopilots.list",
+      "autopilots.run",
+      "autopilots.update",
       "issues.comments.add",
       "issues.comments.delete",
       "issues.comments.list",
@@ -3437,16 +4308,32 @@
         "rationale": "Local controls are not public SDK operations."
       },
       {
-        "family": "skills-squads-and-autopilots",
+        "family": "autopilot",
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "autopilots.create",
+          "autopilots.delete",
+          "autopilots.get",
+          "autopilots.history",
+          "autopilots.list",
+          "autopilots.run",
+          "autopilots.update"
+        ],
+        "source_ref_ids": [
+          "F-AUTOPILOT"
+        ],
+        "rationale": "Governed autopilot resource operations."
+      },
+      {
+        "family": "skills-squads",
         "disposition": "deferred_owner_decision",
         "required_operation_ids": [],
         "source_ref_ids": [
-          "F-AUTOPILOT",
           "F-SKILL",
           "F-SKILL-RUN",
           "F-SQUAD"
         ],
-        "rationale": "No governed operation."
+        "rationale": "No governed skill or squad operation."
       },
       {
         "family": "transport-error-contract",
@@ -3866,6 +4753,153 @@
           "signature_id": "project_update",
           "binding_id": "project_update",
           "response_id": "project",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Return type widened from tuple[Autopilot, ...] to AutopilotListPage carrying the total envelope key.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.list",
+          "signature_id": "autopilot_list",
+          "binding_id": "autopilot_list",
+          "response_id": "autopilot_list_page",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.get",
+      "compatibility": "intentionally_changed",
+      "rationale": "Autopilot model widened to the upstream AutopilotResponse surface (drops name/enabled, adds title/status and ~18 upstream fields).",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.get",
+          "signature_id": "autopilot_get",
+          "binding_id": "autopilot_get",
+          "response_id": "autopilot",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.create",
+      "compatibility": "intentionally_changed",
+      "rationale": "Create signature aligned to upstream flags (--title, --agent, --mode, --priority, --project, --issue-title-template, --subscriber). Autopilot model widened; agent and execution_mode are required.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.create",
+          "signature_id": "autopilot_create",
+          "binding_id": "autopilot_create",
+          "response_id": "autopilot",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.update",
+      "compatibility": "intentionally_changed",
+      "rationale": "Update signature aligned to upstream flags with Flags().Changed semantics. project_id presence policy: None omits, empty string clears. clear_subscribers and subscribers are mutually exclusive.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.update",
+          "signature_id": "autopilot_update",
+          "binding_id": "autopilot_update",
+          "response_id": "autopilot",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.delete",
+      "compatibility": "intentionally_changed",
+      "rationale": "Delete is a no-output operation; the autopilot model widening is collateral but the operation shape is unchanged.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.delete",
+          "signature_id": "autopilot_delete",
+          "binding_id": "autopilot_delete",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.run",
+      "compatibility": "intentionally_changed",
+      "rationale": "AutopilotRun model widened to the upstream AutopilotRunResponse surface (drops started_at, adds triggered_at). Argv divergence pre-existing (autopilot trigger <id> vs autopilot run), deferred.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.run",
+          "signature_id": "autopilot_run",
+          "binding_id": "autopilot_run",
+          "response_id": "autopilot_run",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.history",
+      "compatibility": "intentionally_changed",
+      "rationale": "Return type widened from tuple[AutopilotRun, ...] to AutopilotRunListPage (total/limit/offset/has_more). Argv fixed to upstream 'autopilot runs <id>' subcommand (was the non-existent 'autopilot history'). New --limit/--offset filters.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.history",
+          "signature_id": "autopilot_history",
+          "binding_id": "autopilot_history",
+          "response_id": "autopilot_run_list_page",
           "errors": "standard"
         }
       ]
@@ -4345,15 +5379,15 @@
     "legacy:014": "manual:attachments.list:canonical",
     "legacy:015": "manual:attachments.upload:canonical",
     "legacy:016": "manual:attachments.download:canonical",
-    "legacy:017": "manual:autopilots.list:canonical",
-    "legacy:018": "manual:autopilots.get:canonical",
-    "legacy:019": "manual:autopilots.create:canonical",
-    "legacy:020": "manual:autopilots.update:canonical",
+    "legacy:017": "generated:autopilots.list:default:canonical",
+    "legacy:018": "generated:autopilots.get:default:canonical",
+    "legacy:019": "generated:autopilots.create:default:canonical",
+    "legacy:020": "generated:autopilots.update:default:canonical",
     "legacy:021": "manual:autopilots.update:variant:01",
     "legacy:022": "manual:autopilots.update:variant:02",
-    "legacy:023": "manual:autopilots.delete:canonical",
-    "legacy:024": "manual:autopilots.run:canonical",
-    "legacy:025": "manual:autopilots.history:canonical",
+    "legacy:023": "generated:autopilots.delete:default:canonical",
+    "legacy:024": "generated:autopilots.run:default:canonical",
+    "legacy:025": "generated:autopilots.history:default:canonical",
     "legacy:026": "manual:autopilots.get_run:canonical",
     "legacy:027": "manual:configuration.show:canonical",
     "legacy:028": "manual:configuration.get:canonical",
@@ -4463,6 +5497,14 @@
     "legacy:132": "manual:workspaces.switch:canonical",
     "legacy:133": "manual:workspaces.watch:canonical",
     "legacy:134": "manual:workspaces.unwatch:canonical",
-    "legacy:135": "manual:maintenance.version:canonical"
+    "legacy:135": "manual:maintenance.version:canonical",
+    "legacy:136": "manual:issues.create:variant:05",
+    "legacy:137": "manual:issues.create:variant:06",
+    "legacy:138": "manual:issues.update:variant:02",
+    "legacy:139": "manual:autopilots.history:variant:01",
+    "legacy:140": "manual:autopilots.history:variant:02",
+    "legacy:141": "manual:autopilots.history:variant:03",
+    "legacy:142": "manual:autopilots.update:variant:03",
+    "legacy:143": "manual:autopilots.create:variant:01"
   }
 }

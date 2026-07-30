@@ -42,7 +42,9 @@ _TAG_KINDS = frozenset(
         "request",
     }
 )
-_ENUM_TYPES = frozenset({"IssueStatus", "ProjectStatus", "IssueSort", "SortDirection"})
+_ENUM_TYPES = frozenset(
+    {"IssueStatus", "ProjectStatus", "IssueSort", "SortDirection", "AutopilotExecutionMode"}
+)
 _REQUEST_TYPES = frozenset(
     {
         "CommentListFlatRequest",
@@ -63,12 +65,16 @@ _DECODED_TYPES = frozenset(
         "multica_py.models.issues.Issue",
         "multica_py.models.projects.Project",
         "multica_py.models.project_resources.ProjectResourceRecord",
+        "multica_py.models.autopilots.Autopilot",
+        "multica_py.models.autopilots.AutopilotListPage",
+        "multica_py.models.autopilots.AutopilotRun",
+        "multica_py.models.autopilots.AutopilotRunListPage",
     }
 )
 _BODY_KINDS = frozenset(
     {"nonblank", "nonnegative_int", "positive_int", "project_update", "resource_update"}
 )
-_VALIDATOR_ENUM_IDS = frozenset({"IssueStatus", "ProjectStatus"})
+_VALIDATOR_ENUM_IDS = frozenset({"IssueStatus", "ProjectStatus", "AutopilotExecutionMode"})
 _REQUEST_FIELD_ORDER = {
     "CommentListFlatRequest": ("issue_id", "since"),
     "CommentListThreadRequest": ("issue_id", "thread_id", "cursor", "limit"),
@@ -83,6 +89,16 @@ _REQUEST_FIELD_ORDER = {
 _AUXILIARY_CATALOG_KEYS = {
     "types": frozenset(
         {
+            "autopilot",
+            "autopilot_wire",
+            "autopilot_subscriber",
+            "autopilot_subscriber_wire",
+            "autopilot_run",
+            "autopilot_run_wire",
+            "autopilot_list_page",
+            "autopilot_list_page_wire",
+            "autopilot_run_list_page",
+            "autopilot_run_list_page_wire",
             "comment",
             "comment_page",
             "comment_thread_page",
@@ -107,6 +123,13 @@ _AUXILIARY_CATALOG_KEYS = {
     ),
     "signatures": frozenset(
         {
+            "autopilot_create",
+            "autopilot_delete",
+            "autopilot_get",
+            "autopilot_history",
+            "autopilot_list",
+            "autopilot_run",
+            "autopilot_update",
             "comment_add",
             "comment_delete",
             "comment_list",
@@ -130,6 +153,10 @@ _AUXILIARY_CATALOG_KEYS = {
     ),
     "decoders": frozenset(
         {
+            "decode_autopilot",
+            "decode_autopilot_run",
+            "decode_autopilot_list_page",
+            "decode_autopilot_run_list_page",
             "decode_comment",
             "decode_comment_page",
             "decode_comment_thread_page",
@@ -165,6 +192,10 @@ _AUXILIARY_CATALOG_KEYS = {
             "nonblank:request.name",
             "nonblank:request.title",
             "nonblank:resource_id",
+            "nonblank:autopilot_id",
+            "nonblank:title",
+            "nonblank:agent",
+            "nonblank:subscriber",
             "position_forbids_direction",
             "preserve_daemon_and_label",
             "strict:IssueStatus",
@@ -951,8 +982,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     binding_descriptors = _binding_descriptors(catalogs["binding_descriptors"])
     vectors_raw = _dict(catalogs["test_vectors"], "catalogs.test_vectors")
     vectors = tuple(_parse_vector(value, key) for key, value in vectors_raw.items())
-    if len(vectors) != 30:
-        raise ContractError(f"expected 30 test vectors, got {len(vectors)}")
+    if len(vectors) != 37:
+        raise ContractError(f"expected 37 test vectors, got {len(vectors)}")
     if len({vector.assertion.assertion_id for vector in vectors}) != len(vectors):
         raise ContractError("test vector assertion IDs must be unique")
     scope = _dict(raw["scope"], "scope")
@@ -1012,14 +1043,14 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             raise ContractError(f"{vector.vector_id} references unknown operation")
     migration_raw = _dict(raw["legacy_argv_migration"], "legacy_argv_migration")
     migration: dict[str, str] = {}
-    for index in range(1, 136):
+    for index in range(1, 144):
         key = f"legacy:{index:03d}"
         value = migration_raw.get(key)
         if not isinstance(value, str):
             raise ContractError(f"legacy_argv_migration is missing {key}")
         migration[key] = value
     if set(migration_raw) != set(migration):
-        raise ContractError("legacy_argv_migration must contain exactly legacy:001..legacy:135")
+        raise ContractError("legacy_argv_migration must contain exactly legacy:001..legacy:143")
     source_refs = _source_refs(raw["source_refs"])
     if any(item.commit != target.commit for item in source_refs):
         raise ContractError("every source_refs commit must match target.commit")
@@ -1040,8 +1071,12 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
 
 def validate_contract(path: pathlib.Path) -> ContractCatalog:
     contract = load_contract(path)
-    if {item.enum_id for item in contract.enum_definitions} != {"issue_sort", "sort_direction"}:
-        raise ContractError("v3 must define the two generated public enums")
+    if {item.enum_id for item in contract.enum_definitions} != {
+        "issue_sort",
+        "sort_direction",
+        "autopilot_execution_mode",
+    }:
+        raise ContractError("v3 must define the three generated public enums")
     if len(contract.validator_definitions) == 0:
         raise ContractError("v3 must define validator definitions")
     if len({item.validator_id for item in contract.validator_definitions}) != len(
@@ -1138,9 +1173,9 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
                 )
     base_count = sum(":canonical" in vector.vector_id for vector in contract.test_vectors)
     variant_count = len(contract.test_vectors) - base_count
-    if (base_count, variant_count) != (19, 11):
+    if (base_count, variant_count) != (26, 11):
         raise ContractError(
-            f"expected 19 entrypoint-base and 11 variant vectors, got {base_count}/{variant_count}"
+            f"expected 26 entrypoint-base and 11 variant vectors, got {base_count}/{variant_count}"
         )
     return contract
 

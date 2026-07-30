@@ -7,7 +7,15 @@ import msgspec
 
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import OutputShapeError
-from multica_py.models.autopilots import Autopilot, AutopilotTrigger, TriggerConfigItem
+from multica_py.models.autopilots import (
+    Autopilot,
+    AutopilotListPage,
+    AutopilotRun,
+    AutopilotRunListPage,
+    AutopilotSubscriber,
+    AutopilotTrigger,
+    TriggerConfigItem,
+)
 from multica_py.models.issue_activity import Comment, CommentThread
 from multica_py.models.issues import (
     Issue,
@@ -154,8 +162,133 @@ def comment_thread_from_wire(wire: CommentThreadWire) -> CommentThread:
 
 
 class AutopilotListWire(msgspec.Struct, frozen=True, kw_only=True):
-    autopilots: tuple[Autopilot, ...] = ()
+    autopilots: tuple[AutopilotWire, ...] = ()
     total: int = 0
+
+
+def autopilot_list_page_from_wire(wire: AutopilotListWire) -> AutopilotListPage:
+    return AutopilotListPage(
+        autopilots=tuple(autopilot_from_wire(a) for a in wire.autopilots),
+        total=wire.total,
+    )
+
+
+class AutopilotSubscriberWire(msgspec.Struct, frozen=True, kw_only=True):
+    user_type: str
+    user_id: str
+    created_at: datetime.datetime | None = None
+
+
+class AutopilotWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    workspace_id: str
+    title: str
+    description: str | None = None
+    project_id: str | None = None
+    assignee_type: str
+    assignee_id: str
+    status: str
+    execution_mode: str
+    issue_title_template: str | None = None
+    created_by_type: str
+    created_by_id: str
+    last_run_at: datetime.datetime | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
+    trigger_kinds: tuple[str, ...] = ()
+    next_run_at: datetime.datetime | None = None
+    last_run_status: str | None = None
+    subscribers: tuple[AutopilotSubscriberWire, ...] = ()
+    can_write: bool | None = None
+    can_manage_access: bool | None = None
+
+
+def autopilot_from_wire(wire: AutopilotWire) -> Autopilot:
+    return Autopilot(
+        id=wire.id,
+        workspace_id=wire.workspace_id,
+        title=wire.title,
+        description=wire.description,
+        project_id=wire.project_id,
+        assignee_type=wire.assignee_type,
+        assignee_id=wire.assignee_id,
+        status=wire.status,
+        execution_mode=wire.execution_mode,
+        issue_title_template=wire.issue_title_template,
+        created_by_type=wire.created_by_type,
+        created_by_id=wire.created_by_id,
+        last_run_at=wire.last_run_at,
+        created_at=wire.created_at,
+        updated_at=wire.updated_at,
+        trigger_kinds=wire.trigger_kinds,
+        next_run_at=wire.next_run_at,
+        last_run_status=wire.last_run_status,
+        subscribers=tuple(
+            AutopilotSubscriber(
+                user_type=s.user_type,
+                user_id=s.user_id,
+                created_at=s.created_at,
+            )
+            for s in wire.subscribers
+        ),
+        can_write=wire.can_write,
+        can_manage_access=wire.can_manage_access,
+    )
+
+
+class AutopilotRunWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    autopilot_id: str
+    trigger_id: str | None = None
+    source: str
+    status: str
+    issue_id: str | None = None
+    task_id: str | None = None
+    triggered_at: datetime.datetime | None = None
+    completed_at: datetime.datetime | None = None
+    failure_reason: str | None = None
+    reason_code: str | None = None
+    trigger_payload: object | None = None
+    result: object | None = None
+    created_at: datetime.datetime | None = None
+
+
+def autopilot_run_from_wire(wire: AutopilotRunWire) -> AutopilotRun:
+    return AutopilotRun(
+        id=wire.id,
+        autopilot_id=wire.autopilot_id,
+        trigger_id=wire.trigger_id,
+        source=wire.source,
+        status=wire.status,
+        issue_id=wire.issue_id,
+        task_id=wire.task_id,
+        triggered_at=wire.triggered_at,
+        completed_at=wire.completed_at,
+        failure_reason=wire.failure_reason,
+        reason_code=wire.reason_code,
+        trigger_payload=wire.trigger_payload,
+        result=wire.result,
+        created_at=wire.created_at,
+    )
+
+
+class AutopilotRunListPageWire(msgspec.Struct, frozen=True, kw_only=True):
+    runs: tuple[AutopilotRunWire, ...] = ()
+    total: int = 0
+
+
+def autopilot_run_list_page_from_wire(
+    wire: AutopilotRunListPageWire, *, limit: int | None = None, offset: int | None = None
+) -> AutopilotRunListPage:
+    runs = tuple(autopilot_run_from_wire(r) for r in wire.runs)
+    has_more = (offset or 0) + len(runs) < wire.total
+    return AutopilotRunListPage(
+        runs=runs,
+        total=wire.total,
+        limit=limit,
+        offset=offset,
+        has_more=has_more,
+    )
 
 
 class LocalDirectoryResourceRefWire(msgspec.Struct, frozen=True, kw_only=True):

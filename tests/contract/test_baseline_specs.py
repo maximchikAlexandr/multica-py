@@ -156,7 +156,7 @@ BASELINE_CASES: tuple[BaselineCase, ...] = (
         "Every public SDK method MUST have exactly one canonical success operation row with complete transport behavior.",
         "Public methods have canonical operation coverage",
         "`discovered_public_methods` is compared to `{case.sdk_method for case in OPERATION_CASES if case.is_canonical}`",
-        "the sets are equal, with 116 unique canonical methods, 137 unique case IDs, and 21 noncanonical variants; 135 historic payload rows remain a migration subset.",
+        "the sets are equal, with 117 unique canonical methods, 146 unique case IDs, and 29 noncanonical variants; 143 historic payload rows remain a migration subset.",
         "001:FR-060\u2013FR-066,004:FR-004\u2013FR-008,FR-017,006:FR-011\u2013FR-013",
     ),
     BaselineCase(

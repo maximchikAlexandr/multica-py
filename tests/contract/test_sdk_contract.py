@@ -20,7 +20,7 @@ def test_sdk_contract() -> None:
     files = render_files(APPROVED)
     assert files[0].path == RUNTIME_PATH
     assert tuple(item.path for item in files[1:]) == TRANSIENT_PATHS
-    assert len(contract.binding_descriptors) == 19
+    assert len(contract.binding_descriptors) == 26
     assert (
         tuple((item.operation_id, item.entrypoint_id) for item in contract.binding_descriptors)
         != ()
