@@ -169,14 +169,18 @@
   `if limit is not None and limit < 0: raise ValueError("...limit
   nonnegative")` and `if offset is not None and offset < 0: raise
   ValueError("...offset nonnegative")`. Build argv
-  `["autopilot", "history", autopilot_id]`, append `--limit <n>` /
-  `--offset <n>` when provided, append `["--output", "json"]`. Decode via
-  `AutopilotRunListPageWire` and return
-  `autopilot_run_list_page_from_wire(page, limit=limit, offset=offset)`.
-- [ ] 3.7 In `src/multica_py/resources/autopilots.py`, change `get_run`
-  (line 54-55) to decode via wire: `return autopilot_run_from_wire(
-  self._run_json_decode(("autopilot", "run", "get", run_id, "--output",
-  "json"), AutopilotRunWire))`.
+  `["autopilot", "runs", autopilot_id]` (NOT `"history"` — upstream has no
+  `autopilot history` subcommand, only `autopilot runs <id>`
+  (cmd_autopilot.go:64,105); this fixes the pre-existing `history` argv
+  defect, see design D9), append `--limit <n>` / `--offset <n>` when provided,
+  append `["--output", "json"]`. Decode via `AutopilotRunListPageWire` and
+  return `autopilot_run_list_page_from_wire(page, limit=limit, offset=offset)`.
+- [ ] 3.7 In `src/multica_py/resources/autopilots.py`, leave `get_run`
+  (line 54-55) UNCHANGED: it stays an ungoverned hand-written method emitting
+  `("autopilot","run","get",run_id,"--output","json")` against a non-existent
+  upstream command (design D10). Do NOT add a contract binding for it; do NOT
+  widen its decode path (it continues to use `AutopilotRun` directly via
+  `_run_json_decode`). A follow-up will fix or remove this defect.
 - [ ] 3.8 In `src/multica_py/resources/autopilots.py`, `delete` (line 45-46)
   is unchanged (no body, `run_text`).
 
@@ -202,8 +206,8 @@
   `autopilot_delete` `((autopilot_id: str) -> None)`,
   `autopilot_run` `((autopilot_id: str) -> AutopilotRun)`,
   `autopilot_history` `((autopilot_id: str, *, limit: int | None,
-  offset: int | None) -> AutopilotRunListPage)`,
-  `autopilot_get_run` `((run_id: str) -> AutopilotRun)`.
+  offset: int | None) -> AutopilotRunListPage)`. Do NOT add an
+  `autopilot_get_run` signature (D10: `get_run` is not governed).
 - [ ] 4.4 In `contracts/sdk-contract.json`, add responses to the `responses`
   catalog: `autopilot` (`public_type_id autopilot`, `wire_type_id
   autopilot_wire`, `decoder_id decode_autopilot`, `success_exit_codes [0]`,
@@ -222,38 +226,67 @@
 - [ ] 4.6 In `contracts/sdk-contract.json`, add binding descriptors to the
   `binding_descriptors` array for `autopilot_list`, `autopilot_get`,
   `autopilot_create`, `autopilot_update`, `autopilot_delete`,
-  `autopilot_run`, `autopilot_history`, `autopilot_get_run`. Each carries
-  `command`, `mappings` (path/flag/header/body), `constraints`. For
-  `autopilot_create`: mappings `title -> --title -> body:title`,
-  `description -> --description -> body:description`, `agent -> --agent ->
-  body:assignee_id` (resolved), `execution_mode -> --mode ->
+  `autopilot_run`, `autopilot_history` (7 descriptors — NO
+  `autopilot_get_run`, see D10). Each carries `command`, `mappings`
+  (path/flag/header/body), `constraints`. The `autopilot_history` binding's
+  `command` is `"autopilot runs"` (the upstream subcommand, NOT `autopilot
+  history` — see D9). For `autopilot_create`: mappings `title -> --title ->
+  body:title`, `description -> --description -> body:description`, `agent ->
+  --agent -> body:assignee_id` (resolved), `execution_mode -> --mode ->
   body:execution_mode`, `priority -> --priority -> body:priority`,
   `project_id -> --project -> body:project_id`, `issue_title_template ->
   --issue-title-template -> body:issue_title_template`, `subscribers ->
   --subscriber -> body:subscribers` (repeatable). For `autopilot_history`:
-  `limit -> --limit -> query:limit`, `offset -> --offset -> query:offset`.
-  For `autopilot_update`: presence-sensitive mappings with
-  `project_id` clear-on-empty.
+  `autopilot_id -> <positional> -> path:autopilot_id`, `limit -> --limit ->
+  query:limit`, `offset -> --offset -> query:offset`. For `autopilot_update`:
+  presence-sensitive mappings with `project_id` clear-on-empty. For
+  `autopilot_run`: the `command` stays `"autopilot run"` (the pre-existing
+  argv defect vs upstream `autopilot trigger <id>` is deferred, D11); mark
+  the operation `intentionally_changed` with that rationale.
 - [ ] 4.7 In `contracts/sdk-contract.json`, add `mapping_presence` entries
   for each new binding: `autopilot_create` (required: title/agent/
   execution_mode; optional_omit: description/project_id/priority/
   issue_title_template/subscribers), `autopilot_update` (optional_omit for
-  all; `project_id` uses `empty` presence for clear), `autopilot_history`
-  (optional_omit: limit/offset).
+  all fields; `project_id` uses `optional_omit` — the `presence` enum has no
+  `empty` value; `optional_omit` means `null/omitted -> omit flag`, `""` (empty)
+  `-> emit flag`, which is exactly the "`None` omits, `\"\"` clears" policy),
+  `autopilot_history` (optional_omit: limit/offset). The `presence` catalog
+  values are `required_nonblank`, `required_value`, `optional_omit`,
+  `optional_blank_omit`, `update_text`, `literal` (catalogs.presence in
+  sdk-contract.json); `optional_omit` has `"empty": "emit"` matching the
+  clear-on-empty semantics, so `project_id` -> `optional_omit` (NOT `empty`).
 - [ ] 4.8 In `contracts/sdk-contract.json`, add operation entries to the
   `operations` array: `autopilots.list`, `autopilots.get`,
   `autopilots.create`, `autopilots.update`, `autopilots.delete`,
-  `autopilots.run`, `autopilots.history`, `autopilots.get_run`. Each with
-  `operation_id`, `compatibility: "intentionally_changed"`, `rationale`
-  naming the model widening and/or pagination return-type change,
-  `source_ref_ids: ["S-AUTO"]`, `entrypoints` (binding + response), and
-  `test_ref_ids` pointing to the relevant `manual:autopilots.*` /
-  `generated:autopilots.*` test vectors.
-- [ ] 4.9 In `contracts/sdk-contract.json`, update the
-  `skills-squads-and-autopilots` family entry `disposition` from
-  `deferred_owner_decision` to `covered` for the autopilot subset (or split
-  the family if the schema requires a single disposition; document the
-  narrowing in the rationale).
+  `autopilots.run`, `autopilots.history` (7 operations — NO
+  `autopilots.get_run`, see D10). Each with `operation_id`, `compatibility:
+  "intentionally_changed"`, `rationale` naming the model widening and/or
+  pagination return-type change (for `autopilots.history` also name the argv
+  fix to `autopilot runs <id>`; for `autopilots.run` name the deferred
+  `autopilot trigger <id>` argv divergence), `source_ref_ids: ["S-AUTO"]`,
+  `entrypoints` (binding + response), and `test_ref_ids` pointing to the
+  relevant `manual:autopilots.*` / `generated:autopilots.*` test vectors.
+- [ ] 4.9 In `contracts/sdk-contract.json`, split the
+  `skills-squads-and-autopilots` family entry (disposition
+  `deferred_owner_decision`, `required_operation_ids: []`, `source_ref_ids:
+  ["F-AUTOPILOT","F-SKILL","F-SKILL-RUN","F-SQUAD"]`) into two
+  `scope.family_dispositions` entries (design D12):
+  - `autopilot`: `disposition: "required_compatibility"`,
+    `required_operation_ids: ["autopilots.list","autopilots.get",
+    "autopilots.create","autopilots.update","autopilots.delete",
+    "autopilots.run","autopilots.history"]`, `source_ref_ids:
+    ["F-AUTOPILOT"]`, `rationale: "Governed autopilot resource operations."`
+    (`required_compatibility` is the established disposition for a governed
+    family, used by `issue-existing-changes` and `transport-error-contract`;
+    per-operation `compatibility` is independent and stays
+    `intentionally_changed`).
+  - `skills-squads`: `disposition: "deferred_owner_decision"`,
+    `required_operation_ids: []`, `source_ref_ids: ["F-SKILL","F-SKILL-RUN",
+    "F-SQUAD"]`, `rationale: "No governed skill or squad operation."` (this
+    preserves the exact prior status of skills/squads, isolated).
+  Remove the old `skills-squads-and-autopilots` entry. Add the 7 autopilot
+  operation ids to the top-level `scope.operation_ids` array (alphabetically
+  grouped under `autopilots.*`).
 - [ ] 4.10 In `tools/upstream_contract/contract.py`, add the new auxiliary
   catalog keys to `_AUXILIARY_CATALOG_KEYS`: extend `types` frozenset
   (line 84) with `autopilot`, `autopilot_wire`, `autopilot_subscriber`,
@@ -262,8 +295,8 @@
   `autopilot_run_list_page`, `autopilot_run_list_page_wire`; extend
   `signatures` frozenset (line 108) with `autopilot_list`, `autopilot_get`,
   `autopilot_create`, `autopilot_update`, `autopilot_delete`,
-  `autopilot_run`, `autopilot_history`, `autopilot_get_run`; extend
-  `decoders` frozenset (line 131) with `decode_autopilot`,
+  `autopilot_run`, `autopilot_history` (NOT `autopilot_get_run` — it is not
+  governed); extend `decoders` frozenset (line 131) with `decode_autopilot`,
   `decode_autopilot_run`, `decode_autopilot_list_page`,
   `decode_autopilot_run_list_page`. Add `AutopilotExecutionMode` to
   `_ENUM_TYPES` (line 45) and `_VALIDATOR_ENUM_IDS` (line 71) if the enum is
@@ -315,45 +348,74 @@
   - `manual:autopilots.update:canonical` and variants — argv/kwargs change
     from `--name`/`--enabled` to `--title`/`--status`; `kwargs` use the new
     keyword-only form.
-  - `manual:autopilots.run:canonical` and `manual:autopilots.get_run:canonical`
-    — `_APRUN` fixture widens to a full `AutopilotRunResponse` JSON.
+  - `manual:autopilots.run:canonical` — `_APRUN` fixture widens to a full
+    `AutopilotRunResponse` JSON; argv stays `("autopilot","run","a1",
+    "--output","json")` (pre-existing `autopilot trigger <id>` argv defect
+    deferred, D11).
+  - `manual:autopilots.get_run:canonical` — `_APRUN` fixture widens to a full
+    `AutopilotRunResponse` JSON; argv stays `("autopilot","run","get","r1",
+    "--output","json")` (NOT governed, D10; the method is unchanged). This row
+    stays `manual:` and does NOT get a `contract_operation_id`.
   - `manual:autopilots.history:canonical` — `stdout` changes from `b"[]"`
-    to `b'{"runs":[],"total":0}'`; add `kwargs=(("limit",None),("offset",None))`
+    to `b'{"runs":[],"total":0}'`; argv changes from
+    `("autopilot","history","a1","--output","json")` to
+    `("autopilot","runs","a1","--output","json")` (the upstream subcommand is
+    `autopilot runs <id>`, NOT `autopilot history`, see D9); add
+    `kwargs=(("limit",None),("offset",None))`
     or omit (defaults); result decoded as `AutopilotRunListPage`.
-  - Add new variant rows:
-    `manual:autopilots.history:variant:01` with `limit=10`,
-    `manual:autopilots.history:variant:02` with `offset=20`,
-    `manual:autopilots.history:variant:03` with `limit=10, offset=20`,
-    `manual:autopilots.update:variant:03` with `project_id=""` (clear),
-    `manual:autopilots.create:variant:01` with optional fields set.
+  - Add new variant rows (all `manual:`, noncanonical):
+    `manual:autopilots.history:variant:01` with `limit=10` → argv
+    `("autopilot","runs","a1","--limit","10","--output","json")`,
+    `manual:autopilots.history:variant:02` with `offset=20` → argv
+    `("autopilot","runs","a1","--offset","20","--output","json")`,
+    `manual:autopilots.history:variant:03` with `limit=10, offset=20` → argv
+    `("autopilot","runs","a1","--limit","10","--offset","20","--output","json")`,
+    `manual:autopilots.update:variant:03` with `project_id=""` (clear) → argv
+    contains `--project ""`,
+    `manual:autopilots.create:variant:01` with optional fields set
+    (`description`, `project_id`, `issue_title_template`, `subscribers`).
   Update imports in the `_build_operation_cases` local imports block
   (lines ~441-465): add `AutopilotListPage, AutopilotRunListPage,
   AutopilotSubscriber` from `multica_py.models.autopilots` and
   `AutopilotExecutionMode` from `multica_py.enums`.
-- [ ] 6.2 In `tests/cases/operations.py`, add the new variant rows to
-  `LEGACY_ARGV_MIGRATION` (after line 317 for autopilots and after line 410
-  for triggers): e.g. `"legacy:127": "manual:autopilots.history:variant:01"`,
-  etc. Compute the exact legacy indices after the issue-list-pagination
-  change lands (it adds legacy:139-141); this branch is off main, so base
-  legacy max is 138 — new autopilot variants start at legacy:139 onward.
-  Reconcile indices with the issue-list-pagination branch at merge time.
-- [ ] 6.3 In `tests/cases/legacy_payloads.py`, append fingerprints for each
-  new `legacy:NNN` using the existing helper formula. The fingerprint list
-  grows by the number of new variants.
+- [ ] 6.2 In `tests/cases/operations.py`, add the 5 new variant rows to
+  `LEGACY_ARGV_MIGRATION` continuing after the current max `legacy:138`
+  (this branch is off `main`, where `LEGACY_ARGV_MIGRATION` max is 138):
+  `"legacy:139": "manual:autopilots.history:variant:01"`,
+  `"legacy:140": "manual:autopilots.history:variant:02"`,
+  `"legacy:141": "manual:autopilots.history:variant:03"`,
+  `"legacy:142": "manual:autopilots.update:variant:03"`,
+  `"legacy:143": "manual:autopilots.create:variant:01"`. Reconcile indices
+  with the issue-list-pagination branch at merge time (that branch adds
+  legacy:139-141; renumber this branch's new entries to start after the
+  merged max — the final absolute indices may shift, but the count is +5).
+- [ ] 6.3 In `tests/cases/legacy_payloads.py`, append 5 fingerprints for
+  `legacy:139`–`legacy:143` computed with the existing helper formula
+  `hashlib.sha256(repr(payload(case)).encode()).hexdigest()` where `payload`
+  is the tuple from
+  `tests/unit/resources/test_operations.py::test_legacy_payload_bijection`
+  (lines 103-114). The fingerprint list grows 138 → 143.
 - [ ] 6.4 In `tests/unit/resources/test_operations.py::test_discovered_public_methods`
   (lines 79-95), recompute the counter assertions against the actual edited
-  `OPERATION_CASES`. The canonical method set stays 117 (no new public
-  methods, only signature/return changes). The total cases grow by the new
-  variant rows; noncanonical grows by the same delta; generated/manual
-  counts shift if any `manual:` rows become `generated:` (the autopilot
-  operations are now governed, so the canonical autopilot rows may flip from
-  `manual:` to `generated:` — verify which rows the generator emits and
-  adjust `len(generated)`/`len(manual)` accordingly). Recompute every counter
-  exactly before committing; these are exact invariants.
+  `OPERATION_CASES`. Exact final invariants (see design §Migration):
+  - `len(discovered) == 117` (canonical public method set unchanged; `get_run`
+    stays a public method, just ungoverned).
+  - `len(OPERATION_CASES) == 146` (141 + 5 new variant rows).
+  - `sum(... if c.is_canonical) == 117` (canonical unchanged).
+  - `sum(... if not c.is_canonical) == 29` (24 + 5 new variants).
+  - `len(generated) == 37` (30 + 7 autopilot canonical rows flip `manual:` →
+    `generated:`: list/get/create/update/delete/run/history; `get_run` stays
+    `manual:`).
+  - `len(manual) == 109` (111 − 7 flipped + 5 new variants).
+  These are exact invariants — recompute against the actual edited
+  `OPERATION_CASES` before committing; no allowlist.
 - [ ] 6.5 In `tests/unit/resources/test_operations.py::test_legacy_payload_bijection`
-  (lines 116-119), update `range(1, 139)` to `range(1, 139 + N)` where N is
-  the number of new legacy entries, and `len(LEGACY_PAYLOAD_FINGERPRINTS)`
-  and the bijection length to `138 + N`.
+  (lines 116-119), update `range(1, 139)` to `range(1, 144)` (5 new legacy
+  entries: legacy:139-143), `len(LEGACY_PAYLOAD_FINGERPRINTS) == 143` (was
+  138), and the bijection length `== 143` (was 138). `LEGACY_ARGV_MIGRATION`
+  max becomes `legacy:143`. Reconcile the absolute indices with the
+  issue-list-pagination branch at merge time (that branch also adds legacy
+  entries; the +5 count is fixed).
 - [ ] 6.6 Create `tests/contract/test_autopilot_models.py` with
   table-driven decode tests:
   - `test_autopilot_decoding` `@pytest.mark.parametrize` over: full
@@ -380,9 +442,14 @@
     `AutopilotResource(mock_transport, ClientConfig()).history("a1", limit=v)`,
     assert `ValueError` and `"limit"` in message, assert
     `mock_transport.run_bytes.assert_not_called()`. Add a `limit=0` valid row
-    asserting argv contains `--limit 0`.
+    asserting argv equals
+    `("autopilot","runs","a1","--limit","0","--output","json")` (the `runs`
+    subcommand; `--limit 0` is emitted but upstream ignores it via `if v > 0`,
+    see design D13 — this is an SDK pass-through assertion, not a page-content
+    guarantee).
   - `test_history_rejects_negative_offset` over `(-1, -5)` — same for
-    `offset`. Add an `offset=0` valid row.
+    `offset`. Add an `offset=0` valid row asserting argv equals
+    `("autopilot","runs","a1","--offset","0","--output","json")`.
   - `test_update_rejects_clear_subscribers_with_subscribers` —
     `.update("a1", clear_subscribers=True, subscribers=("u1",))` raises
     `ValueError` and transport not called.
@@ -400,9 +467,11 @@
 - [ ] 7.2 `uv run mypy src` and `uv run mypy tests` green.
 - [ ] 7.3 `uv run ruff check` and `uv run ruff format --check` green.
 - [ ] 7.4 `uv run pytest tests/unit/resources/test_operations.py::test_discovered_public_methods`
-  asserts the canonical method set is unchanged (117 methods) and the
-  recomputed counters — no allowlist, exact invariants.
+  asserts the canonical method set is unchanged (117 methods) and the exact
+  counters: `len(OPERATION_CASES) == 146`, canonical `== 117`, noncanonical
+  `== 29`, `len(generated) == 37`, `len(manual) == 109` — no allowlist.
 - [ ] 7.5 `uv run pytest tests/unit/resources/test_operations.py::test_legacy_payload_bijection`
-  green with the updated legacy fingerprint count.
+  green with 143 legacy fingerprints (`range(1, 144)`,
+  `len(LEGACY_PAYLOAD_FINGERPRINTS) == 143`).
 - [ ] 7.6 `uv run openspec change validate autopilot-list-pagination --strict`
   green.

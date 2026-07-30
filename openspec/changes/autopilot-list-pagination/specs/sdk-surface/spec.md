@@ -24,7 +24,11 @@ and MUST expose pagination metadata on `autopilots.list` and
 
 - **WHEN** the approved contract operation list is inspected
 - **THEN** `autopilots.list`, `autopilots.get`, `autopilots.create`,
-  `autopilots.update`, `autopilots.delete`, `autopilots.run`,
-  `autopilots.history`, and `autopilots.get_run` are present with
-  `compatibility` set to `intentionally_changed` and a rationale naming the
-  model widening and pagination return-type change.
+  `autopilots.update`, `autopilots.delete`, `autopilots.run`, and
+  `autopilots.history` are present with `compatibility` set to
+  `intentionally_changed` and a rationale naming the model widening and
+  pagination return-type change (and, for `history`, the argv fix to the
+  upstream `autopilot runs <id>` subcommand; for `run`, the deferred
+  `autopilot trigger <id>` argv divergence).
+- **AND** `autopilots.get_run` is NOT present (it stays ungoverned; upstream
+  has no single-run fetch subcommand).

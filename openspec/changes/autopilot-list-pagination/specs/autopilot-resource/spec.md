@@ -3,18 +3,20 @@
 ### Requirement: Governed autopilot resource
 
 The SDK MUST expose a governed `AutopilotResource` whose operations
-(`autopilots.list/get/create/update/delete/run/history/get_run`) are defined in
-the approved contract with binding descriptors, signatures, responses,
-decoders, and types.
+(`autopilots.list/get/create/update/delete/run/history`) are defined in the
+approved contract with binding descriptors, signatures, responses, decoders,
+and types. `autopilots.get_run` is NOT governed (no upstream single-run fetch
+subcommand exists) and stays an ungoverned hand-written method.
 
 #### Scenario: Autopilot operations are governed
 
 - **WHEN** the approved contract `contracts/sdk-contract.json` is inspected
 - **THEN** it contains operation entries for `autopilots.list`,
   `autopilots.get`, `autopilots.create`, `autopilots.update`,
-  `autopilots.delete`, `autopilots.run`, `autopilots.history`, and
-  `autopilots.get_run`, each with a binding descriptor, signature, response,
-  and source ref.
+  `autopilots.delete`, `autopilots.run`, and `autopilots.history`, each with a
+  binding descriptor, signature, response, and source ref.
+- **AND** it does NOT contain an `autopilots.get_run` operation entry (the
+  `get_run` method stays ungoverned, no binding/response).
 
 #### Scenario: Autopilot operations decode via wire converters
 
@@ -107,17 +109,19 @@ The legacy fields `started_at` MUST NOT be present; `completed_at` remains.
 ### Requirement: Autopilot history supports limit/offset and returns a page
 
 `AutopilotResource.history` MUST accept `limit: int | None` and
-`offset: int | None`, emit `--limit`/`--offset` when provided, and return an
-`AutopilotRunListPage(runs, total, limit, offset, has_more)`. `has_more` MUST
-be computed Python-side as `len(runs) < total` when `offset is None`, or
-`offset + len(runs) < total` when `offset` is set.
+`offset: int | None`, emit the upstream-correct `autopilot runs <id>`
+subcommand (NOT the non-existent `autopilot history`), emit `--limit`/`--offset`
+when provided, and return an `AutopilotRunListPage(runs, total, limit, offset,
+has_more)`. `has_more` MUST be computed Python-side as `len(runs) < total` when
+`offset is None`, or `offset + len(runs) < total` when `offset` is set.
 
-#### Scenario: History emits limit and offset
+#### Scenario: History emits the upstream runs subcommand with limit and offset
 
 - **WHEN** `client.autopilots.history("a1", limit=10, offset=20)` is called
 - **THEN** the transport receives the argv
-  `("autopilot", "history", "a1", "--limit", "10", "--offset", "20", "--output", "json")`
-  via `run_bytes`.
+  `("autopilot", "runs", "a1", "--limit", "10", "--offset", "20", "--output", "json")`
+  via `run_bytes` (the upstream subcommand is `autopilot runs <id>`, not
+  `autopilot history`).
 
 #### Scenario: History returns a page with has_more
 

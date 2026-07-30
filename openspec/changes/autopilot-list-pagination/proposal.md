@@ -11,8 +11,13 @@ is both stale and lossy relative to the upstream `multica` CLI:
   `server/cmd/multica/cmd_autopilot.go:185-189`).
 - `AutopilotResource.history` (src/multica_py/resources/autopilots.py:51)
   returns `tuple[AutopilotRun, ...]`, discards `total`, and does not expose the
-  upstream `--limit`/`--offset` flags the CLI registers
-  (`server/cmd/multica/cmd_autopilot.go:152-153`).
+  upstream `--limit`/`--offset` flags the CLI registers on the `autopilot runs
+  <id>` subcommand (`server/cmd/multica/cmd_autopilot.go:150-153`). The current
+  SDK emits the non-existent argv `("autopilot","history",autopilot_id)` — a
+  pre-existing defect: upstream has no `autopilot history` subcommand, only
+  `autopilot runs <id>` (cmd_autopilot.go:64,105). This change fixes the argv
+  to `("autopilot","runs",autopilot_id,...)` (the public method name `history`
+  is preserved) and adds `--limit`/`--offset`.
 - The public `Autopilot` model (src/multica_py/models/autopilots.py:8) carries
   only `id, name, enabled`, while the upstream `AutopilotResponse`
   (`server/internal/handler/autopilot.go:31-79`) returns
@@ -76,24 +81,48 @@ the user approved adding it as a governed resource ("Да. Добавь такж
   src/multica_py/_internal/wire_models.py.
 - **BREAKING**: `AutopilotResource.history` SHALL accept
   `limit: int | None = None` and `offset: int | None = None` (emit
-  `--limit`/`--offset`), and return `AutopilotRunListPage(runs, total, limit,
-  offset, has_more)` instead of `tuple[AutopilotRun, ...]`. `has_more` is
-  computed Python-side as `offset + len(runs) < total` because upstream returns
-  only `total` (no `has_more`), mirroring the `issue list` precedent. Introduce
+  `--limit`/`--offset`), emit the upstream-correct subcommand `autopilot runs
+  <id>` (fixing the pre-existing `autopilot history` argv defect), and return
+  `AutopilotRunListPage(runs, total, limit, offset, has_more)` instead of
+  `tuple[AutopilotRun, ...]`. `has_more` is computed Python-side as
+  `offset + len(runs) < total` because upstream returns only `total` (no
+  `has_more`), mirroring the `issue list` precedent. Introduce
   `AutopilotRunListPage` and `AutopilotRunListPageWire(runs, total)`.
 - Add a nonnegative guard on `limit`/`offset` in `AutopilotResource.history`
   raising `ValueError`.
 
 ### Governed autopilot contract
 
-- Promote autopilot from `deferred_owner_decision` to governed: add
-  `autopilots.list`, `autopilots.get`, `autopilots.create`,
-  `autopilots.update`, `autopilots.delete`, `autopilots.run`,
-  `autopilots.history`, `autopilots.get_run` operation entries to
+- Promote autopilot to governed: add 7 operation entries — `autopilots.list`,
+  `autopilots.get`, `autopilots.create`, `autopilots.update`,
+  `autopilots.delete`, `autopilots.run`, `autopilots.history` — to
   `contracts/sdk-contract.json` with binding descriptors, signatures,
-  responses, decoders, types, mappings, and source refs. The
-  `skills-squads-and-autopilots` family disposition moves to
-  `covered` for the autopilot subset.
+  responses, decoders, types, mappings, and source refs. `autopilots.history`
+  binds to the upstream-correct `autopilot runs <id>` subcommand; the public
+  method name stays `history`.
+- Split the `skills-squads-and-autopilots` family into two: a new `autopilot`
+  family (disposition `required_compatibility`, `required_operation_ids` = the
+  7 governed autopilot ops, `source_ref_ids: ["F-AUTOPILOT"]`) and a
+  `skills-squads` family (disposition stays `deferred_owner_decision`,
+  `required_operation_ids: []`, `source_ref_ids: ["F-SKILL","F-SKILL-RUN",
+  "F-SQUAD"]`). This keeps skills/squads ungoverned and avoids any implicit
+  promotion caused by a single shared disposition field.
+
+### Out-of-scope autopilot methods (ungoverned, unchanged)
+
+- `AutopilotResource.get_run` (src/multica_py/resources/autopilots.py:54)
+  emits `("autopilot","run","get",run_id)` against an upstream subcommand that
+  does not exist (upstream has no single-run fetch; only `autopilot runs <id>`
+  for listing and `autopilot trigger <id>` for manual trigger). This is a
+  pre-existing defect. This change does NOT add `autopilots.get_run` to the
+  governed contract and does NOT alter its argv or signature; it remains an
+  ungoverned hand-written method (like the autopilot triggers). Fixing the
+  `get_run` argv or removing the method is deferred to a follow-up.
+- `AutopilotResource.run` (manual trigger) stays governed but keeps its
+  existing argv `("autopilot","run",autopilot_id)`: the upstream subcommand is
+  `autopilot trigger <id>`, so this is a pre-existing argv defect NOT in scope
+  to fix; the operation is marked `intentionally_changed` with a deferral
+  rationale. Only its model is widened, not its argv.
 
 ### Upstream-aligned create/update signatures
 
@@ -134,9 +163,10 @@ the user approved adding it as a governed resource ("Да. Добавь такж
 
 ### New Capabilities
 - `autopilot-resource`: governed autopilot SDK surface — the `Autopilot` and
-  `AutopilotRun` models, `AutopilotResource` methods (list/get/create/update/
-  delete/run/history/get_run), pagination pages, upstream-aligned create/update
-  signatures, and contract governance for the eight autopilot operations.
+  `AutopilotRun` models, the governed `AutopilotResource` methods
+  (list/get/create/update/delete/run/history), pagination pages,
+  upstream-aligned create/update signatures, and contract governance for the
+  seven autopilot operations. `get_run` stays ungoverned (out-of-scope defect).
 
 ### Modified Capabilities
 - `sdk-surface`: adds the requirement "Autopilot resource governance and
@@ -150,10 +180,11 @@ the user approved adding it as a governed resource ("Да. Добавь такж
   signatures and return types change. Consumers using `Autopilot.name` or
   `.enabled`, or `AutopilotRun.started_at`, break and must migrate to
   `title`/`status`/`triggered_at`.
-- **Contract**: `contracts/sdk-contract.json` gains 8 operations, 8 binding
+- **Contract**: `contracts/sdk-contract.json` gains 7 operations, 7 binding
   descriptors, signatures, responses, decoders, types; the
-  `skills-squads-and-autopilots` family disposition narrows to covered for the
-  autopilot subset.
+  `skills-squads-and-autopilots` family is split into a governed `autopilot`
+  family (`required_compatibility`) and an unchanged `skills-squads` family
+  (`deferred_owner_decision`).
 - **Code**: src/multica_py/models/autopilots.py,
   src/multica_py/_internal/wire_models.py,
   src/multica_py/resources/autopilots.py,
