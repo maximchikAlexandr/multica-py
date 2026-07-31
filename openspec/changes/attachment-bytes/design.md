@@ -60,11 +60,14 @@ return type of `upload()`; `download()` returns `None` and writes a file.
 `upload()` already resolves the path via `pathlib.Path(file_path).resolve()`
 and builds `--file <resolved>`. Writing to `<tmpdir>/<filename>` preserves the
 user-supplied basename through resolution (the resolved path's final component
-is `filename`). Using `filename` as the in-tmpdir leaf — not a random suffix —
-is what makes "preserve the exact filename" a structural guarantee rather than
-a post-hoc assertion. `tempfile.TemporaryDirectory()` as a context manager
-removes the directory on both success and exception exit, satisfying the
-cleanup-on-failure requirement with no explicit `try/finally`.
+is `filename`). `filename` is validated at the trust boundary by `_safe_leaf`
+before path construction — rejects empty, absolute, and `..`-bearing values
+(path-traversal defence, ASVS 12.8.1/12.8.2). Using `filename` as the
+in-tmpdir leaf — not a random suffix — is what makes "preserve the exact
+filename" a structural guarantee rather than a post-hoc assertion.
+`tempfile.TemporaryDirectory()` as a context manager removes the directory on
+both success and exception exit, satisfying the cleanup-on-failure requirement
+with no explicit `try/finally`.
 
 **2. `download_bytes` calls `download(attachment_id, <tmpdir>)` then reads the
    single file in the tmpdir.**
@@ -72,11 +75,13 @@ The upstream `attachment download <id> --output <path>` writes the attachment
 to `<path>`. Pointing `--output` at the temp directory itself would not work
 (`download()` resolves and passes the path verbatim); instead pass
 `<tmpdir>/<attachment_id>` as the output path, then read that file. The
-attachment id is a safe leaf name in a private tmpdir. If upstream naming
-behavior ever changes to write a server-chosen filename into a directory,
-`download_bytes` would need to find the single file in the tmpdir; for now the
-explicit path is simplest and matches `download()`'s contract. Using a context
-manager handles cleanup on both success and failure.
+attachment id is a safe leaf name in a private tmpdir, **validated at the trust
+boundary by `_safe_leaf`** (rejects path separators and empty values — path
+traversal defence, ASVS 12.8.1/12.8.2). If upstream naming behavior ever
+changes to write a server-chosen filename into a directory, `download_bytes`
+would need to find the single file in the tmpdir; for now the explicit path is
+simplest and matches `download()`'s contract. Using a context manager handles
+cleanup on both success and failure.
 
 **3. Reuse `upload()`/`download()` verbatim; do not duplicate argv building.**
 The byte methods call the existing methods by name, so any future change to

@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path as _Path
 from typing import cast
+from unittest.mock import MagicMock
 
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.resources.agents import AgentResource
@@ -52,9 +53,11 @@ class OperationCase:
     exit_code: int = 0
     stdin: bytes | None = None
     timeout: float | None = None
-    assert_result: Callable[[object], None] | None = None
+    assert_result: Callable[[object, MagicMock], None] | None = None
     contract_operation_id: str | None = None
     source_ref: str | None = None
+    argv_check: str = "exact"
+    transport_side_effect: Callable[..., object] | None = None
 
 
 RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
@@ -228,13 +231,13 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
             return request_type(**fields)
         raise ValueError(f"unsupported tagged value {kind!r}")
 
-    def assertion_for(assertion: ResultAssertion) -> Callable[[object], None] | None:
+    def assertion_for(assertion: ResultAssertion) -> Callable[[object, MagicMock], None] | None:
         if assertion.kind == "none":
             return _assert_none
         if assertion.kind == "decoded_type":
             expected = str(assertion.expected["value"])
 
-            def assert_type(result: object) -> None:
+            def assert_type(result: object, _mt: MagicMock = MagicMock()) -> None:
                 actual = f"{type(result).__module__}.{type(result).__qualname__}"
                 if actual != expected:
                     raise AssertionError(f"expected {expected}, got {actual}")
@@ -245,7 +248,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
             for item in cast("list[dict[str, object]]", assertion.expected["items"])
         )
 
-        def assert_page(result: object) -> None:
+        def assert_page(result: object, _mt: MagicMock = MagicMock()) -> None:
             if type(result) is not Page:
                 raise AssertionError("expected multica_py.models.common.Page")
             if tuple(item.id for item in result.items) != expected_items:
@@ -253,7 +256,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
 
         return assert_page
 
-    def _assert_none(result: object) -> None:
+    def _assert_none(result: object, _mt: MagicMock = MagicMock()) -> None:
         if result is not None:
             raise AssertionError(f"expected None, got {result!r}")
 
@@ -442,6 +445,8 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:144": "manual:issues.list:variant:01",
     "legacy:145": "manual:issues.list:variant:02",
     "legacy:146": "manual:issues.list:variant:03",
+    "legacy:147": "manual:attachments.upload_bytes:canonical",
+    "legacy:148": "manual:attachments.download_bytes:canonical",
 }
 
 
@@ -451,6 +456,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
 
     import msgspec
 
+    from multica_py._internal.specs import TextResult
     from multica_py.enums import (
         AutopilotExecutionMode,
         IssueStatus,
@@ -599,6 +605,26 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         }
     )
 
+    def _assert_upload_bytes(result: object, mt: MagicMock) -> None:
+        assert isinstance(result, AttachmentResult)
+        assert result.id == "a1"
+        mt.run_bytes.assert_called_once()
+        argv = mt.run_bytes.call_args.args[0]
+        assert argv[:4] == ("attachment", "upload", "i1", "--file")
+        assert argv[-2:] == ("--output", "json")
+        assert argv[4].endswith("manifest.json")
+        assert pathlib.PurePath(argv[4]).name == "manifest.json"
+
+    def _assert_download_bytes(result: object, mt: MagicMock) -> None:
+        assert result == b"\x00\x01binary"
+        mt.run_text.assert_called_once()
+        argv = mt.run_text.call_args.args[0]
+        assert argv[:4] == ("attachment", "download", "a1", "--output")
+
+    def _write_download(_argv: tuple[str, ...], **_kw: object) -> TextResult:
+        pathlib.Path(_argv[_argv.index("--output") + 1]).write_bytes(b"\x00\x01binary")
+        return TextResult(text="", stderr="", exit_code=0)
+
     def _c(
         sdk_method: str,
         expected_argv: tuple[str, ...],
@@ -614,6 +640,9 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         id: str = "",
         canonical: bool | None = None,
         source_ref: str | None = None,
+        assert_result: Callable[[object, MagicMock], None] | None = None,
+        argv_check: str = "exact",
+        transport_side_effect: Callable[..., object] | None = None,
     ) -> OperationCase:
         if not transport:
             if sdk_method in _SPAWN_SDK_METHODS:
@@ -651,6 +680,9 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 else None
             ),
             source_ref=(legacy_key or source_ref) if not id.startswith("generated:") else None,
+            assert_result=assert_result,
+            argv_check=argv_check,
+            transport_side_effect=transport_side_effect,
         )
 
     cases: list[OperationCase] = [
@@ -773,6 +805,25 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("attachment", "download", "a1", "--output", "/out"),
             args=("a1", "/out"),
             id="manual:attachments.download:canonical",
+        ),
+        _c(
+            "attachments.upload_bytes",
+            ("attachment", "upload", "i1", "--file", "<dynamic>", "--output", "json"),
+            args=("i1", "manifest.json", b'{"x":1}'),
+            stdout=_AR,
+            id="manual:attachments.upload_bytes:canonical",
+            argv_check="none",
+            assert_result=_assert_upload_bytes,
+        ),
+        _c(
+            "attachments.download_bytes",
+            ("attachment", "download", "a1", "--output", "<dynamic>"),
+            args=("a1",),
+            transport="run_text",
+            id="manual:attachments.download_bytes:canonical",
+            argv_check="none",
+            transport_side_effect=_write_download,
+            assert_result=_assert_download_bytes,
         ),
         _c(
             "autopilots.list",

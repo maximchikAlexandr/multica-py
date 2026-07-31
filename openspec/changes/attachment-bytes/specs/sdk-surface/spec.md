@@ -27,6 +27,12 @@ The SDK SHALL expose `AttachmentResource.upload_bytes(issue_id, filename, payloa
 - **WHEN** the underlying `upload()` or `download()` raises an exception
 - **THEN** the exception propagates to the caller (same SDK exception type) and the temporary directory created for the operation no longer exists on the filesystem.
 
+#### Scenario: Path separators and empty values are rejected
+- **WHEN** `upload_bytes` is called with a `filename` containing `/` or `\` or `..`, or with an empty string
+- **THEN** `ValueError` is raised with a message identifying the parameter.
+- **WHEN** `download_bytes` is called with an `attachment_id` containing `/` or `\` or `..`, or with an empty string
+- **THEN** `ValueError` is raised with a message identifying the parameter.
+
 #### Scenario: Existing upload and download behavior is unchanged
 - **WHEN** `upload(issue_id, file_path)` or `download(attachment_id, output_path)` is called
 - **THEN** the argv and return behavior are identical to before this change (no regression in the file-based API).
