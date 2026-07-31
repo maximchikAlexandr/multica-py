@@ -23,6 +23,14 @@ _RESOURCE_MAP: dict[str, type] = dict(RESOURCE_SPECS)
 
 
 def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
+    if case.transport_side_effect is not None:
+        if case.transport_method == "run_bytes":
+            mock_transport.run_bytes.side_effect = case.transport_side_effect
+        elif case.transport_method == "run_text":
+            mock_transport.run_text.side_effect = case.transport_side_effect
+        elif case.transport_method == "spawn":
+            mock_transport.spawn.side_effect = case.transport_side_effect
+        return
     if case.transport_method == "spawn":
         mock_transport.spawn.return_value = MagicMock()
     elif case.transport_method == "run_bytes":
@@ -52,12 +60,13 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
     result = method(*case.args, **dict(case.kwargs))
 
     if case.assert_result is not None:
-        case.assert_result(result)
+        case.assert_result(result, mock_transport)
 
     if case.transport_method == "run_bytes":
         mock_transport.run_bytes.assert_called_once()
         call_args = mock_transport.run_bytes.call_args
-        assert call_args.args == (tuple(case.expected_argv),)
+        if case.argv_check == "exact":
+            assert call_args.args == (tuple(case.expected_argv),)
         assert call_args.kwargs.get("stdin") == case.stdin
         assert call_args.kwargs.get("timeout") == (
             datetime.timedelta(seconds=case.timeout) if case.timeout is not None else None
@@ -65,7 +74,8 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
     elif case.transport_method == "run_text":
         mock_transport.run_text.assert_called_once()
         call_args = mock_transport.run_text.call_args
-        assert call_args.args == (tuple(case.expected_argv),)
+        if case.argv_check == "exact":
+            assert call_args.args == (tuple(case.expected_argv),)
     elif case.transport_method == "spawn":
         mock_transport.spawn.assert_called_once_with(tuple(case.expected_argv))
 
@@ -80,14 +90,14 @@ def test_discovered_public_methods() -> None:
     discovered = discover_public_methods()
     canonical = {c.sdk_method for c in OPERATION_CASES if c.is_canonical}
     assert discovered == canonical
-    assert len(discovered) == 117
-    assert len(OPERATION_CASES) == 149
-    assert sum(1 for c in OPERATION_CASES if c.is_canonical) == 117
+    assert len(discovered) == 119
+    assert len(OPERATION_CASES) == 151
+    assert sum(1 for c in OPERATION_CASES if c.is_canonical) == 119
     assert sum(1 for c in OPERATION_CASES if not c.is_canonical) == 32
     generated = tuple(c for c in OPERATION_CASES if c.contract_operation_id is not None)
     manual = tuple(c for c in OPERATION_CASES if c.contract_operation_id is None)
     assert len(generated) == 37
-    assert len(manual) == 112
+    assert len(manual) == 114
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
     assert all(
@@ -113,10 +123,10 @@ def test_legacy_payload_bijection() -> None:
             case.stdout,
         )
 
-    expected_legacy_ids = {f"legacy:{index:03d}" for index in range(1, 147)}
+    expected_legacy_ids = {f"legacy:{index:03d}" for index in range(1, 149)}
     assert set(LEGACY_ARGV_MIGRATION) == expected_legacy_ids
-    assert len(LEGACY_PAYLOAD_FINGERPRINTS) == 146
-    assert len(LEGACY_ARGV_MIGRATION.values()) == len(set(LEGACY_ARGV_MIGRATION.values())) == 146
+    assert len(LEGACY_PAYLOAD_FINGERPRINTS) == 148
+    assert len(LEGACY_ARGV_MIGRATION.values()) == len(set(LEGACY_ARGV_MIGRATION.values())) == 148
     assert set(LEGACY_ARGV_MIGRATION.values()).issubset(final_by_id)
 
     legacy_by_id = {
