@@ -71,12 +71,15 @@ GitHub issue maximchikAlexandr/multica-py#12.
   `decoded_type -> builtins.tuple` to `decoded_type ->
   multica_py.models.issues.IssueListPage` and its `stdout_base64` to a payload
   carrying the pagination metadata.
-- Add `offset` nonnegative validation: a Python-side guard in
-  `IssueResource.list` raising `ValueError` when `filter.offset` is set and
-  negative (mirrors the existing `direction_requires_sort` guard at line 56);
-  no new contract validator id is added (offset is a local CLI control flag,
-  same category as the existing `--limit` which is also ungoverned beyond
-  `optional_omit`).
+- Add `offset` nonnegative validation: register `offset_nonnegative` as a
+  named contract validator in `catalogs.validators` (reusing
+  `validate_nonnegative_limit`), `validator_definitions`, `validator_evidence`,
+  `issue_list` binding descriptor constraints, and `issues.list` entrypoint
+  `validator_ids`. The runtime guard in `IssueResource.list`
+  (`if filter.offset is not None and filter.offset < 0: raise ValueError(...)`)
+  remains the enforcement point. The contract validator id satisfies
+  AGENTS.md's requirement that imperative constraints be normalized by review
+  as named custom validators with positive/negative tests.
 - Tests: extend the existing `tests/cases/operations.py` `issues.list` row
   set and `tests/contract/test_issue_models.py`, no new test files.
   - New `manual:` variant rows for `issues.list` with `--offset`, `--project`,

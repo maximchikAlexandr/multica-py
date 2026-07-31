@@ -93,10 +93,14 @@ Constraints carried from AGENTS.md and the existing specs:
   stabilises).
 - Clearing semantics for `project_id` on the filter. `None`/omitted omits the
   flag (filter not applied); there is no "all projects" sentinel.
-- Governing `--offset` with a contract validator. `--offset` is a local CLI
-  control flag like `--limit` (already `optional_omit` only); the nonnegative
-  guard is Python-only in `IssueResource.list`, mirroring the existing
-  Python-only `direction_requires_sort` guard at line 56.
+- Re-governing `--offset` beyond the nonnegative guard. `--offset` is a local
+  CLI control flag; its nonnegative guard is Python-only in
+  `IssueResource.list` (mirroring `direction_requires_sort` at line 56), but
+  unlike the original plan, `offset_nonnegative` is registered as a named
+  contract validator (mirroring `limit_nonnegative` / `comment_list_before.
+  constraints`) to satisfy the AGENTS.md requirement that imperative
+  constraints be normalized by review as a named custom validator with
+  positive/negative tests.
 
 ## Decisions
 
@@ -129,17 +133,22 @@ archived `issue-parent-decoding` change (consistency across the issue
 surface). The wire field stays `parent_issue_id` (upstream JSON name).
 
 **4. `IssueListFilter` gains `offset` and `project_id`; `--offset`/`--project`
-   are Python-only emissions, contract-mapped as `optional_omit`.**
+   are contract-mapped as `optional_omit`; `offset_nonnegative` is a named
+   contract validator.**
 Add `offset: int | None = None` and `project_id: str | None = None` to
 `IssueListFilter`. Emit them in `IssueResource.list` inside the existing
 `if filter is not None:` block: `--offset` after `--limit`, `--project` after
 `--offset` (matching the contract mapping order). Add two `optional_omit`
 entries to `mapping_presence.issue_list` and the two mappings to both the
-binding descriptor and the operation entry, mirroring the existing six. The
-nonnegative `offset` guard is Python-only in `IssueResource.list`
-(`if filter.offset is not None and filter.offset < 0: raise ValueError(...)`),
-matching the Python-only `direction_requires_sort` guard; no new contract
-validator id is added (offset is local CLI control, like `--limit`).
+binding descriptor and the operation entry, mirroring the existing six.
+Register `offset_nonnegative` as a named contract validator in
+`catalogs.validators` (reusing `validate_nonnegative_limit`), in
+`validator_definitions`, and in `validator_evidence`; add it to the
+`issue_list` binding descriptor constraints and the `issues.list` entrypoint
+`validator_ids`. The runtime guard in `IssueResource.list`
+(`if filter.offset is not None and filter.offset < 0: raise ValueError(...)`)
+remains the enforcement point; the contract validator id provides the
+AGENTS.md trace anchor and positive/negative test coverage.
 
 **5. Contract: new `issue_list_page` public type + `decode_issue_list_page`
    decoder; repoint the `issues.list` entrypoint; flip compatibility.**
@@ -235,8 +244,8 @@ stays 30; only one vector changes shape.
   validator checks for the repointed entrypoint.
 - [Generator determinism] → render is idempotent; verify by running twice
   and diffing `approved_sdk.py`.
-- [`offset` nonnegative guard is Python-only, not a contract validator] →
-  mirrors `--limit` (also `optional_omit` only) and the Python-only
-  `direction_requires_sort` guard; adding a contract validator only for
-  `offset` would be inconsistent and would require a new validator id with
-  positive/negative tests beyond scope.
+- [`offset_nonnegative` registered as a named contract validator] → added
+  to satisfy AGENTS.md: imperative constraints must be normalized by review
+  as a named custom validator with positive/negative tests. Reuses
+  `validate_nonnegative_limit` (same nonnegative int check); `limit` and
+  `offset` share the same semantics, so no new validation logic is needed.
