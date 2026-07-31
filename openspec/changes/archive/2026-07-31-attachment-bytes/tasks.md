@@ -161,7 +161,7 @@
 
 ## 7. Verification
 
-- [ ] 7.1 `uv run pytest -m "not live"` green.
+- [x] 7.1 `uv run pytest -m "not live"` green.
 - [x] 7.2 `uv run mypy src` and `uv run mypy tests` green (the new `OperationCase` fields and `assert_result` signature change are typed; `transport_side_effect` is `Callable[..., object] | None`).
 - [x] 7.3 `uv run ruff check` and `uv run ruff format --check` green.
 - [x] 7.4 `uv run pytest tests/unit/resources/test_operations.py::test_discovered_public_methods` asserts the canonical method set grew to 119 and the updated counters (151 total / 119 canonical / 32 noncanonical / 37 generated / 114 manual) — no allowlist, exact invariants.
