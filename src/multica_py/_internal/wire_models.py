@@ -21,6 +21,7 @@ from multica_py.models.issues import (
     Issue,
     IssueAssignee,
     IssueChildStageGroup,
+    IssueListPage,
     IssueMetadataItem,
     IssueSummary,
     LinkedPullRequest,
@@ -36,6 +37,11 @@ class IssueSummaryWire(msgspec.Struct, frozen=True, kw_only=True):
     title: str
     status: IssueStatus
     priority: str | None = None
+    created_at: datetime.datetime | None = None
+    parent_issue_id: str | None = None
+    project_id: str | None = None
+    creator_id: str | None = None
+    creator_type: str | None = None
 
 
 def issue_summary_from_wire(wire: IssueSummaryWire) -> IssueSummary:
@@ -44,11 +50,30 @@ def issue_summary_from_wire(wire: IssueSummaryWire) -> IssueSummary:
         title=wire.title,
         status=wire.status,
         priority=wire.priority,
+        created_at=wire.created_at,
+        parent_id=wire.parent_issue_id,
+        project_id=wire.project_id,
+        creator_id=wire.creator_id,
+        creator_type=wire.creator_type,
     )
 
 
 class IssueListPageWire(msgspec.Struct, frozen=True, kw_only=True):
     issues: tuple[IssueSummaryWire, ...] = ()
+    has_more: bool = False
+    limit: int | None = None
+    offset: int | None = None
+    total: int | None = None
+
+
+def issue_list_page_from_wire(wire: IssueListPageWire) -> IssueListPage:
+    return IssueListPage(
+        issues=tuple(issue_summary_from_wire(item) for item in wire.issues),
+        has_more=wire.has_more,
+        limit=wire.limit,
+        offset=wire.offset,
+        total=wire.total,
+    )
 
 
 class IssueWire(msgspec.Struct, frozen=True, kw_only=True):

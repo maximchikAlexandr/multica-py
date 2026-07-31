@@ -439,6 +439,9 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:141": "manual:autopilots.history:variant:03",
     "legacy:142": "manual:autopilots.update:variant:03",
     "legacy:143": "manual:autopilots.create:variant:01",
+    "legacy:144": "manual:issues.list:variant:01",
+    "legacy:145": "manual:issues.list:variant:02",
+    "legacy:146": "manual:issues.list:variant:03",
 }
 
 
@@ -481,6 +484,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         IssueAssignmentRequest,
         IssueChildStageGroup,
         IssueCreateRequest,
+        IssueListFilter,
         IssueReorderRequest,
         IssueUpdateRequest,
         LinkedPullRequest,
@@ -1221,6 +1225,27 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("issue", "list", "--output", "json"),
             stdout=b'{"issues":[]}',
             id="generated:issues.list:default:canonical",
+        ),
+        _c(
+            "issues.list",
+            ("issue", "list", "--offset", "20", "--output", "json"),
+            args=(IssueListFilter(offset=20),),
+            stdout=b'{"issues":[],"has_more":false,"limit":50,"offset":20,"total":0}',
+            id="manual:issues.list:variant:01",
+        ),
+        _c(
+            "issues.list",
+            ("issue", "list", "--project", "pr_001", "--output", "json"),
+            args=(IssueListFilter(project_id="pr_001"),),
+            stdout=b'{"issues":[],"has_more":false,"limit":50,"offset":0,"total":0}',
+            id="manual:issues.list:variant:02",
+        ),
+        _c(
+            "issues.list",
+            ("issue", "list", "--offset", "20", "--project", "pr_001", "--output", "json"),
+            args=(IssueListFilter(offset=20, project_id="pr_001"),),
+            stdout=b'{"issues":[],"has_more":false,"limit":50,"offset":20,"total":0}',
+            id="manual:issues.list:variant:03",
         ),
         _c(
             "issues.get",

@@ -81,13 +81,13 @@ def test_discovered_public_methods() -> None:
     canonical = {c.sdk_method for c in OPERATION_CASES if c.is_canonical}
     assert discovered == canonical
     assert len(discovered) == 117
-    assert len(OPERATION_CASES) == 146
+    assert len(OPERATION_CASES) == 149
     assert sum(1 for c in OPERATION_CASES if c.is_canonical) == 117
-    assert sum(1 for c in OPERATION_CASES if not c.is_canonical) == 29
+    assert sum(1 for c in OPERATION_CASES if not c.is_canonical) == 32
     generated = tuple(c for c in OPERATION_CASES if c.contract_operation_id is not None)
     manual = tuple(c for c in OPERATION_CASES if c.contract_operation_id is None)
     assert len(generated) == 37
-    assert len(manual) == 109
+    assert len(manual) == 112
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
     assert all(
@@ -113,10 +113,10 @@ def test_legacy_payload_bijection() -> None:
             case.stdout,
         )
 
-    expected_legacy_ids = {f"legacy:{index:03d}" for index in range(1, 144)}
+    expected_legacy_ids = {f"legacy:{index:03d}" for index in range(1, 147)}
     assert set(LEGACY_ARGV_MIGRATION) == expected_legacy_ids
-    assert len(LEGACY_PAYLOAD_FINGERPRINTS) == 143
-    assert len(LEGACY_ARGV_MIGRATION.values()) == len(set(LEGACY_ARGV_MIGRATION.values())) == 143
+    assert len(LEGACY_PAYLOAD_FINGERPRINTS) == 146
+    assert len(LEGACY_ARGV_MIGRATION.values()) == len(set(LEGACY_ARGV_MIGRATION.values())) == 146
     assert set(LEGACY_ARGV_MIGRATION.values()).issubset(final_by_id)
 
     legacy_by_id = {

@@ -124,7 +124,7 @@ ISSUE_LABELS_REMOVE_BINDING = GeneratedBinding(
 
 ISSUE_LIST_BINDING = GeneratedBinding(
     'issues.list', 'default', ('issue', 'list'),
-    (GeneratedMapping('filter.status', '--status', 'query:status'), GeneratedMapping('filter.priority', '--priority', 'query:priority'), GeneratedMapping('filter.assignee_id', '--assignee-id', 'query:assignee_id'), GeneratedMapping('filter.limit', '--limit', 'query:limit'), GeneratedMapping('filter.sort', '--sort', 'query:sort'), GeneratedMapping('filter.direction', '--direction', 'query:direction'),), ('direction_requires_sort', 'position_forbids_direction'),
+    (GeneratedMapping('filter.status', '--status', 'query:status'), GeneratedMapping('filter.priority', '--priority', 'query:priority'), GeneratedMapping('filter.assignee_id', '--assignee-id', 'query:assignee_id'), GeneratedMapping('filter.limit', '--limit', 'query:limit'), GeneratedMapping('filter.offset', '--offset', 'query:offset'), GeneratedMapping('filter.project_id', '--project', 'query:project_id'), GeneratedMapping('filter.sort', '--sort', 'query:sort'), GeneratedMapping('filter.direction', '--direction', 'query:direction'),), ('direction_requires_sort', 'offset_nonnegative', 'position_forbids_direction'),
 )
 
 ISSUE_STATUS_BINDING = GeneratedBinding(

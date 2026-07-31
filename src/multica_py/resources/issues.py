@@ -13,7 +13,7 @@ from multica_py._internal.wire_models import (
     IssueListPageWire,
     IssueWire,
     issue_from_wire,
-    issue_summary_from_wire,
+    issue_list_page_from_wire,
 )
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
@@ -26,6 +26,7 @@ from multica_py.models.issues import (
     IssueChildStageGroup,
     IssueCreateRequest,
     IssueListFilter,
+    IssueListPage,
     IssueReorderRequest,
     IssueSummary,
     IssueUpdateRequest,
@@ -47,10 +48,14 @@ class IssueResource(BaseResource):
         self.subscribers = IssueSubscriberResource(transport, config)
         self.labels = IssueLabelResource(transport, config)
 
-    def list(self, filter: IssueListFilter | None = None) -> tuple[IssueSummary, ...]:
+    def list(self, filter: IssueListFilter | None = None) -> IssueListPage:
         _ = ISSUE_LIST_BINDING
         args = ["issue", "list"]
         if filter is not None:
+            if filter.offset is not None and filter.offset < 0:
+                raise ValueError(
+                    "IssueResource.list: offset must be nonnegative (offset_nonnegative)"
+                )
             if filter.direction is not None and filter.sort is None:
                 raise ValueError(
                     "IssueResource.list: direction requires sort (direction_requires_sort)"
@@ -63,14 +68,15 @@ class IssueResource(BaseResource):
                 args.extend(["--assignee-id", filter.assignee_id])
             if filter.limit is not None:
                 args.extend(["--limit", str(filter.limit)])
+            if filter.offset is not None:
+                args.extend(["--offset", str(filter.offset)])
+            if filter.project_id is not None:
+                args.extend(["--project", filter.project_id])
             if filter.sort is not None:
                 args.extend(["--sort", filter.sort.value])
             if filter.direction is not None:
                 args.extend(["--direction", filter.direction.value])
-        return tuple(
-            issue_summary_from_wire(item)
-            for item in self._run_json_decode(tuple(args), IssueListPageWire).issues
-        )
+        return issue_list_page_from_wire(self._run_json_decode(tuple(args), IssueListPageWire))
 
     def get(self, issue_id: str) -> Issue:
         return issue_from_wire(self._run_json_decode(("issue", "get", issue_id), IssueWire))
