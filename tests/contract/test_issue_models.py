@@ -1,14 +1,32 @@
 from __future__ import annotations
 
+import datetime
 import json
 from typing import Protocol
+from unittest.mock import MagicMock
 
 import pytest
 
 from multica_py._internal.decoders import decode_json
-from multica_py._internal.wire_models import IssueWire, issue_from_wire
+from multica_py._internal.transport import CliTransport
+from multica_py._internal.wire_models import (
+    IssueListPageWire,
+    IssueSummaryWire,
+    IssueWire,
+    issue_from_wire,
+    issue_list_page_from_wire,
+    issue_summary_from_wire,
+)
+from multica_py.config import ClientConfig
 from multica_py.models.issue_activity import IssueUsage
-from multica_py.models.issues import IssueCreateRequest, IssueSummary, IssueUpdateRequest
+from multica_py.models.issues import (
+    IssueCreateRequest,
+    IssueListFilter,
+    IssueListPage,
+    IssueSummary,
+    IssueUpdateRequest,
+)
+from multica_py.resources.issues import IssueResource
 
 
 class _IdFieldFactory(Protocol):
@@ -115,3 +133,91 @@ def test_request_rejects_empty_id_field(
     with pytest.raises(ValueError) as exc:
         factory(**{field_name: bad_value})
     assert field_name in str(exc.value)
+
+
+def test_issue_list_page_decoding() -> None:
+    full_data = (
+        b'{"issues":[{"id":"i1","title":"t","status":"todo",'
+        b'"created_at":"2026-01-01T00:00:00Z","parent_issue_id":"p1",'
+        b'"project_id":"pr1","creator_id":"u1","creator_type":"member"}],'
+        b'"has_more":true,"limit":50,"offset":20,"total":137}'
+    )
+    wire = decode_json(full_data, IssueListPageWire)
+    page = issue_list_page_from_wire(wire)
+    assert page.has_more is True
+    assert page.limit == 50
+    assert page.offset == 20
+    assert page.total == 137
+    assert len(page.issues) == 1
+    assert page.issues[0].created_at == datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
+    assert page.issues[0].parent_id == "p1"
+    assert page.issues[0].project_id == "pr1"
+    assert page.issues[0].creator_id == "u1"
+    assert page.issues[0].creator_type == "member"
+
+    empty_data = b'{"issues":[]}'
+    empty_wire = decode_json(empty_data, IssueListPageWire)
+    empty_page = issue_list_page_from_wire(empty_wire)
+    assert empty_page.has_more is False
+    assert empty_page.limit is None
+    assert empty_page.offset is None
+    assert empty_page.total is None
+    assert empty_page.issues == ()
+
+
+def test_issue_summary_scalar_fields_decoding() -> None:
+    minimal_data = b'{"id":"i1","title":"t","status":"todo"}'
+    minimal = decode_json(minimal_data, IssueSummary)
+    assert minimal.created_at is None
+    assert minimal.parent_id is None
+    assert minimal.project_id is None
+    assert minimal.creator_id is None
+    assert minimal.creator_type is None
+
+    full_data = (
+        b'{"id":"i1","title":"t","status":"todo",'
+        b'"created_at":"2026-01-01T00:00:00Z","parent_issue_id":"p1",'
+        b'"project_id":"pr1","creator_id":"u1","creator_type":"member"}'
+    )
+    wire = decode_json(full_data, IssueSummaryWire)
+    summary = issue_summary_from_wire(wire)
+    assert summary.created_at == datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
+    assert summary.parent_id == "p1"
+    assert summary.project_id == "pr1"
+    assert summary.creator_id == "u1"
+    assert summary.creator_type == "member"
+
+
+@pytest.fixture
+def _mock_transport() -> MagicMock:
+    transport = MagicMock(spec=CliTransport)
+    transport.run_bytes.return_value = MagicMock(
+        stdout=b'{"issues":[],"has_more":false,"limit":0,"offset":0,"total":0}',
+        argv=("test",),
+    )
+    transport.run_text.return_value = MagicMock()
+    return transport
+
+
+@pytest.mark.parametrize(
+    ("offset", "should_raise"),
+    [
+        (-1, True),
+        (-5, True),
+        (0, False),
+    ],
+)
+def test_issue_list_filter_rejects_negative_offset(
+    offset: int, should_raise: bool, _mock_transport: MagicMock
+) -> None:
+    resource = IssueResource(_mock_transport, ClientConfig())
+    if should_raise:
+        with pytest.raises(ValueError) as exc:
+            resource.list(IssueListFilter(offset=offset))
+        assert "offset" in str(exc.value)
+        _mock_transport.run_bytes.assert_not_called()
+    else:
+        resource.list(IssueListFilter(offset=offset))
+        _mock_transport.run_bytes.assert_called_once()
+        call_args = _mock_transport.run_bytes.call_args
+        assert call_args.args == (("issue", "list", "--offset", "0", "--output", "json"),)

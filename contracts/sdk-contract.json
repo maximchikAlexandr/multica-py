@@ -29,6 +29,7 @@
       "issue": "Issue",
       "issue_wire": "IssueWire",
       "issue_summaries": "tuple[IssueSummary, ...]",
+      "issue_list_page": "IssueListPage",
       "issue_list_page_wire": "IssueListPageWire",
       "labels": "tuple[Label, ...]",
       "labels_wire": "list[Label]",
@@ -58,7 +59,7 @@
       "issue_labels_add": "(issue_id: str, label_id: str) -> tuple[Label, ...]",
       "issue_labels_list": "(issue_id: str) -> tuple[Label, ...]",
       "issue_labels_remove": "(issue_id: str, label_id: str) -> tuple[Label, ...]",
-      "issue_list": "(filter: IssueListFilter | None = None) -> tuple[IssueSummary, ...]",
+      "issue_list": "(filter: IssueListFilter | None = None) -> IssueListPage",
       "issue_status": "(issue_id: str, status: IssueStatus) -> Issue",
       "project_create": "(request: ProjectCreateRequest) -> Project",
       "project_resource_add": "(project_id: str, request: ProjectResourceAddLocalDirectoryRequest) -> ProjectResourceRecord",
@@ -365,6 +366,16 @@
             "query:limit"
           ],
           [
+            "filter.offset",
+            "--offset",
+            "query:offset"
+          ],
+          [
+            "filter.project_id",
+            "--project",
+            "query:project_id"
+          ],
+          [
             "filter.sort",
             "--sort",
             "query:sort"
@@ -377,6 +388,7 @@
         ],
         "constraints": [
           "direction_requires_sort",
+          "offset_nonnegative",
           "position_forbids_direction"
         ]
       },
@@ -1020,6 +1032,8 @@
         "optional_omit",
         "optional_omit",
         "optional_omit",
+        "optional_omit",
+        "optional_omit",
         "optional_omit"
       ],
       "issue_status": [
@@ -1150,6 +1164,15 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
+      "issue_list_page": {
+        "public_type_id": "issue_list_page",
+        "wire_type_id": "issue_list_page_wire",
+        "decoder_id": "decode_issue_list_page",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
       "labels": {
         "public_type_id": "labels",
         "wire_type_id": "labels_wire",
@@ -1207,6 +1230,7 @@
       "decode_comment_thread_page": "multica_py.resources.issue_comments.IssueCommentResource._decode_comment_thread_page",
       "decode_issue": "multica_py._internal.wire_models.issue_from_wire",
       "decode_issue_summaries": "multica_py._internal.wire_models.issue_summary_from_wire",
+      "decode_issue_list_page": "multica_py._internal.wire_models.issue_list_page_from_wire",
       "decode_labels": "multica_py.resources.issue_labels._decode_labels",
       "decode_none": "multica_py.resources._base.decode_none",
       "decode_project": "multica_py._internal.wire_models.project_from_wire",
@@ -1224,6 +1248,7 @@
       "empty_emits": "multica_py._generated.validators.validate_project_update",
       "limit_nonnegative": "multica_py._generated.validators.validate_nonnegative_limit",
       "limit_positive": "multica_py._generated.validators.validate_positive_limit",
+      "offset_nonnegative": "multica_py._generated.validators.validate_nonnegative_limit",
       "nonblank:body": "multica_py._generated.validators.validate_nonblank",
       "nonblank:comment_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:issue_id": "multica_py._generated.validators.validate_nonblank",
@@ -1284,6 +1309,10 @@
       "limit_positive": {
         "positive_case_id": "limit-positive-valid",
         "negative_case_id": "limit-positive-invalid"
+      },
+      "offset_nonnegative": {
+        "positive_case_id": "offset-nonnegative-valid",
+        "negative_case_id": "offset-nonnegative-invalid"
       },
       "nonblank:body": {
         "positive_case_id": "nonblank-body-valid",
@@ -1482,6 +1511,12 @@
         "name": "validate_positive_limit",
         "parameter_name": "value",
         "body_kind": "positive_int"
+      },
+      {
+        "validator_id": "offset_nonnegative",
+        "name": "validate_nonnegative_limit",
+        "parameter_name": "value",
+        "body_kind": "nonnegative_int"
       },
       {
         "validator_id": "nonblank:body",
@@ -1917,6 +1952,16 @@
             "destination": "query:limit"
           },
           {
+            "source": "filter.offset",
+            "binding": "--offset",
+            "destination": "query:offset"
+          },
+          {
+            "source": "filter.project_id",
+            "binding": "--project",
+            "destination": "query:project_id"
+          },
+          {
             "source": "filter.sort",
             "binding": "--sort",
             "destination": "query:sort"
@@ -1929,6 +1974,7 @@
         ],
         "validator_ids": [
           "direction_requires_sort",
+          "offset_nonnegative",
           "position_forbids_direction"
         ]
       },
@@ -2853,7 +2899,7 @@
         "is_canonical": true,
         "args": [],
         "kwargs": [],
-        "stdout_base64": "eyJpc3N1ZXMiOltdfQ==",
+        "stdout_base64": "eyJpc3N1ZXMiOltdLCJoYXNfbW9yZSI6ZmFsc2UsImxpbWl0Ijo1MCwib2Zmc2V0IjowLCJ0b3RhbCI6MH0=",
         "stderr": "",
         "exit_code": 0,
         "transport_method": "run_bytes",
@@ -2870,7 +2916,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "builtins.tuple"
+            "value": "multica_py.models.issues.IssueListPage"
           }
         }
       },
@@ -4570,8 +4616,8 @@
     },
     {
       "operation_id": "issues.list",
-      "compatibility": "compatible",
-      "rationale": "Existing filters plus reviewed sort/direction remain supported.",
+      "compatibility": "intentionally_changed",
+      "rationale": "Return type widens from tuple[IssueSummary, ...] to IssueListPage, exposing pagination metadata; offset and project_id filters added.",
       "source_ref_ids": [
         "S-ISSUE"
       ],
@@ -4584,7 +4630,7 @@
           "public_symbol": "multica_py.resources.issues.IssueResource.list",
           "signature_id": "issue_list",
           "binding_id": "issue_list",
-          "response_id": "issue_summaries",
+          "response_id": "issue_list_page",
           "errors": "standard"
         }
       ]

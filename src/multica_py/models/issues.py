@@ -13,6 +13,11 @@ class IssueSummary(msgspec.Struct, frozen=True, kw_only=True):
     title: str
     status: IssueStatus
     priority: str | None = None
+    created_at: datetime.datetime | None = None
+    parent_id: str | None = None
+    project_id: str | None = None
+    creator_id: str | None = None
+    creator_type: str | None = None
 
 
 class IssueAssignee(msgspec.Struct, frozen=True, kw_only=True):
@@ -61,8 +66,18 @@ class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
     priority: str | None = None
     assignee_id: str | None = None
     limit: int | None = None
+    offset: int | None = None
+    project_id: str | None = None
     sort: IssueSort | None = None
     direction: SortDirection | None = None
+
+
+class IssueListPage(msgspec.Struct, frozen=True, kw_only=True):
+    issues: tuple[IssueSummary, ...] = ()
+    has_more: bool = False
+    limit: int | None = None
+    offset: int | None = None
+    total: int | None = None
 
 
 class InlineDescription(msgspec.Struct, frozen=True, kw_only=True):

@@ -69,6 +69,7 @@ _DECODED_TYPES = frozenset(
         "multica_py.models.autopilots.AutopilotListPage",
         "multica_py.models.autopilots.AutopilotRun",
         "multica_py.models.autopilots.AutopilotRunListPage",
+        "multica_py.models.issues.IssueListPage",
     }
 )
 _BODY_KINDS = frozenset(
@@ -107,6 +108,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "comments",
             "comments_wire",
             "issue",
+            "issue_list_page",
             "issue_list_page_wire",
             "issue_summaries",
             "issue_wire",
@@ -162,6 +164,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "decode_comment_thread_page",
             "decode_comments",
             "decode_issue",
+            "decode_issue_list_page",
             "decode_issue_summaries",
             "decode_labels",
             "decode_none",
@@ -182,6 +185,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "empty_emits",
             "limit_nonnegative",
             "limit_positive",
+            "offset_nonnegative",
             "nonblank:body",
             "nonblank:comment_id",
             "nonblank:issue_id",

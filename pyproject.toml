@@ -170,6 +170,7 @@ module = [
     "tests.contract.test_executor_models",
     "tests.contract.test_public_invariants",
     "tests.contract.test_autopilot_models",
+    "tests.contract.test_issue_models",
     "tests.live.*",
 ]
 ignore_missing_imports = true
