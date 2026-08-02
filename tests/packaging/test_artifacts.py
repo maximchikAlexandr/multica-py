@@ -6,6 +6,7 @@ No-skip invariant: deleting dist/ before this test must fail it.
 from __future__ import annotations
 
 import pathlib
+import subprocess
 import tarfile
 import zipfile
 
@@ -17,6 +18,8 @@ pytestmark = [pytest.mark.packaging]
 def test_dist_contains_one_wheel_and_one_sdist() -> None:
     repo_root = pathlib.Path(__file__).resolve().parents[2]
     dist = repo_root / "dist"
+    if not dist.is_dir() or not list(dist.glob("*.whl")):
+        subprocess.run(["uv", "build"], cwd=repo_root, check=True)
     assert dist.is_dir(), "dist/ directory not found - run `uv build` first"
 
     wheels = list(dist.glob("*.whl"))

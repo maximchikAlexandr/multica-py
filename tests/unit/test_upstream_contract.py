@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 import subprocess
+import tempfile
 from dataclasses import dataclass, replace
 from typing import cast
 
@@ -193,7 +194,7 @@ def test_result_assertion_algorithms() -> None:
 
 def test_render_is_independent_of_evidence() -> None:
     first = render_files(APPROVED)
-    evidence = pathlib.Path("/private/tmp/upstream-evidence.json")
+    evidence = pathlib.Path(tempfile.gettempdir()) / "upstream-evidence.json"
     evidence.write_text('{"review_items":["changed"]}\n', encoding="utf-8")
     try:
         second = render_files(APPROVED)

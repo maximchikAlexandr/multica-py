@@ -155,6 +155,10 @@ def _communicate_until_exit(
         try:
             stdout_data, stderr_data = process.communicate(timeout=poll_interval)
         except subprocess.TimeoutExpired:
+            stdin = _stdin_pipe(process)
+            if stdin is not None:
+                stdin.close()
+                setattr(process, "stdin", None)
             now = time.monotonic()
             cancel_hit = cancel is not None and cancel.cancelled
             timeout_due = timeout_deadline is not None and now >= timeout_deadline
@@ -203,6 +207,7 @@ def run_with_timeout(
         if stdin is not None and stdin_pipe is not None:
             stdin_pipe.write(stdin)
             stdin_pipe.close()
+            setattr(process, "stdin", None)
         stdout_data, stderr_data, timeout_hit = _communicate_until_exit(
             process,
             poll_interval=0.1,

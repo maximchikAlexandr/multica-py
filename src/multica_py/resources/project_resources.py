@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pathlib
+import os
 
 from multica_py._generated.approved_sdk import (
     PROJECT_RESOURCE_ADD_BINDING,
@@ -40,7 +40,7 @@ class ProjectResourceCollection(BaseResource):
         _ = PROJECT_RESOURCE_ADD_BINDING
         validate_nonblank(project_id)
         validate_nonblank(request.daemon_id)
-        local_path = str(pathlib.Path(request.local_path).resolve())
+        local_path = os.path.abspath(request.local_path)
         args = [
             "project",
             "resource",
@@ -68,7 +68,7 @@ class ProjectResourceCollection(BaseResource):
         _ = PROJECT_RESOURCE_UPDATE_BINDING
         validate_nonblank(project_id)
         validate_nonblank(resource_id)
-        local_path = str(pathlib.Path(request.local_path).resolve())
+        local_path = os.path.abspath(request.local_path)
         args = [
             "project",
             "resource",
