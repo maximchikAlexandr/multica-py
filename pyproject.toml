@@ -7,9 +7,10 @@ name = "multica-py"
 version = "0.1.0"
 description = "Python SDK for the Multica CLI"
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
-    { name = "multica-py contributors" },
+    { name = "maximchikAlexandr", email = "maximchik.alexandr@yandex.ru" },
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -26,7 +27,8 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/maximchikAlexandr/multica-py"
 Repository = "https://github.com/maximchikAlexandr/multica-py"
-Documentation = "https://github.com/maximchikAlexandr/multica-py"
+Documentation = "https://github.com/maximchikAlexandr/multica-py/tree/main/docs"
+Issues = "https://github.com/maximchikAlexandr/multica-py/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/multica_py"]
@@ -41,6 +43,9 @@ include = [
     ".github",
     "README.md",
     "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
     "LICENSE",
     "pyproject.toml",
     "ruff.toml",
