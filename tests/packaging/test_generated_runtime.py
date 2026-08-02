@@ -4,6 +4,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -49,6 +50,6 @@ def test_wheel_exports_generated_runtime(tmp_path: pathlib.Path) -> None:
 
 def _uv_env() -> dict[str, str]:
     env = dict(os.environ)
-    env["UV_CACHE_DIR"] = "/private/tmp/multica-py-uv-cache"
+    env["UV_CACHE_DIR"] = str(pathlib.Path(tempfile.gettempdir()) / "multica-py-uv-cache")
     env.pop("PYTHONPATH", None)
     return env

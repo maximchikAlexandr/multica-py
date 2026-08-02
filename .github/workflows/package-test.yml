@@ -25,7 +25,7 @@ jobs:
           test $(ls dist/*.whl | wc -l) -eq 1
           test $(ls dist/*.tar.gz | wc -l) -eq 1
       - name: Run packaging tests
-        run: uv run pytest tests/packaging/ -v
+        run: uv run pytest tests/packaging/ -v -o addopts="" -m packaging
       - uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -35,6 +35,7 @@ jobs:
     needs: build-and-validate
     permissions:
       contents: read
+      actions: read
     strategy:
       matrix:
         path:
@@ -46,12 +47,12 @@ jobs:
           - system-python
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - uses: actions/download-artifact@v4
         with:
           name: dist
-        path: dist/
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-      - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
+          path: dist/
+      - uses: astral-sh/setup-uv@7e7e21ddc30bd66316c7b9889405f485b5022c96
         with:
           python-version: "3.12"
       - run: pip install uv
@@ -67,4 +68,9 @@ jobs:
             system-python) pip install dist/*.whl ;;
           esac
       - name: Verify import
-        run: python -c "import multica_py; print('ok')"
+        run: |
+          if [ "${{ matrix.path }}" = "system-python" ]; then
+            python -c "import multica_py; print('ok')"
+          else
+            uv run python -c "import multica_py; print('ok')"
+          fi
