@@ -1,6 +1,10 @@
 # multica-py
 
-Python SDK wrapping the [Multica CLI](https://github.com/multica-ai/multica). Library-only — embed it in FastAPI, Temporal workers, scripts, anything that already drives the upstream `multica` binary via subprocess. No CLI of its own.
+[![CI Status](https://github.com/maximchikAlexandr/multica-py/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maximchikAlexandr/multica-py/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+
+Python SDK wrapping the [Multica CLI](https://github.com/multica-ai/multica).
 
 ## Prerequisites
 
