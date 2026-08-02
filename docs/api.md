@@ -30,7 +30,7 @@ All resources accessed as attributes of `MulticaClient`:
 - **projects**: `list/get/create/update/delete/set_status`
 - **projects.resources**: `list`, `add_local_directory`, `update_local_directory`, `remove`
 - **labels**: `list/get/create/update/delete`
-- **agents**: `list/get/create/update/archive/restore/tasks/upload_avatar`
+- **agents**: `list/get/create/update/archive/restore/tasks/avatar`
 - **agents.skills**: `list/set`
 - **skills**: `list/get/create/update/delete/import_from_url`
 - **skills.files**: `list/upsert/delete`
@@ -54,7 +54,27 @@ All resources accessed as attributes of `MulticaClient`:
 
 ## Shared Models
 
-- `Page[T]` — immutable tuple payload with `next_cursor`
+- `ResourceEntity[TData]` — typed bound wrapper with an explicit `to_data()` snapshot boundary
+- `LazyCollection[T]` — cached one-call collection
+- `OffsetLazyCollection[T]` — offset-paged collection with `page()` and bounded traversal
+- `CursorLazyCollection[T]` — cursor-paged collection with progress guards
+- `LazyMapping[K, V]` — cached mapping relation
+- `Page[T]` — immutable tuple payload used by non-relation paged services
 - `ActionResult` — typed success/message container for commands that expose structured action results
 - `ProjectResourceRecord`, `LocalDirectoryResourceRef`, `ProjectResourceAddLocalDirectoryRequest`, `ProjectResourceUpdateLocalDirectoryRequest` — typed project-resource models
 - `IssueUsage.cost_usd` — optional float decoded from `issue usage` JSON
+
+## Bound entities and load points
+
+Workspace, project, issue, agent, skill, squad, member, label, comment,
+comment-thread, task-run, autopilot, and autopilot-run results are bound
+entities. Scalar properties are passive. Relation property access is also
+passive; `all()`, `page()`, iteration, `refresh()`, and
+`MulticaClient.prefetch()` may invoke the CLI.
+
+Each wrapper owns its cache. A later `get()` returns a new wrapper rather than
+mutating an earlier list result. `to_data()` excludes client and cache state.
+Detached entities raise `DetachedEntityError` before transport access.
+
+The complete relation inventory and removed surfaces are documented in
+[docs/migration.md](migration.md).

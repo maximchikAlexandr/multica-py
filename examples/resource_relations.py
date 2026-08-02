@@ -1,67 +1,74 @@
-"""Read-only examples for the bound resource graph.
+"""Traverse the bound resource graph through explicit load points.
 
-The IDs below are placeholders for a prepared workspace. Property access is
-passive; explicit load points are marked with ``all()``, ``page()``, or
-``prefetch()``.
+The IDs are placeholders for prepared resources. Reading a relation property
+is passive; all(), page(), iteration, and prefetch() may invoke the CLI.
 """
 
 from multica_py import ClientConfig, MulticaClient
 
 
-def load_graph(client: MulticaClient) -> None:
-    # Workspace and project phase.
-    workspace = client.workspaces.get("ws_1")
-    _ = workspace.members  # no subprocess call
-    workspace.members.all()
-    workspace.issues.page(limit=20)
-    workspace.autopilots.all()
+def inspect_workspace(client: MulticaClient, workspace_id: str) -> None:
+    workspace = client.workspaces.get(workspace_id)
 
-    project = client.projects.get("project_1")
-    project.resources.all()
-    project.issues.all()
+    members = workspace.members.all()
+    first_issue_page = workspace.issues.page(limit=20)
+    projects = workspace.projects.all()
+    client.prefetch(projects, lambda project: project.issues, max_parallel=4)
 
-    # Agent, skill, squad, and workspace-member phase.
-    agent = client.agents.get("agent_1")
-    agent.skills.all()
-    agent.tasks.all()
-    agent.issues.all()
-    skill = client.skills.get("skill_1")
-    skill.files.all()
-    squad = client.squads.get("squad_1")
-    squad.members.all()
-    squad.issues.all()
+    print(
+        f"{workspace.name}: {len(members)} members, "
+        f"{first_issue_page.total} issues, {len(projects)} projects"
+    )
+    for project in projects:
+        resources = project.resources.all()
+        print(f"  {project.name}: {len(project.issues)} issues, {len(resources)} resources")
 
-    # Issue, comment, metadata, and run phase.
-    issue = client.issues.get("issue_1")
-    issue.comments.all()
+
+def inspect_execution_resources(
+    client: MulticaClient,
+    agent_id: str,
+    skill_id: str,
+    squad_id: str,
+) -> None:
+    agent = client.agents.get(agent_id)
+    skill = client.skills.get(skill_id)
+    squad = client.squads.get(squad_id)
+
+    print(f"agent skills: {len(agent.skills.all())}")
+    print(f"skill files: {len(skill.files.all())}")
+    print(f"squad members: {len(squad.members.all())}")
+
+
+def inspect_issue(client: MulticaClient, issue_id: str) -> None:
+    issue = client.issues.get(issue_id)
+    comments = issue.comments.all()
+    metadata = issue.metadata.all()
+
     for thread in issue.recent_comment_threads(limit=10).all():
-        thread.comments.all()
-    issue.labels.all()
-    issue.metadata.all()
+        print(f"thread {thread.id}: {len(thread.comments.all())} comments")
     for run in issue.runs.all():
-        run.messages.all()
+        print(f"run {run.id}: {len(run.messages.all())} messages")
 
-    # Autopilot phase. A complete get envelope may seed triggers/subscribers;
-    # omitted fields stay unloaded until their governed read path is used.
-    autopilot = client.autopilots.get("autopilot_1")
-    triggers = autopilot.triggers
-    if triggers.loaded:
-        tuple(triggers)
-    else:
-        triggers.all()
-    autopilot.subscribers.all()
-    autopilot.runs.all()
-
-    # Bounded prefetch is explicit and uses one selector shape per call.
-    client.prefetch((workspace,), lambda item: item.members)
-    client.prefetch((autopilot,), lambda item: item.runs)
-
-    # Snapshot/lifecycle boundary: this is passive and excludes client state.
+    print(f"{issue.title}: {len(comments)} comments, metadata={tuple(metadata)}")
     _ = issue.to_data()
 
 
+def inspect_autopilot(client: MulticaClient, autopilot_id: str) -> None:
+    autopilot = client.autopilots.get(autopilot_id)
+    triggers = autopilot.triggers
+
+    # A complete get envelope can seed triggers without another CLI call.
+    trigger_values = tuple(triggers) if triggers.loaded else triggers.all()
+    runs = autopilot.runs.all()
+    print(f"{autopilot.title}: {len(trigger_values)} triggers, {len(runs)} runs")
+
+
 def main() -> None:
-    load_graph(MulticaClient(ClientConfig()))
+    client = MulticaClient(ClientConfig())
+    inspect_workspace(client, "ws_123")
+    inspect_execution_resources(client, "agent_123", "skill_123", "squad_123")
+    inspect_issue(client, "issue_123")
+    inspect_autopilot(client, "autopilot_123")
 
 
 if __name__ == "__main__":
