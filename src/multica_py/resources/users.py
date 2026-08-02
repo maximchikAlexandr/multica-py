@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from multica_py.models.system import User
+from multica_py.models.system import UserProfile, UserProfileUpdate
 from multica_py.resources._base import BaseResource
+from multica_py.sentinels import Unset
 
 
 class UserResource(BaseResource):
-    def list(self) -> tuple[User, ...]:
-        return self._run_json_decode_list(("user", "list"), User)
+    def profile_get(self) -> UserProfile:
+        return self._run_json_decode(("user", "profile", "get"), UserProfile)
 
-    def get(self, user_id: str) -> User:
-        return self._run_json_decode(("user", "get", user_id), User)
+    def profile_update(self, request: UserProfileUpdate) -> UserProfile:
+        if request.description is Unset:
+            raise ValueError("description must be provided")
+        return self._run_json_decode(
+            ("user", "profile", "update", "--description", request.description), UserProfile
+        )

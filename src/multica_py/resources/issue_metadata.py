@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import MetadataValueType
-from multica_py.models.common import Page
 from multica_py.models.issue_activity import (
     MetadataEntry,
     MetadataListRequest,
@@ -15,14 +16,23 @@ from multica_py.resources._base import BaseResource
 from multica_py.types import MetadataValue
 
 
+@dataclass(frozen=True, slots=True)
+class MetadataPage:
+    items: tuple[MetadataEntry, ...]
+    next_cursor: str | None = None
+
+
 class IssueMetadataResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
 
-    def list(self, issue_id: str) -> tuple[MetadataEntry, ...]:
-        return self._run_json_decode_list(("issue", "metadata", "list", issue_id), MetadataEntry)
+    def list(self, issue_id: str) -> dict[str, MetadataValue]:
+        result = self._transport.run_bytes(
+            ("issue", "metadata", "list", issue_id, "--output", "json")
+        )
+        return decode_json(result.stdout, dict[str, MetadataValue], command=" ".join(result.argv))
 
-    def query(self, request: MetadataListRequest) -> Page[MetadataEntry]:
+    def query(self, request: MetadataListRequest) -> MetadataPage:
         args = ["issue", "metadata", "list", request.issue_id]
         for predicate in request.predicates:
             args.extend(_predicate_args(predicate))
@@ -32,7 +42,7 @@ class IssueMetadataResource(BaseResource):
             args.extend(["--limit", str(request.limit)])
         result = self._transport.run_text((*args, "--output", "json"))
         items = tuple(decode_json(result.text.encode("utf-8"), list[MetadataEntry]))
-        return Page(items=items, next_cursor=_extract_metadata_cursor(result.stderr))
+        return MetadataPage(items=items, next_cursor=_extract_metadata_cursor(result.stderr))
 
     def get(self, issue_id: str, key: str) -> MetadataEntry:
         return self._run_json_decode(

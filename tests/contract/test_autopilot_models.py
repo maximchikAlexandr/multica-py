@@ -174,7 +174,7 @@ def test_autopilot_list_page_decoding() -> None:
         b'"assignee_type":"member","assignee_id":"u1","status":"active",'
         b'"execution_mode":"create_issue","created_by_type":"member",'
         b'"created_by_id":"creator"}],"total":1}',
-        AutopilotListPage,
+        AutopilotListPage[Autopilot],
         command="test",
     )
     assert len(page.autopilots) == 1
@@ -185,7 +185,7 @@ def test_autopilot_list_page_decoding() -> None:
 def test_autopilot_list_page_empty() -> None:
     page = decode_json(
         b'{"autopilots":[],"total":0}',
-        AutopilotListPage,
+        AutopilotListPage[Autopilot],
         command="test",
     )
     assert page.autopilots == ()
@@ -195,7 +195,7 @@ def test_autopilot_list_page_empty() -> None:
 def test_autopilot_run_list_page_decoding() -> None:
     page = decode_json(
         b'{"runs":[{"id":"r1","autopilot_id":"a1","source":"web","status":"running"}],"total":5}',
-        AutopilotRunListPage,
+        AutopilotRunListPage[AutopilotRun],
         command="test",
     )
     assert len(page.runs) == 1

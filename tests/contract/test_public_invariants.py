@@ -3,9 +3,10 @@ from __future__ import annotations
 import importlib
 import inspect
 import pkgutil
+import types
 from collections.abc import Iterator
 from types import ModuleType
-from typing import TypeGuard, cast, get_type_hints
+from typing import Any, ForwardRef, TypeGuard, TypeVar, cast, get_args, get_origin, get_type_hints
 
 import msgspec
 
@@ -18,6 +19,7 @@ from multica_py.models.project_resources import (
     ProjectResourceRecord,
     ProjectResourceUpdateLocalDirectoryRequest,
 )
+from multica_py.resources.issues import IssueEntity
 from multica_py.resources.project_resources import ProjectResourceCollection
 
 
@@ -127,3 +129,49 @@ def test_no_open_ended_container_fields() -> None:
             ann = str(annotations.get(fname, ""))
             if "Any" in ann or "dict[" in ann or ann == "typing.Any" or ann == "<class 'object'>":
                 raise TypeError(f"{name}.{fname}: {ann} is an open-ended container")
+
+
+def assert_public_annotations_precise(public_class: type[object]) -> None:
+    resolution_namespace: dict[str, object] = {
+        "IssueEntity": IssueEntity,
+        "MulticaClient": MulticaClient,
+    }
+
+    def assert_annotation(annotation: object, path: str) -> None:
+        assert annotation is not Any, f"{path} contains Any"
+        assert annotation is not object, f"{path} contains bare object"
+        assert not isinstance(annotation, ForwardRef), (
+            f"{path} contains unresolved forward reference"
+        )
+        if isinstance(annotation, TypeVar):
+            return
+        origin = get_origin(annotation)
+        if origin is None:
+            return
+        assert get_args(annotation), f"{path} uses an unparameterized generic"
+        assert origin is not types.UnionType or get_args(annotation), f"{path} is unresolved"
+        for index, argument in enumerate(get_args(annotation)):
+            assert_annotation(argument, f"{path}[{index}]")
+
+    for name, member in inspect.getmembers(public_class):
+        if name.startswith("_") and name != "__init__":
+            continue
+        callable_member = member.fget if isinstance(member, property) else member
+        if not (inspect.isfunction(callable_member) or inspect.ismethod(callable_member)):
+            continue
+        module = inspect.getmodule(callable_member)
+        assert module is not None, f"{public_class.__name__}.{name} has no module"
+        if module.__name__ != public_class.__module__:
+            continue
+        globalns = cast("dict[str, object]", dict(vars(module)))
+        globalns.update(resolution_namespace)
+        hints = get_type_hints(callable_member, globalns=globalns)
+        signature = inspect.signature(callable_member)
+        for parameter in signature.parameters.values():
+            if parameter.name not in {"self", "cls"}:
+                assert parameter.name in hints, (
+                    f"{public_class.__name__}.{name}.{parameter.name} is unannotated"
+                )
+        assert "return" in hints, f"{public_class.__name__}.{name} has no return annotation"
+        for hint_name, annotation in hints.items():
+            assert_annotation(annotation, f"{public_class.__name__}.{name}.{hint_name}")

@@ -30,52 +30,69 @@ Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`
 ## Usage
 
 ```python
-from multica_py import ClientConfig, MulticaClient
+from multica_py import ClientConfig, CompatibilityPolicy, IssueStatus, MulticaClient
+from multica_py.models.issues import IssueListFilter
 
-client = MulticaClient(ClientConfig())
-for issue in client.issues.list():
+client = MulticaClient(
+    ClientConfig(
+        server_url="https://multica.example.com",
+        profile="automation",
+        compatibility=CompatibilityPolicy.strict,
+        max_processes=4,
+    )
+)
+page = client.issues.list(IssueListFilter(status=IssueStatus.backlog, limit=50))
+for issue in page.issues:
     print(issue.title)
 ```
 
-`ClientConfig` is an immutable `msgspec.Struct` (`executable`, `server_url`, `workspace_id`, `profile`, `cwd`, `environment`, `timeout`, `compatibility`, `debug`, `encoding`, `max_processes`). The client exposes derived constructors: `with_profile`, `with_workspace`, `with_timeout`, `with_cwd`, `with_environment`.
+`ClientConfig` is immutable. Keep one configured client at an integration
+boundary and pass application code a small adapter instead of constructing a
+client in every request or workflow. Derived views created by `with_profile`,
+`with_workspace`, `with_timeout`, `with_cwd`, and `with_environment`
+retain independent configuration while sharing the same process limit.
 
-### Self-hosted / local
-
-```python
-from multica_py import ClientConfig, MulticaClient
-
-config = ClientConfig(
-    executable="/usr/local/bin/multica",
-    server_url="http://localhost:8080",
-    workspace_id="ws_local",
-    profile="self-hosted",
-)
-client = MulticaClient(config)
-```
-
-Interactive first-time local setup is process-backed:
+### Traverse related resources
 
 ```python
-process = client.setup.self_host("http://localhost:8080")
-process.wait()
+workspace = client.workspaces.get("ws_123")
+
+# Property access is passive. all(), page(), refresh(), iteration, and
+# prefetch() are explicit load points.
+projects = workspace.projects.all()
+client.prefetch(projects, lambda project: project.issues, max_parallel=4)
+
+for project in projects:
+    for issue in project.issues:
+        print(project.name, issue.title)
 ```
 
-### FastAPI
+Bound entities retain their originating client context and own their lazy
+cache. Use `entity.to_data()` when you need a passive immutable snapshot for
+serialization, comparison, or a message boundary.
 
-```python
-from datetime import timedelta
-from fastapi import FastAPI
-from multica_py import ClientConfig, MulticaClient
+### Reliable automation patterns
 
-app = FastAPI()
-client = MulticaClient(ClientConfig(timeout=timedelta(seconds=30)))
+For long-running workers and service integrations:
 
-@app.get("/issues")
-def list_issues():
-    return [i.title for i in client.issues.list()]
-```
+- use `CompatibilityPolicy.strict` so an unreviewed CLI version fails early;
+- filter and page on the server before doing local selection;
+- read the current issue before a guarded status transition;
+- store an external idempotency key in issue metadata;
+- use a stable marker when a retried workflow must not duplicate a comment;
+- catch typed `MulticaError` subclasses at the adapter boundary.
 
-Full pattern catalog: [docs/service-usage.md](docs/service-usage.md). API surface: [docs/api.md](docs/api.md). Resource coverage: [docs/cli-coverage.md](docs/cli-coverage.md).
+See the runnable examples:
+
+- [production client and scoped views](examples/production_client.py);
+- [server-filtered queue selection](examples/issue_queue.py);
+- [idempotent metadata, comments, and guarded status changes](examples/issue_workflow.py);
+- [bound resource graph](examples/resource_relations.py);
+- [local self-hosted setup](examples/self_hosted_local.py).
+
+The full pattern catalog is in [docs/service-usage.md](docs/service-usage.md).
+See also the [API surface](docs/api.md), [migration guide](docs/migration.md),
+and [CLI coverage](docs/cli-coverage.md).
 
 ## Security notes
 

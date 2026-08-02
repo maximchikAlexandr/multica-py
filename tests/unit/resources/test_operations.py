@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import datetime
 import hashlib
+import importlib
+import inspect
+import pathlib
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -11,6 +14,7 @@ from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from tests.cases.operations import (
+    GENERATED_OPERATION_CASES,
     LEGACY_ARGV_MIGRATION,
     OPERATION_CASES,
     RESOURCE_SPECS,
@@ -18,6 +22,7 @@ from tests.cases.operations import (
     _resource_attr,
     discover_public_methods,
 )
+from tools.upstream_contract.contract import validate_contract
 
 _RESOURCE_MAP: dict[str, type] = dict(RESOURCE_SPECS)
 
@@ -88,21 +93,55 @@ def test_operation(case: OperationCase, mock_transport: MagicMock) -> None:
 
 def test_discovered_public_methods() -> None:
     discovered = discover_public_methods()
-    canonical = {c.sdk_method for c in OPERATION_CASES if c.is_canonical}
+    canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
+    canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
-    assert len(discovered) == 119
-    assert len(OPERATION_CASES) == 151
-    assert sum(1 for c in OPERATION_CASES if c.is_canonical) == 119
-    assert sum(1 for c in OPERATION_CASES if not c.is_canonical) == 32
-    generated = tuple(c for c in OPERATION_CASES if c.contract_operation_id is not None)
-    manual = tuple(c for c in OPERATION_CASES if c.contract_operation_id is None)
-    assert len(generated) == 37
-    assert len(manual) == 114
+    assert len(canonical_cases) == len(canonical)
+    assert len({c.id for c in OPERATION_CASES}) == len(OPERATION_CASES)
+    generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
+    manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
+    assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
-    assert all(
-        (c.contract_operation_id is None) == (c.source_ref is not None) for c in OPERATION_CASES
+    assert all(c.contract_operation_id is not None for c in generated)
+
+
+def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> None:
+    contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
+
+    def contract_key(case: OperationCase) -> tuple[str, str]:
+        assert case.contract_operation_id is not None
+        if case.id.startswith("generated:"):
+            _, entrypoint, _ = case.id.removeprefix("generated:").rsplit(":", 2)
+            return case.contract_operation_id, entrypoint
+        return case.contract_operation_id, "default"
+
+    canonical_by_operation = {
+        contract_key(case): case
+        for case in OPERATION_CASES
+        if case.is_canonical and case.contract_operation_id is not None
+    }
+    assert set(canonical_by_operation) == {
+        (operation.operation_id, entrypoint.entrypoint_id)
+        for operation in contract.operations
+        for entrypoint in operation.entrypoints
+    }
+    assert len(canonical_by_operation) == sum(
+        case.is_canonical and case.contract_operation_id is not None for case in OPERATION_CASES
     )
+    catalogs = cast("dict[str, object]", contract.raw["catalogs"])
+    signatures = cast("dict[str, object]", catalogs["signatures"])
+    for operation in contract.operations:
+        for entrypoint in operation.entrypoints:
+            module_name, class_name, method_name = entrypoint.public_symbol.rsplit(".", 2)
+            resource = getattr(importlib.import_module(module_name), class_name)
+            method = getattr(resource, method_name)
+            assert inspect.isfunction(method)
+            assert entrypoint.signature_id in signatures
+            assert (
+                canonical_by_operation[(operation.operation_id, entrypoint.entrypoint_id)].method
+                == method_name
+            )
 
 
 def test_legacy_payload_bijection() -> None:
@@ -126,13 +165,27 @@ def test_legacy_payload_bijection() -> None:
     expected_legacy_ids = {f"legacy:{index:03d}" for index in range(1, 149)}
     assert set(LEGACY_ARGV_MIGRATION) == expected_legacy_ids
     assert len(LEGACY_PAYLOAD_FINGERPRINTS) == 148
-    assert len(LEGACY_ARGV_MIGRATION.values()) == len(set(LEGACY_ARGV_MIGRATION.values())) == 148
-    assert set(LEGACY_ARGV_MIGRATION.values()).issubset(final_by_id)
+    removed = {
+        "legacy:014": "removed:attachments.list",
+        "legacy:069": "removed:repositories.get",
+        "legacy:070": "removed:repositories.checkout",
+        "legacy:072": "removed:runtimes.get",
+        "legacy:083": "removed:users.list",
+        "legacy:084": "removed:users.get",
+    }
+    assert {key: LEGACY_ARGV_MIGRATION[key] for key in removed} == removed
+    final_migration = {
+        key: value for key, value in LEGACY_ARGV_MIGRATION.items() if key not in removed
+    }
+    assert len(final_migration.values()) == len(set(final_migration.values())) == 142
+    assert set(final_migration.values()).issubset(final_by_id)
 
     legacy_by_id = {
         f"legacy:{index:03d}": fingerprint
         for index, fingerprint in enumerate(LEGACY_PAYLOAD_FINGERPRINTS, start=1)
     }
     for legacy_id, final_id in LEGACY_ARGV_MIGRATION.items():
+        if legacy_id in removed:
+            continue
         actual = hashlib.sha256(repr(payload(final_by_id[final_id])).encode()).hexdigest()
         assert legacy_by_id[legacy_id] == actual

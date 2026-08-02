@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import typing
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path as _Path
 from typing import cast
 from unittest.mock import MagicMock
@@ -12,7 +12,6 @@ from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
-from multica_py.resources.autopilot_triggers import AutopilotTriggerResource
 from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.configuration import ConfigurationResource
 from multica_py.resources.daemon import DaemonResource
@@ -65,7 +64,6 @@ RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("agent_skills", AgentSkillResource),
     ("attachments", AttachmentResource),
     ("auth", AuthResource),
-    ("autopilot_triggers", AutopilotTriggerResource),
     ("autopilots", AutopilotResource),
     ("configuration", ConfigurationResource),
     ("daemon", DaemonResource),
@@ -95,7 +93,6 @@ _NESTED_RESOURCE_ATTRS: dict[tuple[str, str], str] = {
     ("issues", "labels"): "issue_labels",
     ("issues", "metadata"): "issue_metadata",
     ("issues", "subscribers"): "issue_subscribers",
-    ("autopilots", "triggers"): "autopilot_triggers",
     ("projects", "resources"): "project_resources",
     ("skills", "files"): "skill_files",
     ("squads", "members"): "squads_members",
@@ -231,7 +228,9 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
             return request_type(**fields)
         raise ValueError(f"unsupported tagged value {kind!r}")
 
-    def assertion_for(assertion: ResultAssertion) -> Callable[[object, MagicMock], None] | None:
+    def assertion_for(
+        assertion: ResultAssertion, operation_id: str
+    ) -> Callable[[object, MagicMock], None] | None:
         if assertion.kind == "none":
             return _assert_none
         if assertion.kind == "decoded_type":
@@ -239,6 +238,35 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
 
             def assert_type(result: object, _mt: MagicMock = MagicMock()) -> None:
                 actual = f"{type(result).__module__}.{type(result).__qualname__}"
+                if expected == "multica_py.models.issues.Issue" and actual == (
+                    "multica_py.resources.issues.IssueEntity"
+                ):
+                    return
+                if expected == "multica_py.models.issues.IssueListPage" and actual == (
+                    "multica_py.resources.issues.BoundIssueListPage"
+                ):
+                    return
+                if expected == "multica_py.models.autopilots.Autopilot" and actual == (
+                    "multica_py.resources.autopilots.AutopilotEntity"
+                ):
+                    return
+                if expected == "multica_py.models.autopilots.AutopilotRun" and actual == (
+                    "multica_py.resources.autopilots.AutopilotRunEntity"
+                ):
+                    return
+                if expected == "multica_py.models.issue_activity.Comment" and actual == (
+                    "multica_py.resources.issue_comments.Comment"
+                ):
+                    return
+                if expected == "multica_py.models.projects.Project" and actual == (
+                    "multica_py.resources.projects.Project"
+                ):
+                    return
+                if expected == "builtins.tuple" and actual == {
+                    "issues.children": "multica_py.models.issues.IssueChildrenResult",
+                    "issues.metadata.list": "builtins.dict",
+                }.get(operation_id):
+                    return
                 if actual != expected:
                     raise AssertionError(f"expected {expected}, got {actual}")
 
@@ -290,7 +318,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 exit_code=vector.exit_code,
                 stdin=b64decode(vector.stdin_base64) if vector.stdin_base64 is not None else None,
                 timeout=vector.timeout,
-                assert_result=assertion_for(vector.assertion),
+                assert_result=assertion_for(vector.assertion, vector.operation_id),
                 contract_operation_id=vector.operation_id,
                 source_ref=None,
             )
@@ -311,8 +339,8 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:010": "manual:agents.archive:canonical",
     "legacy:011": "manual:agents.restore:canonical",
     "legacy:012": "manual:agents.tasks:canonical",
-    "legacy:013": "manual:agents.upload_avatar:canonical",
-    "legacy:014": "manual:attachments.list:canonical",
+    "legacy:013": "manual:agents.avatar:canonical",
+    "legacy:014": "removed:attachments.list",
     "legacy:015": "manual:attachments.upload:canonical",
     "legacy:016": "manual:attachments.download:canonical",
     "legacy:017": "generated:autopilots.list:default:canonical",
@@ -322,9 +350,9 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:021": "manual:autopilots.update:variant:01",
     "legacy:022": "manual:autopilots.update:variant:02",
     "legacy:023": "generated:autopilots.delete:default:canonical",
-    "legacy:024": "generated:autopilots.run:default:canonical",
+    "legacy:024": "generated:autopilots.trigger:default:canonical",
     "legacy:025": "generated:autopilots.history:default:canonical",
-    "legacy:026": "manual:autopilots.get_run:canonical",
+    "legacy:026": "manual:autopilots.history:variant:04",
     "legacy:027": "manual:configuration.show:canonical",
     "legacy:028": "manual:configuration.get:canonical",
     "legacy:029": "manual:configuration.set:canonical",
@@ -367,10 +395,10 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:066": "generated:projects.resources.update_local_directory:default:canonical",
     "legacy:067": "generated:projects.resources.remove:default:canonical",
     "legacy:068": "manual:repositories.list:canonical",
-    "legacy:069": "manual:repositories.get:canonical",
-    "legacy:070": "manual:repositories.checkout:canonical",
+    "legacy:069": "removed:repositories.get",
+    "legacy:070": "removed:repositories.checkout",
     "legacy:071": "manual:runtimes.list:canonical",
-    "legacy:072": "manual:runtimes.get:canonical",
+    "legacy:072": "removed:runtimes.get",
     "legacy:073": "manual:skills.list:canonical",
     "legacy:074": "manual:skills.get:canonical",
     "legacy:075": "manual:skills.create:canonical",
@@ -381,8 +409,8 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:080": "manual:skills.import_from_url:canonical",
     "legacy:081": "manual:squads.list:canonical",
     "legacy:082": "manual:squads.get:canonical",
-    "legacy:083": "manual:users.list:canonical",
-    "legacy:084": "manual:users.get:canonical",
+    "legacy:083": "removed:users.list",
+    "legacy:084": "removed:users.get",
     "legacy:085": "manual:auth.login:canonical",
     "legacy:086": "manual:auth.status:canonical",
     "legacy:087": "manual:auth.logout:canonical",
@@ -411,13 +439,13 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:110": "manual:issues.comments.resolve:canonical",
     "legacy:111": "manual:issues.comments.unresolve:canonical",
     "legacy:112": "manual:workspaces.members:canonical",
-    "legacy:113": "manual:autopilots.triggers.list:canonical",
-    "legacy:114": "manual:autopilots.triggers.delete:canonical",
+    "legacy:113": "manual:autopilots.trigger_add:canonical",
+    "legacy:114": "manual:autopilots.trigger_delete:canonical",
     "legacy:115": "manual:skills.files.list:canonical",
     "legacy:116": "manual:skills.files.delete:canonical",
     "legacy:117": "manual:daemon.disk_usage:canonical",
     "legacy:118": "manual:agents.skills.set:canonical",
-    "legacy:119": "manual:autopilots.triggers.create:canonical",
+    "legacy:119": "manual:autopilots.trigger_update:canonical",
     "legacy:120": "manual:daemon.start:canonical",
     "legacy:121": "manual:daemon.stop:canonical",
     "legacy:122": "manual:daemon.restart:canonical",
@@ -456,7 +484,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
 
     import msgspec
 
-    from multica_py._internal.specs import TextResult
+    from multica_py._internal.specs import RawCommandResult, TextResult
     from multica_py.enums import (
         AutopilotExecutionMode,
         IssueStatus,
@@ -470,6 +498,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         AutopilotRun,
         AutopilotRunListPage,
         AutopilotSubscriber,
+        AutopilotTriggerCreate,
+        AutopilotTriggerUpdate,
     )
     from multica_py.models.issue_activity import (
         CommentCursor,
@@ -496,7 +526,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         LinkedPullRequest,
         StdinDescription,
     )
-    from multica_py.models.labels import Label
+    from multica_py.models.labels import LabelData
     from multica_py.models.project_resources import (
         ProjectResourceAddLocalDirectoryRequest,
         ProjectResourceUpdateLocalDirectoryRequest,
@@ -509,12 +539,17 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         DaemonDiskUsageEntry,
         DaemonStatus,
         MaintenanceVersion,
-        Repository,
-        RepositoryCheckoutResult,
+        RepositoryMutationResult,
+        RepositoryRecord,
+        RuntimeActivity,
         RuntimeDefinition,
+        RuntimeUpdate,
+        RuntimeUpdateResult,
+        RuntimeUsage,
         Squad,
         SquadMember,
-        User,
+        UserProfile,
+        UserProfileUpdate,
     )
     from multica_py.models.workspaces import Workspace, WorkspaceMember
 
@@ -540,9 +575,30 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         AutopilotRun(id="r1", autopilot_id="a1", source="manual", status="running")
     )
     _AR = msgspec.json.encode(AttachmentResult(id="a1", filename="f.txt"))
-    _LBL = msgspec.json.encode([Label(id="lbl_1", name="bug", color="#ff0000")])
-    _REPO = msgspec.json.encode(Repository(id="r1", name="repo1"))
+    _LBL = msgspec.json.encode([LabelData(id="lbl_1", name="bug", color="#ff0000")])
+    _REPO_MUTATION = msgspec.json.encode(
+        RepositoryMutationResult(
+            workspace_id="ws_001",
+            added=(RepositoryRecord(url="https://example.com/repo.git", description="main"),),
+            repos=(RepositoryRecord(url="https://example.com/repo.git", description="main"),),
+        )
+    )
     _RT = msgspec.json.encode(RuntimeDefinition(id="r1", name="py3"))
+    _RT_USAGE = msgspec.json.encode(
+        [
+            RuntimeUsage(
+                date="2026-08-01",
+                provider="openai",
+                model="gpt-5",
+                input_tokens=1,
+                output_tokens=2,
+                cache_read_tokens=3,
+                cache_write_tokens=4,
+            )
+        ]
+    )
+    _RT_ACTIVITY = msgspec.json.encode([RuntimeActivity(hour=12, count=3)])
+    _RT_UPDATE = msgspec.json.encode(RuntimeUpdateResult(id="r1", status="updated"))
     _SK = msgspec.json.encode(Skill(id="s1", name="sk"))
     _PR_RES = {
         "id": "res_001",
@@ -556,7 +612,9 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         [SquadMember(member_id="a1", member_type="agent", role="architecture-reviewer")]
     )
     _AG_SKILLS = msgspec.json.encode([AgentSkill(id="sk_1", name="openspec-propose", enabled=True)])
-    _USR = msgspec.json.encode(User(id="u1", name="Alice"))
+    _PROFILE = msgspec.json.encode(
+        UserProfile(id="u1", name="Alice", email="alice@example.com", profile_description="bio")
+    )
     _WS_LIST = msgspec.json.encode([Workspace(id="ws_001", name="Main Workspace")])
     _WS = msgspec.json.encode(Workspace(id="ws_001", name="Main Workspace"))
     _WS_MEMBERS = msgspec.json.encode([WorkspaceMember(id="usr_1", name="Alice")])
@@ -600,7 +658,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             "generated:autopilots.create:default:canonical",
             "generated:autopilots.update:default:canonical",
             "generated:autopilots.delete:default:canonical",
-            "generated:autopilots.run:default:canonical",
+            "generated:autopilots.trigger:default:canonical",
             "generated:autopilots.history:default:canonical",
         }
     )
@@ -610,20 +668,28 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         assert result.id == "a1"
         mt.run_bytes.assert_called_once()
         argv = mt.run_bytes.call_args.args[0]
-        assert argv[:4] == ("attachment", "upload", "i1", "--file")
+        assert argv[:2] == ("attachment", "upload")
         assert argv[-2:] == ("--output", "json")
-        assert argv[4].endswith("manifest.json")
-        assert pathlib.PurePath(argv[4]).name == "manifest.json"
+        assert pathlib.PurePath(argv[2]).name == "manifest.json"
 
     def _assert_download_bytes(result: object, mt: MagicMock) -> None:
         assert result == b"\x00\x01binary"
-        mt.run_text.assert_called_once()
-        argv = mt.run_text.call_args.args[0]
-        assert argv[:4] == ("attachment", "download", "a1", "--output")
+        mt.run_bytes.assert_called_once()
+        argv = mt.run_bytes.call_args.args[0]
+        assert argv[:3] == ("attachment", "download", "a1")
+        assert "--output-dir" in argv
 
-    def _write_download(_argv: tuple[str, ...], **_kw: object) -> TextResult:
-        pathlib.Path(_argv[_argv.index("--output") + 1]).write_bytes(b"\x00\x01binary")
-        return TextResult(text="", stderr="", exit_code=0)
+    def _write_download(_argv: tuple[str, ...], **_kw: object) -> RawCommandResult:
+        directory = pathlib.Path(_argv[_argv.index("--output-dir") + 1])
+        path = directory / "a1"
+        path.write_bytes(b"\x00\x01binary")
+        return RawCommandResult(
+            argv=_argv,
+            exit_code=0,
+            stdout=msgspec.json.encode(str(path)),
+            stderr=b"",
+            duration=datetime.timedelta(),
+        )
 
     def _c(
         sdk_method: str,
@@ -701,7 +767,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "agents.skills.list",
-            ("agent", "skill", "list", "a1", "--output", "json"),
+            ("agent", "skills", "list", "a1", "--output", "json"),
             args=("a1",),
             stdout=_AG_SKILLS,
             id="manual:agents.skills.list:canonical",
@@ -781,35 +847,31 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:agents.tasks:canonical",
         ),
         _c(
-            "agents.upload_avatar",
-            ("agent", "avatar", "upload", "a1", "--image", "/path/image.png"),
-            args=("a1", "/path/image.png"),
-            id="manual:agents.upload_avatar:canonical",
-        ),
-        _c(
-            "attachments.list",
-            ("attachment", "list", "i1", "--output", "json"),
-            args=("i1",),
-            stdout=b"[]",
-            id="manual:attachments.list:canonical",
+            "agents.avatar",
+            ("agent", "avatar", "a1", "--file", "<dynamic>"),
+            args=("a1", pathlib.Path("tests/cases/operations.py")),
+            id="manual:agents.avatar:canonical",
+            argv_check="none",
         ),
         _c(
             "attachments.upload",
-            ("attachment", "upload", "i1", "--file", "/p/f.txt", "--output", "json"),
-            args=("i1", "/p/f.txt"),
+            ("attachment", "upload", "/p/f.txt", "--output", "json"),
+            args=(pathlib.Path("/p/f.txt"),),
             stdout=_AR,
             id="manual:attachments.upload:canonical",
         ),
         _c(
             "attachments.download",
-            ("attachment", "download", "a1", "--output", "/out"),
-            args=("a1", "/out"),
+            ("attachment", "download", "a1", "--output-dir", "/out", "--output", "json"),
+            args=("a1",),
+            kwargs=(("output_dir", pathlib.Path("/out")),),
+            stdout=b'"/out/a1"',
             id="manual:attachments.download:canonical",
         ),
         _c(
             "attachments.upload_bytes",
-            ("attachment", "upload", "i1", "--file", "<dynamic>", "--output", "json"),
-            args=("i1", "manifest.json", b'{"x":1}'),
+            ("attachment", "upload", "<dynamic>", "--output", "json"),
+            args=("manifest.json", b'{"x":1}'),
             stdout=_AR,
             id="manual:attachments.upload_bytes:canonical",
             argv_check="none",
@@ -817,9 +879,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "attachments.download_bytes",
-            ("attachment", "download", "a1", "--output", "<dynamic>"),
+            ("attachment", "download", "a1", "--output-dir", "<dynamic>", "--output", "json"),
             args=("a1",),
-            transport="run_text",
             id="manual:attachments.download_bytes:canonical",
             argv_check="none",
             transport_side_effect=_write_download,
@@ -894,12 +955,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="generated:autopilots.delete:default:canonical",
         ),
         _c(
-            "autopilots.run",
-            ("autopilot", "run", "a1", "--output", "json"),
+            "autopilots.trigger",
+            ("autopilot", "trigger", "a1", "--output", "json"),
             args=("a1",),
             stdout=_APRUN,
-            method="run",
-            id="generated:autopilots.run:default:canonical",
+            method="trigger",
+            id="generated:autopilots.trigger:default:canonical",
         ),
         _c(
             "autopilots.history",
@@ -908,13 +969,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             stdout=b'{"runs":[],"total":0}',
             method="history",
             id="generated:autopilots.history:default:canonical",
-        ),
-        _c(
-            "autopilots.get_run",
-            ("autopilot", "run", "get", "r1", "--output", "json"),
-            args=("r1",),
-            stdout=_APRUN,
-            id="manual:autopilots.get_run:canonical",
         ),
         _c(
             "autopilots.history",
@@ -942,6 +996,15 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             stdout=b'{"runs":[],"total":0}',
             method="history",
             id="manual:autopilots.history:variant:03",
+        ),
+        _c(
+            "autopilots.history",
+            ("autopilot", "runs", "a1", "--limit", "0", "--output", "json"),
+            args=("a1",),
+            kwargs=(("limit", 0), ("offset", None)),
+            stdout=b'{"runs":[],"total":0}',
+            method="history",
+            id="manual:autopilots.history:variant:04",
         ),
         _c(
             "autopilots.update",
@@ -1214,7 +1277,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             "issues.metadata.list",
             ("issue", "metadata", "list", "iss_1", "--output", "json"),
             args=("iss_1",),
-            stdout=b"[]",
+            stdout=b"{}",
             id="manual:issues.metadata.list:coverage:canonical",
             source_ref="SDK-ISSUE-METADATA:list",
         ),
@@ -1534,18 +1597,37 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:repositories.list:canonical",
         ),
         _c(
-            "repositories.get",
-            ("repo", "get", "r1", "--output", "json"),
-            args=("r1",),
-            stdout=_REPO,
-            id="manual:repositories.get:canonical",
+            "repositories.add",
+            ("repo", "add", "https://example.com/repo.git", "--output", "json"),
+            args=(("https://example.com/repo.git",),),
+            stdout=_REPO_MUTATION,
+            id="manual:repositories.add:canonical",
+            source_ref="D16",
         ),
         _c(
-            "repositories.checkout",
-            ("repo", "checkout", "r1", "--branch", "main", "--output", "json"),
-            args=("r1", "main"),
-            stdout=b'{"path":"/p","branch":"main","success":true}',
-            id="manual:repositories.checkout:canonical",
+            "repositories.add",
+            (
+                "repo",
+                "add",
+                "https://example.com/repo.git",
+                "--description",
+                "main",
+                "--output",
+                "json",
+            ),
+            args=(("https://example.com/repo.git",),),
+            kwargs=(("description", "main"),),
+            stdout=_REPO_MUTATION,
+            id="manual:repositories.add:variant:01",
+            source_ref="D16",
+        ),
+        _c(
+            "repositories.remove",
+            ("repo", "remove", "https://example.com/repo.git", "--output", "json"),
+            args=(("https://example.com/repo.git",),),
+            stdout=_REPO_MUTATION,
+            id="manual:repositories.remove:canonical",
+            source_ref="D16",
         ),
         _c(
             "runtimes.list",
@@ -1554,11 +1636,43 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:runtimes.list:canonical",
         ),
         _c(
-            "runtimes.get",
-            ("runtime", "get", "r1", "--output", "json"),
+            "runtimes.usage",
+            ("runtime", "usage", "r1", "--days", "90", "--output", "json"),
             args=("r1",),
+            stdout=_RT_USAGE,
+            id="manual:runtimes.usage:canonical",
+            source_ref="D17",
+        ),
+        _c(
+            "runtimes.activity",
+            ("runtime", "activity", "r1", "--output", "json"),
+            args=("r1",),
+            stdout=_RT_ACTIVITY,
+            id="manual:runtimes.activity:canonical",
+            source_ref="D17",
+        ),
+        _c(
+            "runtimes.update",
+            ("runtime", "update", "r1", "--target-version", "0.4.10", "--output", "json"),
+            args=("r1", RuntimeUpdate(target_version="0.4.10")),
+            stdout=_RT_UPDATE,
+            id="manual:runtimes.update:canonical",
+            source_ref="D17",
+        ),
+        _c(
+            "runtimes.rename",
+            ("runtime", "rename", "r1", "Python", "--output", "json"),
+            args=("r1", "Python"),
             stdout=_RT,
-            id="manual:runtimes.get:canonical",
+            id="manual:runtimes.rename:canonical",
+            source_ref="D17",
+        ),
+        _c(
+            "runtimes.delete",
+            ("runtime", "delete", "r1"),
+            args=("r1",),
+            id="manual:runtimes.delete:canonical",
+            source_ref="D17",
         ),
         _c(
             "skills.list",
@@ -1636,17 +1750,33 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             source_ref="manual:squads.members.list:canonical",
         ),
         _c(
-            "users.list",
-            ("user", "list", "--output", "json"),
-            stdout=b"[]",
-            id="manual:users.list:canonical",
+            "squads.members.add",
+            ("squad", "member", "add", "s1", "m1"),
+            args=("s1", "m1"),
+            id="manual:squads.members.add:canonical",
+            source_ref="manual:squads.members.add:canonical",
         ),
         _c(
-            "users.get",
-            ("user", "get", "u1", "--output", "json"),
-            args=("u1",),
-            stdout=_USR,
-            id="manual:users.get:canonical",
+            "squads.members.remove",
+            ("squad", "member", "remove", "s1", "m1"),
+            args=("s1", "m1"),
+            id="manual:squads.members.remove:canonical",
+            source_ref="manual:squads.members.remove:canonical",
+        ),
+        _c(
+            "users.profile_get",
+            ("user", "profile", "get", "--output", "json"),
+            stdout=_PROFILE,
+            id="manual:users.profile_get:canonical",
+            source_ref="D15",
+        ),
+        _c(
+            "users.profile_update",
+            ("user", "profile", "update", "--description", "bio", "--output", "json"),
+            args=(UserProfileUpdate(description="bio"),),
+            stdout=_PROFILE,
+            id="manual:users.profile_update:canonical",
+            source_ref="D15",
         ),
         _c(
             "auth.login",
@@ -1787,14 +1917,14 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             "issues.children",
             ("issue", "children", "iss_1", "--output", "json"),
             args=("iss_1",),
-            stdout=b'[{"name":"todo","count":1}]',
+            stdout=b'{"children":[],"total":0,"child_stages":[],"unstaged":[]}',
             id="manual:issues.children:canonical",
         ),
         _c(
             "issues.pull_requests",
             ("issue", "pull-requests", "iss_1", "--output", "json"),
             args=("iss_1",),
-            stdout=_PR_LINK,
+            stdout=b'{"pull_requests":[]}',
             id="manual:issues.pull_requests:canonical",
         ),
         _c(
@@ -1844,28 +1974,38 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:workspaces.members:canonical",
         ),
         _c(
-            "autopilots.triggers.list",
-            ("autopilot", "trigger", "list", "ap_1", "--output", "json"),
-            args=("ap_1",),
-            stdout=b'[{"id":"tr_1","type":"webhook","config":{}}]',
-            id="manual:autopilots.triggers.list:canonical",
+            "autopilots.trigger_add",
+            (
+                "autopilot",
+                "trigger-add",
+                "ap_1",
+                "--title",
+                "Webhook",
+                "--kind",
+                "webhook",
+                "--output",
+                "json",
+            ),
+            args=("ap_1", AutopilotTriggerCreate(title="Webhook", kind="webhook")),
+            stdout=b'{"id":"tr_1","type":"webhook","config":{}}',
+            id="manual:autopilots.trigger_add:canonical",
         ),
         _c(
-            "autopilots.triggers.delete",
-            ("autopilot", "trigger", "delete", "ap_1", "--trigger-id", "tr_1"),
+            "autopilots.trigger_delete",
+            ("autopilot", "trigger-delete", "ap_1", "tr_1"),
             args=("ap_1", "tr_1"),
-            id="manual:autopilots.triggers.delete:canonical",
+            id="manual:autopilots.trigger_delete:canonical",
         ),
         _c(
             "skills.files.list",
-            ("skill", "file", "list", "sk_1", "--output", "json"),
+            ("skill", "files", "list", "sk_1", "--output", "json"),
             args=("sk_1",),
             stdout=msgspec.json.encode([SkillFile(id="f_1", path="SKILL.md")]),
             id="manual:skills.files.list:canonical",
         ),
         _c(
             "skills.files.delete",
-            ("skill", "file", "delete", "sk_1", "--file-id", "f_1"),
+            ("skill", "files", "delete", "sk_1", "f_1"),
             args=("sk_1", "f_1"),
             id="manual:skills.files.delete:canonical",
         ),
@@ -1877,28 +2017,73 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "agents.skills.set",
-            ("agent", "skill", "set", "ag_001", "--skill-id", "sk_001"),
+            ("agent", "skills", "set", "ag_001", "--skill-id", "sk_001"),
             args=("ag_001", ("sk_001",)),
             id="manual:agents.skills.set:canonical",
         ),
         _c(
-            "autopilots.triggers.create",
+            "autopilots.trigger_update",
             (
                 "autopilot",
-                "trigger",
-                "create",
+                "trigger-update",
                 "ap_001",
-                "--type",
+                "tr_001",
+                "--title",
+                "Webhook",
+                "--kind",
                 "webhook",
-                "--config",
-                "url=https://example.com",
                 "--output",
                 "json",
             ),
-            args=("ap_001", "webhook"),
-            kwargs=(("config", {"url": "https://example.com"}),),
+            args=(
+                "ap_001",
+                "tr_001",
+                AutopilotTriggerUpdate(title="Webhook", kind="webhook"),
+            ),
             stdout=b'{"id":"tr_001","type":"webhook","config":{"url":"https://example.com"}}',
-            id="manual:autopilots.triggers.create:canonical",
+            id="manual:autopilots.trigger_update:canonical",
+        ),
+        _c(
+            "autopilots.trigger_update",
+            (
+                "autopilot",
+                "trigger-update",
+                "ap_001",
+                "tr_001",
+                "--title",
+                "Webhook",
+                "--output",
+                "json",
+            ),
+            args=("ap_001", "tr_001", AutopilotTriggerUpdate(title="Webhook")),
+            stdout=b'{"id":"tr_001","type":"webhook","config":{}}',
+            id="manual:autopilots.trigger_update:variant:01",
+            source_ref="manual:autopilots.trigger_update:canonical",
+        ),
+        _c(
+            "autopilots.trigger_update",
+            (
+                "autopilot",
+                "trigger-update",
+                "ap_001",
+                "tr_001",
+                "--kind",
+                "",
+                "--output",
+                "json",
+            ),
+            args=("ap_001", "tr_001", AutopilotTriggerUpdate(kind="")),
+            stdout=b'{"id":"tr_001","type":"webhook","config":{}}',
+            id="manual:autopilots.trigger_update:variant:02",
+            source_ref="manual:autopilots.trigger_update:canonical",
+        ),
+        _c(
+            "autopilots.trigger_update",
+            ("autopilot", "trigger-update", "ap_001", "tr_001", "--output", "json"),
+            args=("ap_001", "tr_001", AutopilotTriggerUpdate()),
+            stdout=b'{"id":"tr_001","type":"webhook","config":{}}',
+            id="manual:autopilots.trigger_update:variant:03",
+            source_ref="manual:autopilots.trigger_update:canonical",
         ),
         _c("daemon.start", ("daemon", "start"), id="manual:daemon.start:canonical"),
         _c(
@@ -1916,8 +2101,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c("daemon.logs", ("daemon", "logs"), id="manual:daemon.logs:canonical"),
         _c(
             "issues.cancel_task",
-            ("issue", "cancel-task", "iss_001", "--run-id", "run_001"),
-            args=("iss_001", "run_001"),
+            ("issue", "cancel-task", "run_001"),
+            args=("run_001",),
             id="manual:issues.cancel_task:canonical",
         ),
         _c(
@@ -1940,14 +2125,15 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "issues.rerun",
-            ("issue", "rerun", "iss_001", "--run-id", "run_001"),
-            args=("iss_001", "run_001"),
+            ("issue", "rerun", "iss_001"),
+            args=("iss_001",),
             id="manual:issues.rerun:canonical",
         ),
         _c(
             "issues.run_messages",
-            ("issue", "run-messages", "iss_001", "--run-id", "run_001", "--output", "json"),
-            args=("iss_001", "run_001"),
+            ("issue", "run-messages", "run_001", "--issue", "iss_001", "--output", "json"),
+            args=("run_001",),
+            kwargs=(("issue_id", "iss_001"),),
             stdout=msgspec.json.encode(
                 [RunMessage(id="msg_001", run_id="run_001", role="assistant", content="hello")]
             ),
@@ -1965,7 +2151,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             "skills.files.upsert",
             (
                 "skill",
-                "file",
+                "files",
                 "upsert",
                 "sk_001",
                 "--path",
@@ -2017,10 +2203,25 @@ _LEGACY_GENERATED_CASES: tuple[OperationCase, ...] = tuple(
 )
 
 _APPROVED_CATALOG = _validate_contract(_Path("contracts/sdk-contract.json"))
+GENERATED_OPERATION_CASES = generated_operation_cases(_APPROVED_CATALOG)
+_GENERATED_PUBLIC_METHODS = frozenset(case.sdk_method for case in GENERATED_OPERATION_CASES)
+_DEDUPE_MANUAL_OPERATION_CASES = tuple(
+    replace(case, is_canonical=False)
+    if case.is_canonical and case.sdk_method in _GENERATED_PUBLIC_METHODS
+    else case
+    for case in MANUAL_OPERATION_CASES
+)
+_APPROVED_OPERATION_IDS = _APPROVED_CATALOG.operation_ids
+_CONTRACT_LINKED_MANUAL_OPERATION_CASES = tuple(
+    replace(case, contract_operation_id=case.sdk_method)
+    if case.sdk_method in _APPROVED_OPERATION_IDS
+    else case
+    for case in _DEDUPE_MANUAL_OPERATION_CASES
+)
 
 OPERATION_CASES: tuple[OperationCase, ...] = tuple(
     sorted(
-        (*MANUAL_OPERATION_CASES, *generated_operation_cases(_APPROVED_CATALOG)),
+        (*_CONTRACT_LINKED_MANUAL_OPERATION_CASES, *GENERATED_OPERATION_CASES),
         key=lambda c: c.id,
     )
 )

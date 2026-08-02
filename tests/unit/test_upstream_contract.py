@@ -135,8 +135,8 @@ def test_closed_contract_rejects_invalid_rows(
 
 def test_v3_catalogs_and_legacy_mapping_are_closed() -> None:
     contract = validate_contract(APPROVED)
-    assert len(contract.test_vectors) == 37
-    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 26
+    assert len(contract.test_vectors) == 55
+    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 44
     assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 11
     assert tuple(contract.legacy_argv_migration) == tuple(
         f"legacy:{index:03d}" for index in range(1, 144)

@@ -61,6 +61,32 @@ class Issue(msgspec.Struct, frozen=True, kw_only=True):
     creator_type: str | None = None
 
 
+class IssueData(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    title: str
+    description: str | None = None
+    status: IssueStatus
+    priority: str | None = None
+    assignee: IssueAssignee | None = None
+    pull_requests: tuple[LinkedPullRequest, ...] = ()
+    child_stages: tuple[IssueChildStageGroup, ...] = ()
+    label_names: tuple[str, ...] = ()
+    metadata_snapshot: tuple[IssueMetadataItem, ...] = ()
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
+    parent_id: str | None = None
+    project_id: str | None = None
+    creator_id: str | None = None
+    creator_type: str | None = None
+
+
+class IssueChildrenResult(msgspec.Struct, frozen=True, kw_only=True):
+    children: tuple[Issue, ...] = ()
+    total: int = 0
+    child_stages: tuple[IssueChildStageGroup, ...] = ()
+    unstaged: tuple[Issue, ...] = ()
+
+
 class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
     status: IssueStatus | None = None
     priority: str | None = None

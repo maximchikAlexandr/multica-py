@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from collections.abc import Mapping
+from collections.abc import Callable, Iterable, Mapping
+from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, as_completed
+from typing import Protocol, TypeVar
 
 import msgspec
 
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.models.relations import LazyLoadable
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
@@ -27,11 +30,31 @@ from multica_py.resources.squads import SquadResource
 from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
 
+TEntity = TypeVar("TEntity", bound="_BoundEntity")
+TRelationValue_co = TypeVar("TRelationValue_co", covariant=True)
+
+
+class _OriginClient(Protocol):
+    _semaphore: ProcessSemaphore
+
+
+class _BoundEntity(Protocol):
+    @property
+    def _client(self) -> _OriginClient | None: ...
+
+
+def _load_relation(relation: LazyLoadable[TRelationValue_co]) -> None:
+    _ = relation.all()
+
+
+def _load_job(relation: LazyLoadable[TRelationValue_co]) -> Callable[[], None]:
+    return lambda: _load_relation(relation)
+
 
 class MulticaClient:
-    def __init__(self, config: ClientConfig) -> None:
+    def __init__(self, config: ClientConfig, _semaphore: ProcessSemaphore | None = None) -> None:
         self._config = config
-        self._semaphore = ProcessSemaphore(config.max_processes)
+        self._semaphore = _semaphore or ProcessSemaphore(config.max_processes)
         self._transport = CliTransport(config, semaphore=self._semaphore)
 
         self.auth = AuthResource(self._transport, config)
@@ -51,6 +74,26 @@ class MulticaClient:
         self.squads = SquadResource(self._transport, config)
         self.users = UserResource(self._transport, config)
         self.maintenance = MaintenanceResource(self._transport, config)
+        for r in (
+            self.auth,
+            self.setup,
+            self.daemon,
+            self.workspaces,
+            self.issues,
+            self.projects,
+            self.labels,
+            self.agents,
+            self.skills,
+            self.autopilots,
+            self.repositories,
+            self.runtimes,
+            self.attachments,
+            self.configuration,
+            self.squads,
+            self.users,
+            self.maintenance,
+        ):
+            r._set_client(self)
 
     @property
     def config(self) -> ClientConfig:
@@ -60,16 +103,18 @@ class MulticaClient:
         return msgspec.structs.replace(self._config, **changes)
 
     def with_profile(self, profile: str | None) -> MulticaClient:
-        return MulticaClient(self._replace_config(profile=profile))
+        return MulticaClient(self._replace_config(profile=profile), _semaphore=self._semaphore)
 
     def with_workspace(self, workspace_id: str | None) -> MulticaClient:
-        return MulticaClient(self._replace_config(workspace_id=workspace_id))
+        return MulticaClient(
+            self._replace_config(workspace_id=workspace_id), _semaphore=self._semaphore
+        )
 
     def with_timeout(self, timeout: datetime.timedelta | None) -> MulticaClient:
-        return MulticaClient(self._replace_config(timeout=timeout))
+        return MulticaClient(self._replace_config(timeout=timeout), _semaphore=self._semaphore)
 
     def with_cwd(self, cwd: pathlib.Path | None) -> MulticaClient:
-        return MulticaClient(self._replace_config(cwd=cwd))
+        return MulticaClient(self._replace_config(cwd=cwd), _semaphore=self._semaphore)
 
     def with_environment(
         self,
@@ -78,7 +123,58 @@ class MulticaClient:
         normalized = (
             tuple(sorted(environment.items())) if isinstance(environment, Mapping) else environment
         )
-        return MulticaClient(self._replace_config(environment=normalized))
+        return MulticaClient(
+            self._replace_config(environment=normalized), _semaphore=self._semaphore
+        )
+
+    def prefetch(
+        self,
+        entities: Iterable[TEntity],
+        selector: Callable[[TEntity], LazyLoadable[TRelationValue_co]],
+        *,
+        max_parallel: int = 4,
+    ) -> None:
+        if max_parallel < 1:
+            raise ValueError("max_parallel must be at least 1")
+
+        entity_values = tuple(entities)
+        jobs: list[tuple[int, Callable[[], None]]] = []
+        seen: set[int] = set()
+        for entity in entity_values:
+            origin = entity._client
+            if origin is None or origin._semaphore is not self._semaphore:
+                raise ValueError("entities must share an origin scope")
+            relation = selector(entity)
+            if relation.loaded or id(relation) in seen:
+                continue
+            seen.add(id(relation))
+            index = len(jobs)
+            jobs.append((index, _load_job(relation)))
+        failures: dict[int, Exception] = {}
+        futures: dict[Future[None], int] = {}
+        with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+            for index, load in jobs:
+                futures[executor.submit(load)] = index
+            for future in as_completed(futures):
+                index = futures[future]
+                try:
+                    future.result()
+                except CancelledError:
+                    continue
+                except Exception as error:
+                    failures[index] = error
+                    for pending in futures:
+                        if not pending.done():
+                            pending.cancel()
+            for future, index in futures.items():
+                try:
+                    future.result()
+                except CancelledError:
+                    continue
+                except Exception as error:
+                    failures.setdefault(index, error)
+        if failures:
+            raise failures[min(failures)]
 
     def __enter__(self) -> MulticaClient:
         return self

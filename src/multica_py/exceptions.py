@@ -83,3 +83,41 @@ class OutputShapeError(ProtocolError):
 
 class EncodingError(ProtocolError):
     pass
+
+
+class RelationError(MulticaError):
+    pass
+
+
+class DetachedEntityError(RelationError):
+    def __init__(self, entity_type: str, entity_id: str, relation_name: str) -> None:
+        super().__init__(
+            f"Cannot access {entity_type}.{relation_name}: "
+            f"{entity_type} '{entity_id}' is detached. "
+            f"Fetch a fresh bound entity through MulticaClient."
+        )
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+        self.relation_name = relation_name
+
+
+class MissingRelationContextError(RelationError):
+    def __init__(
+        self, entity_type: str, entity_id: str, relation_name: str, missing_field: str
+    ) -> None:
+        super().__init__(
+            f"Cannot access {entity_type}.{relation_name}: "
+            f"'{missing_field}' is required but not available "
+            f"on {entity_type} '{entity_id}'."
+        )
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+        self.relation_name = relation_name
+        self.missing_field = missing_field
+
+
+class RelationPaginationError(RelationError):
+    def __init__(self, relation_name: str, reason: str) -> None:
+        super().__init__(f"Pagination error on {relation_name}: {reason}")
+        self.relation_name = relation_name
+        self.reason = reason

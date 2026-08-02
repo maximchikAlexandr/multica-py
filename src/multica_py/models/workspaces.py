@@ -9,6 +9,12 @@ class Workspace(msgspec.Struct, frozen=True, kw_only=True):
     description: str | None = None
 
 
+class WorkspaceData(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    name: str
+    description: str | None = None
+
+
 class WorkspaceMember(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     name: str
