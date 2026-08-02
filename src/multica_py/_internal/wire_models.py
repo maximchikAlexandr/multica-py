@@ -33,6 +33,7 @@ from multica_py.models.issues import (
 from multica_py.models.labels import LabelData
 from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
 from multica_py.models.projects import Project
+from multica_py.models.system import AttachmentResult
 from multica_py.types import JsonValue, MetadataValue
 
 
@@ -46,9 +47,13 @@ class IssueSummaryWire(msgspec.Struct, frozen=True, kw_only=True):
     project_id: str | None = None
     creator_id: str | None = None
     creator_type: str | None = None
+    labels: tuple[LabelData, ...] | msgspec.UnsetType = msgspec.UNSET
+    metadata: dict[str, MetadataValue] | msgspec.UnsetType = msgspec.UNSET
 
 
 def issue_summary_from_wire(wire: IssueSummaryWire) -> IssueSummary:
+    labels = () if wire.labels is msgspec.UNSET else wire.labels
+    metadata = {} if wire.metadata is msgspec.UNSET else wire.metadata
     return IssueSummary(
         id=wire.id,
         title=wire.title,
@@ -59,6 +64,10 @@ def issue_summary_from_wire(wire: IssueSummaryWire) -> IssueSummary:
         project_id=wire.project_id,
         creator_id=wire.creator_id,
         creator_type=wire.creator_type,
+        label_names=tuple(label.name for label in labels),
+        metadata_snapshot=tuple(
+            IssueMetadataItem(key=key, value=value) for key, value in metadata.items()
+        ),
     )
 
 
@@ -91,6 +100,7 @@ class IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     children: tuple[IssueChildStageGroup, ...] | msgspec.UnsetType = msgspec.UNSET
     labels: tuple[LabelData, ...] | msgspec.UnsetType = msgspec.UNSET
     metadata: dict[str, MetadataValue] | msgspec.UnsetType = msgspec.UNSET
+    attachments: tuple[AttachmentResult, ...] | msgspec.UnsetType = msgspec.UNSET
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
     parent_issue_id: str | None = None
@@ -101,11 +111,16 @@ class IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     )
 
 
+def _attachments_from_wire(wire: IssueWire) -> tuple[AttachmentResult, ...]:
+    return () if wire.attachments is msgspec.UNSET else wire.attachments
+
+
 def issue_data_from_wire(wire: IssueWire) -> IssueData:
     pull_requests = () if wire.pull_requests is msgspec.UNSET else wire.pull_requests
     children = () if wire.children is msgspec.UNSET else wire.children
     labels = () if wire.labels is msgspec.UNSET else wire.labels
     metadata = {} if wire.metadata is msgspec.UNSET else wire.metadata
+    attachments = _attachments_from_wire(wire)
     return IssueData(
         id=wire.id,
         title=wire.title,
@@ -119,6 +134,7 @@ def issue_data_from_wire(wire: IssueWire) -> IssueData:
         metadata_snapshot=tuple(
             IssueMetadataItem(key=key, value=value) for key, value in metadata.items()
         ),
+        attachments=attachments,
         created_at=wire.created_at,
         updated_at=wire.updated_at,
         parent_id=wire.parent_issue_id,
@@ -141,6 +157,7 @@ def issue_from_wire(wire: IssueWire) -> Issue:
         children=data.child_stages,
         labels=data.label_names,
         metadata=data.metadata_snapshot,
+        attachments=data.attachments,
         created_at=data.created_at,
         updated_at=data.updated_at,
         parent_id=data.parent_id,

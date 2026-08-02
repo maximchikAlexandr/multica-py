@@ -48,11 +48,11 @@ first page:
 ```python
 from collections.abc import Iterator
 
-from multica_py import Issue, IssueStatus, MulticaClient
-from multica_py.models.issues import IssueListFilter
+from multica_py import IssueStatus, MulticaClient
+from multica_py.models.issues import IssueListFilter, IssueSummary
 
 
-def iter_backlog(client: MulticaClient, project_id: str) -> Iterator[Issue]:
+def iter_backlog(client: MulticaClient, project_id: str) -> Iterator[IssueSummary]:
     offset = 0
     while True:
         page = client.issues.list(
@@ -71,9 +71,10 @@ def iter_backlog(client: MulticaClient, project_id: str) -> Iterator[Issue]:
         offset += len(page.issues)
 ```
 
-Use the bound project relation when all project issues are genuinely needed:
-`client.projects.get(project_id).issues.all()`. Prefer the filtered direct
-service for a status-specific queue.
+Use the project relation when all project summaries are genuinely needed:
+`client.projects.get(project_id).issues.all()`. Both paths return
+`IssueSummary`; call `client.issues.get(summary.id)` only for a full issue.
+Prefer the filtered direct service for a status-specific queue.
 
 ## Use bound relations at graph boundaries
 
@@ -95,7 +96,8 @@ requires a current read from the server.
 For a batch of entities with the same client origin:
 
 ```python
-issues = client.projects.get("project_123").issues.all()
+summaries = client.projects.get("project_123").issues.all()
+issues = tuple(client.issues.get(summary.id) for summary in summaries)
 client.prefetch(issues, lambda issue: issue.labels, max_parallel=4)
 ```
 

@@ -242,10 +242,6 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                     "multica_py.resources.issues.IssueEntity"
                 ):
                     return
-                if expected == "multica_py.models.issues.IssueListPage" and actual == (
-                    "multica_py.resources.issues.BoundIssueListPage"
-                ):
-                    return
                 if expected == "multica_py.models.autopilots.Autopilot" and actual == (
                     "multica_py.resources.autopilots.AutopilotEntity"
                 ):
@@ -521,6 +517,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         IssueChildStageGroup,
         IssueCreateRequest,
         IssueListFilter,
+        IssueMetadataItem,
         IssueReorderRequest,
         IssueUpdateRequest,
         LinkedPullRequest,
@@ -1339,6 +1336,39 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("issue", "list", "--output", "json"),
             stdout=b'{"issues":[]}',
             id="generated:issues.list:default:canonical",
+        ),
+        _c(
+            "issues.list",
+            (
+                "issue",
+                "list",
+                "--metadata",
+                'external_key="42"',
+                "--metadata",
+                "ready=true",
+                "--metadata",
+                "attempt=2",
+                "--metadata",
+                "ratio=1.5",
+                "--metadata",
+                "finished_at=null",
+                "--output",
+                "json",
+            ),
+            args=(
+                IssueListFilter(
+                    metadata=(
+                        IssueMetadataItem(key="external_key", value="42"),
+                        IssueMetadataItem(key="ready", value=True),
+                        IssueMetadataItem(key="attempt", value=2),
+                        IssueMetadataItem(key="ratio", value=1.5),
+                        IssueMetadataItem(key="finished_at", value=None),
+                    )
+                ),
+            ),
+            stdout=b'{"issues":[]}',
+            id="manual:issues.list:metadata:canonical",
+            source_ref="S-ISSUE-LIST-METADATA-CLI",
         ),
         _c(
             "issues.list",

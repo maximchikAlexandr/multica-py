@@ -40,6 +40,7 @@ from multica_py.models.issues import (
     IssueChildStageGroup,
     IssueData,
     IssueMetadataItem,
+    IssueSummary,
     LinkedPullRequest,
 )
 from multica_py.models.relations import (
@@ -416,6 +417,17 @@ def test_offset_pagination_uses_requested_offset_not_response_metadata() -> None
     assert relation.all() == ("item",)
 
     assert relation.loaded is True
+
+
+def test_offset_pagination_rejects_empty_progress_page() -> None:
+    relation: OffsetLazyCollection[IssueSummary] = OffsetLazyCollection(
+        lambda *, limit, offset: OffsetPage((), 1, limit or 1, offset, True)
+    )
+
+    with pytest.raises(RelationPaginationError, match="empty_page"):
+        relation.all()
+
+    assert relation.loaded is False
 
 
 def test_issue_wire_missing_and_empty_fields_do_not_seed_relations() -> None:

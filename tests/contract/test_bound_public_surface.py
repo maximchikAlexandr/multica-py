@@ -10,6 +10,8 @@ import pytest
 import multica_py
 import multica_py.models as models_pkg
 import multica_py.models.relations as relations_pkg
+from multica_py import MulticaClient
+from multica_py.enums import IssueStatus
 from multica_py.exceptions import (
     DetachedEntityError,
     MissingRelationContextError,
@@ -20,7 +22,14 @@ from multica_py.models import ResourceEntity
 from multica_py.models.agents import AgentData
 from multica_py.models.autopilots import AutopilotData, AutopilotRunData
 from multica_py.models.issue_activity import CommentData, CommentThreadData, TaskRunData
-from multica_py.models.issues import IssueChildrenResult, IssueData
+from multica_py.models.issues import (
+    IssueChildrenResult,
+    IssueData,
+    IssueListFilter,
+    IssueListPage,
+    IssueMetadataItem,
+    IssueSummary,
+)
 from multica_py.models.labels import LabelData
 from multica_py.models.project_resources import ProjectResourceData
 from multica_py.models.projects import ProjectData
@@ -35,6 +44,7 @@ from multica_py.models.relations import (
 )
 from multica_py.models.skills import SkillData
 from multica_py.models.system import (
+    AttachmentResult,
     RepositoryRecord,
     RuntimeDefinition,
     SquadData,
@@ -67,7 +77,6 @@ UNSUPPORTED_RELATION_CASES = (
     UnsupportedRelationCase(SkillEntity, "agents"),
     UnsupportedRelationCase(RuntimeDefinition, "agents"),
     UnsupportedRelationCase(RepositoryRecord, "projects"),
-    UnsupportedRelationCase(IssueEntity, "attachments"),
     UnsupportedRelationCase(WorkspaceEntity, "users"),
 )
 
@@ -80,6 +89,57 @@ UNSUPPORTED_RELATION_IDS = tuple(
 @pytest.mark.parametrize("case", UNSUPPORTED_RELATION_CASES, ids=UNSUPPORTED_RELATION_IDS)
 def test_unsupported_inverse_relations_are_absent(case: UnsupportedRelationCase) -> None:
     assert not hasattr(case.owner, case.member)
+
+
+def test_issue_entity_attachments_are_passive_snapshots() -> None:
+    attachment = AttachmentResult(id="a1", filename="result.txt")
+    entity = IssueEntity(
+        IssueData(id="i1", title="Issue", status=IssueStatus.todo, attachments=(attachment,))
+    )
+    descriptor = cast("object", inspect.getattr_static(IssueEntity, "attachments"))
+    assert type(descriptor).__name__ == "property"
+    assert entity.attachments == (attachment,)
+    assert entity.attachments == (attachment,)
+    assert type(entity.attachments[0]) is AttachmentResult
+    assert not hasattr(entity.attachments, "list")
+    assert not hasattr(IssueEntity, "_attachments")
+
+
+def _consumer_type_examples(client: MulticaClient) -> None:
+    page: IssueListPage = client.issues.list(
+        IssueListFilter(metadata=(IssueMetadataItem(key="external_key", value="queue-key"),))
+    )
+    summary: IssueSummary = page.issues[0]
+    bound_issue: IssueEntity = client.issues.get(summary.id)
+    if bound_issue.attachments:
+        attachment_id: str = bound_issue.attachments[0].id
+        assert attachment_id
+
+    workspace_issues: OffsetLazyCollection[IssueSummary] = client.workspaces.get(
+        "workspace_id"
+    ).issues
+    project_issues: OffsetLazyCollection[IssueSummary] = client.projects.get("project_id").issues
+    agent_issues: OffsetLazyCollection[IssueSummary] = client.agents.get("agent_id").issues
+    squad_issues: OffsetLazyCollection[IssueSummary] = client.squads.get("squad_id").issues
+    member: WorkspaceMemberEntity = client.workspaces.get("workspace_id").members.all()[0]
+    member_issues: OffsetLazyCollection[IssueSummary] = member.issues
+
+    relation_summaries: tuple[tuple[IssueSummary, ...], ...] = (
+        workspace_issues.all(),
+        project_issues.all(),
+        agent_issues.all(),
+        squad_issues.all(),
+        member_issues.all(),
+    )
+    for summaries in relation_summaries:
+        relation_summary: IssueSummary = summaries[0]
+        assert isinstance(client.issues.get(relation_summary.id), IssueEntity)
+
+    member_user_id: str | None = member.user_id
+    member_email: str | None = member.email
+    for summary in page.issues:
+        if member_user_id is not None and summary.creator_id == member_user_id:
+            assert member_email is None or isinstance(member_email, str)
 
 
 @dataclass(frozen=True)

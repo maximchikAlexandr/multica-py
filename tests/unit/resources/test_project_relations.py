@@ -280,6 +280,7 @@ def test_project_issues_two_pages() -> None:
     result = entity.issues.all()
     assert len(result) == 3
     assert client.issues.list.call_count == 2
+    assert all(isinstance(item, IssueSummary) for item in result)
 
     call1_flt = client.issues.list.call_args_list[0][0][0]
     assert call1_flt.limit == 50
@@ -289,6 +290,7 @@ def test_project_issues_two_pages() -> None:
     call2_flt = client.issues.list.call_args_list[1][0][0]
     assert call2_flt.offset == 2
     assert call2_flt.project_id == "p1"
+    client.issues.get.assert_not_called()
 
 
 def test_project_issues_single_page() -> None:
@@ -299,7 +301,7 @@ def test_project_issues_single_page() -> None:
         offset=0,
         total=1,
     )
-    client = _make_mock_resources(issue_page_results=[page])
+    client = _make_mock_resources(issue_page_results=[page, page])
     entity = Project(
         ProjectData(id="p1", name="Test", status=_PLANNED),
         client=client,
@@ -307,6 +309,11 @@ def test_project_issues_single_page() -> None:
     result = entity.issues.all()
     assert len(result) == 1
     assert client.issues.list.call_count == 1
+    assert isinstance(result[0], IssueSummary)
+    client.issues.get.assert_not_called()
+    entity.issues.refresh()
+    assert client.issues.list.call_count == 2
+    client.issues.get.assert_not_called()
 
 
 def test_project_issues_cached_after_all() -> None:
@@ -318,6 +325,7 @@ def test_project_issues_cached_after_all() -> None:
     )
     entity.issues.all()
     assert client.issues.list.call_count == 1
+    client.issues.get.assert_not_called()
     entity.issues.all()
     assert client.issues.list.call_count == 1
 
@@ -334,6 +342,7 @@ def test_project_issues_invalidate_triggers_new_load() -> None:
     entity.issues.invalidate()
     entity.issues.all()
     assert client.issues.list.call_count == 2
+    client.issues.get.assert_not_called()
 
 
 def test_detached_entity_error_on_resource_access() -> None:

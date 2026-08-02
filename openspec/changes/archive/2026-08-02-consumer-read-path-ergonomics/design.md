@@ -195,13 +195,16 @@ upstream commit `ecbdbda09e7b2be56cd9ccc55cee1ee360222d18`.
 | Membership ID, `user_id`, and `email`; append refs to `workspaces.members.list` | `S-WORKSPACE-MEMBERS-CLI`: `server/cmd/multica/cmd_workspace.go`, `runWorkspaceMembers`, lines 524–562; `S-WORKSPACE-MEMBER-IDENTITY`: `server/internal/handler/workspace.go`, `MemberWithUserResponse/ListMembersWithUser`, lines 391–429 | `T-WORKSPACE-MEMBER-IDENTITY`: `tests/unit/resources/test_workspace_relations.py`, node `test_workspace_members_preserve_user_identity` |
 | Embedded attachments and omitted-field ambiguity; append refs to `issues.get` | reuse `S-ISSUE-RESPONSE`; `S-ISSUE-GET-ATTACHMENTS`: `server/internal/handler/issue.go`, `GetIssue/ListAttachmentsByIssue/Attachments`, lines 1864–1900 | `T-ISSUE-GET-ATTACHMENTS`: `tests/unit/resources/test_issues.py`, node `test_issue_get_decodes_attachment_snapshots` |
 
-The implementation adds each named `test_ref_id` with the exact path/node above
-before attaching it to its operation. `issues.list.rationale` states metadata
-mapping plus summary projection; `issues.get.rationale` states embedded
-attachment normalization and upstream omission ambiguity;
-`workspaces.members.list.rationale` states the distinct membership/user identity
-projection. No implementer chooses alternative IDs, paths, nodes, or source
-ranges.
+Block 1 registers each named `test_ref_id` with the exact future path/node above
+and attaches it to its operation, but does not create placeholder tests or
+implement behavior owned by later blocks. The real nodes are added atomically
+with their behavior: both issue-list nodes in task 2.6, the member node in task
+4.3, and the attachment node in task 5.3. Task 7.1 verifies that all four
+registered refs resolve. `issues.list.rationale` states metadata mapping plus
+summary projection; `issues.get.rationale` states embedded attachment
+normalization and upstream omission ambiguity; `workspaces.members.list.rationale`
+states the distinct membership/user identity projection. No implementer chooses
+alternative IDs, paths, nodes, or source ranges.
 
 ## Risks / Trade-offs
 
@@ -228,10 +231,11 @@ ranges.
    locations: `catalogs.bindings.issue_list.mappings`, the matching
    `catalogs.mapping_presence.issue_list` position as `optional_omit`, and
    `catalogs.binding_descriptors[descriptor_id == "issue_list"].mappings`.
-   Update the three operation records and exact evidence entries from Decision
-   7, then regenerate checked runtime artifacts. Response projections and
-   adapter validation remain handwritten because contract schema v3 has no
-   fields for them.
+   Update the three operation records, source refs, and future test-ref targets
+   from Decision 7, then regenerate checked runtime artifacts. Implement each
+   test node only in its owning later block. Response projections and adapter
+   validation remain handwritten because contract schema v3 has no fields for
+   them.
 2. Extend wire and immutable models with backward-compatible optional/defaulted
    member, summary, and attachment fields.
 3. Change direct list and the five list-backed relations to preserve summaries;

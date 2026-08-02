@@ -14,6 +14,7 @@ from multica_py.config import ClientConfig
 from multica_py.enums import ProjectStatus
 from multica_py.exceptions import ValidationError
 from multica_py.models import ResourceEntity
+from multica_py.models.issues import IssueSummary
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceRecord,
@@ -28,7 +29,7 @@ from multica_py.models.projects import (
 )
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
 from multica_py.resources._base import BaseResource
-from multica_py.resources.issues import IssueEntity, IssueResource
+from multica_py.resources.issues import IssueResource, _issue_summary_offset_page
 from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.sentinels import Unset
 
@@ -40,7 +41,7 @@ class Project(ResourceEntity[ProjectData]):
     def __init__(self, data: ProjectData, client: MulticaClient | None = None) -> None:
         super().__init__(data, client=client)
         self._resources: LazyCollection[ProjectResourceRecord] | None = None
-        self._issues: OffsetLazyCollection[IssueEntity] | None = None
+        self._issues: OffsetLazyCollection[IssueSummary] | None = None
 
     @property
     def id(self) -> str:
@@ -69,14 +70,14 @@ class Project(ResourceEntity[ProjectData]):
         return self._resources
 
     @property
-    def issues(self) -> OffsetLazyCollection[IssueEntity]:
+    def issues(self) -> OffsetLazyCollection[IssueSummary]:
         if self._issues is None:
             issues = self._require_client(
                 entity_type="Project", entity_id=self._data.id, relation_name="issues"
             ).issues
             pid = self._data.id
 
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueEntity]:
+            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
                 return self._page_issues(issues, pid, limit, offset)
 
             self._issues = OffsetLazyCollection(page_loader)
@@ -84,24 +85,11 @@ class Project(ResourceEntity[ProjectData]):
 
     def _page_issues(
         self, issues: IssueResource, pid: str, limit: int | None, offset: int
-    ) -> OffsetPage[IssueEntity]:
+    ) -> OffsetPage[IssueSummary]:
         from multica_py.models.issues import IssueListFilter
-        from multica_py.resources.issues import _issue_data_from_summary
 
         flt = IssueListFilter(project_id=pid, limit=limit, offset=offset)
-        page = issues.list(flt)
-        return OffsetPage(
-            items=tuple(
-                item
-                if isinstance(item, IssueEntity)
-                else IssueEntity(_issue_data_from_summary(item), client=self._client)
-                for item in page.issues
-            ),
-            total=page.total or 0,
-            limit=page.limit or 50,
-            offset=page.offset or 0,
-            has_more=page.has_more,
-        )
+        return _issue_summary_offset_page(issues, flt)
 
     def _invalidate_resources(self) -> None:
         if self._resources is not None:

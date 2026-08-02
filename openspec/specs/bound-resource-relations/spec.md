@@ -32,7 +32,9 @@ only through iteration, length, containment, mapping lookup, `all()`, `page()`, 
 ### Requirement: Normative relation inventory
 The implementation MUST provide exactly the following 33 relation contracts.
 Operation IDs and public signatures in this table are normative; unlisted
-relations are outside this change.
+relations are outside this change. Issue-list relations return immutable
+summaries because their governed operation is `issues.list`; they MUST NOT
+fabricate full bound issues from partial rows.
 
 | # | Public member | Operation ID | Request / strategy | Result and context | Invalidation |
 |---:|---|---|---|---|---|
@@ -40,7 +42,7 @@ relations are outside this change.
 | relation:R02 (2) | `Workspace.agents: LazyCollection[Agent]` | `agents.list` | scoped workspace; one call | bound agents | explicit refresh |
 | relation:R03 (3) | `Workspace.skills: LazyCollection[Skill]` | `skills.list` | scoped workspace; one call | bound skills | explicit refresh |
 | relation:R04 (4) | `Workspace.projects: LazyCollection[Project]` | `projects.list` | scoped workspace; one call | bound projects | explicit refresh |
-| relation:R05 (5) | `Workspace.issues: OffsetLazyCollection[Issue]` | `issues.list` | scoped workspace; default limit 50 | compact bound issues; page metadata | explicit refresh |
+| relation:R05 (5) | `Workspace.issues: OffsetLazyCollection[IssueSummary]` | `issues.list` | scoped workspace; default limit 50 | immutable summaries; page metadata | explicit refresh |
 | relation:R06 (6) | `Workspace.labels: LazyCollection[Label]` | `labels.list` | scoped workspace; one call | bound labels | explicit refresh |
 | relation:R07 (7) | `Workspace.autopilots: LazyCollection[Autopilot]` | `autopilots.list` | scoped workspace; exactly one list-page call | bound autopilots; `metadata.total` | explicit refresh |
 | relation:R08 (8) | `Workspace.repositories: LazyCollection[RepositoryRecord]` | `repositories.list` | scoped workspace; one call | immutable URL/ref records | explicit refresh |
@@ -48,13 +50,13 @@ relations are outside this change.
 | relation:R10 (10) | `Workspace.squads: LazyCollection[Squad]` | `squads.list` | scoped workspace; one call | bound squads | explicit refresh |
 | relation:R11 (11) | `Agent.skills: LazyCollection[AgentSkill]` | `agents.skills.list` | `agent_id`; one call | immutable assigned-skill records | `agents.skills.set` |
 | relation:R12 (12) | `Agent.tasks: LazyCollection[AgentTask]` | `agents.tasks` | `agent_id`; one call | immutable task records | none |
-| relation:R13 (13) | `Agent.issues: OffsetLazyCollection[Issue]` | `issues.list` | `assignee_id=agent.id`; limit 50 | compact bound issues | explicit refresh |
+| relation:R13 (13) | `Agent.issues: OffsetLazyCollection[IssueSummary]` | `issues.list` | `assignee_id=agent.id`; limit 50 | immutable summaries | explicit refresh |
 | relation:R14 (14) | `Skill.files: LazyCollection[SkillFile]` | `skills.files.list` | `skill_id`; one call | immutable file records | skill file create/update/delete |
 | relation:R15 (15) | `Squad.members: LazyCollection[SquadMember]` | `squads.members.list` | `squad_id`; one call | immutable member records | squad member add/remove |
-| relation:R16 (16) | `Squad.issues: OffsetLazyCollection[Issue]` | `issues.list` | `assignee_id=squad.id`; limit 50 | compact bound issues | explicit refresh |
-| relation:R17 (17) | `WorkspaceMember.issues: OffsetLazyCollection[Issue]` | `issues.list` | `assignee_id=member.id`; limit 50 | compact bound issues | explicit refresh |
+| relation:R16 (16) | `Squad.issues: OffsetLazyCollection[IssueSummary]` | `issues.list` | `assignee_id=squad.id`; limit 50 | immutable summaries | explicit refresh |
+| relation:R17 (17) | `WorkspaceMember.issues: OffsetLazyCollection[IssueSummary]` | `issues.list` | `assignee_id=member.id`; limit 50 | immutable summaries | explicit refresh |
 | relation:R18 (18) | `Project.resources: LazyCollection[ProjectResourceRecord]` | `projects.resources.list` | `project_id`; one call | immutable records | project resource add/update/remove |
-| relation:R19 (19) | `Project.issues: OffsetLazyCollection[Issue]` | `issues.list` | `project_id=project.id`; limit 50 | compact bound issues | explicit refresh |
+| relation:R19 (19) | `Project.issues: OffsetLazyCollection[IssueSummary]` | `issues.list` | `project_id=project.id`; limit 50 | immutable summaries | explicit refresh |
 | relation:R20 (20) | `Issue.comments: LazyCollection[Comment]` | `issues.comments.list` | flat mode, `issue_id`; one call | bound comments | add with issue ID; delete/resolve require refresh |
 | relation:R21 (21) | `Issue.recent_comment_threads(limit: int = 10, *, cursor: CommentCursor | None = None) -> CursorLazyCollection[CommentThread]` | `issues.comments.list` | recent mode; fixed collection page limit; opaque atomic cursor | bound threads; next cursor | add with issue ID; delete/resolve require refresh |
 | relation:R22 (22) | `CommentThread.comments: CursorLazyCollection[Comment]` | `issues.comments.list` | thread mode; inherited `issue_id`; default page limit 50; opaque atomic cursor | bound comments | parent-addressed add only; delete/resolve require refresh |
@@ -82,6 +84,7 @@ relations are outside this change.
 A bound `Workspace` MUST expose `members`, `agents`, `skills`, `projects`,
 `issues`, `labels`, `autopilots`, `repositories`, `runtimes`, and `squads` using
 the workspace identifier as server-side scope and the original client runtime.
+`Workspace.issues` MUST yield immutable `IssueSummary` values.
 
 #### Scenario: Workspace unpaged relations use one scoped call
 - **WHEN** `members`, `agents`, `skills`, `projects`, `labels`, `repositories`, `runtimes`, or `squads` is completely loaded
@@ -89,7 +92,7 @@ the workspace identifier as server-side scope and the original client runtime.
 
 #### Scenario: Workspace issues traverse offset pages
 - **WHEN** `workspace.issues` is completely loaded
-- **THEN** governed `issues.list` requests preserve the workspace scope and advance offsets until `has_more` is false
+- **THEN** governed `issues.list` requests preserve the workspace scope, yield summaries, and advance offsets until `has_more` is false
 
 #### Scenario: Workspace autopilots preserve aggregate metadata
 - **WHEN** `workspace.autopilots` loads the governed list response
@@ -99,7 +102,9 @@ the workspace identifier as server-side scope and the original client runtime.
 Bound `Agent`, `Skill`, `Squad`, and `WorkspaceMember` entities MUST expose the
 relations `Agent.skills`, `Agent.tasks`, `Agent.issues`, `Skill.files`,
 `Squad.members`, `Squad.issues`, and `WorkspaceMember.issues` through governed
-server-side operations.
+server-side operations. The three issue relations MUST yield immutable
+`IssueSummary` values. `WorkspaceMember.issues` MUST use the membership `id` as
+the assignee filter while `user_id` remains available for user reconciliation.
 
 #### Scenario: Agent and skill nested commands are plural
 - **WHEN** `Agent.skills` or `Skill.files` loads
@@ -111,11 +116,12 @@ server-side operations.
 
 #### Scenario: Assignee issue relations are server filtered
 - **WHEN** `Agent.issues`, `Squad.issues`, or `WorkspaceMember.issues` loads
-- **THEN** every issue-list page uses `--assignee-id <parent-id>` and no workspace-wide client filter
+- **THEN** every issue-list page uses `--assignee-id <parent-id>`, with `WorkspaceMember.id` as its parent ID, and no workspace-wide client filter
 
 ### Requirement: Project relation graph
 A bound `Project` MUST expose unpaged `resources` and offset-paged `issues`
-relations through governed operations.
+relations through governed operations. `Project.issues` MUST yield immutable
+`IssueSummary` values.
 
 #### Scenario: Project resources load once
 - **WHEN** `Project.resources` first completely loads
@@ -123,7 +129,7 @@ relations through governed operations.
 
 #### Scenario: Project issues are server filtered
 - **WHEN** `Project.issues` loads
-- **THEN** every issue-list page includes `--project <project-id>` and advances without a broad client-side scan
+- **THEN** every issue-list page includes `--project <project-id>`, yields summaries, and advances without a broad client-side scan
 
 ### Requirement: Issue activity relation graph
 A bound `Issue` MUST expose `comments`, `recent_comment_threads`, `labels`,
@@ -311,11 +317,12 @@ independent transport lifecycle behavior.
 ### Requirement: Unsupported inverse and singular relations stay explicit
 The SDK MUST NOT expose a lazy collection when the pinned CLI lacks a
 server-side list/filter, would require a hidden workspace scan/N+1, or the
-relationship is singular and requires `LazyRef` semantics.
+relationship is singular and requires `LazyRef` semantics. A passive immutable
+snapshot embedded in an already-fetched entity is not a lazy relation.
 
 #### Scenario: Unsupported collections are absent
 - **WHEN** the public bound surface is inspected
-- **THEN** it has no `Project.autopilots`, agent/squad autopilots, `Label.issues`, `Skill.agents`, `Runtime.agents`, `Repository.projects`, `Issue.attachments`, or `Workspace.users` relation
+- **THEN** it has no `Project.autopilots`, agent/squad autopilots, `Label.issues`, `Skill.agents`, `Runtime.agents`, `Repository.projects`, lazy attachment relation on `IssueEntity`, or `Workspace.users` relation; passive `IssueEntity.attachments` is only the embedded `issue get` tuple
 
 #### Scenario: Singular references are deferred
 - **WHEN** issue, autopilot, or run parent/project/assignee/creator references are inspected
