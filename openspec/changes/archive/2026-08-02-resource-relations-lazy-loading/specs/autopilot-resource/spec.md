@@ -11,7 +11,7 @@ Trigger reads MUST come from the governed autopilot get envelope; mutations
 MUST use `trigger_add`, `trigger_update`, and `trigger_delete` methods backed
 by upstream `trigger-add`, `trigger-update`, and `trigger-delete` commands.
 
-#### Scenario: Supported operations are governed
+#### Scenario: Autopilot operations are governed
 - **WHEN** `contracts/sdk-contract.json` is inspected
 - **THEN** it governs list, get, create, update, delete, trigger, history, trigger-add, trigger-update, and trigger-delete with bindings, signatures, responses, source refs, and migration compatibility
 
@@ -19,7 +19,7 @@ by upstream `trigger-add`, `trigger-update`, and `trigger-delete` commands.
 - **WHEN** canonical public methods are discovered
 - **THEN** `autopilots.get_run` and legacy `autopilots.run` are absent, while `autopilots.trigger` and `autopilots.history` are present
 
-#### Scenario: Get decodes aggregate envelope
+#### Scenario: Autopilot operations decode via wire converters
 - **WHEN** `client.autopilots.get("a1")` receives the upstream get envelope
 - **THEN** it adapts the `autopilot` member to a bound `Autopilot` and seeds explicitly present complete triggers/subscribers
 
@@ -35,9 +35,17 @@ Public `Autopilot` MUST be a bound entity over immutable `AutopilotData`.
 exist. `Autopilot.triggers` and `Autopilot.subscribers` MUST be read-only lazy
 relations seeded from complete get-envelope fields when present.
 
-#### Scenario: Full autopilot data decodes
+#### Scenario: Full autopilot decode
 - **WHEN** the get envelope provides all scalar fields and subscribers
 - **THEN** `Autopilot.to_data()` preserves them, subscribers are stored as `subscriber_snapshot`, and relation access performs no I/O
+
+#### Scenario: Optional fields default to None
+- **WHEN** the get envelope omits optional scalar fields
+- **THEN** `AutopilotData` preserves their documented `None` or empty-tuple defaults without loading an omitted relation
+
+#### Scenario: Legacy name and enabled are absent
+- **WHEN** a bound `Autopilot` or its immutable data snapshot is inspected
+- **THEN** legacy `name` and `enabled` attributes are absent
 
 #### Scenario: Missing embedded field remains unloaded
 - **WHEN** a compact payload omits triggers or subscribers
@@ -57,9 +65,13 @@ Legacy `started_at` MUST NOT exist. `AutopilotRun.messages` MUST be a relation
 available only when `task_id` is non-null and MUST call
 `issues.run_messages(task_id, issue_id=issue_id)`.
 
-#### Scenario: Run data remains typed
+#### Scenario: Full run decode
 - **WHEN** an autopilot run response is decoded
 - **THEN** `to_data()` exposes the upstream fields and no `started_at` attribute
+
+#### Scenario: Nullable run fields decode to None
+- **WHEN** an autopilot run response contains null optional identifiers, completion, failure, payload, or result fields
+- **THEN** `AutopilotRunData` preserves those values as `None`
 
 #### Scenario: Run messages require task ID
 - **WHEN** `task_id` is null and messages are consumed
@@ -72,9 +84,13 @@ available only when `task_id` is non-null and MUST call
 `LazyCollection[Autopilot]` loaded by exactly one `autopilots.list` call and
 MUST expose the page total as `relation.metadata.total`.
 
-#### Scenario: Direct list returns bound page
+#### Scenario: List returns total
 - **WHEN** direct list receives `autopilots` and `total`
 - **THEN** the page contains bound entities and preserves total
+
+#### Scenario: Empty list page
+- **WHEN** direct list receives no autopilots and a zero total
+- **THEN** it returns an empty bound page with `total == 0`
 
 #### Scenario: Workspace relation uses one list page
 - **WHEN** `workspace.autopilots.all()` loads
@@ -88,14 +104,26 @@ MUST expose the page total as `relation.metadata.total`.
 `OffsetLazyCollection[AutopilotRun]`, use a default page limit of 20, advance
 the next offset by `len(page.runs)`, and stop when `has_more` is false.
 
-#### Scenario: Direct history emits exact runs command
+#### Scenario: History emits the upstream runs subcommand with limit and offset
 - **WHEN** history is called with limit 10 and offset 20
 - **THEN** argv is `("autopilot", "runs", <id>, "--limit", "10", "--offset", "20", "--output", "json")`
 
-#### Scenario: Runs relation traverses pages
+#### Scenario: History returns a page with has_more
 - **WHEN** history pages report more data then completion
 - **THEN** `Autopilot.runs.all()` returns bound runs in page order and `metadata.total` preserves the last consistent total
 
-#### Scenario: Negative pagination is rejected
-- **WHEN** direct history or relation page receives a negative limit or offset
-- **THEN** `ValueError` names the invalid parameter and transport is not called
+#### Scenario: History last page has_more false
+- **WHEN** the final history page reports no continuation
+- **THEN** `Autopilot.runs.all()` stops without another subprocess call
+
+#### Scenario: History default limit and offset
+- **WHEN** `Autopilot.runs` requests its first page
+- **THEN** it uses limit 20 and offset 0
+
+#### Scenario: History rejects negative limit
+- **WHEN** direct history or relation page receives a negative limit
+- **THEN** `ValueError` names `limit` and transport is not called
+
+#### Scenario: History rejects negative offset
+- **WHEN** direct history or relation page receives a negative offset
+- **THEN** `ValueError` names `offset` and transport is not called

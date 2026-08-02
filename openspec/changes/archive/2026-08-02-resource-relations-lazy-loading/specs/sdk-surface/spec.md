@@ -16,13 +16,17 @@ persistence.
 - **WHEN** a consumer invokes a documented relation load point
 - **THEN** only the governed operation and strategy declared for that relation may execute
 
+#### Scenario: Resource calls remain stateless
+- **WHEN** a consumer calls a resource method or passively inspects its returned entity
+- **THEN** no model performs hidden persistence and only documented explicit load points may perform additional I/O
+
 ### Requirement: Public resource surface
 The SDK MUST retain every supported public resource method present in the
 canonical operation table and MUST remove or replace legacy methods proven
 unsupported by the pinned upstream CLI through an intentionally changed
 contract decision and documented migration.
 
-#### Scenario: Supported public methods have canonical rows
+#### Scenario: Public methods have canonical rows
 - **WHEN** a supported public resource method exists
 - **THEN** exactly one canonical operation row covers it
 
@@ -39,13 +43,15 @@ public `Any`, MUST NOT be encoded directly by msgspec, and MUST serialize only
 through its frozen `to_data()` result. A later resource call returns a new
 wrapper rather than mutating an earlier wrapper.
 
-#### Scenario: Decode bind and serialize use explicit boundaries
+#### Scenario: Structured output stays closed and typed
 - **WHEN** structured CLI output is decoded and returned as a bound entity
 - **THEN** wire data adapts to frozen `*Data`, the wrapper retains runtime state privately, and `msgspec.encode(entity.to_data())` contains no client, transport, semaphore, or relation state
 
 #### Scenario: Bound wrappers use replacement semantics
 - **WHEN** list returns a compact wrapper and get later returns richer data for the same ID
 - **THEN** get returns a distinct wrapper with a distinct frozen snapshot and does not enrich the list wrapper in place
+
+## ADDED Requirements
 
 ### Requirement: Bound entity and snapshot naming
 Participating entity names MUST refer to bound public wrappers; immutable
@@ -64,6 +70,8 @@ also mean eager scalar collections.
 - **WHEN** a consumer calls `entity.to_data()`
 - **THEN** the result is the immutable typed scalar snapshot without client runtime state
 
+## MODIFIED Requirements
+
 ### Requirement: Executor fields and squad member decoding
 The SDK SHALL decode upstream executor fields and squad members. `AgentData`
 SHALL expose `skill_refs: tuple[AgentSkill, ...]`, not eager `skills`;
@@ -72,29 +80,61 @@ SHALL expose `skill_refs: tuple[AgentSkill, ...]`, not eager `skills`;
 `SquadData.archived_at` remain optional typed fields. `Squad.members` SHALL be
 `LazyCollection[SquadMember]` backed by `squad member list`.
 
-#### Scenario: Embedded agent skills become snapshot refs
+#### Scenario: Agent skills decode as typed AgentSkill objects
 - **WHEN** agent get/list contains assigned skill objects
 - **THEN** `AgentData.skill_refs` preserves typed `AgentSkill` values and `Agent.skills` remains the lazy relation name
 
-#### Scenario: Missing embedded agent skills is empty snapshot only
+#### Scenario: Agent with no skills decodes to empty tuple
 - **WHEN** agent get/list omits embedded skills
 - **THEN** `AgentData.skill_refs == ()` and no relation cache is seeded
 
-#### Scenario: Agent archived timestamp decodes
-- **WHEN** archived_at is null/omitted or RFC3339
-- **THEN** it decodes respectively to `None` or timezone-aware `datetime`
+#### Scenario: Agent archived_at null decodes to None
+- **WHEN** `archived_at` is null or omitted
+- **THEN** `AgentData.archived_at` is `None`
 
-#### Scenario: Assigned skills use plural governed command
+#### Scenario: Agent archived_at RFC3339 decodes to datetime
+- **WHEN** `archived_at` is a valid RFC3339 value
+- **THEN** `AgentData.archived_at` is the corresponding timezone-aware `datetime`
+
+#### Scenario: Assigned skills read returns typed AgentSkill
 - **WHEN** `Agent.skills.all()` loads
 - **THEN** `agent skills list <agent-id> --output json` returns `tuple[AgentSkill, ...]`
 
-#### Scenario: Squad optional fields decode
-- **WHEN** leader_id/archived_at are omitted, null, or valid RFC3339
-- **THEN** `SquadData` preserves the documented optional values and existing minimal fixtures decode
+#### Scenario: Squad leader_id decodes
+- **WHEN** a squad response contains `leader_id`
+- **THEN** `SquadData.leader_id` preserves it
+
+#### Scenario: Squad leader_id absent decodes to None
+- **WHEN** a squad response omits `leader_id` or contains null
+- **THEN** `SquadData.leader_id` is `None`
+
+#### Scenario: Squad archived_at null decodes to None
+- **WHEN** a squad response omits `archived_at` or contains null
+- **THEN** `SquadData.archived_at` is `None`
+
+#### Scenario: Squad archived_at RFC3339 decodes to datetime
+- **WHEN** a squad response contains an RFC3339 `archived_at`
+- **THEN** `SquadData.archived_at` is the corresponding timezone-aware `datetime`
+
+#### Scenario: Existing minimal squad fixture still decodes
+- **WHEN** a minimal legacy squad fixture omits optional fields
+- **THEN** it decodes with the documented defaults
 
 #### Scenario: Squad members remain typed
 - **WHEN** `Squad.members.all()` loads
 - **THEN** one `squad member list <squad-id> --output json` call returns typed `SquadMember` records preserving role and order
+
+#### Scenario: Squad member list emits exact argv
+- **WHEN** the squad member relation loads
+- **THEN** transport receives `("squad", "member", "list", <squad-id>, "--output", "json")`
+
+#### Scenario: Squad member list returns typed members
+- **WHEN** the CLI returns squad member records
+- **THEN** each item is a typed `SquadMember`
+
+#### Scenario: Squad member list with multiple roles preserves each
+- **WHEN** multiple squad members have distinct roles
+- **THEN** identity, type, role, and response order are preserved
 
 ### Requirement: Autopilot resource governance and pagination
 The SDK MUST govern `autopilots.list/get/create/update/delete/trigger/history`
@@ -110,6 +150,18 @@ and `Autopilot.runs/triggers/subscribers` provide the relation surface.
 #### Scenario: Direct pages remain available
 - **WHEN** direct list or history is called
 - **THEN** it returns the documented typed page with total/limit/offset metadata while relations adapt those pages without changing direct behavior
+
+#### Scenario: Autopilot list returns AutopilotListPage
+- **WHEN** `autopilots.list()` succeeds
+- **THEN** it returns the documented bound `AutopilotListPage`
+
+#### Scenario: Autopilot history returns AutopilotRunListPage
+- **WHEN** `autopilots.history()` succeeds
+- **THEN** it returns the documented bound `AutopilotRunListPage`
+
+#### Scenario: Autopilot operations are in the approved contract
+- **WHEN** the approved contract is inspected
+- **THEN** every supported autopilot operation has its governed binding and response contract
 
 ### Requirement: Attachment byte-oriented upload and download
 The SDK SHALL expose
@@ -129,21 +181,37 @@ success/failure, and propagate the underlying SDK exception.
 - **WHEN** download is called with attachment ID and output directory
 - **THEN** argv is `attachment download <id> --output-dir <dir> --output json` and the returned path is the decoded downloaded path
 
-#### Scenario: Byte upload preserves filename and content
+#### Scenario: upload_bytes preserves the supplied filename
 - **WHEN** upload_bytes receives empty or binary bytes and a safe filename
 - **THEN** it delegates through a temporary file with the exact filename/task ID and returns the file upload result
 
-#### Scenario: Byte download returns exact bytes
+#### Scenario: download_bytes returns the file content as bytes
 - **WHEN** download_bytes delegates to a temporary output directory
 - **THEN** it reads and returns the exact downloaded bytes, including empty content
 
-#### Scenario: Temporary files always clean up
-- **WHEN** either byte helper succeeds or the underlying operation raises
-- **THEN** its temporary directory is removed and the original exception type propagates
+#### Scenario: Empty payload uploads and returns the decoded result
+- **WHEN** `upload_bytes` receives empty bytes
+- **THEN** it preserves the empty payload and returns the decoded upload result
 
-#### Scenario: Unsafe names and IDs are rejected
+#### Scenario: Empty attachment downloads as empty bytes
+- **WHEN** the downloaded attachment is empty
+- **THEN** `download_bytes` returns `b""`
+
+#### Scenario: Temporary files are removed after success
+- **WHEN** either byte helper succeeds
+- **THEN** its temporary directory is removed
+
+#### Scenario: Temporary files are removed when the underlying CLI operation fails
+- **WHEN** the underlying operation raises
+- **THEN** the temporary directory is removed and the original exception type propagates
+
+#### Scenario: Path separators and empty values are rejected
 - **WHEN** filename or attachment ID is empty, contains a separator, or contains `..`
 - **THEN** `ValueError` identifies the parameter before filesystem or transport access
+
+#### Scenario: Existing upload and download behavior is unchanged
+- **WHEN** callers use the supported path-based upload and download methods
+- **THEN** their governed argv, results, and error behavior remain unchanged
 
 ## ADDED Requirements
 
