@@ -30,11 +30,75 @@ load only at explicit load points such as `all()`, `page()`, `refresh()`, or
 | Nested autopilot trigger list/create/delete | Get-envelope seed plus `trigger_add/update/delete` | Trigger reads come from governed get; mutations use `trigger-add/update/delete`. |
 | `Autopilot.subscribers` eager tuple | `AutopilotData.subscriber_snapshot` and `Autopilot.subscribers` | Complete get-envelope data seeds the relation; omitted fields stay unloaded. |
 
+## Issue list projections
+
+Direct issue lists and the five list-backed relations now expose immutable
+`IssueSummary` values. They are list projections, not compact bound issues.
+Use the explicit `issues.get(summary.id)` call only when bound behavior or
+complete issue state is needed.
+
+| Caller | Before | After |
+|---|---|---|
+| Direct list | `for issue in client.issues.list(filter).issues` | `for summary in client.issues.list(filter).issues` |
+| `Workspace.issues` | `for issue in client.workspaces.get(workspace_id).issues.all()` | `for summary in client.workspaces.get(workspace_id).issues.all()` |
+| `Project.issues` | `for issue in client.projects.get(project_id).issues.all()` | `for summary in client.projects.get(project_id).issues.all()` |
+| `Agent.issues` | `for issue in client.agents.get(agent_id).issues.all()` | `for summary in client.agents.get(agent_id).issues.all()` |
+| `Squad.issues` | `for issue in client.squads.get(squad_id).issues.all()` | `for summary in client.squads.get(squad_id).issues.all()` |
+| `WorkspaceMember.issues` | `for issue in member.issues.all()` | `for summary in member.issues.all()` |
+
+```python
+from multica_py import IssueStatus
+from multica_py.models.issues import IssueSummary
+
+for summary in client.issues.list(filter).issues:
+    summary: IssueSummary
+    if summary.status is IssueStatus.backlog:
+        bound_issue = client.issues.get(summary.id)
+        bound_issue.add_comment("ready")
+```
+
+The summary path is the default for queue discovery. The explicit get is the
+intentional boundary when a caller needs comments, mutation helpers, or other
+bound relations.
+
+## Workspace-member identity
+
+`WorkspaceMember.id` is the workspace membership identity and remains the
+value used by `WorkspaceMember.issues` as `assignee_id`. It is not an alias for
+the related user. `WorkspaceMember.user_id` is the optional user identity for
+reconciling `IssueSummary.creator_id`, and `WorkspaceMember.email` is the
+optional member email.
+
+Older or minimal member payloads may omit both user fields. In that case
+`user_id is None` and `email is None`; callers should handle `None` explicitly
+and must not fall back from `user_id` to the membership `id`.
+
+## Embedded issue attachments
+
+`IssueEntity.attachments` is a passive tuple snapshot from the explicit
+`issues.get(issue_id)` response and reuses `AttachmentResult`. Both an omitted
+`attachments` field and an explicit empty array decode as `()`.
+
+The pinned upstream command may also omit the field when its best-effort
+attachment read fails, so an empty tuple is not an atomic completion signal.
+When a result is expected, retry with a fresh `issues.get(issue_id)` and pass a
+known attachment directly to the existing byte helper:
+
+```python
+issue = client.issues.get(issue_id)
+if issue.attachments:
+    payload = client.attachments.download_bytes(issue.attachments[0].id)
+```
+
+The SDK does not add an attachment list relation, a selector helper, or a
+second public attachment model.
+
 ## Unsupported inverse and singular relations
 
 The following members intentionally do not exist: `Project.autopilots`,
 agent/squad autopilots, `Label.issues`, `Skill.agents`, `Runtime.agents`,
-`Repository.projects`, `Issue.attachments`, and `Workspace.users`. There is no
+`Repository.projects`, a lazy attachment relation on `IssueEntity`, and
+`Workspace.users`. There is no
 hidden workspace scan, client-side filtering fallback, or per-child N+1 path.
 
 Issue parent/project/assignee/creator and analogous autopilot/run references

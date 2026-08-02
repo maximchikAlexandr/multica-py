@@ -111,6 +111,8 @@ class WorkspaceMemberData(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     name: str
     role: str | None = None
+    user_id: str | None = None
+    email: str | None = None
 
 
 # ponytail: member_type/role are free str, no enum — upstream values not stabilised; add enums when they are

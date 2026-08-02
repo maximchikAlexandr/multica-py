@@ -491,6 +491,11 @@
             "query:project_id"
           ],
           [
+            "filter.metadata",
+            "repeat:--metadata",
+            "query:metadata"
+          ],
+          [
             "filter.sort",
             "--sort",
             "query:sort"
@@ -2341,6 +2346,7 @@
         "optional_omit",
         "optional_omit",
         "optional_omit",
+        "optional_omit",
         "optional_omit"
       ],
       "issue_status": [
@@ -3894,6 +3900,11 @@
             "source": "filter.project_id",
             "binding": "--project",
             "destination": "query:project_id"
+          },
+          {
+            "source": "filter.metadata",
+            "binding": "repeat:--metadata",
+            "destination": "query:metadata"
           },
           {
             "source": "filter.sort",
@@ -7986,6 +7997,78 @@
       "symbol": "workspaceCmd/workspaceListCmd/workspaceCreateCmd/workspaceGetCmd/workspaceMemberCmd/workspaceMemberListCmd/workspaceUpdateCmd/runWorkspaceList/runWorkspaceCreate/runWorkspaceGet/runWorkspaceUpdate/runWorkspaceMembers",
       "line_start": 16,
       "line_end": 563
+    },
+    {
+      "source_ref_id": "S-ISSUE-LIST-METADATA-CLI",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueListCmd/runIssueList",
+      "line_start": 436,
+      "line_end": 622
+    },
+    {
+      "source_ref_id": "S-ISSUE-LIST-METADATA-PARSER",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_issue_metadata.go",
+      "symbol": "buildMetadataFilterQueryParam",
+      "line_start": 19,
+      "line_end": 54
+    },
+    {
+      "source_ref_id": "S-ISSUE-LIST-METADATA-HANDLER",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/internal/handler/issue.go",
+      "symbol": "ListIssues/parseMetadataFilterParam/MetadataFilter",
+      "line_start": 778,
+      "line_end": 878
+    },
+    {
+      "source_ref_id": "S-ISSUE-RESPONSE",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/internal/handler/issue.go",
+      "symbol": "IssueResponse",
+      "line_start": 31,
+      "line_end": 71
+    },
+    {
+      "source_ref_id": "S-ISSUE-LIST-PROJECTION",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/internal/handler/issue.go",
+      "symbol": "ListIssues/labelsByIssue/IssueResponse",
+      "line_start": 778,
+      "line_end": 1270
+    },
+    {
+      "source_ref_id": "S-WORKSPACE-MEMBERS-CLI",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "runWorkspaceMembers",
+      "line_start": 524,
+      "line_end": 562
+    },
+    {
+      "source_ref_id": "S-WORKSPACE-MEMBER-IDENTITY",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/internal/handler/workspace.go",
+      "symbol": "MemberWithUserResponse/ListMembersWithUser",
+      "line_start": 391,
+      "line_end": 429
+    },
+    {
+      "source_ref_id": "S-ISSUE-GET-ATTACHMENTS",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/internal/handler/issue.go",
+      "symbol": "GetIssue/ListAttachmentsByIssue/Attachments",
+      "line_start": 1864,
+      "line_end": 1900
     }
   ],
   "test_refs": [
@@ -7998,6 +8081,26 @@
       "test_ref_id": "T-CONTRACT",
       "path": "tests/contract/test_sdk_contract.py",
       "node_id": "test_sdk_contract"
+    },
+    {
+      "test_ref_id": "T-ISSUE-LIST-METADATA",
+      "path": "tests/unit/resources/test_operations.py",
+      "node_id": "test_operation[manual:issues.list:metadata:canonical]"
+    },
+    {
+      "test_ref_id": "T-ISSUE-LIST-PROJECTION",
+      "path": "tests/unit/resources/test_issues.py",
+      "node_id": "test_issue_list_page_decodes_summary_collections"
+    },
+    {
+      "test_ref_id": "T-WORKSPACE-MEMBER-IDENTITY",
+      "path": "tests/unit/resources/test_workspace_relations.py",
+      "node_id": "test_workspace_members_preserve_user_identity"
+    },
+    {
+      "test_ref_id": "T-ISSUE-GET-ATTACHMENTS",
+      "path": "tests/unit/resources/test_issues.py",
+      "node_id": "test_issue_get_decodes_attachment_snapshots"
     },
     {
       "test_ref_id": "relation:R01",
@@ -8719,9 +8822,14 @@
     {
       "operation_id": "issues.list",
       "compatibility": "intentionally_changed",
-      "rationale": "Return type widens from tuple[IssueSummary, ...] to IssueListPage, exposing pagination metadata; offset and project_id filters added.",
+      "rationale": "Return type changes from BoundIssueListPage with bound compact entities to IssueListPage with immutable IssueSummary values, exposing pagination metadata; offset and project_id filters added. The approved metadata mapping repeats --metadata into the metadata query, while the reviewed list projection preserves labels and metadata on summaries without fabricating bound issues.",
       "source_ref_ids": [
-        "S-ISSUE"
+        "S-ISSUE",
+        "S-ISSUE-LIST-METADATA-CLI",
+        "S-ISSUE-LIST-METADATA-PARSER",
+        "S-ISSUE-LIST-METADATA-HANDLER",
+        "S-ISSUE-RESPONSE",
+        "S-ISSUE-LIST-PROJECTION"
       ],
       "test_ref_ids": [
         "T-OPERATION",
@@ -8729,7 +8837,9 @@
         "relation:R13",
         "relation:R16",
         "relation:R17",
-        "relation:R19"
+        "relation:R19",
+        "T-ISSUE-LIST-METADATA",
+        "T-ISSUE-LIST-PROJECTION"
       ],
       "entrypoints": [
         {
@@ -9299,12 +9409,15 @@
     {
       "operation_id": "issues.get",
       "compatibility": "compatible",
-      "rationale": "Issue get for detail view.",
+      "rationale": "Issue get for detail view; embedded attachment snapshots reuse AttachmentResult and normalize omitted or empty upstream attachments to an empty tuple because the best-effort read may omit the field, so consumers can retry explicitly.",
       "source_ref_ids": [
-        "S-ISSUE"
+        "S-ISSUE",
+        "S-ISSUE-RESPONSE",
+        "S-ISSUE-GET-ATTACHMENTS"
       ],
       "test_ref_ids": [
-        "T-OPERATION"
+        "T-OPERATION",
+        "T-ISSUE-GET-ATTACHMENTS"
       ],
       "entrypoints": [
         {
@@ -10175,13 +10288,16 @@
     {
       "operation_id": "workspaces.members.list",
       "compatibility": "compatible",
-      "rationale": "Workspace member list for workspace members relation.",
+      "rationale": "Workspace member list for workspace members relation; the reviewed response keeps membership id distinct from user_id and email for assignee filtering and creator reconciliation.",
       "source_ref_ids": [
-        "S-WORKSPACE"
+        "S-WORKSPACE",
+        "S-WORKSPACE-MEMBERS-CLI",
+        "S-WORKSPACE-MEMBER-IDENTITY"
       ],
       "test_ref_ids": [
         "T-OPERATION",
-        "relation:R01"
+        "relation:R01",
+        "T-WORKSPACE-MEMBER-IDENTITY"
       ],
       "entrypoints": [
         {

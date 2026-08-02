@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import inspect
 import pathlib
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast
 from unittest.mock import MagicMock
@@ -144,6 +145,20 @@ def _workspace_member(
     )
 
 
+@dataclass(frozen=True)
+class AssigneeIssueRelationCase:
+    name: str
+    entity_factory: Callable[[MagicMock], AgentEntity | SquadEntity | WorkspaceMemberEntity]
+    assignee_id: str
+
+
+ASSIGNEE_ISSUE_RELATION_CASES = (
+    AssigneeIssueRelationCase("agent", _agent, "ag_1"),
+    AssigneeIssueRelationCase("squad", _squad, "sq_1"),
+    AssigneeIssueRelationCase("workspace member", _workspace_member, "wm_1"),
+)
+
+
 # ============================================================================
 # R11 - Agent.skills
 # ============================================================================
@@ -212,7 +227,8 @@ def test_agent_tasks_cached_after_all() -> None:
 # ============================================================================
 
 
-def test_agent_issues_paginates_offset() -> None:
+@pytest.mark.parametrize("case", ASSIGNEE_ISSUE_RELATION_CASES, ids=lambda case: case.name)
+def test_assignee_issue_relations_paginate_offset(case: AssigneeIssueRelationCase) -> None:
     p1 = IssueListPage(
         issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=True,
@@ -228,12 +244,20 @@ def test_agent_issues_paginates_offset() -> None:
         total=2,
     )
     client = _make_client(issues=[p1, p2])
-    entity = _agent(client=client)
+    entity = case.entity_factory(client)
     items = entity.issues.all()
     assert len(items) == 2
     assert client.issues.list.call_count == 2
+    assert all(isinstance(item, IssueSummary) for item in items)
     flt = client.issues.list.call_args_list[0][0][0]
-    assert flt.assignee_id == "ag_1"
+    assert flt.assignee_id == case.assignee_id
+    assert flt.limit == 50
+    assert flt.offset == 0
+    second_filter = client.issues.list.call_args_list[1][0][0]
+    assert second_filter.assignee_id == case.assignee_id
+    assert second_filter.limit == 50
+    assert second_filter.offset == 1
+    client.issues.get.assert_not_called()
 
 
 def test_agent_issues_single_page() -> None:
@@ -244,10 +268,15 @@ def test_agent_issues_single_page() -> None:
         offset=0,
         total=1,
     )
-    client = _make_client(issues=[p])
+    client = _make_client(issues=[p, p])
     entity = _agent(client=client)
     items = entity.issues.all()
     assert len(items) == 1
+    assert isinstance(items[0], IssueSummary)
+    client.issues.get.assert_not_called()
+    entity.issues.refresh()
+    assert client.issues.list.call_count == 2
+    client.issues.get.assert_not_called()
 
 
 def test_agent_issues_is_offset_lazy() -> None:
@@ -420,8 +449,10 @@ def test_squad_issues_uses_assignee_id() -> None:
     entity = _squad(client=client)
     items = entity.issues.all()
     assert len(items) == 1
+    assert isinstance(items[0], IssueSummary)
     flt = client.issues.list.call_args_list[0][0][0]
     assert flt.assignee_id == "sq_1"
+    client.issues.get.assert_not_called()
 
 
 def test_squad_issues_two_pages() -> None:
@@ -439,11 +470,26 @@ def test_squad_issues_two_pages() -> None:
         offset=1,
         total=2,
     )
-    client = _make_client(issues=[p1, p2])
+    client = _make_client(issues=[p1, p2, p1, p2])
     entity = _squad(client=client)
     items = entity.issues.all()
     assert len(items) == 2
     assert client.issues.list.call_count == 2
+    assert all(isinstance(item, IssueSummary) for item in items)
+    first_filter = client.issues.list.call_args_list[0][0][0]
+    second_filter = client.issues.list.call_args_list[1][0][0]
+    assert first_filter.assignee_id == "sq_1"
+    assert first_filter.limit == 50
+    assert first_filter.offset == 0
+    assert second_filter.assignee_id == "sq_1"
+    assert second_filter.limit == 50
+    assert second_filter.offset == 1
+    client.issues.get.assert_not_called()
+    entity.issues.refresh()
+    assert client.issues.list.call_count == 4
+    assert client.issues.list.call_args_list[2][0][0].offset == 0
+    assert client.issues.list.call_args_list[3][0][0].offset == 1
+    client.issues.get.assert_not_called()
 
 
 # ============================================================================
@@ -463,8 +509,10 @@ def test_workspace_member_issues_uses_assignee_id() -> None:
     entity = _workspace_member(client=client)
     items = entity.issues.all()
     assert len(items) == 1
+    assert isinstance(items[0], IssueSummary)
     flt = client.issues.list.call_args_list[0][0][0]
     assert flt.assignee_id == "wm_1"
+    client.issues.get.assert_not_called()
 
 
 def test_workspace_member_issues_two_pages() -> None:
@@ -482,11 +530,26 @@ def test_workspace_member_issues_two_pages() -> None:
         offset=1,
         total=2,
     )
-    client = _make_client(issues=[p1, p2])
+    client = _make_client(issues=[p1, p2, p1, p2])
     entity = _workspace_member(client=client)
     items = entity.issues.all()
     assert len(items) == 2
     assert client.issues.list.call_count == 2
+    assert all(isinstance(item, IssueSummary) for item in items)
+    first_filter = client.issues.list.call_args_list[0][0][0]
+    second_filter = client.issues.list.call_args_list[1][0][0]
+    assert first_filter.assignee_id == "wm_1"
+    assert first_filter.limit == 50
+    assert first_filter.offset == 0
+    assert second_filter.assignee_id == "wm_1"
+    assert second_filter.limit == 50
+    assert second_filter.offset == 1
+    client.issues.get.assert_not_called()
+    entity.issues.refresh()
+    assert client.issues.list.call_count == 4
+    assert client.issues.list.call_args_list[2][0][0].offset == 0
+    assert client.issues.list.call_args_list[3][0][0].offset == 1
+    client.issues.get.assert_not_called()
 
 
 def test_workspace_member_detached_raises() -> None:
@@ -500,6 +563,7 @@ def test_workspace_member_zero_io_property_access() -> None:
     entity = _workspace_member(client=client)
     _ = entity.issues
     assert client.issues.list.call_count == 0
+    client.issues.get.assert_not_called()
 
 
 # ============================================================================

@@ -33,6 +33,23 @@ MIGRATION_CASES = (
     DocumentationCase(ROOT / "docs/migration.md", "Project.autopilots"),
     DocumentationCase(ROOT / "docs/migration.md", "ManyRelation"),
     DocumentationCase(ROOT / "docs/migration.md", "LazyRef"),
+    DocumentationCase(
+        ROOT / "docs/migration.md", "Direct issue lists and the five list-backed relations"
+    ),
+    DocumentationCase(ROOT / "docs/migration.md", "Workspace.issues"),
+    DocumentationCase(ROOT / "docs/migration.md", "Project.issues"),
+    DocumentationCase(ROOT / "docs/migration.md", "Agent.issues"),
+    DocumentationCase(ROOT / "docs/migration.md", "Squad.issues"),
+    DocumentationCase(ROOT / "docs/migration.md", "WorkspaceMember.issues"),
+    DocumentationCase(ROOT / "docs/migration.md", "issues.get(summary.id)"),
+    DocumentationCase(ROOT / "docs/migration.md", "WorkspaceMember.id"),
+    DocumentationCase(ROOT / "docs/migration.md", "WorkspaceMember.user_id"),
+    DocumentationCase(ROOT / "docs/migration.md", "user_id is None"),
+    DocumentationCase(ROOT / "docs/migration.md", "IssueEntity.attachments"),
+    DocumentationCase(
+        ROOT / "docs/migration.md", "attachments.download_bytes(issue.attachments[0].id)"
+    ),
+    DocumentationCase(ROOT / "docs/migration.md", "best-effort"),
 )
 
 
@@ -40,6 +57,26 @@ MIGRATION_CASES = (
     "case", MIGRATION_CASES, ids=tuple(case.required_text for case in MIGRATION_CASES)
 )
 def test_migration_table_covers_required_surface(case: DocumentationCase) -> None:
+    assert case.required_text in case.path.read_text()
+
+
+CONSUMER_DOCUMENTATION_CASES = (
+    DocumentationCase(ROOT / "docs/service-usage.md", "Iterator[IssueSummary]"),
+    DocumentationCase(
+        ROOT / "docs/service-usage.md", "client.projects.get(project_id).issues.all()"
+    ),
+    DocumentationCase(ROOT / "examples/issue_queue.py", 'IssueMetadataItem(key="external_key"'),
+    DocumentationCase(ROOT / "examples/issue_queue.py", "summary.label_names"),
+    DocumentationCase(ROOT / "examples/issue_queue.py", "summary.metadata_snapshot"),
+)
+
+
+@pytest.mark.parametrize(
+    "case",
+    CONSUMER_DOCUMENTATION_CASES,
+    ids=tuple(case.required_text for case in CONSUMER_DOCUMENTATION_CASES),
+)
+def test_consumer_examples_use_summary_read_paths(case: DocumentationCase) -> None:
     assert case.required_text in case.path.read_text()
 
 

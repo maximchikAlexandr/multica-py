@@ -1,6 +1,6 @@
 ## Why
 
-The Multica CLI already returns executor fields that AI Factory must verify
+The Multica CLI already returns executor fields that downstream consumers must verify
 before activation (agent archive state, assigned skill objects, squad leader
 and archive state, squad member roster), but `multica-py` drops them:
 
@@ -11,7 +11,7 @@ and archive state, squad member roster), but `multica-py` drops them:
 - there is no `squad member list` operation, so the SDK cannot read a squad's
   member roster.
 
-This blocks downstream consumers (e.g. AI Factory activation checks) from
+This blocks downstream activation checks from
 validating configured agents and Review/Fix squads through the typed SDK.
 
 ## What Changes

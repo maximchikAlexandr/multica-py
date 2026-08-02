@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py.models import ResourceEntity
 from multica_py.models.autopilots import AutopilotListPage
-from multica_py.models.issues import IssueListFilter
+from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.projects import ProjectData
 from multica_py.models.relations import (
     LazyCollection,
@@ -19,7 +19,7 @@ from multica_py.models.workspaces import Workspace, WorkspaceData, WorkspaceMemb
 from multica_py.resources._base import BaseResource
 from multica_py.resources.agents import AgentEntity
 from multica_py.resources.autopilots import AutopilotEntity
-from multica_py.resources.issues import IssueEntity
+from multica_py.resources.issues import _issue_summary_offset_page
 from multica_py.resources.labels import Label
 from multica_py.resources.projects import Project
 from multica_py.resources.skills import SkillEntity
@@ -31,26 +31,13 @@ if TYPE_CHECKING:
 
 def _workspace_page_issues(
     client: MulticaClient, limit: int | None, offset: int
-) -> OffsetPage[IssueEntity]:
-    from multica_py.resources.issues import IssueEntity, _issue_data_from_summary
+) -> OffsetPage[IssueSummary]:
 
     flt = IssueListFilter(
         limit=limit,
         offset=offset,
     )
-    page = client.issues.list(flt)
-    return OffsetPage(
-        items=tuple(
-            issue
-            if isinstance(issue, IssueEntity)
-            else IssueEntity(_issue_data_from_summary(issue), client=client)
-            for issue in page.issues
-        ),
-        total=page.total or 0,
-        limit=page.limit or 50,
-        offset=page.offset or 0,
-        has_more=page.has_more,
-    )
+    return _issue_summary_offset_page(client.issues, flt)
 
 
 def _bind_workspace(workspace: Workspace, *, client: MulticaClient | None) -> WorkspaceEntity:
@@ -66,7 +53,14 @@ def _bind_workspace_member(
     if isinstance(member, WorkspaceMemberEntity):
         return WorkspaceMemberEntity(member.to_data(), client=client)
     return WorkspaceMemberEntity(
-        WorkspaceMemberData(id=member.id, name=member.name, role=member.role), client=client
+        WorkspaceMemberData(
+            id=member.id,
+            name=member.name,
+            role=member.role,
+            user_id=member.user_id,
+            email=member.email,
+        ),
+        client=client,
     )
 
 
@@ -81,7 +75,7 @@ class WorkspaceEntity(ResourceEntity[WorkspaceData]):
         self._repositories: LazyCollection[RepositoryRecord] | None = None
         self._runtimes: LazyCollection[RuntimeDefinition] | None = None
         self._squads: LazyCollection[SquadEntity] | None = None
-        self._issues: OffsetLazyCollection[IssueEntity] | None = None
+        self._issues: OffsetLazyCollection[IssueSummary] | None = None
         self._autopilots: LazyCollection[AutopilotEntity] | None = None
 
     @property
@@ -191,11 +185,11 @@ class WorkspaceEntity(ResourceEntity[WorkspaceData]):
         return self._squads
 
     @property
-    def issues(self) -> OffsetLazyCollection[IssueEntity]:
+    def issues(self) -> OffsetLazyCollection[IssueSummary]:
         if self._issues is None:
             client = self._check_client("issues")
 
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueEntity]:
+            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
                 return _workspace_page_issues(client, limit, offset)
 
             self._issues = OffsetLazyCollection(page_loader)
@@ -250,7 +244,7 @@ class WorkspaceResource(BaseResource):
 class WorkspaceMemberEntity(ResourceEntity[WorkspaceMemberData]):
     def __init__(self, data: WorkspaceMemberData, client: MulticaClient | None = None) -> None:
         super().__init__(data, client=client)
-        self._issues: OffsetLazyCollection[IssueEntity] | None = None
+        self._issues: OffsetLazyCollection[IssueSummary] | None = None
 
     @property
     def id(self) -> str:
@@ -264,6 +258,14 @@ class WorkspaceMemberEntity(ResourceEntity[WorkspaceMemberData]):
     def role(self) -> str | None:
         return self._data.role
 
+    @property
+    def user_id(self) -> str | None:
+        return self._data.user_id
+
+    @property
+    def email(self) -> str | None:
+        return self._data.email
+
     def _check_client(self, relation_name: str) -> MulticaClient:
         return self._require_client(
             entity_type="WorkspaceMemberEntity",
@@ -272,32 +274,19 @@ class WorkspaceMemberEntity(ResourceEntity[WorkspaceMemberData]):
         )
 
     @property
-    def issues(self) -> OffsetLazyCollection[IssueEntity]:
+    def issues(self) -> OffsetLazyCollection[IssueSummary]:
         if self._issues is None:
             client = self._check_client("issues")
             mid = self._data.id
 
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueEntity]:
-                from multica_py.resources.issues import IssueEntity, _issue_data_from_summary
+            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
 
                 flt = IssueListFilter(
                     assignee_id=mid,
                     limit=limit,
                     offset=offset,
                 )
-                page = client.issues.list(flt)
-                return OffsetPage(
-                    items=tuple(
-                        issue
-                        if isinstance(issue, IssueEntity)
-                        else IssueEntity(_issue_data_from_summary(issue), client=client)
-                        for issue in page.issues
-                    ),
-                    total=page.total or 0,
-                    limit=page.limit or 50,
-                    offset=page.offset or 0,
-                    has_more=page.has_more,
-                )
+                return _issue_summary_offset_page(client.issues, flt)
 
             self._issues = OffsetLazyCollection(page_loader)
         return self._issues

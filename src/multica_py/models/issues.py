@@ -5,7 +5,13 @@ import datetime
 import msgspec
 
 from multica_py.enums import IssueSort, IssueStatus, SortDirection
+from multica_py.models.system import AttachmentResult
 from multica_py.types import MetadataValue
+
+
+class IssueMetadataItem(msgspec.Struct, frozen=True, kw_only=True):
+    key: str
+    value: MetadataValue
 
 
 class IssueSummary(msgspec.Struct, frozen=True, kw_only=True):
@@ -18,6 +24,8 @@ class IssueSummary(msgspec.Struct, frozen=True, kw_only=True):
     project_id: str | None = None
     creator_id: str | None = None
     creator_type: str | None = None
+    label_names: tuple[str, ...] = ()
+    metadata_snapshot: tuple[IssueMetadataItem, ...] = ()
 
 
 class IssueAssignee(msgspec.Struct, frozen=True, kw_only=True):
@@ -37,11 +45,6 @@ class IssueChildStageGroup(msgspec.Struct, frozen=True, kw_only=True):
     count: int
 
 
-class IssueMetadataItem(msgspec.Struct, frozen=True, kw_only=True):
-    key: str
-    value: MetadataValue
-
-
 class Issue(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     title: str
@@ -53,6 +56,7 @@ class Issue(msgspec.Struct, frozen=True, kw_only=True):
     children: tuple[IssueChildStageGroup, ...] = ()
     labels: tuple[str, ...] = ()
     metadata: tuple[IssueMetadataItem, ...] = ()
+    attachments: tuple[AttachmentResult, ...] = ()
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
     parent_id: str | None = None
@@ -72,6 +76,7 @@ class IssueData(msgspec.Struct, frozen=True, kw_only=True):
     child_stages: tuple[IssueChildStageGroup, ...] = ()
     label_names: tuple[str, ...] = ()
     metadata_snapshot: tuple[IssueMetadataItem, ...] = ()
+    attachments: tuple[AttachmentResult, ...] = ()
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
     parent_id: str | None = None
@@ -96,6 +101,7 @@ class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
     project_id: str | None = None
     sort: IssueSort | None = None
     direction: SortDirection | None = None
+    metadata: tuple[IssueMetadataItem, ...] = ()
 
 
 class IssueListPage(msgspec.Struct, frozen=True, kw_only=True):

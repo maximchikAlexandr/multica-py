@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import datetime
+import json
 import pathlib
 from collections.abc import Mapping
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
 from multica_py._generated.approved_sdk import (
@@ -47,6 +47,7 @@ from multica_py.models.issues import (
     IssueCreateRequest,
     IssueData,
     IssueListFilter,
+    IssueListPage,
     IssueMetadataItem,
     IssueReorderRequest,
     IssueSummary,
@@ -59,9 +60,11 @@ from multica_py.models.relations import (
     CursorPage,
     LazyCollection,
     LazyMapping,
+    OffsetPage,
     RelationMetadata,
     _RelationLoad,
 )
+from multica_py.models.system import AttachmentResult
 from multica_py.resources._base import BaseResource
 from multica_py.resources.issue_comments import (
     Comment,
@@ -76,33 +79,20 @@ from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.resources.labels import Label
 from multica_py.types import MetadataValue
 
-
-@dataclass(frozen=True, slots=True)
-class BoundIssueListPage:
-    """Immutable page whose compact issue rows retain their client view."""
-
-    issues: tuple[IssueEntity, ...]
-    has_more: bool
-    limit: int | None
-    offset: int | None
-    total: int | None
-
-
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
 
 
-def _issue_data_from_summary(summary: IssueSummary) -> IssueData:
-    return IssueData(
-        id=summary.id,
-        title=summary.title,
-        status=summary.status,
-        priority=summary.priority,
-        created_at=summary.created_at,
-        parent_id=summary.parent_id,
-        project_id=summary.project_id,
-        creator_id=summary.creator_id,
-        creator_type=summary.creator_type,
+def _issue_summary_offset_page(
+    issues: IssueResource, issue_filter: IssueListFilter
+) -> OffsetPage[IssueSummary]:
+    page = issues.list(issue_filter)
+    return OffsetPage(
+        items=page.issues,
+        total=page.total or 0,
+        limit=page.limit or 50,
+        offset=page.offset or 0,
+        has_more=page.has_more,
     )
 
 
@@ -118,6 +108,7 @@ def _issue_data_from_issue(issue: Issue) -> IssueData:
         child_stages=issue.children,
         label_names=issue.labels,
         metadata_snapshot=issue.metadata,
+        attachments=issue.attachments,
         created_at=issue.created_at,
         updated_at=issue.updated_at,
         parent_id=issue.parent_id,
@@ -244,6 +235,10 @@ class IssueEntity(ResourceEntity[IssueData]):
     @property
     def creator_type(self) -> str | None:
         return self._data.creator_type
+
+    @property
+    def attachments(self) -> tuple[AttachmentResult, ...]:
+        return self._data.attachments
 
     def _check_client(self, relation_name: str) -> MulticaClient:
         return self._require_client(
@@ -471,14 +466,16 @@ class IssueResource(BaseResource):
         self.subscribers._set_client(client)
         self.labels._set_client(client)
 
-    def list(self, filter: IssueListFilter | None = None) -> BoundIssueListPage:
+    def list(self, filter: IssueListFilter | None = None) -> IssueListPage:
         args = ["issue", "list"]
         if filter is not None:
+            sort = filter.sort
+            direction = filter.direction
             if filter.offset is not None and filter.offset < 0:
                 raise ValueError(
                     "IssueResource.list: offset must be nonnegative (offset_nonnegative)"
                 )
-            if filter.direction is not None and filter.sort is None:
+            if direction is not None and sort is None:
                 raise ValueError(
                     "IssueResource.list: direction requires sort (direction_requires_sort)"
                 )
@@ -494,24 +491,29 @@ class IssueResource(BaseResource):
                 args.extend(["--offset", str(filter.offset)])
             if filter.project_id is not None:
                 args.extend(["--project", filter.project_id])
-            if filter.sort is not None:
-                args.extend(["--sort", filter.sort.value])
-            if filter.direction is not None:
-                args.extend(["--direction", filter.direction.value])
+            seen_metadata_keys: set[str] = set()
+            for item in filter.metadata:
+                if not item.key.strip() or "=" in item.key:
+                    raise ValueError(f"IssueResource.list: invalid metadata key {item.key!r}")
+                if item.key in seen_metadata_keys:
+                    raise ValueError(f"IssueResource.list: duplicate metadata key {item.key!r}")
+                seen_metadata_keys.add(item.key)
+                encoded = json.dumps(
+                    item.value,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    allow_nan=False,
+                )
+                args.extend(["--metadata", f"{item.key}={encoded}"])
+            if sort is not None:
+                args.extend(["--sort", sort.value])
+            if direction is not None:
+                args.extend(["--direction", direction.value])
         page = issue_list_page_from_wire(self._run_json_decode(tuple(args), IssueListPageWire))
-        return BoundIssueListPage(
-            issues=tuple(self._bind_summary(summary) for summary in page.issues),
-            has_more=page.has_more,
-            limit=page.limit,
-            offset=page.offset,
-            total=page.total,
-        )
+        return page
 
     def _bind_issue(self, data: IssueData) -> IssueEntity:
         return IssueEntity(data, client=self._client)
-
-    def _bind_summary(self, summary: IssueSummary) -> IssueEntity:
-        return self._bind_issue(_issue_data_from_summary(summary))
 
     def get(self, issue_id: str) -> IssueEntity:
         validate_nonblank(issue_id)

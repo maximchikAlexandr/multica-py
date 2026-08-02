@@ -9,7 +9,7 @@ counts MUST be changed in the same commit as their added/removed rows and MUST
 equal the lengths computed from the final case tables; historic literals
 117/146/29/143 are not post-change requirements.
 
-#### Scenario: Public methods have exact canonical coverage
+#### Scenario: Public methods have canonical operation coverage
 - **WHEN** `discovered_public_methods` is compared to `{case.sdk_method for case in OPERATION_CASES if case.is_canonical}`
 - **THEN** the sets are equal, every supported method has one canonical row, removed methods have none, and stored count constants equal the computed table partitions
 

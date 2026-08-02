@@ -42,118 +42,119 @@ The distribution MUST remain `multica-py`, import as `multica_py`, include `py.t
 <!-- Source IDs: 001:FR-006A–FR-006D,FR-047–FR-050B -->
 
 ### Requirement: Executor fields and squad member decoding
-The SDK SHALL decode the executor fields the Multica CLI already returns on `agent get`, `agent list`, and `squad get`, and SHALL expose a typed `squad member list` operation.
+The SDK SHALL decode upstream executor fields and squad members. `AgentData`
+SHALL expose `skill_refs: tuple[AgentSkill, ...]`, not eager `skills`;
+`Agent.skills` SHALL be `LazyCollection[AgentSkill]` backed by governed plural
+`agent skills list`. `AgentData.archived_at`, `SquadData.leader_id`, and
+`SquadData.archived_at` remain optional typed fields. `Squad.members` SHALL be
+`LazyCollection[SquadMember]` backed by `squad member list`.
+
 #### Scenario: Agent skills decode as typed AgentSkill objects
-- **WHEN** the CLI response for `agent get` / `agent list` contains `"skills": [{"id":"sk_1","name":"openspec-propose","enabled":true}]`
-- **THEN** the decoded `Agent.skills` is `tuple[AgentSkill, ...]` with `AgentSkill(id="sk_1", name="openspec-propose", enabled=True)`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** agent get/list contains assigned skill objects
+- **THEN** `AgentData.skill_refs` preserves typed `AgentSkill` values and `Agent.skills` remains the lazy relation name
 
 #### Scenario: Agent with no skills decodes to empty tuple
-- **WHEN** the CLI response omits `skills` or returns `"skills": []`
-- **THEN** the decoded `Agent.skills` is `()`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** agent get/list omits embedded skills
+- **THEN** `AgentData.skill_refs == ()` and no relation cache is seeded
 
 #### Scenario: Agent archived_at null decodes to None
-- **WHEN** the CLI response contains `"archived_at": null` or omits the key
-- **THEN** the decoded `Agent.archived_at` is `None`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** `archived_at` is null or omitted
+- **THEN** `AgentData.archived_at` is `None`
 
 #### Scenario: Agent archived_at RFC3339 decodes to datetime
-- **WHEN** the CLI response contains `"archived_at": "2026-07-28T11:47:17Z"`
-- **THEN** the decoded `Agent.archived_at` is a `datetime.datetime` equal to `datetime.datetime(2026, 7, 28, 11, 47, 17, tzinfo=datetime.timezone.utc)`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** `archived_at` is a valid RFC3339 value
+- **THEN** `AgentData.archived_at` is the corresponding timezone-aware `datetime`
 
 #### Scenario: Assigned skills read returns typed AgentSkill
-- **WHEN** `client.agents.skills.list("a1")` is called and the CLI returns `{"id":"sk_1","name":"openspec-propose","enabled":true}`
-- **THEN** the result is `tuple[AgentSkill, ...]` with `AgentSkill(id="sk_1", name="openspec-propose", enabled=True)`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** `Agent.skills.all()` loads
+- **THEN** `agent skills list <agent-id> --output json` returns `tuple[AgentSkill, ...]`
 
 #### Scenario: Squad leader_id decodes
-- **WHEN** the CLI response for `squad get` / `squad list` contains `"leader_id": "leader-agent-id"`
-- **THEN** the decoded `Squad.leader_id` is `"leader-agent-id"`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** a squad response contains `leader_id`
+- **THEN** `SquadData.leader_id` preserves it
 
 #### Scenario: Squad leader_id absent decodes to None
-- **WHEN** the CLI response omits `leader_id` or returns `"leader_id": null`
-- **THEN** the decoded `Squad.leader_id` is `None`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** a squad response omits `leader_id` or contains null
+- **THEN** `SquadData.leader_id` is `None`
 
 #### Scenario: Squad archived_at null decodes to None
-- **WHEN** the CLI response contains `"archived_at": null` or omits the key
-- **THEN** the decoded `Squad.archived_at` is `None`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** a squad response omits `archived_at` or contains null
+- **THEN** `SquadData.archived_at` is `None`
 
 #### Scenario: Squad archived_at RFC3339 decodes to datetime
-- **WHEN** the CLI response contains `"archived_at": "2026-07-28T11:47:17Z"`
-- **THEN** the decoded `Squad.archived_at` is a `datetime.datetime` equal to `datetime.datetime(2026, 7, 28, 11, 47, 17, tzinfo=datetime.timezone.utc)`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** a squad response contains an RFC3339 `archived_at`
+- **THEN** `SquadData.archived_at` is the corresponding timezone-aware `datetime`
 
 #### Scenario: Existing minimal squad fixture still decodes
-- **WHEN** a fixture encodes `Squad(id="s1", name="S")` with no `leader_id` or `archived_at`
-- **THEN** it decodes back to a `Squad` with `leader_id is None` and `archived_at is None` and `member_count == 0`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** a minimal legacy squad fixture omits optional fields
+- **THEN** it decodes with the documented defaults
+
+#### Scenario: Squad members remain typed
+- **WHEN** `Squad.members.all()` loads
+- **THEN** one `squad member list <squad-id> --output json` call returns typed `SquadMember` records preserving role and order
 
 #### Scenario: Squad member list emits exact argv
-- **WHEN** `client.squads.members.list("sq_1")` is called
-- **THEN** the transport receives the argv `("squad", "member", "list", "sq_1", "--output", "json")` via `run_bytes`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** the squad member relation loads
+- **THEN** transport receives `("squad", "member", "list", <squad-id>, "--output", "json")`
 
 #### Scenario: Squad member list returns typed members
-- **WHEN** `client.squads.members.list("sq_1")` is called and the CLI returns `[{"member_id":"a1","member_type":"agent","role":"architecture-reviewer"}]`
-- **THEN** the result is `tuple[SquadMember, ...]` with `SquadMember(member_id="a1", member_type="agent", role="architecture-reviewer")`.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
+- **WHEN** the CLI returns squad member records
+- **THEN** each item is a typed `SquadMember`
 
 #### Scenario: Squad member list with multiple roles preserves each
-- **WHEN** the CLI returns multiple members with distinct roles
-- **THEN** each `SquadMember` preserves its `member_id`, `member_type`, and `role` verbatim, in response order.
-<!-- Source IDs: pending — see issue #10 (deferred_owner_decision) -->
-
-Specifically:
-
-- `Agent.skills` SHALL be `tuple[AgentSkill, ...]` where `AgentSkill` is a frozen `msgspec.Struct` with `id: str`, `name: str`, `enabled: bool`.
-- `Agent` SHALL decode `archived_at` as `datetime.datetime | None`, where JSON `null` decodes to `None` and an RFC3339 timestamp decodes to a `datetime.datetime`.
-- `Squad` SHALL decode `leader_id: str | None = None` and `archived_at: datetime.datetime | None = None`.
-- A `SquadMember` model (frozen `msgspec.Struct`, `member_id: str`, `member_type: str`, `role: str`) SHALL decode the `multica squad member list <squad-id> --output json` response.
-- `SquadResource` SHALL expose a nested `members` resource whose `list(squad_id)` method returns `tuple[SquadMember, ...]` and emits the argv `("squad", "member", "list", <squad-id>, "--output", "json")`.
-- `AgentSkillResource.list` SHALL return `tuple[AgentSkill, ...]` (same typed shape as `Agent.skills`), replacing the previous generic `Skill` decode.
-
-All new scalar fields are additive with `None` defaults so that fixtures and older CLI responses omitting them continue to decode.
+- **WHEN** multiple squad members have distinct roles
+- **THEN** identity, type, role, and response order are preserved
 
 ### Requirement: Autopilot resource governance and pagination
+The SDK MUST govern `autopilots.list/get/create/update/delete/trigger/history`
+and trigger mutation operations. `run` MUST be renamed to `trigger`;
+unsupported `get_run` MUST be removed. Direct list/history page behavior
+remains as specified by `autopilot-resource`, while bound `Workspace.autopilots`
+and `Autopilot.runs/triggers/subscribers` provide the relation surface.
 
-The SDK MUST govern the autopilot resource operations in the approved contract
-and MUST expose pagination metadata on `autopilots.list` and
-`autopilots.history`, consistent with the issue-list pagination surface.
+#### Scenario: Autopilot operation set is exact
+- **WHEN** approved operations and discovered public methods are inspected
+- **THEN** `trigger` replaces `run`, `get_run` is absent, and every supported operation has an intentionally changed rationale and canonical case
+
+#### Scenario: Direct pages remain available
+- **WHEN** direct list or history is called
+- **THEN** it returns the documented typed page with total/limit/offset metadata while relations adapt those pages without changing direct behavior
 
 #### Scenario: Autopilot list returns AutopilotListPage
-
-- **WHEN** `client.autopilots.list()` is called and the CLI returns
-  `{"autopilots":[...],"total":N}`
-- **THEN** the result is an `AutopilotListPage` with `total == N` and an
-  `autopilots: tuple[Autopilot, ...]` field, not a bare `tuple[Autopilot, ...]`.
+- **WHEN** `autopilots.list()` succeeds
+- **THEN** it returns the documented bound `AutopilotListPage`
 
 #### Scenario: Autopilot history returns AutopilotRunListPage
-
-- **WHEN** `client.autopilots.history("a1", limit=10, offset=20)` is called and
-  the CLI returns `{"runs":[...],"total":N}`
-- **THEN** the result is an `AutopilotRunListPage` with `total`, `limit`,
-  `offset`, and a Python-computed `has_more`.
+- **WHEN** `autopilots.history()` succeeds
+- **THEN** it returns the documented bound `AutopilotRunListPage`
 
 #### Scenario: Autopilot operations are in the approved contract
-
-- **WHEN** the approved contract operation list is inspected
-- **THEN** `autopilots.list`, `autopilots.get`, `autopilots.create`,
-  `autopilots.update`, `autopilots.delete`, `autopilots.run`, and
-  `autopilots.history` are present with `compatibility` set to
-  `intentionally_changed` and a rationale naming the model widening and
-  pagination return-type change (and, for `history`, the argv fix to the
-  upstream `autopilot runs <id>` subcommand; for `run`, the deferred
-  `autopilot trigger <id>` argv divergence).
-- **AND** `autopilots.get_run` is NOT present (it stays ungoverned; upstream
-  has no single-run fetch subcommand).
+- **WHEN** the approved contract is inspected
+- **THEN** every supported autopilot operation has its governed binding and response contract
 
 ### Requirement: Issue list pagination and summary identity decoding
-The SDK SHALL accept `offset` and `project_id` on `IssueListFilter`, SHALL forward them as the upstream `--offset` and `--project` flags only when non-`None` (and `offset` nonnegative), SHALL return a typed `IssueListPage` from `IssueResource.list` carrying the listed issues and the pagination metadata (`has_more`, `limit`, `offset`, `total`) that the upstream `issue list --output json` response returns, and SHALL expose the per-issue identity and hierarchy scalar fields (`created_at`, `parent_id` renamed from `parent_issue_id`, `project_id`, `creator_id`, `creator_type`) on `IssueSummary`.
+The SDK SHALL accept `offset`, `project_id`, and ordered typed `metadata`
+predicates on `IssueListFilter`. It SHALL forward `offset` and `project_id` as
+the upstream `--offset` and `--project` flags only when non-`None` (and `offset`
+nonnegative). It SHALL forward each metadata predicate as a repeatable
+`--metadata key=<json-scalar>` pair in caller order, using the existing
+`IssueMetadataItem` and `MetadataValue` public types. The handwritten adapter
+SHALL encode values with `json.dumps(value, ensure_ascii=False,
+separators=(",", ":"), allow_nan=False)`. Predicate keys SHALL be nonblank,
+unique within the filter, and SHALL NOT contain `=`. Invalid keys, duplicate
+keys, and non-finite floats SHALL raise `ValueError` before transport.
+`IssueSummaryWire` SHALL decode
+`labels: tuple[LabelData, ...] | msgspec.UnsetType = msgspec.UNSET` and
+`metadata: dict[str, MetadataValue] | msgspec.UnsetType = msgspec.UNSET`, mapping
+them to `IssueSummary.label_names` and `IssueSummary.metadata_snapshot` with
+omitted values normalized to `()`. The SDK SHALL return a typed `IssueListPage` from `IssueResource.list`, carrying
+immutable `IssueSummary` values and the upstream pagination metadata
+(`has_more`, `limit`, `offset`, `total`). Each summary SHALL expose identity and
+hierarchy scalar fields (`created_at`, `parent_id` renamed from
+`parent_issue_id`, `project_id`, `creator_id`, `creator_type`) plus authoritative
+`label_names` and `metadata_snapshot` from the list response. The list path
+SHALL NOT fabricate a full bound `IssueEntity`; callers SHALL use
+`issues.get(summary.id)` when full state or bound behavior is required.
 
 #### Scenario: List with offset emits --offset
 - **WHEN** `IssueResource.list` is called with `IssueListFilter(offset=20)`
@@ -197,42 +198,176 @@ The SDK SHALL accept `offset` and `project_id` on `IssueListFilter`, SHALL forwa
 
 #### Scenario: IssueListPage is the public return type
 - **WHEN** `IssueResource.list` is called
-- **THEN** the returned object is an instance of `multica_py.models.issues.IssueListPage`.
+- **THEN** the returned object is an instance of `multica_py.models.issues.IssueListPage` and not a `BoundIssueListPage`.
+
+#### Scenario: Metadata predicates emit exact repeated flags
+- **WHEN** `IssueResource.list` receives metadata predicates `external_key="42"`, `ready=true`, `attempt=2`, and `finished_at=null`
+- **THEN** argv contains ordered pairs `--metadata external_key="42"`, `--metadata ready=true`, `--metadata attempt=2`, and `--metadata finished_at=null`
+
+#### Scenario: Metadata predicate order is preserved
+- **WHEN** two valid metadata predicates are supplied in a defined tuple order
+- **THEN** their repeatable `--metadata` pairs occur in that same order
+
+#### Scenario: Metadata predicate keys are validated before transport
+- **WHEN** a metadata predicate has a blank key or a key containing `=`
+- **THEN** a `ValueError` names the invalid metadata key and no CLI invocation occurs
+
+#### Scenario: Duplicate metadata predicate keys are rejected before transport
+- **WHEN** two metadata predicates have the same key
+- **THEN** a `ValueError` names the duplicate key and no CLI invocation occurs
+
+#### Scenario: Non-finite metadata floats are rejected before transport
+- **WHEN** a metadata predicate value is `nan`, `inf`, or `-inf`
+- **THEN** `json.dumps(..., allow_nan=False)` causes a `ValueError` before any CLI invocation
+
+#### Scenario: List summary preserves labels and metadata
+- **WHEN** an issue-list row contains labels and metadata
+- **THEN** its `IssueSummary.label_names` and `IssueSummary.metadata_snapshot` preserve those decoded values
+
+#### Scenario: Omitted summary collections decode as empty tuples
+- **WHEN** an issue-list row omits labels and metadata
+- **THEN** its `IssueSummary.label_names == ()` and `IssueSummary.metadata_snapshot == ()`
+
+#### Scenario: List never fabricates a full issue entity
+- **WHEN** an issue-list row is decoded
+- **THEN** no placeholder full-issue fields or bound relation state are constructed from the summary
 
 ### Requirement: Attachment byte-oriented upload and download
-The SDK SHALL expose `AttachmentResource.upload_bytes(issue_id, filename, payload) -> AttachmentResult` and `AttachmentResource.download_bytes(attachment_id) -> bytes` as convenience wrappers over the existing file-based `upload()` and `download()` methods. The byte methods SHALL NOT duplicate CLI command-building logic, SHALL accept `bytes` (not base64), SHALL preserve the exact filename supplied to `upload_bytes`, SHALL clean up temporary files automatically on both success and failure, SHALL correctly support empty and binary content, SHALL raise the same SDK exception types as the underlying file-based methods, and SHALL leave the existing `upload()` and `download()` behavior unchanged.
+The SDK SHALL expose
+`upload(path: Path, *, task_id: str | None = None) -> AttachmentResult`,
+`download(attachment_id: str, *, output_dir: Path) -> Path`,
+`upload_bytes(filename: str, payload: bytes, *, task_id: str | None = None) -> AttachmentResult`,
+and `download_bytes(attachment_id: str) -> bytes`. `attachments.list` and the
+legacy issue-id upload signature SHALL be absent. Byte helpers MUST delegate to
+file methods, preserve filename/binary/empty content, clean temporary files on
+success/failure, and propagate the underlying SDK exception.
+
+#### Scenario: File upload emits pinned argv
+- **WHEN** upload is called with a path and optional task ID
+- **THEN** argv is `attachment upload <path> [--task <id>] --output json` and no issue ID or `--file` flag is emitted
+
+#### Scenario: File download emits pinned argv
+- **WHEN** download is called with attachment ID and output directory
+- **THEN** argv is `attachment download <id> --output-dir <dir> --output json` and the returned path is the decoded downloaded path
 
 #### Scenario: upload_bytes preserves the supplied filename
-- **WHEN** `upload_bytes("i1", "manifest.json", b'{"x":1}')` is called
-- **THEN** the underlying `upload()` is called with a path whose final component is exactly `manifest.json`, and the returned `AttachmentResult` is the one decoded by `upload()`.
+- **WHEN** upload_bytes receives empty or binary bytes and a safe filename
+- **THEN** it delegates through a temporary file with the exact filename/task ID and returns the file upload result
 
 #### Scenario: download_bytes returns the file content as bytes
-- **WHEN** `download_bytes("a1")` is called and the underlying `download()` writes a file containing `b'\x00\x01binary'`
-- **THEN** the returned value is exactly `b'\x00\x01binary'`.
+- **WHEN** download_bytes delegates to a temporary output directory
+- **THEN** it reads and returns the exact downloaded bytes, including empty content
 
 #### Scenario: Empty payload uploads and returns the decoded result
-- **WHEN** `upload_bytes("i1", "empty.bin", b'')` is called
-- **THEN** `upload()` is called with a path to a zero-length file named `empty.bin` and the decoded `AttachmentResult` is returned.
+- **WHEN** `upload_bytes` receives empty bytes
+- **THEN** it preserves the empty payload and returns the decoded upload result
 
 #### Scenario: Empty attachment downloads as empty bytes
-- **WHEN** `download_bytes("a1")` is called and the underlying `download()` writes a zero-length file
-- **THEN** the returned value is `b''`.
+- **WHEN** the downloaded attachment is empty
+- **THEN** `download_bytes` returns `b""`
 
 #### Scenario: Temporary files are removed after success
-- **WHEN** `upload_bytes` or `download_bytes` completes successfully
-- **THEN** the temporary directory created for the operation no longer exists on the filesystem after the call returns.
+- **WHEN** either byte helper succeeds
+- **THEN** its temporary directory is removed
 
 #### Scenario: Temporary files are removed when the underlying CLI operation fails
-- **WHEN** the underlying `upload()` or `download()` raises an exception
-- **THEN** the exception propagates to the caller (same SDK exception type) and the temporary directory created for the operation no longer exists on the filesystem.
+- **WHEN** the underlying operation raises
+- **THEN** the temporary directory is removed and the original exception type propagates
 
 #### Scenario: Path separators and empty values are rejected
-- **WHEN** `upload_bytes` is called with a `filename` containing `/` or `\` or `..`, or with an empty string
-- **THEN** `ValueError` is raised with a message identifying the parameter.
-- **WHEN** `download_bytes` is called with an `attachment_id` containing `/` or `\` or `..`, or with an empty string
-- **THEN** `ValueError` is raised with a message identifying the parameter.
+- **WHEN** filename or attachment ID is empty, contains a separator, or contains `..`
+- **THEN** `ValueError` identifies the parameter before filesystem or transport access
 
 #### Scenario: Existing upload and download behavior is unchanged
-- **WHEN** `upload(issue_id, file_path)` or `download(attachment_id, output_path)` is called
-- **THEN** the argv and return behavior are identical to before this change (no regression in the file-based API).
+- **WHEN** callers use the supported path-based upload and download methods
+- **THEN** their governed argv, results, and error behavior remain unchanged
+
+### Requirement: Corrected profile, repository, and runtime surfaces
+The SDK MUST expose only source-governed D15–D17 surfaces. `users.profile_get`
+returns immutable `UserProfile`; `users.profile_update(UserProfileUpdate)`
+updates only a present description. `repositories.list/add/remove` use
+immutable URL/description records and multi-URL mutation results.
+`repositories.get` and `repositories.checkout` MUST be absent: checkout is a
+daemon-task workflow, not a configured SDK server operation. `runtimes.get`
+MUST be absent; usage/activity return immutable tuples, usage validates
+`1 <= days <= 365`, update requires target-version with optional wait, rename
+supports machine, and delete supports cascade.
+
+#### Scenario: D15–D17 discovery is exact
+- **WHEN** public resources and the approved contract are inspected
+- **THEN** every approved D15–D17 symbol resolves with its approved signature,
+  no removed legacy or daemon-only checkout symbol resolves, and each supported
+  method has exactly one canonical transport vector
+
+### Requirement: Unsupported surface migration
+The SDK MUST publish an alpha migration mapping for every unsupported, renamed,
+or intentionally narrowed public surface changed by this roadmap and the
+consumer read-path change.
+
+#### Scenario: Migration table is complete
+- **WHEN** release documentation is reviewed
+- **THEN** it maps legacy attachment, user, repository, runtime, autopilot, agent skill, skill file, issue label/children/metadata, rerun/cancel, run-message, avatar, direct issue-list, and issue-list relation surfaces to the supported replacement or explicitly states that no CLI-backed replacement exists
+
+#### Scenario: Unsupported service replacements are exact
+- **WHEN** migration documentation is inspected
+- **THEN** it specifies `attachments.list` remains removed; issue-result discovery uses a fresh `issues.get(issue_id).attachments` snapshot and `download_bytes`; `users.list/get` remains replaced by profile operations while workspace registry reconciliation uses `workspace.members` with `user_id`; `repositories.get` is removed in favor of URL/ref list/add/remove/checkout; `runtimes.get` is removed; `autopilots.run` is renamed `trigger`; `autopilots.get_run` is replaced by history-page selection; and list callers use `IssueSummary` plus explicit `issues.get(summary.id)` when a full issue is needed
+
+### Requirement: Workspace member identity is explicit
+The SDK SHALL decode workspace membership identity and user identity as separate
+fields. It SHALL add optional `user_id` and `email` fields directly to the
+existing `models.workspaces.WorkspaceMember` and
+`models.system.WorkspaceMemberData`; it SHALL NOT add a separate member wire
+class. `WorkspaceMember.id` SHALL remain the workspace membership identifier,
+`WorkspaceMember.user_id` SHALL expose the related user identifier, and
+`WorkspaceMember.email` SHALL expose the member email when supplied by the
+pinned upstream response. `WorkspaceMemberEntity` SHALL expose same-named
+passive properties. The added fields SHALL default to `None` when absent for
+backward-compatible decoding.
+
+#### Scenario: Distinct member and user identifiers round-trip
+- **WHEN** `workspace member list --output json` returns different `id` and `user_id` values plus an `email`
+- **THEN** the decoded `WorkspaceMember` preserves all three values without aliasing either identifier
+
+#### Scenario: Older member payload remains decodable
+- **WHEN** a workspace-member payload contains `id`, `name`, and `role` but omits `user_id` and `email`
+- **THEN** decoding succeeds with `user_id is None` and `email is None`
+
+#### Scenario: Membership identifier remains the assignee identifier
+- **WHEN** `WorkspaceMember.issues` constructs its issue-list filter
+- **THEN** it uses `WorkspaceMember.id` as `assignee_id` and does not substitute `user_id`
+
+#### Scenario: User identifier supports creator reconciliation
+- **WHEN** a consumer compares an issue `creator_id` with workspace members
+- **THEN** it can compare against `WorkspaceMember.user_id` without interpreting the membership identifier as a user identifier
+
+### Requirement: Issue get exposes its embedded attachment snapshot
+The SDK SHALL decode the `attachments` array embedded in `issue get --output
+json` through `IssueWire.attachments: tuple[AttachmentResult, ...] |
+msgspec.UnsetType`. One shared normalization SHALL populate both
+`Issue.attachments` and `IssueData.attachments` as
+`tuple[AttachmentResult, ...]`; `issue_from_wire` and `issue_data_from_wire`
+SHALL use that normalization. `IssueEntity.attachments` SHALL expose the
+`IssueData` tuple as a passive property. Decoding SHALL reuse the existing
+attachment result type and preserve response order. An omitted field and an
+explicit empty array SHALL both normalize to `()`.
+
+#### Scenario: Embedded attachments decode in response order
+- **WHEN** `issue get --output json` returns two attachment objects
+- **THEN** `Issue.attachments`, `IssueData.attachments`, and the bound `IssueEntity.attachments` expose two `AttachmentResult` values in the same order
+
+#### Scenario: Empty attachment array decodes as an empty tuple
+- **WHEN** `issue get --output json` contains `"attachments": []`
+- **THEN** `Issue.attachments == ()`, `IssueData.attachments == ()`, and `IssueEntity.attachments == ()`
+
+#### Scenario: Omitted attachment field decodes as an empty tuple
+- **WHEN** `issue get --output json` omits `attachments`
+- **THEN** decoding succeeds and the `Issue`, `IssueData`, and `IssueEntity` attachment snapshots are `()`
+
+#### Scenario: Passive attachment access performs no I/O
+- **WHEN** `IssueEntity.attachments` is read repeatedly from a bound issue returned by `issues.get`
+- **THEN** no additional CLI invocation occurs
+
+#### Scenario: Missing attachments are not an atomic completion signal
+- **WHEN** a polling consumer observes `IssueEntity.attachments == ()` after `issues.get`
+- **THEN** documentation explains that pinned upstream may omit the field after a best-effort attachment-read failure and the consumer can retry `issues.get`
 

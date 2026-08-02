@@ -16,7 +16,7 @@ from multica_py.models.agents import (
     AgentTask,
     AgentUpdateRequest,
 )
-from multica_py.models.issues import IssueListFilter
+from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.relations import (
     LazyCollection,
     OffsetLazyCollection,
@@ -24,7 +24,7 @@ from multica_py.models.relations import (
 )
 from multica_py.resources._base import BaseResource
 from multica_py.resources.agent_skills import AgentSkillResource
-from multica_py.resources.issues import IssueEntity
+from multica_py.resources.issues import _issue_summary_offset_page
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
@@ -32,27 +32,14 @@ if TYPE_CHECKING:
 
 def _page_agent_issues(
     client: MulticaClient, agent_id: str, limit: int | None, offset: int
-) -> OffsetPage[IssueEntity]:
-    from multica_py.resources.issues import IssueEntity, _issue_data_from_summary
+) -> OffsetPage[IssueSummary]:
 
     flt = IssueListFilter(
         assignee_id=agent_id,
         limit=limit,
         offset=offset,
     )
-    page = client.issues.list(flt)
-    return OffsetPage(
-        items=tuple(
-            item
-            if isinstance(item, IssueEntity)
-            else IssueEntity(_issue_data_from_summary(item), client=client)
-            for item in page.issues
-        ),
-        total=page.total or 0,
-        limit=page.limit or 50,
-        offset=page.offset or 0,
-        has_more=page.has_more,
-    )
+    return _issue_summary_offset_page(client.issues, flt)
 
 
 class AgentEntity(ResourceEntity[AgentData]):
@@ -60,7 +47,7 @@ class AgentEntity(ResourceEntity[AgentData]):
         super().__init__(data, client=client)
         self._skills: LazyCollection[AgentSkill] | None = None
         self._tasks: LazyCollection[AgentTask] | None = None
-        self._issues: OffsetLazyCollection[IssueEntity] | None = None
+        self._issues: OffsetLazyCollection[IssueSummary] | None = None
 
     @property
     def id(self) -> str:
@@ -104,12 +91,12 @@ class AgentEntity(ResourceEntity[AgentData]):
         return self._tasks
 
     @property
-    def issues(self) -> OffsetLazyCollection[IssueEntity]:
+    def issues(self) -> OffsetLazyCollection[IssueSummary]:
         if self._issues is None:
             client = self._check_client("issues")
             aid = self._data.id
 
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueEntity]:
+            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
                 return _page_agent_issues(client, aid, limit, offset)
 
             self._issues = OffsetLazyCollection(page_loader)

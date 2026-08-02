@@ -7,7 +7,7 @@ from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models import ResourceEntity
-from multica_py.models.issues import IssueListFilter
+from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.relations import (
     LazyCollection,
     OffsetLazyCollection,
@@ -15,7 +15,7 @@ from multica_py.models.relations import (
 )
 from multica_py.models.system import Squad, SquadData, SquadMember
 from multica_py.resources._base import BaseResource
-from multica_py.resources.issues import IssueEntity
+from multica_py.resources.issues import _issue_summary_offset_page
 from multica_py.resources.squad_members import SquadMemberResource
 
 if TYPE_CHECKING:
@@ -24,34 +24,21 @@ if TYPE_CHECKING:
 
 def _page_squad_issues(
     client: MulticaClient, squad_id: str, limit: int | None, offset: int
-) -> OffsetPage[IssueEntity]:
-    from multica_py.resources.issues import IssueEntity, _issue_data_from_summary
+) -> OffsetPage[IssueSummary]:
 
     flt = IssueListFilter(
         assignee_id=squad_id,
         limit=limit,
         offset=offset,
     )
-    page = client.issues.list(flt)
-    return OffsetPage(
-        items=tuple(
-            item
-            if isinstance(item, IssueEntity)
-            else IssueEntity(_issue_data_from_summary(item), client=client)
-            for item in page.issues
-        ),
-        total=page.total or 0,
-        limit=page.limit or 50,
-        offset=page.offset or 0,
-        has_more=page.has_more,
-    )
+    return _issue_summary_offset_page(client.issues, flt)
 
 
 class SquadEntity(ResourceEntity[SquadData]):
     def __init__(self, data: SquadData, client: MulticaClient | None = None) -> None:
         super().__init__(data, client=client)
         self._members: LazyCollection[SquadMember] | None = None
-        self._issues: OffsetLazyCollection[IssueEntity] | None = None
+        self._issues: OffsetLazyCollection[IssueSummary] | None = None
 
     @property
     def id(self) -> str:
@@ -89,12 +76,12 @@ class SquadEntity(ResourceEntity[SquadData]):
         return self._members
 
     @property
-    def issues(self) -> OffsetLazyCollection[IssueEntity]:
+    def issues(self) -> OffsetLazyCollection[IssueSummary]:
         if self._issues is None:
             client = self._check_client("issues")
             sid = self._data.id
 
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueEntity]:
+            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
                 return _page_squad_issues(client, sid, limit, offset)
 
             self._issues = OffsetLazyCollection(page_loader)
