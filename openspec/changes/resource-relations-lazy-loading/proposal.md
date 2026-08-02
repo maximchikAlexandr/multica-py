@@ -48,6 +48,13 @@ typed bound entities without hidden workspace scans or per-child N+1 calls.
 - Keep singular references (`Issue.parent/project/assignee/creator` and
   analogous autopilot/run refs) outside this change; they require a later
   `LazyRef` design and are not among the 33 collection/query relations.
+- Reconcile the still-incomplete D15–D17 surfaces from traced source evidence:
+  profile-description updates, multi-URL workspace-repository mutations, and
+  runtime usage/activity/update management. Daemon-only repository checkout
+  is intentionally outside the SDK surface.
+- Consolidate existing bound wrappers behind a typed private foundation and
+  explicit semantic binding adapters, without changing public entity names or
+  adding a dynamic relation registry.
 
 ## Capabilities
 

@@ -21,3 +21,10 @@ class ProjectCreateRequest(msgspec.Struct, frozen=True, kw_only=True):
 class ProjectUpdateRequest(msgspec.Struct, frozen=True, kw_only=True):
     name: str | UnsetType = Unset
     description: str | None | UnsetType = Unset
+
+
+class ProjectData(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    name: str
+    description: str | None = None
+    status: ProjectStatus

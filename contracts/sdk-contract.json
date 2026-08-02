@@ -34,12 +34,73 @@
       "labels": "tuple[Label, ...]",
       "labels_wire": "list[Label]",
       "none": "None",
+      "path": "pathlib.Path",
       "project": "Project",
       "project_wire": "ProjectWire",
       "project_resource": "ProjectResourceRecord",
       "project_resource_wire": "ProjectResourceRecordWire",
       "project_resources": "tuple[ProjectResourceRecord, ...]",
-      "project_resources_wire": "list[ProjectResourceRecordWire]"
+      "project_resources_wire": "list[ProjectResourceRecordWire]",
+      "agent": "Agent",
+      "agent_skills": "tuple[AgentSkill, ...]",
+      "agent_tasks": "tuple[AgentTask, ...]",
+      "agent_wire": "AgentWire",
+      "attachment_result": "AttachmentResult",
+      "attachment_result_wire": "AttachmentResultWire",
+      "autopilot_trigger": "AutopilotTrigger",
+      "autopilot_trigger_create": "AutopilotTriggerCreate",
+      "autopilot_trigger_update": "AutopilotTriggerUpdate",
+      "autopilot_trigger_wire": "AutopilotTriggerWire",
+      "autopilot_triggers": "tuple[AutopilotTrigger, ...]",
+      "autopilot_triggers_wire": "list[AutopilotTriggerWire]",
+      "issue_children_result_wire": "IssueChildrenResultWire",
+      "issue_pull_requests_result_wire": "IssuePullRequestsResultWire",
+      "linked_pull_request": "LinkedPullRequest",
+      "linked_pull_requests": "tuple[LinkedPullRequest, ...]",
+      "metadata_entries": "tuple[MetadataEntry, ...]",
+      "metadata_entries_wire": "list[MetadataEntryWire]",
+      "repository_mutation_result": "RepositoryMutationResult",
+      "repository_mutation_result_wire": "RepositoryMutationResultWire",
+      "repository_record": "RepositoryRecord",
+      "repository_record_wire": "RepositoryRecordWire",
+      "repository_records": "tuple[RepositoryRecord, ...]",
+      "repository_records_wire": "list[RepositoryRecordWire]",
+      "run_message": "RunMessage",
+      "run_messages": "tuple[RunMessage, ...]",
+      "run_messages_wire": "list[RunMessageWire]",
+      "runtime_activity": "RuntimeActivity",
+      "runtime_activity_wire": "RuntimeActivityWire",
+      "runtime_definition": "RuntimeDefinition",
+      "runtime_definition_wire": "RuntimeDefinitionWire",
+      "runtime_definitions": "tuple[RuntimeDefinition, ...]",
+      "runtime_definitions_wire": "list[RuntimeDefinitionWire]",
+      "runtime_usage": "RuntimeUsage",
+      "runtime_usage_wire": "RuntimeUsageWire",
+      "runtime_update_result": "RuntimeUpdateResult",
+      "runtime_update_result_wire": "RuntimeUpdateResultWire",
+      "skill": "Skill",
+      "skill_file": "SkillFile",
+      "skill_files": "tuple[SkillFile, ...]",
+      "skill_files_wire": "list[SkillFileWire]",
+      "skill_wire": "SkillWire",
+      "squad": "Squad",
+      "squad_member": "SquadMember",
+      "squad_members": "tuple[SquadMember, ...]",
+      "squad_members_wire": "list[SquadMemberWire]",
+      "squad_wire": "SquadWire",
+      "subscriber": "Subscriber",
+      "subscribers": "tuple[Subscriber, ...]",
+      "subscribers_wire": "list[SubscriberWire]",
+      "task_run": "TaskRun",
+      "task_runs": "tuple[TaskRun, ...]",
+      "task_runs_wire": "list[TaskRunWire]",
+      "user_profile": "UserProfile",
+      "user_profile_wire": "UserProfileWire",
+      "workspace": "Workspace",
+      "workspace_member": "WorkspaceMember",
+      "workspace_members": "tuple[WorkspaceMember, ...]",
+      "workspace_members_wire": "list[WorkspaceMemberWire]",
+      "workspace_wire": "WorkspaceWire"
     },
     "signatures": {
       "autopilot_list": "() -> AutopilotListPage",
@@ -67,7 +128,61 @@
       "project_resource_remove": "(project_id: str, resource_id: str) -> None",
       "project_resource_update": "(project_id: str, resource_id: str, request: ProjectResourceUpdateLocalDirectoryRequest) -> ProjectResourceRecord",
       "project_status": "(project_id: str, status: ProjectStatus) -> Project",
-      "project_update": "(project_id: str, request: ProjectUpdateRequest) -> Project"
+      "project_update": "(project_id: str, request: ProjectUpdateRequest) -> Project",
+      "agent_get": "(agent_id: str) -> Agent",
+      "agent_list": "() -> tuple[Agent, ...]",
+      "agent_tasks": "(agent_id: str) -> tuple[AgentTask, ...]",
+      "agent_skills_list": "(agent_id: str) -> tuple[AgentSkill, ...]",
+      "agent_skills_set": "(agent_id: str, skill_ids: tuple[str, ...]) -> None",
+      "agent_avatar": "(agent_id: str, file: pathlib.Path) -> None",
+      "attachment_download": "(attachment_id: str, *, output_dir: pathlib.Path) -> pathlib.Path",
+      "attachment_upload": "(path: pathlib.Path, *, task_id: str | None = None) -> AttachmentResult",
+      "autopilot_trigger": "(autopilot_id: str) -> AutopilotRun",
+      "autopilot_trigger_add": "(autopilot_id: str, request: AutopilotTriggerCreate) -> AutopilotTrigger",
+      "autopilot_trigger_update": "(autopilot_id: str, trigger_id: str, request: AutopilotTriggerUpdate) -> AutopilotTrigger",
+      "autopilot_trigger_delete": "(autopilot_id: str, trigger_id: str) -> None",
+      "issue_cancel_task": "(task_id: str, *, issue_id: str | None) -> None",
+      "issue_children": "(issue_id: str) -> tuple[IssueChildStageGroup, ...]",
+      "issue_get": "(issue_id: str) -> Issue",
+      "issue_pull_requests": "(issue_id: str) -> tuple[LinkedPullRequest, ...]",
+      "issue_rerun": "(issue_id: str) -> None",
+      "issue_run_messages": "(task_run_id: str, *, issue_id: str | None) -> tuple[RunMessage, ...]",
+      "issue_runs": "(issue_id: str) -> tuple[TaskRun, ...]",
+      "issue_subscribers_add": "(issue_id: str, user_id: str) -> None",
+      "issue_subscribers_list": "(issue_id: str) -> tuple[Subscriber, ...]",
+      "issue_subscribers_remove": "(issue_id: str, user_id: str) -> None",
+      "issue_metadata_delete": "(issue_id: str, key: str) -> None",
+      "issue_metadata_get": "(issue_id: str, key: str) -> MetadataEntry",
+      "issue_metadata_list": "(issue_id: str) -> tuple[MetadataEntry, ...]",
+      "issue_metadata_set": "(issue_id: str, key: str, value: str) -> MetadataEntry",
+      "label_get": "(label_id: str) -> Label",
+      "label_list": "() -> tuple[Label, ...]",
+      "project_get": "(project_id: str) -> Project",
+      "project_list": "() -> tuple[Project, ...]",
+      "repositories_add": "(urls: tuple[str, ...], *, description: str | None = None) -> RepositoryMutationResult",
+      "repositories_list": "() -> tuple[RepositoryRecord, ...]",
+      "repositories_remove": "(urls: tuple[str, ...]) -> RepositoryMutationResult",
+      "runtime_activity": "(runtime_id: str) -> tuple[RuntimeActivity, ...]",
+      "runtime_delete": "(runtime_id: str, *, cascade: bool = False) -> None",
+      "runtime_list": "() -> tuple[RuntimeDefinition, ...]",
+      "runtime_rename": "(runtime_id: str, name: str, *, machine: bool = False) -> RuntimeDefinition",
+      "runtime_update": "(runtime_id: str, request: RuntimeUpdate) -> RuntimeUpdateResult",
+      "runtime_usage": "(runtime_id: str, *, days: int = 90) -> tuple[RuntimeUsage, ...]",
+      "skill_files_delete": "(skill_id: str, file_id: str) -> None",
+      "skill_files_list": "(skill_id: str) -> tuple[SkillFile, ...]",
+      "skill_files_upsert": "(skill_id: str, path: str, content: str) -> SkillFile",
+      "skill_get": "(skill_id: str) -> Skill",
+      "skill_list": "() -> tuple[Skill, ...]",
+      "squad_get": "(squad_id: str) -> Squad",
+      "squad_list": "() -> tuple[Squad, ...]",
+      "squad_members_add": "(squad_id: str, member_id: str) -> None",
+      "squad_members_list": "(squad_id: str) -> tuple[SquadMember, ...]",
+      "squad_members_remove": "(squad_id: str, member_id: str) -> None",
+      "user_profile_get": "() -> UserProfile",
+      "user_profile_update": "(request: UserProfileUpdate) -> UserProfile",
+      "workspace_get": "(workspace_id: str) -> Workspace",
+      "workspace_list": "() -> tuple[Workspace, ...]",
+      "workspace_members_list": "(workspace_id: str) -> tuple[WorkspaceMember, ...]"
     },
     "bindings": {
       "comment_add": {
@@ -808,6 +923,1036 @@
         "constraints": [
           "nonblank:autopilot_id"
         ]
+      },
+      "agent_get": {
+        "command": [
+          "agent",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "agent_id",
+            "pos:0",
+            "path:agent_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id"
+        ]
+      },
+      "agent_list": {
+        "command": [
+          "agent",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "agent_tasks": {
+        "command": [
+          "agent",
+          "tasks"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "agent_id",
+            "pos:0",
+            "path:agent_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id"
+        ]
+      },
+      "agent_skills_list": {
+        "command": [
+          "agent",
+          "skills",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "agent_id",
+            "pos:0",
+            "path:agent_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id"
+        ]
+      },
+      "agent_skills_set": {
+        "command": [
+          "agent",
+          "skills",
+          "set"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "agent_id",
+            "pos:0",
+            "path:agent_id"
+          ],
+          [
+            "skill_ids",
+            "repeat:pos:1",
+            "path:skill_ids"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id"
+        ]
+      },
+      "agent_avatar": {
+        "command": [
+          "agent",
+          "avatar"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "agent_id",
+            "pos:0",
+            "path:agent_id"
+          ],
+          [
+            "file",
+            "--file",
+            "local_control:absolute_path"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id"
+        ]
+      },
+      "attachment_upload": {
+        "command": [
+          "attachment",
+          "upload"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "path",
+            "pos:0",
+            "local_control:absolute_path"
+          ],
+          [
+            "task_id",
+            "--task",
+            "path:task_id"
+          ]
+        ],
+        "constraints": []
+      },
+      "attachment_download": {
+        "command": [
+          "attachment",
+          "download"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "attachment_id",
+            "pos:0",
+            "path:attachment_id"
+          ],
+          [
+            "output_dir",
+            "--output-dir",
+            "local_control:absolute_path"
+          ]
+        ],
+        "constraints": [
+          "nonblank:attachment_id"
+        ]
+      },
+      "autopilot_trigger": {
+        "command": [
+          "autopilot",
+          "trigger"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      "autopilot_trigger_add": {
+        "command": [
+          "autopilot",
+          "trigger-add"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ],
+          [
+            "request.title",
+            "--title",
+            "json_body:title"
+          ],
+          [
+            "request.kind",
+            "--kind",
+            "json_body:trigger_kind"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id",
+          "nonblank:request.title"
+        ]
+      },
+      "autopilot_trigger_update": {
+        "command": [
+          "autopilot",
+          "trigger-update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ],
+          [
+            "trigger_id",
+            "pos:1",
+            "path:trigger_id"
+          ],
+          [
+            "request.title",
+            "--title",
+            "json_body:title"
+          ],
+          [
+            "request.kind",
+            "--kind",
+            "json_body:trigger_kind"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id",
+          "nonblank:trigger_id"
+        ]
+      },
+      "autopilot_trigger_delete": {
+        "command": [
+          "autopilot",
+          "trigger-delete"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ],
+          [
+            "trigger_id",
+            "pos:1",
+            "path:trigger_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id",
+          "nonblank:trigger_id"
+        ]
+      },
+      "issue_get": {
+        "command": [
+          "issue",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_pull_requests": {
+        "command": [
+          "issue",
+          "pull-requests"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_children": {
+        "command": [
+          "issue",
+          "children"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_runs": {
+        "command": [
+          "issue",
+          "runs"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_run_messages": {
+        "command": [
+          "issue",
+          "run-messages"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "task_run_id",
+            "pos:0",
+            "path:task_run_id"
+          ],
+          [
+            "issue_id",
+            "--issue",
+            "query:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:task_run_id"
+        ]
+      },
+      "issue_rerun": {
+        "command": [
+          "issue",
+          "rerun"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_cancel_task": {
+        "command": [
+          "issue",
+          "cancel-task"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "task_id",
+            "pos:0",
+            "path:task_id"
+          ],
+          [
+            "issue_id",
+            "--issue",
+            "query:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:task_id"
+        ]
+      },
+      "issue_subscribers_list": {
+        "command": [
+          "issue",
+          "subscriber",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_subscribers_add": {
+        "command": [
+          "issue",
+          "subscriber",
+          "add"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "user_id",
+            "pos:1",
+            "path:user_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:user_id"
+        ]
+      },
+      "issue_subscribers_remove": {
+        "command": [
+          "issue",
+          "subscriber",
+          "remove"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "user_id",
+            "pos:1",
+            "path:user_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:user_id"
+        ]
+      },
+      "issue_metadata_list": {
+        "command": [
+          "issue",
+          "metadata",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_metadata_get": {
+        "command": [
+          "issue",
+          "metadata",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "key",
+            "pos:1",
+            "path:key"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:key"
+        ]
+      },
+      "issue_metadata_set": {
+        "command": [
+          "issue",
+          "metadata",
+          "set"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "key",
+            "pos:1",
+            "path:key"
+          ],
+          [
+            "value",
+            "pos:2",
+            "json_body:value"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:key"
+        ]
+      },
+      "issue_metadata_delete": {
+        "command": [
+          "issue",
+          "metadata",
+          "delete"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "key",
+            "pos:1",
+            "path:key"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:key"
+        ]
+      },
+      "label_list": {
+        "command": [
+          "label",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "label_get": {
+        "command": [
+          "label",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "label_id",
+            "pos:0",
+            "path:label_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:label_id"
+        ]
+      },
+      "project_get": {
+        "command": [
+          "project",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "project_id",
+            "pos:0",
+            "path:project_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:project_id"
+        ]
+      },
+      "project_list": {
+        "command": [
+          "project",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "repositories_list": {
+        "command": [
+          "repo",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "repositories_add": {
+        "command": [
+          "repo",
+          "add"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "urls",
+            "repeat:pos:0",
+            "json_body:repos"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ]
+        ],
+        "constraints": [
+          "nonempty:urls",
+          "description_requires_one_url"
+        ]
+      },
+      "repositories_remove": {
+        "command": [
+          "repo",
+          "remove"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "urls",
+            "repeat:pos:0",
+            "json_body:repos"
+          ]
+        ],
+        "constraints": [
+          "nonempty:urls"
+        ]
+      },
+      "runtime_list": {
+        "command": [
+          "runtime",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "runtime_usage": {
+        "command": [
+          "runtime",
+          "usage"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "runtime_id",
+            "pos:0",
+            "path:runtime_id"
+          ],
+          [
+            "days",
+            "--days",
+            "query:days"
+          ]
+        ],
+        "constraints": [
+          "nonblank:runtime_id",
+          "range:days:1..365"
+        ]
+      },
+      "runtime_activity": {
+        "command": [
+          "runtime",
+          "activity"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "runtime_id",
+            "pos:0",
+            "path:runtime_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:runtime_id"
+        ]
+      },
+      "runtime_update": {
+        "command": [
+          "runtime",
+          "update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "runtime_id",
+            "pos:0",
+            "path:runtime_id"
+          ],
+          [
+            "request.target_version",
+            "--target-version",
+            "json_body:target_version"
+          ],
+          [
+            "request.wait",
+            "--wait",
+            "local_control:wait"
+          ]
+        ],
+        "constraints": [
+          "nonblank:runtime_id",
+          "nonblank:request.target_version"
+        ]
+      },
+      "runtime_rename": {
+        "command": [
+          "runtime",
+          "rename"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "runtime_id",
+            "pos:0",
+            "path:runtime_id"
+          ],
+          [
+            "name",
+            "pos:1",
+            "path:name"
+          ],
+          [
+            "machine",
+            "--machine",
+            "local_control:machine"
+          ]
+        ],
+        "constraints": [
+          "nonblank:runtime_id",
+          "nonblank:name"
+        ]
+      },
+      "runtime_delete": {
+        "command": [
+          "runtime",
+          "delete"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "runtime_id",
+            "pos:0",
+            "path:runtime_id"
+          ],
+          [
+            "cascade",
+            "--cascade",
+            "local_control:cascade"
+          ]
+        ],
+        "constraints": [
+          "nonblank:runtime_id"
+        ]
+      },
+      "skill_get": {
+        "command": [
+          "skill",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "skill_id",
+            "pos:0",
+            "path:skill_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:skill_id"
+        ]
+      },
+      "skill_list": {
+        "command": [
+          "skill",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "skill_files_list": {
+        "command": [
+          "skill",
+          "files",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "skill_id",
+            "pos:0",
+            "path:skill_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:skill_id"
+        ]
+      },
+      "skill_files_upsert": {
+        "command": [
+          "skill",
+          "files",
+          "upsert"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "skill_id",
+            "pos:0",
+            "path:skill_id"
+          ],
+          [
+            "path",
+            "--path",
+            "json_body:path"
+          ],
+          [
+            "content",
+            "--content",
+            "json_body:content"
+          ]
+        ],
+        "constraints": [
+          "nonblank:skill_id",
+          "nonblank:path"
+        ]
+      },
+      "skill_files_delete": {
+        "command": [
+          "skill",
+          "files",
+          "delete"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "skill_id",
+            "pos:0",
+            "path:skill_id"
+          ],
+          [
+            "file_id",
+            "pos:1",
+            "path:file_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:skill_id",
+          "nonblank:file_id"
+        ]
+      },
+      "squad_list": {
+        "command": [
+          "squad",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "squad_get": {
+        "command": [
+          "squad",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "squad_id",
+            "pos:0",
+            "path:squad_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:squad_id"
+        ]
+      },
+      "squad_members_list": {
+        "command": [
+          "squad",
+          "member",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "squad_id",
+            "pos:0",
+            "path:squad_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:squad_id"
+        ]
+      },
+      "squad_members_add": {
+        "command": [
+          "squad",
+          "member",
+          "add"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "squad_id",
+            "pos:0",
+            "path:squad_id"
+          ],
+          [
+            "member_id",
+            "pos:1",
+            "path:member_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:squad_id",
+          "nonblank:member_id"
+        ]
+      },
+      "squad_members_remove": {
+        "command": [
+          "squad",
+          "member",
+          "remove"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "squad_id",
+            "pos:0",
+            "path:squad_id"
+          ],
+          [
+            "member_id",
+            "pos:1",
+            "path:member_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:squad_id",
+          "nonblank:member_id"
+        ]
+      },
+      "user_profile_get": {
+        "command": [
+          "user",
+          "profile",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "user_profile_update": {
+        "command": [
+          "user",
+          "profile",
+          "update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "request.description",
+            "--description",
+            "json_body:profile_description"
+          ]
+        ],
+        "constraints": [
+          "required:request.description",
+          "empty_emits:request.description",
+          "none_rejected:request.description"
+        ]
+      },
+      "workspace_list": {
+        "command": [
+          "workspace",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "workspace_get": {
+        "command": [
+          "workspace",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "workspace_id",
+            "pos:0",
+            "path:workspace_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:workspace_id"
+        ]
+      },
+      "workspace_members_list": {
+        "command": [
+          "workspace",
+          "member",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "workspace_id",
+            "pos:0",
+            "path:workspace_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:workspace_id"
+        ]
       }
     },
     "binding_source_refs": {
@@ -894,6 +2039,168 @@
       ],
       "project_update": [
         "S-PROJECT"
+      ],
+      "agent_avatar": [
+        "S-AUTO"
+      ],
+      "agent_get": [
+        "S-AUTO"
+      ],
+      "agent_list": [
+        "S-AUTO"
+      ],
+      "agent_skills_list": [
+        "S-AUTO"
+      ],
+      "agent_skills_set": [
+        "S-AUTO"
+      ],
+      "agent_tasks": [
+        "S-AUTO"
+      ],
+      "attachment_download": [
+        "S-AUTO"
+      ],
+      "attachment_upload": [
+        "S-AUTO"
+      ],
+      "autopilot_trigger": [
+        "S-AUTO"
+      ],
+      "autopilot_trigger_add": [
+        "S-AUTO"
+      ],
+      "autopilot_trigger_delete": [
+        "S-AUTO"
+      ],
+      "autopilot_trigger_update": [
+        "S-AUTO"
+      ],
+      "issue_cancel_task": [
+        "S-AUTO"
+      ],
+      "issue_children": [
+        "S-AUTO"
+      ],
+      "issue_get": [
+        "S-AUTO"
+      ],
+      "issue_metadata_delete": [
+        "S-AUTO"
+      ],
+      "issue_metadata_get": [
+        "S-AUTO"
+      ],
+      "issue_metadata_list": [
+        "S-AUTO"
+      ],
+      "issue_metadata_set": [
+        "S-AUTO"
+      ],
+      "issue_pull_requests": [
+        "S-AUTO"
+      ],
+      "issue_rerun": [
+        "S-AUTO"
+      ],
+      "issue_run_messages": [
+        "S-AUTO"
+      ],
+      "issue_runs": [
+        "S-AUTO"
+      ],
+      "issue_subscribers_add": [
+        "S-AUTO"
+      ],
+      "issue_subscribers_list": [
+        "S-AUTO"
+      ],
+      "issue_subscribers_remove": [
+        "S-AUTO"
+      ],
+      "label_get": [
+        "S-AUTO"
+      ],
+      "label_list": [
+        "S-AUTO"
+      ],
+      "project_get": [
+        "S-AUTO"
+      ],
+      "project_list": [
+        "S-AUTO"
+      ],
+      "repositories_add": [
+        "S-AUTO"
+      ],
+      "repositories_list": [
+        "S-AUTO"
+      ],
+      "repositories_remove": [
+        "S-AUTO"
+      ],
+      "runtime_activity": [
+        "S-AUTO"
+      ],
+      "runtime_delete": [
+        "S-AUTO"
+      ],
+      "runtime_list": [
+        "S-AUTO"
+      ],
+      "runtime_rename": [
+        "S-AUTO"
+      ],
+      "runtime_update": [
+        "S-AUTO"
+      ],
+      "runtime_usage": [
+        "S-AUTO"
+      ],
+      "skill_files_delete": [
+        "S-AUTO"
+      ],
+      "skill_files_list": [
+        "S-AUTO"
+      ],
+      "skill_files_upsert": [
+        "S-AUTO"
+      ],
+      "skill_get": [
+        "S-AUTO"
+      ],
+      "skill_list": [
+        "S-AUTO"
+      ],
+      "squad_get": [
+        "S-AUTO"
+      ],
+      "squad_list": [
+        "S-AUTO"
+      ],
+      "squad_members_add": [
+        "S-AUTO"
+      ],
+      "squad_members_list": [
+        "S-AUTO"
+      ],
+      "squad_members_remove": [
+        "S-AUTO"
+      ],
+      "user_profile_get": [
+        "S-AUTO"
+      ],
+      "user_profile_update": [
+        "S-AUTO"
+      ],
+      "workspace_get": [
+        "S-AUTO"
+      ],
+      "workspace_list": [
+        "S-AUTO"
+      ],
+      "workspace_members_list": [
+        "S-AUTO"
       ]
     },
     "presence": {
@@ -1071,6 +2378,177 @@
         "required_nonblank",
         "update_text",
         "update_text"
+      ],
+      "agent_avatar": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "agent_get": [
+        "required_nonblank"
+      ],
+      "agent_list": [],
+      "agent_skills_list": [
+        "required_nonblank"
+      ],
+      "agent_skills_set": [
+        "required_nonblank",
+        "optional_blank_omit"
+      ],
+      "agent_tasks": [
+        "required_nonblank"
+      ],
+      "attachment_download": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "attachment_upload": [
+        "required_nonblank",
+        "optional_omit"
+      ],
+      "autopilot_trigger": [
+        "required_nonblank"
+      ],
+      "autopilot_trigger_add": [
+        "required_nonblank",
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "autopilot_trigger_delete": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "autopilot_trigger_update": [
+        "required_nonblank",
+        "required_nonblank",
+        "optional_omit",
+        "optional_omit"
+      ],
+      "issue_cancel_task": [
+        "required_nonblank",
+        "optional_omit"
+      ],
+      "issue_children": [
+        "required_nonblank"
+      ],
+      "issue_get": [
+        "required_nonblank"
+      ],
+      "issue_metadata_delete": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "issue_metadata_get": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "issue_metadata_list": [
+        "required_nonblank"
+      ],
+      "issue_metadata_set": [
+        "required_nonblank",
+        "required_nonblank",
+        "required_value"
+      ],
+      "issue_pull_requests": [
+        "required_nonblank"
+      ],
+      "issue_rerun": [
+        "required_nonblank"
+      ],
+      "issue_run_messages": [
+        "required_nonblank",
+        "optional_omit"
+      ],
+      "issue_runs": [
+        "required_nonblank"
+      ],
+      "issue_subscribers_add": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "issue_subscribers_list": [
+        "required_nonblank"
+      ],
+      "issue_subscribers_remove": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "label_get": [
+        "required_nonblank"
+      ],
+      "label_list": [],
+      "project_get": [
+        "required_nonblank"
+      ],
+      "project_list": [],
+      "repositories_add": [
+        "required_nonblank",
+        "optional_blank_omit"
+      ],
+      "repositories_list": [],
+      "repositories_remove": [
+        "required_nonblank"
+      ],
+      "runtime_activity": [
+        "required_nonblank"
+      ],
+      "runtime_delete": [
+        "required_nonblank"
+      ],
+      "runtime_list": [],
+      "runtime_rename": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "runtime_update": [
+        "required_nonblank",
+        "optional_omit",
+        "optional_omit"
+      ],
+      "runtime_usage": [
+        "required_nonblank"
+      ],
+      "skill_files_delete": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "skill_files_list": [
+        "required_nonblank"
+      ],
+      "skill_files_upsert": [
+        "required_nonblank",
+        "required_nonblank",
+        "required_value"
+      ],
+      "skill_get": [
+        "required_nonblank"
+      ],
+      "skill_list": [],
+      "squad_get": [
+        "required_nonblank"
+      ],
+      "squad_list": [],
+      "squad_members_add": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "squad_members_list": [
+        "required_nonblank"
+      ],
+      "squad_members_remove": [
+        "required_nonblank",
+        "required_nonblank"
+      ],
+      "user_profile_get": [],
+      "user_profile_update": [
+        "optional_omit"
+      ],
+      "workspace_get": [
+        "required_nonblank"
+      ],
+      "workspace_list": [],
+      "workspace_members_list": [
+        "required_nonblank"
       ]
     },
     "responses": {
@@ -1217,6 +2695,258 @@
           0
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "agent": {
+        "public_type_id": "agent",
+        "wire_type_id": "agent_wire",
+        "decoder_id": "decode_agent",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "agent_skills": {
+        "public_type_id": "agent_skills",
+        "wire_type_id": "agent_skills_wire",
+        "decoder_id": "decode_agent_skills",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "agent_tasks": {
+        "public_type_id": "agent_tasks",
+        "wire_type_id": "agent_tasks_wire",
+        "decoder_id": "decode_agent_tasks",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "attachment_result": {
+        "public_type_id": "attachment_result",
+        "wire_type_id": "attachment_result_wire",
+        "decoder_id": "decode_attachment_result",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "path": {
+        "public_type_id": "path",
+        "wire_type_id": null,
+        "decoder_id": "decode_path",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "autopilot_trigger": {
+        "public_type_id": "autopilot_trigger",
+        "wire_type_id": "autopilot_trigger_wire",
+        "decoder_id": "decode_autopilot_trigger",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "autopilot_triggers": {
+        "public_type_id": "autopilot_triggers",
+        "wire_type_id": "autopilot_triggers_wire",
+        "decoder_id": "decode_autopilot_triggers",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_children_result": {
+        "public_type_id": "issue_child_stage_groups",
+        "wire_type_id": "issue_children_result_wire",
+        "decoder_id": "decode_issue_children",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "linked_pull_requests": {
+        "public_type_id": "linked_pull_requests",
+        "wire_type_id": "issue_pull_requests_result_wire",
+        "decoder_id": "decode_linked_pull_requests",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "metadata_entries": {
+        "public_type_id": "metadata_entries",
+        "wire_type_id": "metadata_entries_wire",
+        "decoder_id": "decode_metadata_entries",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "repository_records": {
+        "public_type_id": "repository_records",
+        "wire_type_id": "repository_records_wire",
+        "decoder_id": "decode_repository_records",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "repository_mutation_result": {
+        "public_type_id": "repository_mutation_result",
+        "wire_type_id": "repository_mutation_result_wire",
+        "decoder_id": "decode_repository_mutation_result",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_update_result": {
+        "public_type_id": "runtime_update_result",
+        "wire_type_id": "runtime_update_result_wire",
+        "decoder_id": "decode_runtime_update_result",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "run_messages": {
+        "public_type_id": "run_messages",
+        "wire_type_id": "run_messages_wire",
+        "decoder_id": "decode_run_messages",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_definitions": {
+        "public_type_id": "runtime_definitions",
+        "wire_type_id": "runtime_definitions_wire",
+        "decoder_id": "decode_runtime_definitions",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_definition": {
+        "public_type_id": "runtime_definition",
+        "wire_type_id": "runtime_definition_wire",
+        "decoder_id": "decode_runtime_definition",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_usage": {
+        "public_type_id": "runtime_usage",
+        "wire_type_id": "runtime_usage_wire",
+        "decoder_id": "decode_runtime_usage",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_activity": {
+        "public_type_id": "runtime_activity",
+        "wire_type_id": "runtime_activity_wire",
+        "decoder_id": "decode_runtime_activity",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "skill_files": {
+        "public_type_id": "skill_files",
+        "wire_type_id": "skill_files_wire",
+        "decoder_id": "decode_skill_files",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "skill_file": {
+        "public_type_id": "skill_file",
+        "wire_type_id": "skill_files_wire",
+        "decoder_id": "decode_skill_file",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "squad_members": {
+        "public_type_id": "squad_members",
+        "wire_type_id": "squad_members_wire",
+        "decoder_id": "decode_squad_members",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "subscribers": {
+        "public_type_id": "subscribers",
+        "wire_type_id": "subscribers_wire",
+        "decoder_id": "decode_subscribers",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "task_runs": {
+        "public_type_id": "task_runs",
+        "wire_type_id": "task_runs_wire",
+        "decoder_id": "decode_task_runs",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "user_profile": {
+        "public_type_id": "user_profile",
+        "wire_type_id": "user_profile_wire",
+        "decoder_id": "decode_user_profile",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "workspace_members": {
+        "public_type_id": "workspace_members",
+        "wire_type_id": "workspace_members_wire",
+        "decoder_id": "decode_workspace_members",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "skill": {
+        "public_type_id": "skill",
+        "wire_type_id": "skill_wire",
+        "decoder_id": "decode_skill",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "squad": {
+        "public_type_id": "squad",
+        "wire_type_id": "squad_wire",
+        "decoder_id": "decode_squad",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "workspace": {
+        "public_type_id": "workspace",
+        "wire_type_id": "workspace_wire",
+        "decoder_id": "decode_workspace",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
       }
     },
     "decoders": {
@@ -1233,9 +2963,37 @@
       "decode_issue_list_page": "multica_py._internal.wire_models.issue_list_page_from_wire",
       "decode_labels": "multica_py.resources.issue_labels._decode_labels",
       "decode_none": "multica_py.resources._base.decode_none",
+      "decode_path": "multica_py.resources.attachments._decode_download_path",
       "decode_project": "multica_py._internal.wire_models.project_from_wire",
       "decode_project_resource": "multica_py._internal.wire_models.project_resource_from_wire",
-      "decode_project_resources": "multica_py.resources.project_resources._decode_project_resources"
+      "decode_project_resources": "multica_py.resources.project_resources._decode_project_resources",
+      "decode_agent": "multica_py._internal.wire_models.agent_from_wire",
+      "decode_agent_skills": "multica_py.resources.agent_skills.AgentSkillResource._decode_agent_skills",
+      "decode_agent_tasks": "multica_py.resources.agents.AgentResource._decode_agent_tasks",
+      "decode_attachment_result": "multica_py._internal.wire_models.attachment_result_from_wire",
+      "decode_autopilot_trigger": "multica_py._internal.wire_models.autopilot_trigger_from_wire",
+      "decode_autopilot_triggers": "multica_py.resources.autopilot_triggers.AutopilotTriggerResource._decode_triggers",
+      "decode_issue_children": "multica_py.resources.issues.IssueResource._decode_issue_children",
+      "decode_linked_pull_requests": "multica_py.resources.issues.IssueResource._decode_pull_requests",
+      "decode_metadata_entries": "multica_py.resources.issue_metadata.IssueMetadataResource._decode_metadata_entries",
+      "decode_repository_mutation_result": "multica_py.models.system.RepositoryMutationResult",
+      "decode_repository_records": "multica_py.resources.repositories.RepositoryResource._decode_repository_records",
+      "decode_run_messages": "multica_py.resources.issues.IssueResource._decode_run_messages",
+      "decode_runtime_activity": "multica_py.resources.runtimes.RuntimeResource._decode_runtime_activity",
+      "decode_runtime_definition": "multica_py.resources.runtimes.RuntimeResource._decode_runtime_definition",
+      "decode_runtime_definitions": "multica_py.resources.runtimes.RuntimeResource._decode_runtime_definitions",
+      "decode_runtime_usage": "multica_py.resources.runtimes.RuntimeResource._decode_runtime_usage",
+      "decode_runtime_update_result": "multica_py.models.system.RuntimeUpdateResult",
+      "decode_skill_file": "multica_py.resources.skill_files.SkillFileResource._decode_skill_file",
+      "decode_skill_files": "multica_py.resources.skill_files.SkillFileResource._decode_skill_files",
+      "decode_squad_members": "multica_py.resources.squad_members.SquadMemberResource._decode_squad_members",
+      "decode_subscribers": "multica_py.resources.issue_subscribers.IssueSubscriberResource._decode_subscribers",
+      "decode_task_runs": "multica_py.resources.issues.IssueResource._decode_task_runs",
+      "decode_user_profile": "multica_py._internal.wire_models.user_profile_from_wire",
+      "decode_workspace_members": "multica_py.resources.workspaces.WorkspaceResource._decode_workspace_members",
+      "decode_skill": "multica_py._internal.wire_models.skill_from_wire",
+      "decode_squad": "multica_py._internal.wire_models.squad_from_wire",
+      "decode_workspace": "multica_py._internal.wire_models.workspace_from_wire"
     },
     "validators": {
       "at_least_one:name_description": "multica_py._generated.validators.validate_project_update",
@@ -1267,7 +3025,23 @@
       "preserve_daemon_and_label": "multica_py._generated.validators.validate_resource_update",
       "strict:IssueStatus": "multica_py._generated.validators.validate_issue_status",
       "strict:ProjectStatus": "multica_py._generated.validators.validate_project_status",
-      "unset_omits": "multica_py._generated.validators.validate_project_update"
+      "unset_omits": "multica_py._generated.validators.validate_project_update",
+      "nonblank:agent_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:attachment_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:key": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:member_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:name": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:runtime": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:skill_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:squad_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:file_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:path": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:task_run_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:task_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:trigger_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:url": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:user_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:workspace_id": "multica_py._generated.validators.validate_nonblank"
     },
     "validator_evidence": {
       "at_least_one:name_description": {
@@ -1389,6 +3163,70 @@
       "unset_omits": {
         "positive_case_id": "unset-omits-valid",
         "negative_case_id": "unset-omits-invalid"
+      },
+      "nonblank:agent_id": {
+        "positive_case_id": "nonblank-agent_id-valid",
+        "negative_case_id": "nonblank-agent_id-invalid"
+      },
+      "nonblank:attachment_id": {
+        "positive_case_id": "nonblank-attachment_id-valid",
+        "negative_case_id": "nonblank-attachment_id-invalid"
+      },
+      "nonblank:key": {
+        "positive_case_id": "nonblank-key-valid",
+        "negative_case_id": "nonblank-key-invalid"
+      },
+      "nonblank:member_id": {
+        "positive_case_id": "nonblank-member_id-valid",
+        "negative_case_id": "nonblank-member_id-invalid"
+      },
+      "nonblank:name": {
+        "positive_case_id": "nonblank-name-valid",
+        "negative_case_id": "nonblank-name-invalid"
+      },
+      "nonblank:runtime": {
+        "positive_case_id": "nonblank-runtime-valid",
+        "negative_case_id": "nonblank-runtime-invalid"
+      },
+      "nonblank:skill_id": {
+        "positive_case_id": "nonblank-skill_id-valid",
+        "negative_case_id": "nonblank-skill_id-invalid"
+      },
+      "nonblank:squad_id": {
+        "positive_case_id": "nonblank-squad_id-valid",
+        "negative_case_id": "nonblank-squad_id-invalid"
+      },
+      "nonblank:file_id": {
+        "positive_case_id": "nonblank-file_id-valid",
+        "negative_case_id": "nonblank-file_id-invalid"
+      },
+      "nonblank:path": {
+        "positive_case_id": "nonblank-path-valid",
+        "negative_case_id": "nonblank-path-invalid"
+      },
+      "nonblank:task_run_id": {
+        "positive_case_id": "nonblank-task_run_id-valid",
+        "negative_case_id": "nonblank-task_run_id-invalid"
+      },
+      "nonblank:task_id": {
+        "positive_case_id": "nonblank-task_id-valid",
+        "negative_case_id": "nonblank-task_id-invalid"
+      },
+      "nonblank:trigger_id": {
+        "positive_case_id": "nonblank-trigger_id-valid",
+        "negative_case_id": "nonblank-trigger_id-invalid"
+      },
+      "nonblank:url": {
+        "positive_case_id": "nonblank-url-valid",
+        "negative_case_id": "nonblank-url-invalid"
+      },
+      "nonblank:user_id": {
+        "positive_case_id": "nonblank-user_id-valid",
+        "negative_case_id": "nonblank-user_id-invalid"
+      },
+      "nonblank:workspace_id": {
+        "positive_case_id": "nonblank-workspace_id-valid",
+        "negative_case_id": "nonblank-workspace_id-invalid"
       }
     },
     "enum_definitions": [
@@ -1631,6 +3469,102 @@
         "name": "validate_project_update",
         "parameter_name": "value",
         "body_kind": "project_update"
+      },
+      {
+        "validator_id": "nonblank:agent_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:attachment_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:key",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:member_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:name",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:runtime",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:skill_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:squad_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:file_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:path",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:task_run_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:task_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:trigger_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:url",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:user_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:workspace_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
       }
     ],
     "binding_descriptors": [
@@ -2378,25 +4312,6 @@
         ]
       },
       {
-        "descriptor_id": "autopilot_run",
-        "operation_id": "autopilots.run",
-        "entrypoint_id": "default",
-        "command": [
-          "autopilot",
-          "run"
-        ],
-        "mappings": [
-          {
-            "source": "autopilot_id",
-            "binding": "pos:0",
-            "destination": "path:autopilot_id"
-          }
-        ],
-        "validator_ids": [
-          "nonblank:autopilot_id"
-        ]
-      },
-      {
         "descriptor_id": "autopilot_history",
         "operation_id": "autopilots.history",
         "entrypoint_id": "default",
@@ -2423,6 +4338,1133 @@
         ],
         "validator_ids": [
           "nonblank:autopilot_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_get",
+        "operation_id": "agents.get",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "agent_id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:agent_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_list",
+        "operation_id": "agents.list",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "agent_tasks",
+        "operation_id": "agents.tasks",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "tasks"
+        ],
+        "mappings": [
+          {
+            "source": "agent_id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:agent_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_skills_list",
+        "operation_id": "agents.skills.list",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "skills",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "agent_id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:agent_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_skills_set",
+        "operation_id": "agents.skills.set",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "skills",
+          "set"
+        ],
+        "mappings": [
+          {
+            "source": "agent_id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          },
+          {
+            "source": "skill_ids",
+            "binding": "repeat:pos:1",
+            "destination": "path:skill_ids"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:agent_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_avatar",
+        "operation_id": "agents.avatar",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "avatar"
+        ],
+        "mappings": [
+          {
+            "source": "agent_id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          },
+          {
+            "source": "file",
+            "binding": "--file",
+            "destination": "local_control:absolute_path"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:agent_id"
+        ]
+      },
+      {
+        "descriptor_id": "attachment_upload",
+        "operation_id": "attachments.upload",
+        "entrypoint_id": "default",
+        "command": [
+          "attachment",
+          "upload"
+        ],
+        "mappings": [
+          {
+            "source": "path",
+            "binding": "pos:0",
+            "destination": "local_control:absolute_path"
+          },
+          {
+            "source": "task_id",
+            "binding": "--task",
+            "destination": "path:task_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "attachment_download",
+        "operation_id": "attachments.download",
+        "entrypoint_id": "default",
+        "command": [
+          "attachment",
+          "download"
+        ],
+        "mappings": [
+          {
+            "source": "attachment_id",
+            "binding": "pos:0",
+            "destination": "path:attachment_id"
+          },
+          {
+            "source": "output_dir",
+            "binding": "--output-dir",
+            "destination": "local_control:absolute_path"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:attachment_id"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_trigger",
+        "operation_id": "autopilots.trigger",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "trigger"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_trigger_add",
+        "operation_id": "autopilots.trigger_add",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "trigger-add"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          },
+          {
+            "source": "request.title",
+            "binding": "--title",
+            "destination": "json_body:title"
+          },
+          {
+            "source": "request.kind",
+            "binding": "--kind",
+            "destination": "json_body:trigger_kind"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:autopilot_id",
+          "nonblank:request.title"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_trigger_update",
+        "operation_id": "autopilots.trigger_update",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "trigger-update"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          },
+          {
+            "source": "trigger_id",
+            "binding": "pos:1",
+            "destination": "path:trigger_id"
+          },
+          {
+            "source": "request.title",
+            "binding": "--title",
+            "destination": "json_body:title"
+          },
+          {
+            "source": "request.kind",
+            "binding": "--kind",
+            "destination": "json_body:trigger_kind"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:autopilot_id",
+          "nonblank:trigger_id"
+        ]
+      },
+      {
+        "descriptor_id": "autopilot_trigger_delete",
+        "operation_id": "autopilots.trigger_delete",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "trigger-delete"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          },
+          {
+            "source": "trigger_id",
+            "binding": "pos:1",
+            "destination": "path:trigger_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:autopilot_id",
+          "nonblank:trigger_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_get",
+        "operation_id": "issues.get",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_pull_requests",
+        "operation_id": "issues.pull_requests",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "pull-requests"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_children",
+        "operation_id": "issues.children",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "children"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_runs",
+        "operation_id": "issues.runs",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "runs"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_run_messages",
+        "operation_id": "issues.run_messages",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "run-messages"
+        ],
+        "mappings": [
+          {
+            "source": "task_run_id",
+            "binding": "pos:0",
+            "destination": "path:task_run_id"
+          },
+          {
+            "source": "issue_id",
+            "binding": "--issue",
+            "destination": "query:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:task_run_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_rerun",
+        "operation_id": "issues.rerun",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "rerun"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_cancel_task",
+        "operation_id": "issues.cancel_task",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "cancel-task"
+        ],
+        "mappings": [
+          {
+            "source": "task_id",
+            "binding": "pos:0",
+            "destination": "path:task_id"
+          },
+          {
+            "source": "issue_id",
+            "binding": "--issue",
+            "destination": "query:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:task_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_subscribers_list",
+        "operation_id": "issues.subscribers.list",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "subscriber",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_subscribers_add",
+        "operation_id": "issues.subscribers.add",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "subscriber",
+          "add"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "user_id",
+            "binding": "pos:1",
+            "destination": "path:user_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id",
+          "nonblank:user_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_subscribers_remove",
+        "operation_id": "issues.subscribers.remove",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "subscriber",
+          "remove"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "user_id",
+            "binding": "pos:1",
+            "destination": "path:user_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id",
+          "nonblank:user_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_metadata_list",
+        "operation_id": "issues.metadata.list",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "metadata",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id"
+        ]
+      },
+      {
+        "descriptor_id": "issue_metadata_get",
+        "operation_id": "issues.metadata.get",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "metadata",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "key",
+            "binding": "pos:1",
+            "destination": "path:key"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id",
+          "nonblank:key"
+        ]
+      },
+      {
+        "descriptor_id": "issue_metadata_set",
+        "operation_id": "issues.metadata.set",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "metadata",
+          "set"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "key",
+            "binding": "pos:1",
+            "destination": "path:key"
+          },
+          {
+            "source": "value",
+            "binding": "pos:2",
+            "destination": "json_body:value"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id",
+          "nonblank:key"
+        ]
+      },
+      {
+        "descriptor_id": "issue_metadata_delete",
+        "operation_id": "issues.metadata.delete",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "metadata",
+          "delete"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "key",
+            "binding": "pos:1",
+            "destination": "path:key"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:issue_id",
+          "nonblank:key"
+        ]
+      },
+      {
+        "descriptor_id": "label_list",
+        "operation_id": "labels.list",
+        "entrypoint_id": "default",
+        "command": [
+          "label",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "label_get",
+        "operation_id": "labels.get",
+        "entrypoint_id": "default",
+        "command": [
+          "label",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "label_id",
+            "binding": "pos:0",
+            "destination": "path:label_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:label_id"
+        ]
+      },
+      {
+        "descriptor_id": "project_get",
+        "operation_id": "projects.get",
+        "entrypoint_id": "default",
+        "command": [
+          "project",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "project_id",
+            "binding": "pos:0",
+            "destination": "path:project_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:project_id"
+        ]
+      },
+      {
+        "descriptor_id": "project_list",
+        "operation_id": "projects.list",
+        "entrypoint_id": "default",
+        "command": [
+          "project",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "repositories_list",
+        "operation_id": "repositories.list",
+        "entrypoint_id": "default",
+        "command": [
+          "repo",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "repositories_add",
+        "operation_id": "repositories.add",
+        "entrypoint_id": "default",
+        "command": [
+          "repo",
+          "add"
+        ],
+        "mappings": [
+          {
+            "source": "urls",
+            "binding": "repeat:pos:0",
+            "destination": "json_body:repos"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "repositories_remove",
+        "operation_id": "repositories.remove",
+        "entrypoint_id": "default",
+        "command": [
+          "repo",
+          "remove"
+        ],
+        "mappings": [
+          {
+            "source": "urls",
+            "binding": "repeat:pos:0",
+            "destination": "json_body:repos"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "runtime_list",
+        "operation_id": "runtimes.list",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "runtime_usage",
+        "operation_id": "runtimes.usage",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "usage"
+        ],
+        "mappings": [
+          {
+            "source": "runtime_id",
+            "binding": "pos:0",
+            "destination": "path:runtime_id"
+          },
+          {
+            "source": "days",
+            "binding": "--days",
+            "destination": "query:days"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:runtime"
+        ]
+      },
+      {
+        "descriptor_id": "runtime_activity",
+        "operation_id": "runtimes.activity",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "activity"
+        ],
+        "mappings": [
+          {
+            "source": "runtime_id",
+            "binding": "pos:0",
+            "destination": "path:runtime_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:runtime"
+        ]
+      },
+      {
+        "descriptor_id": "runtime_update",
+        "operation_id": "runtimes.update",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "update"
+        ],
+        "mappings": [
+          {
+            "source": "runtime_id",
+            "binding": "pos:0",
+            "destination": "path:runtime_id"
+          },
+          {
+            "source": "request.target_version",
+            "binding": "--target-version",
+            "destination": "json_body:target_version"
+          },
+          {
+            "source": "request.wait",
+            "binding": "--wait",
+            "destination": "local_control:wait"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:runtime"
+        ]
+      },
+      {
+        "descriptor_id": "runtime_rename",
+        "operation_id": "runtimes.rename",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "rename"
+        ],
+        "mappings": [
+          {
+            "source": "runtime_id",
+            "binding": "pos:0",
+            "destination": "path:runtime_id"
+          },
+          {
+            "source": "name",
+            "binding": "pos:1",
+            "destination": "path:name"
+          },
+          {
+            "source": "machine",
+            "binding": "--machine",
+            "destination": "local_control:machine"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:runtime",
+          "nonblank:name"
+        ]
+      },
+      {
+        "descriptor_id": "runtime_delete",
+        "operation_id": "runtimes.delete",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "delete"
+        ],
+        "mappings": [
+          {
+            "source": "runtime_id",
+            "binding": "pos:0",
+            "destination": "path:runtime_id"
+          },
+          {
+            "source": "cascade",
+            "binding": "--cascade",
+            "destination": "local_control:cascade"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:runtime"
+        ]
+      },
+      {
+        "descriptor_id": "skill_get",
+        "operation_id": "skills.get",
+        "entrypoint_id": "default",
+        "command": [
+          "skill",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "skill_id",
+            "binding": "pos:0",
+            "destination": "path:skill_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:skill_id"
+        ]
+      },
+      {
+        "descriptor_id": "skill_list",
+        "operation_id": "skills.list",
+        "entrypoint_id": "default",
+        "command": [
+          "skill",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "skill_files_list",
+        "operation_id": "skills.files.list",
+        "entrypoint_id": "default",
+        "command": [
+          "skill",
+          "files",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "skill_id",
+            "binding": "pos:0",
+            "destination": "path:skill_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:skill_id"
+        ]
+      },
+      {
+        "descriptor_id": "skill_files_upsert",
+        "operation_id": "skills.files.upsert",
+        "entrypoint_id": "default",
+        "command": [
+          "skill",
+          "files",
+          "upsert"
+        ],
+        "mappings": [
+          {
+            "source": "skill_id",
+            "binding": "pos:0",
+            "destination": "path:skill_id"
+          },
+          {
+            "source": "path",
+            "binding": "--path",
+            "destination": "json_body:path"
+          },
+          {
+            "source": "content",
+            "binding": "--content",
+            "destination": "json_body:content"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:skill_id",
+          "nonblank:path"
+        ]
+      },
+      {
+        "descriptor_id": "skill_files_delete",
+        "operation_id": "skills.files.delete",
+        "entrypoint_id": "default",
+        "command": [
+          "skill",
+          "files",
+          "delete"
+        ],
+        "mappings": [
+          {
+            "source": "skill_id",
+            "binding": "pos:0",
+            "destination": "path:skill_id"
+          },
+          {
+            "source": "file_id",
+            "binding": "pos:1",
+            "destination": "path:file_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:skill_id",
+          "nonblank:file_id"
+        ]
+      },
+      {
+        "descriptor_id": "squad_list",
+        "operation_id": "squads.list",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "squad_get",
+        "operation_id": "squads.get",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "squad_id",
+            "binding": "pos:0",
+            "destination": "path:squad_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:squad_id"
+        ]
+      },
+      {
+        "descriptor_id": "squad_members_list",
+        "operation_id": "squads.members.list",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "member",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "squad_id",
+            "binding": "pos:0",
+            "destination": "path:squad_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:squad_id"
+        ]
+      },
+      {
+        "descriptor_id": "squad_members_add",
+        "operation_id": "squads.members.add",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "member",
+          "add"
+        ],
+        "mappings": [
+          {
+            "source": "squad_id",
+            "binding": "pos:0",
+            "destination": "path:squad_id"
+          },
+          {
+            "source": "member_id",
+            "binding": "pos:1",
+            "destination": "path:member_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:squad_id",
+          "nonblank:member_id"
+        ]
+      },
+      {
+        "descriptor_id": "squad_members_remove",
+        "operation_id": "squads.members.remove",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "member",
+          "remove"
+        ],
+        "mappings": [
+          {
+            "source": "squad_id",
+            "binding": "pos:0",
+            "destination": "path:squad_id"
+          },
+          {
+            "source": "member_id",
+            "binding": "pos:1",
+            "destination": "path:member_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:squad_id",
+          "nonblank:member_id"
+        ]
+      },
+      {
+        "descriptor_id": "user_profile_get",
+        "operation_id": "users.profile_get",
+        "entrypoint_id": "default",
+        "command": [
+          "user",
+          "profile",
+          "get"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "user_profile_update",
+        "operation_id": "users.profile_update",
+        "entrypoint_id": "default",
+        "command": [
+          "user",
+          "profile",
+          "update"
+        ],
+        "mappings": [
+          {
+            "source": "request.description",
+            "binding": "--description",
+            "destination": "json_body:profile_description"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "workspace_list",
+        "operation_id": "workspaces.list",
+        "entrypoint_id": "default",
+        "command": [
+          "workspace",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "workspace_get",
+        "operation_id": "workspaces.get",
+        "entrypoint_id": "default",
+        "command": [
+          "workspace",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "workspace_id",
+            "binding": "pos:0",
+            "destination": "path:workspace_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:workspace_id"
+        ]
+      },
+      {
+        "descriptor_id": "workspace_members_list",
+        "operation_id": "workspaces.members.list",
+        "entrypoint_id": "default",
+        "command": [
+          "workspace",
+          "member",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "workspace_id",
+            "binding": "pos:0",
+            "destination": "path:workspace_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:workspace_id"
         ]
       }
     ],
@@ -3945,7 +6987,7 @@
           }
         ],
         "kwargs": [],
-        "stdout_base64": "eyJpZCI6ImExIiwid29ya3NwYWNlX2lkIjoidzEiLCJ0aXRsZSI6IkFQIiwiYXNzaWduZWVfdHlwZSI6Im1lbWJlciIsImFzc2lnbmVlX2lkIjoidTEiLCJzdGF0dXMiOiJhY3RpdmUiLCJleGVjdXRpb25fbW9kZSI6ImNyZWF0ZV9pc3N1ZSIsImNyZWF0ZWRfYnlfdHlwZSI6Im1lbWJlciIsImNyZWF0ZWRfYnlfaWQiOiJ1MSIsInN1YnNjcmliZXJzIjpbXX0=",
+        "stdout_base64": "eyJhdXRvcGlsb3QiOnsiaWQiOiJhMSIsIndvcmtzcGFjZV9pZCI6IncxIiwidGl0bGUiOiJBUCIsImFzc2lnbmVlX3R5cGUiOiJtZW1iZXIiLCJhc3NpZ25lZV9pZCI6InUxIiwic3RhdHVzIjoiYWN0aXZlIiwiZXhlY3V0aW9uX21vZGUiOiJjcmVhdGVfaXNzdWUiLCJjcmVhdGVkX2J5X3R5cGUiOiJtZW1iZXIiLCJjcmVhdGVkX2J5X2lkIjoidTEiLCJzdWJzY3JpYmVycyI6W119LCJ0cmlnZ2VycyI6W119",
         "stderr": "",
         "exit_code": 0,
         "transport_method": "run_bytes",
@@ -4090,9 +7132,9 @@
           }
         }
       },
-      "generated:autopilots.run:default:canonical": {
-        "vector_id": "generated:autopilots.run:default:canonical",
-        "operation_id": "autopilots.run",
+      "generated:autopilots.trigger:default:canonical": {
+        "vector_id": "generated:autopilots.trigger:default:canonical",
+        "operation_id": "autopilots.trigger",
         "entrypoint_id": "default",
         "is_canonical": true,
         "args": [
@@ -4108,7 +7150,7 @@
         "transport_method": "run_bytes",
         "expected_argv": [
           "autopilot",
-          "run",
+          "trigger",
           "a1",
           "--output",
           "json"
@@ -4116,7 +7158,7 @@
         "stdin_base64": null,
         "timeout": null,
         "assertion": {
-          "id": "assert:generated:autopilots.run:default:canonical",
+          "id": "assert:generated:autopilots.trigger:default:canonical",
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
@@ -4155,6 +7197,592 @@
           "expected": {
             "kind": "primitive",
             "value": "multica_py.models.autopilots.AutopilotRunListPage"
+          }
+        }
+      },
+      "generated:agents.list:default:canonical": {
+        "vector_id": "generated:agents.list:default:canonical",
+        "operation_id": "agents.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "agent",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:agents.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:agents.tasks:default:canonical": {
+        "vector_id": "generated:agents.tasks:default:canonical",
+        "operation_id": "agents.tasks",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ag_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "agent",
+          "tasks",
+          "ag_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:agents.tasks:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:agents.skills.list:default:canonical": {
+        "vector_id": "generated:agents.skills.list:default:canonical",
+        "operation_id": "agents.skills.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ag_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "agent",
+          "skills",
+          "list",
+          "ag_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:agents.skills.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:labels.list:default:canonical": {
+        "vector_id": "generated:labels.list:default:canonical",
+        "operation_id": "labels.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "label",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:labels.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:projects.list:default:canonical": {
+        "vector_id": "generated:projects.list:default:canonical",
+        "operation_id": "projects.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "project",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:projects.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:skills.list:default:canonical": {
+        "vector_id": "generated:skills.list:default:canonical",
+        "operation_id": "skills.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "skill",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:skills.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:skills.files.list:default:canonical": {
+        "vector_id": "generated:skills.files.list:default:canonical",
+        "operation_id": "skills.files.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "sk_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "skill",
+          "files",
+          "list",
+          "sk_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:skills.files.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:squads.list:default:canonical": {
+        "vector_id": "generated:squads.list:default:canonical",
+        "operation_id": "squads.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "squad",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:squads.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:squads.members.list:default:canonical": {
+        "vector_id": "generated:squads.members.list:default:canonical",
+        "operation_id": "squads.members.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "sq_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "squad",
+          "member",
+          "list",
+          "sq_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:squads.members.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:repositories.list:default:canonical": {
+        "vector_id": "generated:repositories.list:default:canonical",
+        "operation_id": "repositories.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "repo",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:repositories.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:runtimes.list:default:canonical": {
+        "vector_id": "generated:runtimes.list:default:canonical",
+        "operation_id": "runtimes.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "runtime",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:runtimes.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.subscribers.list:default:canonical": {
+        "vector_id": "generated:issues.subscribers.list:default:canonical",
+        "operation_id": "issues.subscribers.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "subscriber",
+          "list",
+          "iss_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.subscribers.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.metadata.list:default:canonical": {
+        "vector_id": "generated:issues.metadata.list:default:canonical",
+        "operation_id": "issues.metadata.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "metadata",
+          "list",
+          "iss_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.metadata.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.pull_requests:default:canonical": {
+        "vector_id": "generated:issues.pull_requests:default:canonical",
+        "operation_id": "issues.pull_requests",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJwdWxsX3JlcXVlc3RzIjpbXX0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "pull-requests",
+          "iss_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.pull_requests:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.children:default:canonical": {
+        "vector_id": "generated:issues.children:default:canonical",
+        "operation_id": "issues.children",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJjaGlsZHJlbiI6W10sInRvdGFsIjowLCJjaGlsZF9zdGFnZXMiOltdLCJ1bnN0YWdlZCI6W119",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "children",
+          "iss_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.children:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.runs:default:canonical": {
+        "vector_id": "generated:issues.runs:default:canonical",
+        "operation_id": "issues.runs",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "iss_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "runs",
+          "iss_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.runs:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:issues.run_messages:default:canonical": {
+        "vector_id": "generated:issues.run_messages:default:canonical",
+        "operation_id": "issues.run_messages",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "tr_1"
+          }
+        ],
+        "kwargs": [
+          [
+            "issue_id",
+            {
+              "kind": "primitive",
+              "value": "iss_1"
+            }
+          ]
+        ],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "run-messages",
+          "tr_1",
+          "--issue",
+          "iss_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.run_messages:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
+      },
+      "generated:workspaces.members.list:default:canonical": {
+        "vector_id": "generated:workspaces.members.list:default:canonical",
+        "operation_id": "workspaces.members.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ws_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "workspace",
+          "member",
+          "list",
+          "ws_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:workspaces.members.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
           }
         }
       }
@@ -4214,6 +7842,150 @@
       "symbol": "ErrorKind/NetworkError/UserMessageError/HTTPError/classifyNetworkError/wrapTransport",
       "line_start": 1,
       "line_end": 492
+    },
+    {
+      "source_ref_id": "D03",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueChildrenCmd/childStage/runIssueChildren",
+      "line_start": 191,
+      "line_end": 966
+    },
+    {
+      "source_ref_id": "D04",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issuePullRequestsCmd/runIssuePullRequests/normalizePullRequestList/printIssuePullRequestsTable/pullRequestURL",
+      "line_start": 183,
+      "line_end": 789
+    },
+    {
+      "source_ref_id": "D05",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_issue_metadata.go",
+      "symbol": "issueMetadataCmd/issueMetadataListCmd/issueMetadataGetCmd/issueMetadataSetCmd/issueMetadataDeleteCmd/runIssueMetadataList/runIssueMetadataGet/runIssueMetadataSet/runIssueMetadataDelete",
+      "line_start": 57,
+      "line_end": 331
+    },
+    {
+      "source_ref_id": "D06",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueRunMessagesCmd/runIssueRunMessages",
+      "line_start": 323,
+      "line_end": 2207
+    },
+    {
+      "source_ref_id": "D07",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueRerunCmd/issueCancelTaskCmd/runIssueRerun/runIssueCancelTask",
+      "line_start": 337,
+      "line_end": 2283
+    },
+    {
+      "source_ref_id": "D08",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentSkillsCmd/agentSkillsListCmd/agentSkillsSetCmd/runAgentSkillsList/runAgentSkillsSet",
+      "line_start": 82,
+      "line_end": 940
+    },
+    {
+      "source_ref_id": "D09",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillFilesCmd/skillFilesListCmd/skillFilesUpsertCmd/skillFilesDeleteCmd/runSkillFilesList/runSkillFilesUpsert/runSkillFilesDelete",
+      "line_start": 75,
+      "line_end": 691
+    },
+    {
+      "source_ref_id": "D11",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotTriggerCmd/runAutopilotTrigger",
+      "line_start": 56,
+      "line_end": 537
+    },
+    {
+      "source_ref_id": "D13",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotTriggerAddCmd/autopilotTriggerUpdateCmd/autopilotTriggerDeleteCmd/runAutopilotTriggerAdd/runAutopilotTriggerUpdate/runAutopilotTriggerDelete",
+      "line_start": 70,
+      "line_end": 760
+    },
+    {
+      "source_ref_id": "D14",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_attachment.go",
+      "symbol": "attachmentCmd/attachmentDownloadCmd/attachmentUploadCmd/runAttachmentUpload/runAttachmentDownload",
+      "line_start": 16,
+      "line_end": 181
+    },
+    {
+      "source_ref_id": "D15",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_user.go",
+      "symbol": "userProfileCmd/userProfileGetCmd/userProfileUpdateCmd/runUserProfileGet/runUserProfileUpdate",
+      "line_start": 16,
+      "line_end": 148
+    },
+    {
+      "source_ref_id": "D16",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_repo.go",
+      "symbol": "repoListCmd/repoAddCmd/repoRemoveCmd/repoCheckoutCmd/runRepoList/runRepoAdd/runRepoRemove/runRepoCheckout",
+      "line_start": 23,
+      "line_end": 396
+    },
+    {
+      "source_ref_id": "D17",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runtimeListCmd/runtimeUsageCmd/runtimeActivityCmd/runtimeUpdateCmd/runtimeRenameCmd/runtimeDeleteCmd/runRuntimeList/runRuntimeUsage/runRuntimeActivity/runRuntimeUpdate/runRuntimeRename/runRuntimeDelete",
+      "line_start": 23,
+      "line_end": 413
+    },
+    {
+      "source_ref_id": "D18",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentAvatarCmd/runAgentAvatar",
+      "line_start": 73,
+      "line_end": 880
+    },
+    {
+      "source_ref_id": "S-SQUAD",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadCmd/squadListCmd/squadGetCmd/squadCreateCmd/squadUpdateCmd/squadDeleteCmd/squadMemberCmd/squadMemberListCmd/squadMemberAddCmd/squadMemberSetRoleCmd/squadMemberRemoveCmd/runSquadList/runSquadGet/runSquadCreate/runSquadUpdate/runSquadDelete/runSquadMemberList/runSquadMemberAdd/runSquadMemberSetRole/runSquadMemberRemove",
+      "line_start": 15,
+      "line_end": 441
+    },
+    {
+      "source_ref_id": "S-WORKSPACE",
+      "repository": "multica-ai/multica",
+      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceCmd/workspaceListCmd/workspaceCreateCmd/workspaceGetCmd/workspaceMemberCmd/workspaceMemberListCmd/workspaceUpdateCmd/runWorkspaceList/runWorkspaceCreate/runWorkspaceGet/runWorkspaceUpdate/runWorkspaceMembers",
+      "line_start": 16,
+      "line_end": 563
     }
   ],
   "test_refs": [
@@ -4226,33 +7998,251 @@
       "test_ref_id": "T-CONTRACT",
       "path": "tests/contract/test_sdk_contract.py",
       "node_id": "test_sdk_contract"
+    },
+    {
+      "test_ref_id": "relation:R01",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.members"
+    },
+    {
+      "test_ref_id": "relation:R02",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.agents"
+    },
+    {
+      "test_ref_id": "relation:R03",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.skills"
+    },
+    {
+      "test_ref_id": "relation:R04",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.projects"
+    },
+    {
+      "test_ref_id": "relation:R05",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.issues"
+    },
+    {
+      "test_ref_id": "relation:R06",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.labels"
+    },
+    {
+      "test_ref_id": "relation:R07",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.autopilots"
+    },
+    {
+      "test_ref_id": "relation:R08",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.repositories"
+    },
+    {
+      "test_ref_id": "relation:R09",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.runtimes"
+    },
+    {
+      "test_ref_id": "relation:R10",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Workspace.squads"
+    },
+    {
+      "test_ref_id": "relation:R11",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Agent.skills"
+    },
+    {
+      "test_ref_id": "relation:R12",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Agent.tasks"
+    },
+    {
+      "test_ref_id": "relation:R13",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Agent.issues"
+    },
+    {
+      "test_ref_id": "relation:R14",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Skill.files"
+    },
+    {
+      "test_ref_id": "relation:R15",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Squad.members"
+    },
+    {
+      "test_ref_id": "relation:R16",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Squad.issues"
+    },
+    {
+      "test_ref_id": "relation:R17",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# WorkspaceMember.issues"
+    },
+    {
+      "test_ref_id": "relation:R18",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Project.resources"
+    },
+    {
+      "test_ref_id": "relation:R19",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Project.issues"
+    },
+    {
+      "test_ref_id": "relation:R20",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Issue.comments"
+    },
+    {
+      "test_ref_id": "relation:R21",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Issue.recent_comment_threads"
+    },
+    {
+      "test_ref_id": "relation:R22",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# CommentThread.comments"
+    },
+    {
+      "test_ref_id": "relation:R23",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Issue.labels"
+    },
+    {
+      "test_ref_id": "relation:R24",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Issue.subscribers"
+    },
+    {
+      "test_ref_id": "relation:R25",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Issue.metadata"
+    },
+    {
+      "test_ref_id": "relation:R26",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Issue.pull_requests"
+    },
+    {
+      "test_ref_id": "relation:R27",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Issue.children"
+    },
+    {
+      "test_ref_id": "relation:R28",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Issue.runs"
+    },
+    {
+      "test_ref_id": "relation:R29",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# TaskRun.messages"
+    },
+    {
+      "test_ref_id": "relation:R30",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Autopilot.runs"
+    },
+    {
+      "test_ref_id": "relation:R31",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Autopilot.triggers"
+    },
+    {
+      "test_ref_id": "relation:R32",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# Autopilot.subscribers"
+    },
+    {
+      "test_ref_id": "relation:R33",
+      "path": "specs/bound-resource-relations/spec.md",
+      "node_id": "# AutopilotRun.messages"
     }
   ],
   "scope": {
     "operation_ids": [
+      "agents.avatar",
+      "agents.get",
+      "agents.list",
+      "agents.skills.list",
+      "agents.skills.set",
+      "agents.tasks",
+      "attachments.download",
+      "attachments.upload",
       "autopilots.create",
       "autopilots.delete",
       "autopilots.get",
       "autopilots.history",
       "autopilots.list",
-      "autopilots.run",
+      "autopilots.trigger",
+      "autopilots.trigger_add",
+      "autopilots.trigger_delete",
+      "autopilots.trigger_update",
       "autopilots.update",
+      "issues.cancel_task",
+      "issues.children",
       "issues.comments.add",
       "issues.comments.delete",
       "issues.comments.list",
       "issues.create",
+      "issues.get",
       "issues.labels.add",
       "issues.labels.list",
       "issues.labels.remove",
       "issues.list",
+      "issues.metadata.delete",
+      "issues.metadata.get",
+      "issues.metadata.list",
+      "issues.metadata.set",
+      "issues.pull_requests",
+      "issues.rerun",
+      "issues.run_messages",
+      "issues.runs",
       "issues.set_status",
+      "issues.subscribers.add",
+      "issues.subscribers.list",
+      "issues.subscribers.remove",
+      "labels.get",
+      "labels.list",
       "projects.create",
+      "projects.get",
+      "projects.list",
       "projects.resources.add_local_directory",
       "projects.resources.list",
       "projects.resources.remove",
       "projects.resources.update_local_directory",
       "projects.set_status",
-      "projects.update"
+      "projects.update",
+      "repositories.add",
+      "repositories.list",
+      "repositories.remove",
+      "runtimes.activity",
+      "runtimes.delete",
+      "runtimes.list",
+      "runtimes.rename",
+      "runtimes.update",
+      "runtimes.usage",
+      "skills.files.delete",
+      "skills.files.list",
+      "skills.files.upsert",
+      "skills.get",
+      "skills.list",
+      "squads.get",
+      "squads.list",
+      "squads.members.add",
+      "squads.members.list",
+      "squads.members.remove",
+      "users.profile_get",
+      "users.profile_update",
+      "workspaces.get",
+      "workspaces.list",
+      "workspaces.members.list"
     ],
     "ungoverned_policy": "existing_unrelated_operations_unchanged",
     "source_authority_ref": "specs/007-upstream-v0-4-9-migration/contracts/source-authority.json",
@@ -4260,20 +8250,29 @@
     "family_dispositions": [
       {
         "family": "agent-settings-and-skills",
-        "disposition": "deferred_owner_decision",
-        "required_operation_ids": [],
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "agents.avatar",
+          "agents.get",
+          "agents.list",
+          "agents.skills.list",
+          "agents.skills.set",
+          "agents.tasks"
+        ],
         "source_ref_ids": [
           "F-AGENT-PERM",
           "F-AGENT-RUN",
           "F-AGENT-SKILL",
           "F-AGENT-SKILL-RUN"
         ],
-        "rationale": "No governed agent mutation operation."
+        "rationale": "Governed agent list/get/skills/tasks/avatar operations."
       },
       {
         "family": "attachments-and-client-transport",
         "disposition": "required_subset_plus_deferred_extension",
         "required_operation_ids": [
+          "attachments.download",
+          "attachments.upload",
           "issues.comments.add",
           "issues.create"
         ],
@@ -4298,10 +8297,17 @@
         "family": "issue-existing-changes",
         "disposition": "required_compatibility",
         "required_operation_ids": [
+          "issues.cancel_task",
+          "issues.children",
           "issues.comments.add",
           "issues.comments.list",
           "issues.create",
-          "issues.list"
+          "issues.get",
+          "issues.list",
+          "issues.pull_requests",
+          "issues.rerun",
+          "issues.run_messages",
+          "issues.runs"
         ],
         "source_ref_ids": [
           "F-ISSUE-CREATE",
@@ -4314,7 +8320,14 @@
         "family": "issue-new-commands",
         "disposition": "required_subset_plus_extension_candidates",
         "required_operation_ids": [
-          "issues.set_status"
+          "issues.metadata.delete",
+          "issues.metadata.get",
+          "issues.metadata.list",
+          "issues.metadata.set",
+          "issues.set_status",
+          "issues.subscribers.add",
+          "issues.subscribers.list",
+          "issues.subscribers.remove"
         ],
         "source_ref_ids": [
           "F-ISSUE-NEW-DECL",
@@ -4328,6 +8341,8 @@
         "disposition": "required_subset_plus_cli_only",
         "required_operation_ids": [
           "projects.create",
+          "projects.get",
+          "projects.list",
           "projects.resources.add_local_directory",
           "projects.resources.list",
           "projects.resources.remove",
@@ -4343,17 +8358,6 @@
         "rationale": "Governed project operations are required; root flags remain CLI control."
       },
       {
-        "family": "runtime-and-local-control",
-        "disposition": "cli_only_plus_deferred_extension",
-        "required_operation_ids": [],
-        "source_ref_ids": [
-          "F-DAEMON",
-          "F-RUNTIME",
-          "F-RUNTIME-PROFILE"
-        ],
-        "rationale": "Local controls are not public SDK operations."
-      },
-      {
         "family": "autopilot",
         "disposition": "required_compatibility",
         "required_operation_ids": [
@@ -4362,7 +8366,10 @@
           "autopilots.get",
           "autopilots.history",
           "autopilots.list",
-          "autopilots.run",
+          "autopilots.trigger",
+          "autopilots.trigger_add",
+          "autopilots.trigger_delete",
+          "autopilots.trigger_update",
           "autopilots.update"
         ],
         "source_ref_ids": [
@@ -4372,35 +8379,100 @@
       },
       {
         "family": "skills-squads",
-        "disposition": "deferred_owner_decision",
-        "required_operation_ids": [],
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "skills.files.delete",
+          "skills.files.list",
+          "skills.files.upsert",
+          "skills.get",
+          "skills.list",
+          "squads.get",
+          "squads.list",
+          "squads.members.add",
+          "squads.members.list",
+          "squads.members.remove"
+        ],
         "source_ref_ids": [
           "F-SKILL",
           "F-SKILL-RUN",
           "F-SQUAD"
         ],
-        "rationale": "No governed skill or squad operation."
+        "rationale": "Governed skill and squad operations."
       },
       {
         "family": "transport-error-contract",
         "disposition": "required_compatibility",
         "required_operation_ids": [
+          "agents.avatar",
+          "agents.get",
+          "agents.list",
+          "agents.skills.list",
+          "agents.skills.set",
+          "agents.tasks",
+          "attachments.download",
+          "attachments.upload",
+          "autopilots.trigger",
+          "autopilots.trigger_add",
+          "autopilots.trigger_delete",
+          "autopilots.trigger_update",
+          "issues.cancel_task",
+          "issues.children",
           "issues.comments.add",
           "issues.comments.delete",
           "issues.comments.list",
           "issues.create",
+          "issues.get",
           "issues.labels.add",
           "issues.labels.list",
           "issues.labels.remove",
           "issues.list",
+          "issues.metadata.delete",
+          "issues.metadata.get",
+          "issues.metadata.list",
+          "issues.metadata.set",
+          "issues.pull_requests",
+          "issues.rerun",
+          "issues.run_messages",
+          "issues.runs",
           "issues.set_status",
+          "issues.subscribers.add",
+          "issues.subscribers.list",
+          "issues.subscribers.remove",
+          "labels.get",
+          "labels.list",
           "projects.create",
+          "projects.get",
+          "projects.list",
           "projects.resources.add_local_directory",
           "projects.resources.list",
           "projects.resources.remove",
           "projects.resources.update_local_directory",
           "projects.set_status",
-          "projects.update"
+          "projects.update",
+          "repositories.add",
+          "repositories.list",
+          "repositories.remove",
+          "runtimes.activity",
+          "runtimes.delete",
+          "runtimes.list",
+          "runtimes.rename",
+          "runtimes.update",
+          "runtimes.usage",
+          "skills.files.delete",
+          "skills.files.list",
+          "skills.files.upsert",
+          "skills.get",
+          "skills.list",
+          "squads.get",
+          "squads.list",
+          "squads.members.add",
+          "squads.members.list",
+          "squads.members.remove",
+          "users.profile_get",
+          "users.profile_update",
+          "workspaces.get",
+          "workspaces.list",
+          "workspaces.members.list"
         ],
         "source_ref_ids": [
           "F-CLIENT-ERROR",
@@ -4410,26 +8482,52 @@
         "rationale": "All governed operations preserve SDK error mapping."
       },
       {
-        "family": "workspace-properties",
-        "disposition": "separate_extension_candidate",
-        "required_operation_ids": [],
-        "source_ref_ids": [
-          "F-ISSUE-PROPERTY",
-          "F-PROPERTY-DECL",
-          "F-PROPERTY-RUN"
+        "family": "labels-and-workspace-members",
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "labels.get",
+          "labels.list",
+          "workspaces.get",
+          "workspaces.list",
+          "workspaces.members.list"
         ],
-        "rationale": "Requires separate schema approval."
+        "source_ref_ids": [
+          "S-LABEL",
+          "S-WORKSPACE"
+        ],
+        "rationale": "Governed label and workspace operations."
       },
       {
-        "family": "workspace-repository-management",
-        "disposition": "deferred_owner_decision",
-        "required_operation_ids": [],
-        "source_ref_ids": [
-          "F-REPO-DECL",
-          "F-REPO-RUN",
-          "F-WORKSPACE-DECL"
+        "family": "users-and-repositories",
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "repositories.add",
+          "repositories.list",
+          "repositories.remove",
+          "users.profile_get",
+          "users.profile_update"
         ],
-        "rationale": "Workspace repositories are not project resources."
+        "source_ref_ids": [
+          "D15",
+          "D16"
+        ],
+        "rationale": "Governed user and repository operations."
+      },
+      {
+        "family": "runtimes-and-daemons",
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "runtimes.activity",
+          "runtimes.delete",
+          "runtimes.list",
+          "runtimes.rename",
+          "runtimes.update",
+          "runtimes.usage"
+        ],
+        "source_ref_ids": [
+          "D17"
+        ],
+        "rationale": "Governed runtime operations."
       }
     ]
   },
@@ -4490,7 +8588,10 @@
       ],
       "test_ref_ids": [
         "T-OPERATION",
-        "T-OPERATION"
+        "T-OPERATION",
+        "relation:R20",
+        "relation:R21",
+        "relation:R22"
       ],
       "entrypoints": [
         {
@@ -4579,7 +8680,8 @@
         "S-LABEL"
       ],
       "test_ref_ids": [
-        "T-OPERATION"
+        "T-OPERATION",
+        "relation:R23"
       ],
       "entrypoints": [
         {
@@ -4622,7 +8724,12 @@
         "S-ISSUE"
       ],
       "test_ref_ids": [
-        "T-OPERATION"
+        "T-OPERATION",
+        "relation:R05",
+        "relation:R13",
+        "relation:R16",
+        "relation:R17",
+        "relation:R19"
       ],
       "entrypoints": [
         {
@@ -4706,7 +8813,8 @@
         "S-PROJECT"
       ],
       "test_ref_ids": [
-        "T-OPERATION"
+        "T-OPERATION",
+        "relation:R18"
       ],
       "entrypoints": [
         {
@@ -4811,7 +8919,8 @@
         "S-AUTO"
       ],
       "test_ref_ids": [
-        "T-OPERATION"
+        "T-OPERATION",
+        "relation:R07"
       ],
       "entrypoints": [
         {
@@ -4832,7 +8941,9 @@
         "S-AUTO"
       ],
       "test_ref_ids": [
-        "T-OPERATION"
+        "T-OPERATION",
+        "relation:R31",
+        "relation:R32"
       ],
       "entrypoints": [
         {
@@ -4909,27 +9020,6 @@
       ]
     },
     {
-      "operation_id": "autopilots.run",
-      "compatibility": "intentionally_changed",
-      "rationale": "AutopilotRun model widened to the upstream AutopilotRunResponse surface (drops started_at, adds triggered_at). Argv divergence pre-existing (autopilot trigger <id> vs autopilot run), deferred.",
-      "source_ref_ids": [
-        "S-AUTO"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.run",
-          "signature_id": "autopilot_run",
-          "binding_id": "autopilot_run",
-          "response_id": "autopilot_run",
-          "errors": "standard"
-        }
-      ]
-    },
-    {
       "operation_id": "autopilots.history",
       "compatibility": "intentionally_changed",
       "rationale": "Return type widened from tuple[AutopilotRun, ...] to AutopilotRunListPage (total/limit/offset/has_more). Argv fixed to upstream 'autopilot runs <id>' subcommand (was the non-existent 'autopilot history'). New --limit/--offset filters.",
@@ -4937,7 +9027,8 @@
         "S-AUTO"
       ],
       "test_ref_ids": [
-        "T-OPERATION"
+        "T-OPERATION",
+        "relation:R30"
       ],
       "entrypoints": [
         {
@@ -4946,6 +9037,1159 @@
           "signature_id": "autopilot_history",
           "binding_id": "autopilot_history",
           "response_id": "autopilot_run_list_page",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.list",
+      "compatibility": "compatible",
+      "rationale": "Unpaged agent list for workspace agent relation.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R02"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agents.AgentResource.list",
+          "signature_id": "agent_list",
+          "binding_id": "agent_list",
+          "response_id": "agent",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.get",
+      "compatibility": "compatible",
+      "rationale": "Agent get for detail view.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agents.AgentResource.get",
+          "signature_id": "agent_get",
+          "binding_id": "agent_get",
+          "response_id": "agent",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.tasks",
+      "compatibility": "compatible",
+      "rationale": "Agent task list for agent tasks relation.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R12"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agents.AgentResource.tasks",
+          "signature_id": "agent_tasks",
+          "binding_id": "agent_tasks",
+          "response_id": "task_runs",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.skills.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Corrected from singular to plural agent skills list (D08).",
+      "source_ref_ids": [
+        "D08"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R11"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agent_skills.AgentSkillResource.list",
+          "signature_id": "agent_skills_list",
+          "binding_id": "agent_skills_list",
+          "response_id": "agent_skills",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.skills.set",
+      "compatibility": "intentionally_changed",
+      "rationale": "Corrected from singular to plural agent skills set (D08).",
+      "source_ref_ids": [
+        "D08"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agent_skills.AgentSkillResource.set",
+          "signature_id": "agent_skills_set",
+          "binding_id": "agent_skills_set",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.avatar",
+      "compatibility": "intentionally_changed",
+      "rationale": "Corrected from agent avatar upload --image to agent avatar --file (D18).",
+      "source_ref_ids": [
+        "D18"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agents.AgentResource.avatar",
+          "signature_id": "agent_avatar",
+          "binding_id": "agent_avatar",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "attachments.upload",
+      "compatibility": "intentionally_changed",
+      "rationale": "Replaced legacy issue-id + --file with path + optional --task (D14).",
+      "source_ref_ids": [
+        "D14"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.attachments.AttachmentResource.upload",
+          "signature_id": "attachment_upload",
+          "binding_id": "attachment_upload",
+          "response_id": "attachment_result",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "attachments.download",
+      "compatibility": "intentionally_changed",
+      "rationale": "Replaced legacy output-path with --output-dir (D14).",
+      "source_ref_ids": [
+        "D14"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.attachments.AttachmentResource.download",
+          "signature_id": "attachment_download",
+          "binding_id": "attachment_download",
+          "response_id": "path",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.trigger",
+      "compatibility": "intentionally_changed",
+      "rationale": "Renamed from run to trigger to match upstream command (D11).",
+      "source_ref_ids": [
+        "D11"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger",
+          "signature_id": "autopilot_trigger",
+          "binding_id": "autopilot_trigger",
+          "response_id": "autopilot_run",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.trigger_add",
+      "compatibility": "intentionally_changed",
+      "rationale": "Replaced legacy nested trigger-create with upstream trigger-add (D13).",
+      "source_ref_ids": [
+        "D13"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_add",
+          "signature_id": "autopilot_trigger_add",
+          "binding_id": "autopilot_trigger_add",
+          "response_id": "autopilot_trigger",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.trigger_update",
+      "compatibility": "intentionally_changed",
+      "rationale": "New upstream trigger-update command (D13).",
+      "source_ref_ids": [
+        "D13"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_update",
+          "signature_id": "autopilot_trigger_update",
+          "binding_id": "autopilot_trigger_update",
+          "response_id": "autopilot_trigger",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.trigger_delete",
+      "compatibility": "intentionally_changed",
+      "rationale": "Replaced legacy nested trigger-delete with upstream trigger-delete (D13).",
+      "source_ref_ids": [
+        "D13"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_delete",
+          "signature_id": "autopilot_trigger_delete",
+          "binding_id": "autopilot_trigger_delete",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.get",
+      "compatibility": "compatible",
+      "rationale": "Issue get for detail view.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.get",
+          "signature_id": "issue_get",
+          "binding_id": "issue_get",
+          "response_id": "issue",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.pull_requests",
+      "compatibility": "intentionally_changed",
+      "rationale": "Adapt pull_requests envelope wrapper (D04).",
+      "source_ref_ids": [
+        "D04"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R26"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.pull_requests",
+          "signature_id": "issue_pull_requests",
+          "binding_id": "issue_pull_requests",
+          "response_id": "linked_pull_requests",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.children",
+      "compatibility": "intentionally_changed",
+      "rationale": "Adapt children grouped envelope (D03).",
+      "source_ref_ids": [
+        "D03"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R27"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.children",
+          "signature_id": "issue_children",
+          "binding_id": "issue_children",
+          "response_id": "issue_children_result",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.runs",
+      "compatibility": "intentionally_changed",
+      "rationale": "Issue runs for issue runs relation (D06).",
+      "source_ref_ids": [
+        "D06"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R28"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.runs",
+          "signature_id": "issue_runs",
+          "binding_id": "issue_runs",
+          "response_id": "task_runs",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.run_messages",
+      "compatibility": "intentionally_changed",
+      "rationale": "Corrected from issue positional + --run-id to task_run_id + optional --issue (D06).",
+      "source_ref_ids": [
+        "D06"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R29",
+        "relation:R33"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.run_messages",
+          "signature_id": "issue_run_messages",
+          "binding_id": "issue_run_messages",
+          "response_id": "run_messages",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.rerun",
+      "compatibility": "intentionally_changed",
+      "rationale": "Corrected run-id parameter semantics (D07).",
+      "source_ref_ids": [
+        "D07"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.rerun",
+          "signature_id": "issue_rerun",
+          "binding_id": "issue_rerun",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.cancel_task",
+      "compatibility": "intentionally_changed",
+      "rationale": "Corrected from issue + run-id to task-id + optional issue (D07).",
+      "source_ref_ids": [
+        "D07"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.cancel_task",
+          "signature_id": "issue_cancel_task",
+          "binding_id": "issue_cancel_task",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.subscribers.list",
+      "compatibility": "compatible",
+      "rationale": "Issue subscriber list for issue subscribers relation.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R24"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.list",
+          "signature_id": "issue_subscribers_list",
+          "binding_id": "issue_subscribers_list",
+          "response_id": "subscribers",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.subscribers.add",
+      "compatibility": "compatible",
+      "rationale": "Issue subscriber add for mutation invalidation.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.add",
+          "signature_id": "issue_subscribers_add",
+          "binding_id": "issue_subscribers_add",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.subscribers.remove",
+      "compatibility": "compatible",
+      "rationale": "Issue subscriber remove for mutation invalidation.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.remove",
+          "signature_id": "issue_subscribers_remove",
+          "binding_id": "issue_subscribers_remove",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.metadata.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Decode metadata JSON object as typed mapping (D05).",
+      "source_ref_ids": [
+        "D05"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R25"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.list",
+          "signature_id": "issue_metadata_list",
+          "binding_id": "issue_metadata_list",
+          "response_id": "metadata_entries",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.metadata.get",
+      "compatibility": "intentionally_changed",
+      "rationale": "Metadata get with typed key (D05).",
+      "source_ref_ids": [
+        "D05"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.get",
+          "signature_id": "issue_metadata_get",
+          "binding_id": "issue_metadata_get",
+          "response_id": "metadata_entries",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.metadata.set",
+      "compatibility": "intentionally_changed",
+      "rationale": "Metadata set with typed key/value (D05).",
+      "source_ref_ids": [
+        "D05"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.set",
+          "signature_id": "issue_metadata_set",
+          "binding_id": "issue_metadata_set",
+          "response_id": "metadata_entries",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.metadata.delete",
+      "compatibility": "intentionally_changed",
+      "rationale": "Metadata delete with typed key (D05).",
+      "source_ref_ids": [
+        "D05"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.delete",
+          "signature_id": "issue_metadata_delete",
+          "binding_id": "issue_metadata_delete",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "labels.list",
+      "compatibility": "compatible",
+      "rationale": "Label list for workspace labels relation.",
+      "source_ref_ids": [
+        "S-LABEL"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R06"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.labels.LabelResource.list",
+          "signature_id": "label_list",
+          "binding_id": "label_list",
+          "response_id": "labels",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "labels.get",
+      "compatibility": "compatible",
+      "rationale": "Label get for detail view.",
+      "source_ref_ids": [
+        "S-LABEL"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.labels.LabelResource.get",
+          "signature_id": "label_get",
+          "binding_id": "label_get",
+          "response_id": "labels",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.list",
+      "compatibility": "compatible",
+      "rationale": "Project list for workspace projects relation.",
+      "source_ref_ids": [
+        "S-PROJECT"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R04"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.ProjectResource.list",
+          "signature_id": "project_list",
+          "binding_id": "project_list",
+          "response_id": "project",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.get",
+      "compatibility": "compatible",
+      "rationale": "Project get for detail view.",
+      "source_ref_ids": [
+        "S-PROJECT"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.ProjectResource.get",
+          "signature_id": "project_get",
+          "binding_id": "project_get",
+          "response_id": "project",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "skills.list",
+      "compatibility": "compatible",
+      "rationale": "Skill list for workspace skills relation.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R03"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skills.SkillResource.list",
+          "signature_id": "skill_list",
+          "binding_id": "skill_list",
+          "response_id": "skill",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "skills.get",
+      "compatibility": "compatible",
+      "rationale": "Skill get for detail view.",
+      "source_ref_ids": [
+        "S-AUTO"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skills.SkillResource.get",
+          "signature_id": "skill_get",
+          "binding_id": "skill_get",
+          "response_id": "skill",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "skills.files.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Corrected from singular to plural skill files list (D09).",
+      "source_ref_ids": [
+        "D09"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R14"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skill_files.SkillFileResource.list",
+          "signature_id": "skill_files_list",
+          "binding_id": "skill_files_list",
+          "response_id": "skill_files",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "skills.files.upsert",
+      "compatibility": "intentionally_changed",
+      "rationale": "Corrected from singular to plural skill files upsert (D09).",
+      "source_ref_ids": [
+        "D09"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skill_files.SkillFileResource.upsert",
+          "signature_id": "skill_files_upsert",
+          "binding_id": "skill_files_upsert",
+          "response_id": "skill_file",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "skills.files.delete",
+      "compatibility": "intentionally_changed",
+      "rationale": "Corrected from singular to plural skill files delete (D09).",
+      "source_ref_ids": [
+        "D09"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skill_files.SkillFileResource.delete",
+          "signature_id": "skill_files_delete",
+          "binding_id": "skill_files_delete",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "squads.list",
+      "compatibility": "compatible",
+      "rationale": "Squad list for workspace squads relation.",
+      "source_ref_ids": [
+        "S-SQUAD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R10"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squads.SquadResource.list",
+          "signature_id": "squad_list",
+          "binding_id": "squad_list",
+          "response_id": "squad",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "squads.get",
+      "compatibility": "compatible",
+      "rationale": "Squad get for detail view.",
+      "source_ref_ids": [
+        "S-SQUAD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squads.SquadResource.get",
+          "signature_id": "squad_get",
+          "binding_id": "squad_get",
+          "response_id": "squad",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "squads.members.list",
+      "compatibility": "compatible",
+      "rationale": "Squad member list for squad members relation.",
+      "source_ref_ids": [
+        "S-SQUAD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R15"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.list",
+          "signature_id": "squad_members_list",
+          "binding_id": "squad_members_list",
+          "response_id": "squad_members",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "squads.members.add",
+      "compatibility": "compatible",
+      "rationale": "Squad member add for mutation invalidation.",
+      "source_ref_ids": [
+        "S-SQUAD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.add",
+          "signature_id": "squad_members_add",
+          "binding_id": "squad_members_add",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "squads.members.remove",
+      "compatibility": "compatible",
+      "rationale": "Squad member remove for mutation invalidation.",
+      "source_ref_ids": [
+        "S-SQUAD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.remove",
+          "signature_id": "squad_members_remove",
+          "binding_id": "squad_members_remove",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "users.profile_get",
+      "compatibility": "intentionally_changed",
+      "rationale": "Replaced unsupported users.list/get with profile get (D15).",
+      "source_ref_ids": [
+        "D15"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.users.UserResource.profile_get",
+          "signature_id": "user_profile_get",
+          "binding_id": "user_profile_get",
+          "response_id": "user_profile",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "users.profile_update",
+      "compatibility": "intentionally_changed",
+      "rationale": "Replaced unsupported users.list/get with profile update (D15).",
+      "source_ref_ids": [
+        "D15"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.users.UserResource.profile_update",
+          "signature_id": "user_profile_update",
+          "binding_id": "user_profile_update",
+          "response_id": "user_profile",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "repositories.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Repository list uses repo command group with URL/ref identity (D16).",
+      "source_ref_ids": [
+        "D16"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R08"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.repositories.RepositoryResource.list",
+          "signature_id": "repositories_list",
+          "binding_id": "repositories_list",
+          "response_id": "repository_records",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "repositories.add",
+      "compatibility": "intentionally_changed",
+      "rationale": "Repository add accepts one or more URLs; description requires one URL (D16).",
+      "source_ref_ids": [
+        "D16"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.repositories.RepositoryResource.add",
+          "signature_id": "repositories_add",
+          "binding_id": "repositories_add",
+          "response_id": "repository_mutation_result",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "repositories.remove",
+      "compatibility": "intentionally_changed",
+      "rationale": "Repository remove accepts one or more URLs and returns the mutation envelope (D16).",
+      "source_ref_ids": [
+        "D16"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.repositories.RepositoryResource.remove",
+          "signature_id": "repositories_remove",
+          "binding_id": "repositories_remove",
+          "response_id": "repository_mutation_result",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtimes.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Runtime list uses runtime command group (D17).",
+      "source_ref_ids": [
+        "D17"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R09"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtimes.RuntimeResource.list",
+          "signature_id": "runtime_list",
+          "binding_id": "runtime_list",
+          "response_id": "runtime_definitions",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtimes.usage",
+      "compatibility": "compatible",
+      "rationale": "Runtime usage returns an immutable daily tuple and validates days 1..365 (D17).",
+      "source_ref_ids": [
+        "D17"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtimes.RuntimeResource.usage",
+          "signature_id": "runtime_usage",
+          "binding_id": "runtime_usage",
+          "response_id": "runtime_usage",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtimes.activity",
+      "compatibility": "compatible",
+      "rationale": "Runtime activity returns an immutable hourly tuple (D17).",
+      "source_ref_ids": [
+        "D17"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtimes.RuntimeResource.activity",
+          "signature_id": "runtime_activity",
+          "binding_id": "runtime_activity",
+          "response_id": "runtime_activity",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtimes.update",
+      "compatibility": "compatible",
+      "rationale": "Runtime update requires target_version and optionally waits for completion (D17).",
+      "source_ref_ids": [
+        "D17"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtimes.RuntimeResource.update",
+          "signature_id": "runtime_update",
+          "binding_id": "runtime_update",
+          "response_id": "runtime_update_result",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtimes.rename",
+      "compatibility": "compatible",
+      "rationale": "Runtime rename supports explicit machine mode (D17).",
+      "source_ref_ids": [
+        "D17"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtimes.RuntimeResource.rename",
+          "signature_id": "runtime_rename",
+          "binding_id": "runtime_rename",
+          "response_id": "runtime_definition",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtimes.delete",
+      "compatibility": "compatible",
+      "rationale": "Runtime delete supports explicit cascade mode (D17).",
+      "source_ref_ids": [
+        "D17"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtimes.RuntimeResource.delete",
+          "signature_id": "runtime_delete",
+          "binding_id": "runtime_delete",
+          "response_id": "none",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "workspaces.list",
+      "compatibility": "compatible",
+      "rationale": "Workspace list.",
+      "source_ref_ids": [
+        "S-WORKSPACE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.list",
+          "signature_id": "workspace_list",
+          "binding_id": "workspace_list",
+          "response_id": "workspace",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "workspaces.get",
+      "compatibility": "compatible",
+      "rationale": "Workspace get.",
+      "source_ref_ids": [
+        "S-WORKSPACE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.get",
+          "signature_id": "workspace_get",
+          "binding_id": "workspace_get",
+          "response_id": "workspace",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "workspaces.members.list",
+      "compatibility": "compatible",
+      "rationale": "Workspace member list for workspace members relation.",
+      "source_ref_ids": [
+        "S-WORKSPACE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R01"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.members",
+          "signature_id": "workspace_members_list",
+          "binding_id": "workspace_members_list",
+          "response_id": "workspace_members",
           "errors": "standard"
         }
       ]
@@ -5421,8 +10665,8 @@
     "legacy:010": "manual:agents.archive:canonical",
     "legacy:011": "manual:agents.restore:canonical",
     "legacy:012": "manual:agents.tasks:canonical",
-    "legacy:013": "manual:agents.upload_avatar:canonical",
-    "legacy:014": "manual:attachments.list:canonical",
+    "legacy:013": "manual:agents.avatar:canonical",
+    "legacy:014": "removed:attachments.list",
     "legacy:015": "manual:attachments.upload:canonical",
     "legacy:016": "manual:attachments.download:canonical",
     "legacy:017": "generated:autopilots.list:default:canonical",
@@ -5432,9 +10676,9 @@
     "legacy:021": "manual:autopilots.update:variant:01",
     "legacy:022": "manual:autopilots.update:variant:02",
     "legacy:023": "generated:autopilots.delete:default:canonical",
-    "legacy:024": "generated:autopilots.run:default:canonical",
+    "legacy:024": "generated:autopilots.trigger:default:canonical",
     "legacy:025": "generated:autopilots.history:default:canonical",
-    "legacy:026": "manual:autopilots.get_run:canonical",
+    "legacy:026": "manual:autopilots.history:variant:04",
     "legacy:027": "manual:configuration.show:canonical",
     "legacy:028": "manual:configuration.get:canonical",
     "legacy:029": "manual:configuration.set:canonical",
@@ -5477,10 +10721,10 @@
     "legacy:066": "generated:projects.resources.update_local_directory:default:canonical",
     "legacy:067": "generated:projects.resources.remove:default:canonical",
     "legacy:068": "manual:repositories.list:canonical",
-    "legacy:069": "manual:repositories.get:canonical",
-    "legacy:070": "manual:repositories.checkout:canonical",
+    "legacy:069": "removed:repositories.get",
+    "legacy:070": "removed:repositories.checkout",
     "legacy:071": "manual:runtimes.list:canonical",
-    "legacy:072": "manual:runtimes.get:canonical",
+    "legacy:072": "removed:runtimes.get",
     "legacy:073": "manual:skills.list:canonical",
     "legacy:074": "manual:skills.get:canonical",
     "legacy:075": "manual:skills.create:canonical",
@@ -5491,8 +10735,8 @@
     "legacy:080": "manual:skills.import_from_url:canonical",
     "legacy:081": "manual:squads.list:canonical",
     "legacy:082": "manual:squads.get:canonical",
-    "legacy:083": "manual:users.list:canonical",
-    "legacy:084": "manual:users.get:canonical",
+    "legacy:083": "removed:users.list",
+    "legacy:084": "removed:users.get",
     "legacy:085": "manual:auth.login:canonical",
     "legacy:086": "manual:auth.status:canonical",
     "legacy:087": "manual:auth.logout:canonical",
@@ -5521,13 +10765,13 @@
     "legacy:110": "manual:issues.comments.resolve:canonical",
     "legacy:111": "manual:issues.comments.unresolve:canonical",
     "legacy:112": "manual:workspaces.members:canonical",
-    "legacy:113": "manual:autopilots.triggers.list:canonical",
-    "legacy:114": "manual:autopilots.triggers.delete:canonical",
+    "legacy:113": "manual:autopilots.trigger_add:canonical",
+    "legacy:114": "manual:autopilots.trigger_delete:canonical",
     "legacy:115": "manual:skills.files.list:canonical",
     "legacy:116": "manual:skills.files.delete:canonical",
     "legacy:117": "manual:daemon.disk_usage:canonical",
     "legacy:118": "manual:agents.skills.set:canonical",
-    "legacy:119": "manual:autopilots.triggers.create:canonical",
+    "legacy:119": "manual:autopilots.trigger_update:canonical",
     "legacy:120": "manual:daemon.start:canonical",
     "legacy:121": "manual:daemon.stop:canonical",
     "legacy:122": "manual:daemon.restart:canonical",

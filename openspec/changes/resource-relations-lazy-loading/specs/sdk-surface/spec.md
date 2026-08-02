@@ -147,6 +147,23 @@ success/failure, and propagate the underlying SDK exception.
 
 ## ADDED Requirements
 
+### Requirement: Corrected profile, repository, and runtime surfaces
+The SDK MUST expose only source-governed D15–D17 surfaces. `users.profile_get`
+returns immutable `UserProfile`; `users.profile_update(UserProfileUpdate)`
+updates only a present description. `repositories.list/add/remove` use
+immutable URL/description records and multi-URL mutation results.
+`repositories.get` and `repositories.checkout` MUST be absent: checkout is a
+daemon-task workflow, not a configured SDK server operation. `runtimes.get`
+MUST be absent; usage/activity return immutable tuples, usage validates
+`1 <= days <= 365`, update requires target-version with optional wait, rename
+supports machine, and delete supports cascade.
+
+#### Scenario: D15–D17 discovery is exact
+- **WHEN** public resources and the approved contract are inspected
+- **THEN** every approved D15–D17 symbol resolves with its approved signature,
+  no removed legacy or daemon-only checkout symbol resolves, and each supported
+  method has exactly one canonical transport vector
+
 ### Requirement: Unsupported surface migration
 The SDK MUST publish an alpha migration mapping for every unsupported or
 renamed public surface changed by this roadmap.

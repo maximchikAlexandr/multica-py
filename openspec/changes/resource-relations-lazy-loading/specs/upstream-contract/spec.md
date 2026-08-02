@@ -1,5 +1,20 @@
 ## ADDED Requirements
 
+### Requirement: D15–D17 public-symbol integrity
+The approved contract MUST define immutable public/wire schemas, cardinality,
+presence semantics, validators, command mappings, and exact vectors for
+profile, repository, and runtime operations. Validation MUST resolve every
+approved `public_symbol`, normalize and compare its signature, and require
+exactly one canonical vector for every approved operation. Repository checkout
+MUST be recorded as daemon-only removal, not as a transport-compatible
+operation. Source and binary evidence remain review-only and MUST NOT generate
+public behaviour without this approval.
+
+#### Scenario: Contract cannot certify a missing SDK method
+- **WHEN** an approved D15–D17 public symbol is absent, has a different
+  signature, or lacks one canonical vector
+- **THEN** the contract integrity gate fails before release verification
+
 ### Requirement: Complete relation operation governance
 Every operation used by the 33-relation matrix MUST be approved in
 `contracts/sdk-contract.json` with pinned source references, exact input

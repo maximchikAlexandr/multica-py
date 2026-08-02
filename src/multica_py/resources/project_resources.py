@@ -84,4 +84,6 @@ class ProjectResourceCollection(BaseResource):
 
     def remove(self, project_id: str, resource_id: str) -> None:
         _ = PROJECT_RESOURCE_REMOVE_BINDING
+        validate_nonblank(project_id)
+        validate_nonblank(resource_id)
         self._transport.run_text(("project", "resource", "remove", project_id, resource_id))

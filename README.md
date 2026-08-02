@@ -75,7 +75,7 @@ def list_issues():
     return [i.title for i in client.issues.list()]
 ```
 
-Full pattern catalog: [docs/service-usage.md](docs/service-usage.md). API surface: [docs/api.md](docs/api.md). Resource coverage: [docs/cli-coverage.md](docs/cli-coverage.md).
+Full pattern catalog: [docs/service-usage.md](docs/service-usage.md). API surface: [docs/api.md](docs/api.md). Migration guide: [docs/migration.md](docs/migration.md). Bound graph example: [examples/resource_relations.py](examples/resource_relations.py). Resource coverage: [docs/cli-coverage.md](docs/cli-coverage.md).
 
 ## Security notes
 

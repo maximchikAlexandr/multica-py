@@ -15,6 +15,17 @@ equal the lengths computed from the final case tables; historic literals
 
 ## ADDED Requirements
 
+### Requirement: Approved-operation integrity
+Verification MUST resolve every approved public symbol, compare its normalized
+signature, and require exactly one canonical exact-transport vector per
+approved operation. Set equality alone MUST NOT conceal duplicate vectors or
+unresolved D15–D17 entrypoints.
+
+#### Scenario: Duplicate or unresolved approved operation fails
+- **WHEN** a supported method has zero or multiple canonical rows, or an
+  approved public symbol cannot be resolved with its approved signature
+- **THEN** the offline contract gate fails
+
 ### Requirement: Complete relation roadmap verification
 Offline verification MUST cover every relation in the 33-relation matrix,
 every corrected drift operation, all five loading strategies, bound/snapshot

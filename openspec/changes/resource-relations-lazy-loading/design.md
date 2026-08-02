@@ -387,7 +387,44 @@ Each phase must keep direct resource operations and completed earlier phases
 green. Rollback reverts the approved contract and bound surface together and
 regenerates output; generated files are never hand-edited.
 
+## Post-review amendments
+
+### 12. Bound-wrapper foundation stays explicit
+
+`ResourceEntity[TData]` remains the public generic name. Its private
+implementation owns the frozen data snapshot and nullable originating
+`MulticaClient`, exposes `to_data()`/`from_data()`, and provides one typed
+client requirement helper. Concrete entities retain explicit inherited context
+and entity-local lazy caches. No dynamic `__getattr__`, identity map,
+descriptor registry, or cross-entity cache is introduced.
+
+### 13. Binding adapters are semantic and narrow
+
+Repeated Issue summary/data, workspace-member, autopilot/run, and page binding
+uses explicit typed helpers which receive the exact originating or scoped
+client. They preserve immutable replacement and inherited context. A generic
+string/registry binder is rejected because it conceals public types and source
+ownership.
+
+### 14. D15–D17 corrected disposition
+
+`users.profile_get()` returns a frozen projection of reviewed `id`, `name`,
+`email`, and `profile_description` fields. Frozen `UserProfileUpdate` has one
+`description: str | Unset` field: `Unset` omits, including `""` emits the
+description flag, and `None` is invalid. The SDK exposes neither CLI stdin/file
+variants nor a name update.
+
+`RepositoryRecord` has URL and description. Add/remove are multi-URL
+workspace-registry mutations returning frozen mutation envelopes. `repo
+checkout` is daemon-task-only; it requires daemon environment variables and
+local daemon HTTP, so it and `RepositoryCheckoutResult` are removed.
+
+Runtime usage/activity are tuples; usage validates days 1–365. Update requires
+target-version and supports wait; rename supports machine; delete supports
+cascade. Exact response fields, wire decoders, command vectors, and presence
+decisions are governed in the approved contract before code.
+
 ## Open Questions
 
-None. All public names, relation contracts, errors, migrations, and internal
-ownership decisions required by this change are fixed above.
+None. D15–D17 source-versus-binary disposition is explicit; raw evidence
+remains review-only until approved in `contracts/sdk-contract.json`.
