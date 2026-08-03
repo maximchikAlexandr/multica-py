@@ -74,10 +74,14 @@ SHALL retain their existing request-object-only signature unchanged.
 - **WHEN** the direct keyword form supplies values that would violate the
   request model's `__post_init__` validation (e.g. blank `project_id` on
   `IssueCreateRequest`, non-exactly-one target on `IssueAssignmentRequest` or
-  `IssueReorderRequest`, relative path on
-  `ProjectResourceAddLocalDirectoryRequest`)
+  `IssueReorderRequest`, blank `daemon_id` on
+  `ProjectResourceAddLocalDirectoryRequest`, blank `local_path` on
+  `ProjectResourceUpdateLocalDirectoryRequest`)
 - **THEN** the same `ValueError` the request object raises is raised from the
-  direct form too, before any CLI invocation.
+  direct form too, before any CLI invocation. A relative `local_path` on
+  `ProjectResourceAddLocalDirectoryRequest` is NOT such a case: that
+  request's `__post_init__` only validates `daemon_id`, and the call site
+  normalizes `local_path` via `os.path.abspath` in both forms identically.
 
 #### Scenario: Update-style presence semantics are identical in both forms
 

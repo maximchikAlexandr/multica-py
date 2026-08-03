@@ -89,9 +89,11 @@ None.
   dispatcher at the top of its body. No transport, argv, or wire-model change.
 - `src/multica_py/models/` — request classes unchanged; they remain the source
   of truth for field names, types, defaults, and `__post_init__` validation.
-- `tests/unit/resources/` — `ArgvCase`/`DecodeCase` tables gain rows for the
-  direct keyword form (positive), mixed-input `TypeError` (negative), and
-  request-object parity (positive) per in-scope method.
+- `tests/cases/operations.py` and `tests/unit/resources/` — new
+  `OperationCase` rows added to `OPERATION_CASES` for the direct keyword
+  form and for request-object parity per in-scope method; dedicated
+  `mock_transport`-based tests for mixed-input/neither-input `TypeError`
+  and `__post_init__` `ValueError` paths.
 - `docs/` — resource method examples flip to the direct keyword form first,
   request-object form shown as the advanced/reusable alternative.
 - No CLI, wire, transport, dependency, packaging, or public-method-name

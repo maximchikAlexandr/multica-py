@@ -23,14 +23,16 @@ frozen=True, kw_only=True`):
 | `issues.assign` | `IssueAssignmentRequest` | `issue_id: str`, `member_id`, `agent_id`, `squad_id`, `unassign: bool = False` | `__post_init__` exactly-one-target |
 | `issues.reorder` | `IssueReorderRequest` | `issue_id: str`, `before_id`, `after_id`, `top: bool`, `bottom: bool` | `__post_init__` exactly-one-target |
 | `runtimes.update` | `RuntimeUpdate` | `target_version: str`, `wait: bool = False` | nonblank check at call site |
-| `project_resources.add_local_directory` | `ProjectResourceAddLocalDirectoryRequest` | `local_path: str \| Path`, `daemon_id: str`, `label: str \| None` | `__post_init__` nonblank daemon_id, absolute path |
+| `project_resources.add_local_directory` | `ProjectResourceAddLocalDirectoryRequest` | `local_path: str \| Path`, `daemon_id: str`, `label: str \| None` | `__post_init__` nonblank `daemon_id` only (absolute-path check is in `LocalDirectoryResourceRef.__post_init__`, a separate out-of-scope class; call site normalizes `local_path` via `os.path.abspath`) |
 | `project_resources.update_local_directory` | `ProjectResourceUpdateLocalDirectoryRequest` | `local_path: str \| Path` | `__post_init__` non-empty |
 | `users.profile_update` | `UserProfileUpdate` | `description: str \| msgspec.UnsetType = msgspec.UNSET` | `Unset` rejected at call site |
 
 Constraints: no public method may be renamed, split, or removed. No transport,
 argv, wire, or dependency change. The request classes stay as the source of
 truth for field names, types, defaults, and `__post_init__` validation. Tests
-reuse the existing `ArgvCase`/`DecodeCase` table-driven pattern and the shared
+reuse the existing canonical table-driven pattern (`OperationCase` in
+`tests/cases/operations.py`, consumed by
+`tests/unit/resources/test_operations.py::test_operation`) and the shared
 fake-CLI client fixture; no new test framework or third-party dep. `uv run mypy
 src` and `uv run mypy tests` must pass; no `Any` leaks.
 
@@ -177,15 +179,33 @@ two `@overload`s; the body's annotation only needs to be internally consistent
 and `Any`-free. `**kwargs: object` (not `Any`) keeps the no-`Any` rule.
 
 For methods that already take a required positional identifier before the
-request (e.g. `projects.update(self, project_id: str, request: ...)`, `agents.update(self, agent_id: str, request: ...)`), the overloads are:
+request (e.g. `projects.update(self, project_id: str, request: ...)`,
+`agents.update(self, agent_id: str, request: ...)`), the overloads are:
 
 1. `def update(self, project_id: str, request: ProjectUpdateRequest, /) -> Project: ...`
 2. `def update(self, project_id: str, *, name=..., description=...) -> Project: ...`
 3. runtime: `def update(self, project_id: str, request: ProjectUpdateRequest | None = None, /, **kwargs: object) -> Project: ...`
 
-The pre-existing positional identifier (`project_id`, `agent_id`, `skill_id`,
-`issue_id`, `autopilot_id`, `runtime_id`, `resource_id`) stays positional and
-is not part of the dual-input dispatch.
+The pre-existing positional identifiers — `project_id` (on `projects.update`),
+`agent_id` (on `agents.update`), `skill_id` (on `skills.update`), `runtime_id`
+(on `runtimes.update`), and `project_id`/`resource_id` (on the
+`project_resources` methods) — stay positional and are not part of the
+dual-input dispatch.
+
+**Exception — `issues.assign` and `issues.reorder`:** these two methods do
+NOT take a separate positional `issue_id`. Their signatures today are
+`IssueResource.assign(self, request: IssueAssignmentRequest)` and
+`IssueResource.reorder(self, request: IssueReorderRequest)`, and `issue_id`
+lives INSIDE the request class (`IssueAssignmentRequest.issue_id: str`,
+`IssueReorderRequest.issue_id: str`). For these two methods the entire
+request — including `issue_id` — is the subject of the dual-input dispatch,
+so `issue_id` is a required keyword in the direct-form `@overload`
+(`def assign(self, *, issue_id: str, member_id=..., agent_id=...,
+squad_id=..., unassign: bool = False) -> IssueEntity: ...`). The `issues.update`
+method is different: it already takes `issue_id` as a separate positional
+identifier, which stays positional; `issues.update`'s direct form mirrors
+only the `IssueUpdateRequest` fields (title, description, priority,
+assignee_id, project_id, parent_id) as keywords.
 
 ### Decision 4: Field surface mirrors the request model exactly
 
@@ -214,20 +234,40 @@ request-bearing methods keep their request-object-only example.
 ### Decision 6: Tests reuse the existing table pattern
 
 Per the AGENTS.md test rules, coverage is added as new rows on the existing
-`ArgvCase`/`DecodeCase` tables in `tests/unit/resources/`, not new files or
-near-identical functions. For each in-scope method, add:
+canonical table-driven infrastructure, not new files or near-identical
+functions. The canonical case type is `OperationCase`
+(`@dataclass(frozen=True)`) in `tests/cases/operations.py`; the canonical
+parametrized consumer is
+`tests/unit/resources/test_operations.py::test_operation` (parametrized over
+`OPERATION_CASES`). Per-domain case classes that exist today
+(`AvatarArgvCase`, `SkillFileArgvCase`, `ProjectResourceDecodeCase`, etc.) are
+not the canonical argv-parity surface and MUST NOT be referenced as the
+target for new parity rows. For each in-scope method, add parity rows to
+`OPERATION_CASES` via `tests/cases/operations.py` — the direct-form row and
+the request-object row are two `OperationCase(...)` entries with the same
+`expected_argv` (and matching `stdin`/`timeout`/`transport_method`):
 
-- one positive `ArgvCase` row for the direct keyword form asserting the exact
-  argv (and `stdin`/`timeout` where relevant);
-- one positive `ArgvCase` row asserting the request-object form still emits
-  the same argv (parity);
-- one negative row asserting `TypeError` with the mixed-input message on
-  `request + kwargs`;
-- where the request model has `__post_init__` validation, one negative row
-  asserting the same `ValueError` from the direct form.
+- one `OperationCase` row for the direct keyword form (args empty, the
+  request fields passed as `kwargs`, `expected_argv` asserting the exact
+  argv, and `stdin`/`timeout` where relevant);
+- one `OperationCase` row for the request-object form (the request passed
+  positionally in `args`, `kwargs` empty) asserting the same `expected_argv`
+  (parity). If an equivalent request-object row already exists in
+  `OPERATION_CASES`, do NOT duplicate it — add only the direct-form row and
+  reuse the existing row as the parity baseline.
 
-The mixed-input and neither-input `TypeError` paths share one parametrized
-test across all in-scope methods to avoid 14 near-identical functions.
+The mixed-input and neither-input `TypeError` paths and the
+`__post_init__`-validation `ValueError` paths do NOT fit the
+`test_operation` argv-parity shape (they raise before transport) and go
+into dedicated tests in `tests/unit/resources/` that reuse the shared
+`mock_transport` fixture from `tests/unit/resources/conftest.py`:
+
+- one `@pytest.mark.parametrize` test across all 14 in-scope methods
+  asserting mixed-input `TypeError` (request + kwargs) and neither-input
+  `TypeError`, asserting the transport is never called;
+- where the request model has `__post_init__` validation, negative rows in
+  the same parametrized test asserting the same `ValueError` from the
+  direct form.
 
 ## Risks / Trade-offs
 
@@ -244,7 +284,7 @@ test across all in-scope methods to avoid 14 near-identical functions.
   warranted — it is a structural-parity guard, not a dispatch mechanism.
 - **Risk:** `Unset`/`None` presence semantics on update methods silently
   diverge between the two forms.
-  → **Mitigation:** the parity `ArgvCase` rows assert bit-for-bit argv for
+  → **Mitigation:** the parity `OperationCase` rows assert bit-for-bit argv for
   omitted/`None`/`Unset` on `projects.update` and `users.profile_update`.
 - **Risk:** The broad runtime `**kwargs: object` tempts callers to bypass the
   overloads with untyped dicts.
