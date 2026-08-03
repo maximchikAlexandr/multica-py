@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from multica_py._generated.approved_sdk import (
     PROJECT_CREATE_BINDING,
@@ -28,10 +28,10 @@ from multica_py.models.projects import (
     ProjectUpdateRequest,
 )
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
-from multica_py.resources._base import BaseResource
+from multica_py.resources._base import BaseResource, _resolve_request
 from multica_py.resources.issues import IssueResource, _issue_summary_offset_page
 from multica_py.resources.project_resources import ProjectResourceCollection
-from multica_py.sentinels import Unset
+from multica_py.sentinels import Unset, UnsetType
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
@@ -130,27 +130,47 @@ class ProjectResource(BaseResource):
             project_from_wire(self._run_json_decode(("project", "get", project_id), ProjectWire))
         )
 
-    def create(self, request: ProjectCreateRequest) -> Project:
+    @overload
+    def create(self, request: ProjectCreateRequest, /) -> Project: ...
+    @overload
+    def create(self, *, name: str, description: str | None = None) -> Project: ...
+
+    def create(self, request: ProjectCreateRequest | None = None, /, **kwargs: object) -> Project:  # type: ignore[misc]
         _ = PROJECT_CREATE_BINDING
-        validate_nonblank(request.name)
-        args = ["project", "create", "--title", request.name]
-        if request.description is not None:
-            args.extend(["--description", request.description])
+        req = _resolve_request(request, kwargs, ProjectCreateRequest)
+        validate_nonblank(req.name)
+        args = ["project", "create", "--title", req.name]
+        if req.description is not None:
+            args.extend(["--description", req.description])
         return self._bind_project(
             project_from_wire(self._run_json_decode(tuple(args), ProjectWire))
         )
 
-    def update(self, project_id: str, request: ProjectUpdateRequest) -> Project:
+    @overload
+    def update(self, project_id: str, request: ProjectUpdateRequest, /) -> Project: ...
+    @overload
+    def update(
+        self,
+        project_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+    ) -> Project: ...
+
+    def update(  # type: ignore[misc]
+        self, project_id: str, request: ProjectUpdateRequest | None = None, /, **kwargs: object
+    ) -> Project:
         _ = PROJECT_UPDATE_BINDING
+        req = _resolve_request(request, kwargs, ProjectUpdateRequest)
         args = ["project", "update", project_id]
-        if request.name is not Unset:
-            args.extend(["--title", request.name])
-        if request.description is Unset:
+        if req.name is not Unset:
+            args.extend(["--title", req.name])
+        if req.description is Unset:
             pass
-        elif request.description is None:
+        elif req.description is None:
             raise ValidationError("description=None is not supported for project update via CLI")
         else:
-            args.extend(["--description", request.description])
+            args.extend(["--description", req.description])
         return self._bind_project(
             project_from_wire(self._run_json_decode(tuple(args), ProjectWire))
         )

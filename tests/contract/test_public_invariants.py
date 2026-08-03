@@ -22,6 +22,25 @@ from multica_py.models.project_resources import (
 from multica_py.resources.issues import IssueEntity
 from multica_py.resources.project_resources import ProjectResourceCollection
 
+_DIRECT_KEYWORD_METHODS = frozenset(
+    {
+        ("AgentResource", "create"),
+        ("AgentResource", "update"),
+        ("IssueResource", "assign"),
+        ("IssueResource", "create"),
+        ("IssueResource", "reorder"),
+        ("IssueResource", "update"),
+        ("ProjectResource", "create"),
+        ("ProjectResource", "update"),
+        ("ProjectResourceCollection", "add_local_directory"),
+        ("ProjectResourceCollection", "update_local_directory"),
+        ("RuntimeResource", "update"),
+        ("SkillResource", "create"),
+        ("SkillResource", "update"),
+        ("UserResource", "profile_update"),
+    }
+)
+
 
 def _assert_hint_clean(owner_name: str, callable_name: str, hints: dict[str, object]) -> None:
     for param_name, param_type in hints.items():
@@ -29,6 +48,12 @@ def _assert_hint_clean(owner_name: str, callable_name: str, hints: dict[str, obj
         assert "Any" not in type_str, (
             f"{owner_name}.{callable_name} parameter {param_name} uses Any"
         )
+        if (
+            param_name == "kwargs"
+            and type_str == "<class 'object'>"
+            and (owner_name, callable_name) in _DIRECT_KEYWORD_METHODS
+        ):
+            continue
         assert type_str != "<class 'object'>", (
             f"{owner_name}.{callable_name} parameter {param_name} uses object"
         )

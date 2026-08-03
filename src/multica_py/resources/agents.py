@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from multica_py._generated.approved_sdk import AGENT_AVATAR_BINDING, validate_nonblank
 from multica_py._internal.transport import CliTransport
@@ -22,7 +22,7 @@ from multica_py.models.relations import (
     OffsetLazyCollection,
     OffsetPage,
 )
-from multica_py.resources._base import BaseResource
+from multica_py.resources._base import BaseResource, _resolve_request
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.resources.issues import _issue_summary_offset_page
 
@@ -138,25 +138,48 @@ class AgentResource(BaseResource):
         )
         return AgentEntity(data, client=self._client)
 
-    def create(self, request: AgentCreateRequest) -> AgentEntity:
-        validate_nonblank(request.name)
-        args = ["agent", "create", "--name", request.name]
-        if request.description is not None:
-            args.extend(["--description", request.description])
-        if request.runtime_id is not None:
-            args.extend(["--runtime-id", request.runtime_id])
-        if request.model is not None:
-            args.extend(["--model", request.model])
+    @overload
+    def create(self, request: AgentCreateRequest, /) -> AgentEntity: ...
+    @overload
+    def create(
+        self,
+        *,
+        name: str,
+        description: str | None = None,
+        runtime_id: str | None = None,
+        model: str | None = None,
+    ) -> AgentEntity: ...
+
+    def create(self, request: AgentCreateRequest | None = None, /, **kwargs: object) -> AgentEntity:  # type: ignore[misc]
+        req = _resolve_request(request, kwargs, AgentCreateRequest)
+        validate_nonblank(req.name)
+        args = ["agent", "create", "--name", req.name]
+        if req.description is not None:
+            args.extend(["--description", req.description])
+        if req.runtime_id is not None:
+            args.extend(["--runtime-id", req.runtime_id])
+        if req.model is not None:
+            args.extend(["--model", req.model])
         a = self._run_json_decode(tuple(args), Agent)
         return self._bind_agent(a)
 
-    def update(self, agent_id: str, request: AgentUpdateRequest) -> AgentEntity:
+    @overload
+    def update(self, agent_id: str, request: AgentUpdateRequest, /) -> AgentEntity: ...
+    @overload
+    def update(
+        self, agent_id: str, *, name: str | None = None, description: str | None = None
+    ) -> AgentEntity: ...
+
+    def update(  # type: ignore[misc]
+        self, agent_id: str, request: AgentUpdateRequest | None = None, /, **kwargs: object
+    ) -> AgentEntity:
         validate_nonblank(agent_id)
+        req = _resolve_request(request, kwargs, AgentUpdateRequest)
         args = ["agent", "update", agent_id]
-        if request.name is not None:
-            args.extend(["--name", request.name])
-        if request.description is not None:
-            args.extend(["--description", request.description])
+        if req.name is not None:
+            args.extend(["--name", req.name])
+        if req.description is not None:
+            args.extend(["--description", req.description])
         a = self._run_json_decode(tuple(args), Agent)
         return self._bind_agent(a)
 
