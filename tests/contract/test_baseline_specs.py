@@ -158,7 +158,7 @@ BASELINE_CASES: tuple[BaselineCase, ...] = (
     BaselineCase(
         "openspec/specs/verification-and-release/spec.md",
         "Offline quality and release",
-        "CI MUST run Ruff, configured mypy, offline pytest, coverage, contract check, package validation, and approved release validation through `uv`.",
+        "CI MUST run Ruff, configured mypy, offline pytest, statement and branch coverage, contract check, package validation, and approved release validation through `uv`. Coverage acceptance MUST include named gates for process lifecycle code and individually selected critical resource modules so that aggregate package coverage cannot conceal their regression.",
         "Pull requests run offline quality and release checks",
         "a pull request runs",
         "job outcomes, not workflow-text tests, decide acceptance.",
@@ -176,7 +176,7 @@ BASELINE_CASES: tuple[BaselineCase, ...] = (
     BaselineCase(
         "openspec/specs/verification-and-release/spec.md",
         "Focused process and offline checks",
-        "Offline tests MUST use stdlib and pytest, keep exact argv assertions, and retain exactly three real-process cases.",
+        "Offline tests MUST use stdlib and pytest, keep exact argv assertions including operations with dynamic temporary paths, retain exactly three real-process cases, and use deterministic synchronization or subprocess test doubles for additional lifecycle branches.",
         "Offline checks keep focused process cases",
         "the process module is collected",
         "IDs are `bytes-env`, `text-stdin`, and `timeout-tree-cleanup`.",

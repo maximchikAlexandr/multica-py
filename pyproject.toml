@@ -102,12 +102,30 @@ transport = "multica_py/_internal/transport\\.py$"
 models = "multica_py/models/.*"
 resources = "multica_py/resources/.*"
 errors = "multica_py/exceptions\\.py$"
+processes = "multica_py/_internal/processes\\.py$"
+managed_process = "multica_py/process\\.py$"
+issues_resource = "multica_py/resources/issues\\.py$"
+runtimes_resource = "multica_py/resources/runtimes\\.py$"
 
 [tool.coverage.thresholds]
 transport = 80
 models = 90
 resources = 70
 errors = 95
+processes = 73
+managed_process = 91
+issues_resource = 81
+runtimes_resource = 90
+
+[tool.coverage.branch_thresholds]
+transport = 75
+models = 84
+resources = 70
+errors = 95
+processes = 57
+managed_process = 80
+issues_resource = 60
+runtimes_resource = 80
 
 [tool.mypy]
 strict = true

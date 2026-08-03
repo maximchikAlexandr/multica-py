@@ -55,6 +55,13 @@ def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
         )
 
 
+def _normalized_argv(call_argv: tuple[str, ...], case: OperationCase) -> tuple[str, ...]:
+    normalized = list(call_argv)
+    for position in case.dynamic_argv_positions:
+        normalized[position] = case.expected_argv[position]
+    return tuple(normalized)
+
+
 def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> None:
     transport = cast("CliTransport", mock_transport)
     config = ClientConfig()
@@ -70,8 +77,9 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
     if case.transport_method == "run_bytes":
         mock_transport.run_bytes.assert_called_once()
         call_args = mock_transport.run_bytes.call_args
-        if case.argv_check == "exact":
-            assert call_args.args == (tuple(case.expected_argv),)
+        assert (
+            _normalized_argv(cast("tuple[str, ...]", call_args.args[0]), case) == case.expected_argv
+        )
         assert call_args.kwargs.get("stdin") == case.stdin
         assert call_args.kwargs.get("timeout") == (
             datetime.timedelta(seconds=case.timeout) if case.timeout is not None else None
@@ -79,8 +87,9 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
     elif case.transport_method == "run_text":
         mock_transport.run_text.assert_called_once()
         call_args = mock_transport.run_text.call_args
-        if case.argv_check == "exact":
-            assert call_args.args == (tuple(case.expected_argv),)
+        assert (
+            _normalized_argv(cast("tuple[str, ...]", call_args.args[0]), case) == case.expected_argv
+        )
     elif case.transport_method == "spawn":
         mock_transport.spawn.assert_called_once_with(tuple(case.expected_argv))
 
