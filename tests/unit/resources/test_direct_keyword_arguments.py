@@ -121,6 +121,12 @@ def test_structural_parity_guard() -> None:
         assert field_names == request_fields, (
             f"{sdk_method}: direct overload fields {field_names} != request fields {request_fields}"
         )
+        overload_hints = typing.get_type_hints(overload)
+        overload_types = {name: overload_hints[name] for name in field_names}
+        request_types = {f.name: f.type for f in msgspec.structs.fields(request_cls)}
+        assert overload_types == request_types, (
+            f"{sdk_method}: direct overload types {overload_types} != request types {request_types}"
+        )
         overload_defaults = {
             p.name: _NODEFAULT if p.default is inspect.Parameter.empty else p.default
             for p in params
