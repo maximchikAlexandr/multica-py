@@ -4,11 +4,16 @@ Define the offline, packaging, live-smoke, and release checks required for the
 SDK.
 ## Requirements
 ### Requirement: Offline quality and release
-CI MUST run Ruff, configured mypy, offline pytest, coverage, contract check, package validation, and approved release validation through `uv`.
+CI MUST run Ruff, configured mypy, offline pytest, statement and branch coverage, contract check, package validation, and approved release validation through `uv`. Coverage acceptance MUST include named gates for process lifecycle code and individually selected critical resource modules so that aggregate package coverage cannot conceal their regression.
+
 #### Scenario: Pull requests run offline quality and release checks
 - **WHEN** a pull request runs
 - **THEN** job outcomes, not workflow-text tests, decide acceptance.
 <!-- Source IDs: 001:FR-051–FR-059C,005:FR-011–FR-017 -->
+
+#### Scenario: Critical coverage zones are enforced
+- **WHEN** offline coverage is checked
+- **THEN** each configured critical zone independently satisfies both its statement and branch threshold and a missing zone or threshold fails the gate
 
 ### Requirement: Canonical operation coverage
 Every supported public SDK resource method MUST have exactly one canonical
@@ -24,11 +29,16 @@ equal the lengths computed from the final case tables; historic literals
 - **THEN** the sets are equal, every supported method has one canonical row, removed methods have none, and stored count constants equal the computed table partitions
 
 ### Requirement: Focused process and offline checks
-Offline tests MUST use stdlib and pytest, keep exact argv assertions, and retain exactly three real-process cases.
+Offline tests MUST use stdlib and pytest, keep exact argv assertions including operations with dynamic temporary paths, retain exactly three real-process cases, and use deterministic synchronization or subprocess test doubles for additional lifecycle branches.
+
 #### Scenario: Offline checks keep focused process cases
 - **WHEN** the process module is collected
 - **THEN** IDs are `bytes-env`, `text-stdin`, and `timeout-tree-cleanup`.
 <!-- Source IDs: 004:FR-006,FR-015,FR-016,005:FR-002,FR-005,FR-006,006:FR-009 -->
+
+#### Scenario: Dynamic argv remains exact
+- **WHEN** an operation creates a temporary file or directory path
+- **THEN** only the declared dynamic argv position is normalized and the complete remaining argv, transport method, stdin, and timeout are compared exactly
 
 ### Requirement: Prepared-target live smoke
 Live smoke MUST run separately against a prepared CLI/profile/workspace and clean uniquely named resources through the SDK.
