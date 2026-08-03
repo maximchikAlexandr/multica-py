@@ -55,7 +55,7 @@ class OperationCase:
     assert_result: Callable[[object, MagicMock], None] | None = None
     contract_operation_id: str | None = None
     source_ref: str | None = None
-    argv_check: str = "exact"
+    dynamic_argv_positions: tuple[int, ...] = ()
     transport_side_effect: Callable[..., object] | None = None
 
 
@@ -669,6 +669,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         assert argv[-2:] == ("--output", "json")
         assert pathlib.PurePath(argv[2]).name == "manifest.json"
 
+    def _assert_avatar_path(_result: object, mt: MagicMock) -> None:
+        mt.run_text.assert_called_once()
+        path = pathlib.Path(mt.run_text.call_args.args[0][4])
+        assert path.is_file()
+        assert path.name == "operations.py"
+
     def _assert_download_bytes(result: object, mt: MagicMock) -> None:
         assert result == b"\x00\x01binary"
         mt.run_bytes.assert_called_once()
@@ -704,7 +710,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         canonical: bool | None = None,
         source_ref: str | None = None,
         assert_result: Callable[[object, MagicMock], None] | None = None,
-        argv_check: str = "exact",
+        dynamic_argv_positions: tuple[int, ...] = (),
         transport_side_effect: Callable[..., object] | None = None,
     ) -> OperationCase:
         if not transport:
@@ -744,7 +750,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ),
             source_ref=(legacy_key or source_ref) if not id.startswith("generated:") else None,
             assert_result=assert_result,
-            argv_check=argv_check,
+            dynamic_argv_positions=dynamic_argv_positions,
             transport_side_effect=transport_side_effect,
         )
 
@@ -848,7 +854,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("agent", "avatar", "a1", "--file", "<dynamic>"),
             args=("a1", pathlib.Path("tests/cases/operations.py")),
             id="manual:agents.avatar:canonical",
-            argv_check="none",
+            dynamic_argv_positions=(4,),
+            assert_result=_assert_avatar_path,
         ),
         _c(
             "attachments.upload",
@@ -871,7 +878,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("manifest.json", b'{"x":1}'),
             stdout=_AR,
             id="manual:attachments.upload_bytes:canonical",
-            argv_check="none",
+            dynamic_argv_positions=(2,),
             assert_result=_assert_upload_bytes,
         ),
         _c(
@@ -879,7 +886,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("attachment", "download", "a1", "--output-dir", "<dynamic>", "--output", "json"),
             args=("a1",),
             id="manual:attachments.download_bytes:canonical",
-            argv_check="none",
+            dynamic_argv_positions=(4,),
             transport_side_effect=_write_download,
             assert_result=_assert_download_bytes,
         ),
