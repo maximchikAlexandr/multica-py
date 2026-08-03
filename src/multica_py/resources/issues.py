@@ -4,7 +4,7 @@ import datetime
 import json
 import pathlib
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, overload
 
 from multica_py._generated.approved_sdk import (
     validate_nonblank,
@@ -46,6 +46,7 @@ from multica_py.models.issues import (
     IssueChildStageGroup,
     IssueCreateRequest,
     IssueData,
+    IssueDescriptionInput,
     IssueListFilter,
     IssueListPage,
     IssueMetadataItem,
@@ -53,6 +54,7 @@ from multica_py.models.issues import (
     IssueSummary,
     IssueUpdateRequest,
     LinkedPullRequest,
+    NoDescription,
 )
 from multica_py.models.labels import LabelData
 from multica_py.models.relations import (
@@ -65,7 +67,7 @@ from multica_py.models.relations import (
     _RelationLoad,
 )
 from multica_py.models.system import AttachmentResult
-from multica_py.resources._base import BaseResource
+from multica_py.resources._base import BaseResource, _resolve_request
 from multica_py.resources.issue_comments import (
     Comment,
     CommentThread,
@@ -531,64 +533,114 @@ class IssueResource(BaseResource):
         result = self._run_json_decode(("issue", "children", issue_id), IssueChildrenResultWire)
         return issue_children_result_from_wire(result)
 
-    def create(self, request: IssueCreateRequest) -> IssueEntity:
+    @overload
+    def create(self, request: IssueCreateRequest, /) -> IssueEntity: ...
+    @overload
+    def create(
+        self,
+        *,
+        title: str,
+        description_input: IssueDescriptionInput = NoDescription(),
+        priority: str | None = None,
+        assignee_id: str | None = None,
+        label_ids: tuple[str, ...] = (),
+        project_id: str | None = None,
+        parent_id: str | None = None,
+    ) -> IssueEntity: ...
+
+    def create(self, request: IssueCreateRequest | None = None, /, **kwargs: object) -> IssueEntity:  # type: ignore[misc]
         """Create an issue and optionally attach labels.
 
         Creates the issue first, then attaches each ``label_ids`` entry via
         separate ``issue label add`` calls. A failure mid-loop can leave a
         partially labeled issue.
         """
-        validate_nonblank(request.title)
-        args = ["issue", "create", "--title", request.title]
-        desc = request.description_input
+        req = _resolve_request(request, kwargs, IssueCreateRequest)
+        validate_nonblank(req.title)
+        args = ["issue", "create", "--title", req.title]
+        desc = req.description_input
         if isinstance(desc, InlineDescription):
             args.extend(["--description", desc.text])
         elif isinstance(desc, FileDescription):
             args.extend(["--description-file", str(pathlib.Path(desc.path).resolve())])
         elif desc.__class__.__name__ == "StdinDescription":
             args.append("--description-stdin")
-        if request.priority is not None:
-            args.extend(["--priority", request.priority])
-        if request.assignee_id is not None:
-            args.extend(["--assignee-id", request.assignee_id])
-        if request.project_id is not None:
-            args.extend(["--project", request.project_id])
-        if request.parent_id is not None:
-            args.extend(["--parent", request.parent_id])
+        if req.priority is not None:
+            args.extend(["--priority", req.priority])
+        if req.assignee_id is not None:
+            args.extend(["--assignee-id", req.assignee_id])
+        if req.project_id is not None:
+            args.extend(["--project", req.project_id])
+        if req.parent_id is not None:
+            args.extend(["--parent", req.parent_id])
         issue = self._bind_issue(
             issue_data_from_wire(self._run_json_decode(tuple(args), IssueWire))
         )
-        for label_id in request.label_ids:
+        for label_id in req.label_ids:
             self.labels.add(issue.id, label_id)
-        if request.label_ids:
+        if req.label_ids:
             return self.get(issue.id)
         return issue
 
-    def update(self, issue_id: str, request: IssueUpdateRequest) -> IssueEntity:
+    @overload
+    def update(self, issue_id: str, request: IssueUpdateRequest, /) -> IssueEntity: ...
+    @overload
+    def update(
+        self,
+        issue_id: str,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+        priority: str | None = None,
+        assignee_id: str | None = None,
+        project_id: str | None = None,
+        parent_id: str | None = None,
+    ) -> IssueEntity: ...
+
+    def update(  # type: ignore[misc]
+        self, issue_id: str, request: IssueUpdateRequest | None = None, /, **kwargs: object
+    ) -> IssueEntity:
+        req = _resolve_request(request, kwargs, IssueUpdateRequest)
         args = ["issue", "update", issue_id]
-        if request.title is not None:
-            args.extend(["--title", request.title])
-        if request.description is not None:
-            args.extend(["--description", request.description])
-        if request.priority is not None:
-            args.extend(["--priority", request.priority])
-        if request.assignee_id is not None:
-            args.extend(["--assignee-id", request.assignee_id])
-        if request.project_id is not None:
-            args.extend(["--project", request.project_id])
-        if request.parent_id is not None:
-            args.extend(["--parent", request.parent_id])
+        if req.title is not None:
+            args.extend(["--title", req.title])
+        if req.description is not None:
+            args.extend(["--description", req.description])
+        if req.priority is not None:
+            args.extend(["--priority", req.priority])
+        if req.assignee_id is not None:
+            args.extend(["--assignee-id", req.assignee_id])
+        if req.project_id is not None:
+            args.extend(["--project", req.project_id])
+        if req.parent_id is not None:
+            args.extend(["--parent", req.parent_id])
         return self._bind_issue(issue_data_from_wire(self._run_json_decode(tuple(args), IssueWire)))
 
-    def assign(self, request: IssueAssignmentRequest) -> IssueEntity:
-        args = ["issue", "assign", request.issue_id]
-        if request.member_id is not None:
-            args.extend(["--to-id", request.member_id])
-        elif request.agent_id is not None:
-            args.extend(["--to-id", request.agent_id])
-        elif request.squad_id is not None:
-            args.extend(["--to-id", request.squad_id])
-        elif request.unassign:
+    @overload
+    def assign(self, request: IssueAssignmentRequest, /) -> IssueEntity: ...
+    @overload
+    def assign(
+        self,
+        *,
+        issue_id: str,
+        member_id: str | None = None,
+        agent_id: str | None = None,
+        squad_id: str | None = None,
+        unassign: bool = False,
+    ) -> IssueEntity: ...
+
+    def assign(  # type: ignore[misc]
+        self, request: IssueAssignmentRequest | None = None, /, **kwargs: object
+    ) -> IssueEntity:
+        req = _resolve_request(request, kwargs, IssueAssignmentRequest)
+        args = ["issue", "assign", req.issue_id]
+        if req.member_id is not None:
+            args.extend(["--to-id", req.member_id])
+        elif req.agent_id is not None:
+            args.extend(["--to-id", req.agent_id])
+        elif req.squad_id is not None:
+            args.extend(["--to-id", req.squad_id])
+        elif req.unassign:
             args.append("--unassign")
         return self._bind_issue(issue_data_from_wire(self._run_json_decode(tuple(args), IssueWire)))
 
@@ -602,15 +654,31 @@ class IssueResource(BaseResource):
     def deprioritize(self, issue_id: str) -> str:
         return self._transport.run_text(("issue", "deprioritize", issue_id)).text
 
-    def reorder(self, request: IssueReorderRequest) -> IssueEntity:
-        args = ["issue", "reorder", request.issue_id]
-        if request.before_id is not None:
-            args.extend(["--before", request.before_id])
-        elif request.after_id is not None:
-            args.extend(["--after", request.after_id])
-        elif request.top:
+    @overload
+    def reorder(self, request: IssueReorderRequest, /) -> IssueEntity: ...
+    @overload
+    def reorder(
+        self,
+        *,
+        issue_id: str,
+        before_id: str | None = None,
+        after_id: str | None = None,
+        top: bool = False,
+        bottom: bool = False,
+    ) -> IssueEntity: ...
+
+    def reorder(  # type: ignore[misc]
+        self, request: IssueReorderRequest | None = None, /, **kwargs: object
+    ) -> IssueEntity:
+        req = _resolve_request(request, kwargs, IssueReorderRequest)
+        args = ["issue", "reorder", req.issue_id]
+        if req.before_id is not None:
+            args.extend(["--before", req.before_id])
+        elif req.after_id is not None:
+            args.extend(["--after", req.after_id])
+        elif req.top:
             args.append("--top")
-        elif request.bottom:
+        elif req.bottom:
             args.append("--bottom")
         return self._bind_issue(issue_data_from_wire(self._run_json_decode(tuple(args), IssueWire)))
 

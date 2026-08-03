@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.transport import CliTransport
@@ -14,7 +14,7 @@ from multica_py.models.skills import (
     SkillFile,
     SkillUpdateRequest,
 )
-from multica_py.resources._base import BaseResource
+from multica_py.resources._base import BaseResource, _resolve_request
 from multica_py.resources.skill_files import SkillFileResource
 
 if TYPE_CHECKING:
@@ -100,21 +100,37 @@ class SkillResource(BaseResource):
         )
         return SkillEntity(data, client=self._client)
 
-    def create(self, request: SkillCreateRequest) -> SkillEntity:
-        validate_nonblank(request.name)
-        args = ["skill", "create", "--name", request.name]
-        if request.description is not None:
-            args.extend(["--description", request.description])
+    @overload
+    def create(self, request: SkillCreateRequest, /) -> SkillEntity: ...
+    @overload
+    def create(self, *, name: str, description: str | None = None) -> SkillEntity: ...
+
+    def create(self, request: SkillCreateRequest | None = None, /, **kwargs: object) -> SkillEntity:  # type: ignore[misc]
+        req = _resolve_request(request, kwargs, SkillCreateRequest)
+        validate_nonblank(req.name)
+        args = ["skill", "create", "--name", req.name]
+        if req.description is not None:
+            args.extend(["--description", req.description])
         s = self._run_json_decode(tuple(args), Skill)
         return self._bind_skill(s)
 
-    def update(self, skill_id: str, request: SkillUpdateRequest) -> SkillEntity:
+    @overload
+    def update(self, skill_id: str, request: SkillUpdateRequest, /) -> SkillEntity: ...
+    @overload
+    def update(
+        self, skill_id: str, *, name: str | None = None, description: str | None = None
+    ) -> SkillEntity: ...
+
+    def update(  # type: ignore[misc]
+        self, skill_id: str, request: SkillUpdateRequest | None = None, /, **kwargs: object
+    ) -> SkillEntity:
         validate_nonblank(skill_id)
+        req = _resolve_request(request, kwargs, SkillUpdateRequest)
         args = ["skill", "update", skill_id]
-        if request.name is not None:
-            args.extend(["--name", request.name])
-        if request.description is not None:
-            args.extend(["--description", request.description])
+        if req.name is not None:
+            args.extend(["--name", req.name])
+        if req.description is not None:
+            args.extend(["--description", req.description])
         s = self._run_json_decode(tuple(args), Skill)
         return self._bind_skill(s)
 

@@ -13,6 +13,17 @@ if TYPE_CHECKING:
     from multica_py.client import MulticaClient
 
 S = TypeVar("S", bound=msgspec.Struct)
+R = TypeVar("R", bound=msgspec.Struct)
+
+
+def _resolve_request(request: R | None, kwargs: dict[str, object], cls: type[R]) -> R:
+    if request is not None and kwargs:
+        raise TypeError("Pass either a request object or keyword arguments, not both.")
+    if request is not None:
+        return request
+    if not kwargs:
+        raise TypeError(f"Pass a {cls.__name__} or its keyword arguments; got neither.")
+    return cls(**kwargs)
 
 
 class BaseResource:

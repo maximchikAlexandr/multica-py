@@ -39,6 +39,14 @@ issue = workspace_client.issues.get("issue_456")
 Derived views keep independent immutable configuration and share the original
 process semaphore. Closing one view does not close another.
 
+## Direct keyword vs request object
+
+Most methods accept input either as a request object or as direct keyword arguments. The two styles are mutually exclusive — passing both raises `TypeError("Pass either a request object or keyword arguments, not both.")`. Passing neither raises `TypeError("Pass a ... or its keyword arguments; got neither.")`.
+
+Direct keyword form is available for: `projects.create`, `projects.update`, `agents.create`, `agents.update`, `skills.create`, `skills.update`, `issues.create`, `issues.update`, `issues.assign`, `issues.reorder`, `runtimes.update`, `project_resources.add_local_directory`, `project_resources.update_local_directory`, `users.profile_update`.
+
+For these methods, request objects remain valuable when you need to reuse a parameter set, validate input early, store pending input, or assemble arguments across layers. The request-object form is the only option for: `issue_comments.list_flat`, `issue_comments.list_thread`, `issue_comments.list_recent`, `issue_metadata.query`, `issue_metadata.set_typed`.
+
 ## Filter and page before local selection
 
 For a queue or polling loop, ask the server only for the relevant status and

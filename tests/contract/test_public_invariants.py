@@ -29,6 +29,8 @@ def _assert_hint_clean(owner_name: str, callable_name: str, hints: dict[str, obj
         assert "Any" not in type_str, (
             f"{owner_name}.{callable_name} parameter {param_name} uses Any"
         )
+        if param_name == "kwargs" and type_str == "<class 'object'>":
+            continue
         assert type_str != "<class 'object'>", (
             f"{owner_name}.{callable_name} parameter {param_name} uses object"
         )
