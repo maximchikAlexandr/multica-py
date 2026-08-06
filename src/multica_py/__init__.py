@@ -1,3 +1,4 @@
+from multica_py._internal.commands import Command
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.enums import (
@@ -31,18 +32,26 @@ from multica_py.exceptions import (
     UnsupportedCliVersionError,
     ValidationError,
 )
+from multica_py.models import ResourceEntity
+from multica_py.models.agents import AgentData
 from multica_py.models.autopilots import (
+    AutopilotData,
+    AutopilotRunData,
     AutopilotTriggerCreate,
     AutopilotTriggerUpdate,
 )
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.issues import IssueChildrenResult
+from multica_py.models.issue_activity import CommentData, CommentThreadData, TaskRunData
+from multica_py.models.issues import IssueChildrenResult, IssueData
+from multica_py.models.labels import LabelData
 from multica_py.models.project_resources import (
     LocalDirectoryResourceRef,
     ProjectResourceAddLocalDirectoryRequest,
+    ProjectResourceData,
     ProjectResourceRecord,
     ProjectResourceUpdateLocalDirectoryRequest,
 )
+from multica_py.models.projects import ProjectData
 from multica_py.models.relations import (
     CursorLazyCollection,
     CursorPage,
@@ -52,6 +61,7 @@ from multica_py.models.relations import (
     OffsetPage,
     RelationMetadata,
 )
+from multica_py.models.skills import SkillData
 from multica_py.models.system import (
     RepositoryMutationResult,
     RepositoryRecord,
@@ -59,9 +69,12 @@ from multica_py.models.system import (
     RuntimeUpdate,
     RuntimeUpdateResult,
     RuntimeUsage,
+    SquadData,
     UserProfile,
     UserProfileUpdate,
+    WorkspaceMemberData,
 )
+from multica_py.models.workspaces import WorkspaceData
 from multica_py.process import ManagedProcess
 from multica_py.resources.agents import Agent
 from multica_py.resources.autopilots import Autopilot, AutopilotRun
@@ -78,18 +91,24 @@ from multica_py.types import JsonScalar, JsonValue, MetadataValue
 __all__ = [
     "ActionResult",
     "Agent",
+    "AgentData",
     "AuthenticationError",
     "AuthorizationError",
     "Autopilot",
+    "AutopilotData",
     "AutopilotRun",
+    "AutopilotRunData",
     "AutopilotTriggerCreate",
     "AutopilotTriggerUpdate",
     "ClientConfig",
+    "Command",
     "CommandCancelledError",
     "CommandExecutionError",
     "CommandTimeoutError",
     "Comment",
+    "CommentData",
     "CommentThread",
+    "CommentThreadData",
     "CompatibilityPolicy",
     "ConflictError",
     "CursorLazyCollection",
@@ -100,11 +119,13 @@ __all__ = [
     "ExecutableNotRunnableError",
     "Issue",
     "IssueChildrenResult",
+    "IssueData",
     "IssueStatus",
     "JsonOutputError",
     "JsonScalar",
     "JsonValue",
     "Label",
+    "LabelData",
     "LazyCollection",
     "LazyMapping",
     "LocalDirectoryResourceRef",
@@ -122,7 +143,9 @@ __all__ = [
     "OutputShapeError",
     "Page",
     "Project",
+    "ProjectData",
     "ProjectResourceAddLocalDirectoryRequest",
+    "ProjectResourceData",
     "ProjectResourceRecord",
     "ProjectResourceUpdateLocalDirectoryRequest",
     "ProjectStatus",
@@ -132,13 +155,17 @@ __all__ = [
     "RelationPaginationError",
     "RepositoryMutationResult",
     "RepositoryRecord",
+    "ResourceEntity",
     "RuntimeActivity",
     "RuntimeUpdate",
     "RuntimeUpdateResult",
     "RuntimeUsage",
     "Skill",
+    "SkillData",
     "Squad",
+    "SquadData",
     "TaskRun",
+    "TaskRunData",
     "UnknownCommandError",
     "Unset",
     "UnsupportedCliVersionError",
@@ -146,5 +173,7 @@ __all__ = [
     "UserProfileUpdate",
     "ValidationError",
     "Workspace",
+    "WorkspaceData",
     "WorkspaceMember",
+    "WorkspaceMemberData",
 ]

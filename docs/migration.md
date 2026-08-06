@@ -5,6 +5,17 @@ bound wrappers; scalar data is available through `to_json()` / `to_dict()`,
 and relations load only at explicit load points such as `all()`, `page()`,
 `refresh()`, or `MulticaClient.prefetch()`.
 
+## Command preview (additive)
+
+The eager API and its return types are unchanged. The only new public type is
+`Command[T]`, returned by typed `*_command()` siblings for CLI operations and
+relation load points. Its `commands` property is always a tuple: empty for a
+cache-hit no-op, one item for one CLI call, or ordered items/templates for a
+composite operation. Preview performs no I/O, and `run()` executes the same
+immutable plan. Composite previews may contain result references such as
+`${create.id}`. This is an additive feature; no eager method was renamed,
+removed, or split.
+
 Recursive JSON fields such as `AutopilotRun.trigger_payload` and `result` now
 use immutable snapshots: object nodes implement the public
 `Mapping[str, JsonValue]` contract and arrays are tuples. The unified entity's

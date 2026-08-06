@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import datetime
 import threading
+import types
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, cast
 from unittest.mock import MagicMock
 
 import pytest
 
+from multica_py._internal.commands import Command, _Step
+from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
@@ -20,6 +25,7 @@ from multica_py.models.relations import (
     OffsetLazyCollection,
     OffsetPage,
 )
+from multica_py.resources._base import BaseResource
 from multica_py.resources.projects import Project
 from multica_py.resources.workspaces import Workspace, WorkspaceMember
 from tests.unit.resources.workspace_cases import (
@@ -39,6 +45,310 @@ def test_workspace_repeated_property_access_returns_memoized_lazy() -> None:
     r2 = entity.members
     assert r1 is r2
     assert isinstance(r1, LazyCollection)
+
+
+def test_generic_relation_command_plans_preview_pages_and_mapping_cache() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.side_effect = lambda argv, **_kwargs: RawCommandResult(
+        argv=argv,
+        exit_code=0,
+        stdout=b"{}",
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    resource = BaseResource(transport, ClientConfig())
+
+    offset_pages = iter(
+        (
+            OffsetPage(("one",), 2, 50, 0, True),
+            OffsetPage(("two",), 2, 50, 1, False),
+        )
+    )
+
+    def offset_command(limit: int | None, offset: int) -> Command[OffsetPage[str]]:
+        return resource._plan(
+            steps=(
+                _Step(
+                    ("items", "--limit", str(limit), "--offset", str(offset), "--output", "json"),
+                    "run_bytes",
+                    decode=lambda _stdout, _command: next(offset_pages),
+                ),
+            ),
+            finalize=lambda results: cast("OffsetPage[str]", results[0]),
+        )
+
+    offset_relation = OffsetLazyCollection(
+        lambda *, limit, offset: OffsetPage(("legacy",), 1, 50, offset, False),
+        default_limit=50,
+        page_command_loader=offset_command,
+    )
+    offset_command_plan = offset_relation.all_command()
+    assert offset_command_plan.commands == (
+        "multica items --limit 50 --offset 0 --output json",
+        "multica items --limit 50 --offset '${page.next_offset}' --output json",
+    )
+    assert offset_command_plan.run() == ("one", "two")
+    assert transport.run_bytes.call_args_list[1].args[0] == (
+        "items",
+        "--limit",
+        "50",
+        "--offset",
+        "1",
+        "--output",
+        "json",
+    )
+
+    cursor_pages = iter(
+        (
+            CursorPage(("one",), CommentCursor(before="b2", before_id="i2")),
+            CursorPage(("two",), None),
+        )
+    )
+
+    def cursor_command(cursor: CommentCursor | None) -> Command[CursorPage[str]]:
+        return resource._plan(
+            steps=(
+                _Step(
+                    ("comments", "--output", "json")
+                    if cursor is None
+                    else (
+                        "comments",
+                        "--before",
+                        cursor.before,
+                        "--before-id",
+                        cursor.before_id,
+                        "--output",
+                        "json",
+                    ),
+                    "run_bytes",
+                    decode=lambda _stdout, _command: next(cursor_pages),
+                ),
+            ),
+            finalize=lambda results: cast("CursorPage[str]", results[0]),
+        )
+
+    cursor_relation = CursorLazyCollection(
+        lambda *, cursor: CursorPage(("legacy",), None),
+        page_command_loader=cursor_command,
+    )
+    cursor_command_plan = cursor_relation.all_command()
+    assert cursor_command_plan.commands == (
+        "multica comments --output json",
+        "multica comments --before '${page.next_cursor.before}' --before-id '${page.next_cursor.before_id}' --output json",
+    )
+    assert cursor_command_plan.run() == ("one", "two")
+    assert transport.run_bytes.call_args_list[3].args[0] == (
+        "comments",
+        "--before",
+        "b2",
+        "--before-id",
+        "i2",
+        "--output",
+        "json",
+    )
+
+    def build_mapping_command() -> Command[Mapping[str, str]]:
+        return resource._plan(
+            steps=(
+                _Step(
+                    ("mapping", "list", "--output", "json"),
+                    "run_bytes",
+                    decode=lambda _stdout, _command: {"key": "value"},
+                ),
+            ),
+            finalize=lambda results: cast("Mapping[str, str]", results[0]),
+        )
+
+    mapping = LazyMapping(
+        lambda: {"legacy": "unused"},
+        command_loader=build_mapping_command,
+    )
+    mapping_command = mapping.all_command()
+    assert mapping_command.commands == ("multica mapping list --output json",)
+    assert mapping_command.run() == {"key": "value"}
+    assert mapping["key"] == "value"
+    assert transport.run_bytes.call_count == 5
+    cache_hit = mapping.all_command()
+    assert cache_hit.commands == ()
+    assert cache_hit.run() == {"key": "value"}
+    assert transport.run_bytes.call_count == 5
+    refresh = mapping.refresh_command()
+    assert refresh.commands == ("multica mapping list --output json",)
+    assert refresh.run() == {"key": "value"}
+    assert transport.run_bytes.call_count == 6
+
+
+def test_mapping_command_runs_coalesce_and_retry_after_refresh_failure() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    started = threading.Event()
+    release = threading.Event()
+    calls = 0
+
+    def run_bytes(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            started.set()
+            assert release.wait(timeout=2)
+        if calls == 2:
+            raise RuntimeError("refresh failed")
+        return RawCommandResult(
+            argv=argv,
+            exit_code=0,
+            stdout=b"{}",
+            stderr=b"",
+            duration=datetime.timedelta(),
+        )
+
+    transport.run_bytes.side_effect = run_bytes
+    resource = BaseResource(transport, ClientConfig())
+
+    def command_loader() -> Command[Mapping[str, str]]:
+        return resource._plan(
+            steps=(
+                _Step(
+                    ("mapping", "list", "--output", "json"),
+                    "run_bytes",
+                    decode=lambda _stdout, _command: {"value": "ok"},
+                ),
+            ),
+            finalize=lambda results: cast("Mapping[str, str]", results[0]),
+        )
+
+    mapping = LazyMapping(lambda: {"legacy": "unused"}, command_loader=command_loader)
+    commands = [mapping.all_command(), mapping.all_command()]
+    results: list[Mapping[str, str]] = []
+    threads = [
+        threading.Thread(target=lambda command=command: results.append(command.run()))
+        for command in commands
+    ]
+    for thread in threads:
+        thread.start()
+    assert started.wait(timeout=2)
+    release.set()
+    for thread in threads:
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+
+    assert results == [{"value": "ok"}, {"value": "ok"}]
+    assert calls == 1
+
+    refresh = mapping.refresh_command()
+    with pytest.raises(RuntimeError, match="refresh failed"):
+        refresh.run()
+    assert dict(mapping.all()) == {"value": "ok"}
+    assert mapping.all_command().commands == ()
+    assert mapping.refresh_command().run() == {"value": "ok"}
+    assert calls == 3
+
+
+def test_prefetch_routes_command_backed_mapping_through_all_command() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.side_effect = lambda argv, **_kwargs: RawCommandResult(
+        argv=argv,
+        exit_code=0,
+        stdout=b"{}",
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    resource = BaseResource(transport, ClientConfig())
+
+    def command_loader() -> Command[Mapping[str, str]]:
+        return resource._plan(
+            steps=(
+                _Step(
+                    ("mapping", "list", "--output", "json"),
+                    "run_bytes",
+                    decode=lambda _stdout, _command: {"value": "prefetched"},
+                ),
+            ),
+            finalize=lambda results: cast("Mapping[str, str]", results[0]),
+        )
+
+    relation = LazyMapping(
+        lambda: (_ for _ in ()).throw(AssertionError("legacy loader bypassed")),
+        command_loader=command_loader,
+    )
+    client = MulticaClient(ClientConfig())
+    entities = (
+        types.SimpleNamespace(_client=client),
+        types.SimpleNamespace(_client=client),
+    )
+    selected = iter((relation, relation))
+
+    client.prefetch(entities, lambda _entity: next(selected), max_parallel=2)
+
+    assert dict(relation.all()) == {"value": "prefetched"}
+    assert transport.run_bytes.call_count == 1
+
+
+def test_prefetch_runs_command_backed_relations_concurrently() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    started = {"one": threading.Event(), "two": threading.Event()}
+    release = threading.Event()
+
+    def run_bytes(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
+        key = argv[1]
+        started[key].set()
+        assert release.wait(timeout=2)
+        return RawCommandResult(
+            argv=argv,
+            exit_code=0,
+            stdout=b"{}",
+            stderr=b"",
+            duration=datetime.timedelta(),
+        )
+
+    transport.run_bytes.side_effect = run_bytes
+    resource = BaseResource(transport, ClientConfig())
+
+    def command_loader(key: str) -> Callable[[], Command[Mapping[str, str]]]:
+        def build() -> Command[Mapping[str, str]]:
+            return resource._plan(
+                steps=(
+                    _Step(
+                        ("mapping", key, "--output", "json"),
+                        "run_bytes",
+                        decode=lambda _stdout, _command: {key: "ok"},
+                    ),
+                ),
+                finalize=lambda results: cast("Mapping[str, str]", results[0]),
+            )
+
+        return build
+
+    relations = (
+        LazyMapping(dict, command_loader=command_loader("one")),
+        LazyMapping(dict, command_loader=command_loader("two")),
+    )
+    client = MulticaClient(ClientConfig())
+    entities = (
+        types.SimpleNamespace(_client=client),
+        types.SimpleNamespace(_client=client),
+    )
+    selected = iter(relations)
+    errors: list[Exception] = []
+
+    def prefetch() -> None:
+        try:
+            client.prefetch(entities, lambda _entity: next(selected), max_parallel=2)
+        except Exception as error:
+            errors.append(error)
+
+    thread = threading.Thread(target=prefetch)
+    thread.start()
+    assert started["one"].wait(timeout=2)
+    assert started["two"].wait(timeout=2)
+    release.set()
+    thread.join(timeout=2)
+    assert not thread.is_alive()
+    assert errors == []
+    assert all(relation.loaded for relation in relations)
+    assert transport.run_bytes.call_count == 2
 
 
 def test_workspace_after_invalidate_reloads() -> None:

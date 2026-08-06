@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import shlex
 import typing
 from collections.abc import Callable
 from dataclasses import dataclass, replace
@@ -45,6 +46,7 @@ class OperationCase:
     resource_attr: str
     method: str
     expected_argv: tuple[str, ...] = ()
+    expected_commands: tuple[str, ...] = ()
     transport_method: str = "run_bytes"
     args: tuple[object, ...] = ()
     kwargs: tuple[tuple[str, object], ...] = ()
@@ -58,6 +60,10 @@ class OperationCase:
     source_ref: str | None = None
     dynamic_argv_positions: tuple[int, ...] = ()
     transport_side_effect: Callable[..., object] | None = None
+    expected_transport_argvs: tuple[tuple[str, ...], ...] = ()
+    expected_exception: type[Exception] | None = None
+    public_route: bool = False
+    snapshot_profiles: tuple[str, str] | None = None
 
 
 RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
@@ -115,6 +121,15 @@ _SPAWN_SDK_METHODS: frozenset[str] = frozenset(
 )
 
 
+def _expected_commands(expected_argv: tuple[str, ...]) -> tuple[str, ...]:
+    argv = list(expected_argv)
+    if "--token" in argv:
+        token_position = argv.index("--token") + 1
+        if token_position < len(argv):
+            argv[token_position] = "***"
+    return (shlex.join(("multica", *argv)),)
+
+
 def _resource_attr(sdk_method: str) -> str:
     parts = sdk_method.split(".")
     if len(parts) >= 3:
@@ -129,7 +144,7 @@ def discover_public_methods() -> frozenset[str]:
     for flat_key, cls in RESOURCE_SPECS:
         dotted = _NESTED_DOTTED_PREFIXES.get(flat_key, flat_key)
         for name, value in cls.__dict__.items():
-            if name.startswith("_"):
+            if name.startswith("_") or name.endswith("_command"):
                 continue
             function = value.__func__ if isinstance(value, (classmethod, staticmethod)) else value
             if not inspect.isfunction(function):
@@ -307,6 +322,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 resource_attr=_resource_attr(sdk_method),
                 method=method,
                 expected_argv=vector.expected_argv,
+                expected_commands=_expected_commands(vector.expected_argv),
                 transport_method=vector.transport_method,
                 args=tuple(materialize(value) for value in vector.args),
                 kwargs=tuple((name, materialize(value)) for name, value in vector.kwargs),
@@ -318,6 +334,11 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 assert_result=assertion_for(vector.assertion, vector.operation_id),
                 contract_operation_id=vector.operation_id,
                 source_ref=None,
+                public_route=sdk_method
+                in {
+                    "issues.comments.list_flat",
+                    "projects.resources.list",
+                },
             )
         )
     return tuple(generated)
@@ -489,6 +510,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         MetadataValueType,
         ProjectStatus,
     )
+    from multica_py.exceptions import NetworkError
     from multica_py.models.agents import AgentCreateRequest, AgentSkill, AgentUpdateRequest
     from multica_py.models.autopilots import (
         AutopilotListPage,
@@ -696,6 +718,29 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             duration=datetime.timedelta(),
         )
 
+    def _write_composite_issue(argv: tuple[str, ...], **_kw: object) -> RawCommandResult:
+        if argv[:3] == ("issue", "create", "--title"):
+            stdout = b'{"id":"i1","title":"Test","status":"todo"}'
+        elif argv[:3] == ("issue", "label", "add"):
+            stdout = b"[]"
+        else:
+            stdout = b'{"id":"i1","title":"Test","status":"todo"}'
+        return RawCommandResult(
+            argv=argv,
+            exit_code=0,
+            stdout=stdout,
+            stderr=b"",
+            duration=datetime.timedelta(),
+        )
+
+    def _fail_composite_issue(_argv: tuple[str, ...], **_kw: object) -> RawCommandResult:
+        from multica_py.exceptions import NetworkError
+
+        raise NetworkError("first composite step failed")
+
+    def _assert_composite_issue(result: object, _mt: MagicMock) -> None:
+        assert getattr(result, "id") == "i1"
+
     def _c(
         sdk_method: str,
         expected_argv: tuple[str, ...],
@@ -712,8 +757,13 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         canonical: bool | None = None,
         source_ref: str | None = None,
         assert_result: Callable[[object, MagicMock], None] | None = None,
+        expected_commands: tuple[str, ...] | None = None,
         dynamic_argv_positions: tuple[int, ...] = (),
         transport_side_effect: Callable[..., object] | None = None,
+        expected_transport_argvs: tuple[tuple[str, ...], ...] = (),
+        expected_exception: type[Exception] | None = None,
+        public_route: bool = False,
+        snapshot_profiles: tuple[str, str] | None = None,
     ) -> OperationCase:
         if not transport:
             if sdk_method in _SPAWN_SDK_METHODS:
@@ -739,6 +789,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             resource_attr=ra,
             method=m,
             expected_argv=expected_argv,
+            expected_commands=expected_commands or _expected_commands(expected_argv),
             transport_method=transport,
             args=args,
             kwargs=kwargs,
@@ -754,6 +805,10 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             assert_result=assert_result,
             dynamic_argv_positions=dynamic_argv_positions,
             transport_side_effect=transport_side_effect,
+            expected_transport_argvs=expected_transport_argvs,
+            expected_exception=expected_exception,
+            public_route=public_route,
+            snapshot_profiles=snapshot_profiles,
         )
 
     cases: list[OperationCase] = [
@@ -762,6 +817,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("agent", "list", "--output", "json"),
             stdout=b"[]",
             id="manual:agents.list:canonical",
+            public_route=True,
         ),
         _c(
             "agents.get",
@@ -856,6 +912,9 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("agent", "avatar", "a1", "--file", "<dynamic>"),
             args=("a1", pathlib.Path("tests/cases/operations.py")),
             id="manual:agents.avatar:canonical",
+            expected_commands=(
+                f"multica agent avatar a1 --file {shlex.quote(str(_Path('tests/cases/operations.py').resolve()))}",
+            ),
             dynamic_argv_positions=(4,),
             assert_result=_assert_avatar_path,
         ),
@@ -880,6 +939,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("manifest.json", b'{"x":1}'),
             stdout=_AR,
             id="manual:attachments.upload_bytes:canonical",
+            expected_commands=("multica attachment upload '${temp.path}' --output json",),
             dynamic_argv_positions=(2,),
             assert_result=_assert_upload_bytes,
         ),
@@ -888,9 +948,61 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("attachment", "download", "a1", "--output-dir", "<dynamic>", "--output", "json"),
             args=("a1",),
             id="manual:attachments.download_bytes:canonical",
+            expected_commands=(
+                "multica attachment download a1 --output-dir '${temp.path}' --output json",
+            ),
             dynamic_argv_positions=(4,),
             transport_side_effect=_write_download,
             assert_result=_assert_download_bytes,
+        ),
+        _c(
+            "issues.create",
+            ("issue", "create", "--title", "Test", "--output", "json"),
+            method="create",
+            kwargs=(("title", "Test"), ("label_ids", ("l1", "l2"))),
+            expected_commands=(
+                "multica issue create --title Test --output json",
+                "multica issue label add '${create.id}' l1 --output json",
+                "multica issue label add '${create.id}' l2 --output json",
+                "multica issue get '${create.id}' --output json",
+            ),
+            expected_transport_argvs=(
+                ("issue", "create", "--title", "Test", "--output", "json"),
+                ("issue", "label", "add", "i1", "l1", "--output", "json"),
+                ("issue", "label", "add", "i1", "l2", "--output", "json"),
+                ("issue", "get", "i1", "--output", "json"),
+            ),
+            transport_side_effect=_write_composite_issue,
+            assert_result=_assert_composite_issue,
+            id="manual:issues.create:focused-composite-success",
+            source_ref="review-cycle-command-preview",
+        ),
+        _c(
+            "issues.get",
+            ("issue", "get", "i1", "--output", "json"),
+            args=("i1",),
+            stdout=b'{"id":"i1","title":"Test","status":"todo"}',
+            expected_commands=("multica --profile profile-a issue get i1 --output json",),
+            id="manual:issues.get:focused-snapshot",
+            source_ref="review-cycle-command-preview",
+            snapshot_profiles=("profile-a", "profile-b"),
+        ),
+        _c(
+            "issues.create",
+            ("issue", "create", "--title", "Test", "--output", "json"),
+            method="create",
+            kwargs=(("title", "Test"), ("label_ids", ("l1", "l2"))),
+            expected_commands=(
+                "multica issue create --title Test --output json",
+                "multica issue label add '${create.id}' l1 --output json",
+                "multica issue label add '${create.id}' l2 --output json",
+                "multica issue get '${create.id}' --output json",
+            ),
+            expected_transport_argvs=(("issue", "create", "--title", "Test", "--output", "json"),),
+            transport_side_effect=_fail_composite_issue,
+            expected_exception=NetworkError,
+            id="manual:issues.create:focused-composite-failure",
+            source_ref="review-cycle-command-preview",
         ),
         _c(
             "autopilots.list",
@@ -2041,6 +2153,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("sk_1",),
             stdout=msgspec.json.encode([SkillFile(id="f_1", path="SKILL.md")]),
             id="manual:skills.files.list:canonical",
+            public_route=True,
         ),
         _c(
             "skills.files.delete",

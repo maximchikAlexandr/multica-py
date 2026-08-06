@@ -21,6 +21,10 @@ def _validate_server_url(url: str) -> None:
     parsed = urlparse(url)
     scheme = parsed.scheme.lower()
     host = (parsed.hostname or "").lower()
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("server_url must not contain username or password userinfo")
+    if parsed.query or parsed.fragment:
+        raise ValueError("server_url must not contain query or fragment")
     if scheme == "https":
         return
     if scheme == "http" and host in _LOCAL_HOSTS:

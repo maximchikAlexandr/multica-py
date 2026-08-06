@@ -25,19 +25,33 @@ from multica_py.resources.project_resources import ProjectResourceCollection
 _DIRECT_KEYWORD_METHODS = frozenset(
     {
         ("AgentResource", "create"),
+        ("AgentResource", "create_command"),
         ("AgentResource", "update"),
+        ("AgentResource", "update_command"),
         ("IssueResource", "assign"),
+        ("IssueResource", "assign_command"),
         ("IssueResource", "create"),
+        ("IssueResource", "create_command"),
         ("IssueResource", "reorder"),
+        ("IssueResource", "reorder_command"),
         ("IssueResource", "update"),
+        ("IssueResource", "update_command"),
         ("ProjectResource", "create"),
+        ("ProjectResource", "create_command"),
         ("ProjectResource", "update"),
+        ("ProjectResource", "update_command"),
         ("ProjectResourceCollection", "add_local_directory"),
+        ("ProjectResourceCollection", "add_local_directory_command"),
         ("ProjectResourceCollection", "update_local_directory"),
+        ("ProjectResourceCollection", "update_local_directory_command"),
         ("RuntimeResource", "update"),
+        ("RuntimeResource", "update_command"),
         ("SkillResource", "create"),
+        ("SkillResource", "create_command"),
         ("SkillResource", "update"),
+        ("SkillResource", "update_command"),
         ("UserResource", "profile_update"),
+        ("UserResource", "profile_update_command"),
     }
 )
 

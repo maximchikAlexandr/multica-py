@@ -2,18 +2,21 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass
-from typing import get_type_hints
+from typing import cast, get_type_hints
 from unittest.mock import MagicMock
 
 import pytest
 
-from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.commands import Command, _Step
+from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
+from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
-from multica_py.models.issues import IssueListPage, IssueSummary
+from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
 from multica_py.models.relations import OffsetLazyCollection
+from multica_py.resources._base import BaseResource
 from multica_py.resources.agents import Agent
 from multica_py.resources.projects import Project
 from multica_py.resources.squads import Squad
@@ -125,10 +128,49 @@ def test_workspace_members_preserve_user_identity() -> None:
         offset=0,
         total=1,
     )
+    command_resource = BaseResource(MagicMock(spec=CliTransport), ClientConfig())
+
+    def list_command(issue_filter: IssueListFilter) -> Command[object]:
+        def decode(_stdout: bytes, command_text: str) -> object:
+            words = command_text.split()
+            offset = int(words[words.index("--offset") + 1])
+            limit = int(words[words.index("--limit") + 1])
+            return client.issues.list(
+                IssueListFilter(
+                    assignee_id=issue_filter.assignee_id,
+                    limit=limit,
+                    offset=offset,
+                )
+            )
+
+        transport = command_resource._transport
+        cast("MagicMock", transport.run_bytes).side_effect = lambda argv, **_kwargs: (
+            RawCommandResult(
+                argv=argv,
+                exit_code=0,
+                stdout=b"",
+                stderr=b"",
+                duration=datetime.timedelta(),
+            )
+        )
+        args = (
+            "issue",
+            "list",
+            "--limit",
+            str(issue_filter.limit),
+            "--offset",
+            str(issue_filter.offset),
+        )
+        return command_resource._plan(
+            steps=(_Step(args, "run_bytes", decode=decode),),
+            finalize=lambda results: results[0],
+        )
+
+    client.issues.list_command = list_command
     resource = WorkspaceResource(transport, ClientConfig())
     resource._set_client(client)
 
-    members = resource.members("ws_1")
+    members = resource.members_command("ws_1").run()
     member = members[0]
     items = member.issues.all()
 
@@ -249,3 +291,141 @@ def test_workspace_detached_access_raises() -> None:
         entity.members.all()
     with pytest.raises(DetachedEntityError):
         entity.issues.all()
+
+
+def test_workspace_resource_commands_are_lazy_and_preserve_argv() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_text.return_value = TextResult("", "", 0)
+    transport.run_bytes.side_effect = (
+        RawCommandResult(
+            argv=("workspace", "list", "--output", "json"),
+            exit_code=0,
+            stdout=b"[]",
+            stderr=b"",
+            duration=datetime.timedelta(),
+        ),
+        RawCommandResult(
+            argv=("workspace", "get", "ws_1", "--output", "json"),
+            exit_code=0,
+            stdout=b'{"id":"ws_1","name":"Workspace"}',
+            stderr=b"",
+            duration=datetime.timedelta(),
+        ),
+        RawCommandResult(
+            argv=("workspace", "member", "list", "ws_1", "--output", "json"),
+            exit_code=0,
+            stdout=b"[]",
+            stderr=b"",
+            duration=datetime.timedelta(),
+        ),
+    )
+    resource = WorkspaceResource(transport, ClientConfig())
+    commands = (
+        (resource.list_command(), "multica workspace list --output json"),
+        (resource.get_command("ws_1"), "multica workspace get ws_1 --output json"),
+        (
+            resource.members_command("ws_1"),
+            "multica workspace member list ws_1 --output json",
+        ),
+        (resource.switch_command("ws_1"), "multica workspace switch ws_1"),
+        (resource.watch_command("ws_1"), "multica workspace watch ws_1"),
+        (resource.unwatch_command("ws_1"), "multica workspace unwatch ws_1"),
+    )
+
+    assert transport.run_bytes.call_count == 0
+    assert transport.run_text.call_count == 0
+    for command, expected in commands:
+        assert command.commands == (expected,)
+    assert transport.run_bytes.call_count == 0
+    assert transport.run_text.call_count == 0
+
+
+def test_workspace_issue_and_autopilot_relation_commands_preserve_plan_metadata() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.side_effect = (
+        RawCommandResult(
+            argv=(
+                "issue",
+                "list",
+                "--limit",
+                "50",
+                "--offset",
+                "0",
+                "--output",
+                "json",
+            ),
+            exit_code=0,
+            stdout=(
+                b'{"issues":[{"id":"i1","title":"Issue","status":"todo"}],'
+                b'"has_more":false,"limit":50,"offset":0,"total":1}'
+            ),
+            stderr=b"",
+            duration=datetime.timedelta(),
+        ),
+        RawCommandResult(
+            argv=("autopilot", "list", "--output", "json"),
+            exit_code=0,
+            stdout=b'{"autopilots":[],"total":7}',
+            stderr=b"",
+            duration=datetime.timedelta(),
+        ),
+    )
+    scoped = MulticaClient(ClientConfig(workspace_id="ws_1"))
+    scoped.issues._transport = transport
+    scoped.autopilots._transport = transport
+    origin = MagicMock()
+    origin.with_workspace.return_value = scoped
+    workspace = Workspace(id="ws_1", name="Workspace", _client=origin)
+
+    issues = workspace.issues.all_command()
+    autopilots = workspace.autopilots.all_command()
+
+    assert transport.run_bytes.call_count == 0
+    assert issues.commands == (
+        "multica issue list --limit 50 --offset 0 --output json",
+        "multica issue list --limit 50 --offset '${page.next_offset}' --output json",
+    )
+    assert autopilots.commands == ("multica autopilot list --output json",)
+    assert [item.id for item in issues.run()] == ["i1"]
+    assert autopilots.run() == ()
+    assert workspace.autopilots.metadata.total == 7
+    assert transport.run_bytes.call_count == 2
+
+
+def test_workspace_member_issue_page_command_preserves_assignee_and_is_lazy() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(
+            "issue",
+            "list",
+            "--assignee-id",
+            "membership-1",
+            "--limit",
+            "50",
+            "--offset",
+            "0",
+            "--output",
+            "json",
+        ),
+        exit_code=0,
+        stdout=(
+            b'{"issues":[{"id":"i1","title":"Issue","status":"todo"}],'
+            b'"has_more":false,"limit":50,"offset":0,"total":1}'
+        ),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    client = MulticaClient(ClientConfig())
+    client.issues._transport = transport
+    member = WorkspaceMember(id="membership-1", name="Member", _client=client)
+
+    command = member.issues.page_command()
+
+    assert transport.run_bytes.call_count == 0
+    assert command.commands == (
+        "multica issue list --assignee-id membership-1 --offset 0 --output json",
+    )
+    assert command.run().items[0].id == "i1"

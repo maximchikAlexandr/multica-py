@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import msgspec
 
 from multica_py.enums import IssueSort, IssueStatus, SortDirection
+from multica_py.models.system import AttachmentResult
 from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
@@ -46,6 +47,26 @@ class LinkedPullRequest(msgspec.Struct, frozen=True, kw_only=True):
 class IssueChildStageGroup(msgspec.Struct, frozen=True, kw_only=True):
     name: str
     count: int
+
+
+class IssueData(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    title: str
+    description: str | None = None
+    status: IssueStatus
+    priority: str | None = None
+    assignee: IssueAssignee | None = None
+    pull_requests: tuple[LinkedPullRequest, ...] = ()
+    child_stages: tuple[IssueChildStageGroup, ...] = ()
+    label_names: tuple[str, ...] = ()
+    metadata_snapshot: tuple[IssueMetadataItem, ...] = ()
+    attachments: tuple[AttachmentResult, ...] = ()
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
+    parent_id: str | None = None
+    project_id: str | None = None
+    creator_id: str | None = None
+    creator_type: str | None = None
 
 
 class IssueChildrenResult(msgspec.Struct, frozen=True, kw_only=True):

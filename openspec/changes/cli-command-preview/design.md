@@ -38,7 +38,7 @@ The current state, verified against the repo:
 - Lazy relations live in `src/multica_py/models/relations.py`:
   `LazyCollection` (`all`/`refresh`/`invalidate`, with retry,
   coalescing, generation outcomes), `OffsetLazyCollection` (adds
-  `page(limit=, offset=)` and a multi-page `_load_pages`), 
+  `page(limit=, offset=)` and a multi-page `_load_pages`),
   `CursorLazyCollection` (adds `page(cursor=)` and a multi-page
   `_load_pages`), and `LazyMapping` (`all`/`refresh`/`invalidate`).
   `MulticaClient.prefetch` (`client.py`) loads selected relations under

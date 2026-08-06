@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime
+
 import msgspec
 
 
@@ -87,6 +89,22 @@ class UserProfile(msgspec.Struct, frozen=True, kw_only=True):
 
 class UserProfileUpdate(msgspec.Struct, frozen=True, kw_only=True):
     description: str | msgspec.UnsetType = msgspec.UNSET
+
+
+class SquadData(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    name: str
+    member_count: int = 0
+    leader_id: str | None = None
+    archived_at: datetime.datetime | None = None
+
+
+class WorkspaceMemberData(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    name: str
+    role: str | None = None
+    user_id: str | None = None
+    email: str | None = None
 
 
 class SquadMember(msgspec.Struct, frozen=True, kw_only=True):

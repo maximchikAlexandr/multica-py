@@ -11,6 +11,7 @@ from unittest.mock import MagicMock
 import msgspec
 import pytest
 
+from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models._bound import _BoundEntity
@@ -23,7 +24,9 @@ from multica_py.models.issues import (
     IssueMetadataItem,
     LinkedPullRequest,
 )
+from multica_py.models.relations import CursorPage
 from multica_py.models.system import AttachmentResult
+from multica_py.resources._base import BaseResource
 from multica_py.resources.agents import Agent
 from multica_py.resources.autopilots import Autopilot, AutopilotRun, _coerce_json_value
 from multica_py.resources.issue_comments import Comment, CommentThread
@@ -468,9 +471,17 @@ class TestBoundEntitySerialization:
 
     def test_bound_comment_thread_uses_init_issue_context(self) -> None:
         client = MagicMock()
+        command_resource = BaseResource(MagicMock(), ClientConfig())
         client.issues.comments.list_thread.return_value = Page(
             items=(Comment(id="comment-1", body="body"),),
             next_cursor=None,
+        )
+        client.issues.comments.list_thread_command = lambda request: command_resource._plan(
+            steps=(),
+            finalize=lambda _results: CursorPage(
+                items=client.issues.comments.list_thread(request).items,
+                next_cursor=None,
+            ),
         )
         thread = CommentThread(id="thread-1", issue_id="issue-1", _client=client)
 
