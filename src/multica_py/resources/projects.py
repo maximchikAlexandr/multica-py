@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import cast, overload
 
 import msgspec
@@ -8,7 +7,7 @@ import msgspec
 from multica_py._generated.approved_sdk import (
     validate_nonblank,
 )
-from multica_py._internal.commands import Command, _replace_plan, _Step
+from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _project_from_wire,
@@ -108,34 +107,16 @@ class Project(_BoundEntity):  # type: ignore[misc]
     def add_local_directory_command(
         self, request: ProjectResourceAddLocalDirectoryRequest
     ) -> Command[ProjectResourceRecord]:
-        validate_nonblank(self.id)
-        validate_nonblank(request.daemon_id)
         client = self._require_client(
             entity_type="Project", entity_id=self.id, relation_name="add_local_directory"
         )
-        local_path = os.path.abspath(request.local_path)
-        args = [
-            "project",
-            "resource",
-            "add",
-            self.id,
-            "--type",
-            "local_directory",
-            "--local-path",
-            local_path,
-            "--daemon-id",
-            request.daemon_id,
-        ]
-        if request.label is not None and request.label.strip():
-            args.extend(["--ref-label", request.label])
         command = client.projects.resources.add_local_directory_command(self.id, request)
 
-        def finalize(results: tuple[object, ...]) -> ProjectResourceRecord:
-            result = command._plan.finalize(results)
+        def invalidate(result: ProjectResourceRecord) -> ProjectResourceRecord:
             self._invalidate_resources()
             return result
 
-        return Command(_replace_plan(command._plan, finalize=finalize))
+        return command._map(invalidate)
 
     def remove_resource(self, resource_id: str) -> None:
         self.remove_resource_command(resource_id).run()
@@ -146,12 +127,8 @@ class Project(_BoundEntity):  # type: ignore[misc]
         client = self._require_client(
             entity_type="Project", entity_id=self.id, relation_name="remove_resource"
         )
-        command = client.projects.resources.remove_command(self.id, resource_id)
-        return Command(
-            _replace_plan(
-                command._plan,
-                finalize=lambda results: self._invalidate_resources(),
-            )
+        return client.projects.resources.remove_command(self.id, resource_id)._map(
+            lambda result: self._invalidate_resources()
         )
 
 
@@ -160,25 +137,19 @@ class ProjectResource(BaseResource):
         super().__init__(transport, config)
         self.resources = ProjectResourceCollection(transport, config)
 
+    def _bind(self, project: _ProjectWire) -> Project:
+        return _project_from_wire(project)._with_client(self._client)
+
     def list_command(self) -> Command[tuple[Project, ...]]:
-        args, decode = self._plan_decode_list(("project", "list"), _ProjectWire)
-
-        def finalize(results: tuple[object, ...]) -> tuple[Project, ...]:
-            projects = cast("tuple[_ProjectWire, ...]", results[0])
-            return tuple(_project_from_wire(item)._with_client(self._client) for item in projects)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_list_command(("project", "list"), _ProjectWire)._map(
+            lambda projects: tuple(map(self._bind, projects))
+        )
 
     def list(self) -> tuple[Project, ...]:
         return self.list_command().run()
 
     def get_command(self, project_id: str) -> Command[Project]:
-        args, decode = self._plan_decode(("project", "get", project_id), _ProjectWire)
-
-        def finalize(results: tuple[object, ...]) -> Project:
-            return _project_from_wire(cast("_ProjectWire", results[0]))._with_client(self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(("project", "get", project_id), _ProjectWire)._map(self._bind)
 
     def get(self, project_id: str) -> Project:
         return self.get_command(project_id).run()
@@ -196,12 +167,7 @@ class ProjectResource(BaseResource):
         args = ["project", "create", "--title", req.name]
         if req.description is not None:
             args.extend(["--description", req.description])
-        plan_args, decode = self._plan_decode(tuple(args), _ProjectWire)
-
-        def finalize(results: tuple[object, ...]) -> Project:
-            return _project_from_wire(cast("_ProjectWire", results[0]))._with_client(self._client)
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), _ProjectWire)._map(self._bind)
 
     @overload
     def create(self, request: ProjectCreateRequest, /) -> Project: ...
@@ -239,12 +205,7 @@ class ProjectResource(BaseResource):
             raise ValidationError("description=None is not supported for project update via CLI")
         else:
             args.extend(["--description", req.description])
-        plan_args, decode = self._plan_decode(tuple(args), _ProjectWire)
-
-        def finalize(results: tuple[object, ...]) -> Project:
-            return _project_from_wire(cast("_ProjectWire", results[0]))._with_client(self._client)
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), _ProjectWire)._map(self._bind)
 
     @overload
     def update(self, project_id: str, request: ProjectUpdateRequest, /) -> Project: ...
@@ -265,26 +226,15 @@ class ProjectResource(BaseResource):
         ).run()
 
     def delete_command(self, project_id: str) -> Command[None]:
-        def finalize(results: tuple[object, ...]) -> None:
-            return None
-
-        return self._plan(
-            steps=(_Step(("project", "delete", project_id), "run_text"),),
-            finalize=finalize,
-        )
+        return self._none_command(("project", "delete", project_id))
 
     def delete(self, project_id: str) -> None:
         self.delete_command(project_id).run()
 
     def set_status_command(self, project_id: str, status: ProjectStatus) -> Command[Project]:
-        args, decode = self._plan_decode(
+        return self._decoded_command(
             ("project", "status", project_id, status.value), _ProjectWire
-        )
-
-        def finalize(results: tuple[object, ...]) -> Project:
-            return _project_from_wire(cast("_ProjectWire", results[0]))._with_client(self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        )._map(self._bind)
 
     def set_status(self, project_id: str, status: ProjectStatus) -> Project:
         return self.set_status_command(project_id, status).run()

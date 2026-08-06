@@ -76,51 +76,6 @@ def test_transport_builds_correct_argv():
     )
 
 
-def test_command_plan_uses_configuration_snapshot_after_profile_switch() -> None:
-    from multica_py._internal.commands import _Step
-    from multica_py.client import MulticaClient
-
-    class RecordingTransport(CliTransport):
-        def __init__(self, config: ClientConfig) -> None:
-            super().__init__(config)
-            self.calls: list[tuple[str, ...]] = []
-
-        def run_bytes(
-            self,
-            command_args: tuple[str, ...],
-            *,
-            stdin: bytes | None = None,
-            timeout: datetime.timedelta | None = None,
-        ) -> RawCommandResult:
-            del stdin, timeout
-            self.calls.append(self.build_full_argv(command_args))
-            return RawCommandResult(
-                argv=self.build_full_argv(command_args),
-                exit_code=0,
-                stdout=b"{}",
-                stderr=b"",
-                duration=datetime.timedelta(),
-            )
-
-    profile_a = ClientConfig(profile="a")
-    transport = RecordingTransport(profile_a)
-    client = MulticaClient(profile_a)
-    client.issues._transport = transport
-    client.issues._config = profile_a
-    command = client.issues._plan(
-        steps=(_Step(("issue", "get", "issue_123"), "run_bytes"),),
-        finalize=lambda results: results,
-    )
-
-    profile_b = client.with_profile("b").config
-    client.issues._config = profile_b
-    transport._config = profile_b
-
-    assert command.commands == ("multica --profile a issue get issue_123",)
-    command.run()
-    assert transport.calls == [("multica", "--profile", "a", "issue", "get", "issue_123")]
-
-
 def test_transport_redacts_token():
     redacted = redact_argv(("multica", "auth", "login", "--token=secret123"))
     assert "secret123" not in " ".join(redacted)

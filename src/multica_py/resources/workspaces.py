@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, cast
 
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
-from multica_py._internal.commands import Command, _replace_plan, _Step
+from multica_py._internal.commands import Command
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.autopilots import AutopilotListPage
 from multica_py.models.issues import IssueListFilter, IssueSummary
@@ -34,9 +34,6 @@ if TYPE_CHECKING:
     from multica_py.client import MulticaClient
 
 
-S = TypeVar("S", bound=msgspec.Struct)
-
-
 def _workspace_page_issues(
     client: MulticaClient, limit: int | None, offset: int
 ) -> OffsetPage[IssueSummary]:
@@ -46,21 +43,6 @@ def _workspace_page_issues(
         offset=offset,
     )
     return _issue_summary_offset_page(client.issues, flt)
-
-
-def _resource_list_command(
-    resource: BaseResource,
-    args: tuple[str, ...],
-    item_type: type[S],
-    bind: Callable[[S], S] | None = None,
-) -> Command[tuple[S, ...]]:
-    plan_args, decode = resource._plan_decode_list(args, item_type)
-
-    def finalize(results: tuple[object, ...]) -> tuple[S, ...]:
-        items = cast("tuple[S, ...]", results[0])
-        return tuple(bind(item) if bind is not None else item for item in items)
-
-    return resource._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
 
 
 def _workspace_issues_page_command(
@@ -79,13 +61,11 @@ def _workspace_autopilots_command(
     client: MulticaClient,
 ) -> Command[_RelationLoad[Autopilot]]:
     command = client.autopilots.list_command()
-    plan = command._plan
 
-    def finalize(results: tuple[object, ...]) -> _RelationLoad[Autopilot]:
-        page = plan.finalize(results)
+    def finalize(page: AutopilotListPage[Autopilot]) -> _RelationLoad[Autopilot]:
         return _RelationLoad(page.autopilots, RelationMetadata(total=page.total))
 
-    return Command(_replace_plan(plan, finalize=finalize))
+    return command._map(finalize)
 
 
 class WorkspaceMember(_BoundEntity):  # type: ignore[misc]
@@ -223,12 +203,7 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
                 "_labels",
                 LazyCollection(
                     client.labels.list,
-                    command_loader=lambda: _resource_list_command(
-                        client.labels,
-                        ("label", "list"),
-                        Label,
-                        bind=lambda item: item._with_client(client),
-                    ),
+                    command_loader=client.labels.list_command,
                 ),
             )
         return self._labels  # type: ignore[return-value]
@@ -242,11 +217,7 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
                 "_repositories",
                 LazyCollection(
                     client.repositories.list,
-                    command_loader=lambda: _resource_list_command(
-                        client.repositories,
-                        ("repo", "list"),
-                        RepositoryRecord,
-                    ),
+                    command_loader=client.repositories.list_command,
                 ),
             )
         return self._repositories  # type: ignore[return-value]
@@ -260,11 +231,7 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
                 "_runtimes",
                 LazyCollection(
                     client.runtimes.list,
-                    command_loader=lambda: _resource_list_command(
-                        client.runtimes,
-                        ("runtime", "list"),
-                        RuntimeDefinition,
-                    ),
+                    command_loader=client.runtimes.list_command,
                 ),
             )
         return self._runtimes  # type: ignore[return-value]
@@ -326,66 +293,44 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
 
 class WorkspaceResource(BaseResource):
     def list_command(self) -> Command[tuple[Workspace, ...]]:
-        args, decode = self._plan_decode_list(("workspace", "list"), Workspace)
-
-        def finalize(results: tuple[object, ...]) -> tuple[Workspace, ...]:
-            items = cast("tuple[Workspace, ...]", results[0])
-            return tuple(item._with_client(self._client) for item in items)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_list_command(("workspace", "list"), Workspace)._map(
+            lambda items: tuple(item._with_client(self._client) for item in items)
+        )
 
     def list(self) -> tuple[Workspace, ...]:
         return self.list_command().run()
 
     def get_command(self, workspace_id: str) -> Command[Workspace]:
         validate_nonblank(workspace_id)
-        args, decode = self._plan_decode(("workspace", "get", workspace_id), Workspace)
-
-        def finalize(results: tuple[object, ...]) -> Workspace:
-            return cast("Workspace", results[0])._with_client(self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(("workspace", "get", workspace_id), Workspace)._map(
+            lambda workspace: workspace._with_client(self._client)
+        )
 
     def get(self, workspace_id: str) -> Workspace:
         return self.get_command(workspace_id).run()
 
     def members_command(self, workspace_id: str) -> Command[tuple[WorkspaceMember, ...]]:
-        args, decode = self._plan_decode_list(
+        return self._decoded_list_command(
             ("workspace", "member", "list", workspace_id), WorkspaceMember
-        )
-
-        def finalize(results: tuple[object, ...]) -> tuple[WorkspaceMember, ...]:
-            items = cast("tuple[WorkspaceMember, ...]", results[0])
-            return tuple(item._with_client(self._client) for item in items)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        )._map(lambda items: tuple(item._with_client(self._client) for item in items))
 
     def members(self, workspace_id: str) -> tuple[WorkspaceMember, ...]:
         return self.members_command(workspace_id).run()
 
     def switch_command(self, workspace_id: str) -> Command[None]:
-        return self._plan(
-            steps=(_Step(("workspace", "switch", workspace_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("workspace", "switch", workspace_id))
 
     def switch(self, workspace_id: str) -> None:
         self.switch_command(workspace_id).run()
 
     def watch_command(self, workspace_id: str) -> Command[None]:
-        return self._plan(
-            steps=(_Step(("workspace", "watch", workspace_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("workspace", "watch", workspace_id))
 
     def watch(self, workspace_id: str) -> None:
         self.watch_command(workspace_id).run()
 
     def unwatch_command(self, workspace_id: str) -> Command[None]:
-        return self._plan(
-            steps=(_Step(("workspace", "unwatch", workspace_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("workspace", "unwatch", workspace_id))
 
     def unwatch(self, workspace_id: str) -> None:
         self.unwatch_command(workspace_id).run()

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
-
-from multica_py._internal.commands import Command, _Step
+from multica_py._internal.commands import Command
 from multica_py.models._bound import _BoundEntity
 from multica_py.resources._base import BaseResource
 
@@ -17,22 +15,16 @@ class Label(_BoundEntity):  # type: ignore[misc]
 
 class LabelResource(BaseResource):
     def list_command(self) -> Command[tuple[Label, ...]]:
-        args, decode = self._plan_decode_list(("label", "list"), Label)
-
-        def finalize(results: tuple[object, ...]) -> tuple[Label, ...]:
-            items = cast("tuple[Label, ...]", results[0])
-            return tuple(item._with_client(self._client) for item in items)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_list_command(("label", "list"), Label)._map(
+            lambda items: tuple(item._with_client(self._client) for item in items)
+        )
 
     def list(self) -> tuple[Label, ...]:
         return self.list_command().run()
 
     def get_command(self, label_id: str) -> Command[Label]:
-        args, decode = self._plan_decode(("label", "get", label_id), Label)
-        return self._plan(
-            steps=(_Step(args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("Label", results[0])._with_client(self._client),
+        return self._decoded_command(("label", "get", label_id), Label)._map(
+            lambda label: label._with_client(self._client)
         )
 
     def get(self, label_id: str) -> Label:
@@ -42,10 +34,8 @@ class LabelResource(BaseResource):
         args = ["label", "create", "--name", name]
         if color is not None:
             args.extend(["--color", color])
-        plan_args, decode = self._plan_decode(tuple(args), Label)
-        return self._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("Label", results[0])._with_client(self._client),
+        return self._decoded_command(tuple(args), Label)._map(
+            lambda label: label._with_client(self._client)
         )
 
     def create(self, name: str, color: str | None = None) -> Label:
@@ -59,20 +49,15 @@ class LabelResource(BaseResource):
             args.extend(["--name", name])
         if color is not None:
             args.extend(["--color", color])
-        plan_args, decode = self._plan_decode(tuple(args), Label)
-        return self._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("Label", results[0])._with_client(self._client),
+        return self._decoded_command(tuple(args), Label)._map(
+            lambda label: label._with_client(self._client)
         )
 
     def update(self, label_id: str, name: str | None = None, color: str | None = None) -> Label:
         return self.update_command(label_id, name, color).run()
 
     def delete_command(self, label_id: str) -> Command[None]:
-        return self._plan(
-            steps=(_Step(("label", "delete", label_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("label", "delete", label_id))
 
     def delete(self, label_id: str) -> None:
         self.delete_command(label_id).run()

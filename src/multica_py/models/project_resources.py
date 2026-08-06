@@ -47,10 +47,3 @@ class ProjectResourceUpdateLocalDirectoryRequest(msgspec.Struct, frozen=True, kw
     def __post_init__(self) -> None:
         if not str(self.local_path).strip():
             raise ValueError("local_path must be non-empty")
-
-
-class ProjectResourceData(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    project_id: str
-    resource_type: str
-    resource_ref: LocalDirectoryResourceRef

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
-from multica_py._internal.commands import Command, _replace_plan, _Step
+from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
@@ -120,12 +120,8 @@ class Squad(_BoundEntity):  # type: ignore[misc]
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="add_member"
         )
-        command = client.squads.members.add_command(self.id, member_id)
-        return Command(
-            _replace_plan(
-                command._plan,
-                finalize=lambda results: self._invalidate_members(),
-            )
+        return client.squads.members.add_command(self.id, member_id)._map(
+            lambda result: self._invalidate_members()
         )
 
     def remove_member(self, member_id: str) -> None:
@@ -136,12 +132,8 @@ class Squad(_BoundEntity):  # type: ignore[misc]
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="remove_member"
         )
-        command = client.squads.members.remove_command(self.id, member_id)
-        return Command(
-            _replace_plan(
-                command._plan,
-                finalize=lambda results: self._invalidate_members(),
-            )
+        return client.squads.members.remove_command(self.id, member_id)._map(
+            lambda result: self._invalidate_members()
         )
 
 
@@ -151,25 +143,18 @@ class SquadResource(BaseResource):
         self.members = SquadMemberResource(transport, config)
 
     def list_command(self) -> Command[tuple[Squad, ...]]:
-        args, decode = self._plan_decode_list(("squad", "list"), Squad)
-
-        def finalize(results: tuple[object, ...]) -> tuple[Squad, ...]:
-            items = cast("tuple[Squad, ...]", results[0])
-            return tuple(item._with_client(self._client) for item in items)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_list_command(("squad", "list"), Squad)._map(
+            lambda items: tuple(squad._with_client(self._client) for squad in items)
+        )
 
     def list(self) -> tuple[Squad, ...]:
         return self.list_command().run()
 
     def get_command(self, squad_id: str) -> Command[Squad]:
         validate_nonblank(squad_id)
-        args, decode = self._plan_decode(("squad", "get", squad_id), Squad)
-
-        def finalize(results: tuple[object, ...]) -> Squad:
-            return cast("Squad", results[0])._with_client(self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(("squad", "get", squad_id), Squad)._map(
+            lambda squad: squad._with_client(self._client)
+        )
 
     def get(self, squad_id: str) -> Squad:
         return self.get_command(squad_id).run()

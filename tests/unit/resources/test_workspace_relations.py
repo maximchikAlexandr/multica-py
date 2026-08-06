@@ -293,54 +293,6 @@ def test_workspace_detached_access_raises() -> None:
         entity.issues.all()
 
 
-def test_workspace_resource_commands_are_lazy_and_preserve_argv() -> None:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_text.return_value = TextResult("", "", 0)
-    transport.run_bytes.side_effect = (
-        RawCommandResult(
-            argv=("workspace", "list", "--output", "json"),
-            exit_code=0,
-            stdout=b"[]",
-            stderr=b"",
-            duration=datetime.timedelta(),
-        ),
-        RawCommandResult(
-            argv=("workspace", "get", "ws_1", "--output", "json"),
-            exit_code=0,
-            stdout=b'{"id":"ws_1","name":"Workspace"}',
-            stderr=b"",
-            duration=datetime.timedelta(),
-        ),
-        RawCommandResult(
-            argv=("workspace", "member", "list", "ws_1", "--output", "json"),
-            exit_code=0,
-            stdout=b"[]",
-            stderr=b"",
-            duration=datetime.timedelta(),
-        ),
-    )
-    resource = WorkspaceResource(transport, ClientConfig())
-    commands = (
-        (resource.list_command(), "multica workspace list --output json"),
-        (resource.get_command("ws_1"), "multica workspace get ws_1 --output json"),
-        (
-            resource.members_command("ws_1"),
-            "multica workspace member list ws_1 --output json",
-        ),
-        (resource.switch_command("ws_1"), "multica workspace switch ws_1"),
-        (resource.watch_command("ws_1"), "multica workspace watch ws_1"),
-        (resource.unwatch_command("ws_1"), "multica workspace unwatch ws_1"),
-    )
-
-    assert transport.run_bytes.call_count == 0
-    assert transport.run_text.call_count == 0
-    for command, expected in commands:
-        assert command.commands == (expected,)
-    assert transport.run_bytes.call_count == 0
-    assert transport.run_text.call_count == 0
-
-
 def test_workspace_issue_and_autopilot_relation_commands_preserve_plan_metadata() -> None:
     transport = MagicMock(spec=CliTransport)
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)

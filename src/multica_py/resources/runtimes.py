@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import cast, overload
 
-from multica_py._internal.commands import Command, _Step
+from multica_py._internal.commands import Command
 from multica_py.models.system import (
     RuntimeActivity,
     RuntimeDefinition,
@@ -15,11 +15,7 @@ from multica_py.resources._base import BaseResource, _resolve_request
 
 class RuntimeResource(BaseResource):
     def list_command(self) -> Command[tuple[RuntimeDefinition, ...]]:
-        args, decode = self._plan_decode_list(("runtime", "list"), RuntimeDefinition)
-        return self._plan(
-            steps=(_Step(args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("tuple[RuntimeDefinition, ...]", results[0]),
-        )
+        return self._decoded_list_command(("runtime", "list"), RuntimeDefinition)
 
     def list(self) -> tuple[RuntimeDefinition, ...]:
         return self.list_command().run()
@@ -31,12 +27,8 @@ class RuntimeResource(BaseResource):
             raise ValueError("runtime_id must be nonblank")
         if not 1 <= days <= 365:
             raise ValueError("days must be between 1 and 365")
-        args, decode = self._plan_decode_list(
+        return self._decoded_list_command(
             ("runtime", "usage", runtime_id, "--days", str(days)), RuntimeUsage
-        )
-        return self._plan(
-            steps=(_Step(args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("tuple[RuntimeUsage, ...]", results[0]),
         )
 
     def usage(self, runtime_id: str, *, days: int = 90) -> tuple[RuntimeUsage, ...]:
@@ -45,11 +37,7 @@ class RuntimeResource(BaseResource):
     def activity_command(self, runtime_id: str) -> Command[tuple[RuntimeActivity, ...]]:
         if not runtime_id.strip():
             raise ValueError("runtime_id must be nonblank")
-        args, decode = self._plan_decode_list(("runtime", "activity", runtime_id), RuntimeActivity)
-        return self._plan(
-            steps=(_Step(args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("tuple[RuntimeActivity, ...]", results[0]),
-        )
+        return self._decoded_list_command(("runtime", "activity", runtime_id), RuntimeActivity)
 
     def activity(self, runtime_id: str) -> tuple[RuntimeActivity, ...]:
         return self.activity_command(runtime_id).run()
@@ -72,11 +60,7 @@ class RuntimeResource(BaseResource):
         args = ["runtime", "update", runtime_id, "--target-version", req.target_version]
         if req.wait:
             args.append("--wait")
-        plan_args, decode = self._plan_decode(tuple(args), RuntimeUpdateResult)
-        return self._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("RuntimeUpdateResult", results[0]),
-        )
+        return self._decoded_command(tuple(args), RuntimeUpdateResult)
 
     @overload
     def update(self, runtime_id: str, request: RuntimeUpdate, /) -> RuntimeUpdateResult: ...
@@ -98,11 +82,7 @@ class RuntimeResource(BaseResource):
         args = ["runtime", "rename", runtime_id, name]
         if machine:
             args.append("--machine")
-        plan_args, decode = self._plan_decode(tuple(args), RuntimeDefinition)
-        return self._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("RuntimeDefinition", results[0]),
-        )
+        return self._decoded_command(tuple(args), RuntimeDefinition)
 
     def rename(self, runtime_id: str, name: str, *, machine: bool = False) -> RuntimeDefinition:
         return self.rename_command(runtime_id, name, machine=machine).run()
@@ -113,10 +93,7 @@ class RuntimeResource(BaseResource):
         args = ["runtime", "delete", runtime_id]
         if cascade:
             args.append("--cascade")
-        return self._plan(
-            steps=(_Step(tuple(args), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(tuple(args))
 
     def delete(self, runtime_id: str, *, cascade: bool = False) -> None:
         self.delete_command(runtime_id, cascade=cascade).run()

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, TypeVar, cast
 
 import msgspec
 
-from multica_py._internal.commands import Command, _replace_plan, _Step
+from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import TextResult
 from multica_py._internal.transport import CliTransport
@@ -152,8 +152,7 @@ def _adapt_cursor_page_command(
     command: Command[object],
     convert: Callable[[object], CursorPage[P]],
 ) -> Command[CursorPage[P]]:
-    plan = command._plan
-    return Command(_replace_plan(plan, finalize=lambda results: convert(plan.finalize(results))))
+    return command._map(convert)
 
 
 class IssueCommentResource(BaseResource):
@@ -161,13 +160,13 @@ class IssueCommentResource(BaseResource):
         super().__init__(transport, config)
 
     def list_command(self, issue_id: str) -> Command[tuple[Comment, ...]]:
-        args, decode = self._plan_decode_list(("issue", "comment", "list", issue_id), _CommentWire)
-
-        def finalize(results: tuple[object, ...]) -> tuple[Comment, ...]:
-            items = cast("tuple[_CommentWire, ...]", results[0])
-            return tuple(_bind_comment(comment_from_wire(item), self._client) for item in items)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_list_command(
+            ("issue", "comment", "list", issue_id), _CommentWire
+        )._map(
+            lambda items: tuple(
+                _bind_comment(comment_from_wire(item), self._client) for item in items
+            )
+        )
 
     def list(self, issue_id: str) -> tuple[Comment, ...]:
         return self.list_command(issue_id).run()
@@ -267,20 +266,15 @@ class IssueCommentResource(BaseResource):
         return self.list_recent_command(request).run()
 
     def add_command(self, issue_id: str, body: str) -> Command[Comment]:
-        args, decode = self._plan_decode(
+        return self._decoded_command(
             ("issue", "comment", "add", issue_id, "--content", body), _CommentWire
-        )
-
-        def finalize(results: tuple[object, ...]) -> Comment:
-            return _bind_comment(comment_from_wire(cast("_CommentWire", results[0])), self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        )._map(lambda wire: _bind_comment(comment_from_wire(wire), self._client))
 
     def add(self, issue_id: str, body: str) -> Comment:
         return self.add_command(issue_id, body).run()
 
     def reply_command(self, issue_id: str, thread_id: str, body: str) -> Command[Comment]:
-        args, decode = self._plan_decode(
+        return self._decoded_command(
             (
                 "issue",
                 "comment",
@@ -292,39 +286,25 @@ class IssueCommentResource(BaseResource):
                 thread_id,
             ),
             _CommentWire,
-        )
-
-        def finalize(results: tuple[object, ...]) -> Comment:
-            return _bind_comment(comment_from_wire(cast("_CommentWire", results[0])), self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        )._map(lambda wire: _bind_comment(comment_from_wire(wire), self._client))
 
     def reply(self, issue_id: str, thread_id: str, body: str) -> Comment:
         return self.reply_command(issue_id, thread_id, body).run()
 
     def delete_command(self, comment_id: str) -> Command[None]:
-        return self._plan(
-            steps=(_Step(("issue", "comment", "delete", comment_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("issue", "comment", "delete", comment_id))
 
     def delete(self, comment_id: str) -> None:
         self.delete_command(comment_id).run()
 
     def resolve_command(self, thread_id: str) -> Command[None]:
-        return self._plan(
-            steps=(_Step(("issue", "comment", "resolve", thread_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("issue", "comment", "resolve", thread_id))
 
     def resolve(self, thread_id: str) -> None:
         self.resolve_command(thread_id).run()
 
     def unresolve_command(self, thread_id: str) -> Command[None]:
-        return self._plan(
-            steps=(_Step(("issue", "comment", "unresolve", thread_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("issue", "comment", "unresolve", thread_id))
 
     def unresolve(self, thread_id: str) -> None:
         self.unresolve_command(thread_id).run()

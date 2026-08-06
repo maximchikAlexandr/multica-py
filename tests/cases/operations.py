@@ -1819,10 +1819,27 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             source_ref="D17",
         ),
         _c(
+            "runtimes.rename",
+            ("runtime", "rename", "r1", "Python", "--machine", "--output", "json"),
+            args=("r1", "Python"),
+            kwargs=(("machine", True),),
+            stdout=_RT,
+            id="manual:runtimes.rename:variant:01",
+            source_ref="D17",
+        ),
+        _c(
             "runtimes.delete",
             ("runtime", "delete", "r1"),
             args=("r1",),
             id="manual:runtimes.delete:canonical",
+            source_ref="D17",
+        ),
+        _c(
+            "runtimes.delete",
+            ("runtime", "delete", "r1", "--cascade"),
+            args=("r1",),
+            kwargs=(("cascade", True),),
+            id="manual:runtimes.delete:variant:01",
             source_ref="D17",
         ),
         _c(

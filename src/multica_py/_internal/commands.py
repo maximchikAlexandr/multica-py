@@ -14,6 +14,7 @@ __all__ = ["Command"]
 
 T_co = TypeVar("T_co", covariant=True)
 T_plan = TypeVar("T_plan")
+T_mapped = TypeVar("T_mapped")
 
 _StepMode = Literal["run_bytes", "run_text", "spawn"]
 
@@ -168,6 +169,23 @@ class Command(Generic[T_co]):
 
     def run(self) -> T_co:
         return self._plan.run()
+
+    def _map(self, mapper: Callable[[T_co], T_mapped]) -> Command[T_mapped]:
+        plan = self._plan
+        override = plan._run_override
+
+        def run_override() -> T_mapped:
+            if override is None:
+                raise RuntimeError("command has no run override")
+            return mapper(override())
+
+        return Command(
+            _replace_plan(
+                plan,
+                finalize=lambda results: mapper(plan.finalize(results)),
+                run_override=run_override if override is not None else None,
+            )
+        )
 
     def __repr__(self) -> str:
         return f"Command(commands={self.commands!r})"

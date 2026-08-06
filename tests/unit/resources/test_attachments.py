@@ -297,19 +297,3 @@ def test_download_bytes_fails_closed_on_windows(monkeypatch: pytest.MonkeyPatch)
 
     with pytest.raises(OSError, match="not supported securely on Windows"):
         attachments._read_downloaded_bytes(pathlib.Path("unused"), pathlib.Path("unused"))
-
-
-def test_attachment_byte_command_previews_are_lazy_and_use_temp_refs() -> None:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    resource = AttachmentResource(transport, ClientConfig())
-
-    upload = resource.upload_bytes_command("file name.txt", b"payload")
-    download = resource.download_bytes_command("a1")
-
-    assert upload.commands == ("multica attachment upload '${temp.path}' --output json",)
-    assert download.commands == (
-        "multica attachment download a1 --output-dir '${temp.path}' --output json",
-    )
-    transport.run_bytes.assert_not_called()
-    transport.run_text.assert_not_called()

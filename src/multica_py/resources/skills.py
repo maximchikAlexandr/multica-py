@@ -5,7 +5,7 @@ from typing import cast, overload
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
-from multica_py._internal.commands import Command, _Step
+from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
@@ -58,36 +58,25 @@ class Skill(_BoundEntity):  # type: ignore[misc]
         return self.upsert_file_command(path, content).run()
 
     def upsert_file_command(self, path: str, content: str) -> Command[SkillFile]:
-        validate_nonblank(self.id)
-        validate_nonblank(path)
         client = self._require_client(
             entity_type="Skill", entity_id=self.id, relation_name="upsert_file"
         )
-        args = ("skill", "files", "upsert", self.id, "--path", path, "--content", content)
-        plan_args, decode = client.skills._plan_decode(args, SkillFile)
 
-        def finalize(results: tuple[object, ...]) -> SkillFile:
-            result = cast("SkillFile", results[0])
+        def invalidate(result: SkillFile) -> SkillFile:
             self._invalidate_files()
             return result
 
-        return client.skills._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize
-        )
+        return client.skills.files.upsert_command(self.id, path, content)._map(invalidate)
 
     def delete_file(self, file_id: str) -> None:
         self.delete_file_command(file_id).run()
 
     def delete_file_command(self, file_id: str) -> Command[None]:
-        validate_nonblank(self.id)
-        validate_nonblank(file_id)
         client = self._require_client(
             entity_type="Skill", entity_id=self.id, relation_name="delete_file"
         )
-        args = ("skill", "files", "delete", self.id, file_id)
-        return client.skills._plan(
-            steps=(_Step(args, "run_text"),),
-            finalize=lambda results: self._invalidate_files(),
+        return client.skills.files.delete_command(self.id, file_id)._map(
+            lambda result: self._invalidate_files()
         )
 
 
@@ -97,25 +86,18 @@ class SkillResource(BaseResource):
         self.files = SkillFileResource(transport, config)
 
     def list_command(self) -> Command[tuple[Skill, ...]]:
-        args, decode = self._plan_decode_list(("skill", "list"), Skill)
-
-        def finalize(results: tuple[object, ...]) -> tuple[Skill, ...]:
-            items = cast("tuple[Skill, ...]", results[0])
-            return tuple(s._with_client(self._client) for s in items)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_list_command(("skill", "list"), Skill)._map(
+            lambda items: tuple(skill._with_client(self._client) for skill in items)
+        )
 
     def list(self) -> tuple[Skill, ...]:
         return self.list_command().run()
 
     def get_command(self, skill_id: str) -> Command[Skill]:
         validate_nonblank(skill_id)
-        args, decode = self._plan_decode(("skill", "get", skill_id), Skill)
-
-        def finalize(results: tuple[object, ...]) -> Skill:
-            return cast("Skill", results[0])._with_client(self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(("skill", "get", skill_id), Skill)._map(
+            lambda skill: skill._with_client(self._client)
+        )
 
     def get(self, skill_id: str) -> Skill:
         return self.get_command(skill_id).run()
@@ -133,12 +115,9 @@ class SkillResource(BaseResource):
         args = ["skill", "create", "--name", req.name]
         if req.description is not None:
             args.extend(["--description", req.description])
-        plan_args, decode = self._plan_decode(tuple(args), Skill)
-
-        def finalize(results: tuple[object, ...]) -> Skill:
-            return cast("Skill", results[0])._with_client(self._client)
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), Skill)._map(
+            lambda skill: skill._with_client(self._client)
+        )
 
     @overload
     def create(self, request: SkillCreateRequest, /) -> Skill: ...
@@ -167,12 +146,9 @@ class SkillResource(BaseResource):
             args.extend(["--name", req.name])
         if req.description is not None:
             args.extend(["--description", req.description])
-        plan_args, decode = self._plan_decode(tuple(args), Skill)
-
-        def finalize(results: tuple[object, ...]) -> Skill:
-            return cast("Skill", results[0])._with_client(self._client)
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), Skill)._map(
+            lambda skill: skill._with_client(self._client)
+        )
 
     @overload
     def update(self, skill_id: str, request: SkillUpdateRequest, /) -> Skill: ...
@@ -188,21 +164,15 @@ class SkillResource(BaseResource):
 
     def delete_command(self, skill_id: str) -> Command[None]:
         validate_nonblank(skill_id)
-        return self._plan(
-            steps=(_Step(("skill", "delete", skill_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("skill", "delete", skill_id))
 
     def delete(self, skill_id: str) -> None:
         self.delete_command(skill_id).run()
 
     def import_from_url_command(self, url: str) -> Command[Skill]:
-        args, decode = self._plan_decode(("skill", "import", "--url", url), Skill)
-
-        def finalize(results: tuple[object, ...]) -> Skill:
-            return cast("Skill", results[0])._with_client(self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(("skill", "import", "--url", url), Skill)._map(
+            lambda skill: skill._with_client(self._client)
+        )
 
     def import_from_url(self, url: str) -> Skill:
         return self.import_from_url_command(url).run()

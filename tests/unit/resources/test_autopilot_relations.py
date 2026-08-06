@@ -367,8 +367,7 @@ def test_trigger_mutations_invalidate_relation() -> None:
     ]
     transport.run_text.return_value = TextResult("", "", 0)
     resource = _resource(transport, client)
-    client.autopilots._plan_decode = resource._plan_decode
-    client.autopilots._plan = resource._plan
+    client.autopilots = resource
     relation: LazyCollection[AutopilotTrigger] = LazyCollection(
         lambda: (AutopilotTrigger(id="tr1", type="webhook"),)
     )
@@ -408,56 +407,6 @@ def test_autopilot_run_messages_require_task_before_transport() -> None:
         run.messages.all()
     client.issues.run_messages.assert_not_called()
     client.issues.run_messages_command.assert_not_called()
-
-
-def test_autopilot_resource_commands_are_lazy_and_preserve_argv() -> None:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.side_effect = (
-        _result(b'{"autopilots":[],"total":0}'),
-        _result(msgspec.json.encode({"autopilot": _AUTOPILOT})),
-        _result(msgspec.json.encode(_AUTOPILOT)),
-        _result(msgspec.json.encode(_AUTOPILOT)),
-        _result(b'{"id":"r1","autopilot_id":"a1","source":"manual","status":"done"}'),
-        _result(b'{"runs":[],"total":0}'),
-        _result(b'{"id":"tr1","type":"webhook","config":{}}'),
-        _result(b'{"id":"tr1","type":"webhook","config":{}}'),
-    )
-    transport.run_text.return_value = TextResult("", "", 0)
-    resource = _resource(transport)
-    commands = (
-        (resource.list_command(), "multica autopilot list --output json"),
-        (resource.get_command("a1"), "multica autopilot get a1 --output json"),
-        (
-            resource.create_command(
-                "my-ap", agent="ag1", execution_mode=AutopilotExecutionMode.create_issue
-            ),
-            "multica autopilot create --title my-ap --agent ag1 --mode create_issue --priority none --output json",
-        ),
-        (resource.update_command("a1"), "multica autopilot update a1 --output json"),
-        (resource.trigger_command("a1"), "multica autopilot trigger a1 --output json"),
-        (resource.history_command("a1"), "multica autopilot runs a1 --output json"),
-        (
-            resource.trigger_add_command(
-                "a1", AutopilotTriggerCreate(title="Webhook", kind="webhook")
-            ),
-            "multica autopilot trigger-add a1 --title Webhook --kind webhook --output json",
-        ),
-        (
-            resource.trigger_update_command("a1", "tr1", AutopilotTriggerUpdate(title="Webhook")),
-            "multica autopilot trigger-update a1 tr1 --title Webhook --output json",
-        ),
-        (resource.delete_command("a1"), "multica autopilot delete a1"),
-        (resource.trigger_delete_command("a1", "tr1"), "multica autopilot trigger-delete a1 tr1"),
-    )
-
-    assert transport.run_bytes.call_count == 0
-    assert transport.run_text.call_count == 0
-    for command, expected in commands:
-        assert command.commands == (expected,)
-        command.run()
-    assert transport.run_bytes.call_count == 8
-    assert transport.run_text.call_count == 2
 
 
 def test_autopilot_trigger_command_invalidates_only_after_success() -> None:

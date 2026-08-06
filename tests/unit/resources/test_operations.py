@@ -5,11 +5,13 @@ import hashlib
 import importlib
 import inspect
 import pathlib
+import typing
 from typing import cast
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from multica_py import Command
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
@@ -26,6 +28,18 @@ from tests.cases.operations import (
 from tools.upstream_contract.contract import validate_contract
 
 _RESOURCE_MAP: dict[str, type] = dict(RESOURCE_SPECS)
+
+
+def _call_contracts(method: object) -> tuple[tuple[inspect.Signature, object], ...]:
+    assert inspect.isfunction(method)
+    functions = typing.get_overloads(method) or (method,)
+    return tuple(
+        (
+            inspect.signature(function).replace(return_annotation=inspect.Signature.empty),
+            typing.get_type_hints(function)["return"],
+        )
+        for function in functions
+    )
 
 
 def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
@@ -127,8 +141,19 @@ def test_discovered_public_methods() -> None:
     assert len({c.id for c in OPERATION_CASES}) == len(OPERATION_CASES)
     for case in canonical_cases:
         cls = _RESOURCE_MAP[case.resource_attr]
-        assert hasattr(cls, f"{case.method}_command"), case.sdk_method
+        eager = getattr(cls, case.method)
+        command = getattr(cls, f"{case.method}_command", None)
+        assert command is not None, case.sdk_method
         assert case.expected_commands, case.sdk_method
+        eager_contracts = _call_contracts(eager)
+        command_contracts = _call_contracts(command)
+        assert len(eager_contracts) == len(command_contracts), case.sdk_method
+        for (eager_signature, eager_return), (command_signature, command_return) in zip(
+            eager_contracts, command_contracts, strict=True
+        ):
+            assert command_signature == eager_signature, case.sdk_method
+            assert typing.get_origin(command_return) is Command, case.sdk_method
+            assert typing.get_args(command_return) == (eager_return,), case.sdk_method
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}

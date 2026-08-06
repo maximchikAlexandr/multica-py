@@ -34,10 +34,7 @@ class MaintenanceResource(BaseResource):
         return self.version_command().run()
 
     def update_command(self) -> Command[ManagedProcess]:
-        return self._plan(
-            steps=(_Step(("update",), "spawn"),),
-            finalize=lambda results: cast("ManagedProcess", results[0]),
-        )
+        return self._spawn_command(("update",))
 
     def update(self) -> ManagedProcess:
         return self.update_command().run()

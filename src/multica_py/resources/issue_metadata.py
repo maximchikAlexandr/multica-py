@@ -65,12 +65,8 @@ class IssueMetadataResource(BaseResource):
         return self.query_command(request).run()
 
     def get_command(self, issue_id: str, key: str) -> Command[MetadataEntry]:
-        args, decode = self._plan_decode(
+        return self._decoded_command(
             ("issue", "metadata", "get", issue_id, "--key", key), MetadataEntry
-        )
-        return self._plan(
-            steps=(_Step(args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("MetadataEntry", results[0]),
         )
 
     def get(self, issue_id: str, key: str) -> MetadataEntry:
@@ -96,20 +92,13 @@ class IssueMetadataResource(BaseResource):
         inferred = request.value_type or _infer_metadata_value_type(request.value)
         if inferred is not None:
             args.extend(["--type", inferred.value])
-        plan_args, decode = self._plan_decode(tuple(args), MetadataEntry)
-        return self._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("MetadataEntry", results[0]),
-        )
+        return self._decoded_command(tuple(args), MetadataEntry)
 
     def set_typed(self, request: MetadataSetRequest) -> MetadataEntry:
         return self.set_typed_command(request).run()
 
     def delete_command(self, issue_id: str, key: str) -> Command[None]:
-        return self._plan(
-            steps=(_Step(("issue", "metadata", "delete", issue_id, "--key", key), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("issue", "metadata", "delete", issue_id, "--key", key))
 
     def delete(self, issue_id: str, key: str) -> None:
         self.delete_command(issue_id, key).run()

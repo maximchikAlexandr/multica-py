@@ -16,22 +16,6 @@ class CommentCursor(msgspec.Struct, frozen=True, kw_only=True, forbid_unknown_fi
     before_id: str
 
 
-class CommentData(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    body: str
-    thread_id: str | None = None
-    author_id: str | None = None
-    created_at: datetime.datetime | None = None
-    updated_at: datetime.datetime | None = None
-
-
-class CommentThreadData(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    comments: tuple[CommentData, ...] = ()
-    resolved: bool = False
-    updated_at: datetime.datetime | None = None
-
-
 class Page(msgspec.Struct, Generic[T], frozen=True, kw_only=True):
     items: tuple[T, ...]
     total_count: int | None = None
@@ -96,12 +80,6 @@ class RunMessage(msgspec.Struct, frozen=True, kw_only=True):
     role: str
     content: str
     created_at: datetime.datetime | None = None
-
-
-class TaskRunData(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    status: str
-    agent_id: str | None = None
 
 
 class IssueUsage(msgspec.Struct, frozen=True, kw_only=True):

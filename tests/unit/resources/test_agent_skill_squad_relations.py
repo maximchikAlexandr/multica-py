@@ -171,10 +171,12 @@ def _make_client(
     client.skills.files.list_command = lambda skill_id: empty_command(
         lambda: client.skills.files.list(skill_id)
     )
-    client.skills._plan = command_resource._plan
-    client.skills._plan_decode = command_resource._plan_decode
-    client.agents._plan = command_resource._plan
-    client.squads._plan = command_resource._plan
+    client.skills.files.upsert_command = lambda skill_id, path, content: empty_command(
+        lambda: SkillFile(id="f1", path=path, content=content)
+    )
+    client.skills.files.delete_command = lambda skill_id, file_id: empty_command(
+        lambda: client.skills.files.delete(skill_id, file_id)
+    )
     client.squads.members.add_command = lambda squad_id, member_id: effect_command(
         lambda: client.squads.members.add(squad_id, member_id)
     )
@@ -458,68 +460,6 @@ def test_skill_files_delete_invalidates_cache() -> None:
     assert state["calls"] == 2
 
 
-def test_skill_resource_command_methods_are_lazy_and_preserve_argv() -> None:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.side_effect = (
-        RawCommandResult(
-            ("skill", "list", "--output", "json"), 0, b"[]", b"", datetime.timedelta()
-        ),
-        RawCommandResult(
-            ("skill", "get", "sk_1", "--output", "json"),
-            0,
-            b'{"id":"sk_1","name":"Skill"}',
-            b"",
-            datetime.timedelta(),
-        ),
-        RawCommandResult(
-            ("skill", "create", "--name", "New", "--output", "json"),
-            0,
-            b'{"id":"sk_1","name":"Skill"}',
-            b"",
-            datetime.timedelta(),
-        ),
-        RawCommandResult(
-            ("skill", "update", "sk_1", "--name", "Renamed", "--output", "json"),
-            0,
-            b'{"id":"sk_1","name":"Skill"}',
-            b"",
-            datetime.timedelta(),
-        ),
-        RawCommandResult(
-            ("skill", "import", "--url", "https://x.com", "--output", "json"),
-            0,
-            b'{"id":"sk_1","name":"Skill"}',
-            b"",
-            datetime.timedelta(),
-        ),
-    )
-    transport.run_text.return_value = TextResult("", "", 0)
-    resource = SkillResource(transport, ClientConfig())
-    commands = (
-        (resource.list_command(), "multica skill list --output json"),
-        (resource.get_command("sk_1"), "multica skill get sk_1 --output json"),
-        (resource.create_command(name="New"), "multica skill create --name New --output json"),
-        (
-            resource.update_command("sk_1", name="Renamed"),
-            "multica skill update sk_1 --name Renamed --output json",
-        ),
-        (
-            resource.import_from_url_command("https://x.com"),
-            "multica skill import --url https://x.com --output json",
-        ),
-        (resource.delete_command("sk_1"), "multica skill delete sk_1"),
-    )
-
-    assert transport.run_bytes.call_count == 0
-    assert transport.run_text.call_count == 0
-    for command, expected in commands:
-        assert command.commands == (expected,)
-        command.run()
-    assert transport.run_bytes.call_count == 5
-    assert transport.run_text.call_count == 1
-
-
 def test_skill_file_commands_invalidate_only_after_success() -> None:
     client = MulticaClient(ClientConfig())
     transport = MagicMock(spec=CliTransport)
@@ -543,7 +483,7 @@ def test_skill_file_commands_invalidate_only_after_success() -> None:
         datetime.timedelta(),
     )
     transport.run_text.return_value = TextResult("", "", 0)
-    client.skills._transport = transport
+    client.skills.files._transport = transport
     entity = _skill(client=client)
     entity._set_runtime(
         "_files", LazyCollection(lambda: (SkillFile(id="f_0", path="X.md", content="old"),))
@@ -1106,38 +1046,6 @@ def test_agent_skills_set_full_argv_uses_plural() -> None:
     transport.run_bytes.assert_not_called()
 
 
-def test_nested_resource_command_forms_are_lazy_and_preserve_argv() -> None:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-
-    agent_skills = AgentSkillResource(transport, ClientConfig())
-    skill_files = SkillFileResource(transport, ClientConfig())
-    squad_members = SquadMemberResource(transport, ClientConfig())
-    commands = (
-        agent_skills.list_command("ag_1"),
-        agent_skills.set_command("ag_1", ("sk_1", "sk_2")),
-        skill_files.list_command("sk_1"),
-        skill_files.upsert_command("sk_1", "README.md", "content"),
-        skill_files.delete_command("sk_1", "f_1"),
-        squad_members.list_command("sq_1"),
-        squad_members.add_command("sq_1", "u_1"),
-        squad_members.remove_command("sq_1", "u_1"),
-    )
-
-    assert tuple(command.commands[0] for command in commands) == (
-        "multica agent skills list ag_1 --output json",
-        "multica agent skills set ag_1 --skill-id sk_1 --skill-id sk_2",
-        "multica skill files list sk_1 --output json",
-        "multica skill files upsert sk_1 --path README.md --content content --output json",
-        "multica skill files delete sk_1 f_1",
-        "multica squad member list sq_1 --output json",
-        "multica squad member add sq_1 u_1",
-        "multica squad member remove sq_1 u_1",
-    )
-    transport.run_bytes.assert_not_called()
-    transport.run_text.assert_not_called()
-
-
 @pytest.mark.parametrize(
     "relation_name",
     ["skills", "tasks"],
@@ -1156,91 +1064,12 @@ def test_empty_results_return_empty_tuple() -> None:
     assert entity.tasks.all() == ()
 
 
-def test_agent_resource_command_methods_are_lazy_and_preserve_argv() -> None:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.side_effect = (
-        RawCommandResult(
-            ("agent", "list", "--output", "json"), 0, b"[]", b"", datetime.timedelta()
-        ),
-        RawCommandResult(
-            ("agent", "get", "ag_1", "--output", "json"),
-            0,
-            b'{"id":"ag_1","name":"Agent"}',
-            b"",
-            datetime.timedelta(),
-        ),
-        RawCommandResult(
-            ("agent", "create", "--name", "New", "--output", "json"),
-            0,
-            b'{"id":"ag_1","name":"Agent"}',
-            b"",
-            datetime.timedelta(),
-        ),
-        RawCommandResult(
-            ("agent", "update", "ag_1", "--name", "Renamed", "--output", "json"),
-            0,
-            b'{"id":"ag_1","name":"Agent"}',
-            b"",
-            datetime.timedelta(),
-        ),
-        RawCommandResult(
-            ("agent", "tasks", "ag_1", "--output", "json"), 0, b"[]", b"", datetime.timedelta()
-        ),
-    )
-    resource = AgentResource(transport, ClientConfig())
-    commands = (
-        (resource.list_command(), "multica agent list --output json"),
-        (resource.get_command("ag_1"), "multica agent get ag_1 --output json"),
-        (resource.create_command(name="New"), "multica agent create --name New --output json"),
-        (
-            resource.update_command("ag_1", name="Renamed"),
-            "multica agent update ag_1 --name Renamed --output json",
-        ),
-        (resource.tasks_command("ag_1"), "multica agent tasks ag_1 --output json"),
-    )
-
-    assert transport.run_bytes.call_count == 0
-    for command, expected in commands:
-        assert command.commands == (expected,)
-        command.run()
-    assert transport.run_bytes.call_count == len(commands)
-
-
-def test_agent_text_commands_are_lazy_and_preserve_modes(
-    tmp_path: pathlib.Path,
-) -> None:
-    avatar = tmp_path / "avatar.png"
-    avatar.write_bytes(b"image")
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_text.return_value = TextResult("", "", 0)
-    resource = AgentResource(transport, ClientConfig())
-
-    commands = (
-        (resource.archive_command("ag_1"), ("agent", "archive", "ag_1")),
-        (resource.restore_command("ag_1"), ("agent", "restore", "ag_1")),
-        (
-            resource.avatar_command("ag_1", avatar),
-            ("agent", "avatar", "ag_1", "--file", str(avatar.resolve())),
-        ),
-    )
-
-    assert transport.run_text.call_count == 0
-    for command, expected_argv in commands:
-        assert command.commands == (f"multica {shlex.join(expected_argv)}",)
-        command.run()
-    assert transport.run_text.call_args_list == [
-        ((expected_argv,), {}) for _, expected_argv in commands
-    ]
-
-
 def test_agent_set_skills_command_invalidates_only_after_success() -> None:
     client = MulticaClient(ClientConfig())
     transport = MagicMock(spec=CliTransport)
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     transport.run_text.return_value = TextResult("", "", 0)
-    client.agents._transport = transport
+    client.agents.skills._transport = transport
     entity = _agent(client=client)
     entity._set_runtime(
         "_skills", LazyCollection(lambda: (AgentSkill(id="sk_1", name="Skill", enabled=True),))

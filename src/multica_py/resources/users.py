@@ -4,7 +4,7 @@ from typing import cast, overload
 
 import msgspec
 
-from multica_py._internal.commands import Command, _Step
+from multica_py._internal.commands import Command
 from multica_py.models.system import UserProfile, UserProfileUpdate
 from multica_py.resources._base import BaseResource, _resolve_request
 from multica_py.sentinels import Unset
@@ -12,11 +12,7 @@ from multica_py.sentinels import Unset
 
 class UserResource(BaseResource):
     def profile_get_command(self) -> Command[UserProfile]:
-        args, decode = self._plan_decode(("user", "profile", "get"), UserProfile)
-        return self._plan(
-            steps=(_Step(args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("UserProfile", results[0]),
-        )
+        return self._decoded_command(("user", "profile", "get"), UserProfile)
 
     def profile_get(self) -> UserProfile:
         return self.profile_get_command().run()
@@ -35,11 +31,7 @@ class UserResource(BaseResource):
         if req.description is Unset:
             raise ValueError("description must be provided")
         args = ("user", "profile", "update", "--description", req.description)
-        plan_args, decode = self._plan_decode(args, UserProfile)
-        return self._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("UserProfile", results[0]),
-        )
+        return self._decoded_command(args, UserProfile)
 
     @overload
     def profile_update(self, request: UserProfileUpdate, /) -> UserProfile: ...

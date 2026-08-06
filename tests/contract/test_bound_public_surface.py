@@ -204,47 +204,91 @@ REMOVED_PUBLIC_NAMES = (
     *(
         RemovedPublicNameCase("multica_py", name)
         for name in (
+            "AgentData",
             "AgentEntity",
+            "AutopilotData",
             "AutopilotEntity",
+            "AutopilotRunData",
             "AutopilotRunEntity",
+            "CommentData",
+            "CommentThreadData",
+            "IssueData",
             "IssueEntity",
+            "LabelData",
             "LabelEntity",
+            "ProjectData",
             "ProjectEntity",
+            "ProjectResourceData",
+            "ResourceEntity",
+            "SkillData",
             "SkillEntity",
+            "SquadData",
             "SquadEntity",
+            "TaskRunData",
             "TaskRunEntity",
+            "WorkspaceData",
             "WorkspaceEntity",
+            "WorkspaceMemberData",
             "WorkspaceMemberEntity",
         )
     ),
     *(
         RemovedPublicNameCase("multica_py.models", name)
         for name in (
+            "AgentData",
             "AgentEntity",
+            "AutopilotData",
             "AutopilotEntity",
+            "AutopilotRunData",
             "AutopilotRunEntity",
+            "CommentData",
             "CommentEntity",
+            "CommentThreadData",
             "CommentThreadEntity",
+            "IssueData",
             "IssueEntity",
+            "LabelData",
             "LabelEntity",
+            "ProjectData",
             "ProjectEntity",
+            "ProjectResourceData",
+            "ResourceEntity",
+            "SkillData",
             "SkillEntity",
+            "SquadData",
             "SquadEntity",
+            "TaskRunData",
             "TaskRunEntity",
+            "WorkspaceData",
             "WorkspaceEntity",
+            "WorkspaceMemberData",
             "WorkspaceMemberEntity",
         )
     ),
+    RemovedPublicNameCase("multica_py.models.agents", "AgentData"),
     RemovedPublicNameCase("multica_py.models.agents", "Agent"),
+    RemovedPublicNameCase("multica_py.models.autopilots", "AutopilotData"),
+    RemovedPublicNameCase("multica_py.models.autopilots", "AutopilotRunData"),
     RemovedPublicNameCase("multica_py.models.autopilots", "Autopilot"),
     RemovedPublicNameCase("multica_py.models.autopilots", "AutopilotRun"),
+    RemovedPublicNameCase("multica_py.models.issue_activity", "CommentData"),
+    RemovedPublicNameCase("multica_py.models.issue_activity", "CommentThreadData"),
+    RemovedPublicNameCase("multica_py.models.issue_activity", "TaskRunData"),
     RemovedPublicNameCase("multica_py.models.issue_activity", "Comment"),
     RemovedPublicNameCase("multica_py.models.issue_activity", "CommentThread"),
     RemovedPublicNameCase("multica_py.models.issue_activity", "TaskRun"),
+    RemovedPublicNameCase("multica_py.models.issues", "IssueData"),
     RemovedPublicNameCase("multica_py.models.issues", "Issue"),
+    RemovedPublicNameCase("multica_py.models.labels", "LabelData"),
+    RemovedPublicNameCase("multica_py.models.project_resources", "ProjectResourceData"),
+    RemovedPublicNameCase("multica_py.models.projects", "ProjectData"),
     RemovedPublicNameCase("multica_py.models.projects", "Project"),
+    RemovedPublicNameCase("multica_py.models.skills", "SkillData"),
     RemovedPublicNameCase("multica_py.models.skills", "Skill"),
+    RemovedPublicNameCase("multica_py.models.system", "SquadData"),
     RemovedPublicNameCase("multica_py.models.system", "Squad"),
+    RemovedPublicNameCase("multica_py.models.system", "WorkspaceMemberData"),
+    RemovedPublicNameCase("multica_py.models.workspaces", "WorkspaceData"),
     RemovedPublicNameCase("multica_py.models.workspaces", "Workspace"),
     RemovedPublicNameCase("multica_py.resources.agents", "AgentEntity"),
     RemovedPublicNameCase("multica_py.resources.autopilots", "AutopilotEntity"),
@@ -255,53 +299,6 @@ REMOVED_PUBLIC_NAMES = (
     RemovedPublicNameCase("multica_py.resources.workspaces", "WorkspaceEntity"),
     RemovedPublicNameCase("multica_py.resources.workspaces", "WorkspaceMemberEntity"),
 )
-
-
-@dataclass(frozen=True)
-class AdditivePublicNameCase:
-    module_name: str
-    name: str
-
-
-_ADDITIVE_NAMES = (
-    "AgentData",
-    "AutopilotData",
-    "AutopilotRunData",
-    "CommentData",
-    "CommentThreadData",
-    "IssueData",
-    "LabelData",
-    "ProjectData",
-    "ProjectResourceData",
-    "ResourceEntity",
-    "SkillData",
-    "SquadData",
-    "TaskRunData",
-    "WorkspaceData",
-    "WorkspaceMemberData",
-)
-
-ADDITIVE_PUBLIC_NAMES = tuple(
-    AdditivePublicNameCase(module_name, name)
-    for module_name in ("multica_py", "multica_py.models")
-    for name in _ADDITIVE_NAMES
-)
-
-
-def _additive_public_name_id(case: AdditivePublicNameCase) -> str:
-    return f"{case.module_name}.{case.name}"
-
-
-@pytest.mark.parametrize(
-    "case",
-    ADDITIVE_PUBLIC_NAMES,
-    ids=_additive_public_name_id,
-)
-def test_additive_public_names_are_preserved(case: AdditivePublicNameCase) -> None:
-    module = importlib.import_module(case.module_name)
-    exports = cast("tuple[str, ...] | list[str]", getattr(module, "__all__", ()))
-    assert case.name in exports
-    assert hasattr(module, case.name)
 
 
 REMOVED_PUBLIC_NAME_IDS = tuple(f"{case.module_name}.{case.name}" for case in REMOVED_PUBLIC_NAMES)

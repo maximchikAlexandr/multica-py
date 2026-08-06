@@ -16,7 +16,7 @@ from multica_py._generated.approved_sdk import (
     AUTOPILOT_TRIGGER_UPDATE_BINDING,
     validate_nonblank,
 )
-from multica_py._internal.commands import Command, _replace_plan, _Step
+from multica_py._internal.commands import Command, _replace_plan
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _autopilot_from_wire,
@@ -113,16 +113,14 @@ def _bound_relation_command(
     relation_name: str,
 ) -> Command[tuple[object, ...]]:
     command = client.autopilots.get_command(autopilot_id)
-    plan = command._plan
 
-    def finalize(results: tuple[object, ...]) -> tuple[object, ...]:
-        autopilot = plan.finalize(results)
+    def finalize(autopilot: Autopilot) -> tuple[object, ...]:
         relation = cast("LazyCollection[object]", getattr(autopilot, relation_name))
         if not relation.loaded:
             raise RelationPaginationError(f"Autopilot.{relation_name}", "missing complete get seed")
         return tuple(relation.all())
 
-    return Command(_replace_plan(plan, finalize=finalize))
+    return command._map(finalize)
 
 
 def _runs_page_command(
@@ -517,30 +515,15 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
         return self.trigger_add_command(request).run()
 
     def trigger_add_command(self, request: AutopilotTriggerCreate) -> Command[AutopilotTrigger]:
-        validate_nonblank(self.id)
-        validate_nonblank(request.title)
         client = self._require_client(
             entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
         )
-        args = (
-            "autopilot",
-            "trigger-add",
-            self.id,
-            "--title",
-            request.title,
-            "--kind",
-            request.kind,
-        )
-        plan_args, decode = client.autopilots._plan_decode(args, _AutopilotTriggerWire)
 
-        def finalize(results: tuple[object, ...]) -> AutopilotTrigger:
-            result = trigger_from_wire(cast("_AutopilotTriggerWire", results[0]))
+        def invalidate(result: AutopilotTrigger) -> AutopilotTrigger:
             self.triggers.invalidate()
             return result
 
-        return client.autopilots._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize
-        )
+        return client.autopilots.trigger_add_command(self.id, request)._map(invalidate)
 
     def trigger_update(self, trigger_id: str, request: AutopilotTriggerUpdate) -> AutopilotTrigger:
         return self.trigger_update_command(trigger_id, request).run()
@@ -548,40 +531,27 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
     def trigger_update_command(
         self, trigger_id: str, request: AutopilotTriggerUpdate
     ) -> Command[AutopilotTrigger]:
-        validate_nonblank(self.id)
-        validate_nonblank(trigger_id)
         client = self._require_client(
             entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
         )
-        args = ["autopilot", "trigger-update", self.id, trigger_id]
-        if request.title is not msgspec.UNSET:
-            args.extend(["--title", request.title])
-        if request.kind is not msgspec.UNSET:
-            args.extend(["--kind", request.kind])
-        plan_args, decode = client.autopilots._plan_decode(tuple(args), _AutopilotTriggerWire)
 
-        def finalize(results: tuple[object, ...]) -> AutopilotTrigger:
-            result = trigger_from_wire(cast("_AutopilotTriggerWire", results[0]))
+        def invalidate(result: AutopilotTrigger) -> AutopilotTrigger:
             self.triggers.invalidate()
             return result
 
-        return client.autopilots._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize
+        return client.autopilots.trigger_update_command(self.id, trigger_id, request)._map(
+            invalidate
         )
 
     def trigger_delete(self, trigger_id: str) -> None:
         self.trigger_delete_command(trigger_id).run()
 
     def trigger_delete_command(self, trigger_id: str) -> Command[None]:
-        validate_nonblank(self.id)
-        validate_nonblank(trigger_id)
         client = self._require_client(
             entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
         )
-        args = ("autopilot", "trigger-delete", self.id, trigger_id)
-        return client.autopilots._plan(
-            steps=(_Step(args, "run_text"),),
-            finalize=lambda results: self.triggers.invalidate(),
+        return client.autopilots.trigger_delete_command(self.id, trigger_id)._map(
+            lambda result: self.triggers.invalidate()
         )
 
 
@@ -590,10 +560,7 @@ class AutopilotResource(BaseResource):
         super().__init__(transport, config)
 
     def list_command(self) -> Command[AutopilotListPage[Autopilot]]:
-        args, decode = self._plan_decode(("autopilot", "list"), _AutopilotListWire)
-
-        def finalize(results: tuple[object, ...]) -> AutopilotListPage[Autopilot]:
-            page = cast("_AutopilotListWire", results[0])
+        def finalize(page: _AutopilotListWire) -> AutopilotListPage[Autopilot]:
             return AutopilotListPage(
                 autopilots=tuple(
                     self._bind_autopilot(_autopilot_from_wire(item)) for item in page.autopilots
@@ -601,24 +568,25 @@ class AutopilotResource(BaseResource):
                 total=page.total,
             )
 
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(("autopilot", "list"), _AutopilotListWire)._map(finalize)
 
     def list(self) -> AutopilotListPage[Autopilot]:
         return self.list_command().run()
 
     def get_command(self, autopilot_id: str) -> Command[Autopilot]:
         validate_nonblank(autopilot_id)
-        args, decode = self._plan_decode(("autopilot", "get", autopilot_id), _AutopilotGetWire)
 
-        def finalize(results: tuple[object, ...]) -> Autopilot:
-            result = _autopilot_get_from_wire(cast("_AutopilotGetWire", results[0]))
+        def finalize(wire: _AutopilotGetWire) -> Autopilot:
+            result = _autopilot_get_from_wire(wire)
             return self._bind_autopilot(
                 result.data,
                 triggers=result.triggers,
                 subscribers=result.subscribers,
             )
 
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(("autopilot", "get", autopilot_id), _AutopilotGetWire)._map(
+            finalize
+        )
 
     def get(self, autopilot_id: str) -> Autopilot:
         return self.get_command(autopilot_id).run()
@@ -657,12 +625,7 @@ class AutopilotResource(BaseResource):
             raise ValueError("subscribers must be nonblank")
         for ref in subscribers:
             args.extend(["--subscriber", ref])
-        plan_args, decode = self._plan_decode(tuple(args), _AutopilotWire)
-
-        def finalize(results: tuple[object, ...]) -> Autopilot:
-            return self._bind_autopilot(_autopilot_from_wire(cast("_AutopilotWire", results[0])))
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), _AutopilotWire)._map(self._bind_autopilot_wire)
 
     def create(
         self,
@@ -728,12 +691,7 @@ class AutopilotResource(BaseResource):
         elif subscribers is not None:
             for ref in subscribers:
                 args.extend(["--subscriber", ref])
-        plan_args, decode = self._plan_decode(tuple(args), _AutopilotWire)
-
-        def finalize(results: tuple[object, ...]) -> Autopilot:
-            return self._bind_autopilot(_autopilot_from_wire(cast("_AutopilotWire", results[0])))
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), _AutopilotWire)._map(self._bind_autopilot_wire)
 
     def update(
         self,
@@ -765,23 +723,16 @@ class AutopilotResource(BaseResource):
         ).run()
 
     def delete_command(self, autopilot_id: str) -> Command[None]:
-        return self._plan(
-            steps=(_Step(("autopilot", "delete", autopilot_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("autopilot", "delete", autopilot_id))
 
     def delete(self, autopilot_id: str) -> None:
         self.delete_command(autopilot_id).run()
 
     def trigger_command(self, autopilot_id: str) -> Command[AutopilotRun]:
         validate_nonblank(autopilot_id)
-        args, decode = self._plan_decode(("autopilot", "trigger", autopilot_id), _AutopilotRunWire)
-
-        def finalize(results: tuple[object, ...]) -> AutopilotRun:
-            run = _autopilot_run_from_wire(cast("_AutopilotRunWire", results[0]))
-            return run._with_client(self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(
+            ("autopilot", "trigger", autopilot_id), _AutopilotRunWire
+        )._map(self._bind_autopilot_run)
 
     def trigger(self, autopilot_id: str) -> AutopilotRun:
         return self.trigger_command(autopilot_id).run()
@@ -802,12 +753,9 @@ class AutopilotResource(BaseResource):
             args.extend(["--limit", str(limit)])
         if offset is not None:
             args.extend(["--offset", str(offset)])
-        plan_args, decode = self._plan_decode(tuple(args), _AutopilotRunListPageWire)
 
-        def finalize(results: tuple[object, ...]) -> AutopilotRunListPage[AutopilotRun]:
-            page = _autopilot_run_list_page_from_wire(
-                cast("_AutopilotRunListPageWire", results[0]), limit=limit, offset=offset
-            )
+        def finalize(wire: _AutopilotRunListPageWire) -> AutopilotRunListPage[AutopilotRun]:
+            page = _autopilot_run_list_page_from_wire(wire, limit=limit, offset=offset)
             return AutopilotRunListPage(
                 runs=tuple(run._with_client(self._client) for run in page.runs),
                 total=page.total,
@@ -816,7 +764,7 @@ class AutopilotResource(BaseResource):
                 has_more=page.has_more,
             )
 
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), _AutopilotRunListPageWire)._map(finalize)
 
     def history(
         self,
@@ -842,12 +790,7 @@ class AutopilotResource(BaseResource):
             "--kind",
             request.kind,
         )
-        plan_args, decode = self._plan_decode(args, _AutopilotTriggerWire)
-
-        def finalize(results: tuple[object, ...]) -> AutopilotTrigger:
-            return trigger_from_wire(cast("_AutopilotTriggerWire", results[0]))
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(args, _AutopilotTriggerWire)._map(trigger_from_wire)
 
     def trigger_add(self, autopilot_id: str, request: AutopilotTriggerCreate) -> AutopilotTrigger:
         return self.trigger_add_command(autopilot_id, request).run()
@@ -866,12 +809,7 @@ class AutopilotResource(BaseResource):
             args.extend(["--title", request.title])
         if request.kind is not msgspec.UNSET:
             args.extend(["--kind", request.kind])
-        plan_args, decode = self._plan_decode(tuple(args), _AutopilotTriggerWire)
-
-        def finalize(results: tuple[object, ...]) -> AutopilotTrigger:
-            return trigger_from_wire(cast("_AutopilotTriggerWire", results[0]))
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), _AutopilotTriggerWire)._map(trigger_from_wire)
 
     def trigger_update(
         self,
@@ -885,10 +823,7 @@ class AutopilotResource(BaseResource):
         _ = cast("object", AUTOPILOT_TRIGGER_DELETE_BINDING)
         validate_nonblank(autopilot_id)
         validate_nonblank(trigger_id)
-        return self._plan(
-            steps=(_Step(("autopilot", "trigger-delete", autopilot_id, trigger_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("autopilot", "trigger-delete", autopilot_id, trigger_id))
 
     def trigger_delete(self, autopilot_id: str, trigger_id: str) -> None:
         self.trigger_delete_command(autopilot_id, trigger_id).run()
@@ -906,3 +841,9 @@ class AutopilotResource(BaseResource):
         if subscribers is not msgspec.UNSET:
             autopilot = msgspec.structs.replace(autopilot, subscribers=subscribers)
         return autopilot
+
+    def _bind_autopilot_wire(self, wire: _AutopilotWire) -> Autopilot:
+        return self._bind_autopilot(_autopilot_from_wire(wire))
+
+    def _bind_autopilot_run(self, wire: _AutopilotRunWire) -> AutopilotRun:
+        return _autopilot_run_from_wire(wire)._with_client(self._client)

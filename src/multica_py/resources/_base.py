@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, cast
 
 import msgspec
 
 from multica_py._internal.commands import Command, _CommandPlan, _Step, _TempProvider
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.process import ManagedProcess
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
@@ -83,6 +85,58 @@ class BaseResource:
             return tuple(items)
 
         return (*args, "--output", "json"), decode
+
+    def _decoded_command(self, args: tuple[str, ...], model_type: type[S]) -> Command[S]:
+        plan_args, decode = self._plan_decode(args, model_type)
+        return self._plan(
+            steps=(_Step(plan_args, "run_bytes", decode=decode),),
+            finalize=lambda results: cast("S", results[0]),
+        )
+
+    def _decoded_list_command(
+        self, args: tuple[str, ...], item_type: type[S]
+    ) -> Command[tuple[S, ...]]:
+        plan_args, decode = self._plan_decode_list(args, item_type)
+        return self._plan(
+            steps=(_Step(plan_args, "run_bytes", decode=decode),),
+            finalize=lambda results: cast("tuple[S, ...]", results[0]),
+        )
+
+    def _text_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        stdin: bytes | None = None,
+        timeout: datetime.timedelta | None = None,
+    ) -> Command[str]:
+        return self._plan(
+            steps=(_Step(args, "run_text", stdin=stdin, timeout=timeout),),
+            finalize=lambda results: cast("TextResult", results[0]).text,
+        )
+
+    def _none_command(self, args: tuple[str, ...]) -> Command[None]:
+        return self._plan(
+            steps=(_Step(args, "run_text"),),
+            finalize=lambda results: None,
+        )
+
+    def _raw_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        stdin: bytes | None = None,
+        timeout: datetime.timedelta | None = None,
+    ) -> Command[RawCommandResult]:
+        return self._plan(
+            steps=(_Step(args, "run_bytes", stdin=stdin, timeout=timeout),),
+            finalize=lambda results: cast("RawCommandResult", results[0]),
+        )
+
+    def _spawn_command(self, args: tuple[str, ...]) -> Command[ManagedProcess]:
+        return self._plan(
+            steps=(_Step(args, "spawn"),),
+            finalize=lambda results: cast("ManagedProcess", results[0]),
+        )
 
     def _run_json_decode(
         self,

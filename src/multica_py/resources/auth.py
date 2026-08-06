@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import cast, overload
+from typing import overload
 
-from multica_py._internal.commands import Command, _Step
-from multica_py._internal.specs import TextResult
+from multica_py._internal.commands import Command
 from multica_py.models.system import AuthenticationStatus
 from multica_py.process import ManagedProcess
 from multica_py.resources._base import BaseResource
@@ -11,11 +10,7 @@ from multica_py.resources._base import BaseResource
 
 class AuthResource(BaseResource):
     def status_command(self) -> Command[AuthenticationStatus]:
-        args, decode = self._plan_decode(("auth", "status"), AuthenticationStatus)
-        return self._plan(
-            steps=(_Step(args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("AuthenticationStatus", results[0]),
-        )
+        return self._decoded_command(("auth", "status"), AuthenticationStatus)
 
     def status(self) -> AuthenticationStatus:
         return self.status_command().run()
@@ -28,14 +23,8 @@ class AuthResource(BaseResource):
 
     def login_command(self, token: str | None = None) -> Command[str] | Command[ManagedProcess]:
         if token is not None:
-            return self._plan(
-                steps=(_Step(("auth", "login", "--token", token), "run_text"),),
-                finalize=lambda results: cast("TextResult", results[0]).text,
-            )
-        return self._plan(
-            steps=(_Step(("auth", "login"), "spawn"),),
-            finalize=lambda results: cast("ManagedProcess", results[0]),
-        )
+            return self._text_command(("auth", "login", "--token", token))
+        return self._spawn_command(("auth", "login"))
 
     @overload
     def login(self, token: str) -> str: ...
@@ -47,11 +36,7 @@ class AuthResource(BaseResource):
         return self.login_command(token).run()
 
     def logout_command(self) -> Command[AuthenticationStatus]:
-        args, decode = self._plan_decode(("auth", "logout"), AuthenticationStatus)
-        return self._plan(
-            steps=(_Step(args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("AuthenticationStatus", results[0]),
-        )
+        return self._decoded_command(("auth", "logout"), AuthenticationStatus)
 
     def logout(self) -> AuthenticationStatus:
         return self.logout_command().run()

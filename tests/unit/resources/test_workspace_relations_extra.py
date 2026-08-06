@@ -33,6 +33,56 @@ from tests.unit.resources.workspace_cases import (
     workspace_relation_method,
 )
 
+
+@dataclass(frozen=True)
+class MissingRelationCommandLoaderCase:
+    id: str
+    invoke: Callable[[], object]
+
+
+def _empty_offset_page(*, limit: int | None, offset: int) -> OffsetPage[str]:
+    return OffsetPage((), 0, limit or 50, offset, False)
+
+
+def _empty_cursor_page(*, cursor: CommentCursor | None) -> CursorPage[str]:
+    return CursorPage(())
+
+
+MISSING_RELATION_COMMAND_LOADER_CASES = (
+    MissingRelationCommandLoaderCase(
+        "collection-all",
+        lambda: LazyCollection[str](lambda: ()).all_command(),
+    ),
+    MissingRelationCommandLoaderCase(
+        "collection-refresh",
+        lambda: LazyCollection[str](lambda: ()).refresh_command(),
+    ),
+    MissingRelationCommandLoaderCase(
+        "offset-page",
+        lambda: OffsetLazyCollection[str](_empty_offset_page).page_command(),
+    ),
+    MissingRelationCommandLoaderCase(
+        "offset-all",
+        lambda: OffsetLazyCollection[str](_empty_offset_page).all_command(),
+    ),
+    MissingRelationCommandLoaderCase(
+        "cursor-page",
+        lambda: CursorLazyCollection[str](_empty_cursor_page).page_command(),
+    ),
+    MissingRelationCommandLoaderCase(
+        "cursor-all",
+        lambda: CursorLazyCollection[str](_empty_cursor_page).all_command(),
+    ),
+    MissingRelationCommandLoaderCase(
+        "mapping-all",
+        lambda: LazyMapping[str, str](dict).all_command(),
+    ),
+    MissingRelationCommandLoaderCase(
+        "mapping-refresh",
+        lambda: LazyMapping[str, str](dict).refresh_command(),
+    ),
+)
+
 # ============================================================================
 # 3.4 - distinct wrappers: lazy object memoized per (entity, relation_name)
 # ============================================================================
@@ -45,6 +95,16 @@ def test_workspace_repeated_property_access_returns_memoized_lazy() -> None:
     r2 = entity.members
     assert r1 is r2
     assert isinstance(r1, LazyCollection)
+
+
+@pytest.mark.parametrize(
+    "case",
+    MISSING_RELATION_COMMAND_LOADER_CASES,
+    ids=lambda case: case.id,
+)
+def test_relation_command_requires_loader(case: MissingRelationCommandLoaderCase) -> None:
+    with pytest.raises(RuntimeError, match="command loader"):
+        case.invoke()
 
 
 def test_generic_relation_command_plans_preview_pages_and_mapping_cache() -> None:
@@ -98,6 +158,16 @@ def test_generic_relation_command_plans_preview_pages_and_mapping_cache() -> Non
         "--output",
         "json",
     )
+
+    def direct_offset_command() -> Command[tuple[str, ...]]:
+        return resource._plan(steps=(), finalize=lambda _results: ("direct",))
+
+    direct_offset_relation: OffsetLazyCollection[str] = OffsetLazyCollection(
+        _empty_offset_page,
+        command_loader=direct_offset_command,
+    )
+    assert direct_offset_relation.all_command().run() == ("direct",)
+    assert direct_offset_relation.refresh_command().run() == ("direct",)
 
     cursor_pages = iter(
         (

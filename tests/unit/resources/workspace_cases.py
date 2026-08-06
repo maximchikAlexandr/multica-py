@@ -51,19 +51,6 @@ def make_workspace_clients(
     def direct_list_command(loader: Callable[[], object]) -> Callable[[], Command[object]]:
         return lambda: empty_command(loader)
 
-    def generic_list_plan(loader: Callable[[], object]) -> Callable[..., Command[object]]:
-        def plan(
-            *,
-            steps: tuple[_Step, ...],
-            finalize: Callable[[tuple[object, ...]], object],
-        ) -> Command[object]:
-            return command_resource._plan(
-                steps=(),
-                finalize=lambda _results: finalize((loader(),)),
-            )
-
-        return plan
-
     origin.with_workspace.return_value = scoped
     scoped.workspaces.members.return_value = members
     scoped.agents.list.return_value = agents
@@ -122,15 +109,11 @@ def make_workspace_clients(
     scoped.agents.list_command = direct_list_command(scoped.agents.list)
     scoped.skills.list_command = direct_list_command(scoped.skills.list)
     scoped.projects.list_command = direct_list_command(scoped.projects.list)
+    scoped.labels.list_command = direct_list_command(scoped.labels.list)
+    scoped.repositories.list_command = direct_list_command(scoped.repositories.list)
+    scoped.runtimes.list_command = direct_list_command(scoped.runtimes.list)
     scoped.squads.list_command = direct_list_command(scoped.squads.list)
     scoped.autopilots.list_command = direct_list_command(scoped.autopilots.list)
-    for resource, loader in (
-        (scoped.labels, scoped.labels.list),
-        (scoped.repositories, scoped.repositories.list),
-        (scoped.runtimes, scoped.runtimes.list),
-    ):
-        resource._plan_decode_list = command_resource._plan_decode_list
-        resource._plan = generic_list_plan(loader)
 
     return WorkspaceClients(origin=origin, scoped=scoped)
 

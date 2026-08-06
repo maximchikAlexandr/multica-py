@@ -356,33 +356,6 @@ def test_project_relation_commands_preserve_project_scope(
     transport.run_text.assert_not_called()
 
 
-def test_project_resource_commands_are_lazy_and_preserve_request_argv() -> None:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    resource = ProjectResourceCollection(transport, ClientConfig())
-
-    commands = (
-        resource.list_command("p1"),
-        resource.add_local_directory_command(
-            "p1",
-            ProjectResourceAddLocalDirectoryRequest(local_path="relative/path", daemon_id="d1"),
-        ),
-        resource.update_local_directory_command("p1", "r1", local_path="relative/updated"),
-        resource.remove_command("p1", "r1"),
-    )
-
-    assert tuple(command.commands[0] for command in commands) == (
-        "multica project resource list p1 --output json",
-        f"multica project resource add p1 --type local_directory --local-path "
-        f"{os.path.abspath('relative/path')} --daemon-id d1 --output json",
-        f"multica project resource update p1 r1 --local-path "
-        f"{os.path.abspath('relative/updated')} --output json",
-        "multica project resource remove p1 r1",
-    )
-    transport.run_bytes.assert_not_called()
-    transport.run_text.assert_not_called()
-
-
 def test_project_add_local_directory_command_freezes_path_and_invalidates_after_success() -> None:
     transport = MagicMock()
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)

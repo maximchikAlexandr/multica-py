@@ -47,19 +47,3 @@ def test_runtime_validation_fails_before_transport(
         case.invoke(resource)
     mock_transport.run_bytes.assert_not_called()
     mock_transport.run_text.assert_not_called()
-
-
-def test_runtime_update_command_preserves_dual_input_and_is_lazy(
-    mock_transport: MagicMock,
-) -> None:
-    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    resource = RuntimeResource(mock_transport, ClientConfig())
-
-    direct = resource.update_command("r1", RuntimeUpdate(target_version="1.2.3", wait=True))
-    keyword = resource.update_command("r1", target_version="1.2.3", wait=True)
-
-    expected = "multica runtime update r1 --target-version 1.2.3 --wait --output json"
-    assert direct.commands == (expected,)
-    assert keyword.commands == (expected,)
-    mock_transport.run_bytes.assert_not_called()
-    mock_transport.run_text.assert_not_called()

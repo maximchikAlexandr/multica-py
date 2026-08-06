@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, cast, overload
 import msgspec
 
 from multica_py._generated.approved_sdk import AGENT_AVATAR_BINDING, validate_nonblank
-from multica_py._internal.commands import Command, _Step
+from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
@@ -140,13 +140,8 @@ class Agent(_BoundEntity):  # type: ignore[misc]
         client = self._require_client(
             entity_type="Agent", entity_id=self.id, relation_name="set_skills"
         )
-        args = ["agent", "skills", "set", self.id]
-        for skill_id in skill_ids:
-            args.extend(["--skill-id", skill_id])
-
-        return client.agents._plan(
-            steps=(_Step(tuple(args), "run_text"),),
-            finalize=lambda results: self._invalidate_skills(),
+        return client.agents.skills.set_command(self.id, skill_ids)._map(
+            lambda result: self._invalidate_skills()
         )
 
 
@@ -156,25 +151,18 @@ class AgentResource(BaseResource):
         self.skills = AgentSkillResource(transport, config)
 
     def list_command(self) -> Command[tuple[Agent, ...]]:
-        args, decode = self._plan_decode_list(("agent", "list"), Agent)
-
-        def finalize(results: tuple[object, ...]) -> tuple[Agent, ...]:
-            items = cast("tuple[Agent, ...]", results[0])
-            return tuple(a._with_client(self._client) for a in items)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_list_command(("agent", "list"), Agent)._map(
+            lambda items: tuple(agent._with_client(self._client) for agent in items)
+        )
 
     def list(self) -> tuple[Agent, ...]:
         return self.list_command().run()
 
     def get_command(self, agent_id: str) -> Command[Agent]:
         validate_nonblank(agent_id)
-        args, decode = self._plan_decode(("agent", "get", agent_id), Agent)
-
-        def finalize(results: tuple[object, ...]) -> Agent:
-            return cast("Agent", results[0])._with_client(self._client)
-
-        return self._plan(steps=(_Step(args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(("agent", "get", agent_id), Agent)._map(
+            lambda agent: agent._with_client(self._client)
+        )
 
     def get(self, agent_id: str) -> Agent:
         return self.get_command(agent_id).run()
@@ -203,12 +191,9 @@ class AgentResource(BaseResource):
             args.extend(["--runtime-id", req.runtime_id])
         if req.model is not None:
             args.extend(["--model", req.model])
-        plan_args, decode = self._plan_decode(tuple(args), Agent)
-
-        def finalize(results: tuple[object, ...]) -> Agent:
-            return cast("Agent", results[0])._with_client(self._client)
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), Agent)._map(
+            lambda agent: agent._with_client(self._client)
+        )
 
     @overload
     def create(self, request: AgentCreateRequest, /) -> Agent: ...
@@ -242,12 +227,9 @@ class AgentResource(BaseResource):
             args.extend(["--name", req.name])
         if req.description is not None:
             args.extend(["--description", req.description])
-        plan_args, decode = self._plan_decode(tuple(args), Agent)
-
-        def finalize(results: tuple[object, ...]) -> Agent:
-            return cast("Agent", results[0])._with_client(self._client)
-
-        return self._plan(steps=(_Step(plan_args, "run_bytes", decode=decode),), finalize=finalize)
+        return self._decoded_command(tuple(args), Agent)._map(
+            lambda agent: agent._with_client(self._client)
+        )
 
     @overload
     def update(self, agent_id: str, request: AgentUpdateRequest, /) -> Agent: ...
@@ -263,31 +245,21 @@ class AgentResource(BaseResource):
 
     def archive_command(self, agent_id: str) -> Command[None]:
         validate_nonblank(agent_id)
-        return self._plan(
-            steps=(_Step(("agent", "archive", agent_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("agent", "archive", agent_id))
 
     def archive(self, agent_id: str) -> None:
         self.archive_command(agent_id).run()
 
     def restore_command(self, agent_id: str) -> Command[None]:
         validate_nonblank(agent_id)
-        return self._plan(
-            steps=(_Step(("agent", "restore", agent_id), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("agent", "restore", agent_id))
 
     def restore(self, agent_id: str) -> None:
         self.restore_command(agent_id).run()
 
     def tasks_command(self, agent_id: str) -> Command[tuple[AgentTask, ...]]:
         validate_nonblank(agent_id)
-        args, decode = self._plan_decode_list(("agent", "tasks", agent_id), AgentTask)
-        return self._plan(
-            steps=(_Step(args, "run_bytes", decode=decode),),
-            finalize=lambda results: cast("tuple[AgentTask, ...]", results[0]),
-        )
+        return self._decoded_list_command(("agent", "tasks", agent_id), AgentTask)
 
     def tasks(self, agent_id: str) -> tuple[AgentTask, ...]:
         return self.tasks_command(agent_id).run()
@@ -298,10 +270,7 @@ class AgentResource(BaseResource):
         path = file.resolve()
         if not path.is_file():
             raise ValueError(f"file must be an existing local file: {file}")
-        return self._plan(
-            steps=(_Step(("agent", "avatar", agent_id, "--file", str(path)), "run_text"),),
-            finalize=lambda results: None,
-        )
+        return self._none_command(("agent", "avatar", agent_id, "--file", str(path)))
 
     def avatar(self, agent_id: str, file: pathlib.Path) -> None:
         self.avatar_command(agent_id, file).run()
