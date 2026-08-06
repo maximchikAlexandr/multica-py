@@ -15,12 +15,14 @@ class DocumentationCase:
 
 
 MIGRATION_CASES = (
-    DocumentationCase(ROOT / "docs/migration.md", "AgentData.skill_refs"),
+    DocumentationCase(ROOT / "docs/migration.md", "Agent.skill_refs"),
     DocumentationCase(ROOT / "docs/migration.md", "agent skills list/set"),
     DocumentationCase(ROOT / "docs/migration.md", "Skill.files"),
-    DocumentationCase(ROOT / "docs/migration.md", "IssueData.label_names"),
-    DocumentationCase(ROOT / "docs/migration.md", "IssueData.child_stages"),
-    DocumentationCase(ROOT / "docs/migration.md", "IssueData.metadata_snapshot"),
+    DocumentationCase(ROOT / "docs/migration.md", "Issue.label_names"),
+    DocumentationCase(ROOT / "docs/migration.md", "Issue.child_stages"),
+    DocumentationCase(ROOT / "docs/migration.md", "Issue.metadata_snapshot"),
+    DocumentationCase(ROOT / "docs/migration.md", "IssueData.pull_requests"),
+    DocumentationCase(ROOT / "docs/migration.md", "Issue.pull_request_snapshot"),
     DocumentationCase(ROOT / "docs/migration.md", "issues.rerun(issue_id)"),
     DocumentationCase(ROOT / "docs/migration.md", "issues.cancel_task(task_id)"),
     DocumentationCase(ROOT / "docs/migration.md", "issues.run_messages(task_run_id"),
@@ -45,7 +47,7 @@ MIGRATION_CASES = (
     DocumentationCase(ROOT / "docs/migration.md", "WorkspaceMember.id"),
     DocumentationCase(ROOT / "docs/migration.md", "WorkspaceMember.user_id"),
     DocumentationCase(ROOT / "docs/migration.md", "user_id is None"),
-    DocumentationCase(ROOT / "docs/migration.md", "IssueEntity.attachments"),
+    DocumentationCase(ROOT / "docs/migration.md", "Issue.attachments"),
     DocumentationCase(
         ROOT / "docs/migration.md", "attachments.download_bytes(issue.attachments[0].id)"
     ),
@@ -93,7 +95,7 @@ EXAMPLE_CASES = (
     "autopilot.runs",
     "client.prefetch",
     "triggers.loaded",
-    "issue.to_data",
+    "issue.to_dict",
 )
 
 

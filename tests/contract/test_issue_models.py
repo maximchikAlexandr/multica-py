@@ -10,11 +10,11 @@ import pytest
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
-    IssueListPageWire,
-    IssueSummaryWire,
-    IssueWire,
-    issue_from_wire,
-    issue_list_page_from_wire,
+    _issue_from_wire,
+    _issue_list_page_from_wire,
+    _IssueListPageWire,
+    _IssueSummaryWire,
+    _IssueWire,
     issue_summary_from_wire,
 )
 from multica_py.config import ClientConfig
@@ -25,6 +25,7 @@ from multica_py.models.issues import (
     IssueListPage,
     IssueSummary,
     IssueUpdateRequest,
+    LinkedPullRequest,
 )
 from multica_py.resources.issues import IssueResource
 
@@ -58,19 +59,32 @@ def test_issue_get_decoding() -> None:
         "unknown_field": "should be ignored by msgspec",
     }
 
-    wire = decode_json(json.dumps(data).encode(), IssueWire)
-    issue = issue_from_wire(wire)
+    wire = decode_json(json.dumps(data).encode(), _IssueWire)
+    issue = _issue_from_wire(wire)
     assert issue.id == "iss_001"
     assert issue.title == "Test issue"
     assert issue.status.value == "todo"
 
 
+def test_issue_pull_request_snapshot_preserves_r26_relation_name() -> None:
+    wire = decode_json(
+        b'{"id":"iss_001","title":"T","status":"todo",'
+        b'"pull_requests":[{"url":"https://example.test/pr/1"}]}',
+        _IssueWire,
+    )
+    issue = _issue_from_wire(wire)
+
+    assert issue.pull_request_snapshot == (LinkedPullRequest(url="https://example.test/pr/1"),)
+    assert "pull_request_snapshot" in issue._PUBLIC_FIELDS
+    assert "pull_requests" not in issue._PUBLIC_FIELDS
+
+
 def test_issue_additive_fields_ignored() -> None:
     wire = decode_json(
         b'{"id":"iss_001","title":"T","description":"D","status":"todo","unknown":"x"}',
-        IssueWire,
+        _IssueWire,
     )
-    assert issue_from_wire(wire).title == "T"
+    assert _issue_from_wire(wire).title == "T"
 
 
 def test_issue_list_decoding() -> None:
@@ -99,15 +113,15 @@ def test_issue_scalar_relation_fields_decoding() -> None:
         "creator_id": "u_1",
         "creator_type": "member",
     }
-    wire = decode_json(json.dumps(data).encode(), IssueWire)
-    issue = issue_from_wire(wire)
+    wire = decode_json(json.dumps(data).encode(), _IssueWire)
+    issue = _issue_from_wire(wire)
     assert issue.parent_id == "p_1"
     assert issue.project_id == "pr_1"
     assert issue.creator_id == "u_1"
     assert issue.creator_type == "member"
 
-    minimal = decode_json(b'{"id":"iss_1","title":"t","status":"todo"}', IssueWire)
-    minimal_issue = issue_from_wire(minimal)
+    minimal = decode_json(b'{"id":"iss_1","title":"t","status":"todo"}', _IssueWire)
+    minimal_issue = _issue_from_wire(minimal)
     assert minimal_issue.parent_id is None
     assert minimal_issue.project_id is None
     assert minimal_issue.creator_id is None
@@ -142,8 +156,8 @@ def test_issue_list_page_decoding() -> None:
         b'"project_id":"pr1","creator_id":"u1","creator_type":"member"}],'
         b'"has_more":true,"limit":50,"offset":20,"total":137}'
     )
-    wire = decode_json(full_data, IssueListPageWire)
-    page = issue_list_page_from_wire(wire)
+    wire = decode_json(full_data, _IssueListPageWire)
+    page = _issue_list_page_from_wire(wire)
     assert page.has_more is True
     assert page.limit == 50
     assert page.offset == 20
@@ -156,8 +170,8 @@ def test_issue_list_page_decoding() -> None:
     assert page.issues[0].creator_type == "member"
 
     empty_data = b'{"issues":[]}'
-    empty_wire = decode_json(empty_data, IssueListPageWire)
-    empty_page = issue_list_page_from_wire(empty_wire)
+    empty_wire = decode_json(empty_data, _IssueListPageWire)
+    empty_page = _issue_list_page_from_wire(empty_wire)
     assert empty_page.has_more is False
     assert empty_page.limit is None
     assert empty_page.offset is None
@@ -179,7 +193,7 @@ def test_issue_summary_scalar_fields_decoding() -> None:
         b'"created_at":"2026-01-01T00:00:00Z","parent_issue_id":"p1",'
         b'"project_id":"pr1","creator_id":"u1","creator_type":"member"}'
     )
-    wire = decode_json(full_data, IssueSummaryWire)
+    wire = decode_json(full_data, _IssueSummaryWire)
     summary = issue_summary_from_wire(wire)
     assert summary.created_at == datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
     assert summary.parent_id == "p1"

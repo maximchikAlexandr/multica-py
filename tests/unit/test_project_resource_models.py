@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import pytest
 
 from multica_py._internal.decoders import decode_json
-from multica_py._internal.wire_models import ProjectResourceRecordWire, project_resource_from_wire
+from multica_py._internal.wire_models import _ProjectResourceRecordWire, project_resource_from_wire
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.issues import IssueCreateRequest, IssueUpdateRequest
 from multica_py.models.project_resources import (
@@ -70,7 +70,7 @@ _PROJECT_RESOURCE_DECODE_CASES = (
 @pytest.mark.parametrize("case", _PROJECT_RESOURCE_DECODE_CASES, ids=lambda case: case.id)
 def test_decode_local_directory_record(case: ProjectResourceDecodeCase) -> None:
     record = project_resource_from_wire(
-        decode_json(json.dumps(case.payload).encode(), ProjectResourceRecordWire)
+        decode_json(json.dumps(case.payload).encode(), _ProjectResourceRecordWire)
     )
     assert record.resource_type == "local_directory"
     assert record.resource_ref.label == case.label
@@ -87,7 +87,7 @@ def test_discriminator_rejects_unknown_resource_type() -> None:
             "daemon_id": "daemon-001",
         },
     }
-    wire = decode_json(json.dumps(payload).encode(), ProjectResourceRecordWire)
+    wire = decode_json(json.dumps(payload).encode(), _ProjectResourceRecordWire)
     with pytest.raises(Exception, match="Unsupported resource_type"):
         project_resource_from_wire(wire)
 

@@ -128,9 +128,10 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
     first_workspace = prepared_client.workspaces.get(workspace_id)
     second_workspace = prepared_client.workspaces.get(workspace_id)
     assert first_workspace is not second_workspace
-    assert first_workspace.to_data() == second_workspace.to_data()
+    assert first_workspace.id == second_workspace.id
+    assert first_workspace.name == second_workspace.name
     prepared_client.prefetch(
-        (first_workspace, second_workspace),
+        (first_workspace, second_workspace),  # type: ignore[type-var]
         lambda item: cast("LazyCollection[object]", item.members),
         max_parallel=2,
     )

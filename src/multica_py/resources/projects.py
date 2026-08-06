@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, overload
+from typing import overload
+
+import msgspec
 
 from multica_py._generated.approved_sdk import (
     PROJECT_CREATE_BINDING,
@@ -9,22 +11,18 @@ from multica_py._generated.approved_sdk import (
     validate_nonblank,
 )
 from multica_py._internal.transport import CliTransport
-from multica_py._internal.wire_models import ProjectWire, project_from_wire
+from multica_py._internal.wire_models import _project_from_wire, _ProjectWire
 from multica_py.config import ClientConfig
 from multica_py.enums import ProjectStatus
 from multica_py.exceptions import ValidationError
-from multica_py.models import ResourceEntity
+from multica_py.models._bound import _BoundEntity
 from multica_py.models.issues import IssueSummary
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceRecord,
 )
 from multica_py.models.projects import (
-    Project as ProjectRecord,
-)
-from multica_py.models.projects import (
     ProjectCreateRequest,
-    ProjectData,
     ProjectUpdateRequest,
 )
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
@@ -33,55 +31,43 @@ from multica_py.resources.issues import IssueResource, _issue_summary_offset_pag
 from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.sentinels import Unset, UnsetType
 
-if TYPE_CHECKING:
-    from multica_py.client import MulticaClient
 
+class Project(_BoundEntity):  # type: ignore[misc]
+    id: str
+    name: str
+    status: ProjectStatus
+    description: str | None = None
 
-class Project(ResourceEntity[ProjectData]):
-    def __init__(self, data: ProjectData, client: MulticaClient | None = None) -> None:
-        super().__init__(data, client=client)
-        self._resources: LazyCollection[ProjectResourceRecord] | None = None
-        self._issues: OffsetLazyCollection[IssueSummary] | None = None
+    _resources: LazyCollection[ProjectResourceRecord] | None = msgspec.field(
+        default=None, name="_resources"
+    )
+    _issues: OffsetLazyCollection[IssueSummary] | None = msgspec.field(default=None, name="_issues")
 
-    @property
-    def id(self) -> str:
-        return self._data.id
-
-    @property
-    def name(self) -> str:
-        return self._data.name
-
-    @property
-    def description(self) -> str | None:
-        return self._data.description
-
-    @property
-    def status(self) -> ProjectStatus:
-        return self._data.status
+    _PUBLIC_FIELDS = ("id", "name", "description", "status")
 
     @property
     def resources(self) -> LazyCollection[ProjectResourceRecord]:
         if self._resources is None:
             resources = self._require_client(
-                entity_type="Project", entity_id=self._data.id, relation_name="resources"
+                entity_type="Project", entity_id=self.id, relation_name="resources"
             ).projects.resources
-            pid = self._data.id
-            self._resources = LazyCollection(lambda: resources.list(pid))
-        return self._resources
+            pid = self.id
+            self._set_runtime("_resources", LazyCollection(lambda: resources.list(pid)))
+        return self._resources  # type: ignore[return-value]
 
     @property
     def issues(self) -> OffsetLazyCollection[IssueSummary]:
         if self._issues is None:
             issues = self._require_client(
-                entity_type="Project", entity_id=self._data.id, relation_name="issues"
+                entity_type="Project", entity_id=self.id, relation_name="issues"
             ).issues
-            pid = self._data.id
+            pid = self.id
 
             def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
                 return self._page_issues(issues, pid, limit, offset)
 
-            self._issues = OffsetLazyCollection(page_loader)
-        return self._issues
+            self._set_runtime("_issues", OffsetLazyCollection(page_loader))
+        return self._issues  # type: ignore[return-value]
 
     def _page_issues(
         self, issues: IssueResource, pid: str, limit: int | None, offset: int
@@ -121,14 +107,14 @@ class ProjectResource(BaseResource):
 
     def list(self) -> tuple[Project, ...]:
         return tuple(
-            self._bind_project(project_from_wire(item))
-            for item in self._run_json_decode_list(("project", "list"), ProjectWire)
+            _project_from_wire(item)._with_client(self._client)
+            for item in self._run_json_decode_list(("project", "list"), _ProjectWire)
         )
 
     def get(self, project_id: str) -> Project:
-        return self._bind_project(
-            project_from_wire(self._run_json_decode(("project", "get", project_id), ProjectWire))
-        )
+        return _project_from_wire(
+            self._run_json_decode(("project", "get", project_id), _ProjectWire)
+        )._with_client(self._client)
 
     @overload
     def create(self, request: ProjectCreateRequest, /) -> Project: ...
@@ -142,8 +128,8 @@ class ProjectResource(BaseResource):
         args = ["project", "create", "--title", req.name]
         if req.description is not None:
             args.extend(["--description", req.description])
-        return self._bind_project(
-            project_from_wire(self._run_json_decode(tuple(args), ProjectWire))
+        return _project_from_wire(self._run_json_decode(tuple(args), _ProjectWire))._with_client(
+            self._client
         )
 
     @overload
@@ -171,8 +157,8 @@ class ProjectResource(BaseResource):
             raise ValidationError("description=None is not supported for project update via CLI")
         else:
             args.extend(["--description", req.description])
-        return self._bind_project(
-            project_from_wire(self._run_json_decode(tuple(args), ProjectWire))
+        return _project_from_wire(self._run_json_decode(tuple(args), _ProjectWire))._with_client(
+            self._client
         )
 
     def delete(self, project_id: str) -> None:
@@ -180,19 +166,6 @@ class ProjectResource(BaseResource):
 
     def set_status(self, project_id: str, status: ProjectStatus) -> Project:
         _ = PROJECT_STATUS_BINDING
-        return self._bind_project(
-            project_from_wire(
-                self._run_json_decode(("project", "status", project_id, status.value), ProjectWire)
-            )
-        )
-
-    def _bind_project(self, project: ProjectRecord) -> Project:
-        return Project(
-            ProjectData(
-                id=project.id,
-                name=project.name,
-                description=project.description,
-                status=project.status,
-            ),
-            client=self._client,
-        )
+        return _project_from_wire(
+            self._run_json_decode(("project", "status", project_id, status.value), _ProjectWire)
+        )._with_client(self._client)

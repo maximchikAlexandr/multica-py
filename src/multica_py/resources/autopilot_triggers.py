@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from multica_py._internal.wire_models import AutopilotTriggerWire, trigger_from_wire
+from multica_py._internal.wire_models import _AutopilotTriggerWire, trigger_from_wire
 from multica_py.models.autopilots import (
     AutopilotTrigger,
 )
@@ -10,7 +10,7 @@ from multica_py.resources._base import BaseResource
 class AutopilotTriggerResource(BaseResource):
     def list(self, autopilot_id: str) -> tuple[AutopilotTrigger, ...]:
         wires = self._run_json_decode_list(
-            ("autopilot", "trigger", "list", autopilot_id), AutopilotTriggerWire
+            ("autopilot", "trigger", "list", autopilot_id), _AutopilotTriggerWire
         )
         return tuple(trigger_from_wire(wire) for wire in wires)
 
@@ -21,7 +21,7 @@ class AutopilotTriggerResource(BaseResource):
         if config:
             for k, v in config.items():
                 args.extend(["--config", f"{k}={v}"])
-        return trigger_from_wire(self._run_json_decode(tuple(args), AutopilotTriggerWire))
+        return trigger_from_wire(self._run_json_decode(tuple(args), _AutopilotTriggerWire))
 
     def delete(self, autopilot_id: str, trigger_id: str) -> None:
         self._transport.run_text(

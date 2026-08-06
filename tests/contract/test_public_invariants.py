@@ -19,7 +19,7 @@ from multica_py.models.project_resources import (
     ProjectResourceRecord,
     ProjectResourceUpdateLocalDirectoryRequest,
 )
-from multica_py.resources.issues import IssueEntity
+from multica_py.resources.issues import Issue
 from multica_py.resources.project_resources import ProjectResourceCollection
 
 _DIRECT_KEYWORD_METHODS = frozenset(
@@ -158,7 +158,7 @@ def test_no_open_ended_container_fields() -> None:
 
 def assert_public_annotations_precise(public_class: type[object]) -> None:
     resolution_namespace: dict[str, object] = {
-        "IssueEntity": IssueEntity,
+        "Issue": Issue,
         "MulticaClient": MulticaClient,
     }
 

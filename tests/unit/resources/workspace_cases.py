@@ -3,14 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from unittest.mock import MagicMock
 
-from multica_py.models.agents import Agent
 from multica_py.models.autopilots import AutopilotListPage
 from multica_py.models.issues import IssueListPage
-from multica_py.models.labels import LabelData
-from multica_py.models.skills import Skill
-from multica_py.models.system import RepositoryRecord, RuntimeDefinition, Squad
-from multica_py.models.workspaces import WorkspaceData, WorkspaceMember
-from multica_py.resources.autopilots import AutopilotEntity
+from multica_py.models.system import RepositoryRecord, RuntimeDefinition
+from multica_py.resources.agents import Agent
+from multica_py.resources.autopilots import Autopilot
+from multica_py.resources.labels import Label
+from multica_py.resources.skills import Skill
+from multica_py.resources.squads import Squad
+from multica_py.resources.workspaces import Workspace, WorkspaceMember
 
 
 @dataclass(frozen=True)
@@ -25,12 +26,12 @@ def make_workspace_clients(
     agents: tuple[Agent, ...] = (),
     skills: tuple[Skill, ...] = (),
     projects: tuple[object, ...] = (),
-    labels: tuple[LabelData, ...] = (),
+    labels: tuple[Label, ...] = (),
     repositories: tuple[RepositoryRecord, ...] = (),
     runtimes: tuple[RuntimeDefinition, ...] = (),
     squads: tuple[Squad, ...] = (),
     issues: list[IssueListPage] | None = None,
-    autopilots: AutopilotListPage[AutopilotEntity] | None = None,
+    autopilots: AutopilotListPage[Autopilot] | None = None,
 ) -> WorkspaceClients:
     origin = MagicMock(name="origin_client")
     scoped = MagicMock(name="workspace_client")
@@ -53,8 +54,8 @@ def make_workspace_clients(
     return WorkspaceClients(origin=origin, scoped=scoped)
 
 
-def workspace_data() -> WorkspaceData:
-    return WorkspaceData(id="ws_1", name="Test WS")
+def workspace_data() -> Workspace:
+    return Workspace(id="ws_1", name="Test WS")
 
 
 def workspace_relation_method(client: MagicMock, relation_name: str) -> MagicMock:

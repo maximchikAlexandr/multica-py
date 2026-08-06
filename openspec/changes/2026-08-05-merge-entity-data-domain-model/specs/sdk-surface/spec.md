@@ -18,6 +18,10 @@ state and lifecycle are the same. The SDK SHALL NOT expose a public
 they represent distinct input contracts. `IssueSummary` SHALL remain a distinct
 partial-response model for `issues.list` and the five list-backed relations;
 the SDK SHALL NOT construct a misleading full `Issue` from incomplete list rows.
+Recursive public `JsonValue` object nodes SHALL be immutable
+`Mapping[str, JsonValue]` snapshots (arrays are immutable tuples); SDK
+serialization SHALL materialize ordinary JSON dict/list containers at the
+`to_dict()` / `to_json()` boundary.
 
 #### Scenario: One public class per concept
 - **WHEN** a consumer imports a full domain concept
@@ -53,6 +57,17 @@ the SDK SHALL NOT construct a misleading full `Issue` from incomplete list rows.
 - **WHEN** `issues.list` or a list-backed relation returns rows
 - **THEN** the rows are `IssueSummary` values and the SDK does not construct a
   full `Issue` with empty defaults for fields the list response omitted
+
+#### Scenario: JSON values have immutable public snapshots
+- **WHEN** a consumer reads an `AutopilotRun.trigger_payload` or `result`
+  value
+- **THEN** object nodes are typed as `Mapping[str, JsonValue]`, arrays are
+  tuples, and recursively mutating the original input cannot change the run
+
+#### Scenario: JSON values serialize through the SDK boundary
+- **WHEN** a consumer calls `AutopilotRun.to_dict()` or `to_json()`
+- **THEN** immutable Mapping/tuple snapshots are materialized as standard
+  JSON dict/list containers and the result is directly serializable
 
 ### Requirement: Synchronous resource client
 

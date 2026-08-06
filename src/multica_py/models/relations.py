@@ -10,7 +10,7 @@ from multica_py.models.issue_activity import CommentCursor
 from multica_py.models.issues import IssueChildStageGroup
 
 if TYPE_CHECKING:
-    from multica_py.resources.issues import IssueEntity
+    from multica_py.resources.issues import Issue
 
 T_co = TypeVar("T_co", covariant=True)
 T = TypeVar("T")
@@ -36,7 +36,7 @@ __all__ = (
 class RelationMetadata:
     total: int | None = None
     child_stages: tuple[IssueChildStageGroup, ...] = ()
-    unstaged: tuple[IssueEntity, ...] = ()
+    unstaged: tuple[Issue, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

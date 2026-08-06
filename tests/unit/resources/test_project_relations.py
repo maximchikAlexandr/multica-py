@@ -15,7 +15,7 @@ from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceRecord,
 )
-from multica_py.models.projects import ProjectCreateRequest, ProjectData, ProjectUpdateRequest
+from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
 from multica_py.models.relations import OffsetPage
 from multica_py.resources.projects import Project, ProjectResource
 
@@ -157,8 +157,6 @@ def test_project_resource_returns_bound_immutable_projects(case: ProjectBindingC
 
     assert isinstance(project, Project)
     assert project._client is client
-    assert isinstance(project.to_data(), ProjectData)
-    assert project.to_data() is project.to_data()
     assert client.mock_calls == []
     transport.run_bytes.assert_called_once_with(case.expected_argv, stdin=None, timeout=None)
     transport.run_text.assert_not_called()
@@ -173,8 +171,10 @@ def test_project_resources_loads_once() -> None:
     )
     client = _make_mock_resources(resource_list_result=(pr,))
     entity = Project(
-        ProjectData(id="p1", name="Test", status=_PLANNED),
-        client=client,
+        id="p1",
+        name="Test",
+        status=_PLANNED,
+        _client=client,
     )
     result = entity.resources.all()
     assert len(result) == 1
@@ -202,7 +202,7 @@ def test_project_parent_mutations_invalidate_only_resources(
         child.return_value = _RESOURCE_RECORD
     else:
         child.side_effect = RuntimeError("transport failed")
-    entity = Project(ProjectData(id="p1", name="Test", status=_PLANNED), client=client)
+    entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
 
     cached_resources = entity.resources.all()
     entity.issues.all()
@@ -225,8 +225,8 @@ def test_project_parent_mutations_invalidate_only_resources(
 
 def test_project_parent_mutation_does_not_invalidate_another_wrapper() -> None:
     client = _make_mock_resources(resource_list_result=(_RESOURCE_RECORD,))
-    first = Project(ProjectData(id="p1", name="First", status=_PLANNED), client=client)
-    second = Project(ProjectData(id="p1", name="Second", status=_PLANNED), client=client)
+    first = Project(id="p1", name="First", status=_PLANNED, _client=client)
+    second = Project(id="p1", name="Second", status=_PLANNED, _client=client)
 
     first.resources.all()
     second.resources.all()
@@ -242,7 +242,7 @@ def test_project_parent_validation_preserves_loaded_resources(
     case: ProjectParentValidationCase,
 ) -> None:
     client = _make_mock_resources(resource_list_result=(_RESOURCE_RECORD,))
-    entity = Project(ProjectData(id="p1", name="Test", status=_PLANNED), client=client)
+    entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
     cached_resources = entity.resources.all()
 
     with pytest.raises(ValueError):
@@ -273,8 +273,10 @@ def test_project_issues_two_pages() -> None:
     )
     client = _make_mock_resources(issue_page_results=[page1, page2])
     entity = Project(
-        ProjectData(id="p1", name="Test", status=_PLANNED),
-        client=client,
+        id="p1",
+        name="Test",
+        status=_PLANNED,
+        _client=client,
     )
 
     result = entity.issues.all()
@@ -303,8 +305,10 @@ def test_project_issues_single_page() -> None:
     )
     client = _make_mock_resources(issue_page_results=[page, page])
     entity = Project(
-        ProjectData(id="p1", name="Test", status=_PLANNED),
-        client=client,
+        id="p1",
+        name="Test",
+        status=_PLANNED,
+        _client=client,
     )
     result = entity.issues.all()
     assert len(result) == 1
@@ -320,8 +324,10 @@ def test_project_issues_cached_after_all() -> None:
     page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_mock_resources(issue_page_results=[page])
     entity = Project(
-        ProjectData(id="p1", name="Test", status=_PLANNED),
-        client=client,
+        id="p1",
+        name="Test",
+        status=_PLANNED,
+        _client=client,
     )
     entity.issues.all()
     assert client.issues.list.call_count == 1
@@ -334,8 +340,10 @@ def test_project_issues_invalidate_triggers_new_load() -> None:
     page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_mock_resources(issue_page_results=[page, page])
     entity = Project(
-        ProjectData(id="p1", name="Test", status=_PLANNED),
-        client=client,
+        id="p1",
+        name="Test",
+        status=_PLANNED,
+        _client=client,
     )
     entity.issues.all()
     assert client.issues.list.call_count == 1
@@ -346,7 +354,7 @@ def test_project_issues_invalidate_triggers_new_load() -> None:
 
 
 def test_detached_entity_error_on_resource_access() -> None:
-    entity: Project = Project.from_data(ProjectData(id="p1", name="Test", status=_PLANNED))
+    entity: Project = Project(id="p1", name="Test", status=_PLANNED)
     with pytest.raises(DetachedEntityError) as exc:
         entity.resources.all()
     assert exc.value.entity_id == "p1"
@@ -354,7 +362,7 @@ def test_detached_entity_error_on_resource_access() -> None:
 
 
 def test_detached_entity_error_on_issues_access() -> None:
-    entity: Project = Project.from_data(ProjectData(id="p1", name="Test", status=_PLANNED))
+    entity: Project = Project(id="p1", name="Test", status=_PLANNED)
     with pytest.raises(DetachedEntityError) as exc:
         entity.issues.all()
     assert exc.value.entity_id == "p1"

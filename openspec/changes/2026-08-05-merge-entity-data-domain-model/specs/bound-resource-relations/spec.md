@@ -21,6 +21,12 @@ the client-free serialized or detached view explicitly.
 - **THEN** zero subprocess calls occur and runtime context (`_client`, lazy
   caches, locks, loaders) is not serialized
 
+#### Scenario: Autopilot run JSON snapshots remain immutable
+- **WHEN** a consumer reads `AutopilotRun.trigger_payload` or `result`
+- **THEN** JSON object nodes are immutable `Mapping[str, JsonValue]` values
+  and arrays are immutable tuples; `to_dict()` / `to_json()` materialize
+  standard JSON containers for compatible serialization
+
 ### Requirement: Immutable wrapper replacement
 
 Every resource response MUST create a new unified domain instance over a

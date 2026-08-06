@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import pytest
@@ -9,14 +10,13 @@ from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import AutopilotExecutionMode
+from multica_py.exceptions import JsonOutputError, OutputShapeError
 from multica_py.models.autopilots import (
-    Autopilot,
     AutopilotListPage,
-    AutopilotRun,
     AutopilotRunListPage,
     AutopilotSubscriber,
 )
-from multica_py.resources.autopilots import AutopilotResource
+from multica_py.resources.autopilots import Autopilot, AutopilotResource, AutopilotRun
 
 
 def test_autopilot_list_rejects_legacy_fields() -> None:
@@ -81,7 +81,7 @@ _SUBSCRIBERS = (
                 "last_run_status": "success",
                 "can_write": True,
                 "can_manage_access": False,
-                "subscribers": _SUBSCRIBERS,
+                "subscriber_snapshot": _SUBSCRIBERS,
                 "next_run_at": datetime.datetime(2026, 7, 29, 0, 0, tzinfo=datetime.UTC),
                 "last_run_at": datetime.datetime(2026, 7, 28, 11, 47, 17, tzinfo=datetime.UTC),
             },
@@ -98,7 +98,7 @@ _SUBSCRIBERS = (
                 "last_run_status": None,
                 "can_write": None,
                 "can_manage_access": None,
-                "subscribers": (),
+                "subscriber_snapshot": (),
                 "next_run_at": None,
                 "last_run_at": None,
             },
@@ -122,6 +122,13 @@ _FULL_RUN_JSON = (
     b'"created_at":"2026-07-28T11:47:00Z"}'
 )
 _MINIMAL_RUN_JSON = b'{"id":"r1","autopilot_id":"a1","source":"manual","status":"running"}'
+
+
+@dataclass(frozen=True)
+class DecodeErrorCase:
+    name: str
+    json_bytes: bytes
+    model_type: type[object]
 
 
 @pytest.mark.parametrize(
@@ -166,6 +173,30 @@ def test_autopilot_run_decoding(json_bytes: bytes, expected_fields: dict[str, ob
     run = decode_json(json_bytes, AutopilotRun, command="test")
     for field, expected in expected_fields.items():
         assert getattr(run, field) == expected, f"{field} mismatch"
+
+
+_DECODE_ERROR_CASES: tuple[DecodeErrorCase, ...] = (
+    DecodeErrorCase(name="single-shape", json_bytes=b'{"id":"r1"}', model_type=AutopilotRun),
+    DecodeErrorCase(
+        name="list-shape",
+        json_bytes=b'{"runs":[{"id":"r1"}]}',
+        model_type=AutopilotRunListPage[AutopilotRun],
+    ),
+    DecodeErrorCase(name="single-json", json_bytes=b"{bad", model_type=AutopilotRun),
+    DecodeErrorCase(
+        name="list-json",
+        json_bytes=b'{"runs":[bad]}',
+        model_type=AutopilotRunListPage[AutopilotRun],
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _DECODE_ERROR_CASES, ids=lambda case: case.name)
+def test_autopilot_run_decode_errors_preserve_command(case: DecodeErrorCase) -> None:
+    with pytest.raises(
+        (JsonOutputError, OutputShapeError), match=r"\[command: autopilot runs --output json\]"
+    ):
+        decode_json(case.json_bytes, case.model_type, command="autopilot runs --output json")
 
 
 def test_autopilot_list_page_decoding() -> None:
@@ -221,17 +252,17 @@ def test_autopilot_run_list_page_has_more(
     expected_has_more: bool,
 ) -> None:
     from multica_py._internal.wire_models import (
-        AutopilotRunListPageWire,
-        AutopilotRunWire,
-        autopilot_run_list_page_from_wire,
+        _autopilot_run_list_page_from_wire,
+        _AutopilotRunListPageWire,
+        _AutopilotRunWire,
     )
 
     runs = tuple(
-        AutopilotRunWire(id=f"r{i}", autopilot_id="a1", source="web", status="running")
+        _AutopilotRunWire(id=f"r{i}", autopilot_id="a1", source="web", status="running")
         for i in range(runs_count)
     )
-    wire = AutopilotRunListPageWire(runs=runs, total=total)
-    page = autopilot_run_list_page_from_wire(wire, limit=10, offset=offset)
+    wire = _AutopilotRunListPageWire(runs=runs, total=total)
+    page = _autopilot_run_list_page_from_wire(wire, limit=10, offset=offset)
     assert page.has_more is expected_has_more
 
 

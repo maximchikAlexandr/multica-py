@@ -167,14 +167,14 @@ integration and define how conflicting values are handled.
 ## Serialize snapshots, not bound runtime state
 
 ```python
-import msgspec
-
 issue = client.issues.get("issue_456")
-payload = msgspec.json.encode(issue.to_data())
+payload = issue.to_json()
 ```
 
-`to_data()` is passive and excludes the client, lazy caches, locks, and loader
-closures. It is the correct boundary for persistence and messages.
+`to_json()` is passive and excludes the client, lazy caches, locks, and loader
+closures. It is the correct boundary for persistence and messages. The
+round-trip is `from_json(payload)` (returns a detached instance) plus
+`detach()` if mutability must remain sealed.
 
 ## Local self-hosted setup
 

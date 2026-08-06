@@ -240,23 +240,23 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
             def assert_type(result: object, _mt: MagicMock = MagicMock()) -> None:
                 actual = f"{type(result).__module__}.{type(result).__qualname__}"
                 if expected == "multica_py.models.issues.Issue" and actual == (
-                    "multica_py.resources.issues.IssueEntity"
-                ):
-                    return
-                if expected == "multica_py.models.autopilots.Autopilot" and actual == (
-                    "multica_py.resources.autopilots.AutopilotEntity"
-                ):
-                    return
-                if expected == "multica_py.models.autopilots.AutopilotRun" and actual == (
-                    "multica_py.resources.autopilots.AutopilotRunEntity"
-                ):
-                    return
-                if expected == "multica_py.models.issue_activity.Comment" and actual == (
-                    "multica_py.resources.issue_comments.Comment"
+                    "multica_py.resources.issues.Issue"
                 ):
                     return
                 if expected == "multica_py.models.projects.Project" and actual == (
                     "multica_py.resources.projects.Project"
+                ):
+                    return
+                if expected == "multica_py.models.autopilots.Autopilot" and actual == (
+                    "multica_py.resources.autopilots.Autopilot"
+                ):
+                    return
+                if expected == "multica_py.models.autopilots.AutopilotRun" and actual == (
+                    "multica_py.resources.autopilots.AutopilotRun"
+                ):
+                    return
+                if expected == "multica_py.models.issue_activity.Comment" and actual == (
+                    "multica_py.resources.issue_comments.Comment"
                 ):
                     return
                 if expected == "builtins.tuple" and actual == {
@@ -482,17 +482,16 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
     import msgspec
 
     from multica_py._internal.specs import RawCommandResult, TextResult
+    from multica_py._internal.wire_models import _LabelWire
     from multica_py.enums import (
         AutopilotExecutionMode,
         IssueStatus,
         MetadataValueType,
         ProjectStatus,
     )
-    from multica_py.models.agents import Agent, AgentCreateRequest, AgentSkill, AgentUpdateRequest
+    from multica_py.models.agents import AgentCreateRequest, AgentSkill, AgentUpdateRequest
     from multica_py.models.autopilots import (
-        Autopilot,
         AutopilotListPage,
-        AutopilotRun,
         AutopilotRunListPage,
         AutopilotSubscriber,
         AutopilotTriggerCreate,
@@ -509,7 +508,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         MetadataPredicate,
         MetadataSetRequest,
         RunMessage,
-        TaskRun,
     )
     from multica_py.models.issues import (
         FileDescription,
@@ -524,13 +522,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         LinkedPullRequest,
         StdinDescription,
     )
-    from multica_py.models.labels import LabelData
     from multica_py.models.project_resources import (
         ProjectResourceAddLocalDirectoryRequest,
         ProjectResourceUpdateLocalDirectoryRequest,
     )
     from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
-    from multica_py.models.skills import Skill, SkillCreateRequest, SkillFile, SkillUpdateRequest
+    from multica_py.models.skills import SkillCreateRequest, SkillFile, SkillUpdateRequest
     from multica_py.models.system import (
         AttachmentResult,
         AuthenticationStatus,
@@ -544,12 +541,16 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         RuntimeUpdate,
         RuntimeUpdateResult,
         RuntimeUsage,
-        Squad,
         SquadMember,
         UserProfile,
         UserProfileUpdate,
     )
-    from multica_py.models.workspaces import Workspace, WorkspaceMember
+    from multica_py.resources.agents import Agent
+    from multica_py.resources.autopilots import Autopilot, AutopilotRun
+    from multica_py.resources.issues import TaskRun
+    from multica_py.resources.skills import Skill
+    from multica_py.resources.squads import Squad
+    from multica_py.resources.workspaces import Workspace, WorkspaceMember
 
     # ponytail: all 135 cases built from argv_data source data inline
     _LOCAL_DIR = pathlib.Path("/tmp/sandbox").resolve()
@@ -573,7 +574,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         AutopilotRun(id="r1", autopilot_id="a1", source="manual", status="running")
     )
     _AR = msgspec.json.encode(AttachmentResult(id="a1", filename="f.txt"))
-    _LBL = msgspec.json.encode([LabelData(id="lbl_1", name="bug", color="#ff0000")])
+    _LBL = msgspec.json.encode([_LabelWire(id="lbl_1", name="bug", color="#ff0000")])
     _REPO_MUTATION = msgspec.json.encode(
         RepositoryMutationResult(
             workspace_id="ws_001",

@@ -275,6 +275,13 @@ helpers are removed:
 `IssueChildrenResult.children` and `.unstaged` become `tuple[Issue, ...]`
 (unified). `RelationMetadata.unstaged` becomes `tuple[Issue, ...]`.
 
+The legacy `IssueData.pull_requests` embedded snapshot is exposed as
+`Issue.pull_request_snapshot`. The public `Issue.pull_requests` name is already
+reserved by relation R26 for the lazy pull-request collection, so using the
+same name for both the immutable get snapshot and the relation would make the
+frozen struct field inaccessible. The migration guide records this explicit
+field mapping.
+
 ### Decision 5: Serialization replaces `to_data()` / `from_data()`
 
 The unified class exposes:
