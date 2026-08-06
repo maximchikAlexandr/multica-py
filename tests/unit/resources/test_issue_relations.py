@@ -9,36 +9,22 @@ import pytest
 
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
-from multica_py._internal.wire_models import IssueWire, issue_data_from_wire
+from multica_py._internal.wire_models import _issue_from_wire, _IssueWire
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import OutputShapeError, RelationPaginationError
 from multica_py.models.common import Page
 from multica_py.models.issue_activity import (
-    Comment as CommentRecord,
-)
-from multica_py.models.issue_activity import (
     CommentCursor,
-    CommentData,
     CommentListFlatRequest,
     CommentListRecentRequest,
     CommentListThreadRequest,
-    CommentThreadData,
     RunMessage,
-    TaskRunData,
-)
-from multica_py.models.issue_activity import (
-    CommentThread as CommentThreadRecord,
-)
-from multica_py.models.issue_activity import (
-    TaskRun as TaskRunRecord,
 )
 from multica_py.models.issues import (
-    Issue,
     IssueChildrenResult,
     IssueChildStageGroup,
-    IssueData,
     IssueMetadataItem,
     IssueSummary,
     LinkedPullRequest,
@@ -52,7 +38,7 @@ from multica_py.models.relations import (
     OffsetPage,
 )
 from multica_py.resources.issue_comments import Comment, CommentThread
-from multica_py.resources.issues import IssueEntity, IssueResource, TaskRun
+from multica_py.resources.issues import Issue, IssueResource, TaskRun
 
 
 @dataclass(frozen=True)
@@ -78,7 +64,6 @@ class DirectBoundCase:
     stdout: bytes
     expected_argv: tuple[str, ...]
     expected_type: type[Comment | CommentThread | TaskRun]
-    expected_data_type: type[CommentData | CommentThreadData | TaskRunData]
     second_hop: Literal["none", "comments", "messages"]
 
 
@@ -116,7 +101,6 @@ DIRECT_BOUND_CASES = (
         b'[{"id":"c1","content":"comment"}]',
         ("issue", "comment", "list", "iss_1", "--output", "json"),
         Comment,
-        CommentData,
         "none",
     ),
     DirectBoundCase(
@@ -125,7 +109,6 @@ DIRECT_BOUND_CASES = (
         b'[{"id":"c1","content":"comment"}]',
         ("issue", "comment", "list", "iss_1", "--output", "json"),
         Comment,
-        CommentData,
         "none",
     ),
     DirectBoundCase(
@@ -145,7 +128,6 @@ DIRECT_BOUND_CASES = (
             "json",
         ),
         Comment,
-        CommentData,
         "none",
     ),
     DirectBoundCase(
@@ -154,7 +136,6 @@ DIRECT_BOUND_CASES = (
         b'[{"id":"th_1","comments":[]}]',
         ("issue", "comment", "list", "iss_1", "--recent", "10", "--output", "json"),
         CommentThread,
-        CommentThreadData,
         "comments",
     ),
     DirectBoundCase(
@@ -163,7 +144,6 @@ DIRECT_BOUND_CASES = (
         b'{"id":"c1","content":"comment"}',
         ("issue", "comment", "add", "iss_1", "--content", "comment", "--output", "json"),
         Comment,
-        CommentData,
         "none",
     ),
     DirectBoundCase(
@@ -183,7 +163,6 @@ DIRECT_BOUND_CASES = (
             "json",
         ),
         Comment,
-        CommentData,
         "none",
     ),
     DirectBoundCase(
@@ -192,23 +171,20 @@ DIRECT_BOUND_CASES = (
         b'[{"id":"run_1","status":"done"}]',
         ("issue", "runs", "iss_1", "--output", "json"),
         TaskRun,
-        TaskRunData,
         "messages",
     ),
 )
 
 
-def _issue(client: MulticaClient | None = None) -> IssueEntity:
-    return IssueEntity(
-        IssueData(
-            id="iss_1",
-            title="Issue",
-            status=IssueStatus.todo,
-            label_names=("bug",),
-            child_stages=(IssueChildStageGroup(name="todo", count=1),),
-            metadata_snapshot=(IssueMetadataItem(key="priority", value="high"),),
-        ),
-        client=client,
+def _issue(client: MulticaClient | None = None) -> Issue:
+    return Issue(
+        id="iss_1",
+        title="Issue",
+        status=IssueStatus.todo,
+        label_names=("bug",),
+        child_stages=(IssueChildStageGroup(name="todo", count=1),),
+        metadata_snapshot=(IssueMetadataItem(key="priority", value="high"),),
+        _client=client,
     )
 
 
@@ -272,11 +248,11 @@ def test_issue_children_preserve_aggregate_metadata() -> None:
 def test_issue_comments_and_query_views_invalidate_after_add() -> None:
     client = _client()
     client.issues.comments.list_flat.side_effect = [
-        Page(items=(CommentRecord(id="c1", body="one"),)),
-        Page(items=(CommentRecord(id="c2", body="two"),)),
+        Page(items=(Comment(id="c1", body="one"),)),
+        Page(items=(Comment(id="c2", body="two"),)),
     ]
     client.issues.comments.list_recent.return_value = Page(
-        items=(CommentThreadRecord(id="th_1"),), next_cursor=None
+        items=(CommentThread(id="th_1"),), next_cursor=None
     )
     entity = _issue(client)
 
@@ -293,11 +269,11 @@ def test_comment_thread_cursor_relation_inherits_issue_context() -> None:
     client = _client()
     entity = _issue(client)
     client.issues.comments.list_recent.return_value = Page(
-        items=(CommentThreadRecord(id="th_1"),), next_cursor=None
+        items=(CommentThread(id="th_1"),), next_cursor=None
     )
     bound_thread = entity.recent_comment_threads().all()[0]
     client.issues.comments.list_thread.return_value = Page(
-        items=(CommentRecord(id="c1", body="reply"),), next_cursor=None
+        items=(Comment(id="c1", body="reply"),), next_cursor=None
     )
 
     assert isinstance(bound_thread.comments, CursorLazyCollection)
@@ -310,7 +286,7 @@ def test_comment_thread_cursor_relation_inherits_issue_context() -> None:
 
 def test_task_run_messages_preserve_issue_and_task_ids() -> None:
     client = _client()
-    client.issues.runs.return_value = (TaskRunRecord(id="run_1", status="done"),)
+    client.issues.runs.return_value = (TaskRun(id="run_1", status="done"),)
     client.issues.run_messages.return_value = (
         RunMessage(id="m1", run_id="run_1", role="assistant", content="ok"),
     )
@@ -431,13 +407,11 @@ def test_offset_pagination_rejects_empty_progress_page() -> None:
 
 
 def test_issue_wire_missing_and_empty_fields_do_not_seed_relations() -> None:
-    missing = issue_data_from_wire(
-        decode_json(b'{"id":"i1","title":"t","status":"todo"}', IssueWire)
-    )
-    empty = issue_data_from_wire(
+    missing = _issue_from_wire(decode_json(b'{"id":"i1","title":"t","status":"todo"}', _IssueWire))
+    empty = _issue_from_wire(
         decode_json(
             b'{"id":"i1","title":"t","status":"todo","labels":[],"children":[],"metadata":{}}',
-            IssueWire,
+            _IssueWire,
         )
     )
     assert missing.label_names == empty.label_names == ()
@@ -500,8 +474,6 @@ def test_direct_issue_activity_operations_bind_origin_and_context(case: DirectBo
 
     assert isinstance(item, case.expected_type)
     assert item._client is client
-    assert isinstance(item.to_data(), case.expected_data_type)
-    assert item.to_data() is item.to_data()
     assert client.mock_calls == []
     if case.operation in {"list_flat", "list_thread", "list_recent"}:
         transport.run_text.assert_called_once_with(case.expected_argv)
@@ -511,7 +483,7 @@ def test_direct_issue_activity_operations_bind_origin_and_context(case: DirectBo
         transport.run_text.assert_not_called()
     if case.second_hop == "comments":
         client.issues.comments.list_thread.return_value = Page(
-            items=(CommentRecord(id="c2", body="reply"),), next_cursor=None
+            items=(Comment(id="c2", body="reply"),), next_cursor=None
         )
         assert [comment.id for comment in cast("CommentThread", item).comments.all()] == ["c2"]
         request = client.issues.comments.list_thread.call_args.args[0]

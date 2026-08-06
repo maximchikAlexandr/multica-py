@@ -6,23 +6,25 @@ import pathlib
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, cast, overload
 
+import msgspec
+
 from multica_py._generated.approved_sdk import (
     validate_nonblank,
 )
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
-    IssueChildrenResultWire,
-    IssueListPageWire,
-    IssuePullRequestsResultWire,
-    IssueWire,
-    issue_children_result_from_wire,
-    issue_data_from_wire,
-    issue_list_page_from_wire,
-    issue_pull_requests_from_wire,
+    _issue_children_result_from_wire,
+    _issue_from_wire,
+    _issue_list_page_from_wire,
+    _issue_pull_requests_from_wire,
+    _IssueChildrenResultWire,
+    _IssueListPageWire,
+    _IssuePullRequestsResultWire,
+    _IssueWire,
 )
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
-from multica_py.models import ResourceEntity
+from multica_py.models._bound import _BoundEntity
 from multica_py.models.issue_activity import (
     CommentCursor,
     CommentListFlatRequest,
@@ -31,21 +33,15 @@ from multica_py.models.issue_activity import (
     MetadataEntry,
     RunMessage,
     Subscriber,
-    TaskRunData,
-)
-from multica_py.models.issue_activity import (
-    TaskRun as TaskRunRecord,
 )
 from multica_py.models.issues import (
     FileDescription,
     InlineDescription,
-    Issue,
     IssueAssignee,
     IssueAssignmentRequest,
     IssueChildrenResult,
     IssueChildStageGroup,
     IssueCreateRequest,
-    IssueData,
     IssueDescriptionInput,
     IssueListFilter,
     IssueListPage,
@@ -56,7 +52,6 @@ from multica_py.models.issues import (
     LinkedPullRequest,
     NoDescription,
 )
-from multica_py.models.labels import LabelData
 from multica_py.models.relations import (
     CursorLazyCollection,
     CursorPage,
@@ -98,167 +93,103 @@ def _issue_summary_offset_page(
     )
 
 
-def _issue_data_from_issue(issue: Issue) -> IssueData:
-    return IssueData(
-        id=issue.id,
-        title=issue.title,
-        description=issue.description,
-        status=issue.status,
-        priority=issue.priority,
-        assignee=issue.assignee,
-        pull_requests=issue.pull_requests,
-        child_stages=issue.children,
-        label_names=issue.labels,
-        metadata_snapshot=issue.metadata,
-        attachments=issue.attachments,
-        created_at=issue.created_at,
-        updated_at=issue.updated_at,
-        parent_id=issue.parent_id,
-        project_id=issue.project_id,
-        creator_id=issue.creator_id,
-        creator_type=issue.creator_type,
-    )
+class TaskRun(_BoundEntity):  # type: ignore[misc]
+    id: str
+    status: str
+    agent_id: str | None = None
+    started_at: datetime.datetime | None = None
+    completed_at: datetime.datetime | None = None
+    _issue_id: str | None = msgspec.field(default=None, name="_issue_id")
+    _messages: LazyCollection[RunMessage] | None = msgspec.field(default=None, name="_messages")
 
-
-class TaskRun(ResourceEntity[TaskRunData]):
-    def __init__(
-        self,
-        data: TaskRunData,
-        client: MulticaClient | None = None,
-        *,
-        issue_id: str | None = None,
-    ) -> None:
-        super().__init__(data, client=client)
-        self._issue_id = issue_id
-        self._messages: LazyCollection[RunMessage] | None = None
-
-    @property
-    def id(self) -> str:
-        return self._data.id
-
-    @property
-    def status(self) -> str:
-        return self._data.status
-
-    @property
-    def agent_id(self) -> str | None:
-        return self._data.agent_id
-
-    @property
-    def started_at(self) -> datetime.datetime | None:
-        return self._data.started_at
-
-    @property
-    def completed_at(self) -> datetime.datetime | None:
-        return self._data.completed_at
+    _PUBLIC_FIELDS = ("id", "status", "agent_id", "started_at", "completed_at")
 
     @property
     def messages(self) -> LazyCollection[RunMessage]:
         if self._messages is None:
             client = self._require_client(
-                entity_type="TaskRun", entity_id=self._data.id, relation_name="messages"
+                entity_type="TaskRun", entity_id=self.id, relation_name="messages"
             )
-            task_run_id = self._data.id
+            task_run_id = self.id
             issue_id = self._issue_id
 
             def loader() -> tuple[RunMessage, ...]:
                 return client.issues.run_messages(task_run_id, issue_id=issue_id)
 
-            self._messages = LazyCollection(loader)
-        return self._messages
+            self._set_runtime("_messages", LazyCollection(loader))
+        return self._messages  # type: ignore[return-value]
 
 
-class IssueEntity(ResourceEntity[IssueData]):
-    def __init__(self, data: IssueData, client: MulticaClient | None = None) -> None:
-        super().__init__(data, client=client)
-        self._comments: LazyCollection[Comment] | None = None
-        self._recent_threads: dict[
-            tuple[int, tuple[str, str] | None], CursorLazyCollection[CommentThread]
-        ] = {}
-        self._labels: LazyCollection[Label] | None = None
-        self._subscribers: LazyCollection[Subscriber] | None = None
-        self._metadata: LazyMapping[str, MetadataValue] | None = None
-        self._pull_requests: LazyCollection[LinkedPullRequest] | None = None
-        self._children: LazyCollection[IssueEntity] | None = None
-        self._runs: LazyCollection[TaskRun] | None = None
+class Issue(_BoundEntity):  # type: ignore[misc]
+    id: str
+    title: str
+    status: IssueStatus
+    description: str | None = None
+    priority: str | None = None
+    assignee: IssueAssignee | None = None
+    child_stages: tuple[IssueChildStageGroup, ...] = ()
+    label_names: tuple[str, ...] = ()
+    metadata_snapshot: tuple[IssueMetadataItem, ...] = ()
+    attachments: tuple[AttachmentResult, ...] = ()
+    pull_request_snapshot: tuple[LinkedPullRequest, ...] = ()
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
+    parent_id: str | None = None
+    project_id: str | None = None
+    creator_id: str | None = None
+    creator_type: str | None = None
 
-    @property
-    def id(self) -> str:
-        return self._data.id
+    _comments: LazyCollection[Comment] | None = msgspec.field(default=None, name="_comments")
+    _recent_threads: dict[
+        tuple[int, tuple[str, str] | None], CursorLazyCollection[CommentThread]
+    ] = msgspec.field(default_factory=dict, name="_recent_threads")
+    _labels: LazyCollection[Label] | None = msgspec.field(default=None, name="_labels")
+    _subscribers: LazyCollection[Subscriber] | None = msgspec.field(
+        default=None, name="_subscribers"
+    )
+    _metadata: LazyMapping[str, MetadataValue] | None = msgspec.field(
+        default=None, name="_metadata"
+    )
+    _pull_requests: LazyCollection[LinkedPullRequest] | None = msgspec.field(
+        default=None, name="_pull_requests"
+    )
+    _children: LazyCollection[Issue] | None = msgspec.field(default=None, name="_children")
+    _runs: LazyCollection[TaskRun] | None = msgspec.field(default=None, name="_runs")
 
-    @property
-    def title(self) -> str:
-        return self._data.title
-
-    @property
-    def description(self) -> str | None:
-        return self._data.description
-
-    @property
-    def status(self) -> IssueStatus:
-        return self._data.status
-
-    @property
-    def priority(self) -> str | None:
-        return self._data.priority
-
-    @property
-    def assignee(self) -> IssueAssignee | None:
-        return self._data.assignee
-
-    @property
-    def label_names(self) -> tuple[str, ...]:
-        return self._data.label_names
-
-    @property
-    def child_stages(self) -> tuple[IssueChildStageGroup, ...]:
-        return self._data.child_stages
-
-    @property
-    def metadata_snapshot(self) -> tuple[IssueMetadataItem, ...]:
-        return self._data.metadata_snapshot
-
-    @property
-    def pull_request_snapshot(self) -> tuple[LinkedPullRequest, ...]:
-        return self._data.pull_requests
-
-    @property
-    def parent_id(self) -> str | None:
-        return self._data.parent_id
-
-    @property
-    def project_id(self) -> str | None:
-        return self._data.project_id
-
-    @property
-    def creator_id(self) -> str | None:
-        return self._data.creator_id
-
-    @property
-    def creator_type(self) -> str | None:
-        return self._data.creator_type
-
-    @property
-    def attachments(self) -> tuple[AttachmentResult, ...]:
-        return self._data.attachments
-
-    def _check_client(self, relation_name: str) -> MulticaClient:
-        return self._require_client(
-            entity_type="IssueEntity", entity_id=self._data.id, relation_name=relation_name
-        )
+    _PUBLIC_FIELDS = (
+        "id",
+        "title",
+        "description",
+        "status",
+        "priority",
+        "assignee",
+        "child_stages",
+        "label_names",
+        "metadata_snapshot",
+        "attachments",
+        "pull_request_snapshot",
+        "created_at",
+        "updated_at",
+        "parent_id",
+        "project_id",
+        "creator_id",
+        "creator_type",
+    )
 
     @property
     def comments(self) -> LazyCollection[Comment]:
         if self._comments is None:
-            client = self._check_client("comments")
-            issue_id = self._data.id
+            client = self._require_client(
+                entity_type="Issue", entity_id=self.id, relation_name="comments"
+            )
+            issue_id = self.id
 
             def loader() -> tuple[Comment, ...]:
                 page = client.issues.comments.list_flat(CommentListFlatRequest(issue_id=issue_id))
                 return tuple(_bind_comment(item, client) for item in page.items)
 
-            self._comments = LazyCollection(loader)
-        return self._comments
+            self._set_runtime("_comments", LazyCollection(loader))
+        return self._comments  # type: ignore[return-value]
 
     def recent_comment_threads(
         self,
@@ -270,8 +201,10 @@ class IssueEntity(ResourceEntity[IssueData]):
             raise ValueError("limit must be positive")
         key = (limit, None if cursor is None else (cursor.before, cursor.before_id))
         if key not in self._recent_threads:
-            client = self._check_client("recent_comment_threads")
-            issue_id = self._data.id
+            client = self._require_client(
+                entity_type="Issue", entity_id=self.id, relation_name="recent_comment_threads"
+            )
+            issue_id = self.id
 
             def page_loader(*, cursor: CommentCursor | None) -> CursorPage[CommentThread]:
                 request = CommentListRecentRequest(
@@ -291,147 +224,169 @@ class IssueEntity(ResourceEntity[IssueData]):
     @property
     def labels(self) -> LazyCollection[Label]:
         if self._labels is None:
-            client = self._check_client("labels")
-            issue_id = self._data.id
-            self._labels = LazyCollection(
-                lambda: tuple(
-                    Label(LabelData(id=item.id, name=item.name, color=item.color), client=client)
+            client = self._require_client(
+                entity_type="Issue", entity_id=self.id, relation_name="labels"
+            )
+            issue_id = self.id
+
+            def _load_labels() -> tuple[Label, ...]:
+                return tuple(
+                    Label(id=item.id, name=item.name, color=item.color, _client=client)
                     for item in client.issues.labels.list(issue_id)
                 )
-            )
-        return self._labels
+
+            self._set_runtime("_labels", LazyCollection(_load_labels))
+        return self._labels  # type: ignore[return-value]
 
     @property
     def subscribers(self) -> LazyCollection[Subscriber]:
         if self._subscribers is None:
-            client = self._check_client("subscribers")
-            issue_id = self._data.id
+            client = self._require_client(
+                entity_type="Issue", entity_id=self.id, relation_name="subscribers"
+            )
+            issue_id = self.id
             subscribers = client.issues.subscribers
-            self._subscribers = LazyCollection(lambda: subscribers.list(issue_id))
-        return self._subscribers
+            self._set_runtime("_subscribers", LazyCollection(lambda: subscribers.list(issue_id)))
+        return self._subscribers  # type: ignore[return-value]
 
     @property
     def metadata(self) -> LazyMapping[str, MetadataValue]:
         if self._metadata is None:
-            client = self._check_client("metadata")
-            issue_id = self._data.id
+            client = self._require_client(
+                entity_type="Issue", entity_id=self.id, relation_name="metadata"
+            )
+            issue_id = self.id
 
             def loader() -> Mapping[str, MetadataValue]:
                 return client.issues.metadata.list(issue_id)
 
-            self._metadata = LazyMapping(loader)
-        return self._metadata
+            self._set_runtime("_metadata", LazyMapping(loader))
+        return self._metadata  # type: ignore[return-value]
 
     @property
     def pull_requests(self) -> LazyCollection[LinkedPullRequest]:
         if self._pull_requests is None:
-            client = self._check_client("pull_requests")
-            issue_id = self._data.id
+            client = self._require_client(
+                entity_type="Issue", entity_id=self.id, relation_name="pull_requests"
+            )
+            issue_id = self.id
             issues = client.issues
-            self._pull_requests = LazyCollection(lambda: issues.pull_requests(issue_id))
-        return self._pull_requests
+            self._set_runtime(
+                "_pull_requests", LazyCollection(lambda: issues.pull_requests(issue_id))
+            )
+        return self._pull_requests  # type: ignore[return-value]
 
     @property
-    def children(self) -> LazyCollection[IssueEntity]:
+    def children(self) -> LazyCollection[Issue]:
         if self._children is None:
-            client = self._check_client("children")
-            issue_id = self._data.id
+            client = self._require_client(
+                entity_type="Issue", entity_id=self.id, relation_name="children"
+            )
+            issue_id = self.id
 
-            def loader() -> _RelationLoad[IssueEntity]:
+            def loader() -> _RelationLoad[Issue]:
                 result: IssueChildrenResult = client.issues.children(issue_id)
                 return _RelationLoad(
-                    tuple(
-                        IssueEntity(_issue_data_from_issue(item), client=client)
-                        for item in result.children
-                    ),
+                    tuple(item._with_client(client) for item in result.children),
                     RelationMetadata(
                         total=result.total,
                         child_stages=result.child_stages,
-                        unstaged=tuple(
-                            IssueEntity(_issue_data_from_issue(item), client=client)
-                            for item in result.unstaged
-                        ),
+                        unstaged=tuple(item._with_client(client) for item in result.unstaged),
                     ),
                 )
 
-            self._children = LazyCollection(loader)
-        return self._children
+            self._set_runtime("_children", LazyCollection(loader))
+        return self._children  # type: ignore[return-value]
 
     @property
     def runs(self) -> LazyCollection[TaskRun]:
         if self._runs is None:
-            client = self._check_client("runs")
-            issue_id = self._data.id
+            client = self._require_client(
+                entity_type="Issue", entity_id=self.id, relation_name="runs"
+            )
+            issue_id = self.id
 
             def loader() -> tuple[TaskRun, ...]:
                 runs = client.issues.runs(issue_id)
                 return tuple(
                     TaskRun(
-                        TaskRunData(
-                            id=run.id,
-                            status=run.status,
-                            agent_id=run.agent_id,
-                            started_at=run.started_at,
-                            completed_at=run.completed_at,
-                        ),
-                        client=client,
-                        issue_id=issue_id,
+                        id=run.id,
+                        status=run.status,
+                        agent_id=run.agent_id,
+                        started_at=run.started_at,
+                        completed_at=run.completed_at,
+                        _client=client,
+                        _issue_id=issue_id,
                     )
                     for run in runs
                 )
 
-            self._runs = LazyCollection(loader)
-        return self._runs
+            self._set_runtime("_runs", LazyCollection(loader))
+        return self._runs  # type: ignore[return-value]
 
     def add_comment(self, body: str) -> Comment:
-        client = self._check_client("comments")
-        result = client.issues.comments.add(self._data.id, body)
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="comments"
+        )
+        result = client.issues.comments.add(self.id, body)
         self._invalidate_comments()
         return _bind_comment(result, client)
 
     def reply(self, thread_id: str, body: str) -> Comment:
-        client = self._check_client("comments")
-        result = client.issues.comments.reply(self._data.id, thread_id, body)
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="comments"
+        )
+        result = client.issues.comments.reply(self.id, thread_id, body)
         self._invalidate_comments()
         return _bind_comment(result, client)
 
     def add_label(self, label_id: str) -> tuple[Label, ...]:
-        client = self._check_client("labels")
-        result = client.issues.labels.add(self._data.id, label_id)
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="labels"
+        )
+        result = client.issues.labels.add(self.id, label_id)
         self._invalidate_labels()
         return tuple(
-            Label(LabelData(id=item.id, name=item.name, color=item.color), client=client)
-            for item in result
+            Label(id=item.id, name=item.name, color=item.color, _client=client) for item in result
         )
 
     def remove_label(self, label_id: str) -> tuple[Label, ...]:
-        client = self._check_client("labels")
-        result = client.issues.labels.remove(self._data.id, label_id)
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="labels"
+        )
+        result = client.issues.labels.remove(self.id, label_id)
         self._invalidate_labels()
         return tuple(
-            Label(LabelData(id=item.id, name=item.name, color=item.color), client=client)
-            for item in result
+            Label(id=item.id, name=item.name, color=item.color, _client=client) for item in result
         )
 
     def add_subscriber(self, user_id: str) -> None:
-        client = self._check_client("subscribers")
-        client.issues.subscribers.add(self._data.id, user_id)
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="subscribers"
+        )
+        client.issues.subscribers.add(self.id, user_id)
         self._invalidate_subscribers()
 
     def remove_subscriber(self, user_id: str) -> None:
-        client = self._check_client("subscribers")
-        client.issues.subscribers.remove(self._data.id, user_id)
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="subscribers"
+        )
+        client.issues.subscribers.remove(self.id, user_id)
         self._invalidate_subscribers()
 
     def set_metadata(self, key: str, value: MetadataValue) -> MetadataEntry:
-        client = self._check_client("metadata")
-        result = client.issues.metadata.set(self._data.id, key, value)
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="metadata"
+        )
+        result = client.issues.metadata.set(self.id, key, value)
         self._invalidate_metadata()
         return result
 
     def delete_metadata(self, key: str) -> None:
-        client = self._check_client("metadata")
-        client.issues.metadata.delete(self._data.id, key)
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="metadata"
+        )
+        client.issues.metadata.delete(self.id, key)
         self._invalidate_metadata()
 
     def _invalidate_comments(self) -> None:
@@ -511,30 +466,27 @@ class IssueResource(BaseResource):
                 args.extend(["--sort", sort.value])
             if direction is not None:
                 args.extend(["--direction", direction.value])
-        page = issue_list_page_from_wire(self._run_json_decode(tuple(args), IssueListPageWire))
+        page = _issue_list_page_from_wire(self._run_json_decode(tuple(args), _IssueListPageWire))
         return page
 
-    def _bind_issue(self, data: IssueData) -> IssueEntity:
-        return IssueEntity(data, client=self._client)
-
-    def get(self, issue_id: str) -> IssueEntity:
+    def get(self, issue_id: str) -> Issue:
         validate_nonblank(issue_id)
-        return self._bind_issue(
-            issue_data_from_wire(self._run_json_decode(("issue", "get", issue_id), IssueWire))
-        )
+        return _issue_from_wire(
+            self._run_json_decode(("issue", "get", issue_id), _IssueWire)
+        )._with_client(self._client)
 
     def pull_requests(self, issue_id: str) -> tuple[LinkedPullRequest, ...]:
         result = self._run_json_decode(
-            ("issue", "pull-requests", issue_id), IssuePullRequestsResultWire
+            ("issue", "pull-requests", issue_id), _IssuePullRequestsResultWire
         )
-        return issue_pull_requests_from_wire(result)
+        return _issue_pull_requests_from_wire(result)
 
     def children(self, issue_id: str) -> IssueChildrenResult:
-        result = self._run_json_decode(("issue", "children", issue_id), IssueChildrenResultWire)
-        return issue_children_result_from_wire(result)
+        result = self._run_json_decode(("issue", "children", issue_id), _IssueChildrenResultWire)
+        return _issue_children_result_from_wire(result)
 
     @overload
-    def create(self, request: IssueCreateRequest, /) -> IssueEntity: ...
+    def create(self, request: IssueCreateRequest, /) -> Issue: ...
     @overload
     def create(
         self,
@@ -546,9 +498,9 @@ class IssueResource(BaseResource):
         label_ids: tuple[str, ...] = (),
         project_id: str | None = None,
         parent_id: str | None = None,
-    ) -> IssueEntity: ...
+    ) -> Issue: ...
 
-    def create(self, request: IssueCreateRequest | None = None, /, **kwargs: object) -> IssueEntity:  # type: ignore[misc]
+    def create(self, request: IssueCreateRequest | None = None, /, **kwargs: object) -> Issue:  # type: ignore[misc]
         """Create an issue and optionally attach labels.
 
         Creates the issue first, then attaches each ``label_ids`` entry via
@@ -573,8 +525,8 @@ class IssueResource(BaseResource):
             args.extend(["--project", req.project_id])
         if req.parent_id is not None:
             args.extend(["--parent", req.parent_id])
-        issue = self._bind_issue(
-            issue_data_from_wire(self._run_json_decode(tuple(args), IssueWire))
+        issue = _issue_from_wire(self._run_json_decode(tuple(args), _IssueWire))._with_client(
+            self._client
         )
         for label_id in req.label_ids:
             self.labels.add(issue.id, label_id)
@@ -583,7 +535,7 @@ class IssueResource(BaseResource):
         return issue
 
     @overload
-    def update(self, issue_id: str, request: IssueUpdateRequest, /) -> IssueEntity: ...
+    def update(self, issue_id: str, request: IssueUpdateRequest, /) -> Issue: ...
     @overload
     def update(
         self,
@@ -595,11 +547,11 @@ class IssueResource(BaseResource):
         assignee_id: str | None = None,
         project_id: str | None = None,
         parent_id: str | None = None,
-    ) -> IssueEntity: ...
+    ) -> Issue: ...
 
     def update(  # type: ignore[misc]
         self, issue_id: str, request: IssueUpdateRequest | None = None, /, **kwargs: object
-    ) -> IssueEntity:
+    ) -> Issue:
         req = _resolve_request(request, kwargs, IssueUpdateRequest)
         args = ["issue", "update", issue_id]
         if req.title is not None:
@@ -614,10 +566,12 @@ class IssueResource(BaseResource):
             args.extend(["--project", req.project_id])
         if req.parent_id is not None:
             args.extend(["--parent", req.parent_id])
-        return self._bind_issue(issue_data_from_wire(self._run_json_decode(tuple(args), IssueWire)))
+        return _issue_from_wire(self._run_json_decode(tuple(args), _IssueWire))._with_client(
+            self._client
+        )
 
     @overload
-    def assign(self, request: IssueAssignmentRequest, /) -> IssueEntity: ...
+    def assign(self, request: IssueAssignmentRequest, /) -> Issue: ...
     @overload
     def assign(
         self,
@@ -627,11 +581,11 @@ class IssueResource(BaseResource):
         agent_id: str | None = None,
         squad_id: str | None = None,
         unassign: bool = False,
-    ) -> IssueEntity: ...
+    ) -> Issue: ...
 
     def assign(  # type: ignore[misc]
         self, request: IssueAssignmentRequest | None = None, /, **kwargs: object
-    ) -> IssueEntity:
+    ) -> Issue:
         req = _resolve_request(request, kwargs, IssueAssignmentRequest)
         args = ["issue", "assign", req.issue_id]
         if req.member_id is not None:
@@ -642,20 +596,20 @@ class IssueResource(BaseResource):
             args.extend(["--to-id", req.squad_id])
         elif req.unassign:
             args.append("--unassign")
-        return self._bind_issue(issue_data_from_wire(self._run_json_decode(tuple(args), IssueWire)))
-
-    def set_status(self, issue_id: str, status: IssueStatus) -> IssueEntity:
-        return self._bind_issue(
-            issue_data_from_wire(
-                self._run_json_decode(("issue", "status", issue_id, status.value), IssueWire)
-            )
+        return _issue_from_wire(self._run_json_decode(tuple(args), _IssueWire))._with_client(
+            self._client
         )
+
+    def set_status(self, issue_id: str, status: IssueStatus) -> Issue:
+        return _issue_from_wire(
+            self._run_json_decode(("issue", "status", issue_id, status.value), _IssueWire)
+        )._with_client(self._client)
 
     def deprioritize(self, issue_id: str) -> str:
         return self._transport.run_text(("issue", "deprioritize", issue_id)).text
 
     @overload
-    def reorder(self, request: IssueReorderRequest, /) -> IssueEntity: ...
+    def reorder(self, request: IssueReorderRequest, /) -> Issue: ...
     @overload
     def reorder(
         self,
@@ -665,11 +619,11 @@ class IssueResource(BaseResource):
         after_id: str | None = None,
         top: bool = False,
         bottom: bool = False,
-    ) -> IssueEntity: ...
+    ) -> Issue: ...
 
     def reorder(  # type: ignore[misc]
         self, request: IssueReorderRequest | None = None, /, **kwargs: object
-    ) -> IssueEntity:
+    ) -> Issue:
         req = _resolve_request(request, kwargs, IssueReorderRequest)
         args = ["issue", "reorder", req.issue_id]
         if req.before_id is not None:
@@ -680,7 +634,9 @@ class IssueResource(BaseResource):
             args.append("--top")
         elif req.bottom:
             args.append("--bottom")
-        return self._bind_issue(issue_data_from_wire(self._run_json_decode(tuple(args), IssueWire)))
+        return _issue_from_wire(self._run_json_decode(tuple(args), _IssueWire))._with_client(
+            self._client
+        )
 
     def search(self, query: str) -> tuple[IssueSummary, ...]:
         return self._run_json_decode_list(("issue", "search", query), IssueSummary)
@@ -688,17 +644,15 @@ class IssueResource(BaseResource):
     def runs(self, issue_id: str) -> tuple[TaskRun, ...]:
         return tuple(
             TaskRun(
-                TaskRunData(
-                    id=run.id,
-                    status=run.status,
-                    agent_id=run.agent_id,
-                    started_at=run.started_at,
-                    completed_at=run.completed_at,
-                ),
-                client=self._client,
-                issue_id=issue_id,
+                id=run.id,
+                status=run.status,
+                agent_id=run.agent_id,
+                started_at=run.started_at,
+                completed_at=run.completed_at,
+                _client=self._client,
+                _issue_id=issue_id,
             )
-            for run in self._run_json_decode_list(("issue", "runs", issue_id), TaskRunRecord)
+            for run in self._run_json_decode_list(("issue", "runs", issue_id), TaskRun)
         )
 
     def run_messages(

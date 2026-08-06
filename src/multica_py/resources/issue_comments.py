@@ -4,31 +4,25 @@ import datetime
 import re
 from typing import TYPE_CHECKING, cast
 
+import msgspec
+
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
-    CommentThreadWire,
-    CommentWire,
+    _CommentThreadWire,
+    _CommentWire,
     comment_from_wire,
     comment_thread_from_wire,
 )
 from multica_py.config import ClientConfig
 from multica_py.exceptions import MissingRelationContextError, OutputShapeError
-from multica_py.models import ResourceEntity
+from multica_py.models._bound import _BoundEntity
 from multica_py.models.common import Page
 from multica_py.models.issue_activity import (
-    Comment as CommentRecord,
-)
-from multica_py.models.issue_activity import (
     CommentCursor,
-    CommentData,
     CommentListFlatRequest,
     CommentListRecentRequest,
     CommentListThreadRequest,
-    CommentThreadData,
-)
-from multica_py.models.issue_activity import (
-    CommentThread as CommentThreadRecord,
 )
 from multica_py.models.relations import CursorLazyCollection, CursorPage
 from multica_py.resources._base import BaseResource
@@ -62,71 +56,38 @@ def _extract_cursor(stderr: str) -> CommentCursor | None:
     return None
 
 
-class Comment(ResourceEntity[CommentData]):
-    def __init__(self, data: CommentData, client: MulticaClient | None = None) -> None:
-        super().__init__(data, client=client)
+class Comment(_BoundEntity):  # type: ignore[misc]
+    id: str
+    body: str
+    thread_id: str | None = None
+    author_id: str | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
-    @property
-    def id(self) -> str:
-        return self._data.id
-
-    @property
-    def body(self) -> str:
-        return self._data.body
-
-    @property
-    def thread_id(self) -> str | None:
-        return self._data.thread_id
-
-    @property
-    def author_id(self) -> str | None:
-        return self._data.author_id
-
-    @property
-    def created_at(self) -> datetime.datetime | None:
-        return self._data.created_at
-
-    @property
-    def updated_at(self) -> datetime.datetime | None:
-        return self._data.updated_at
+    _PUBLIC_FIELDS = ("id", "body", "thread_id", "author_id", "created_at", "updated_at")
 
 
-class CommentThread(ResourceEntity[CommentThreadData]):
-    def __init__(
-        self,
-        data: CommentThreadData,
-        client: MulticaClient | None = None,
-        *,
-        issue_id: str | None = None,
-    ) -> None:
-        super().__init__(data, client=client)
-        self._issue_id = issue_id
-        self._comments: CursorLazyCollection[Comment] | None = None
+class CommentThread(_BoundEntity):  # type: ignore[misc]
+    id: str
+    resolved: bool = False
+    updated_at: datetime.datetime | None = None
 
-    @property
-    def id(self) -> str:
-        return self._data.id
+    issue_id: str | None = msgspec.field(default=None, name="_issue_id")
+    _comments: CursorLazyCollection[Comment] | None = msgspec.field(default=None, name="_comments")
 
-    @property
-    def resolved(self) -> bool:
-        return self._data.resolved
-
-    @property
-    def updated_at(self) -> datetime.datetime | None:
-        return self._data.updated_at
+    _RUNTIME_INIT_FIELDS = ("issue_id",)
+    _PUBLIC_FIELDS = ("id", "resolved", "updated_at")
 
     @property
     def comments(self) -> CursorLazyCollection[Comment]:
         if self._comments is None:
             client = self._require_client(
-                entity_type="CommentThread", entity_id=self._data.id, relation_name="comments"
+                entity_type="CommentThread", entity_id=self.id, relation_name="comments"
             )
-            if self._issue_id is None:
-                raise MissingRelationContextError(
-                    "CommentThread", self._data.id, "comments", "issue_id"
-                )
-            issue_id = self._issue_id
-            thread_id = self._data.id
+            if self.issue_id is None:
+                raise MissingRelationContextError("CommentThread", self.id, "comments", "issue_id")
+            issue_id = self.issue_id
+            thread_id = self.id
 
             def page_loader(cursor: CommentCursor | None = None) -> CursorPage[Comment]:
                 request = CommentListThreadRequest(
@@ -141,54 +102,25 @@ class CommentThread(ResourceEntity[CommentThreadData]):
                     next_cursor=cast("CommentCursor | None", page.next_cursor),
                 )
 
-            self._comments = CursorLazyCollection(page_loader)
-        return self._comments
+            _comments: CursorLazyCollection[Comment] = CursorLazyCollection(page_loader)
+            self._set_runtime("_comments", _comments)
+        return self._comments  # type: ignore[return-value]
 
 
-def _comment_data(comment: CommentRecord | Comment) -> CommentData:
-    if isinstance(comment, Comment):
-        return comment.to_data()
-    return CommentData(
-        id=comment.id,
-        body=comment.body,
-        thread_id=comment.thread_id,
-        author_id=comment.author_id,
-        created_at=comment.created_at,
-        updated_at=comment.updated_at,
-    )
-
-
-def _bind_comment(comment: CommentRecord | Comment, client: MulticaClient | None) -> Comment:
-    return Comment(_comment_data(comment), client=client)
-
-
-def _thread_data(thread: CommentThreadRecord | CommentThread) -> CommentThreadData:
-    if isinstance(thread, CommentThread):
-        return thread.to_data()
-    return CommentThreadData(
-        id=thread.id,
-        comments=tuple(
-            CommentData(
-                id=comment.id,
-                body=comment.body,
-                thread_id=comment.thread_id,
-                author_id=comment.author_id,
-                created_at=comment.created_at,
-                updated_at=comment.updated_at,
-            )
-            for comment in thread.comments
-        ),
-        resolved=thread.resolved,
-        updated_at=thread.updated_at,
-    )
+def _bind_comment(comment: Comment, client: MulticaClient | None) -> Comment:
+    return comment._with_client(client)
 
 
 def _bind_thread(
-    thread: CommentThreadRecord | CommentThread,
+    thread: CommentThread,
     client: MulticaClient | None,
     issue_id: str,
 ) -> CommentThread:
-    return CommentThread(_thread_data(thread), client=client, issue_id=issue_id)
+    result = thread
+    result = result._with_client(client)
+    if result.issue_id is None:
+        result = msgspec.structs.replace(result, issue_id=issue_id)
+    return result
 
 
 class IssueCommentResource(BaseResource):
@@ -199,7 +131,7 @@ class IssueCommentResource(BaseResource):
         return tuple(
             _bind_comment(comment_from_wire(item), self._client)
             for item in self._run_json_decode_list(
-                ("issue", "comment", "list", issue_id), CommentWire
+                ("issue", "comment", "list", issue_id), _CommentWire
             )
         )
 
@@ -268,7 +200,7 @@ class IssueCommentResource(BaseResource):
         return _bind_comment(
             comment_from_wire(
                 self._run_json_decode(
-                    ("issue", "comment", "add", issue_id, "--content", body), CommentWire
+                    ("issue", "comment", "add", issue_id, "--content", body), _CommentWire
                 )
             ),
             self._client,
@@ -288,7 +220,7 @@ class IssueCommentResource(BaseResource):
                         "--parent",
                         thread_id,
                     ),
-                    CommentWire,
+                    _CommentWire,
                 )
             ),
             self._client,
@@ -303,14 +235,14 @@ class IssueCommentResource(BaseResource):
     def unresolve(self, thread_id: str) -> None:
         self._transport.run_text(("issue", "comment", "unresolve", thread_id))
 
-    def _run_decode_comments(self, payload: str) -> tuple[CommentRecord, ...]:
+    def _run_decode_comments(self, payload: str) -> tuple[Comment, ...]:
         return tuple(
             comment_from_wire(item)
-            for item in decode_json(payload.encode("utf-8"), list[CommentWire])
+            for item in decode_json(payload.encode("utf-8"), list[_CommentWire])
         )
 
-    def _run_decode_threads(self, payload: str) -> tuple[CommentThreadRecord, ...]:
+    def _run_decode_threads(self, payload: str) -> tuple[CommentThread, ...]:
         return tuple(
             comment_thread_from_wire(item)
-            for item in decode_json(payload.encode("utf-8"), list[CommentThreadWire])
+            for item in decode_json(payload.encode("utf-8"), list[_CommentThreadWire])
         )

@@ -14,19 +14,16 @@ from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.issues import IssueListPage, IssueSummary
 from multica_py.models.relations import OffsetLazyCollection
-from multica_py.models.system import WorkspaceMemberData
-from multica_py.models.workspaces import WorkspaceMember
-from multica_py.resources.agents import AgentEntity
+from multica_py.resources.agents import Agent
 from multica_py.resources.projects import Project
-from multica_py.resources.squads import SquadEntity
+from multica_py.resources.squads import Squad
 from multica_py.resources.workspaces import (
-    WorkspaceEntity,
-    WorkspaceMemberEntity,
+    Workspace,
+    WorkspaceMember,
     WorkspaceResource,
 )
 from tests.unit.resources.workspace_cases import (
     make_workspace_clients,
-    workspace_data,
     workspace_relation_method,
 )
 
@@ -55,17 +52,13 @@ _UNPAGED_RELATION_CASES = (
 @dataclass(frozen=True)
 class WorkspaceMemberIdentityDefaultCase:
     name: str
-    value: WorkspaceMember | WorkspaceMemberData
+    value: WorkspaceMember
 
 
 WORKSPACE_MEMBER_IDENTITY_DEFAULT_CASES = (
     WorkspaceMemberIdentityDefaultCase(
         "wire model",
         WorkspaceMember(id="membership-1", name="Member"),
-    ),
-    WorkspaceMemberIdentityDefaultCase(
-        "entity data",
-        WorkspaceMemberData(id="membership-1", name="Member"),
     ),
 )
 
@@ -83,7 +76,7 @@ def test_workspace_member_identity_defaults_to_none(
 @pytest.mark.parametrize("case", _UNPAGED_RELATION_CASES, ids=lambda case: case.relation_name)
 def test_workspace_unpaged_relation_is_lazy_and_cached(case: WorkspaceUnpagedCase) -> None:
     clients = make_workspace_clients()
-    entity = WorkspaceEntity(workspace_data(), client=clients.origin)
+    entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
     relation = getattr(entity, case.relation_name)
     method = workspace_relation_method(clients.scoped, case.relation_name)
 
@@ -96,9 +89,11 @@ def test_workspace_unpaged_relation_is_lazy_and_cached(case: WorkspaceUnpagedCas
     method.assert_called_once_with(*case.expected_args)
 
 
-def test_workspace_member_is_bound_to_distinct_scoped_client() -> None:
-    clients = make_workspace_clients(members=(WorkspaceMember(id="m1", name="Member"),))
-    entity = WorkspaceEntity(workspace_data(), client=clients.origin)
+def test_workspace_members_loader_preserves_bound_items() -> None:
+    clients = make_workspace_clients()
+    member = WorkspaceMember(id="m1", name="Member", _client=clients.scoped)
+    clients.scoped.workspaces.members.return_value = (member,)
+    entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
 
     items = entity.members.all()
 
@@ -106,6 +101,7 @@ def test_workspace_member_is_bound_to_distinct_scoped_client() -> None:
     clients.origin.with_workspace.assert_called_once_with("ws_1")
     clients.scoped.workspaces.members.assert_called_once_with("ws_1")
     clients.origin.workspaces.members.assert_not_called()
+    assert items[0] is member
     assert items[0]._client is clients.scoped
 
 
@@ -139,8 +135,6 @@ def test_workspace_members_preserve_user_identity() -> None:
     assert member.id == "membership-1"
     assert member.user_id == "user-1"
     assert member.email == "member@example.test"
-    assert member.to_data().user_id == "user-1"
-    assert member.to_data().email == "member@example.test"
     assert len(items) == 1
     issue_filter = client.issues.list.call_args.args[0]
     assert issue_filter.assignee_id == "membership-1"
@@ -194,7 +188,7 @@ def test_workspace_issues_paginates_offset() -> None:
         total=3,
     )
     clients = make_workspace_clients(issues=[p1, p2])
-    entity = WorkspaceEntity(workspace_data(), client=clients.origin)
+    entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
     items = entity.issues.all()
     assert len(items) == 3
     assert clients.scoped.issues.list.call_count == 2
@@ -217,7 +211,7 @@ def test_workspace_issues_single_page() -> None:
         total=1,
     )
     clients = make_workspace_clients(issues=[page, page])
-    entity = WorkspaceEntity(workspace_data(), client=clients.origin)
+    entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
     items = entity.issues.all()
     assert len(items) == 1
     assert clients.scoped.issues.list.call_count == 1
@@ -235,11 +229,11 @@ class IssueRelationTypeCase:
 
 
 ISSUE_RELATION_TYPE_CASES = (
-    IssueRelationTypeCase(WorkspaceEntity, "issues"),
+    IssueRelationTypeCase(Workspace, "issues"),
     IssueRelationTypeCase(Project, "issues"),
-    IssueRelationTypeCase(AgentEntity, "issues"),
-    IssueRelationTypeCase(SquadEntity, "issues"),
-    IssueRelationTypeCase(WorkspaceMemberEntity, "issues"),
+    IssueRelationTypeCase(Agent, "issues"),
+    IssueRelationTypeCase(Squad, "issues"),
+    IssueRelationTypeCase(WorkspaceMember, "issues"),
 )
 
 
@@ -250,7 +244,7 @@ def test_issue_relations_are_typed_as_summary_collections(case: IssueRelationTyp
 
 
 def test_workspace_detached_access_raises() -> None:
-    entity: WorkspaceEntity = WorkspaceEntity.from_data(workspace_data())
+    entity: Workspace = Workspace(id="ws_1", name="Test WS")
     with pytest.raises(DetachedEntityError):
         entity.members.all()
     with pytest.raises(DetachedEntityError):

@@ -50,7 +50,7 @@ def inspect_issue(client: MulticaClient, issue_id: str) -> None:
         print(f"run {run.id}: {len(run.messages.all())} messages")
 
     print(f"{issue.title}: {len(comments)} comments, metadata={tuple(metadata)}")
-    _ = issue.to_data()
+    _ = issue.to_dict()
 
 
 def inspect_autopilot(client: MulticaClient, autopilot_id: str) -> None:

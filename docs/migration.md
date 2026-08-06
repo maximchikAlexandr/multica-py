@@ -1,20 +1,77 @@
 # Alpha migration guide
 
 The relation graph is a deliberate 0.x API boundary. Resource results are
-bound wrappers; scalar data is available through `to_data()`, and relations
-load only at explicit load points such as `all()`, `page()`, `refresh()`, or
-`MulticaClient.prefetch()`.
+bound wrappers; scalar data is available through `to_json()` / `to_dict()`,
+and relations load only at explicit load points such as `all()`, `page()`,
+`refresh()`, or `MulticaClient.prefetch()`.
+
+Recursive JSON fields such as `AutopilotRun.trigger_payload` and `result` now
+use immutable snapshots: object nodes implement the public
+`Mapping[str, JsonValue]` contract and arrays are tuples. The unified entity's
+`to_dict()` and `to_json()` methods materialize ordinary dict/list containers
+when data crosses into a serializer; callers should use those methods rather
+than serializing an internal snapshot node directly.
+
+## Class rename table (entity + data unification)
+
+The 0.x release unifies each prior `*Entity` + `*Data` (+ redundant passive
+DTO) pair into a single immutable domain class. The unified class is the
+only public name; no `IssueData = Issue` style aliases are shipped. The
+unified class carries private runtime state (client, lazy caches), so
+persistence should go through `to_json()` / `to_dict()`.
+
+| Removed name | Unified class |
+|---|---|
+| `multica_py.resources.issues.IssueEntity` | `multica_py.resources.issues.Issue` |
+| `multica_py.resources.agents.AgentEntity` | `multica_py.resources.agents.Agent` |
+| `multica_py.resources.skills.SkillEntity` | `multica_py.resources.skills.Skill` |
+| `multica_py.resources.squads.SquadEntity` | `multica_py.resources.squads.Squad` |
+| `multica_py.resources.workspaces.WorkspaceEntity` | `multica_py.resources.workspaces.Workspace` |
+| `multica_py.resources.workspaces.WorkspaceMemberEntity` | `multica_py.resources.workspaces.WorkspaceMember` |
+| `multica_py.resources.autopilots.AutopilotEntity` | `multica_py.resources.autopilots.Autopilot` |
+| `multica_py.resources.autopilots.AutopilotRunEntity` | `multica_py.resources.autopilots.AutopilotRun` |
+| `multica_py.models.issues.IssueData` | `multica_py.resources.issues.Issue` |
+| `multica_py.models.issues.Issue` passive DTO | `multica_py.resources.issues.Issue` |
+| `multica_py.models.projects.ProjectData` | `multica_py.resources.projects.Project` |
+| `multica_py.models.projects.Project` passive DTO | `multica_py.resources.projects.Project` |
+| `multica_py.models.agents.AgentData` | `multica_py.resources.agents.Agent` |
+| `multica_py.models.agents.Agent` passive DTO | `multica_py.resources.agents.Agent` |
+| `multica_py.models.skills.SkillData` | `multica_py.resources.skills.Skill` |
+| `multica_py.models.skills.Skill` passive DTO | `multica_py.resources.skills.Skill` |
+| `multica_py.models.system.SquadData` | `multica_py.resources.squads.Squad` |
+| `multica_py.models.system.Squad` passive DTO | `multica_py.resources.squads.Squad` |
+| `multica_py.models.workspaces.WorkspaceData` | `multica_py.resources.workspaces.Workspace` |
+| `multica_py.models.workspaces.Workspace` passive DTO | `multica_py.resources.workspaces.Workspace` |
+| `multica_py.models.workspaces.WorkspaceMemberData` | `multica_py.resources.workspaces.WorkspaceMember` |
+| `multica_py.models.workspaces.WorkspaceMember` passive DTO | `multica_py.resources.workspaces.WorkspaceMember` |
+| `multica_py.models.autopilots.AutopilotData` | `multica_py.resources.autopilots.Autopilot` |
+| `multica_py.models.autopilots.Autopilot` passive DTO | `multica_py.resources.autopilots.Autopilot` |
+| `multica_py.models.autopilots.AutopilotRunData` | `multica_py.resources.autopilots.AutopilotRun` |
+| `multica_py.models.autopilots.AutopilotRun` passive DTO | `multica_py.resources.autopilots.AutopilotRun` |
+| `multica_py.models.issue_activity.CommentData` | `multica_py.resources.issue_comments.Comment` |
+| `multica_py.models.issue_activity.Comment` passive DTO | `multica_py.resources.issue_comments.Comment` |
+| `multica_py.models.issue_activity.CommentThreadData` | `multica_py.resources.issue_comments.CommentThread` |
+| `multica_py.models.issue_activity.CommentThread` passive DTO | `multica_py.resources.issue_comments.CommentThread` |
+| `multica_py.models.issue_activity.TaskRunData` | `multica_py.resources.issues.TaskRun` |
+| `multica_py.models.issue_activity.TaskRun` passive DTO | `multica_py.resources.issues.TaskRun` |
+| `multica_py.models.labels.LabelData` | `multica_py.resources.labels.Label` |
+| `multica_py.models.project_resources.ProjectResourceData` | `multica_py.models.project_resources.ProjectResourceRecord` |
+| `multica_py.models.ResourceEntity[TData]`, `to_data()`, `from_data()` | direct class fields + `to_json()` / `to_dict()` / `from_dict()` on the unified class |
+
+The private helper `_BoundEntity` (in `multica_py.models._bound`) backs
+every unified class. It is not exported; treat it as implementation detail.
 
 ## Public surface migrations
 
 | Legacy surface | Alpha replacement | Notes |
 |---|---|---|
-| `Agent.skills` eager tuple | `AgentData.skill_refs` and `Agent.skills` | The relation uses `agent skills list`; use `to_data().skill_refs` for the embedded snapshot. |
+| `Agent.skills` eager tuple | `Agent.skill_refs` and `Agent.skills` | The relation uses `agent skills list`; `skill_refs` exposes the embedded snapshot directly. |
 | `agent skill ...` commands | `agent skills list/set` | Singular argv is not a supported relation path. |
 | `skill file ...` commands | `skill files list/upsert/delete` and `Skill.files` | Successful file mutations invalidate the bound skill relation. |
-| `Issue.labels` eager names | `IssueData.label_names` and `Issue.labels` | `add_label()`/`remove_label()` invalidate the matching relation. |
-| `Issue.children` eager stage summary | `IssueData.child_stages` and `Issue.children` | Child aggregate metadata remains on the lazy relation. |
-| `Issue.metadata` eager entries | `IssueData.metadata_snapshot` and `Issue.metadata` | The relation is a typed `LazyMapping`; use `set_metadata()`/`delete_metadata()`. |
+| `Issue.labels` eager names | `Issue.label_names` and `Issue.labels` | `add_label()`/`remove_label()` invalidate the matching relation. |
+| `Issue.children` eager stage summary | `Issue.child_stages` and `Issue.children` | Child aggregate metadata remains on the lazy relation. |
+| `Issue.metadata` eager entries | `Issue.metadata_snapshot` and `Issue.metadata` | The relation is a typed `LazyMapping`; use `set_metadata()`/`delete_metadata()`. |
+| `IssueData.pull_requests` embedded snapshot | `Issue.pull_request_snapshot` and `Issue.pull_requests` | `pull_request_snapshot` is the immutable get-response field; `pull_requests` remains the R26 lazy relation and therefore cannot also be a field name. |
 | `issues.rerun(issue_id, run_id)` | `issues.rerun(issue_id)` | Rerun is addressed only by issue ID. |
 | `issues.cancel_task(issue_id, run_id)` | `issues.cancel_task(task_id)` | Cancellation is addressed by task ID. |
 | Legacy run-message addressing | `issues.run_messages(task_run_id, issue_id=None)` | The CLI receives the task-run ID and optional inherited issue ID. |
@@ -28,7 +85,7 @@ load only at explicit load points such as `all()`, `page()`, `refresh()`, or
 | `autopilots.run(autopilot_id)` | `autopilots.trigger(autopilot_id)` | The command is `autopilot trigger <id>`. |
 | `autopilots.get_run(run_id)` | `autopilots.history(autopilot_id)` | Select a run from the returned page; no single-run fetch exists. |
 | Nested autopilot trigger list/create/delete | Get-envelope seed plus `trigger_add/update/delete` | Trigger reads come from governed get; mutations use `trigger-add/update/delete`. |
-| `Autopilot.subscribers` eager tuple | `AutopilotData.subscriber_snapshot` and `Autopilot.subscribers` | Complete get-envelope data seeds the relation; omitted fields stay unloaded. |
+| `Autopilot.subscribers` eager tuple | `Autopilot.subscriber_snapshot` and `Autopilot.subscribers` | Complete get-envelope data seeds the relation; omitted fields stay unloaded. |
 
 ## Issue list projections
 
@@ -75,7 +132,7 @@ and must not fall back from `user_id` to the membership `id`.
 
 ## Embedded issue attachments
 
-`IssueEntity.attachments` is a passive tuple snapshot from the explicit
+`IssueEntity.attachments` references in older guides map to `Issue.attachments`: the latter is a passive tuple snapshot from the explicit
 `issues.get(issue_id)` response and reuses `AttachmentResult`. Both an omitted
 `attachments` field and an explicit empty array decode as `()`.
 
@@ -97,7 +154,7 @@ second public attachment model.
 
 The following members intentionally do not exist: `Project.autopilots`,
 agent/squad autopilots, `Label.issues`, `Skill.agents`, `Runtime.agents`,
-`Repository.projects`, a lazy attachment relation on `IssueEntity`, and
+`Repository.projects`, a lazy attachment relation on `Issue`, and
 `Workspace.users`. There is no
 hidden workspace scan, client-side filtering fallback, or per-child N+1 path.
 
@@ -108,11 +165,15 @@ release does not invent that API.
 
 ## Bound data and lifecycle
 
-Use the explicit snapshot boundary when passing data to serializers or comparing
-results:
+Use `to_json()` or `to_dict()` when passing data to serializers or comparing
+results. Both exclude the client, lazy caches, locks, and loader closures:
 
 ```python
-issue_data = issue.to_data()
+import msgspec
+
+issue = client.issues.get("issue_456")
+payload = issue.to_json()
+restored = msgspec.json.decode(payload, type=dict[str, object])
 ```
 
 Reading `issue.labels` or `autopilot.runs` creates a lazy object without I/O;

@@ -5,8 +5,10 @@ import datetime
 import pytest
 
 from multica_py._internal.decoders import decode_json
-from multica_py.models.agents import Agent, AgentSkill
-from multica_py.models.system import Squad, SquadMember
+from multica_py.models.agents import AgentSkill
+from multica_py.models.system import SquadMember
+from multica_py.resources.agents import Agent
+from multica_py.resources.squads import Squad
 
 
 @pytest.mark.parametrize(
@@ -15,7 +17,7 @@ from multica_py.models.system import Squad, SquadMember
         (
             Agent,
             b'{"id":"a1","name":"n","skills":[{"id":"sk_1","name":"openspec-propose","enabled":true}]}',
-            "skills",
+            "skill_refs",
             (AgentSkill(id="sk_1", name="openspec-propose", enabled=True),),
         ),
         (
@@ -33,7 +35,7 @@ from multica_py.models.system import Squad, SquadMember
         (
             Agent,
             b'{"id":"a1","name":"n"}',
-            "skills",
+            "skill_refs",
             (),
         ),
         (

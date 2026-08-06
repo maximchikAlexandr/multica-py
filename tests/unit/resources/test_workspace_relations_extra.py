@@ -20,11 +20,10 @@ from multica_py.models.relations import (
     OffsetLazyCollection,
     OffsetPage,
 )
-from multica_py.models.workspaces import WorkspaceMember
-from multica_py.resources.workspaces import WorkspaceEntity
+from multica_py.resources.projects import Project
+from multica_py.resources.workspaces import Workspace, WorkspaceMember
 from tests.unit.resources.workspace_cases import (
     make_workspace_clients,
-    workspace_data,
     workspace_relation_method,
 )
 
@@ -35,7 +34,7 @@ from tests.unit.resources.workspace_cases import (
 
 def test_workspace_repeated_property_access_returns_memoized_lazy() -> None:
     clients = make_workspace_clients()
-    entity = WorkspaceEntity(workspace_data(), client=clients.origin)
+    entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
     r1 = entity.members
     r2 = entity.members
     assert r1 is r2
@@ -77,23 +76,20 @@ def test_workspace_after_invalidate_reloads() -> None:
 )
 def test_workspace_lazy_memoized_per_entity(relation_name: str) -> None:
     clients = make_workspace_clients()
-    entity = WorkspaceEntity(workspace_data(), client=clients.origin)
+    entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
     r1 = getattr(entity, relation_name)
     r2 = getattr(entity, relation_name)
     assert r1 is r2
 
 
-def test_workspace_bound_project_wrappers_are_distinct() -> None:
+def test_workspace_projects_loader_preserves_bound_items() -> None:
     from multica_py.enums import ProjectStatus
-    from multica_py.models.autopilots import AutopilotListPage
-    from multica_py.models.labels import LabelData
-    from multica_py.models.skills import Skill
 
     _PS = ProjectStatus("planned")
-    p1 = MagicMock(id="p1", name="P1", description=None, status=_PS)
-    p2 = MagicMock(id="p1", name="P1", description=None, status=_PS)
+    p1 = Project(id="p1", name="P1", description=None, status=_PS)
+    p2 = Project(id="p1", name="P1", description=None, status=_PS)
     clients = make_workspace_clients(projects=(p1, p2))
-    entity = WorkspaceEntity(workspace_data(), client=clients.origin)
+    entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
     r1 = entity.projects.all()
     call_count_after_first = clients.scoped.projects.list.call_count
     assert entity._projects is not None
@@ -101,7 +97,8 @@ def test_workspace_bound_project_wrappers_are_distinct() -> None:
     r2 = entity.projects.all()
     call_count_after_second = clients.scoped.projects.list.call_count
     assert call_count_after_second == call_count_after_first + 1
-    assert r1[0] is not r2[0]
+    assert r1[0] is p1
+    assert r2[0] is p1
     assert r1[0].id == r2[0].id
 
 
@@ -166,7 +163,7 @@ def test_workspace_each_relation_uses_scoped_client(
     relation_name: str,
 ) -> None:
     clients = make_workspace_clients()
-    entity = WorkspaceEntity(workspace_data(), client=clients.origin)
+    entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
     relation = getattr(entity, relation_name)
     relation.all()
     clients.origin.with_workspace.assert_called_once_with("ws_1")

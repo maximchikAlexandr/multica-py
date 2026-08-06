@@ -12,7 +12,7 @@ from typing import cast
 import pytest
 
 from multica_py.models.common import Page
-from multica_py.models.issue_activity import Comment
+from multica_py.resources.issue_comments import Comment
 from tools.upstream_contract.contract import (
     ContractError,
     ResultAssertion,
@@ -170,7 +170,7 @@ def test_result_assertion_algorithms() -> None:
     decoded = ResultAssertion(
         "assert:decoded",
         "decoded_type",
-        {"kind": "primitive", "value": "multica_py.models.issue_activity.Comment"},
+        {"kind": "primitive", "value": "multica_py.resources.issue_comments.Comment"},
     )
     assert_result(decoded, Comment(id="c1", body="body"))
     with pytest.raises(AssertionError):

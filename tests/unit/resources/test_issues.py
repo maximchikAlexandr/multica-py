@@ -11,11 +11,10 @@ from multica_py._internal.argv import build_global_args
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.wire_models import (
-    IssueListPageWire,
-    IssueWire,
-    issue_data_from_wire,
-    issue_from_wire,
-    issue_list_page_from_wire,
+    _issue_from_wire,
+    _issue_list_page_from_wire,
+    _IssueListPageWire,
+    _IssueWire,
 )
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
@@ -30,7 +29,7 @@ from multica_py.models.issues import (
     NoDescription,
 )
 from multica_py.models.system import AttachmentResult
-from multica_py.resources.issues import IssueEntity, IssueResource
+from multica_py.resources.issues import Issue, IssueResource
 
 
 @dataclass(frozen=True)
@@ -151,7 +150,7 @@ def test_issue_status_enum_values():
 
 @pytest.mark.parametrize("case", _ISSUE_LIST_PROJECTION_CASES)
 def test_issue_list_page_decodes_summary_collections(case: _IssueListProjectionCase) -> None:
-    page = issue_list_page_from_wire(decode_json(case.payload, IssueListPageWire))
+    page = _issue_list_page_from_wire(decode_json(case.payload, _IssueListPageWire))
     assert isinstance(page, IssueListPage)
     assert page.has_more is case.expected_has_more
     assert page.limit == case.expected_limit
@@ -215,16 +214,11 @@ def test_issue_list_metadata_validation_before_transport(
 
 @pytest.mark.parametrize("case", _ISSUE_ATTACHMENT_CASES)
 def test_issue_get_decodes_attachment_snapshots(case: _IssueAttachmentCase) -> None:
-    wire = decode_json(case.payload, IssueWire)
-    issue = issue_from_wire(wire)
-    data = issue_data_from_wire(wire)
-    entity = IssueEntity(data)
+    wire = decode_json(case.payload, _IssueWire)
+    issue = _issue_from_wire(wire)
 
     assert issue.attachments == case.expected
-    assert data.attachments == case.expected
-    assert entity.attachments == case.expected
-    assert entity.attachments == case.expected
-    assert all(isinstance(item, AttachmentResult) for item in entity.attachments)
+    assert all(isinstance(item, AttachmentResult) for item in issue.attachments)
 
 
 def test_issue_polling_uses_attachment_id_from_later_get(mock_transport: MagicMock) -> None:

@@ -12,7 +12,7 @@ from multica_py._generated.approved_sdk import (
     validate_nonblank,
 )
 from multica_py._internal.wire_models import (
-    ProjectResourceRecordWire,
+    _ProjectResourceRecordWire,
     project_resource_from_wire,
 )
 from multica_py.models.project_resources import (
@@ -30,7 +30,7 @@ class ProjectResourceCollection(BaseResource):
             project_resource_from_wire(item)
             for item in self._run_json_decode_list(
                 ("project", "resource", "list", project_id),
-                ProjectResourceRecordWire,
+                _ProjectResourceRecordWire,
             )
         )
 
@@ -78,7 +78,7 @@ class ProjectResourceCollection(BaseResource):
         if req.label is not None and req.label.strip():
             args.extend(["--ref-label", req.label])
         return project_resource_from_wire(
-            self._run_json_decode(tuple(args), ProjectResourceRecordWire)
+            self._run_json_decode(tuple(args), _ProjectResourceRecordWire)
         )
 
     @overload
@@ -121,7 +121,7 @@ class ProjectResourceCollection(BaseResource):
             local_path,
         ]
         return project_resource_from_wire(
-            self._run_json_decode(tuple(args), ProjectResourceRecordWire)
+            self._run_json_decode(tuple(args), _ProjectResourceRecordWire)
         )
 
     def remove(self, project_id: str, resource_id: str) -> None:

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import gc
 import inspect
 import threading
 import types
+import weakref
 from typing import Literal, cast, get_type_hints
 from unittest.mock import MagicMock
 
@@ -17,17 +19,16 @@ from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.exceptions import MissingRelationContextError
 from multica_py.models.autopilots import (
-    AutopilotData,
     AutopilotListPage,
-    AutopilotRunData,
     AutopilotRunListPage,
+    AutopilotSubscriber,
     AutopilotTrigger,
     AutopilotTriggerCreate,
     AutopilotTriggerUpdate,
 )
 from multica_py.models.issue_activity import RunMessage
 from multica_py.models.relations import LazyCollection, LazyMapping
-from multica_py.resources.autopilots import AutopilotEntity, AutopilotResource, AutopilotRunEntity
+from multica_py.resources.autopilots import Autopilot, AutopilotResource, AutopilotRun
 from multica_py.sentinels import Unset
 
 
@@ -63,8 +64,7 @@ class BoundPageCase:
     stdout: bytes
     expected_argv: tuple[str, ...]
     item_attribute: Literal["autopilots", "runs"]
-    expected_item_type: type[AutopilotEntity | AutopilotRunEntity]
-    expected_data_type: type[AutopilotData | AutopilotRunData]
+    expected_item_type: type[Autopilot | AutopilotRun]
     expected_return: object
 
 
@@ -117,9 +117,8 @@ BOUND_PAGE_CASES = (
         msgspec.json.encode({"autopilots": [_AUTOPILOT], "total": 1}),
         ("autopilot", "list", "--output", "json"),
         "autopilots",
-        AutopilotEntity,
-        AutopilotData,
-        AutopilotListPage[AutopilotEntity],
+        Autopilot,
+        AutopilotListPage[Autopilot],
     ),
     BoundPageCase(
         "history has bound run items",
@@ -142,9 +141,8 @@ BOUND_PAGE_CASES = (
         ),
         ("autopilot", "runs", "a1", "--output", "json"),
         "runs",
-        AutopilotRunEntity,
-        AutopilotRunData,
-        AutopilotRunListPage[AutopilotRunEntity],
+        AutopilotRun,
+        AutopilotRunListPage[AutopilotRun],
     ),
 )
 
@@ -178,8 +176,6 @@ def test_direct_pages_have_exact_bound_item_annotations(case: BoundPageCase) -> 
     assert get_type_hints(getattr(AutopilotResource, case.method))["return"] == case.expected_return
     assert isinstance(items[0], case.expected_item_type)
     assert items[0]._client is client
-    assert isinstance(items[0].to_data(), case.expected_data_type)
-    assert items[0].to_data() is items[0].to_data()
     assert client.mock_calls == []
     transport.run_bytes.assert_called_once_with(case.expected_argv, stdin=None, timeout=None)
     transport.run_text.assert_not_called()
@@ -187,7 +183,7 @@ def test_direct_pages_have_exact_bound_item_annotations(case: BoundPageCase) -> 
         client.issues.run_messages.return_value = (
             RunMessage(id="m1", run_id="task_1", role="assistant", content="done"),
         )
-        run = cast("AutopilotRunEntity", items[0])
+        run = cast("AutopilotRun", items[0])
         assert [message.id for message in run.messages.all()] == ["m1"]
         client.issues.run_messages.assert_called_once_with("task_1", issue_id="iss_1")
 
@@ -252,10 +248,44 @@ def test_get_binds_autopilot_and_seeds_only_present_relations(
     )
     entity = _resource(transport).get("a1")
 
-    assert isinstance(entity, AutopilotEntity)
+    assert isinstance(entity, Autopilot)
     assert entity.triggers.loaded is case.triggers_loaded
     assert entity.subscribers.loaded is case.subscribers_loaded
     assert transport.run_bytes.call_count == 1
+
+
+@pytest.mark.compat
+@pytest.mark.parametrize("seeded", (False, True), ids=("lazy", "seeded"))
+def test_autopilot_relation_loaders_do_not_retain_entity(seeded: bool) -> None:
+    client = MagicMock()
+    kwargs: dict[str, object] = {"_client": client}
+    if seeded:
+        kwargs.update(
+            {
+                "triggers": (AutopilotTrigger(id="tr1", type="webhook"),),
+                "subscribers": (AutopilotSubscriber(user_type="member", user_id="u1"),),
+            }
+        )
+    entity = Autopilot(
+        id="a1",
+        workspace_id="w1",
+        title="AP",
+        assignee_type="member",
+        assignee_id="u1",
+        status="active",
+        execution_mode="create_issue",
+        created_by_type="member",
+        created_by_id="u1",
+        **kwargs,
+    )
+    relations = (entity.triggers, entity.subscribers)
+    assert all(relation.loaded is seeded for relation in relations)
+    reference = weakref.ref(entity)
+
+    del entity
+    gc.collect()
+
+    assert reference() is None
 
 
 def test_history_binds_runs_and_autopilot_runs_retains_total() -> None:
@@ -302,19 +332,17 @@ def test_history_binds_runs_and_autopilot_runs_retains_total() -> None:
     ]
     client = MagicMock()
     client.autopilots = _resource(transport, client)
-    entity = AutopilotEntity(
-        AutopilotData(
-            id="a1",
-            workspace_id="w1",
-            title="AP",
-            assignee_type="member",
-            assignee_id="u1",
-            status="active",
-            execution_mode="create_issue",
-            created_by_type="member",
-            created_by_id="u1",
-        ),
-        client=client,
+    entity = Autopilot(
+        id="a1",
+        workspace_id="w1",
+        title="AP",
+        assignee_type="member",
+        assignee_id="u1",
+        status="active",
+        execution_mode="create_issue",
+        created_by_type="member",
+        created_by_id="u1",
+        _client=client,
     )
 
     runs = entity.runs.all()
@@ -331,21 +359,19 @@ def test_trigger_mutations_invalidate_relation() -> None:
     )
     client.autopilots.trigger_add.return_value = AutopilotTrigger(id="tr2", type="cron")
     client.autopilots.trigger_update.return_value = AutopilotTrigger(id="tr1", type="cron")
-    entity = AutopilotEntity(
-        AutopilotData(
-            id="a1",
-            workspace_id="w1",
-            title="AP",
-            assignee_type="member",
-            assignee_id="u1",
-            status="active",
-            execution_mode="create_issue",
-            created_by_type="member",
-            created_by_id="u1",
-        ),
-        client=client,
+    entity = Autopilot(
+        id="a1",
+        workspace_id="w1",
+        title="AP",
+        assignee_type="member",
+        assignee_id="u1",
+        status="active",
+        execution_mode="create_issue",
+        created_by_type="member",
+        created_by_id="u1",
+        _client=client,
     )
-    entity._triggers = relation
+    entity._set_runtime("_triggers", relation)
     relation.all()
 
     entity.trigger_add(AutopilotTriggerCreate(title="new", kind="webhook"))
@@ -357,9 +383,12 @@ def test_trigger_mutations_invalidate_relation() -> None:
 
 def test_autopilot_run_messages_require_task_before_transport() -> None:
     client = MagicMock()
-    run = AutopilotRunEntity(
-        AutopilotRunData(id="r1", autopilot_id="a1", source="manual", status="done"),
-        client=client,
+    run = AutopilotRun(
+        id="r1",
+        autopilot_id="a1",
+        source="manual",
+        status="done",
+        _client=client,
     )
 
     with pytest.raises(MissingRelationContextError):

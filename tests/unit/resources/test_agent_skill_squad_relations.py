@@ -28,18 +28,17 @@ from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
-from multica_py.models.agents import Agent, AgentSkill, AgentTask
+from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.issues import IssueListPage, IssueSummary
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection
-from multica_py.models.skills import Skill, SkillFile
-from multica_py.models.system import Squad, SquadMember
-from multica_py.models.workspaces import WorkspaceMember
+from multica_py.models.skills import SkillFile
+from multica_py.models.system import SquadMember
 from multica_py.resources.agent_skills import AgentSkillResource
-from multica_py.resources.agents import AgentEntity, AgentResource
+from multica_py.resources.agents import Agent, AgentResource
 from multica_py.resources.skill_files import SkillFileResource
-from multica_py.resources.skills import SkillEntity
-from multica_py.resources.squads import SquadEntity
-from multica_py.resources.workspaces import WorkspaceMemberEntity
+from multica_py.resources.skills import Skill
+from multica_py.resources.squads import Squad
+from multica_py.resources.workspaces import WorkspaceMember
 
 _TODO = IssueStatus("todo")
 
@@ -90,65 +89,53 @@ def _make_client(
     return client
 
 
-def _agent(client: MulticaClient | None = None) -> AgentEntity:
-    from multica_py.models.agents import AgentData as _AD
-
-    return AgentEntity(
-        _AD(
-            id="ag_1",
-            name="Agent",
-            description="d",
-            skill_refs=(),
-            archived_at=None,
-        ),
-        client=client,
+def _agent(client: MulticaClient | None = None) -> Agent:
+    return Agent(
+        id="ag_1",
+        name="Agent",
+        description="d",
+        skill_refs=(),
+        archived_at=None,
+        _client=client,
     )
 
 
-def _skill(client: MulticaClient | None = None) -> SkillEntity:
-    from multica_py.models.skills import SkillData as _SD
-
-    return SkillEntity(
-        _SD(
-            id="sk_1",
-            name="Skill",
-            description="d",
-            file_count=0,
-        ),
-        client=client,
+def _skill(client: MulticaClient | None = None) -> Skill:
+    return Skill(
+        id="sk_1",
+        name="Skill",
+        description="d",
+        file_count=0,
+        _client=client,
     )
 
 
-def _squad(client: MulticaClient | None = None) -> SquadEntity:
-    from multica_py.models.system import SquadData as _QD
-
-    return SquadEntity(
-        _QD(
-            id="sq_1",
-            name="Squad",
-            member_count=0,
-            leader_id=None,
-            archived_at=None,
-        ),
-        client=client,
+def _squad(client: MulticaClient | None = None) -> Squad:
+    return Squad(
+        id="sq_1",
+        name="Squad",
+        member_count=0,
+        leader_id=None,
+        archived_at=None,
+        _client=client,
     )
 
 
 def _workspace_member(
     client: MulticaClient | None = None,
-) -> WorkspaceMemberEntity:
-    from multica_py.models.system import WorkspaceMemberData as _WMD
-
-    return WorkspaceMemberEntity(
-        _WMD(id="wm_1", name="Alice", role="admin"),
-        client=client,
+) -> WorkspaceMember:
+    return WorkspaceMember(
+        id="wm_1",
+        name="Alice",
+        role="admin",
+        _client=client,
     )
 
 
 @dataclass(frozen=True)
 class AssigneeIssueRelationCase:
     name: str
-    entity_factory: Callable[[MagicMock], AgentEntity | SquadEntity | WorkspaceMemberEntity]
+    entity_factory: Callable[[MagicMock], Agent | Squad | WorkspaceMember]
     assignee_id: str
 
 
@@ -186,7 +173,7 @@ def test_agent_skills_set_invalidates_cache() -> None:
         return (AgentSkill(id=f"sk{state['calls']}", name="S", enabled=True),)
 
     entity = _agent(client=_make_client())
-    entity._skills = cast("LazyCollection[AgentSkill]", LazyCollection(loader))
+    entity._set_runtime("_skills", cast("LazyCollection[AgentSkill]", LazyCollection(loader)))
     entity.skills.all()
     assert state["calls"] == 1
     entity.set_skills(("new_skill",))
@@ -306,7 +293,7 @@ def test_skill_files_upsert_invalidates_cache() -> None:
         return (SkillFile(id=f"f{state['calls']}", path="X.md", content=None),)
 
     entity = _skill(client=_make_client())
-    entity._files = cast("LazyCollection[SkillFile]", LazyCollection(loader))
+    entity._set_runtime("_files", cast("LazyCollection[SkillFile]", LazyCollection(loader)))
     entity.files.all()
     assert state["calls"] == 1
     entity.upsert_file("X.md", "new")
@@ -322,7 +309,7 @@ def test_skill_files_delete_invalidates_cache() -> None:
         return ()
 
     entity = _skill(client=_make_client())
-    entity._files = cast("LazyCollection[SkillFile]", LazyCollection(loader))
+    entity._set_runtime("_files", cast("LazyCollection[SkillFile]", LazyCollection(loader)))
     entity.files.all()
     entity.delete_file("f1")
     entity.files.all()
