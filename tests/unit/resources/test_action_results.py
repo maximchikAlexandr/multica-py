@@ -24,6 +24,7 @@ from multica_py.models.system import (
 )
 from multica_py.resources._base import BaseResource
 from multica_py.resources.auth import AuthResource
+from multica_py.resources.configuration import ConfigurationResource
 from multica_py.resources.projects import Project as BoundProject
 from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
@@ -79,6 +80,24 @@ def test_void_adapter_wraps_success_once_and_redacts_public_message() -> None:
 
     assert result == ActionResult(success=True, value=None, message="completed token: ***")
     assert not isinstance(result.value, ActionResult)
+
+
+def test_configuration_set_redacts_bare_secret_from_preview_and_message() -> None:
+    transport = _transport()
+    secret = "opaque-secret-7Yp9"
+    transport.run_text.return_value = TextResult(f"stored {secret}", "", 0)
+
+    command = ConfigurationResource(transport, ClientConfig()).set_command(
+        "third_party_api_key", secret
+    )
+
+    assert secret not in command.commands[0]
+    assert "***" in command.commands[0]
+
+    result = command.run()
+
+    assert result.message == "stored ***"
+    assert secret not in (result.message or "")
 
 
 @pytest.mark.parametrize(

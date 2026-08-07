@@ -8,7 +8,7 @@ import msgspec
 
 from multica_py._internal.commands import Command, _CommandPlan, _Step, _TempProvider
 from multica_py._internal.decoders import decode_json
-from multica_py._internal.redaction import redact_text
+from multica_py._internal.redaction import collect_secret_values, redact_text
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
@@ -23,9 +23,9 @@ R = TypeVar("R", bound=msgspec.Struct)
 T = TypeVar("T")
 
 
-def _redacted_text(value: object) -> str | None:
+def _redacted_text(value: object, *, secret_values: tuple[str, ...] = ()) -> str | None:
     text = value.text if isinstance(value, TextResult) else value if isinstance(value, str) else ""
-    return redact_text(text).strip() or None
+    return redact_text(text, secret_values=secret_values).strip() or None
 
 
 def _page_items(value: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
@@ -141,8 +141,13 @@ class BaseResource:
         )
 
     def _action_command(self, args: tuple[str, ...]) -> Command[ActionResult[None]]:
+        secret_values = collect_secret_values(args)
+
         def finalize(results: tuple[object, ...]) -> ActionResult[None]:
-            return ActionResult(value=None, message=_redacted_text(results[0]))
+            return ActionResult(
+                value=None,
+                message=_redacted_text(results[0], secret_values=secret_values),
+            )
 
         return self._plan(
             steps=(_Step(args, "run_text"),),

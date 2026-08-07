@@ -23,6 +23,15 @@ def collect_secret_values(argv: tuple[str, ...]) -> tuple[str, ...]:
     i = 0
     while i < len(argv):
         arg = argv[i]
+        if (
+            arg == "config"
+            and i + 3 < len(argv)
+            and argv[i + 1] == "set"
+            and _secret_env_key_pattern.search(argv[i + 2]) is not None
+        ):
+            secrets.append(argv[i + 3])
+            i += 4
+            continue
         if arg == "--token" and i + 1 < len(argv):
             secrets.append(argv[i + 1])
             i += 2
