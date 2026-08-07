@@ -16,7 +16,6 @@ from multica_py._internal.wire_models import (
 )
 from multica_py.config import ClientConfig
 from multica_py.enums import ProjectStatus
-from multica_py.exceptions import ValidationError
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.project_resources import (
@@ -237,13 +236,15 @@ class ProjectResource(BaseResource):
         self, project_id: str, request: ProjectUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Project]:
         req = _resolve_request(request, kwargs, ProjectUpdateRequest, allow_empty=True)
+        if req.name is Unset and req.description is Unset:
+            return self.get_command(project_id)
         args = ["project", "update", project_id]
         if req.name is not Unset:
             args.extend(["--title", req.name])
         if req.description is Unset:
             pass
         elif req.description is None:
-            raise ValidationError("description=None is not supported for project update via CLI")
+            args.extend(["--description", ""])
         else:
             args.extend(["--description", req.description])
         return self._decoded_command(tuple(args), _ProjectWire)._map(self._bind)

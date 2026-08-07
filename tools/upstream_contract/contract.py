@@ -1962,13 +1962,46 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         (descriptor.operation_id, descriptor.entrypoint_id): descriptor
         for descriptor in contract.binding_descriptors
     }
+    raw_catalogs = _dict(contract.raw["catalogs"], "catalogs")
+    raw_bindings = _dict(raw_catalogs["bindings"], "catalogs.bindings")
     for vector in contract.test_vectors:
         descriptor = descriptors_by_pair[(vector.operation_id, vector.entrypoint_id)]
         command = tuple(vector.expected_argv[: len(descriptor.command)])
         if command != descriptor.command:
-            raise ContractError(
-                f"{vector.vector_id} disagrees with binding {descriptor.descriptor_id!r}"
+            binding = _dict(
+                raw_bindings[descriptor.descriptor_id],
+                f"catalogs.bindings[{descriptor.descriptor_id!r}]",
             )
+            constraints = tuple(
+                _str(item, "binding.constraint")
+                for item in _list(binding["constraints"], "binding.constraints")
+            )
+            read_ids = tuple(
+                item.removeprefix("all_unset_reads:")
+                for item in constraints
+                if item.startswith("all_unset_reads:")
+            )
+            empty_request = not vector.kwargs and all(
+                item.get("kind") != "request" or item.get("fields") == [] for item in vector.args
+            )
+            read_descriptor = next(
+                (
+                    item
+                    for item in contract.binding_descriptors
+                    if item.operation_id in read_ids and item.entrypoint_id == vector.entrypoint_id
+                ),
+                None,
+            )
+            if (
+                not empty_request
+                or len(read_ids) != 1
+                or read_descriptor is None
+                or tuple(vector.expected_argv[: len(read_descriptor.command)])
+                != read_descriptor.command
+            ):
+                raise ContractError(
+                    f"{vector.vector_id} disagrees with binding {descriptor.descriptor_id!r}"
+                )
     base_count = sum(":canonical" in vector.vector_id for vector in contract.test_vectors)
     variant_count = len(contract.test_vectors) - base_count
     if (base_count, variant_count) != (46, 12):

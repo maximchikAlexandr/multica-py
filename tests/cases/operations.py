@@ -896,7 +896,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "agents.update",
-            ("agent", "update", "a1", "--output", "json"),
+            ("agent", "get", "a1", "--output", "json"),
             args=("a1", AgentUpdateRequest()),
             stdout=_AG,
             id="manual:agents.update:canonical",
@@ -1217,7 +1217,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "autopilots.update",
-            ("autopilot", "update", "a1", "--output", "json"),
+            ("autopilot", "get", "a1", "--output", "json"),
             args=("a1",),
             stdout=_AP,
             method="update",
@@ -1798,7 +1798,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "projects.update",
-            ("project", "update", "pr_1", "--output", "json"),
+            ("project", "get", "pr_1", "--output", "json"),
             args=("pr_1", ProjectUpdateRequest()),
             stdout=b'{"id":"pr_1","title":"Alpha","status":"planned"}',
             id="generated:projects.update:default:canonical",
@@ -2046,7 +2046,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "skills.update",
-            ("skill", "update", "s1", "--output", "json"),
+            ("skill", "get", "s1", "--output", "json"),
             args=("s1", SkillUpdateRequest()),
             stdout=_SK,
             id="manual:skills.update:canonical",

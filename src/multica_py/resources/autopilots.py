@@ -749,28 +749,50 @@ class AutopilotResource(BaseResource):
                 raise ValueError("clear_subscribers and subscribers are mutually exclusive")
             kwargs["subscribers"] = ()
         request = _resolve_request(request, kwargs, AutopilotUpdateRequest, allow_empty=True)
+        if (
+            request.title is Unset
+            and request.agent is Unset
+            and request.priority is Unset
+            and request.status is Unset
+            and request.execution_mode is Unset
+            and request.description is Unset
+            and request.project_id is Unset
+            and request.issue_title_template is Unset
+            and request.subscribers is Unset
+        ):
+            return self.get_command(autopilot_id)
         if request.subscribers is not Unset and any(not ref.strip() for ref in request.subscribers):
             raise ValueError("subscribers must be nonblank")
         args = ["autopilot", "update", autopilot_id]
         if request.title is not Unset:
             args.extend(["--title", request.title])
-        if request.description is not Unset and request.description is not None:
-            args.extend(["--description", request.description])
+        if request.description is not Unset:
+            args.extend(
+                ["--description", "" if request.description is None else request.description]
+            )
         if request.agent is not Unset:
             args.extend(["--agent", request.agent])
-        if request.project_id is not Unset and request.project_id is not None:
-            args.extend(["--project", request.project_id])
+        if request.project_id is not Unset:
+            args.extend(["--project", "" if request.project_id is None else request.project_id])
         if request.priority is not Unset:
             args.extend(["--priority", request.priority])
         if request.status is not Unset:
             args.extend(["--status", request.status])
         if request.execution_mode is not Unset:
             args.extend(["--mode", request.execution_mode.value])
-        if request.issue_title_template is not Unset and request.issue_title_template is not None:
-            args.extend(["--issue-title-template", request.issue_title_template])
+        if request.issue_title_template is not Unset:
+            args.extend(
+                [
+                    "--issue-title-template",
+                    "" if request.issue_title_template is None else request.issue_title_template,
+                ]
+            )
         if request.subscribers is not Unset:
-            for ref in request.subscribers:
-                args.extend(["--subscriber", ref])
+            if not request.subscribers:
+                args.append("--clear-subscribers")
+            else:
+                for ref in request.subscribers:
+                    args.extend(["--subscriber", ref])
         return self._decoded_command(tuple(args), _AutopilotWire)._map(self._bind_autopilot_wire)
 
     @overload

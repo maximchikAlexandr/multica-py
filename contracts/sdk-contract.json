@@ -131,7 +131,7 @@
       "autopilot_trigger_add": "(autopilot_id: str, request: AutopilotTriggerCreate) -> AutopilotTrigger",
       "autopilot_trigger_delete": "(autopilot_id: str, trigger_id: str) -> None",
       "autopilot_trigger_update": "(autopilot_id: str, trigger_id: str, request: AutopilotTriggerUpdate) -> AutopilotTrigger",
-      "autopilot_update": "(autopilot_id: str, *, title: str | None, description: str | None, agent: str | None, project_id: str | None, priority: str | None, status: str | None, execution_mode: AutopilotExecutionMode | None, issue_title_template: str | None, subscribers: tuple[str, ...] | None, clear_subscribers: bool) -> Autopilot",
+      "autopilot_update": "(autopilot_id: str, request: AutopilotUpdateRequest) -> Autopilot",
       "comment_add": "(issue_id: str, body: str) -> Comment",
       "comment_delete": "(comment_id: str) -> None",
       "comment_list": "(issue_id: str) -> tuple[Comment, ...]",
@@ -459,7 +459,9 @@
         ],
         "output": "json",
         "mappings": [],
-        "constraints": []
+        "constraints": [
+          "all_unset_reads:agents.get"
+        ]
       },
       "attachment_download": {
         "command": [
@@ -847,13 +849,14 @@
             "json_body:subscribers"
           ],
           [
-            "clear_subscribers",
+            "subscribers",
             "--clear-subscribers",
             "json_body:clear_subscribers"
           ]
         ],
         "constraints": [
-          "nonblank:autopilot_id"
+          "nonblank:autopilot_id",
+          "all_unset_reads:autopilots.get"
         ]
       },
       "comment_add": {
@@ -1678,7 +1681,9 @@
         ],
         "output": "json",
         "mappings": [],
-        "constraints": []
+        "constraints": [
+          "all_unset_reads:issues.get"
+        ]
       },
       "issues_usage_manual": {
         "command": [
@@ -1966,8 +1971,7 @@
           ]
         ],
         "constraints": [
-          "at_least_one:name_description",
-          "description_none_rejected",
+          "all_unset_reads:projects.get",
           "unset_omits",
           "empty_emits"
         ]
@@ -2306,7 +2310,9 @@
         ],
         "output": "json",
         "mappings": [],
-        "constraints": []
+        "constraints": [
+          "all_unset_reads:skills.get"
+        ]
       },
       "squad_get": {
         "command": [
@@ -5311,7 +5317,7 @@
             "destination": "json_body:subscribers"
           },
           {
-            "source": "clear_subscribers",
+            "source": "subscribers",
             "binding": "--clear-subscribers",
             "destination": "json_body:clear_subscribers"
           }
@@ -8049,7 +8055,7 @@
         "transport_method": "run_bytes",
         "expected_argv": [
           "project",
-          "update",
+          "get",
           "pr_1",
           "--output",
           "json"
@@ -8756,13 +8762,13 @@
           }
         ],
         "kwargs": [],
-        "stdout_base64": "eyJpZCI6ImExIiwid29ya3NwYWNlX2lkIjoidzEiLCJ0aXRsZSI6IkFQIiwiYXNzaWduZWVfdHlwZSI6Im1lbWJlciIsImFzc2lnbmVlX2lkIjoidTEiLCJzdGF0dXMiOiJhY3RpdmUiLCJleGVjdXRpb25fbW9kZSI6ImNyZWF0ZV9pc3N1ZSIsImNyZWF0ZWRfYnlfdHlwZSI6Im1lbWJlciIsImNyZWF0ZWRfYnlfaWQiOiJ1MSIsInN1YnNjcmliZXJzIjpbXX0=",
+        "stdout_base64": "eyJhdXRvcGlsb3QiOnsiaWQiOiJhMSIsIndvcmtzcGFjZV9pZCI6IncxIiwidGl0bGUiOiJBUCIsImFzc2lnbmVlX3R5cGUiOiJtZW1iZXIiLCJhc3NpZ25lZV9pZCI6InUxIiwic3RhdHVzIjoiYWN0aXZlIiwiZXhlY3V0aW9uX21vZGUiOiJjcmVhdGVfaXNzdWUiLCJjcmVhdGVkX2J5X3R5cGUiOiJtZW1iZXIiLCJjcmVhdGVkX2J5X2lkIjoidTEiLCJzdWJzY3JpYmVycyI6W119LCJ0cmlnZ2VycyI6W119",
         "stderr": "",
         "exit_code": 0,
         "transport_method": "run_bytes",
         "expected_argv": [
           "autopilot",
-          "update",
+          "get",
           "a1",
           "--output",
           "json"
@@ -11973,7 +11979,7 @@
     {
       "operation_id": "autopilots.update",
       "compatibility": "intentionally_changed",
-      "rationale": "Update signature aligned to upstream flags with Flags().Changed semantics. project_id presence policy: None omits, empty string clears. clear_subscribers and subscribers are mutually exclusive.",
+      "rationale": "Update signature aligned to upstream flags with Flags().Changed semantics. Nullable clears emit their approved empty-string flags; an empty subscribers tuple emits the approved clear flag.",
       "source_ref_ids": [
         "S-AUTO"
       ],

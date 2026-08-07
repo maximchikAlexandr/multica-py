@@ -859,21 +859,54 @@ class IssueResource(BaseResource):
     def update_command(  # type: ignore[misc]
         self, issue_id: str, request: IssueUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Issue]:
+        validate_nonblank(issue_id)
         req = _resolve_request(request, kwargs, IssueUpdateRequest, allow_empty=True)
+        if (
+            req.title is Unset
+            and req.description is Unset
+            and req.priority is Unset
+            and req.assignee_id is Unset
+            and req.project_id is Unset
+            and req.parent_id is Unset
+        ):
+            return self.get_command(issue_id)
         args = ["issue", "update", issue_id]
-        if req.title is not msgspec.UNSET:
+        if req.title is not Unset:
             args.extend(["--title", req.title])
-        if req.description is not msgspec.UNSET and req.description is not None:
-            args.extend(["--description", req.description])
-        if req.priority is not msgspec.UNSET:
+        if req.description is not Unset:
+            args.extend(["--description", "" if req.description is None else req.description])
+        if req.priority is not Unset:
             args.extend(["--priority", req.priority])
-        if req.assignee_id is not msgspec.UNSET and req.assignee_id is not None:
+        if req.assignee_id is not Unset and req.assignee_id is not None:
             args.extend(["--assignee-id", req.assignee_id])
-        if req.project_id is not msgspec.UNSET and req.project_id is not None:
-            args.extend(["--project", req.project_id])
-        if req.parent_id is not msgspec.UNSET and req.parent_id is not None:
-            args.extend(["--parent", req.parent_id])
-        return self._decoded_command(tuple(args), _IssueWire)._map(self._bind_issue)
+        if req.project_id is not Unset:
+            args.extend(["--project", "" if req.project_id is None else req.project_id])
+        if req.parent_id is not Unset:
+            args.extend(["--parent", "" if req.parent_id is None else req.parent_id])
+
+        steps: list[_Step] = []
+        if len(args) > 3:
+            update_args, update_decode = self._plan_decode(tuple(args), _IssueWire)
+            steps.append(
+                _Step(update_args, "run_bytes", decode=update_decode, result_alias="update")
+            )
+
+        if req.assignee_id is None:
+            assign_args, assign_decode = self._plan_decode(
+                ("issue", "assign", issue_id, "--unassign"), _IssueWire
+            )
+            steps.append(
+                _Step(assign_args, "run_bytes", decode=assign_decode, result_alias="assign")
+            )
+            get_args, get_decode = self._plan_decode(("issue", "get", issue_id), _IssueWire)
+            steps.append(
+                _Step(get_args, "run_bytes", decode=get_decode, result_alias="authoritative")
+            )
+
+        def finalize(results: tuple[object, ...]) -> Issue:
+            return self._bind_issue(cast("_IssueWire", results[-1]))
+
+        return self._plan(steps=tuple(steps), finalize=finalize)
 
     @overload
     def update(self, issue_id: str, request: IssueUpdateRequest, /) -> Issue: ...

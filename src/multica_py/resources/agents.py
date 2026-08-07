@@ -339,11 +339,13 @@ class AgentResource(BaseResource):
     ) -> Command[Agent]:
         validate_nonblank(agent_id)
         req = _resolve_request(request, kwargs, AgentUpdateRequest, allow_empty=True)
+        if req.name is Unset and req.description is Unset:
+            return self.get_command(agent_id)
         args = ["agent", "update", agent_id]
         if req.name is not Unset:
             args.extend(["--name", req.name])
-        if req.description is not Unset and req.description is not None:
-            args.extend(["--description", req.description])
+        if req.description is not Unset:
+            args.extend(["--description", "" if req.description is None else req.description])
         return self._decoded_command(tuple(args), Agent)._map(
             lambda agent: agent._with_client(self._client)
         )

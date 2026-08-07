@@ -146,11 +146,13 @@ class SkillResource(BaseResource):
     ) -> Command[Skill]:
         validate_nonblank(skill_id)
         req = _resolve_request(request, kwargs, SkillUpdateRequest, allow_empty=True)
+        if req.name is Unset and req.description is Unset:
+            return self.get_command(skill_id)
         args = ["skill", "update", skill_id]
         if req.name is not Unset:
             args.extend(["--name", req.name])
-        if req.description is not Unset and req.description is not None:
-            args.extend(["--description", req.description])
+        if req.description is not Unset:
+            args.extend(["--description", "" if req.description is None else req.description])
         return self._decoded_command(tuple(args), Skill)._map(
             lambda skill: skill._with_client(self._client)
         )
