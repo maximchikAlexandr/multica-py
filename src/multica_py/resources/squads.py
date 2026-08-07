@@ -123,7 +123,8 @@ class Squad(_BoundEntity):  # type: ignore[misc]
         )
 
         def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            self._invalidate_members()
+            if result.success:
+                self._invalidate_members()
             return result
 
         return client.squads.members.add_command(self.id, member_id)._map(invalidate)
@@ -138,7 +139,8 @@ class Squad(_BoundEntity):  # type: ignore[misc]
         )
 
         def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            self._invalidate_members()
+            if result.success:
+                self._invalidate_members()
             return result
 
         return client.squads.members.remove_command(self.id, member_id)._map(invalidate)

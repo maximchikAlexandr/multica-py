@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import datetime
+import inspect
+import typing
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -11,6 +13,7 @@ from multica_py._internal.commands import Command
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.enums import ProjectStatus
 from multica_py.exceptions import JsonOutputError, NetworkError
 from multica_py.models.common import ActionResult
 from multica_py.models.system import (
@@ -21,8 +24,46 @@ from multica_py.models.system import (
 )
 from multica_py.resources._base import BaseResource
 from multica_py.resources.auth import AuthResource
+from multica_py.resources.projects import Project as BoundProject
 from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
+from tests.cases.operations import OPERATION_CASES, RESOURCE_SPECS
+
+APPROVED_ACTION_METHODS = frozenset(
+    {
+        "agents.archive",
+        "agents.avatar",
+        "agents.restore",
+        "agents.skills.set",
+        "autopilots.delete",
+        "autopilots.trigger_delete",
+        "auth.login",
+        "configuration.set",
+        "issues.cancel_task",
+        "issues.comments.delete",
+        "issues.comments.resolve",
+        "issues.comments.unresolve",
+        "issues.deprioritize",
+        "issues.metadata.delete",
+        "issues.rerun",
+        "issues.subscribers.add",
+        "issues.subscribers.remove",
+        "labels.delete",
+        "projects.delete",
+        "projects.resources.remove",
+        "repositories.add",
+        "repositories.remove",
+        "runtimes.delete",
+        "runtimes.update",
+        "skills.delete",
+        "skills.files.delete",
+        "squads.members.add",
+        "squads.members.remove",
+        "workspaces.switch",
+        "workspaces.watch",
+        "workspaces.unwatch",
+    }
+)
 
 
 def _transport() -> MagicMock:
@@ -99,6 +140,17 @@ def test_token_login_wraps_scalar_and_interactive_login_stays_process() -> None:
     assert auth.login_command("secret-token").commands == ("multica auth login --token '***'",)
 
 
+def test_interactive_login_runs_as_managed_process() -> None:
+    transport = _transport()
+    process = MagicMock()
+    transport.spawn.return_value = process
+
+    result = AuthResource(transport, ClientConfig()).login()
+
+    assert result is process
+    transport.spawn.assert_called_once_with(("auth", "login"))
+
+
 def test_action_transport_and_decode_failures_are_not_wrapped() -> None:
     transport = _transport()
     auth = AuthResource(transport, ClientConfig())
@@ -120,9 +172,34 @@ def test_action_transport_and_decode_failures_are_not_wrapped() -> None:
         ).run()
 
 
-def test_action_case_table_contains_all_approved_void_surfaces() -> None:
-    from tests.cases.operations import OPERATION_CASES
+@pytest.mark.parametrize("success", (True, False), ids=("success", "unsuccessful"))
+def test_bound_action_mapper_preserves_identity_and_gates_invalidation(success: bool) -> None:
+    transport = _transport()
+    expected = ActionResult[None](success=success, value=None)
+    child = BaseResource(transport, ClientConfig())._plan(
+        steps=(), finalize=lambda _results: expected
+    )
+    client = MagicMock()
+    client.projects.resources.remove_command.return_value = child
+    entity = BoundProject(
+        id="p1",
+        name="Project",
+        status=ProjectStatus.planned,
+        _client=client,
+    )
+    relation = MagicMock()
+    entity._set_runtime("_resources", relation)
 
+    result = entity.remove_resource("r1")
+
+    assert result is expected
+    if success:
+        relation.invalidate.assert_called_once_with()
+    else:
+        relation.invalidate.assert_not_called()
+
+
+def test_action_case_table_contains_all_approved_void_surfaces() -> None:
     approved = {
         "agents.archive",
         "agents.avatar",
@@ -153,3 +230,59 @@ def test_action_case_table_contains_all_approved_void_surfaces() -> None:
     }
     covered = {case.sdk_method for case in OPERATION_CASES if case.sdk_method in approved}
     assert covered == approved
+
+
+def test_contract_manual_natural_categories_do_not_use_action_results() -> None:
+    import pathlib
+
+    from tools.upstream_contract.contract import validate_contract
+
+    raw = validate_contract(pathlib.Path("contracts/sdk-contract.json")).raw
+    catalogs = cast("dict[str, object]", raw["catalogs"])
+    signatures = cast("dict[str, object]", catalogs["signatures"])
+    for signature_id in (
+        "auth_logout_manual",
+        "daemon_restart_manual",
+        "daemon_stop_manual",
+        "issues_assign_manual",
+        "issues_metadata_set_typed_manual",
+        "issues_reorder_manual",
+    ):
+        assert "action_result" not in str(signatures[signature_id])
+
+
+def _contains_action_result(annotation: object) -> bool:
+    if typing.get_origin(annotation) is ActionResult or annotation is ActionResult:
+        return True
+    return any(_contains_action_result(argument) for argument in typing.get_args(annotation))
+
+
+def test_action_response_matrix_excludes_natural_categories_and_bare_none() -> None:
+    canonical_cases = {case.sdk_method: case for case in OPERATION_CASES if case.is_canonical}
+    assert set(canonical_cases) >= APPROVED_ACTION_METHODS
+
+    for resource_attr, resource_type in RESOURCE_SPECS:
+        for method_name, member in resource_type.__dict__.items():
+            if method_name.startswith("_") or method_name.endswith("_command"):
+                continue
+            function = (
+                member.__func__ if isinstance(member, (classmethod, staticmethod)) else member
+            )
+            if not inspect.isfunction(function):
+                continue
+            sdk_method = next(
+                (
+                    case.sdk_method
+                    for case in canonical_cases.values()
+                    if case.resource_attr == resource_attr and case.method == method_name
+                ),
+                None,
+            )
+            if sdk_method is None:
+                continue
+            overloads = typing.get_overloads(function) or (function,)
+            returns = tuple(typing.get_type_hints(overload)["return"] for overload in overloads)
+            assert all(return_type is not type(None) for return_type in returns), sdk_method
+            has_action_result = any(_contains_action_result(return_type) for return_type in returns)
+            if has_action_result:
+                assert sdk_method in APPROVED_ACTION_METHODS, sdk_method

@@ -170,7 +170,8 @@ class Project(_BoundEntity):  # type: ignore[misc]
         )
 
         def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            self._invalidate_resources()
+            if result.success:
+                self._invalidate_resources()
             return result
 
         return client.projects.resources.remove_command(self.id, resource_id)._map(invalidate)

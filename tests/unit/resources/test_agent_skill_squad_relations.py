@@ -104,11 +104,11 @@ def _make_client(
         resource = BaseResource(transport, ClientConfig())
         return resource._plan(
             steps=(_Step(("squad", "member", "mutation"), "run_text"),),
-            finalize=lambda _results: None,
+            finalize=lambda _results: ActionResult[None](value=None),
         )
 
     client.agents.skills.list.return_value = skills
-    client.agents.skills.set.return_value = None
+    client.agents.skills.set.return_value = ActionResult[None](value=None)
     client.agents.tasks.return_value = tasks
     if issues is not None:
         client.issues.list.side_effect = issues
@@ -118,7 +118,7 @@ def _make_client(
         )
     client.skills.files.list.return_value = files
     client.skills.files.upsert.return_value = None
-    client.skills.files.delete.return_value = None
+    client.skills.files.delete.return_value = ActionResult[None](value=None)
     client.squads.members.list.return_value = members
     client.agents.skills.list_command = lambda agent_id: empty_command(
         lambda: client.agents.skills.list(agent_id)
@@ -738,7 +738,9 @@ def test_squad_parent_mutations_invalidate_only_members(case: SquadParentMutatio
     cached_members = entity.members.all()
     entity.issues.all()
     if case.succeeds:
-        assert getattr(entity, case.method)(case.member_id) is None
+        result = getattr(entity, case.method)(case.member_id)
+        assert isinstance(result, ActionResult)
+        assert result.success and result.value is None
         assert entity.members.all() == cached_members
         assert client.squads.members.list.call_count == 2
     else:

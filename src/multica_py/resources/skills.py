@@ -79,7 +79,8 @@ class Skill(_BoundEntity):  # type: ignore[misc]
         )
 
         def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            self._invalidate_files()
+            if result.success:
+                self._invalidate_files()
             return result
 
         return client.skills.files.delete_command(self.id, file_id)._map(invalidate)

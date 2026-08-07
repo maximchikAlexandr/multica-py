@@ -573,7 +573,8 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         )
 
         def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            self._invalidate_subscribers()
+            if result.success:
+                self._invalidate_subscribers()
             return result
 
         return client.issues.subscribers.add_command(self.id, user_id)._map(invalidate)
@@ -587,7 +588,8 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         )
 
         def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            self._invalidate_subscribers()
+            if result.success:
+                self._invalidate_subscribers()
             return result
 
         return client.issues.subscribers.remove_command(self.id, user_id)._map(invalidate)
@@ -615,7 +617,8 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         )
 
         def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            self._invalidate_metadata()
+            if result.success:
+                self._invalidate_metadata()
             return result
 
         return client.issues.metadata.delete_command(self.id, key)._map(invalidate)

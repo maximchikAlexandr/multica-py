@@ -127,7 +127,8 @@ class Agent(_BoundEntity):  # type: ignore[misc]
         )
 
         def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            self._invalidate_skills()
+            if result.success:
+                self._invalidate_skills()
             return result
 
         return client.agents.skills.set_command(self.id, skill_ids)._map(invalidate)

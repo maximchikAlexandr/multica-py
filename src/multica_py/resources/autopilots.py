@@ -620,7 +620,8 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
         )
 
         def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            self.triggers.invalidate()
+            if result.success:
+                self.triggers.invalidate()
             return result
 
         return client.autopilots.trigger_delete_command(self.id, trigger_id)._map(invalidate)
