@@ -92,6 +92,7 @@ def test_configuration_set_redacts_bare_secret_from_preview_and_message() -> Non
     )
 
     assert secret not in command.commands[0]
+    assert secret not in repr(command)
     assert "***" in command.commands[0]
 
     result = command.run()

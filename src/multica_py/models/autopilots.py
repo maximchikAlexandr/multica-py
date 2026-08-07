@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import datetime
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 import msgspec
 
 from multica_py.enums import AutopilotExecutionMode
-from multica_py.models.common import Page
+from multica_py.models.common import CommentCursor, Page
 from multica_py.sentinels import Unset, UnsetType
 
 TAutopilot = TypeVar("TAutopilot")
@@ -19,20 +19,99 @@ class AutopilotSubscriber(msgspec.Struct, frozen=True, kw_only=True):
     created_at: datetime.datetime | None = None
 
 
-class AutopilotListPage(Page[TAutopilot], Generic[TAutopilot], frozen=True, kw_only=True):
-    total: int = 0
+if TYPE_CHECKING:
 
-    @property
-    def autopilots(self) -> tuple[TAutopilot, ...]:
-        return self.items
+    class _AutopilotListPageStatic(
+        Page[TAutopilot], Generic[TAutopilot], frozen=True, kw_only=True
+    ):
+        total: int = 0
 
+        @overload
+        def __init__(
+            self,
+            *,
+            items: tuple[TAutopilot, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+        ) -> None: ...
 
-class AutopilotRunListPage(Page[TAutopilotRun], Generic[TAutopilotRun], frozen=True, kw_only=True):
-    total: int = 0
+        @overload
+        def __init__(
+            self,
+            *,
+            autopilots: tuple[TAutopilot, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+        ) -> None: ...
 
-    @property
-    def runs(self) -> tuple[TAutopilotRun, ...]:
-        return self.items
+        def __init__(self, **kwargs: object) -> None: ...
+
+        @property
+        def autopilots(self) -> tuple[TAutopilot, ...]:
+            return self.items
+
+    AutopilotListPage = _AutopilotListPageStatic
+
+    class _AutopilotRunListPageStatic(
+        Page[TAutopilotRun], Generic[TAutopilotRun], frozen=True, kw_only=True
+    ):
+        total: int = 0
+
+        @overload
+        def __init__(
+            self,
+            *,
+            items: tuple[TAutopilotRun, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+        ) -> None: ...
+
+        @overload
+        def __init__(
+            self,
+            *,
+            runs: tuple[TAutopilotRun, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+        ) -> None: ...
+
+        def __init__(self, **kwargs: object) -> None: ...
+
+        @property
+        def runs(self) -> tuple[TAutopilotRun, ...]:
+            return self.items
+
+    AutopilotRunListPage = _AutopilotRunListPageStatic
+
+else:
+
+    class AutopilotListPage(Page[TAutopilot], Generic[TAutopilot], frozen=True, kw_only=True):
+        total: int = 0
+
+        @property
+        def autopilots(self) -> tuple[TAutopilot, ...]:
+            return self.items
+
+    class AutopilotRunListPage(
+        Page[TAutopilotRun], Generic[TAutopilotRun], frozen=True, kw_only=True
+    ):
+        total: int = 0
+
+        @property
+        def runs(self) -> tuple[TAutopilotRun, ...]:
+            return self.items
 
 
 class TriggerConfigItem(msgspec.Struct, frozen=True, kw_only=True):

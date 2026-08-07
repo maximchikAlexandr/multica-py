@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, overload
 
 import msgspec
 
 from multica_py.enums import IssueSort, IssueStatus, SortDirection
-from multica_py.models.common import Page
+from multica_py.models.common import CommentCursor, Page
 from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import MetadataValue
 
@@ -51,17 +51,59 @@ class IssueChildStageGroup(msgspec.Struct, frozen=True, kw_only=True):
     count: int
 
 
-class IssueChildrenResult(Page[object], frozen=True, kw_only=True):
-    total: int = 0
-    child_stages: tuple[IssueChildStageGroup, ...] = ()
-    if TYPE_CHECKING:
+if TYPE_CHECKING:
+
+    class _IssueChildrenResultStatic(Page[Issue], frozen=True, kw_only=True):
+        total: int = 0
+        child_stages: tuple[IssueChildStageGroup, ...] = ()
         unstaged: tuple[Issue, ...] = ()
-    else:
+
+        @overload
+        def __init__(
+            self,
+            *,
+            items: tuple[Issue, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+            child_stages: tuple[IssueChildStageGroup, ...] = ...,
+            unstaged: tuple[Issue, ...] = ...,
+        ) -> None: ...
+
+        @overload
+        def __init__(
+            self,
+            *,
+            children: tuple[Issue, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+            child_stages: tuple[IssueChildStageGroup, ...] = ...,
+            unstaged: tuple[Issue, ...] = ...,
+        ) -> None: ...
+
+        def __init__(self, **kwargs: object) -> None: ...
+
+        @property
+        def children(self) -> tuple[Issue, ...]:
+            return self.items
+
+    IssueChildrenResult = _IssueChildrenResultStatic
+
+else:
+
+    class IssueChildrenResult(Page["Issue"], frozen=True, kw_only=True):
+        total: int = 0
+        child_stages: tuple[IssueChildStageGroup, ...] = ()
         unstaged: tuple[object, ...] = ()
 
-    @property
-    def children(self) -> tuple[Issue, ...]:
-        return cast("tuple[Issue, ...]", self.items)
+        @property
+        def children(self) -> tuple[Issue, ...]:
+            return cast("tuple[Issue, ...]", self.items)
 
 
 class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
@@ -76,10 +118,47 @@ class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
     metadata: tuple[IssueMetadataItem, ...] = ()
 
 
-class IssueListPage(Page[IssueSummary], frozen=True, kw_only=True):
-    @property
-    def issues(self) -> tuple[IssueSummary, ...]:
-        return self.items
+if TYPE_CHECKING:
+
+    class _IssueListPageStatic(Page[IssueSummary], frozen=True, kw_only=True):
+        @overload
+        def __init__(
+            self,
+            *,
+            items: tuple[IssueSummary, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int | None = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+        ) -> None: ...
+
+        @overload
+        def __init__(
+            self,
+            *,
+            issues: tuple[IssueSummary, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int | None = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+        ) -> None: ...
+
+        def __init__(self, **kwargs: object) -> None: ...
+
+        @property
+        def issues(self) -> tuple[IssueSummary, ...]:
+            return self.items
+
+    IssueListPage = _IssueListPageStatic
+
+else:
+
+    class IssueListPage(Page[IssueSummary], frozen=True, kw_only=True):
+        @property
+        def issues(self) -> tuple[IssueSummary, ...]:
+            return self.items
 
 
 class InlineDescription(msgspec.Struct, frozen=True, kw_only=True):
