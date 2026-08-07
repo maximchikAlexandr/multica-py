@@ -16,7 +16,9 @@ from .contract import (
     BindingDescriptor,
     ContractCatalog,
     ContractError,
+    Entrypoint,
     EnumDefinition,
+    Operation,
     ValidatorDefinition,
     validate_contract,
 )
@@ -58,6 +60,7 @@ def _next_patch(version: str) -> str:
 def _runtime(catalog: ContractCatalog) -> bytes:
     enum_definitions: tuple[EnumDefinition, ...] = catalog.enum_definitions
     binding_descriptors: tuple[BindingDescriptor, ...] = catalog.binding_descriptors
+    operations: tuple[Operation, ...] = catalog.operations
     validator_definitions: tuple[ValidatorDefinition, ...] = catalog.validator_definitions
     enum_key: Callable[[EnumDefinition], str] = lambda item: item.public_name  # noqa: E731
     binding_operation_key: Callable[[BindingDescriptor], tuple[str, str]] = lambda item: (  # noqa: E731
@@ -67,6 +70,8 @@ def _runtime(catalog: ContractCatalog) -> bytes:
     binding_descriptor_key: Callable[[BindingDescriptor], str] = lambda item: item.descriptor_id  # noqa: E731
     validator_id_key: Callable[[ValidatorDefinition], str] = lambda item: item.validator_id  # noqa: E731
     validator_name_key: Callable[[ValidatorDefinition], str] = lambda item: item.name  # noqa: E731
+    operation_key: Callable[[Operation], str] = lambda item: item.operation_id  # noqa: E731
+    entrypoint_key: Callable[[Entrypoint], str] = lambda item: item.entrypoint_id  # noqa: E731
     lines = [
         "from __future__ import annotations",
         "",
@@ -104,6 +109,17 @@ def _runtime(catalog: ContractCatalog) -> bytes:
             "    mappings: tuple[GeneratedMapping, ...]",
             "    validator_ids: tuple[str, ...]",
             "",
+            "@dataclass(frozen=True)",
+            "class GeneratedConvention:",
+            "    operation_id: str",
+            "    entrypoint_id: str",
+            "    category: str",
+            "    response_id: str",
+            "    typed_input_id: str | None",
+            "    input_mode: str",
+            "    presence_policy_ids: tuple[str, ...]",
+            "    command_symbol: str",
+            "",
         ]
     )
     for descriptor in sorted(binding_descriptors, key=binding_operation_key):
@@ -125,6 +141,21 @@ def _runtime(catalog: ContractCatalog) -> bytes:
     for descriptor in sorted(binding_descriptors, key=binding_operation_key):
         lines.append(f"    {binding_names[descriptor.descriptor_id]},")
     lines.extend((")", ""))
+    lines.append("OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (")
+    for operation in sorted(operations, key=operation_key):
+        for entrypoint in sorted(operation.entrypoints, key=entrypoint_key):
+            convention = entrypoint.convention
+            lines.extend(
+                [
+                    "    GeneratedConvention(",
+                    f"        {operation.operation_id!r}, {entrypoint.entrypoint_id!r},",
+                    f"        {convention.category!r}, {convention.response_id!r},",
+                    f"        {convention.typed_input_id!r}, {convention.input_mode!r},",
+                    f"        {convention.presence_policy_ids!r}, {convention.command_symbol!r},",
+                    "    ),",
+                ]
+            )
+    lines.extend((")", ""))
     validators_by_name = {
         validator.name: validator
         for validator in sorted(validator_definitions, key=validator_id_key)
@@ -135,12 +166,13 @@ def _runtime(catalog: ContractCatalog) -> bytes:
         lines.extend([f"def {validator.name}({parameter}: object) -> None:", body, ""])
     exports = ["TARGET_VERSION", "MIN_CLI_VERSION", "MAX_CLI_VERSION"]
     exports.extend(item.public_name for item in sorted(enum_definitions, key=enum_key))
-    exports.extend(["GeneratedMapping", "GeneratedBinding"])
+    exports.extend(["GeneratedMapping", "GeneratedBinding", "GeneratedConvention"])
     exports.extend(
         binding_names[descriptor.descriptor_id]
         for descriptor in sorted(binding_descriptors, key=binding_descriptor_key)
     )
     exports.append("OPERATION_BINDINGS")
+    exports.append("OPERATION_CONVENTIONS")
     exports.extend(
         item.name for item in sorted(validators_by_name.values(), key=validator_name_key)
     )

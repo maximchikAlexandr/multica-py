@@ -178,6 +178,8 @@ def test_discovered_public_methods() -> None:
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
     assert all(c.contract_operation_id is not None for c in generated)
+    assert all(c.expected_category is not None for c in generated)
+    assert all(c.expected_response_id is not None for c in generated)
 
 
 def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> None:

@@ -143,13 +143,13 @@ _TYPED_INPUT_IDS = frozenset(
 )
 _PRESENCE_POLICY_IDS = frozenset(
     {
-        "cross_runtime_model",
-        "literal",
-        "optional_blank_omit",
-        "optional_omit",
-        "required_nonblank",
-        "required_value",
-        "update_text",
+        "empty_collection_clear",
+        "empty_present",
+        "false_present",
+        "nullable_clear",
+        "omit",
+        "required_nonnull",
+        "zero_present",
     }
 )
 _UPDATE_PRESENCE_VALUES = frozenset({"omit", "reject", "emit", "not_applicable"})
@@ -1602,6 +1602,9 @@ def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> tuple[ResponseCat
         for key, value in values.items():
             _str(key, f"catalogs.{name} key")
             _str(value, f"catalogs.{name}[{key!r}]")
+    presence_catalog = _dict(catalogs["presence"], "catalogs.presence")
+    if set(presence_catalog) != _PRESENCE_POLICY_IDS:
+        raise ContractError("catalogs.presence must contain exactly the normalized policy IDs")
     for name in ("binding_source_refs", "mapping_presence"):
         values = _dict(catalogs[name], f"catalogs.{name}")
         if set(values) != _AUXILIARY_CATALOG_KEYS["signatures"]:
@@ -1610,6 +1613,26 @@ def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> tuple[ResponseCat
             _str(key, f"catalogs.{name} key")
             for index, item in enumerate(_list(value, f"catalogs.{name}[{key!r}]")):
                 _str(item, f"catalogs.{name}[{key!r}][{index}]")
+    bindings_for_presence = _dict(catalogs["bindings"], "catalogs.bindings")
+    mapping_presence = _dict(catalogs["mapping_presence"], "catalogs.mapping_presence")
+    for key, value in mapping_presence.items():
+        policies = _list(value, f"catalogs.mapping_presence[{key!r}]")
+        mappings = _list(
+            _dict(bindings_for_presence[key], f"catalogs.bindings[{key!r}]")["mappings"],
+            f"catalogs.bindings[{key!r}].mappings",
+        )
+        if len(policies) != len(mappings):
+            raise ContractError(
+                f"catalogs.mapping_presence[{key!r}] must map every binding field exactly once"
+            )
+        for index, policy in enumerate(policies):
+            if (
+                _str(policy, f"catalogs.mapping_presence[{key!r}][{index}]")
+                not in _PRESENCE_POLICY_IDS
+            ):
+                raise ContractError(
+                    f"catalogs.mapping_presence[{key!r}] references an unknown policy"
+                )
     for name in ("presence", "validator_evidence"):
         values = _dict(catalogs[name], f"catalogs.{name}")
         for key, value in values.items():

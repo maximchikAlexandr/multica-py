@@ -47,6 +47,9 @@ class OperationCase:
     method: str
     expected_argv: tuple[str, ...] = ()
     expected_commands: tuple[str, ...] = ()
+    expected_category: str | None = None
+    expected_response_id: str | None = None
+    presence_policy_ids: tuple[str, ...] = ()
     transport_method: str = "run_bytes"
     args: tuple[object, ...] = ()
     kwargs: tuple[tuple[str, object], ...] = ()
@@ -323,6 +326,9 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 method=method,
                 expected_argv=vector.expected_argv,
                 expected_commands=_expected_commands(vector.expected_argv),
+                expected_category=entrypoint.category,
+                expected_response_id=entrypoint.response_id,
+                presence_policy_ids=entrypoint.presence_policy_ids,
                 transport_method=vector.transport_method,
                 args=tuple(materialize(value) for value in vector.args),
                 kwargs=tuple((name, materialize(value)) for name, value in vector.kwargs),

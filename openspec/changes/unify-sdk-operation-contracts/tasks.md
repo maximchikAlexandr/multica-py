@@ -5,10 +5,10 @@
 - [x] 1.3 Promote the currently manual canonical methods into approved operation entries with source/test references, then populate one public-convention record for each of the 124 methods currently returned by `discover_public_methods()`; assert a bijection rather than preserving 124 as a permanent magic number.
 - [x] 1.4 Trace every approved `ProjectUpdateRequest`, `AgentUpdateRequest`, `SkillUpdateRequest`, and `IssueUpdateRequest` field through the pinned v0.4.20 upstream `RunE`/helper path and record the exact omitted/null/empty/zero/false mapping plus source lines; include composite unassign/clear steps where a single update flag is not the approved representation.
 - [x] 1.5 Trace every approved autopilot, trigger, label, project-resource, runtime, and user-profile update field through the pinned upstream path; approve the documented issue-parent, autopilot-project, and profile clear mechanisms only after source confirmation, and fail contract validation for any nullable field without a distinct clear representation.
-- [ ] 1.6 Add/normalize presence policies for `omit`, `nullable_clear`, `required_nonnull`, `empty_present`, `empty_collection_clear`, `false_present`, and `zero_present`; ensure ordered binding mappings reference these policies field-for-field.
-- [ ] 1.7 Update contract rendering/check commands and generated operation-case materialization to consume the new convention fields without allowing evidence or heuristics to change public behavior.
-- [ ] 1.8 Add schema/loader mutation cases proving missing conventions, duplicate categories, unknown types, response/category mismatches, incomplete presence vectors, missing clear evidence, and a non-bijective canonical surface fail closed.
-- [ ] 1.9 Run the focused contract/schema tests and `uv run python scripts/upstream_contract.py validate --approved contracts/sdk-contract.json --source-checkout <pinned-v0.4.20-source>`; record a green validation before runtime surface edits.
+- [x] 1.6 Add/normalize presence policies for `omit`, `nullable_clear`, `required_nonnull`, `empty_present`, `empty_collection_clear`, `false_present`, and `zero_present`; ensure ordered binding mappings reference these policies field-for-field.
+- [x] 1.7 Update contract rendering/check commands and generated operation-case materialization to consume the new convention fields without allowing evidence or heuristics to change public behavior.
+- [x] 1.8 Add schema/loader mutation cases proving missing conventions, duplicate categories, unknown types, response/category mismatches, incomplete presence vectors, missing clear evidence, and a non-bijective canonical surface fail closed.
+- [x] 1.9 Run the focused contract/schema tests and `uv run python scripts/upstream_contract.py validate --approved contracts/sdk-contract.json --source-checkout <pinned-v0.4.20-source>`; record a green validation before runtime surface edits.
 
 ## 2. Common page and action result models
 

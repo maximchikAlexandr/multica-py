@@ -481,6 +481,13 @@
           "default": {},
           "type": "object"
         },
+        "presence": {
+          "additionalProperties": {
+            "$ref": "#/$defs/PresencePolicy"
+          },
+          "default": {},
+          "type": "object"
+        },
         "update_field_policies": {
           "additionalProperties": {
             "$ref": "#/$defs/UpdateModelPolicy"
@@ -610,7 +617,15 @@
         },
         "presence_policy_ids": {
           "items": {
-            "pattern": "^[a-z][a-z0-9_]*$",
+            "enum": [
+              "omit",
+              "nullable_clear",
+              "required_nonnull",
+              "empty_present",
+              "empty_collection_clear",
+              "false_present",
+              "zero_present"
+            ],
             "type": "string"
           },
           "type": "array"
@@ -724,6 +739,19 @@
       "title": "UpdateFieldPolicy",
       "type": "object"
     },
+    "PresencePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "omitted": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"},
+        "null": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"},
+        "empty": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"},
+        "zero": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"},
+        "false": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"}
+      },
+      "required": ["omitted", "null", "empty", "zero", "false"],
+      "title": "PresencePolicy",
+      "type": "object"
+    },
     "UpdateModelPolicy": {
       "additionalProperties": false,
       "properties": {
@@ -779,7 +807,7 @@
         },
         "presence_policy_ids": {
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/PublicConvention/properties/presence_policy_ids/items"
           },
           "type": "array"
         },

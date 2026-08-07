@@ -428,8 +428,7 @@
       "agents_archive_manual": {
         "command": [
           "agent",
-          "archive",
-          "a1"
+          "archive"
         ],
         "output": "json",
         "mappings": [],
@@ -438,8 +437,7 @@
       "agents_create_manual": {
         "command": [
           "agent",
-          "create",
-          "--name"
+          "create"
         ],
         "output": "json",
         "mappings": [],
@@ -448,8 +446,7 @@
       "agents_restore_manual": {
         "command": [
           "agent",
-          "restore",
-          "a1"
+          "restore"
         ],
         "output": "json",
         "mappings": [],
@@ -458,8 +455,7 @@
       "agents_update_manual": {
         "command": [
           "agent",
-          "update",
-          "a1"
+          "update"
         ],
         "output": "json",
         "mappings": [],
@@ -510,8 +506,7 @@
       "attachments_download_bytes_manual": {
         "command": [
           "attachment",
-          "download",
-          "a1"
+          "download"
         ],
         "output": "json",
         "mappings": [],
@@ -520,8 +515,7 @@
       "attachments_upload_bytes_manual": {
         "command": [
           "attachment",
-          "upload",
-          "<dynamic>"
+          "upload"
         ],
         "output": "json",
         "mappings": [],
@@ -530,8 +524,7 @@
       "auth_login_manual": {
         "command": [
           "auth",
-          "login",
-          "--token"
+          "login"
         ],
         "output": "json",
         "mappings": [],
@@ -540,8 +533,7 @@
       "auth_logout_manual": {
         "command": [
           "auth",
-          "logout",
-          "--output"
+          "logout"
         ],
         "output": "json",
         "mappings": [],
@@ -550,8 +542,7 @@
       "auth_status_manual": {
         "command": [
           "auth",
-          "status",
-          "--output"
+          "status"
         ],
         "output": "json",
         "mappings": [],
@@ -1022,8 +1013,7 @@
       "configuration_get_manual": {
         "command": [
           "config",
-          "get",
-          "key"
+          "get"
         ],
         "output": "json",
         "mappings": [],
@@ -1032,8 +1022,7 @@
       "configuration_set_manual": {
         "command": [
           "config",
-          "set",
-          "key"
+          "set"
         ],
         "output": "json",
         "mappings": [],
@@ -1051,8 +1040,7 @@
       "daemon_disk_usage_manual": {
         "command": [
           "daemon",
-          "disk-usage",
-          "--output"
+          "disk-usage"
         ],
         "output": "json",
         "mappings": [],
@@ -1070,8 +1058,7 @@
       "daemon_restart_manual": {
         "command": [
           "daemon",
-          "restart",
-          "--output"
+          "restart"
         ],
         "output": "json",
         "mappings": [],
@@ -1089,8 +1076,7 @@
       "daemon_status_manual": {
         "command": [
           "daemon",
-          "status",
-          "--output"
+          "status"
         ],
         "output": "json",
         "mappings": [],
@@ -1099,8 +1085,7 @@
       "daemon_stop_manual": {
         "command": [
           "daemon",
-          "stop",
-          "--output"
+          "stop"
         ],
         "output": "json",
         "mappings": [],
@@ -1612,8 +1597,7 @@
       "issues_assign_manual": {
         "command": [
           "issue",
-          "assign",
-          "iss_1"
+          "assign"
         ],
         "output": "json",
         "mappings": [],
@@ -1652,8 +1636,7 @@
       "issues_deprioritize_manual": {
         "command": [
           "issue",
-          "deprioritize",
-          "iss_001"
+          "deprioritize"
         ],
         "output": "json",
         "mappings": [],
@@ -1682,8 +1665,7 @@
       "issues_reorder_manual": {
         "command": [
           "issue",
-          "reorder",
-          "iss_1"
+          "reorder"
         ],
         "output": "json",
         "mappings": [],
@@ -1692,8 +1674,7 @@
       "issues_update_manual": {
         "command": [
           "issue",
-          "update",
-          "iss_1"
+          "update"
         ],
         "output": "json",
         "mappings": [],
@@ -1702,8 +1683,7 @@
       "issues_usage_manual": {
         "command": [
           "issue",
-          "usage",
-          "iss_1"
+          "usage"
         ],
         "output": "json",
         "mappings": [],
@@ -1738,8 +1718,7 @@
       "labels_create_manual": {
         "command": [
           "label",
-          "create",
-          "--name"
+          "create"
         ],
         "output": "json",
         "mappings": [],
@@ -1748,8 +1727,7 @@
       "labels_delete_manual": {
         "command": [
           "label",
-          "delete",
-          "lbl_001"
+          "delete"
         ],
         "output": "json",
         "mappings": [],
@@ -1758,8 +1736,7 @@
       "labels_update_manual": {
         "command": [
           "label",
-          "update",
-          "lbl_001"
+          "update"
         ],
         "output": "json",
         "mappings": [],
@@ -1775,9 +1752,7 @@
       },
       "maintenance_version_manual": {
         "command": [
-          "version",
-          "--output",
-          "json"
+          "version"
         ],
         "output": "json",
         "mappings": [],
@@ -2000,8 +1975,7 @@
       "projects_delete_manual": {
         "command": [
           "project",
-          "delete",
-          "pr_1"
+          "delete"
         ],
         "output": "json",
         "mappings": [],
@@ -2195,8 +2169,7 @@
       "setup_self_host_manual": {
         "command": [
           "setup",
-          "self-host",
-          "--url"
+          "self-host"
         ],
         "output": "json",
         "mappings": [],
@@ -2302,8 +2275,7 @@
       "skills_create_manual": {
         "command": [
           "skill",
-          "create",
-          "--name"
+          "create"
         ],
         "output": "json",
         "mappings": [],
@@ -2312,8 +2284,7 @@
       "skills_delete_manual": {
         "command": [
           "skill",
-          "delete",
-          "s1"
+          "delete"
         ],
         "output": "json",
         "mappings": [],
@@ -2322,8 +2293,7 @@
       "skills_import_from_url_manual": {
         "command": [
           "skill",
-          "import",
-          "--url"
+          "import"
         ],
         "output": "json",
         "mappings": [],
@@ -2332,8 +2302,7 @@
       "skills_update_manual": {
         "command": [
           "skill",
-          "update",
-          "s1"
+          "update"
         ],
         "output": "json",
         "mappings": [],
@@ -2508,8 +2477,7 @@
       "workspaces_switch_manual": {
         "command": [
           "workspace",
-          "switch",
-          "ws_001"
+          "switch"
         ],
         "output": "json",
         "mappings": [],
@@ -2518,8 +2486,7 @@
       "workspaces_unwatch_manual": {
         "command": [
           "workspace",
-          "unwatch",
-          "ws_001"
+          "unwatch"
         ],
         "output": "json",
         "mappings": [],
@@ -2528,8 +2495,7 @@
       "workspaces_watch_manual": {
         "command": [
           "workspace",
-          "watch",
-          "ws_001"
+          "watch"
         ],
         "output": "json",
         "mappings": [],
@@ -2928,102 +2894,102 @@
       ]
     },
     "presence": {
-      "required_nonblank": {
-        "omitted": "reject",
-        "null": "reject",
-        "empty": "reject",
-        "zero": "not_applicable",
-        "false": "not_applicable"
-      },
-      "required_value": {
-        "omitted": "reject",
-        "null": "reject",
-        "empty": "emit",
-        "zero": "emit",
-        "false": "emit"
-      },
-      "optional_omit": {
-        "omitted": "omit",
-        "null": "omit",
-        "empty": "emit",
-        "zero": "emit",
-        "false": "emit"
-      },
-      "optional_blank_omit": {
-        "omitted": "omit",
-        "null": "omit",
-        "empty": "omit",
-        "zero": "not_applicable",
-        "false": "not_applicable"
-      },
-      "update_text": {
+      "empty_collection_clear": {
         "omitted": "omit",
         "null": "reject",
         "empty": "emit",
         "zero": "not_applicable",
         "false": "not_applicable"
       },
-      "literal": {
-        "omitted": "not_applicable",
-        "null": "not_applicable",
+      "empty_present": {
+        "omitted": "omit",
+        "null": "reject",
+        "empty": "emit",
+        "zero": "not_applicable",
+        "false": "not_applicable"
+      },
+      "false_present": {
+        "omitted": "omit",
+        "null": "reject",
         "empty": "not_applicable",
         "zero": "not_applicable",
-        "false": "not_applicable"
+        "false": "emit"
       },
-      "cross_runtime_model": {
-        "omitted": "omit_unless_runtime_present",
-        "null": "reject",
+      "nullable_clear": {
+        "omitted": "omit",
+        "null": "emit",
         "empty": "emit",
         "zero": "not_applicable",
+        "false": "not_applicable"
+      },
+      "omit": {
+        "omitted": "omit",
+        "null": "omit",
+        "empty": "emit",
+        "zero": "emit",
+        "false": "emit"
+      },
+      "required_nonnull": {
+        "omitted": "reject",
+        "null": "reject",
+        "empty": "emit",
+        "zero": "emit",
+        "false": "emit"
+      },
+      "zero_present": {
+        "omitted": "omit",
+        "null": "reject",
+        "empty": "not_applicable",
+        "zero": "emit",
         "false": "not_applicable"
       }
     },
     "mapping_presence": {
       "agent_avatar": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "agent_copy": [
-        "required_nonblank",
-        "optional_blank_omit",
-        "optional_blank_omit",
-        "optional_omit",
-        "optional_omit",
-        "cross_runtime_model",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_blank_omit",
-        "optional_omit",
-        "optional_blank_omit",
-        "literal"
+        "required_nonnull",
+        "omit",
+        "omit",
+        "nullable_clear",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "empty_present"
       ],
       "agent_get": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "agent_list": [],
       "agent_skills_list": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "agent_skills_set": [
-        "required_nonblank",
-        "optional_blank_omit"
+        "required_nonnull",
+        "omit"
       ],
       "agent_tasks": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "agents_archive_manual": [],
       "agents_create_manual": [],
       "agents_restore_manual": [],
       "agents_update_manual": [],
       "attachment_download": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "attachment_upload": [
-        "required_nonblank",
-        "optional_omit"
+        "required_nonnull",
+        "omit"
       ],
       "attachments_download_bytes_manual": [],
       "attachments_upload_bytes_manual": [],
@@ -3031,87 +2997,87 @@
       "auth_logout_manual": [],
       "auth_status_manual": [],
       "autopilot_create": [
-        "required_nonblank",
-        "optional_omit",
-        "required_nonblank",
-        "required_nonblank",
-        "required_value",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit"
+        "required_nonnull",
+        "nullable_clear",
+        "required_nonnull",
+        "required_nonnull",
+        "required_nonnull",
+        "omit",
+        "omit",
+        "omit"
       ],
       "autopilot_delete": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "autopilot_get": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "autopilot_history": [
-        "required_nonblank",
-        "optional_omit",
-        "optional_omit"
+        "required_nonnull",
+        "zero_present",
+        "zero_present"
       ],
       "autopilot_list": [],
       "autopilot_run": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "autopilot_trigger": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "autopilot_trigger_add": [
-        "required_nonblank",
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull",
+        "required_nonnull"
       ],
       "autopilot_trigger_delete": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "autopilot_trigger_update": [
-        "required_nonblank",
-        "required_nonblank",
-        "optional_omit",
-        "optional_omit"
+        "required_nonnull",
+        "required_nonnull",
+        "omit",
+        "omit"
       ],
       "autopilot_update": [
-        "required_nonblank",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit"
+        "required_nonnull",
+        "omit",
+        "nullable_clear",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "empty_collection_clear"
       ],
       "comment_add": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "comment_delete": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "comment_list": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "comment_list_flat": [
-        "required_nonblank",
-        "optional_omit"
+        "required_nonnull",
+        "omit"
       ],
       "comment_list_recent": [
-        "required_nonblank",
-        "required_value",
-        "optional_omit",
-        "optional_omit"
+        "required_nonnull",
+        "required_nonnull",
+        "omit",
+        "omit"
       ],
       "comment_list_thread": [
-        "required_nonblank",
-        "required_nonblank",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit"
+        "required_nonnull",
+        "required_nonnull",
+        "omit",
+        "omit",
+        "omit"
       ],
       "configuration_get_manual": [],
       "configuration_set_manual": [],
@@ -3123,92 +3089,92 @@
       "daemon_status_manual": [],
       "daemon_stop_manual": [],
       "issue_cancel_task": [
-        "required_nonblank",
-        "optional_omit"
+        "required_nonnull",
+        "omit"
       ],
       "issue_children": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "issue_create": [
-        "required_nonblank",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit"
+        "required_nonnull",
+        "nullable_clear",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
       ],
       "issue_get": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "issue_labels_add": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "issue_labels_list": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "issue_labels_remove": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "issue_list": [
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit",
-        "optional_omit"
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
       ],
       "issue_metadata_delete": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "issue_metadata_get": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "issue_metadata_list": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "issue_metadata_set": [
-        "required_nonblank",
-        "required_nonblank",
-        "required_value"
+        "required_nonnull",
+        "required_nonnull",
+        "required_nonnull"
       ],
       "issue_pull_requests": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "issue_rerun": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "issue_run_messages": [
-        "required_nonblank",
-        "optional_omit"
+        "required_nonnull",
+        "omit"
       ],
       "issue_runs": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "issue_search": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "issue_status": [
-        "required_nonblank",
-        "required_value"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "issue_subscribers_add": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "issue_subscribers_list": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "issue_subscribers_remove": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "issues_assign_manual": [],
       "issues_comments_reply_manual": [],
@@ -3221,7 +3187,7 @@
       "issues_update_manual": [],
       "issues_usage_manual": [],
       "label_get": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "label_list": [],
       "labels_create_manual": [],
@@ -3230,85 +3196,88 @@
       "maintenance_update_manual": [],
       "maintenance_version_manual": [],
       "project_create": [
-        "required_nonblank",
-        "optional_blank_omit"
+        "required_nonnull",
+        "nullable_clear"
       ],
       "project_get": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "project_list": [],
       "project_resource_add": [
-        "required_nonblank",
-        "required_nonblank",
-        "required_nonblank",
-        "optional_blank_omit",
-        "literal"
+        "required_nonnull",
+        "required_nonnull",
+        "required_nonnull",
+        "omit",
+        "empty_present"
       ],
       "project_resource_list": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "project_resource_remove": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "project_resource_update": [
-        "required_nonblank",
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull",
+        "required_nonnull"
       ],
       "project_status": [
-        "required_nonblank",
-        "required_value"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "project_update": [
-        "required_nonblank",
-        "update_text",
-        "update_text"
+        "required_nonnull",
+        "nullable_clear",
+        "nullable_clear"
       ],
       "projects_delete_manual": [],
       "repositories_add": [
-        "required_nonblank",
-        "optional_blank_omit"
+        "required_nonnull",
+        "nullable_clear"
       ],
       "repositories_list": [],
       "repositories_remove": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "runtime_activity": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "runtime_delete": [
-        "required_nonblank"
+        "required_nonnull",
+        "omit"
       ],
       "runtime_list": [],
       "runtime_rename": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull",
+        "omit"
       ],
       "runtime_update": [
-        "required_nonblank",
-        "optional_omit",
-        "optional_omit"
+        "required_nonnull",
+        "omit",
+        "false_present"
       ],
       "runtime_usage": [
-        "required_nonblank"
+        "required_nonnull",
+        "zero_present"
       ],
       "setup_cloud_manual": [],
       "setup_self_host_manual": [],
       "skill_files_delete": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "skill_files_list": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "skill_files_upsert": [
-        "required_nonblank",
-        "required_nonblank",
-        "required_value"
+        "required_nonnull",
+        "required_nonnull",
+        "required_nonnull"
       ],
       "skill_get": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "skill_list": [],
       "skills_create_manual": [],
@@ -3316,30 +3285,30 @@
       "skills_import_from_url_manual": [],
       "skills_update_manual": [],
       "squad_get": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "squad_list": [],
       "squad_members_add": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "squad_members_list": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "squad_members_remove": [
-        "required_nonblank",
-        "required_nonblank"
+        "required_nonnull",
+        "required_nonnull"
       ],
       "user_profile_get": [],
       "user_profile_update": [
-        "optional_omit"
+        "nullable_clear"
       ],
       "workspace_get": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "workspace_list": [],
       "workspace_members_list": [
-        "required_nonblank"
+        "required_nonnull"
       ],
       "workspaces_switch_manual": [],
       "workspaces_unwatch_manual": [],
@@ -4698,8 +4667,7 @@
         "entrypoint_id": "default",
         "command": [
           "agent",
-          "archive",
-          "a1"
+          "archive"
         ],
         "mappings": [],
         "validator_ids": []
@@ -4819,8 +4787,7 @@
         "entrypoint_id": "default",
         "command": [
           "agent",
-          "create",
-          "--name"
+          "create"
         ],
         "mappings": [],
         "validator_ids": []
@@ -4861,8 +4828,7 @@
         "entrypoint_id": "default",
         "command": [
           "agent",
-          "restore",
-          "a1"
+          "restore"
         ],
         "mappings": [],
         "validator_ids": []
@@ -4937,8 +4903,7 @@
         "entrypoint_id": "default",
         "command": [
           "agent",
-          "update",
-          "a1"
+          "update"
         ],
         "mappings": [],
         "validator_ids": []
@@ -4973,8 +4938,7 @@
         "entrypoint_id": "default",
         "command": [
           "attachment",
-          "download",
-          "a1"
+          "download"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5007,8 +4971,7 @@
         "entrypoint_id": "default",
         "command": [
           "attachment",
-          "upload",
-          "<dynamic>"
+          "upload"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5019,8 +4982,7 @@
         "entrypoint_id": "default",
         "command": [
           "auth",
-          "login",
-          "--token"
+          "login"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5031,8 +4993,7 @@
         "entrypoint_id": "default",
         "command": [
           "auth",
-          "logout",
-          "--output"
+          "logout"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5043,8 +5004,7 @@
         "entrypoint_id": "default",
         "command": [
           "auth",
-          "status",
-          "--output"
+          "status"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5366,8 +5326,7 @@
         "entrypoint_id": "default",
         "command": [
           "config",
-          "get",
-          "key"
+          "get"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5378,8 +5337,7 @@
         "entrypoint_id": "default",
         "command": [
           "config",
-          "set",
-          "key"
+          "set"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5401,8 +5359,7 @@
         "entrypoint_id": "default",
         "command": [
           "daemon",
-          "disk-usage",
-          "--output"
+          "disk-usage"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5424,8 +5381,7 @@
         "entrypoint_id": "default",
         "command": [
           "daemon",
-          "restart",
-          "--output"
+          "restart"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5447,8 +5403,7 @@
         "entrypoint_id": "default",
         "command": [
           "daemon",
-          "status",
-          "--output"
+          "status"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5459,8 +5414,7 @@
         "entrypoint_id": "default",
         "command": [
           "daemon",
-          "stop",
-          "--output"
+          "stop"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5471,8 +5425,7 @@
         "entrypoint_id": "default",
         "command": [
           "issue",
-          "assign",
-          "iss_1"
+          "assign"
         ],
         "mappings": [],
         "validator_ids": []
@@ -5778,8 +5731,7 @@
         "entrypoint_id": "default",
         "command": [
           "issue",
-          "deprioritize",
-          "iss_001"
+          "deprioritize"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6088,8 +6040,7 @@
         "entrypoint_id": "default",
         "command": [
           "issue",
-          "reorder",
-          "iss_1"
+          "reorder"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6277,8 +6228,7 @@
         "entrypoint_id": "default",
         "command": [
           "issue",
-          "update",
-          "iss_1"
+          "update"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6289,8 +6239,7 @@
         "entrypoint_id": "default",
         "command": [
           "issue",
-          "usage",
-          "iss_1"
+          "usage"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6301,8 +6250,7 @@
         "entrypoint_id": "default",
         "command": [
           "label",
-          "create",
-          "--name"
+          "create"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6313,8 +6261,7 @@
         "entrypoint_id": "default",
         "command": [
           "label",
-          "delete",
-          "lbl_001"
+          "delete"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6355,8 +6302,7 @@
         "entrypoint_id": "default",
         "command": [
           "label",
-          "update",
-          "lbl_001"
+          "update"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6376,9 +6322,7 @@
         "operation_id": "maintenance.version",
         "entrypoint_id": "default",
         "command": [
-          "version",
-          "--output",
-          "json"
+          "version"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6413,8 +6357,7 @@
         "entrypoint_id": "default",
         "command": [
           "project",
-          "delete",
-          "pr_1"
+          "delete"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6831,8 +6774,7 @@
         "entrypoint_id": "default",
         "command": [
           "setup",
-          "self-host",
-          "--url"
+          "self-host"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6843,8 +6785,7 @@
         "entrypoint_id": "default",
         "command": [
           "skill",
-          "create",
-          "--name"
+          "create"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6855,8 +6796,7 @@
         "entrypoint_id": "default",
         "command": [
           "skill",
-          "delete",
-          "s1"
+          "delete"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6963,8 +6903,7 @@
         "entrypoint_id": "default",
         "command": [
           "skill",
-          "import",
-          "--url"
+          "import"
         ],
         "mappings": [],
         "validator_ids": []
@@ -6986,8 +6925,7 @@
         "entrypoint_id": "default",
         "command": [
           "skill",
-          "update",
-          "s1"
+          "update"
         ],
         "mappings": [],
         "validator_ids": []
@@ -7180,8 +7118,7 @@
         "entrypoint_id": "default",
         "command": [
           "workspace",
-          "switch",
-          "ws_001"
+          "switch"
         ],
         "mappings": [],
         "validator_ids": []
@@ -7192,8 +7129,7 @@
         "entrypoint_id": "default",
         "command": [
           "workspace",
-          "unwatch",
-          "ws_001"
+          "unwatch"
         ],
         "mappings": [],
         "validator_ids": []
@@ -7204,8 +7140,7 @@
         "entrypoint_id": "default",
         "command": [
           "workspace",
-          "watch",
-          "ws_001"
+          "watch"
         ],
         "mappings": [],
         "validator_ids": []
@@ -11418,7 +11353,7 @@
           "typed_input_id": "AgentCreateRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.agents.AgentResource.create_command"
         }
@@ -11605,7 +11540,7 @@
           "typed_input_id": "AgentUpdateRequest",
           "input_mode": "dual_optional",
           "presence_policy_ids": [
-            "optional_omit"
+            "omit"
           ],
           "command_symbol": "multica_py.resources.agents.AgentResource.update_command"
         }
@@ -11975,7 +11910,7 @@
           "typed_input_id": "AutopilotTriggerCreate",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_add_command"
         }
@@ -12029,7 +11964,7 @@
           "typed_input_id": "AutopilotTriggerUpdate",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_update_command"
         }
@@ -12057,7 +11992,7 @@
           "typed_input_id": "AutopilotUpdateRequest",
           "input_mode": "dual_optional",
           "presence_policy_ids": [
-            "optional_omit"
+            "omit"
           ],
           "command_symbol": "multica_py.resources.autopilots.AutopilotResource.update_command"
         }
@@ -12319,7 +12254,7 @@
           "typed_input_id": "IssueAssignmentRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.issues.IssueResource.assign_command"
         }
@@ -12474,7 +12409,7 @@
           "typed_input_id": "CommentListFlatRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_flat_command"
         },
@@ -12489,7 +12424,7 @@
           "typed_input_id": "CommentListThreadRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_thread_command"
         },
@@ -12504,7 +12439,7 @@
           "typed_input_id": "CommentListRecentRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_recent_command"
         }
@@ -12611,7 +12546,7 @@
           "typed_input_id": "IssueCreateRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.issues.IssueResource.create_command"
         }
@@ -12787,7 +12722,7 @@
           "typed_input_id": "IssueListFilter",
           "input_mode": "dual_optional",
           "presence_policy_ids": [
-            "optional_omit"
+            "omit"
           ],
           "command_symbol": "multica_py.resources.issues.IssueResource.list_command"
         }
@@ -12894,7 +12829,7 @@
           "typed_input_id": "MetadataListRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.query_command"
         }
@@ -12948,7 +12883,7 @@
           "typed_input_id": "MetadataSetRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.set_typed_command"
         }
@@ -13003,7 +12938,7 @@
           "typed_input_id": "IssueReorderRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.issues.IssueResource.reorder_command"
         }
@@ -13249,7 +13184,7 @@
           "typed_input_id": "IssueUpdateRequest",
           "input_mode": "dual_optional",
           "presence_policy_ids": [
-            "optional_omit"
+            "omit"
           ],
           "command_symbol": "multica_py.resources.issues.IssueResource.update_command"
         }
@@ -13408,7 +13343,7 @@
           "typed_input_id": "LabelUpdateRequest",
           "input_mode": "dual_optional",
           "presence_policy_ids": [
-            "optional_omit"
+            "omit"
           ],
           "command_symbol": "multica_py.resources.labels.LabelResource.update_command"
         }
@@ -13488,7 +13423,7 @@
           "typed_input_id": "ProjectCreateRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.projects.ProjectResource.create_command"
         }
@@ -13595,7 +13530,7 @@
           "typed_input_id": "ProjectResourceAddLocalDirectoryRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory_command"
         }
@@ -13676,7 +13611,7 @@
           "typed_input_id": "ProjectResourceUpdateLocalDirectoryRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory_command"
         }
@@ -13730,7 +13665,7 @@
           "typed_input_id": "ProjectUpdateRequest",
           "input_mode": "dual_optional",
           "presence_policy_ids": [
-            "optional_omit"
+            "omit"
           ],
           "command_symbol": "multica_py.resources.projects.ProjectResource.update_command"
         }
@@ -13945,7 +13880,7 @@
           "typed_input_id": "RuntimeUpdate",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.runtimes.RuntimeResource.update_command"
         }
@@ -14051,7 +13986,7 @@
           "typed_input_id": "SkillCreateRequest",
           "input_mode": "dual_required",
           "presence_policy_ids": [
-            "required_value"
+            "required_nonnull"
           ],
           "command_symbol": "multica_py.resources.skills.SkillResource.create_command"
         }
@@ -14263,7 +14198,7 @@
           "typed_input_id": "SkillUpdateRequest",
           "input_mode": "dual_optional",
           "presence_policy_ids": [
-            "optional_omit"
+            "omit"
           ],
           "command_symbol": "multica_py.resources.skills.SkillResource.update_command"
         }
@@ -14449,7 +14384,7 @@
           "typed_input_id": "UserProfileUpdate",
           "input_mode": "dual_optional",
           "presence_policy_ids": [
-            "optional_omit"
+            "omit"
           ],
           "command_symbol": "multica_py.resources.users.UserResource.profile_update_command"
         }

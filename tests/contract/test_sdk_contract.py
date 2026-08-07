@@ -46,6 +46,7 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
     assert b"approved_contract" not in runtime
     assert b"source path" not in runtime
     assert b"OPERATION_BINDINGS" in runtime
+    assert b"OPERATION_CONVENTIONS" in runtime
 
 
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:

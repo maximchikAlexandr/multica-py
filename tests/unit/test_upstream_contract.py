@@ -68,6 +68,10 @@ INVALID_CONTRACT_CASES = (
     InvalidContractCase("operation-evidence", "operation_evidence"),
     InvalidContractCase("nullable-clear-evidence", "nullable_clear_evidence"),
     InvalidContractCase("update-source-ref", "update_source_ref"),
+    InvalidContractCase("mapping-presence-length", "mapping_presence_length"),
+    InvalidContractCase("mapping-presence-unknown", "mapping_presence_unknown"),
+    InvalidContractCase("duplicate-entrypoint", "duplicate_entrypoint"),
+    InvalidContractCase("non-bijective-surface", "non_bijective_surface"),
 )
 
 
@@ -176,6 +180,15 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
         document["catalogs"]["update_field_policies"]["ProjectUpdateRequest"]["fields"]["name"][
             "source_ref_ids"
         ] = ["missing-source-ref"]
+    elif mutation == "mapping_presence_length":
+        document["catalogs"]["mapping_presence"]["project_update"].pop()
+    elif mutation == "mapping_presence_unknown":
+        document["catalogs"]["mapping_presence"]["project_update"][0] = "unknown-policy"
+    elif mutation == "duplicate_entrypoint":
+        operation = next(item for item in document["operations"] if len(item["entrypoints"]) > 1)
+        operation["entrypoints"][1]["entrypoint_id"] = operation["entrypoints"][0]["entrypoint_id"]
+    elif mutation == "non_bijective_surface":
+        document["operations"].pop()
     destination = tmp_path / f"{mutation}.json"
     destination.write_text(json.dumps(document), encoding="utf-8")
     return destination
@@ -237,6 +250,24 @@ def test_public_conventions_and_response_catalog_are_typed_and_closed() -> None:
         "action_result_runtime_update_result",
     } <= contract.response_by_id.keys()
     assert all("any" not in response.public_type_id.lower() for response in contract.responses)
+    catalogs = cast("dict[str, object]", contract.raw["catalogs"])
+    presence = cast("dict[str, object]", catalogs["presence"])
+    assert set(presence) == {
+        "omit",
+        "nullable_clear",
+        "required_nonnull",
+        "empty_present",
+        "empty_collection_clear",
+        "false_present",
+        "zero_present",
+    }
+    bindings = cast("dict[str, object]", catalogs["bindings"])
+    mapping_presence = cast("dict[str, object]", catalogs["mapping_presence"])
+    assert all(
+        len(cast("list[object]", cast("dict[str, object]", bindings[key])["mappings"]))
+        == len(cast("list[object]", value))
+        for key, value in mapping_presence.items()
+    )
 
 
 def test_update_field_policies_are_explicit_and_source_pinned() -> None:
