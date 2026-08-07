@@ -6,8 +6,11 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from typing import Generic, Literal, Protocol, TypeGuard, TypeVar, cast
 
-from multica_py._internal.redaction import redact_argv
-from multica_py._internal.transport import CliTransport
+from multica_py._internal.redaction import (
+    collect_diagnostic_secret_values,
+    redact_diagnostic_argv,
+)
+from multica_py._internal.transport import CliTransport, _effective_environment
 from multica_py.config import ClientConfig
 
 __all__ = ["Command"]
@@ -61,7 +64,11 @@ class _CommandPlan(Generic[T_co]):
             for position, ref in step.refs:
                 argv[position] = _display_ref(ref)
             full_argv = self.transport.build_full_argv(tuple(argv))
-            rendered.append(shlex.join(redact_argv(full_argv)))
+            environment = _effective_environment(self.config_snapshot)
+            secret_values = collect_diagnostic_secret_values(full_argv, environment)
+            rendered.append(
+                shlex.join(redact_diagnostic_argv(full_argv, secret_values=secret_values))
+            )
         return tuple(rendered)
 
     def run(self) -> T_co:

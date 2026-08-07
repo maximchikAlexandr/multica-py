@@ -9,7 +9,7 @@ its source references:
 ```bash
 uv run python scripts/upstream_contract.py validate \
   --approved contracts/sdk-contract.json \
-  --source-checkout .devlocal/upstream/multica-v0.4.9
+  --source-checkout .devlocal/upstream-contract/source/v0.4.20
 ```
 
 Collect declarative facts from a pinned source checkout and verified release
@@ -17,9 +17,9 @@ binary into a caller-supplied ignored directory:
 
 ```bash
 uv run python scripts/upstream_contract.py collect \
-  --source-checkout .devlocal/upstream/multica-v0.4.9 \
+  --source-checkout .devlocal/upstream-contract/source/v0.4.20 \
   --binary /path/to/multica \
-  --tag v0.4.9 --version 0.4.9 --commit <full-commit> \
+  --tag v0.4.20 --version 0.4.20 --commit 93342d04a7a9f788fec921e5aa736f86c7f22d8f \
   --release-id <release-id> --asset-name <asset-name> \
   --sha256 <sha256> --os darwin --arch arm64 \
   --version-output /path/to/version-output.json \

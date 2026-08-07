@@ -136,9 +136,9 @@ def test_closed_contract_rejects_invalid_rows(
 
 def test_v3_catalogs_and_legacy_mapping_are_closed() -> None:
     contract = validate_contract(APPROVED)
-    assert len(contract.test_vectors) == 55
-    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 44
-    assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 11
+    assert len(contract.test_vectors) == 58
+    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 46
+    assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 12
     assert tuple(contract.legacy_argv_migration) == tuple(
         f"legacy:{index:03d}" for index in range(1, 144)
     )
@@ -148,6 +148,84 @@ def test_v3_catalogs_and_legacy_mapping_are_closed() -> None:
         "AutopilotExecutionMode",
     }
     assert all(item.parameter_name.isidentifier() for item in contract.validator_definitions)
+
+
+def test_current_target_and_source_refs_are_pinned_to_v0420() -> None:
+    contract = load_contract(APPROVED)
+    assert contract.target.version == "0.4.20"
+    assert contract.target.tag == "v0.4.20"
+    assert contract.target.commit == "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
+    assert contract.target.release_id == "366120041"
+    assert (
+        contract.target.release_provenance_ref
+        == ".devlocal/upstream-contract/v0.4.9..v0.4.20/release/release-verification.json"
+    )
+    assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
+    assert all(
+        ref.commit != "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18" for ref in contract.source_refs
+    )
+
+
+def test_v0420_delta_source_refs_cover_copy_search_and_runtime_delete() -> None:
+    contract = load_contract(APPROVED)
+    refs = {ref.source_ref_id: ref for ref in contract.source_refs}
+    assert {
+        "S-AGENT-COPY-CMD",
+        "S-AGENT-COPY-FLAGS",
+        "S-AGENT-COPY-RUN",
+        "S-AGENT-PERMISSIONS",
+        "S-AGENT-MAX-CONCURRENCY",
+        "S-ISSUE-SEARCH-CMD",
+        "S-ISSUE-SEARCH-FLAGS",
+        "S-ISSUE-SEARCH-RUN",
+        "S-ISSUE-SEARCH-RESPONSE",
+        "S-ISSUE-SEARCH-QUERY",
+        "S-ISSUE-SEARCH-ENCODE",
+        "S-RUNTIME-DELETE-CMD",
+        "S-RUNTIME-DELETE-RUN",
+        "S-RUNTIME-DELETE-CONFLICT",
+    } <= refs.keys()
+    assert refs["S-AGENT-COPY-RUN"].path == "server/cmd/multica/cmd_agent_copy.go"
+    assert refs["S-ISSUE-SEARCH-RESPONSE"].path == "server/internal/handler/issue.go"
+    assert "unbind-agents-and-delete" in refs["S-RUNTIME-DELETE-RUN"].symbol
+
+
+def test_v0420_governs_copy_search_and_rejects_external_tag_commands(
+    tmp_path: pathlib.Path,
+) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    operations = {item["operation_id"]: item for item in document["operations"]}
+    assert {"agents.copy", "issues.search", "autopilots.trigger"} <= operations.keys()
+    assert document["catalogs"]["bindings"]["agent_copy"]["command"] == ["agent", "copy"]
+    assert document["catalogs"]["bindings"]["issue_search"]["command"] == [
+        "issue",
+        "search",
+    ]
+    assert document["catalogs"]["bindings"]["autopilot_trigger"]["command"] == [
+        "autopilot",
+        "trigger",
+    ]
+    assert len(document["catalogs"]["mapping_presence"]["agent_copy"]) == 14
+    assert document["catalogs"]["responses"]["issue_search"]["malformed_output"] == (
+        "accept_issues_envelope_or_legacy_array_via_handwritten_adapter"
+    )
+    errors = next(item for item in document["source_refs"] if item["source_ref_id"] == "S-ERRORS")
+    assert {"KindConflict", "KindValidation", "Request conflict: ", "请求冲突\uff1a"} <= set(
+        errors["symbol"].split("/")
+    )
+    assert not any(
+        command == ["tag", "external"] for command in document["catalogs"]["bindings"].values()
+    )
+
+    mutated = json.loads(json.dumps(document))
+    mutated["catalogs"]["bindings"]["autopilot_trigger"]["command"] = [
+        "autopilot",
+        "run",
+    ]
+    path = tmp_path / "autopilot-run.json"
+    path.write_text(json.dumps(mutated), encoding="utf-8")
+    with pytest.raises(ContractError, match="disagrees with binding"):
+        validate_contract(path)
 
 
 def test_tagged_values_preserve_datetime_offset_and_unset() -> None:

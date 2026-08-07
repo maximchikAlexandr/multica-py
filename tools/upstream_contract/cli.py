@@ -7,10 +7,32 @@ import hashlib
 import pathlib
 import subprocess
 import sys
+from dataclasses import dataclass
+from typing import cast
 
 from .contract import ContractError, validate_contract
 from .evidence import ReleaseIdentity, collect
 from .generation import RUNTIME_PATH, check_repository, render_files, write_rendered
+
+
+@dataclass(frozen=True)
+class _CliArguments:
+    command: str
+    approved: pathlib.Path
+    source_checkout: pathlib.Path | None
+    binary: pathlib.Path
+    version_output: pathlib.Path
+    output_dir: pathlib.Path
+    tag: str
+    version: str
+    commit: str
+    release_id: str
+    asset_name: str
+    sha256: str
+    os: str
+    arch: str
+    runtime_output: pathlib.Path
+    transient_output: pathlib.Path
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -89,7 +111,7 @@ def _require_runtime_output(path: pathlib.Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+    args = cast("_CliArguments", _parser().parse_args(argv))
     try:
         if args.command == "validate":
             if args.source_checkout is None:
@@ -110,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
                 version_output_sha256=hashlib.sha256(args.version_output.read_bytes()).hexdigest(),
             )
             collect(
-                source_checkout=args.source_checkout,
+                source_checkout=cast("pathlib.Path", args.source_checkout),
                 binary=args.binary,
                 identity=identity,
                 version_output=args.version_output,

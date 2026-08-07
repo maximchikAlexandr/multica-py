@@ -7,11 +7,19 @@ import json
 import pathlib
 import py_compile
 import tempfile
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from types import ModuleType
+from typing import cast
 
-from .contract import ContractCatalog, ContractError, validate_contract
+from .contract import (
+    BindingDescriptor,
+    ContractCatalog,
+    ContractError,
+    EnumDefinition,
+    ValidatorDefinition,
+    validate_contract,
+)
 
 RUNTIME_PATH = pathlib.PurePosixPath("src/multica_py/_generated/approved_sdk.py")
 TRANSIENT_PATHS = (
@@ -19,6 +27,8 @@ TRANSIENT_PATHS = (
     pathlib.PurePosixPath("reports/compatibility.json"),
     pathlib.PurePosixPath("reports/provenance.json"),
 )
+
+
 _ONE_OF_VALUES = {
     "IssueStatus": frozenset(
         {"backlog", "todo", "in_progress", "in_review", "done", "blocked", "cancelled"}
@@ -46,6 +56,17 @@ def _next_patch(version: str) -> str:
 
 
 def _runtime(catalog: ContractCatalog) -> bytes:
+    enum_definitions: tuple[EnumDefinition, ...] = catalog.enum_definitions
+    binding_descriptors: tuple[BindingDescriptor, ...] = catalog.binding_descriptors
+    validator_definitions: tuple[ValidatorDefinition, ...] = catalog.validator_definitions
+    enum_key: Callable[[EnumDefinition], str] = lambda item: item.public_name  # noqa: E731
+    binding_operation_key: Callable[[BindingDescriptor], tuple[str, str]] = lambda item: (  # noqa: E731
+        item.operation_id,
+        item.entrypoint_id,
+    )
+    binding_descriptor_key: Callable[[BindingDescriptor], str] = lambda item: item.descriptor_id  # noqa: E731
+    validator_id_key: Callable[[ValidatorDefinition], str] = lambda item: item.validator_id  # noqa: E731
+    validator_name_key: Callable[[ValidatorDefinition], str] = lambda item: item.name  # noqa: E731
     lines = [
         "from __future__ import annotations",
         "",
@@ -57,7 +78,7 @@ def _runtime(catalog: ContractCatalog) -> bytes:
         f"MAX_CLI_VERSION = {_next_patch(catalog.target.version)!r}",
         "",
     ]
-    for definition in sorted(catalog.enum_definitions, key=lambda item: item.public_name):
+    for definition in sorted(enum_definitions, key=enum_key):
         lines.extend([f"class {definition.public_name}(StrEnum):"])
         for member in definition.members:
             lines.append(f"    {member.name} = {member.value!r}")
@@ -85,9 +106,7 @@ def _runtime(catalog: ContractCatalog) -> bytes:
             "",
         ]
     )
-    for descriptor in sorted(
-        catalog.binding_descriptors, key=lambda item: (item.operation_id, item.entrypoint_id)
-    ):
+    for descriptor in sorted(binding_descriptors, key=binding_operation_key):
         mappings = ", ".join(
             f"GeneratedMapping({source!r}, {binding!r}, {destination!r})"
             for source, binding, destination in descriptor.mappings
@@ -103,32 +122,27 @@ def _runtime(catalog: ContractCatalog) -> bytes:
             ]
         )
     lines.append("OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (")
-    for descriptor in sorted(
-        catalog.binding_descriptors, key=lambda item: (item.operation_id, item.entrypoint_id)
-    ):
+    for descriptor in sorted(binding_descriptors, key=binding_operation_key):
         lines.append(f"    {binding_names[descriptor.descriptor_id]},")
     lines.extend((")", ""))
     validators_by_name = {
         validator.name: validator
-        for validator in sorted(catalog.validator_definitions, key=lambda item: item.validator_id)
+        for validator in sorted(validator_definitions, key=validator_id_key)
     }
-    for validator in sorted(validators_by_name.values(), key=lambda item: item.name):
+    for validator in sorted(validators_by_name.values(), key=validator_name_key):
         parameter = validator.parameter_name
         body = _validator_body(validator.body_kind, parameter)
         lines.extend([f"def {validator.name}({parameter}: object) -> None:", body, ""])
     exports = ["TARGET_VERSION", "MIN_CLI_VERSION", "MAX_CLI_VERSION"]
-    exports.extend(
-        item.public_name
-        for item in sorted(catalog.enum_definitions, key=lambda item: item.public_name)
-    )
+    exports.extend(item.public_name for item in sorted(enum_definitions, key=enum_key))
     exports.extend(["GeneratedMapping", "GeneratedBinding"])
     exports.extend(
         binding_names[descriptor.descriptor_id]
-        for descriptor in sorted(catalog.binding_descriptors, key=lambda item: item.descriptor_id)
+        for descriptor in sorted(binding_descriptors, key=binding_descriptor_key)
     )
     exports.append("OPERATION_BINDINGS")
     exports.extend(
-        item.name for item in sorted(validators_by_name.values(), key=lambda item: item.name)
+        item.name for item in sorted(validators_by_name.values(), key=validator_name_key)
     )
     lines.append(f"__all__ = {tuple(exports)!r}")
     lines.append("")
@@ -246,7 +260,7 @@ def _validate_transient_projection(catalog: ContractCatalog, rendered: RenderedF
                 f"generated Markdown is missing operation IDs: {', '.join(sorted(missing))}"
             )
         return
-    value = json.loads(text)
+    value = cast("object", json.loads(text))
     if not isinstance(value, dict):
         raise ContractError(f"generated {rendered.path} must be a JSON object")
     if rendered.path == TRANSIENT_PATHS[1]:
@@ -325,7 +339,8 @@ def _import_generated_runtime(repository: pathlib.Path) -> ModuleType:
         sys.path.insert(0, str(source))
         module = importlib.import_module("multica_py._generated.approved_sdk")
         required = {"TARGET_VERSION", "MIN_CLI_VERSION", "MAX_CLI_VERSION", "OPERATION_BINDINGS"}
-        if not required.issubset(set(getattr(module, "__all__", ()))):
+        exports = cast("tuple[str, ...]", getattr(module, "__all__", ()))
+        if not required.issubset(set(exports)):
             raise ContractError("generated runtime exports are incomplete")
         return module
     finally:

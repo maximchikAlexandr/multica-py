@@ -9,6 +9,7 @@ import pathlib
 import re
 import subprocess
 from dataclasses import dataclass
+from typing import cast
 
 REVIEW_CODES = (
     "UNKNOWN_PATTERN",
@@ -20,6 +21,7 @@ REVIEW_CODES = (
 )
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _LITERAL_STRING = r'"(?:[^"\\]|\\.)*"'
+_LITERAL_STRING_RE: re.Pattern[str] = re.compile(_LITERAL_STRING)
 _FIELD_MARKERS = {
     "Use": re.compile(r"\bUse\s*:"),
     "Aliases": re.compile(r"\bAliases\s*:"),
@@ -180,19 +182,22 @@ def _collect_facts(
         for number, line in enumerate(lines, start=1):
             use_match = _USE.search(line)
             if use_match:
+                use_value = cast("str", use_match.group(1)).strip('"')
                 facts.append(
                     {
-                        "command_path": use_match.group(1).strip('"').split(),
+                        "command_path": use_value.split(),
                         "kind": "cobra_use",
                         "source": _source_location(relative, number, "cobra.Command"),
-                        "value": {"use": use_match.group(1).strip('"')},
+                        "value": {"use": use_value},
                     }
                 )
             alias_match = _ALIAS.search(line)
             if alias_match:
-                aliases = [
-                    item.strip('"') for item in re.findall(_LITERAL_STRING, alias_match.group(1))
-                ]
+                literal_matches = cast(
+                    "list[str]",
+                    _LITERAL_STRING_RE.findall(cast("str", alias_match.group(1))),
+                )
+                aliases = [item.strip('"') for item in literal_matches]
                 facts.append(
                     {
                         "command_path": [],
@@ -207,8 +212,9 @@ def _collect_facts(
             ):
                 match = regex.search(line)
                 if match:
+                    match_value = cast("str", match.group(1))
                     value: object = (
-                        match.group(1) == "true" if key == "hidden" else match.group(1).strip('"')
+                        match_value == "true" if key == "hidden" else match_value.strip('"')
                     )
                     facts.append(
                         {
@@ -237,7 +243,7 @@ def _collect_facts(
                     )
             add_match = _ADD_COMMAND.search(line)
             if add_match:
-                arguments = add_match.group(1).strip()
+                arguments = cast("str", add_match.group(1)).strip()
                 if _KNOWN_ADD_COMMAND.fullmatch(arguments):
                     facts.append(
                         {
@@ -275,12 +281,13 @@ def _collect_facts(
                 )
             args_match = _KNOWN_ARGS.search(line)
             if args_match:
+                validator = cast("str", args_match.group("validator"))
                 facts.append(
                     {
                         "command_path": [],
                         "kind": "cobra_args",
                         "source": _source_location(relative, number, "cobra.Args"),
-                        "value": {"validator": args_match.group("validator").split("(", 1)[0]},
+                        "value": {"validator": validator.split("(", 1)[0]},
                     }
                 )
             elif _ARGS_MARKER.search(line):

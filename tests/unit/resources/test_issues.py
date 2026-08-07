@@ -45,6 +45,7 @@ class _IssueListProjectionCase:
     payload: bytes
     expected_labels: tuple[str, ...]
     expected_metadata: tuple[IssueMetadataItem, ...]
+    expected_match_source: str | None
     expected_has_more: bool
     expected_limit: int | None
     expected_offset: int | None
@@ -76,6 +77,7 @@ _ISSUE_LIST_PROJECTION_CASES = (
             IssueMetadataItem(key="external_key", value="42"),
             IssueMetadataItem(key="ready", value=True),
         ),
+        expected_match_source=None,
         expected_has_more=True,
         expected_limit=50,
         expected_offset=20,
@@ -85,6 +87,7 @@ _ISSUE_LIST_PROJECTION_CASES = (
         payload=b'{"issues":[{"id":"i2","title":"Minimal","status":"todo"}]}',
         expected_labels=(),
         expected_metadata=(),
+        expected_match_source=None,
         expected_has_more=False,
         expected_limit=None,
         expected_offset=None,
@@ -166,6 +169,7 @@ def test_issue_list_page_decodes_summary_collections(case: _IssueListProjectionC
     assert page.total == case.expected_total
     assert page.issues[0].label_names == case.expected_labels
     assert page.issues[0].metadata_snapshot == case.expected_metadata
+    assert page.issues[0].match_source is case.expected_match_source
 
 
 def test_issue_resource_list_returns_issue_list_page(mock_transport: MagicMock) -> None:
