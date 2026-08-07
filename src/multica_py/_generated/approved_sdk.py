@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-TARGET_VERSION = '0.4.9'
+TARGET_VERSION = '0.4.20'
 MIN_CLI_VERSION = TARGET_VERSION
-MAX_CLI_VERSION = '0.4.10'
+MAX_CLI_VERSION = '0.4.21'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'
@@ -40,6 +40,11 @@ class GeneratedBinding:
 AGENT_AVATAR_BINDING = GeneratedBinding(
     'agents.avatar', 'default', ('agent', 'avatar'),
     (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('file', '--file', 'local_control:absolute_path'),), ('nonblank:agent_id',),
+)
+
+AGENT_COPY_BINDING = GeneratedBinding(
+    'agents.copy', 'default', ('agent', 'copy'),
+    (GeneratedMapping('source_agent_id', 'pos:0', 'path:source_agent_id'), GeneratedMapping('name', '--name', 'json_body:name'), GeneratedMapping('runtime_id', '--runtime-id', 'json_body:runtime_id'), GeneratedMapping('description', '--description', 'json_body:description'), GeneratedMapping('instructions', '--instructions', 'json_body:instructions'), GeneratedMapping('model', '--model', 'json_body:model'), GeneratedMapping('thinking_level', '--thinking-level', 'json_body:thinking_level'), GeneratedMapping('service_tier', '--service-tier', 'json_body:service_tier'), GeneratedMapping('custom_args', '--custom-args', 'json_body:custom_args'), GeneratedMapping('max_concurrent_tasks', '--max-concurrent-tasks', 'json_body:max_concurrent_tasks'), GeneratedMapping('permission_mode', '--permission-mode', 'json_body:permission_mode'), GeneratedMapping('public_to_workspace', '--public-to-workspace', 'json_body:public_to_workspace'), GeneratedMapping('public_to_member_ids', 'repeat:--public-to-member', 'json_body:public_to_member_ids'), GeneratedMapping('copy_skills', '--no-skills', 'local_control:copy_skills'),), ('nonblank:source_agent_id', 'positive_int:max_concurrent_tasks'),
 )
 
 AGENT_GET_BINDING = GeneratedBinding(
@@ -235,6 +240,11 @@ ISSUE_RUN_MESSAGES_BINDING = GeneratedBinding(
 ISSUE_RUNS_BINDING = GeneratedBinding(
     'issues.runs', 'default', ('issue', 'runs'),
     (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'),), ('nonblank:issue_id',),
+)
+
+ISSUE_SEARCH_BINDING = GeneratedBinding(
+    'issues.search', 'default', ('issue', 'search'),
+    (GeneratedMapping('query', 'pos:0', 'query:q'),), ('nonblank:query',),
 )
 
 ISSUE_STATUS_BINDING = GeneratedBinding(
@@ -434,6 +444,7 @@ WORKSPACE_MEMBERS_LIST_BINDING = GeneratedBinding(
 
 OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     AGENT_AVATAR_BINDING,
+    AGENT_COPY_BINDING,
     AGENT_GET_BINDING,
     AGENT_LIST_BINDING,
     AGENT_SKILLS_LIST_BINDING,
@@ -473,6 +484,7 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     ISSUE_RERUN_BINDING,
     ISSUE_RUN_MESSAGES_BINDING,
     ISSUE_RUNS_BINDING,
+    ISSUE_SEARCH_BINDING,
     ISSUE_STATUS_BINDING,
     ISSUE_SUBSCRIBERS_ADD_BINDING,
     ISSUE_SUBSCRIBERS_LIST_BINDING,
@@ -546,6 +558,10 @@ def validate_positive_limit(value: object) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ValueError('value must be a positive integer')
 
+def validate_positive_max_concurrent_tasks(value: object) -> None:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError('value must be a positive integer')
+
 def validate_project_description(value: object) -> None:
     if value is None:
         raise ValueError('project update value cannot be None')
@@ -566,4 +582,4 @@ def validate_thread_cursor_limit(value: object) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ValueError('value must be a positive integer')
 
-__all__ = ('TARGET_VERSION', 'MIN_CLI_VERSION', 'MAX_CLI_VERSION', 'AutopilotExecutionMode', 'IssueSort', 'SortDirection', 'GeneratedMapping', 'GeneratedBinding', 'AGENT_AVATAR_BINDING', 'AGENT_GET_BINDING', 'AGENT_LIST_BINDING', 'AGENT_SKILLS_LIST_BINDING', 'AGENT_SKILLS_SET_BINDING', 'AGENT_TASKS_BINDING', 'ATTACHMENT_DOWNLOAD_BINDING', 'ATTACHMENT_UPLOAD_BINDING', 'AUTOPILOT_CREATE_BINDING', 'AUTOPILOT_DELETE_BINDING', 'AUTOPILOT_GET_BINDING', 'AUTOPILOT_HISTORY_BINDING', 'AUTOPILOT_LIST_BINDING', 'AUTOPILOT_TRIGGER_BINDING', 'AUTOPILOT_TRIGGER_ADD_BINDING', 'AUTOPILOT_TRIGGER_DELETE_BINDING', 'AUTOPILOT_TRIGGER_UPDATE_BINDING', 'AUTOPILOT_UPDATE_BINDING', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'ISSUE_CANCEL_TASK_BINDING', 'ISSUE_CHILDREN_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_GET_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_METADATA_DELETE_BINDING', 'ISSUE_METADATA_GET_BINDING', 'ISSUE_METADATA_LIST_BINDING', 'ISSUE_METADATA_SET_BINDING', 'ISSUE_PULL_REQUESTS_BINDING', 'ISSUE_RERUN_BINDING', 'ISSUE_RUN_MESSAGES_BINDING', 'ISSUE_RUNS_BINDING', 'ISSUE_STATUS_BINDING', 'ISSUE_SUBSCRIBERS_ADD_BINDING', 'ISSUE_SUBSCRIBERS_LIST_BINDING', 'ISSUE_SUBSCRIBERS_REMOVE_BINDING', 'LABEL_GET_BINDING', 'LABEL_LIST_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_GET_BINDING', 'PROJECT_LIST_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'REPOSITORIES_ADD_BINDING', 'REPOSITORIES_LIST_BINDING', 'REPOSITORIES_REMOVE_BINDING', 'RUNTIME_ACTIVITY_BINDING', 'RUNTIME_DELETE_BINDING', 'RUNTIME_LIST_BINDING', 'RUNTIME_RENAME_BINDING', 'RUNTIME_UPDATE_BINDING', 'RUNTIME_USAGE_BINDING', 'SKILL_FILES_DELETE_BINDING', 'SKILL_FILES_LIST_BINDING', 'SKILL_FILES_UPSERT_BINDING', 'SKILL_GET_BINDING', 'SKILL_LIST_BINDING', 'SQUAD_GET_BINDING', 'SQUAD_LIST_BINDING', 'SQUAD_MEMBERS_ADD_BINDING', 'SQUAD_MEMBERS_LIST_BINDING', 'SQUAD_MEMBERS_REMOVE_BINDING', 'USER_PROFILE_GET_BINDING', 'USER_PROFILE_UPDATE_BINDING', 'WORKSPACE_GET_BINDING', 'WORKSPACE_LIST_BINDING', 'WORKSPACE_MEMBERS_LIST_BINDING', 'OPERATION_BINDINGS', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_limit', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_thread_cursor_limit')
+__all__ = ('TARGET_VERSION', 'MIN_CLI_VERSION', 'MAX_CLI_VERSION', 'AutopilotExecutionMode', 'IssueSort', 'SortDirection', 'GeneratedMapping', 'GeneratedBinding', 'AGENT_AVATAR_BINDING', 'AGENT_COPY_BINDING', 'AGENT_GET_BINDING', 'AGENT_LIST_BINDING', 'AGENT_SKILLS_LIST_BINDING', 'AGENT_SKILLS_SET_BINDING', 'AGENT_TASKS_BINDING', 'ATTACHMENT_DOWNLOAD_BINDING', 'ATTACHMENT_UPLOAD_BINDING', 'AUTOPILOT_CREATE_BINDING', 'AUTOPILOT_DELETE_BINDING', 'AUTOPILOT_GET_BINDING', 'AUTOPILOT_HISTORY_BINDING', 'AUTOPILOT_LIST_BINDING', 'AUTOPILOT_TRIGGER_BINDING', 'AUTOPILOT_TRIGGER_ADD_BINDING', 'AUTOPILOT_TRIGGER_DELETE_BINDING', 'AUTOPILOT_TRIGGER_UPDATE_BINDING', 'AUTOPILOT_UPDATE_BINDING', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'ISSUE_CANCEL_TASK_BINDING', 'ISSUE_CHILDREN_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_GET_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_METADATA_DELETE_BINDING', 'ISSUE_METADATA_GET_BINDING', 'ISSUE_METADATA_LIST_BINDING', 'ISSUE_METADATA_SET_BINDING', 'ISSUE_PULL_REQUESTS_BINDING', 'ISSUE_RERUN_BINDING', 'ISSUE_RUN_MESSAGES_BINDING', 'ISSUE_RUNS_BINDING', 'ISSUE_SEARCH_BINDING', 'ISSUE_STATUS_BINDING', 'ISSUE_SUBSCRIBERS_ADD_BINDING', 'ISSUE_SUBSCRIBERS_LIST_BINDING', 'ISSUE_SUBSCRIBERS_REMOVE_BINDING', 'LABEL_GET_BINDING', 'LABEL_LIST_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_GET_BINDING', 'PROJECT_LIST_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'REPOSITORIES_ADD_BINDING', 'REPOSITORIES_LIST_BINDING', 'REPOSITORIES_REMOVE_BINDING', 'RUNTIME_ACTIVITY_BINDING', 'RUNTIME_DELETE_BINDING', 'RUNTIME_LIST_BINDING', 'RUNTIME_RENAME_BINDING', 'RUNTIME_UPDATE_BINDING', 'RUNTIME_USAGE_BINDING', 'SKILL_FILES_DELETE_BINDING', 'SKILL_FILES_LIST_BINDING', 'SKILL_FILES_UPSERT_BINDING', 'SKILL_GET_BINDING', 'SKILL_LIST_BINDING', 'SQUAD_GET_BINDING', 'SQUAD_LIST_BINDING', 'SQUAD_MEMBERS_ADD_BINDING', 'SQUAD_MEMBERS_LIST_BINDING', 'SQUAD_MEMBERS_REMOVE_BINDING', 'USER_PROFILE_GET_BINDING', 'USER_PROFILE_UPDATE_BINDING', 'WORKSPACE_GET_BINDING', 'WORKSPACE_LIST_BINDING', 'WORKSPACE_MEMBERS_LIST_BINDING', 'OPERATION_BINDINGS', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_limit', 'validate_positive_max_concurrent_tasks', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_thread_cursor_limit')

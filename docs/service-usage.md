@@ -52,6 +52,46 @@ print(command.commands)
 issue = command.run()
 ```
 
+Copy an agent with the inspectable command path when the operation needs an
+audit preview. The eager method and command method have the same keyword-only
+arguments and the same bound `Agent` result:
+
+```python
+from multica_py import Unset
+
+copy_command = client.agents.copy_command(
+    "agent-source",
+    runtime_id="runtime-target",
+    model=Unset,
+    thinking_level=Unset,
+    service_tier=Unset,
+)
+assert "--runtime-id runtime-target" in copy_command.commands[0]
+assert "--model" in copy_command.commands[0]  # present with an empty value
+copied = copy_command.run()
+```
+
+For a cross-runtime copy, an omitted model is deliberately emitted as
+`--model ""` so the target runtime selects its default. Omitted
+`thinking_level` and `service_tier` remain omitted, while present values pass
+through as open upstream strings. `copy_skills=False` emits `--no-skills`.
+Secret and machine-local configuration is excluded from this surface:
+`custom_env`, `mcp_config`, and `runtime_config` are not accepted or emitted.
+
+Search keeps a small immutable result shape suitable for queue discovery:
+
+```python
+matches = client.issues.search("deploy")
+assert isinstance(matches, tuple)
+for summary in matches:
+    print(summary.id, summary.match_source)
+```
+
+The command remains `issue search <query> --output json`; the SDK adapts both
+the v0.4.20 `{"issues": [...], "total": ...}` envelope and the legacy array
+to `tuple[IssueSummary, ...]`. `match_source` is an optional open string and
+can be absent or a future upstream value.
+
 Composite operations expose their ordered steps and result references. For
 example, creating labels with an issue shows the create step, one label-add
 step per label, and the final get step; the add and get steps refer to the
@@ -227,3 +267,27 @@ process.wait()
 ```
 
 See the complete runnable examples under [examples/](../examples/).
+
+## Handle typed upstream failures
+
+Conflict and validation exceptions retain actionable, redacted upstream
+detail. A runtime with dependent active agents refuses a non-cascade delete;
+use the cascade form only when unbinding those agents and cancelling their
+active work is intended. Their configuration, chats, and task history remain
+preserved:
+
+```python
+from multica_py.exceptions import ConflictError, ValidationError
+
+try:
+    client.runtimes.delete("runtime-1")
+except ConflictError as exc:
+    print(f"delete refused ({exc.exit_code}): {exc}")
+    client.runtimes.delete("runtime-1", cascade=True)
+except ValidationError as exc:
+    print(f"upstream input rejected ({exc.exit_code}): {exc}")
+```
+
+The pinned v0.4.20 API spelling is `autopilots.trigger`; there is no public
+`autopilots.run` alias. `str(exc)`, `stderr`, and `stdout` contain redacted
+detail, and diagnostics never retain the actual subprocess argv.

@@ -16,6 +16,10 @@ runtime, and run the deterministic check:
 collect → validate --source-checkout → render → check
 ```
 
+The current approved target is `v0.4.20` with compatibility interval
+`[0.4.20, 0.4.21)`. The pinned commit, release asset/checksum, and exact
+commands for this review are maintained in [docs/compatibility.md](compatibility.md).
+
 Git review and merge are the only promotion action. The repository keeps one
 committed generated runtime projection; transient documentation, compatibility,
 provenance, evidence, and build outputs are not golden copies.

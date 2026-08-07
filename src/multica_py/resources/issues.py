@@ -13,6 +13,7 @@ from multica_py._generated.approved_sdk import (
     validate_nonblank,
 )
 from multica_py._internal.commands import Command, _replace_plan, _Step, _StepRef
+from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _issue_children_result_from_wire,
@@ -22,11 +23,15 @@ from multica_py._internal.wire_models import (
     _IssueChildrenResultWire,
     _IssueListPageWire,
     _IssuePullRequestsResultWire,
+    _IssueSearchResultWire,
+    _IssueSummaryWire,
     _IssueWire,
     _LabelWire,
+    issue_summary_from_wire,
 )
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
+from multica_py.exceptions import JsonOutputError, OutputShapeError
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.common import Page
 from multica_py.models.issue_activity import (
@@ -139,6 +144,18 @@ def _issue_summary_offset_page_command(
             finalize=lambda results: cast("OffsetPage[IssueSummary]", results[0]),
         )
     )
+
+
+def _decode_issue_search(stdout: bytes, command: str) -> tuple[IssueSummary, ...]:
+    try:
+        envelope = decode_json(stdout, _IssueSearchResultWire, command=command)
+    except OutputShapeError as envelope_error:
+        try:
+            rows = decode_json(stdout, list[_IssueSummaryWire], command=command)
+        except (OutputShapeError, JsonOutputError):
+            raise envelope_error
+        return tuple(issue_summary_from_wire(row) for row in rows)
+    return tuple(issue_summary_from_wire(row) for row in envelope.issues)
 
 
 class TaskRun(_BoundEntity):  # type: ignore[misc]
@@ -941,7 +958,12 @@ class IssueResource(BaseResource):
         return self.reorder_command(cast("IssueReorderRequest", request), **kwargs).run()
 
     def search_command(self, query: str) -> Command[tuple[IssueSummary, ...]]:
-        return self._decoded_list_command(("issue", "search", query), IssueSummary)
+        validate_nonblank(query)
+        args = ("issue", "search", query, "--output", "json")
+        return self._plan(
+            steps=(_Step(args, "run_bytes", decode=_decode_issue_search),),
+            finalize=lambda results: cast("tuple[IssueSummary, ...]", results[0]),
+        )
 
     def search(self, query: str) -> tuple[IssueSummary, ...]:
         return self.search_command(query).run()

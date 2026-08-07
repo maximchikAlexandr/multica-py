@@ -1,45 +1,9 @@
-## Purpose
-
-Define the controlled subprocess boundary used for all Multica CLI operations.
-## Requirements
-### Requirement: CLI-only transport
-The SDK MUST invoke Multica through one shell-free controlled subprocess transport.
-#### Scenario: Resource calls use the controlled subprocess
-- **WHEN** a resource runs a command
-- **THEN** exact argv, cwd, profile, workspace, environment, stdin, and timeout reach that transport.
-<!-- Source IDs: 001:FR-006–FR-010,FR-015 -->
-
-### Requirement: Managed process lifecycle
-The SDK MUST expose managed processes with bounded concurrency, timeout
-cancellation, escalation, and descendant cleanup. A root client and views
-derived through `with_*()` MUST share exactly one `ProcessSemaphore` while
-remaining otherwise independent clients with distinct immutable configuration,
-transport, services, and close behavior.
-
-#### Scenario: Timed processes clean up descendants
-- **WHEN** the timeout process case expires
-- **THEN** parent and descendant are absent
-
-#### Scenario: Derived clients share concurrency only
-- **WHEN** root and derived client views invoke operations concurrently
-- **THEN** all invocations are bounded by the same `max_processes` semaphore without a shared runtime, transport registry, identity map, or family closed state
-
-#### Scenario: Derived configuration reaches transport
-- **WHEN** a relation loads from an entity returned by a derived client view
-- **THEN** exact cwd, profile, workspace, environment, stdin, and timeout from that view reach its controlled transport
-
-#### Scenario: Client views close independently
-- **WHEN** one root or derived view closes
-- **THEN** other views remain usable and already-started calls follow existing transport timeout/cancellation behavior
-
-#### Scenario: Prefetch shares the process limit
-- **WHEN** relation prefetch runs with `max_parallel=N`
-- **THEN** executor concurrency observes `N` while each CLI process also observes the shared `max_processes` semaphore
+## MODIFIED Requirements
 
 ### Requirement: Decode and diagnostics
-The SDK MUST decode supported structured output, map reliable failures to typed errors, and redact secrets from diagnostics.
-Classified failures MUST preserve actionable upstream detail. A raw HTTP `409`,
-the stable `v0.4.20` localized conflict prefixes,
+The SDK MUST decode supported structured output, map reliable failures to typed
+errors, preserve actionable upstream detail, and redact secrets from all
+diagnostics. A raw HTTP `409`, the stable `v0.4.20` localized conflict prefixes,
 and the localized generic conflict fallback SHALL map to `ConflictError` even
 though upstream has no conflict-specific process exit code. Known validation
 failures SHALL map to `ValidationError` through exit code `5`, raw HTTP
@@ -53,13 +17,8 @@ attributes, reprs, or previews. When no safe detail exists, the existing
 generic command-failed message SHALL remain the fallback.
 
 #### Scenario: Failures expose typed redacted diagnostics
-- **WHEN** malformed output or nonzero exit occurs
-- **THEN** the diagnostic has redacted command context and the documented error type.
-<!-- Source IDs: 001:FR-011–FR-014,FR-040–FR-044 -->
-
-#### Scenario: Failures retain redacted streams
 - **WHEN** malformed output or a nonzero CLI exit occurs
-- **THEN** the diagnostic retains captured redacted streams without exposing secrets
+- **THEN** the diagnostic has redacted command context, captured redacted streams, and the documented error type
 
 #### Scenario: Conflict detail reaches str of exception
 - **WHEN** the CLI emits `Request conflict: <server detail>` for an HTTP `409`

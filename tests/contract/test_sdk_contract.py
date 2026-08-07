@@ -20,7 +20,9 @@ def test_sdk_contract() -> None:
     files = render_files(APPROVED)
     assert files[0].path == RUNTIME_PATH
     assert tuple(item.path for item in files[1:]) == TRANSIENT_PATHS
-    assert len(contract.binding_descriptors) == 79
+    assert len(contract.operations) == 78
+    assert len(contract.binding_descriptors) == 81
+    assert len(contract.test_vectors) == 58
     assert (
         tuple((item.operation_id, item.entrypoint_id) for item in contract.binding_descriptors)
         != ()
@@ -42,3 +44,21 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
     assert b"approved_contract" not in runtime
     assert b"source path" not in runtime
     assert b"OPERATION_BINDINGS" in runtime
+
+
+def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
+    contract = validate_contract(APPROVED)
+    runtime = render_files(APPROVED)[0].content
+    assert b"TARGET_VERSION = '0.4.20'" in runtime
+    assert b"MAX_CLI_VERSION = '0.4.21'" in runtime
+
+    descriptors = {
+        item.operation_id: item
+        for item in contract.binding_descriptors
+        if item.operation_id in {"agents.copy", "issues.search"}
+    }
+    for descriptor in descriptors.values():
+        descriptor_header = (
+            f"{descriptor.operation_id!r}, {descriptor.entrypoint_id!r}, {descriptor.command!r}"
+        ).encode()
+        assert descriptor_header in runtime

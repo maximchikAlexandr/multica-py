@@ -447,6 +447,34 @@ def test_autopilot_trigger_command_invalidates_only_after_success() -> None:
     assert relation.loaded
 
 
+def test_autopilot_trigger_uses_only_supported_command_spelling() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.return_value = _result(
+        b'{"id":"run1","autopilot_id":"a1","source":"manual","status":"running"}',
+        "autopilot",
+        "trigger",
+        "a1",
+        "--output",
+        "json",
+    )
+    resource = _resource(transport)
+
+    command = resource.trigger_command("a1")
+
+    assert command.commands == ("multica autopilot trigger a1 --output json",)
+    assert "autopilot run" not in command.commands[0]
+    assert transport.run_bytes.call_count == 0
+    assert command.run().id == "run1"
+    assert transport.run_bytes.call_args.args[0] == (
+        "autopilot",
+        "trigger",
+        "a1",
+        "--output",
+        "json",
+    )
+
+
 def test_autopilot_relation_commands_preserve_preview_and_page_argv() -> None:
     client = MulticaClient(ClientConfig())
     transport = MagicMock(spec=CliTransport)

@@ -89,7 +89,16 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
         ra = _resource_attr(case.sdk_method)
         cls = _RESOURCE_MAP[ra]
         resource = cls(transport, config)
-    command = getattr(resource, f"{case.method}_command")(*case.args, **dict(case.kwargs))
+    try:
+        command = getattr(resource, f"{case.method}_command")(*case.args, **dict(case.kwargs))
+    except Exception as exc:
+        if case.expected_exception is None:
+            raise
+        assert isinstance(exc, case.expected_exception)
+        mock_transport.run_bytes.assert_not_called()
+        mock_transport.run_text.assert_not_called()
+        mock_transport.spawn.assert_not_called()
+        return
     assert command.commands == case.expected_commands
     mock_transport.run_bytes.assert_not_called()
     mock_transport.run_text.assert_not_called()
@@ -137,8 +146,11 @@ def test_discovered_public_methods() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
+    assert len(discovered) == 124
     assert len(canonical_cases) == len(canonical)
-    assert len({c.id for c in OPERATION_CASES}) == len(OPERATION_CASES)
+    assert len(OPERATION_CASES) == 224
+    assert len({c.id for c in OPERATION_CASES}) == 224
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == 100
     for case in canonical_cases:
         cls = _RESOURCE_MAP[case.resource_attr]
         eager = getattr(cls, case.method)
@@ -156,6 +168,8 @@ def test_discovered_public_methods() -> None:
             assert typing.get_args(command_return) == (eager_return,), case.sdk_method
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
+    assert len(generated) == 58
+    assert len(manual) == 166
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
@@ -220,6 +234,7 @@ def test_legacy_payload_bijection() -> None:
 
     expected_legacy_ids = {f"legacy:{index:03d}" for index in range(1, 149)}
     assert set(LEGACY_ARGV_MIGRATION) == expected_legacy_ids
+    assert len(LEGACY_ARGV_MIGRATION) == 148
     assert len(LEGACY_PAYLOAD_FINGERPRINTS) == 148
     removed = {
         "legacy:014": "removed:attachments.list",

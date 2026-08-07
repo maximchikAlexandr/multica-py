@@ -699,6 +699,10 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         assert path.is_file()
         assert path.name == "operations.py"
 
+    def _assert_bound_agent(result: object, _mt: MagicMock) -> None:
+        assert type(result) is Agent
+        assert getattr(result, "_client", None) is not None
+
     def _assert_download_bytes(result: object, mt: MagicMock) -> None:
         assert result == b"\x00\x01binary"
         mt.run_bytes.assert_called_once()
@@ -789,7 +793,11 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             resource_attr=ra,
             method=m,
             expected_argv=expected_argv,
-            expected_commands=expected_commands or _expected_commands(expected_argv),
+            expected_commands=(
+                expected_commands
+                if expected_commands is not None
+                else _expected_commands(expected_argv)
+            ),
             transport_method=transport,
             args=args,
             kwargs=kwargs,
@@ -801,7 +809,13 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 if id.startswith("generated:")
                 else None
             ),
-            source_ref=(legacy_key or source_ref) if not id.startswith("generated:") else None,
+            source_ref=(
+                legacy_key
+                or source_ref
+                or ("agent-copy-v0420" if sdk_method == "agents.copy" else None)
+            )
+            if not id.startswith("generated:")
+            else None,
             assert_result=assert_result,
             dynamic_argv_positions=dynamic_argv_positions,
             transport_side_effect=transport_side_effect,
@@ -887,6 +901,161 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("a1", AgentUpdateRequest(name="new")),
             stdout=_AG,
             id="manual:agents.update:variant:01",
+        ),
+        _c(
+            "agents.copy",
+            ("agent", "copy", "a1", "--output", "json"),
+            args=("a1",),
+            stdout=_AG,
+            id="manual:agents.copy:variant:08",
+            public_route=True,
+            assert_result=_assert_bound_agent,
+        ),
+        _c(
+            "agents.copy",
+            (
+                "agent",
+                "copy",
+                "a1",
+                "--runtime-id",
+                "rt_2",
+                "--model",
+                "",
+                "--output",
+                "json",
+            ),
+            args=("a1",),
+            kwargs=(("runtime_id", "rt_2"),),
+            stdout=_AG,
+            id="manual:agents.copy:variant:09",
+            public_route=True,
+            assert_result=_assert_bound_agent,
+        ),
+        _c(
+            "agents.copy",
+            (
+                "agent",
+                "copy",
+                "a1",
+                "--model",
+                "future/model",
+                "--thinking-level",
+                "future-thinking",
+                "--service-tier",
+                "future-tier",
+                "--output",
+                "json",
+            ),
+            args=("a1",),
+            kwargs=(
+                ("model", "future/model"),
+                ("thinking_level", "future-thinking"),
+                ("service_tier", "future-tier"),
+            ),
+            stdout=_AG,
+            id="manual:agents.copy:variant:02",
+            public_route=True,
+            assert_result=_assert_bound_agent,
+        ),
+        _c(
+            "agents.copy",
+            (
+                "agent",
+                "copy",
+                "a1",
+                "--description",
+                "",
+                "--instructions",
+                "",
+                "--output",
+                "json",
+            ),
+            args=("a1",),
+            kwargs=(("description", ""), ("instructions", "")),
+            stdout=_AG,
+            id="manual:agents.copy:variant:03",
+            public_route=True,
+            assert_result=_assert_bound_agent,
+        ),
+        _c(
+            "agents.copy",
+            (
+                "agent",
+                "copy",
+                "a1",
+                "--custom-args",
+                '["--feature=on","future"]',
+                "--output",
+                "json",
+            ),
+            args=("a1",),
+            kwargs=(("custom_args", ("--feature=on", "future")),),
+            stdout=_AG,
+            id="manual:agents.copy:variant:04",
+            public_route=True,
+            assert_result=_assert_bound_agent,
+        ),
+        _c(
+            "agents.copy",
+            (
+                "agent",
+                "copy",
+                "a1",
+                "--max-concurrent-tasks",
+                "50",
+                "--output",
+                "json",
+            ),
+            args=("a1",),
+            kwargs=(("max_concurrent_tasks", 50),),
+            stdout=_AG,
+            id="manual:agents.copy:variant:05",
+            public_route=True,
+            assert_result=_assert_bound_agent,
+        ),
+        _c(
+            "agents.copy",
+            (
+                "agent",
+                "copy",
+                "a1",
+                "--permission-mode",
+                "public_to",
+                "--public-to-workspace=false",
+                "--public-to-member",
+                "m2",
+                "--public-to-member",
+                "m1",
+                "--output",
+                "json",
+            ),
+            args=("a1",),
+            kwargs=(
+                ("permission_mode", "public_to"),
+                ("public_to_workspace", False),
+                ("public_to_member_ids", ("m2", "m1")),
+            ),
+            stdout=_AG,
+            id="manual:agents.copy:variant:06",
+            public_route=True,
+            assert_result=_assert_bound_agent,
+        ),
+        _c(
+            "agents.copy",
+            (
+                "agent",
+                "copy",
+                "a1",
+                "--no-skills",
+                "--output",
+                "json",
+            ),
+            args=("a1",),
+            kwargs=(("copy_skills", False),),
+            stdout=_AG,
+            id="manual:agents.copy:variant:07",
+            public_route=True,
+            assert_result=_assert_bound_agent,
         ),
         _c(
             "agents.archive",
@@ -2080,6 +2249,15 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("bug",),
             stdout=b"[]",
             id="manual:issues.search:canonical",
+        ),
+        _c(
+            "issues.search",
+            (),
+            args=("",),
+            expected_commands=(),
+            expected_exception=ValueError,
+            source_ref="review-cycle-validation",
+            id="manual:issues.search:blank-query",
         ),
         _c(
             "issues.children",

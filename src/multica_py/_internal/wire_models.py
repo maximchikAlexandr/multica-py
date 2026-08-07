@@ -51,6 +51,7 @@ class _IssueSummaryWire(msgspec.Struct, frozen=True, kw_only=True):
     project_id: str | None = None
     creator_id: str | None = None
     creator_type: str | None = None
+    match_source: str | None = None
     labels: tuple[_LabelWire, ...] | msgspec.UnsetType = msgspec.UNSET
     metadata: dict[str, MetadataValue] | msgspec.UnsetType = msgspec.UNSET
 
@@ -68,6 +69,7 @@ def issue_summary_from_wire(wire: _IssueSummaryWire) -> IssueSummary:
         project_id=wire.project_id,
         creator_id=wire.creator_id,
         creator_type=wire.creator_type,
+        match_source=wire.match_source,
         label_names=tuple(label.name for label in labels),
         metadata_snapshot=tuple(
             IssueMetadataItem(key=key, value=value) for key, value in metadata.items()
@@ -80,6 +82,11 @@ class _IssueListPageWire(msgspec.Struct, frozen=True, kw_only=True):
     has_more: bool = False
     limit: int | None = None
     offset: int | None = None
+    total: int | None = None
+
+
+class _IssueSearchResultWire(msgspec.Struct, frozen=True, kw_only=True):
+    issues: tuple[_IssueSummaryWire, ...]
     total: int | None = None
 
 

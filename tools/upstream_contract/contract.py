@@ -13,11 +13,15 @@ import keyword
 import pathlib
 import re
 from dataclasses import dataclass
-from typing import cast
+from typing import Protocol, cast
 
 
 class ContractError(ValueError):
     """Raised when an approved contract is not a closed valid v3 document."""
+
+
+class _HasId(Protocol):
+    id: str | None
 
 
 _IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -70,7 +74,7 @@ _DECODED_TYPES = frozenset(
         "multica_py.models.autopilots.AutopilotRun",
         "multica_py.models.autopilots.AutopilotRunListPage",
         "multica_py.models.issues.IssueListPage",
-        "multica_py.models.agents.Agent",
+        "multica_py.resources.agents.Agent",
         "multica_py.models.agents.AgentSkill",
         "multica_py.models.agents.AgentTask",
         "multica_py.models.attachments.AttachmentResult",
@@ -211,6 +215,7 @@ _AUXILIARY_CATALOG_KEYS = {
     "signatures": frozenset(
         {
             "agent_avatar",
+            "agent_copy",
             "agent_get",
             "agent_list",
             "agent_skills_list",
@@ -243,6 +248,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "issue_labels_list",
             "issue_labels_remove",
             "issue_list",
+            "issue_search",
             "issue_metadata_delete",
             "issue_metadata_get",
             "issue_metadata_list",
@@ -354,6 +360,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "limit_positive",
             "nonblank:agent",
             "nonblank:agent_id",
+            "positive_int:max_concurrent_tasks",
             "nonblank:attachment_id",
             "nonblank:autopilot_id",
             "nonblank:body",
@@ -366,6 +373,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "nonblank:name",
             "nonblank:path",
             "nonblank:project_id",
+            "nonblank:query",
             "nonblank:request.daemon_id",
             "nonblank:request.local_path",
             "nonblank:request.name",
@@ -374,6 +382,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "nonblank:runtime",
             "nonblank:skill_id",
             "nonblank:squad_id",
+            "nonblank:source_agent_id",
             "nonblank:subscriber",
             "nonblank:task_id",
             "nonblank:task_run_id",
@@ -1109,7 +1118,7 @@ def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> None:
 
 def load_contract(path: pathlib.Path) -> ContractCatalog:
     try:
-        raw_value = json.loads(path.read_text(encoding="utf-8"))
+        raw_value = cast("object", json.loads(path.read_text(encoding="utf-8")))
     except (OSError, json.JSONDecodeError) as exc:
         raise ContractError(f"cannot read approved contract {path}: {exc}") from exc
     raw = _dict(raw_value, "contract")
@@ -1169,8 +1178,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     binding_descriptors = _binding_descriptors(catalogs["binding_descriptors"])
     vectors_raw = _dict(catalogs["test_vectors"], "catalogs.test_vectors")
     vectors = tuple(_parse_vector(value, key) for key, value in vectors_raw.items())
-    if len(vectors) != 55:
-        raise ContractError(f"expected 37 test vectors, got {len(vectors)}")
+    if len(vectors) != 58:
+        raise ContractError(f"expected 58 test vectors, got {len(vectors)}")
     if len({vector.assertion.assertion_id for vector in vectors}) != len(vectors):
         raise ContractError("test vector assertion IDs must be unique")
     scope = _dict(raw["scope"], "scope")
@@ -1308,6 +1317,19 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
     }
     if actual_descriptor_pairs != expected_descriptor_pairs:
         raise ContractError("binding descriptors must map one-to-one to operation entrypoints")
+    binding_catalog = _dict(
+        _dict(contract.raw["catalogs"], "catalogs")["bindings"], "catalogs.bindings"
+    )
+    for descriptor in contract.binding_descriptors:
+        binding = _dict(binding_catalog[descriptor.descriptor_id], "catalogs.bindings entry")
+        catalog_command = tuple(
+            _str(value, "catalog binding command")
+            for value in _list(binding["command"], "catalog binding command")
+        )
+        if catalog_command != descriptor.command:
+            raise ContractError(
+                f"binding descriptor {descriptor.descriptor_id!r} disagrees with binding catalog"
+            )
     signatures = _dict(
         _dict(contract.raw["catalogs"], "catalogs")["signatures"], "catalogs.signatures"
     )
@@ -1358,11 +1380,22 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
                 raise ContractError(
                     f"binding descriptor {descriptor.descriptor_id!r} references an unknown validator"
                 )
+    descriptors_by_pair = {
+        (descriptor.operation_id, descriptor.entrypoint_id): descriptor
+        for descriptor in contract.binding_descriptors
+    }
+    for vector in contract.test_vectors:
+        descriptor = descriptors_by_pair[(vector.operation_id, vector.entrypoint_id)]
+        command = tuple(vector.expected_argv[: len(descriptor.command)])
+        if command != descriptor.command:
+            raise ContractError(
+                f"{vector.vector_id} disagrees with binding {descriptor.descriptor_id!r}"
+            )
     base_count = sum(":canonical" in vector.vector_id for vector in contract.test_vectors)
     variant_count = len(contract.test_vectors) - base_count
-    if (base_count, variant_count) != (44, 11):
+    if (base_count, variant_count) != (46, 12):
         raise ContractError(
-            f"expected 44 entrypoint-base and 11 variant vectors, got {base_count}/{variant_count}"
+            f"expected 46 entrypoint-base and 12 variant vectors, got {base_count}/{variant_count}"
         )
     return contract
 
@@ -1391,16 +1424,16 @@ def assert_result(assertion: ResultAssertion, result: object) -> None:
     expected_items = assertion.expected.get("items")
     if not isinstance(expected_items, list):
         raise AssertionError("page_items requires an items list")
-    expected_ids = tuple(
-        item.get("value")
-        for item in expected_items
-        if isinstance(item, dict) and item.get("kind") == "primitive"
-    )
-    if len(expected_ids) != len(expected_items) or not all(
-        isinstance(item, dict) and isinstance(item.get("value"), str) for item in expected_items
+    expected_item_dicts = [
+        cast("dict[str, object]", item) for item in expected_items if isinstance(item, dict)
+    ]
+    if len(expected_item_dicts) != len(expected_items) or not all(
+        item.get("kind") == "primitive" and isinstance(item.get("value"), str)
+        for item in expected_item_dicts
     ):
         raise AssertionError("page_items IDs must be primitive strings")
-    actual_items = getattr(result, "items", ())
-    actual_ids = tuple(getattr(item, "id", None) for item in actual_items)
+    expected_ids = tuple(cast("str", item["value"]) for item in expected_item_dicts)
+    page = cast("Page[_HasId]", result)
+    actual_ids = tuple(item.id for item in page.items)
     if actual_ids != expected_ids:
         raise AssertionError(f"expected page IDs {expected_ids}, got {actual_ids}")

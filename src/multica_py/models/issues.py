@@ -27,6 +27,7 @@ class IssueSummary(msgspec.Struct, frozen=True, kw_only=True):
     project_id: str | None = None
     creator_id: str | None = None
     creator_type: str | None = None
+    match_source: str | None = None
     label_names: tuple[str, ...] = ()
     metadata_snapshot: tuple[IssueMetadataItem, ...] = ()
 

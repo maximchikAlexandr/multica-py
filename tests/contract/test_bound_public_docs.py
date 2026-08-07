@@ -15,6 +15,10 @@ class DocumentationCase:
 
 
 MIGRATION_CASES = (
+    DocumentationCase(
+        ROOT / "docs/migration.md", "canonical public import path for the bound agent domain class"
+    ),
+    DocumentationCase(ROOT / "docs/migration.md", "multica_py.resources.agents.Agent"),
     DocumentationCase(ROOT / "docs/migration.md", "Agent.skill_refs"),
     DocumentationCase(ROOT / "docs/migration.md", "agent skills list/set"),
     DocumentationCase(ROOT / "docs/migration.md", "Skill.files"),

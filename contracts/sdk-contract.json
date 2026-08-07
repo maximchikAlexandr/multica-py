@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "target": {
-    "version": "0.4.9",
-    "tag": "v0.4.9",
-    "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
-    "release_id": "358605496",
-    "release_provenance_ref": ".devlocal/artifacts/upstream-upgrades/v0.3.10..v0.4.9/release-provenance.json"
+    "version": "0.4.20",
+    "tag": "v0.4.20",
+    "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+    "release_id": "366120041",
+    "release_provenance_ref": ".devlocal/upstream-contract/v0.4.9..v0.4.20/release/release-verification.json"
   },
   "catalogs": {
     "types": {
@@ -121,6 +121,7 @@
       "issue_labels_list": "(issue_id: str) -> tuple[Label, ...]",
       "issue_labels_remove": "(issue_id: str, label_id: str) -> tuple[Label, ...]",
       "issue_list": "(filter: IssueListFilter | None = None) -> IssueListPage",
+      "issue_search": "(query: str) -> tuple[IssueSummary, ...]",
       "issue_status": "(issue_id: str, status: IssueStatus) -> Issue",
       "project_create": "(request: ProjectCreateRequest) -> Project",
       "project_resource_add": "(project_id: str, request: ProjectResourceAddLocalDirectoryRequest) -> ProjectResourceRecord",
@@ -135,6 +136,7 @@
       "agent_skills_list": "(agent_id: str) -> tuple[AgentSkill, ...]",
       "agent_skills_set": "(agent_id: str, skill_ids: tuple[str, ...]) -> None",
       "agent_avatar": "(agent_id: str, file: pathlib.Path) -> None",
+      "agent_copy": "(source_agent_id: str, *, name: str | UnsetType = Unset, runtime_id: str | UnsetType = Unset, description: str | UnsetType = Unset, instructions: str | UnsetType = Unset, model: str | UnsetType = Unset, thinking_level: str | UnsetType = Unset, service_tier: str | UnsetType = Unset, custom_args: tuple[str, ...] | UnsetType = Unset, max_concurrent_tasks: int | UnsetType = Unset, permission_mode: str | UnsetType = Unset, public_to_workspace: bool | UnsetType = Unset, public_to_member_ids: tuple[str, ...] | UnsetType = Unset, copy_skills: bool = True) -> Agent",
       "attachment_download": "(attachment_id: str, *, output_dir: pathlib.Path) -> pathlib.Path",
       "attachment_upload": "(path: pathlib.Path, *, task_id: str | None = None) -> AttachmentResult",
       "autopilot_trigger": "(autopilot_id: str) -> AutopilotRun",
@@ -510,6 +512,24 @@
           "direction_requires_sort",
           "offset_nonnegative",
           "position_forbids_direction"
+        ]
+      },
+      "issue_search": {
+        "command": [
+          "issue",
+          "search"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "query",
+            "pos:0",
+            "query:q"
+          ]
+        ],
+        "constraints": [
+          "nonblank:query",
+          "response:issues-envelope-or-legacy-array"
         ]
       },
       "issue_status": {
@@ -1033,6 +1053,39 @@
         ],
         "constraints": [
           "nonblank:agent_id"
+        ]
+      },
+      "agent_copy": {
+        "command": [
+          "agent",
+          "copy"
+        ],
+        "output": "json",
+        "mappings": [
+          ["source_agent_id", "pos:0", "path:source_agent_id"],
+          ["name", "--name", "json_body:name"],
+          ["runtime_id", "--runtime-id", "json_body:runtime_id"],
+          ["description", "--description", "json_body:description"],
+          ["instructions", "--instructions", "json_body:instructions"],
+          ["model", "--model", "json_body:model"],
+          ["thinking_level", "--thinking-level", "json_body:thinking_level"],
+          ["service_tier", "--service-tier", "json_body:service_tier"],
+          ["custom_args", "--custom-args", "json_body:custom_args"],
+          ["max_concurrent_tasks", "--max-concurrent-tasks", "json_body:max_concurrent_tasks"],
+          ["permission_mode", "--permission-mode", "json_body:permission_mode"],
+          ["public_to_workspace", "--public-to-workspace", "json_body:public_to_workspace"],
+          ["public_to_member_ids", "repeat:--public-to-member", "json_body:public_to_member_ids"],
+          ["copy_skills", "--no-skills", "local_control:copy_skills"]
+        ],
+        "constraints": [
+          "nonblank:source_agent_id",
+          "optional_nonblank:name",
+          "range:max_concurrent_tasks:1..50",
+          "tuple_strings:custom_args",
+          "nonblank_members:public_to_member_ids",
+          "nonempty_members:public_to_member_ids",
+          "imperative:flags_changed",
+          "unsupported:custom_env,mcp_config,runtime_config,visibility"
         ]
       },
       "attachment_upload": {
@@ -2021,6 +2074,13 @@
       "issue_list": [
         "S-ISSUE"
       ],
+      "issue_search": [
+        "S-ISSUE-SEARCH-CMD",
+        "S-ISSUE-SEARCH-RUN",
+        "S-ISSUE-SEARCH-QUERY",
+        "S-ISSUE-SEARCH-RESPONSE",
+        "S-ISSUE-SEARCH-ENCODE"
+      ],
       "issue_status": [
         "S-ISSUE"
       ],
@@ -2047,6 +2107,13 @@
       ],
       "agent_avatar": [
         "S-AUTO"
+      ],
+      "agent_copy": [
+        "S-AGENT-COPY-CMD",
+        "S-AGENT-COPY-FLAGS",
+        "S-AGENT-COPY-RUN",
+        "S-AGENT-PERMISSIONS",
+        "S-AGENT-MAX-CONCURRENCY"
       ],
       "agent_get": [
         "S-AUTO"
@@ -2250,6 +2317,13 @@
         "empty": "not_applicable",
         "zero": "not_applicable",
         "false": "not_applicable"
+      },
+      "cross_runtime_model": {
+        "omitted": "omit_unless_runtime_present",
+        "null": "reject",
+        "empty": "emit",
+        "zero": "not_applicable",
+        "false": "not_applicable"
       }
     },
     "mapping_presence": {
@@ -2349,6 +2423,9 @@
         "optional_omit",
         "optional_omit"
       ],
+      "issue_search": [
+        "required_nonblank"
+      ],
       "issue_status": [
         "required_nonblank",
         "required_value"
@@ -2388,6 +2465,22 @@
       "agent_avatar": [
         "required_nonblank",
         "required_nonblank"
+      ],
+      "agent_copy": [
+        "required_nonblank",
+        "optional_blank_omit",
+        "optional_blank_omit",
+        "optional_omit",
+        "optional_omit",
+        "cross_runtime_model",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_omit",
+        "optional_blank_omit",
+        "optional_omit",
+        "optional_blank_omit",
+        "literal"
       ],
       "agent_get": [
         "required_nonblank"
@@ -2647,6 +2740,15 @@
           0
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_search": {
+        "public_type_id": "issue_summaries",
+        "wire_type_id": "issue_list_page_wire",
+        "decoder_id": "decode_issue_summaries",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "accept_issues_envelope_or_legacy_array_via_handwritten_adapter"
       },
       "issue_list_page": {
         "public_type_id": "issue_list_page",
@@ -3018,6 +3120,7 @@
       "nonblank:issue_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:label_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:project_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:query": "multica_py._generated.validators.validate_nonblank",
       "nonblank:request.daemon_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:request.local_path": "multica_py._generated.validators.validate_nonblank",
       "nonblank:request.name": "multica_py._generated.validators.validate_nonblank",
@@ -3038,6 +3141,7 @@
       "nonblank:member_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:name": "multica_py._generated.validators.validate_nonblank",
       "nonblank:runtime": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:source_agent_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:skill_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:squad_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:file_id": "multica_py._generated.validators.validate_nonblank",
@@ -3047,7 +3151,8 @@
       "nonblank:trigger_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:url": "multica_py._generated.validators.validate_nonblank",
       "nonblank:user_id": "multica_py._generated.validators.validate_nonblank",
-      "nonblank:workspace_id": "multica_py._generated.validators.validate_nonblank"
+      "nonblank:workspace_id": "multica_py._generated.validators.validate_nonblank",
+      "positive_int:max_concurrent_tasks": "multica_py._generated.validators.validate_positive_max_concurrent_tasks"
     },
     "validator_evidence": {
       "at_least_one:name_description": {
@@ -3113,6 +3218,10 @@
       "nonblank:project_id": {
         "positive_case_id": "nonblank-project-id-valid",
         "negative_case_id": "nonblank-project-id-invalid"
+      },
+      "nonblank:query": {
+        "positive_case_id": "nonblank-query-valid",
+        "negative_case_id": "nonblank-query-invalid"
       },
       "nonblank:request.daemon_id": {
         "positive_case_id": "nonblank-request-daemon-id-valid",
@@ -3194,6 +3303,10 @@
         "positive_case_id": "nonblank-runtime-valid",
         "negative_case_id": "nonblank-runtime-invalid"
       },
+      "nonblank:source_agent_id": {
+        "positive_case_id": "nonblank-source-agent-id-valid",
+        "negative_case_id": "nonblank-source-agent-id-invalid"
+      },
       "nonblank:skill_id": {
         "positive_case_id": "nonblank-skill_id-valid",
         "negative_case_id": "nonblank-skill_id-invalid"
@@ -3233,6 +3346,10 @@
       "nonblank:workspace_id": {
         "positive_case_id": "nonblank-workspace_id-valid",
         "negative_case_id": "nonblank-workspace_id-invalid"
+      },
+      "positive_int:max_concurrent_tasks": {
+        "positive_case_id": "positive-max-concurrent-tasks-valid",
+        "negative_case_id": "positive-max-concurrent-tasks-invalid"
       }
     },
     "enum_definitions": [
@@ -3393,6 +3510,12 @@
         "body_kind": "nonblank"
       },
       {
+        "validator_id": "nonblank:query",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
         "validator_id": "nonblank:request.daemon_id",
         "name": "validate_nonblank",
         "parameter_name": "value",
@@ -3513,6 +3636,12 @@
         "body_kind": "nonblank"
       },
       {
+        "validator_id": "nonblank:source_agent_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
         "validator_id": "nonblank:skill_id",
         "name": "validate_nonblank",
         "parameter_name": "value",
@@ -3571,6 +3700,12 @@
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "positive_int:max_concurrent_tasks",
+        "name": "validate_positive_max_concurrent_tasks",
+        "parameter_name": "value",
+        "body_kind": "positive_int"
       }
     ],
     "binding_descriptors": [
@@ -3921,6 +4056,25 @@
           "direction_requires_sort",
           "offset_nonnegative",
           "position_forbids_direction"
+        ]
+      },
+      {
+        "descriptor_id": "issue_search",
+        "operation_id": "issues.search",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "search"
+        ],
+        "mappings": [
+          {
+            "source": "query",
+            "binding": "pos:0",
+            "destination": "query:q"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:query"
         ]
       },
       {
@@ -4467,6 +4621,35 @@
         ],
         "validator_ids": [
           "nonblank:agent_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_copy",
+        "operation_id": "agents.copy",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "copy"
+        ],
+        "mappings": [
+          {"source": "source_agent_id", "binding": "pos:0", "destination": "path:source_agent_id"},
+          {"source": "name", "binding": "--name", "destination": "json_body:name"},
+          {"source": "runtime_id", "binding": "--runtime-id", "destination": "json_body:runtime_id"},
+          {"source": "description", "binding": "--description", "destination": "json_body:description"},
+          {"source": "instructions", "binding": "--instructions", "destination": "json_body:instructions"},
+          {"source": "model", "binding": "--model", "destination": "json_body:model"},
+          {"source": "thinking_level", "binding": "--thinking-level", "destination": "json_body:thinking_level"},
+          {"source": "service_tier", "binding": "--service-tier", "destination": "json_body:service_tier"},
+          {"source": "custom_args", "binding": "--custom-args", "destination": "json_body:custom_args"},
+          {"source": "max_concurrent_tasks", "binding": "--max-concurrent-tasks", "destination": "json_body:max_concurrent_tasks"},
+          {"source": "permission_mode", "binding": "--permission-mode", "destination": "json_body:permission_mode"},
+          {"source": "public_to_workspace", "binding": "--public-to-workspace", "destination": "json_body:public_to_workspace"},
+          {"source": "public_to_member_ids", "binding": "repeat:--public-to-member", "destination": "json_body:public_to_member_ids"},
+          {"source": "copy_skills", "binding": "--no-skills", "destination": "local_control:copy_skills"}
+        ],
+        "validator_ids": [
+          "nonblank:source_agent_id",
+          "positive_int:max_concurrent_tasks"
         ]
       },
       {
@@ -7796,6 +7979,120 @@
             "value": "builtins.tuple"
           }
         }
+      },
+      "generated:agents.copy:default:canonical": {
+        "vector_id": "generated:agents.copy:default:canonical",
+        "operation_id": "agents.copy",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ag_1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpZCI6ImExIiwibmFtZSI6Im4ifQ==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "agent",
+          "copy",
+          "ag_1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:agents.copy:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.resources.agents.Agent"
+          }
+        }
+      },
+      "generated:agents.copy:default:variant:01": {
+        "vector_id": "generated:agents.copy:default:variant:01",
+        "operation_id": "agents.copy",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ag_1"
+          }
+        ],
+        "kwargs": [
+          [
+            "runtime_id",
+            {
+              "kind": "primitive",
+              "value": "rt_2"
+            }
+          ]
+        ],
+        "stdout_base64": "eyJpZCI6ImExIiwibmFtZSI6Im4ifQ==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "agent",
+          "copy",
+          "ag_1",
+          "--runtime-id",
+          "rt_2",
+          "--model",
+          "",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:agents.copy:default:variant:01",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "multica_py.resources.agents.Agent"
+          }
+        }
+      },
+      "generated:issues.search:default:canonical": {
+        "vector_id": "generated:issues.search:default:canonical",
+        "operation_id": "issues.search",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "needle"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "eyJpc3N1ZXMiOltdLCJ0b3RhbCI6MH0=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "search",
+          "needle",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.search:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.tuple"
+          }
+        }
       }
     }
   },
@@ -7803,7 +8100,7 @@
     {
       "source_ref_id": "S-AUTO",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_autopilot.go",
       "symbol": "autopilotListCmd/autopilotGetCmd/autopilotCreateCmd/autopilotUpdateCmd/autopilotDeleteCmd/autopilotTriggerCmd/autopilotRunsCmd/runAutopilotList/runAutopilotGet/runAutopilotCreate/runAutopilotUpdate/runAutopilotDelete/runAutopilotTrigger/runAutopilotRuns",
       "line_start": 18,
@@ -7812,7 +8109,7 @@
     {
       "source_ref_id": "S-ISSUE",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueStatusCmd/issueCommentListCmd/issueCommentAddCmd/issueCommentDeleteCmd/runIssueCreate/runIssueUpdate/runIssueStatus/runIssueCommentList/runIssueCommentAdd/runIssueCommentDelete",
       "line_start": 20,
@@ -7821,7 +8118,7 @@
     {
       "source_ref_id": "S-LABEL",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_issue_label.go",
       "symbol": "issueLabelListCmd/issueLabelAddCmd/issueLabelRemoveCmd/runIssueLabelList/runIssueLabelAdd/runIssueLabelRemove",
       "line_start": 16,
@@ -7830,7 +8127,7 @@
     {
       "source_ref_id": "S-PROJECT",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_project.go",
       "symbol": "projectStatusCmd/projectResourceListCmd/projectResourceAddCmd/projectResourceUpdateCmd/projectResourceRemoveCmd/runProjectCreate/runProjectUpdate/runProjectStatus/runProjectResourceList/runProjectResourceAdd/runProjectResourceUpdate/runProjectResourceRemove",
       "line_start": 27,
@@ -7839,7 +8136,7 @@
     {
       "source_ref_id": "S-CLIENT",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/internal/cli/client.go",
       "symbol": "APIContext/newHTTPError",
       "line_start": 72,
@@ -7848,16 +8145,16 @@
     {
       "source_ref_id": "S-ERRORS",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/internal/cli/errors.go",
-      "symbol": "ErrorKind/NetworkError/UserMessageError/HTTPError/classifyNetworkError/wrapTransport",
-      "line_start": 1,
-      "line_end": 492
+      "symbol": "HTTPError/Kind/KindConflict/KindValidation/serverMessagePrefixes/Invalid request: /请求无效：/Request conflict: /请求冲突：",
+      "line_start": 154,
+      "line_end": 354
     },
     {
       "source_ref_id": "D03",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueChildrenCmd/childStage/runIssueChildren",
       "line_start": 191,
@@ -7866,7 +8163,7 @@
     {
       "source_ref_id": "D04",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issuePullRequestsCmd/runIssuePullRequests/normalizePullRequestList/printIssuePullRequestsTable/pullRequestURL",
       "line_start": 183,
@@ -7875,7 +8172,7 @@
     {
       "source_ref_id": "D05",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_issue_metadata.go",
       "symbol": "issueMetadataCmd/issueMetadataListCmd/issueMetadataGetCmd/issueMetadataSetCmd/issueMetadataDeleteCmd/runIssueMetadataList/runIssueMetadataGet/runIssueMetadataSet/runIssueMetadataDelete",
       "line_start": 57,
@@ -7884,7 +8181,7 @@
     {
       "source_ref_id": "D06",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueRunMessagesCmd/runIssueRunMessages",
       "line_start": 323,
@@ -7893,7 +8190,7 @@
     {
       "source_ref_id": "D07",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueRerunCmd/issueCancelTaskCmd/runIssueRerun/runIssueCancelTask",
       "line_start": 337,
@@ -7902,7 +8199,7 @@
     {
       "source_ref_id": "D08",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_agent.go",
       "symbol": "agentSkillsCmd/agentSkillsListCmd/agentSkillsSetCmd/runAgentSkillsList/runAgentSkillsSet",
       "line_start": 82,
@@ -7911,7 +8208,7 @@
     {
       "source_ref_id": "D09",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_skill.go",
       "symbol": "skillFilesCmd/skillFilesListCmd/skillFilesUpsertCmd/skillFilesDeleteCmd/runSkillFilesList/runSkillFilesUpsert/runSkillFilesDelete",
       "line_start": 75,
@@ -7920,7 +8217,7 @@
     {
       "source_ref_id": "D11",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_autopilot.go",
       "symbol": "autopilotTriggerCmd/runAutopilotTrigger",
       "line_start": 56,
@@ -7929,7 +8226,7 @@
     {
       "source_ref_id": "D13",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_autopilot.go",
       "symbol": "autopilotTriggerAddCmd/autopilotTriggerUpdateCmd/autopilotTriggerDeleteCmd/runAutopilotTriggerAdd/runAutopilotTriggerUpdate/runAutopilotTriggerDelete",
       "line_start": 70,
@@ -7938,7 +8235,7 @@
     {
       "source_ref_id": "D14",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_attachment.go",
       "symbol": "attachmentCmd/attachmentDownloadCmd/attachmentUploadCmd/runAttachmentUpload/runAttachmentDownload",
       "line_start": 16,
@@ -7947,7 +8244,7 @@
     {
       "source_ref_id": "D15",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_user.go",
       "symbol": "userProfileCmd/userProfileGetCmd/userProfileUpdateCmd/runUserProfileGet/runUserProfileUpdate",
       "line_start": 16,
@@ -7956,7 +8253,7 @@
     {
       "source_ref_id": "D16",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_repo.go",
       "symbol": "repoListCmd/repoAddCmd/repoRemoveCmd/repoCheckoutCmd/runRepoList/runRepoAdd/runRepoRemove/runRepoCheckout",
       "line_start": 23,
@@ -7965,7 +8262,7 @@
     {
       "source_ref_id": "D17",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_runtime.go",
       "symbol": "runtimeListCmd/runtimeUsageCmd/runtimeActivityCmd/runtimeUpdateCmd/runtimeRenameCmd/runtimeDeleteCmd/runRuntimeList/runRuntimeUsage/runRuntimeActivity/runRuntimeUpdate/runRuntimeRename/runRuntimeDelete",
       "line_start": 23,
@@ -7974,7 +8271,7 @@
     {
       "source_ref_id": "D18",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_agent.go",
       "symbol": "agentAvatarCmd/runAgentAvatar",
       "line_start": 73,
@@ -7983,7 +8280,7 @@
     {
       "source_ref_id": "S-SQUAD",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_squad.go",
       "symbol": "squadCmd/squadListCmd/squadGetCmd/squadCreateCmd/squadUpdateCmd/squadDeleteCmd/squadMemberCmd/squadMemberListCmd/squadMemberAddCmd/squadMemberSetRoleCmd/squadMemberRemoveCmd/runSquadList/runSquadGet/runSquadCreate/runSquadUpdate/runSquadDelete/runSquadMemberList/runSquadMemberAdd/runSquadMemberSetRole/runSquadMemberRemove",
       "line_start": 15,
@@ -7992,7 +8289,7 @@
     {
       "source_ref_id": "S-WORKSPACE",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_workspace.go",
       "symbol": "workspaceCmd/workspaceListCmd/workspaceCreateCmd/workspaceGetCmd/workspaceMemberCmd/workspaceMemberListCmd/workspaceUpdateCmd/runWorkspaceList/runWorkspaceCreate/runWorkspaceGet/runWorkspaceUpdate/runWorkspaceMembers",
       "line_start": 16,
@@ -8001,7 +8298,7 @@
     {
       "source_ref_id": "S-ISSUE-LIST-METADATA-CLI",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueListCmd/runIssueList",
       "line_start": 436,
@@ -8010,7 +8307,7 @@
     {
       "source_ref_id": "S-ISSUE-LIST-METADATA-PARSER",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_issue_metadata.go",
       "symbol": "buildMetadataFilterQueryParam",
       "line_start": 19,
@@ -8019,7 +8316,7 @@
     {
       "source_ref_id": "S-ISSUE-LIST-METADATA-HANDLER",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/internal/handler/issue.go",
       "symbol": "ListIssues/parseMetadataFilterParam/MetadataFilter",
       "line_start": 778,
@@ -8028,7 +8325,7 @@
     {
       "source_ref_id": "S-ISSUE-RESPONSE",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/internal/handler/issue.go",
       "symbol": "IssueResponse",
       "line_start": 31,
@@ -8037,7 +8334,7 @@
     {
       "source_ref_id": "S-ISSUE-LIST-PROJECTION",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/internal/handler/issue.go",
       "symbol": "ListIssues/labelsByIssue/IssueResponse",
       "line_start": 778,
@@ -8046,7 +8343,7 @@
     {
       "source_ref_id": "S-WORKSPACE-MEMBERS-CLI",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/cmd/multica/cmd_workspace.go",
       "symbol": "runWorkspaceMembers",
       "line_start": 524,
@@ -8055,7 +8352,7 @@
     {
       "source_ref_id": "S-WORKSPACE-MEMBER-IDENTITY",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/internal/handler/workspace.go",
       "symbol": "MemberWithUserResponse/ListMembersWithUser",
       "line_start": 391,
@@ -8064,11 +8361,137 @@
     {
       "source_ref_id": "S-ISSUE-GET-ATTACHMENTS",
       "repository": "multica-ai/multica",
-      "commit": "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/internal/handler/issue.go",
       "symbol": "GetIssue/ListAttachmentsByIssue/Attachments",
       "line_start": 1864,
       "line_end": 1900
+    },
+    {
+      "source_ref_id": "S-AGENT-COPY-CMD",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_agent_copy.go",
+      "symbol": "agentCopyCmd",
+      "line_start": 23,
+      "line_end": 50
+    },
+    {
+      "source_ref_id": "S-AGENT-COPY-FLAGS",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_agent_copy.go",
+      "symbol": "registerAgentCopyFlags",
+      "line_start": 54,
+      "line_end": 80
+    },
+    {
+      "source_ref_id": "S-AGENT-COPY-RUN",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_agent_copy.go",
+      "symbol": "runAgentCopy",
+      "line_start": 87,
+      "line_end": 301
+    },
+    {
+      "source_ref_id": "S-AGENT-PERMISSIONS",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "applyAgentPermissionFlags",
+      "line_start": 502,
+      "line_end": 540
+    },
+    {
+      "source_ref_id": "S-AGENT-MAX-CONCURRENCY",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_agent_validation.go",
+      "symbol": "validateAgentMaxConcurrentTasksFlag",
+      "line_start": 9,
+      "line_end": 17
+    },
+    {
+      "source_ref_id": "S-ISSUE-SEARCH-CMD",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueSearchCmd",
+      "line_start": 354,
+      "line_end": 369
+    },
+    {
+      "source_ref_id": "S-ISSUE-SEARCH-FLAGS",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueSearchCmd",
+      "line_start": 563,
+      "line_end": 565
+    },
+    {
+      "source_ref_id": "S-ISSUE-SEARCH-RUN",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "runIssueSearch/match_source",
+      "line_start": 2297,
+      "line_end": 2353
+    },
+    {
+      "source_ref_id": "S-ISSUE-SEARCH-RESPONSE",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/internal/handler/issue.go",
+      "symbol": "SearchIssueResponse/match_source",
+      "line_start": 234,
+      "line_end": 241
+    },
+    {
+      "source_ref_id": "S-ISSUE-SEARCH-QUERY",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/internal/handler/issue.go",
+      "symbol": "match_source",
+      "line_start": 546,
+      "line_end": 621
+    },
+    {
+      "source_ref_id": "S-ISSUE-SEARCH-ENCODE",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/internal/handler/issue.go",
+      "symbol": "SearchIssueResponse",
+      "line_start": 726,
+      "line_end": 745
+    },
+    {
+      "source_ref_id": "S-RUNTIME-DELETE-CMD",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runtimeDeleteCmd",
+      "line_start": 60,
+      "line_end": 100
+    },
+    {
+      "source_ref_id": "S-RUNTIME-DELETE-RUN",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runRuntimeDelete/unbind-agents-and-delete",
+      "line_start": 215,
+      "line_end": 255
+    },
+    {
+      "source_ref_id": "S-RUNTIME-DELETE-CONFLICT",
+      "repository": "multica-ai/multica",
+      "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runtimeDeleteConflict",
+      "line_start": 353,
+      "line_end": 424
     }
   ],
   "test_refs": [
@@ -8081,6 +8504,11 @@
       "test_ref_id": "T-CONTRACT",
       "path": "tests/contract/test_sdk_contract.py",
       "node_id": "test_sdk_contract"
+    },
+    {
+      "test_ref_id": "T-UPSTREAM-V0420-DELTA",
+      "path": "tests/unit/test_upstream_contract.py",
+      "node_id": "test_v0420_governs_copy_search_and_rejects_external_tag_commands"
     },
     {
       "test_ref_id": "T-ISSUE-LIST-METADATA",
@@ -8271,6 +8699,7 @@
   "scope": {
     "operation_ids": [
       "agents.avatar",
+      "agents.copy",
       "agents.get",
       "agents.list",
       "agents.skills.list",
@@ -8299,6 +8728,7 @@
       "issues.labels.list",
       "issues.labels.remove",
       "issues.list",
+      "issues.search",
       "issues.metadata.delete",
       "issues.metadata.get",
       "issues.metadata.list",
@@ -8356,6 +8786,7 @@
         "disposition": "required_compatibility",
         "required_operation_ids": [
           "agents.avatar",
+          "agents.copy",
           "agents.get",
           "agents.list",
           "agents.skills.list",
@@ -8399,6 +8830,12 @@
       {
         "family": "issue-existing-changes",
         "disposition": "required_compatibility",
+        "source_ref_ids": [
+          "F-ISSUE-CREATE",
+          "F-ISSUE-DECL",
+          "F-ISSUE-UPDATE"
+        ],
+        "rationale": "Existing governed issue behavior must remain compatible.",
         "required_operation_ids": [
           "issues.cancel_task",
           "issues.children",
@@ -8407,17 +8844,12 @@
           "issues.create",
           "issues.get",
           "issues.list",
+          "issues.search",
           "issues.pull_requests",
           "issues.rerun",
           "issues.run_messages",
           "issues.runs"
-        ],
-        "source_ref_ids": [
-          "F-ISSUE-CREATE",
-          "F-ISSUE-DECL",
-          "F-ISSUE-UPDATE"
-        ],
-        "rationale": "Existing governed issue behavior must remain compatible."
+        ]
       },
       {
         "family": "issue-new-commands",
@@ -8537,6 +8969,7 @@
           "issues.rerun",
           "issues.run_messages",
           "issues.runs",
+          "issues.search",
           "issues.set_status",
           "issues.subscribers.add",
           "issues.subscribers.list",
@@ -8848,6 +9281,33 @@
           "signature_id": "issue_list",
           "binding_id": "issue_list",
           "response_id": "issue_list_page",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.search",
+      "compatibility": "intentionally_changed",
+      "rationale": "Governed issue search keeps the exact CLI query binding while adapting the v0.4.20 issues envelope and retaining the legacy top-level array as handwritten SDK policy.",
+      "source_ref_ids": [
+        "S-ISSUE-SEARCH-CMD",
+        "S-ISSUE-SEARCH-RUN",
+        "S-ISSUE-SEARCH-QUERY",
+        "S-ISSUE-SEARCH-RESPONSE",
+        "S-ISSUE-SEARCH-ENCODE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "T-CONTRACT",
+        "T-UPSTREAM-V0420-DELTA"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.search",
+          "signature_id": "issue_search",
+          "binding_id": "issue_search",
+          "response_id": "issue_search",
           "errors": "standard"
         }
       ]
@@ -9189,6 +9649,33 @@
           "public_symbol": "multica_py.resources.agents.AgentResource.get",
           "signature_id": "agent_get",
           "binding_id": "agent_get",
+          "response_id": "agent",
+          "errors": "standard"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.copy",
+      "compatibility": "intentionally_changed",
+      "rationale": "Governed agent copy exposes portable presence-aware overrides, cross-runtime model defaulting, ordered permission targets, and explicit exclusion of secret or machine-local configuration.",
+      "source_ref_ids": [
+        "S-AGENT-COPY-CMD",
+        "S-AGENT-COPY-FLAGS",
+        "S-AGENT-COPY-RUN",
+        "S-AGENT-PERMISSIONS",
+        "S-AGENT-MAX-CONCURRENCY"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "T-CONTRACT",
+        "T-UPSTREAM-V0420-DELTA"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agents.AgentResource.copy",
+          "signature_id": "agent_copy",
+          "binding_id": "agent_copy",
           "response_id": "agent",
           "errors": "standard"
         }
@@ -10225,9 +10712,12 @@
     {
       "operation_id": "runtimes.delete",
       "compatibility": "compatible",
-      "rationale": "Runtime delete supports explicit cascade mode (D17).",
+      "rationale": "At v0.4.20, non-cascade deletion remains conflict-first; cascade performs the reviewed unbind-agents-and-delete flow, cancels active work, and preserves dependent agent configuration, chats, and task history (D17, S-RUNTIME-DELETE-CMD, S-RUNTIME-DELETE-RUN, S-RUNTIME-DELETE-CONFLICT).",
       "source_ref_ids": [
-        "D17"
+        "D17",
+        "S-RUNTIME-DELETE-CMD",
+        "S-RUNTIME-DELETE-RUN",
+        "S-RUNTIME-DELETE-CONFLICT"
       ],
       "test_ref_ids": [
         "T-OPERATION"

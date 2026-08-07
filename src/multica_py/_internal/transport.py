@@ -14,13 +14,18 @@ from multica_py._internal.processes import (
     create_process,
     run_with_timeout,
 )
-from multica_py._internal.redaction import collect_secret_values, redact_argv, redact_text
+from multica_py._internal.redaction import (
+    collect_diagnostic_secret_values,
+    redact_diagnostic_argv,
+    redact_text,
+)
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py.config import ClientConfig
 from multica_py.exceptions import (
     AuthenticationError,
     CommandExecutionError,
     CommandTimeoutError,
+    ConflictError,
     ExecutableNotFoundError,
     ExecutableNotRunnableError,
     NetworkError,
@@ -45,6 +50,23 @@ _NETWORK_MARKERS = (
     "network is unreachable",
     "tls:",
 )
+_CONFLICT_MARKERS = (
+    "Request conflict: ",
+    "请求冲突：",  # noqa: RUF001
+    "The request conflicts with the current state of the resource "
+    "(it may already exist or have changed since you last fetched it). "
+    "Re-fetch the latest state and try again.",
+    "请求与资源的当前状态冲突（可能已存在，或自上次获取后已被修改）。请重新获取最新状态后再试。",  # noqa: RUF001
+)
+
+_VALIDATION_MARKERS = (
+    "Invalid request: ",
+    "请求无效：",  # noqa: RUF001
+    "The request was invalid. Check the values you provided; run the command with "
+    "--help to see the expected format.",
+    "请求无效。请检查所填写的参数；可用 --help 查看期望的格式。",  # noqa: RUF001
+    "--max-concurrent-tasks must be between 1 and 50",
+)
 
 
 @dataclass(slots=True)
@@ -62,6 +84,12 @@ def _semantic_exit_code_for_http_status(status: int) -> int | None:
     return None
 
 
+def _effective_environment(config: ClientConfig) -> dict[str, str]:
+    environment = dict(os.environ)
+    environment.update(dict(config.environment))
+    return environment
+
+
 def classify_cli_failure(
     *,
     exit_code: int,
@@ -77,10 +105,18 @@ def classify_cli_failure(
     combined = f"{stdout}\n{stderr}"
     status_match = _HTTP_STATUS_PATTERN.search(combined)
     if status_match is not None:
-        semantic_exit = _semantic_exit_code_for_http_status(int(status_match.group(1)))
+        status = int(status_match.group(1))
+        if status == 409:
+            return ConflictError, exit_code
+        semantic_exit = _semantic_exit_code_for_http_status(status)
         if semantic_exit is not None:
             exc_class = _EXIT_CODE_EXCEPTIONS[semantic_exit]
             return exc_class, semantic_exit
+
+    if any(marker in combined for marker in _CONFLICT_MARKERS):
+        return ConflictError, exit_code
+    if any(marker in combined for marker in _VALIDATION_MARKERS):
+        return ValidationError, 5
 
     lowered = combined.lower()
     if any(marker in lowered for marker in _NETWORK_MARKERS):
@@ -164,11 +200,10 @@ class CliTransport:
             self._check_compat()
 
         argv = self._build_full_argv(command_args)
-        redacted_argv = redact_argv(argv)
-        secret_values = collect_secret_values(argv)
         cwd = str(self._config.cwd) if self._config.cwd else None
-        env = dict(os.environ)
-        env.update(dict(self._config.environment))
+        env = _effective_environment(self._config)
+        secret_values = collect_diagnostic_secret_values(argv, env)
+        diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
         effective_timeout = timeout if timeout is not None else self._config.timeout
 
         sem_acquired = False
@@ -197,7 +232,7 @@ class CliTransport:
 
             duration = datetime.datetime.now(tz=datetime.UTC) - t0
             return RawCommandResult(
-                argv=redacted_argv,
+                argv=diagnostic_argv,
                 exit_code=completed.returncode,
                 stdout=completed.stdout,
                 stderr=completed.stderr,
@@ -235,7 +270,8 @@ class CliTransport:
             stdout=stdout_text,
             stderr=stderr_text,
         )
-        message = f"Command failed with exit code {result.exit_code} [command: {command}]"
+        detail = stderr_text.strip() or stdout_text.strip()
+        message = detail or f"Command failed with exit code {result.exit_code} [command: {command}]"
         raise exc_class(
             message,
             exit_code=reported_exit_code,
@@ -251,8 +287,9 @@ class CliTransport:
         self._check_compat()
         argv = self._build_full_argv(command_args)
         cwd = str(self._config.cwd) if self._config.cwd else None
-        env = dict(os.environ)
-        env.update(dict(self._config.environment))
+        env = _effective_environment(self._config)
+        secret_values = collect_diagnostic_secret_values(argv, env)
+        diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
 
         if self._semaphore is not None:
             self._semaphore.acquire()
@@ -270,4 +307,4 @@ class CliTransport:
                 f"Executable not runnable: {self._config.executable!s}"
             )
 
-        return ManagedProcess(proc, argv=redact_argv(argv), semaphore=self._semaphore)
+        return ManagedProcess(proc, argv=diagnostic_argv, semaphore=self._semaphore)

@@ -23,6 +23,46 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
+## v0.4.20 SDK additions and behavior
+
+### Agent copy
+
+`agents.copy(source_agent_id, **overrides)` is the eager form and returns a
+bound `Agent`; `agents.copy_command(source_agent_id, **overrides)` returns
+`Command[Agent]`. Both share the same keyword-only presence-aware overrides:
+`name`, `runtime_id`, `description`, `instructions`, `model`,
+`thinking_level`, `service_tier`, `custom_args`, `max_concurrent_tasks`,
+`permission_mode`, `public_to_workspace`, `public_to_member_ids`, and
+`copy_skills`. Omitted values use `Unset`, so present empty strings remain
+present and `copy_skills=False` emits `--no-skills`.
+
+When copying across runtimes, `runtime_id` plus an omitted `model` emits
+`--model ""`; this is the sole automatic runtime-specific default. Omitted
+`thinking_level` and `service_tier` flags remain absent, and present values
+are forwarded as open upstream strings. The SDK intentionally excludes
+secret or machine-local configuration: `custom_env`, `mcp_config`, and
+`runtime_config` are not part of either signature or argv.
+
+### Issue search
+
+`issues.search(query)` still returns an eager `tuple[IssueSummary, ...]`, and
+`issues.search_command(query)` returns `Command[tuple[IssueSummary, ...]]`.
+The exact command remains `issue search <query> --output json`. The decoder
+accepts the v0.4.20 `issues` envelope and the legacy top-level array without
+introducing a result wrapper. `IssueSummary.match_source` is an optional open
+string, preserved when returned by upstream and `None` when absent.
+
+### Typed failures and runtime deletion
+
+`ConflictError` and `ValidationError` expose actionable redacted detail in
+`str(exc)`, `stderr`, and `stdout`; the conflict retains the actual CLI exit
+code, while v0.4.20 semantic validation uses exit code `5`. A non-cascade
+runtime delete preserves the upstream dependent-agent conflict. With
+`runtimes.delete(runtime_id, cascade=True)`, dependent agents are unbound,
+their queued/running work is cancelled, and the runtime is deleted while
+their configuration, chats, and task history are preserved. Documentation
+must not describe this as deleting or archiving those agents.
+
 ## Class rename table (entity + data unification)
 
 The 0.x release unifies each prior `*Entity` + `*Data` (+ redundant passive
@@ -30,6 +70,11 @@ DTO) pair into a single immutable domain class. The unified class is the
 only public name; no `IssueData = Issue` style aliases are shipped. The
 unified class carries private runtime state (client, lazy caches), so
 persistence should go through `to_json()` / `to_dict()`.
+
+The canonical public import path for the bound agent domain class is
+`multica_py.resources.agents.Agent` (also re-exported as `multica_py.Agent`).
+`multica_py.models.agents` contains only wire/request types and does not export
+the bound `Agent` class.
 
 | Removed name | Unified class |
 |---|---|
