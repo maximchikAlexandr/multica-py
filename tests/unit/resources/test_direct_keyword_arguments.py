@@ -503,15 +503,6 @@ _POST_INIT_CASES = (
         (("local_path", ""),),
         "local_path must be non-empty",
     ),
-    PostInitCase(
-        "users.profile_update:unset-description",
-        "users.profile_update",
-        UserResource,
-        "profile_update",
-        (),
-        (("description", msgspec.UNSET),),
-        "description must be provided",
-    ),
 )
 
 

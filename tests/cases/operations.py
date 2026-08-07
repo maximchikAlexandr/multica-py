@@ -598,6 +598,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             created_by_id="u1",
         )
     )
+    _AP_GET = msgspec.json.encode(
+        {
+            "autopilot": msgspec.json.decode(_AP),
+            "triggers": [{"id": "tr_001", "type": "webhook", "config": {}}],
+        }
+    )
     _APRUN = msgspec.json.encode(
         AutopilotRun(id="r1", autopilot_id="a1", source="manual", status="running")
     )
@@ -2432,9 +2438,9 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "autopilots.trigger_update",
-            ("autopilot", "trigger-update", "ap_001", "tr_001", "--output", "json"),
+            ("autopilot", "get", "ap_001", "--output", "json"),
             args=("ap_001", "tr_001", AutopilotTriggerUpdate()),
-            stdout=b'{"id":"tr_001","type":"webhook","config":{}}',
+            stdout=_AP_GET,
             id="manual:autopilots.trigger_update:variant:03",
             source_ref="manual:autopilots.trigger_update:canonical",
         ),

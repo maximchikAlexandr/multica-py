@@ -29,7 +29,7 @@ class UserResource(BaseResource):
     ) -> Command[UserProfile]:
         req = _resolve_request(request, kwargs, UserProfileUpdate, allow_empty=True)
         if req.description is Unset:
-            raise ValueError("description must be provided")
+            return self.profile_get_command()
         if req.description is None:
             return self._decoded_command(("user", "profile", "update", "--clear"), UserProfile)
         args = ("user", "profile", "update", "--description", req.description)

@@ -63,6 +63,8 @@ class LabelResource(BaseResource):
     ) -> Command[Label]:
         validate_nonblank(label_id)
         request = _resolve_request(request, kwargs, LabelUpdateRequest, allow_empty=True)
+        if request.name is Unset and request.color is Unset:
+            return self.get_command(label_id)
         args = ["label", "update", label_id]
         if request.name is not Unset:
             args.extend(["--name", request.name])

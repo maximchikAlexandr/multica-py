@@ -16,7 +16,8 @@ from multica_py._generated.approved_sdk import (
     AUTOPILOT_TRIGGER_UPDATE_BINDING,
     validate_nonblank,
 )
-from multica_py._internal.commands import Command, _replace_plan
+from multica_py._internal.commands import Command, _replace_plan, _Step
+from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _autopilot_from_wire,
@@ -36,6 +37,7 @@ from multica_py.enums import AutopilotExecutionMode
 from multica_py.exceptions import (
     DetachedEntityError,
     MissingRelationContextError,
+    OutputShapeError,
     RelationPaginationError,
 )
 from multica_py.models._bound import _BoundEntity, _is_mapping, _runtime_state
@@ -123,6 +125,17 @@ def _bound_relation_command(
         return tuple(relation.all())
 
     return command._map(finalize)
+
+
+def _trigger_from_autopilot_get(stdout: bytes, command: str, trigger_id: str) -> AutopilotTrigger:
+    wire = decode_json(stdout, _AutopilotGetWire, command=command)
+    result = _autopilot_get_from_wire(wire)
+    if result.triggers is msgspec.UNSET:
+        raise OutputShapeError("Autopilot get response omitted triggers")
+    for trigger in result.triggers:
+        if trigger.id == trigger_id:
+            return trigger
+    raise OutputShapeError(f"Autopilot trigger {trigger_id!r} was not found")
 
 
 def _runs_page_command(
@@ -957,6 +970,20 @@ class AutopilotResource(BaseResource):
         validate_nonblank(autopilot_id)
         validate_nonblank(trigger_id)
         request = _resolve_request(request, kwargs, AutopilotTriggerUpdate, allow_empty=True)
+        if request.title is Unset and request.kind is Unset:
+            get_args = ("autopilot", "get", autopilot_id, "--output", "json")
+            return self._plan(
+                steps=(
+                    _Step(
+                        get_args,
+                        "run_bytes",
+                        decode=lambda stdout, command: _trigger_from_autopilot_get(
+                            stdout, command, trigger_id
+                        ),
+                    ),
+                ),
+                finalize=lambda results: cast("AutopilotTrigger", results[0]),
+            )
         args = ["autopilot", "trigger-update", autopilot_id, trigger_id]
         if request.title is not msgspec.UNSET:
             args.extend(["--title", request.title])
