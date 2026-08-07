@@ -93,5 +93,5 @@
 - [x] 9.3 Run `uv run mypy src`, `uv run mypy tests`, `uv run ruff check`, and `uv run ruff format --check`; fix every error without `Any` leaks or broad ignores.
 - [x] 9.4 Run `uv run python scripts/upstream_contract.py check --approved contracts/sdk-contract.json`, contract schema validation, generated-runtime freshness checks, and source-link audit; confirm only approved contract data drives public behavior.
 - [x] 9.5 Run `openspec validate unify-sdk-operation-contracts` and `openspec validate --specs`; reconcile any overlap with the already-merged `cli-command-preview` requirements without weakening either contract.
-- [ ] 9.6 Build wheel and sdist, run packaging tests against both artifacts, and verify `Page`, `ActionResult`, retained page types, request models, and `py.typed` are present and importable before a CLI invocation.
+- [x] 9.6 Build wheel and sdist, run packaging tests against both artifacts, and verify `Page`, `ActionResult`, retained page types, request models, and `py.typed` are present and importable before a CLI invocation.
 - [ ] 9.7 Run the separately gated live smoke suite only with configured Multica credentials/runtime, record its result without weakening offline gates, and complete the release/migration checklist for this breaking public-contract change.
