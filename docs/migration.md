@@ -7,14 +7,64 @@ and relations load only at explicit load points such as `all()`, `page()`,
 
 ## Command preview (additive)
 
-The eager API and its return types are unchanged. The only new public type is
-`Command[T]`, returned by typed `*_command()` siblings for CLI operations and
-relation load points. Its `commands` property is always a tuple: empty for a
-cache-hit no-op, one item for one CLI call, or ordered items/templates for a
-composite operation. Preview performs no I/O, and `run()` executes the same
-immutable plan. Composite previews may contain result references such as
+The eager API and command-plan behavior remain unified, while the operation
+contract below records the breaking page/action return migrations. `Command[T]`
+is returned by typed `*_command()` siblings for CLI operations and relation load
+points. Its `commands` property is always a tuple: empty for a cache-hit no-op,
+one item for one CLI call, or ordered items/templates for a composite operation.
+Preview performs no I/O, and `run()` executes the same immutable plan. Composite previews may contain result references such as
 `${create.id}`. This is an additive feature; no eager method was renamed,
 removed, or split.
+
+## SDK-wide operation contract (breaking return/input changes)
+
+The unified operation contract applies the same rules across resources:
+
+- Direct keyword arguments are the preferred short form, with a reusable typed
+  request object as the positional alternative. Passing both is invalid;
+  direct request fields are keyword-only and stable target IDs stay positional.
+- `Unset` means omitted. An approved nullable `None` means clear; accepted
+  `""`, `()`, `False`, and `0` remain present values. All-optional updates
+  delegate an all-`Unset` call to a read command. Required project-resource
+  `local_path` and runtime `target_version` updates reject omission/`None`
+  before I/O and have no no-op read.
+- Eager and `*_command()` calls share one plan and result type. `Command[T]`
+  previews are redacted and I/O-free; `run()` executes that same plan.
+- Canonical/direct-resource collections return immutable `Page[T]` values.
+  Use `.items`, iteration, `len()`, and indexing. Compatibility aliases such
+  as `.issues`, `.autopilots`, `.runs`, and `.children` remain read-only views
+  of the same tuple.
+- Approved actions return `ActionResult[T]` and payloads are in `.value`;
+  former void actions use `ActionResult[None]`. Transport, validation, exit,
+  and decode failures remain exceptions.
+
+### Breaking return matrix
+
+| Former public result | Current public result | Access pattern |
+|---|---|---|
+| Direct top-level and nested CLI/resource `tuple[T, ...]` lists | `Page[T]` or a compatible page subtype | `page.items`, iteration, `len(page)`, indexing |
+| `IssueListPage`, `AutopilotListPage`, `AutopilotRunListPage`, `MetadataPage`, and `IssueChildrenResult` duplicate cores | Frozen generic `Page[T]` core with warning-free compatibility aliases | Prefer `items`; aliases are identity-preserving |
+| `None` from archive/avatar/restore, delete/remove, cancellation/rerun, watcher, subscriber, membership, and configuration-set actions | `ActionResult[None]` | Check `.success` and optional redacted `.message` |
+| `str` from `issues.deprioritize` or token login | `ActionResult[str]` | Read `.value` |
+| `RepositoryMutationResult` from repository add/remove | `ActionResult[RepositoryMutationResult]` | Read `.value.added`, `.value.repos`, and related fields |
+| `RuntimeUpdateResult` from runtime update | `ActionResult[RuntimeUpdateResult]` | Read `.value` |
+| Resource-specific command assumptions | `Command[T]` matching eager `T` | Inspect `.commands`, then call `.run()` |
+
+The page migration covers canonical issue/autopilot/history/comment/metadata
+query/children results, top-level agents/labels/projects/repositories/runtimes/
+skills/squads/workspaces lists, and nested agent skills/tasks, issue comments/
+labels/subscribers/pull requests/runs/run messages/search, project resources,
+runtime activity/usage, skill files, squad members, workspace members, and
+daemon disk usage. Issue-label add/remove refreshed collections use the
+compatible label page contract. `issues.metadata.list` and aggregate/natural
+scalar, mapping, entity, and process results remain their approved natural
+types.
+
+Relation `.all()` snapshots are explicitly unchanged: `LazyCollection.all()`,
+`OffsetLazyCollection.all()`, and `CursorLazyCollection.all()` still return
+tuples. A relation's direct `.page()` follows the Page contract. Resource-named
+page aliases remain warning-free for at least one minor release and may only
+be removed in a future major release.
 
 Recursive JSON fields such as `AutopilotRun.trigger_payload` and `result` now
 use immutable snapshots: object nodes implement the public
@@ -45,8 +95,8 @@ secret or machine-local configuration: `custom_env`, `mcp_config`, and
 
 ### Issue search
 
-`issues.search(query)` still returns an eager `tuple[IssueSummary, ...]`, and
-`issues.search_command(query)` returns `Command[tuple[IssueSummary, ...]]`.
+`issues.search(query)` now returns an eager `Page[IssueSummary]`, and
+`issues.search_command(query)` returns `Command[Page[IssueSummary]]`.
 The exact command remains `issue search <query> --output json`. The decoder
 accepts the v0.4.20 `issues` envelope and the legacy top-level array without
 introducing a result wrapper. `IssueSummary.match_source` is an optional open

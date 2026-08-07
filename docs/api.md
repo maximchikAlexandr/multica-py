@@ -28,14 +28,54 @@ the original argv values to the transport. Composite plans expose dependencies
 such as `${create.id}` in their ordered command templates. The eager API remains
 the default when inspection is not needed.
 
+## SDK-wide operation conventions
+
+Resource methods use one dual-input convention wherever a request/filter model
+is governed by the SDK contract. Pass the frozen request object positionally or
+pass its explicitly documented fields as keyword-only arguments; never both:
+
+```python
+from multica_py import IssueStatus, MulticaClient
+from multica_py.models.issues import IssueListFilter
+
+client = MulticaClient()
+direct = client.issues.list(status=IssueStatus.backlog, limit=50)
+typed = client.issues.list(IssueListFilter(status=IssueStatus.backlog, limit=50))
+assert direct.items == typed.items
+```
+
+Mixed object/keyword input raises the existing `TypeError` before transport
+access. Optional filters and all-optional updates may be called with no fields;
+required request operations retain the missing/mixed-input validation error.
+Direct fields stay keyword-only while stable target IDs remain positional.
+
+Update models use `Unset` to mean omission. `None` means an approved nullable
+clear, while `""`, `()`, `False`, and `0` remain explicit values when their
+field accepts them. All-optional updates (`ProjectUpdateRequest`,
+`AgentUpdateRequest`, `SkillUpdateRequest`, `IssueUpdateRequest`,
+`AutopilotUpdateRequest`, `LabelUpdateRequest`, `AutopilotTriggerUpdate`, and
+`UserProfileUpdate`) delegate an all-omitted call to the matching read command.
+Required-value project-resource and runtime updates reject omitted/`None`
+required fields before I/O and never create a no-op read.
+
+Result categories are closed: entity/state methods return typed entities,
+canonical and direct-resource collections return immutable `Page[T]` (or a
+documented compatible subtype), actions return `ActionResult[T]`, and process
+operations return `ManagedProcess`. `ActionResult.value` carries payloads;
+void actions use `ActionResult[None]`. Transport, validation, exit-code, and
+decode failures remain typed exceptions rather than unsuccessful wrappers.
+`Page.items` is the immutable tuple payload and pages support iteration,
+`len(page)`, and indexing without I/O. Bound relation `.all()` snapshots are
+the deliberate exception and remain tuples.
+
 ## Resources
 
 All resources accessed as attributes of `MulticaClient`:
 
-- **auth**: `status()` → `AuthenticationStatus`, `login(token)` → `str`, `login()` → `ManagedProcess`, `logout()` → `AuthenticationStatus`
+- **auth**: `status()` → `AuthenticationStatus`, token `login(token)` → `ActionResult[str]`, interactive `login()` → `ManagedProcess`, `logout()` → `AuthenticationStatus`
 - **setup**: `cloud()`, `self_host(url)` → both return `ManagedProcess`
-- **daemon**: `start()` → `ManagedProcess`, `status()` → `DaemonStatus`, `stop/restart()` → `DaemonStatus`, `disk_usage()` → tuple, `logs(follow?)` → `ManagedProcess`
-- **workspaces**: `list/get/members` → typed tuples/objects, `watch/unwatch` → text
+- **daemon**: `start/logs()` → `ManagedProcess`, `status/stop/restart()` → `DaemonStatus`, `disk_usage()` → `Page[DaemonDiskUsageEntry]`
+- **workspaces**: `list/members` → `Page[T]`, `get()` → object, `watch/unwatch` → `ActionResult[None]`
 - **issues**: full CRUD + `comments`, `recent_comment_threads`, `labels`, `subscribers`, `metadata`, `pull_requests`, `children`, `runs`, `run_messages`, `usage`, `rerun(issue_id)`, `cancel_task(task_id)`; create/update accept optional `project_id` (emits `--project`)
 - **issues.comments**: `list` for flat comments, `list_flat`, `list_thread`, `list_recent`, `add`, `reply`, `delete`, `resolve`, `unresolve`
 - **issues.metadata**: `list`, `query`, `get`, `set`, `set_typed`, `delete`
@@ -97,14 +137,13 @@ verbatim. Secret or machine-local settings are intentionally not part of this
 API: `custom_env`, `mcp_config`, and `runtime_config` are neither accepted nor
 emitted; skills can be omitted only with `copy_skills=False`.
 
-`issues.search(query)` retains its existing eager return type
-`tuple[IssueSummary, ...]`; `search_command(query)` returns
-`Command[tuple[IssueSummary, ...]]`. The exact invocation is
+`issues.search(query)` returns a `Page[IssueSummary]`; `search_command(query)`
+returns `Command[Page[IssueSummary]]`. The exact invocation is
 `issue search <query> --output json`. Results accept the v0.4.20 envelope or
-the legacy top-level array, and each summary may expose the open optional
+the legacy top-level array; iterate the page or use `.items`, and each summary may expose the open optional
 string `match_source` (`"title"`, `"description"`, `"comment"`, or a future
 upstream value). It defaults to `None` when omitted; the envelope's `total`
-does not create a new public result type.
+is preserved as page metadata.
 
 ## Exceptions
 
@@ -149,8 +188,10 @@ except ValidationError as exc:
 - `OffsetLazyCollection[T]` — offset-paged collection with `page()` and bounded traversal
 - `CursorLazyCollection[T]` — cursor-paged collection with progress guards
 - `LazyMapping[K, V]` — cached mapping relation
-- `Page[T]` — immutable tuple payload used by non-relation paged services
-- `ActionResult` — typed success/message container for commands that expose structured action results
+- `Page[T]` — frozen generic page with immutable `.items`, metadata, iteration,
+  length, and read-only indexing for non-relation paged services
+- `ActionResult[T]` — frozen typed `success`, `value`, and optional redacted
+  `message` container for approved action results
 - `ProjectResourceRecord`, `LocalDirectoryResourceRef`, `ProjectResourceAddLocalDirectoryRequest`, `ProjectResourceUpdateLocalDirectoryRequest` — typed project-resource models
 - `IssueUsage.cost_usd` — optional float decoded from `issue usage` JSON
 - `JsonValue` — closed recursive JSON union. Object nodes are immutable

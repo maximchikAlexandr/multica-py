@@ -80,11 +80,11 @@
 
 ## 8. Documentation and migration
 
-- [ ] 8.1 Add one SDK-wide operation conventions section to `docs/api.md` covering direct keywords vs typed objects, mixed-input rejection, optional filters, all-optional versus required-value update semantics, `Unset`/`None`/falsey behavior, result categories, `.items` pages for canonical/direct-resource collections, tuple relation snapshots, and eager/command equivalence.
-- [ ] 8.2 Update resource examples in `docs/api.md`, `docs/service-usage.md`, README, and examples to show direct keywords first, a reusable typed-object alternative, page iteration/`.items`, and `ActionResult.value`; remove the old request-object-only exception list.
-- [ ] 8.3 Add a precise breaking-change matrix to `docs/migration.md` mapping every former canonical/direct-resource tuple/page alias and every former `None`/payload action return to its new access pattern; state that relation `.all()` tuple snapshots remain unchanged, and that resource-named page aliases remain warning-free for at least one minor and removable only in a future major change.
-- [ ] 8.4 Add the breaking page/action and explicit-`None` semantics to `CHANGELOG.md`, including before/after snippets for projects update, issues list, projects list, delete actions, repository mutations, and command execution.
-- [ ] 8.5 Extend documentation contract tests so public examples and named symbols are pinned to actual signatures, and fail if docs reintroduce resource-specific request, page, action, or command conventions.
+- [x] 8.1 Add one SDK-wide operation conventions section to `docs/api.md` covering direct keywords vs typed objects, mixed-input rejection, optional filters, all-optional versus required-value update semantics, `Unset`/`None`/falsey behavior, result categories, `.items` pages for canonical/direct-resource collections, tuple relation snapshots, and eager/command equivalence.
+- [x] 8.2 Update resource examples in `docs/api.md`, `docs/service-usage.md`, README, and examples to show direct keywords first, a reusable typed-object alternative, page iteration/`.items`, and `ActionResult.value`; remove the old request-object-only exception list.
+- [x] 8.3 Add a precise breaking-change matrix to `docs/migration.md` mapping every former canonical/direct-resource tuple/page alias and every former `None`/payload action return to its new access pattern; state that relation `.all()` tuple snapshots remain unchanged, and that resource-named page aliases remain warning-free for at least one minor and removable only in a future major change.
+- [x] 8.4 Add the breaking page/action and explicit-`None` semantics to `CHANGELOG.md`, including before/after snippets for projects update, issues list, projects list, delete actions, repository mutations, and command execution.
+- [x] 8.5 Extend documentation contract tests so public examples and named symbols are pinned to actual signatures, and fail if docs reintroduce resource-specific request, page, action, or command conventions.
 
 ## 9. Final verification and release readiness
 

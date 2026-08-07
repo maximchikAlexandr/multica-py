@@ -3,7 +3,7 @@
 from collections.abc import Iterator
 
 from multica_py import ClientConfig, IssueStatus, MulticaClient
-from multica_py.models.issues import IssueListFilter, IssueMetadataItem, IssueSummary
+from multica_py.models.issues import IssueMetadataItem, IssueSummary
 
 _PRIORITY_RANK = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
 
@@ -12,20 +12,18 @@ def iter_queue(client: MulticaClient, project_id: str, external_key: str) -> Ite
     offset = 0
     while True:
         page = client.issues.list(
-            IssueListFilter(
-                project_id=project_id,
-                status=IssueStatus.backlog,
-                limit=100,
-                offset=offset,
-                metadata=(IssueMetadataItem(key="external_key", value=external_key),),
-            )
+            project_id=project_id,
+            status=IssueStatus.backlog,
+            limit=100,
+            offset=offset,
+            metadata=(IssueMetadataItem(key="external_key", value=external_key),),
         )
-        yield from page.issues
+        yield from page.items
         if not page.has_more:
             return
-        if not page.issues:
+        if not page.items:
             raise RuntimeError("issue pagination stopped making progress")
-        offset += len(page.issues)
+        offset += len(page.items)
 
 
 def select_queue_head(
