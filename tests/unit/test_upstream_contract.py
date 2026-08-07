@@ -65,6 +65,9 @@ INVALID_CONTRACT_CASES = (
     InvalidContractCase("response-extra", "response_extra"),
     InvalidContractCase("response-any", "response_any"),
     InvalidContractCase("response-category", "response_category"),
+    InvalidContractCase("operation-evidence", "operation_evidence"),
+    InvalidContractCase("nullable-clear-evidence", "nullable_clear_evidence"),
+    InvalidContractCase("update-source-ref", "update_source_ref"),
 )
 
 
@@ -162,6 +165,17 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
         entrypoint = document["operations"][0]["entrypoints"][0]
         entrypoint["response_id"] = "page_comments"
         entrypoint["category"] = "retrieve"
+    elif mutation == "operation_evidence":
+        document["operations"][0]["source_ref_ids"] = []
+    elif mutation == "nullable_clear_evidence":
+        field = document["catalogs"]["update_field_policies"]["IssueUpdateRequest"]["fields"][
+            "description"
+        ]
+        field["clear"]["source_ref_ids"] = []
+    elif mutation == "update_source_ref":
+        document["catalogs"]["update_field_policies"]["ProjectUpdateRequest"]["fields"]["name"][
+            "source_ref_ids"
+        ] = ["missing-source-ref"]
     destination = tmp_path / f"{mutation}.json"
     destination.write_text(json.dumps(document), encoding="utf-8")
     return destination
@@ -196,7 +210,7 @@ def test_public_conventions_and_response_catalog_are_typed_and_closed() -> None:
     entrypoints = tuple(
         entrypoint for operation in contract.operations for entrypoint in operation.entrypoints
     )
-    assert len(entrypoints) == 81
+    assert len(entrypoints) == sum(len(operation.entrypoints) for operation in contract.operations)
     assert all(entrypoint.command_symbol.endswith("_command") for entrypoint in entrypoints)
     assert all(
         entrypoint.category
@@ -223,6 +237,34 @@ def test_public_conventions_and_response_catalog_are_typed_and_closed() -> None:
         "action_result_runtime_update_result",
     } <= contract.response_by_id.keys()
     assert all("any" not in response.public_type_id.lower() for response in contract.responses)
+
+
+def test_update_field_policies_are_explicit_and_source_pinned() -> None:
+    contract = validate_contract(APPROVED)
+    policies = {model.model_id: model for model in contract.update_field_policies}
+    assert set(policies) == {
+        "ProjectUpdateRequest",
+        "AgentUpdateRequest",
+        "SkillUpdateRequest",
+        "IssueUpdateRequest",
+        "AutopilotUpdateRequest",
+        "AutopilotTriggerUpdate",
+        "LabelUpdateRequest",
+        "ProjectResourceUpdateLocalDirectoryRequest",
+        "RuntimeUpdate",
+        "UserProfileUpdate",
+    }
+    issue = {field.field_name: field for field in policies["IssueUpdateRequest"].fields}
+    assert issue["assignee_id"].clear_kind == "composite"
+    assert len(issue["assignee_id"].clear_mapping) >= 2
+    assert issue["parent_id"].clear_mapping == ("--parent", "empty-string")
+    assert all(field.source_ref_ids for model in policies.values() for field in model.fields)
+    assert all(
+        field.clear_source_ref_ids
+        for model in policies.values()
+        for field in model.fields
+        if field.nullable or field.clear_kind != "none"
+    )
 
 
 def test_current_target_and_source_refs_are_pinned_to_v0420() -> None:

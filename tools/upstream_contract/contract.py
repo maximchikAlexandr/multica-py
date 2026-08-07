@@ -152,12 +152,41 @@ _PRESENCE_POLICY_IDS = frozenset(
         "update_text",
     }
 )
+_UPDATE_PRESENCE_VALUES = frozenset({"omit", "reject", "emit", "not_applicable"})
+_UPDATE_CLEAR_KINDS = frozenset({"none", "flag", "dedicated_flag", "composite", "empty_collection"})
+_UPDATE_POLICY_FIELDS = {
+    "ProjectUpdateRequest": frozenset({"name", "description"}),
+    "AgentUpdateRequest": frozenset({"name", "description"}),
+    "SkillUpdateRequest": frozenset({"name", "description"}),
+    "IssueUpdateRequest": frozenset(
+        {"title", "description", "priority", "assignee_id", "project_id", "parent_id"}
+    ),
+    "AutopilotUpdateRequest": frozenset(
+        {
+            "title",
+            "description",
+            "agent",
+            "priority",
+            "status",
+            "execution_mode",
+            "project_id",
+            "issue_title_template",
+            "subscribers",
+        }
+    ),
+    "AutopilotTriggerUpdate": frozenset({"title", "kind"}),
+    "LabelUpdateRequest": frozenset({"name", "color"}),
+    "ProjectResourceUpdateLocalDirectoryRequest": frozenset({"local_path"}),
+    "RuntimeUpdate": frozenset({"target_version", "wait"}),
+    "UserProfileUpdate": frozenset({"description"}),
+}
 _RESPONSE_CATALOG_IDS = frozenset(
     {
         "action_result_none",
         "action_result_repository_mutation_result",
         "action_result_runtime_update_result",
         "action_result_str",
+        "bytes",
         "agent",
         "agent_skills",
         "agent_tasks",
@@ -181,11 +210,14 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "linked_pull_requests",
         "metadata_entries",
         "none",
+        "mapping_config",
         "page_agent",
         "page_agent_skills",
         "page_agent_tasks",
         "page_comments",
+        "page_daemon_disk_usage",
         "page_issue_summaries",
+        "page_issue_usage",
         "page_labels",
         "page_linked_pull_requests",
         "page_project",
@@ -215,6 +247,7 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "runtime_definitions",
         "runtime_update_result",
         "runtime_usage",
+        "scalar_str",
         "skill",
         "skill_file",
         "skill_files",
@@ -222,6 +255,7 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "squad_members",
         "subscribers",
         "task_runs",
+        "process",
         "user_profile",
         "workspace",
         "workspace_members",
@@ -527,6 +561,56 @@ _AUXILIARY_CATALOG_KEYS = {
         }
     ),
 }
+_MANUAL_SIGNATURE_IDS = frozenset(
+    {
+        "agents_archive_manual",
+        "agents_create_manual",
+        "agents_restore_manual",
+        "agents_update_manual",
+        "attachments_download_bytes_manual",
+        "attachments_upload_bytes_manual",
+        "auth_login_manual",
+        "auth_logout_manual",
+        "auth_status_manual",
+        "configuration_get_manual",
+        "configuration_set_manual",
+        "configuration_show_manual",
+        "daemon_disk_usage_manual",
+        "daemon_logs_manual",
+        "daemon_restart_manual",
+        "daemon_start_manual",
+        "daemon_status_manual",
+        "daemon_stop_manual",
+        "issues_assign_manual",
+        "issues_comments_reply_manual",
+        "issues_comments_resolve_manual",
+        "issues_comments_unresolve_manual",
+        "issues_deprioritize_manual",
+        "issues_metadata_query_manual",
+        "issues_metadata_set_typed_manual",
+        "issues_reorder_manual",
+        "issues_update_manual",
+        "issues_usage_manual",
+        "labels_create_manual",
+        "labels_delete_manual",
+        "labels_update_manual",
+        "maintenance_update_manual",
+        "maintenance_version_manual",
+        "projects_delete_manual",
+        "setup_cloud_manual",
+        "setup_self_host_manual",
+        "skills_create_manual",
+        "skills_delete_manual",
+        "skills_import_from_url_manual",
+        "skills_update_manual",
+        "workspaces_switch_manual",
+        "workspaces_unwatch_manual",
+        "workspaces_watch_manual",
+    }
+)
+_AUXILIARY_CATALOG_KEYS["signatures"] = (
+    _AUXILIARY_CATALOG_KEYS["signatures"] | _MANUAL_SIGNATURE_IDS
+)
 _VECTOR_KEYS = frozenset(
     {
         "vector_id",
@@ -686,6 +770,24 @@ class ResponseCatalogEntry:
 
 
 @dataclass(frozen=True)
+class UpdateFieldPolicy:
+    field_name: str
+    nullable: bool
+    source_ref_ids: tuple[str, ...]
+    presence: tuple[tuple[str, str], ...]
+    clear_kind: str
+    clear_source_ref_ids: tuple[str, ...]
+    clear_mapping: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class UpdateModelPolicy:
+    model_id: str
+    source_ref_ids: tuple[str, ...]
+    fields: tuple[UpdateFieldPolicy, ...]
+
+
+@dataclass(frozen=True)
 class Entrypoint:
     entrypoint_id: str
     public_symbol: str
@@ -761,6 +863,7 @@ class ContractCatalog:
     validator_definitions: tuple[ValidatorDefinition, ...]
     binding_descriptors: tuple[BindingDescriptor, ...]
     responses: tuple[ResponseCatalogEntry, ...]
+    update_field_policies: tuple[UpdateModelPolicy, ...]
     test_vectors: tuple[TestVector, ...]
     legacy_argv_migration: dict[str, str]
     raw: dict[str, object]
@@ -1211,6 +1314,10 @@ def _operations(value: object) -> tuple[Operation, ...]:
                     convention=convention,
                 )
             )
+        if not entrypoints:
+            raise ContractError(f"operations[{index}] must approve at least one entrypoint")
+        if len({entrypoint.entrypoint_id for entrypoint in entrypoints}) != len(entrypoints):
+            raise ContractError(f"operations[{index}] repeats an entrypoint ID")
         operations.append(
             Operation(
                 _str(item["operation_id"], "operation_id"),
@@ -1364,6 +1471,127 @@ def _response_catalog(value: object) -> tuple[ResponseCatalogEntry, ...]:
     return tuple(entries)
 
 
+def _update_field_policies(value: object) -> tuple[UpdateModelPolicy, ...]:
+    models = _dict(value, "catalogs.update_field_policies")
+    if set(models) != set(_UPDATE_POLICY_FIELDS):
+        raise ContractError(
+            "catalogs.update_field_policies must contain exactly the approved update models"
+        )
+    result: list[UpdateModelPolicy] = []
+    for model_id, raw_model in models.items():
+        model = _dict(raw_model, f"update_field_policies[{model_id!r}]")
+        _exact_keys(model, frozenset({"source_ref_ids", "fields"}), f"update model {model_id}")
+        model_source_refs = tuple(
+            _str(item, f"update model {model_id}.source_ref_ids[{index}]")
+            for index, item in enumerate(
+                _list(model["source_ref_ids"], f"update model {model_id}.source_ref_ids")
+            )
+        )
+        fields = _dict(model["fields"], f"update model {model_id}.fields")
+        if set(fields) != _UPDATE_POLICY_FIELDS[model_id]:
+            raise ContractError(f"update model {model_id} must list its exact approved fields")
+        parsed_fields: list[UpdateFieldPolicy] = []
+        for field_name, raw_field in fields.items():
+            field = _dict(raw_field, f"update field {model_id}.{field_name}")
+            _exact_keys(
+                field,
+                frozenset({"nullable", "source_ref_ids", "presence", "clear"}),
+                f"update field {model_id}.{field_name}",
+            )
+            nullable = _bool(field["nullable"], f"update field {model_id}.{field_name}.nullable")
+            source_ref_ids = tuple(
+                _str(item, f"update field {model_id}.{field_name}.source_ref_ids[{index}]")
+                for index, item in enumerate(
+                    _list(
+                        field["source_ref_ids"],
+                        f"update field {model_id}.{field_name}.source_ref_ids",
+                    )
+                )
+            )
+            presence = _dict(field["presence"], f"update field {model_id}.{field_name}.presence")
+            _exact_keys(
+                presence,
+                frozenset({"omitted", "null", "empty", "zero", "false"}),
+                f"update field {model_id}.{field_name}.presence",
+            )
+            presence_values = tuple(
+                (
+                    key,
+                    _str(
+                        presence[key],
+                        f"update field {model_id}.{field_name}.presence.{key}",
+                    ),
+                )
+                for key in ("omitted", "null", "empty", "zero", "false")
+            )
+            if any(value not in _UPDATE_PRESENCE_VALUES for _, value in presence_values):
+                raise ContractError(
+                    f"update field {model_id}.{field_name} has an unknown presence mapping"
+                )
+            clear = _dict(field["clear"], f"update field {model_id}.{field_name}.clear")
+            _exact_keys(
+                clear,
+                frozenset({"kind", "source_ref_ids", "mapping"}),
+                f"update field {model_id}.{field_name}.clear",
+            )
+            clear_kind = _str(clear["kind"], f"update field {model_id}.{field_name}.clear.kind")
+            if clear_kind not in _UPDATE_CLEAR_KINDS:
+                raise ContractError(
+                    f"update field {model_id}.{field_name} has an unknown clear kind"
+                )
+            clear_source_refs = tuple(
+                _str(item, f"update field {model_id}.{field_name}.clear.source_ref_ids[{index}]")
+                for index, item in enumerate(
+                    _list(
+                        clear["source_ref_ids"],
+                        f"update field {model_id}.{field_name}.clear.source_ref_ids",
+                    )
+                )
+            )
+            clear_mapping = tuple(
+                _str(item, f"update field {model_id}.{field_name}.clear.mapping[{index}]")
+                for index, item in enumerate(
+                    _list(clear["mapping"], f"update field {model_id}.{field_name}.clear.mapping")
+                )
+            )
+            if nullable and (clear_kind == "none" or not clear_source_refs or not clear_mapping):
+                raise ContractError(
+                    f"nullable update field {model_id}.{field_name} lacks distinct clear evidence"
+                )
+            if not nullable and (
+                clear_kind not in {"none", "empty_collection"}
+                or (clear_kind == "none" and (clear_source_refs or clear_mapping))
+                or (
+                    clear_kind == "empty_collection"
+                    and (not clear_source_refs or not clear_mapping)
+                )
+            ):
+                raise ContractError(
+                    f"non-nullable update field {model_id}.{field_name} has a clear mapping"
+                )
+            if clear_kind == "composite" and len(clear_mapping) < 2:
+                raise ContractError(
+                    f"composite clear for {model_id}.{field_name} must contain multiple steps"
+                )
+            if clear_kind == "empty_collection" and presence_values[2][1] != "emit":
+                raise ContractError(
+                    f"collection clear for {model_id}.{field_name} must preserve an empty value"
+                )
+            parsed_fields.append(
+                UpdateFieldPolicy(
+                    field_name,
+                    nullable,
+                    source_ref_ids,
+                    presence_values,
+                    clear_kind,
+                    clear_source_refs,
+                    clear_mapping,
+                )
+            )
+        result.append(UpdateModelPolicy(model_id, model_source_refs, tuple(parsed_fields)))
+    return tuple(result)
+
+
 def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> tuple[ResponseCatalogEntry, ...]:
     """Validate retained contract metadata before any generator can observe it."""
 
@@ -1466,6 +1694,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "presence",
             "mapping_presence",
             "responses",
+            "update_field_policies",
             "decoders",
             "validators",
             "validator_evidence",
@@ -1477,6 +1706,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     )
     _exact_keys(catalogs, catalog_required, "catalogs")
     responses = _closed_auxiliary_catalogs(catalogs)
+    update_field_policies = _update_field_policies(catalogs["update_field_policies"])
     enum_definitions = _enum_definitions(catalogs["enum_definitions"])
     validator_definitions = _validator_definitions(catalogs["validator_definitions"])
     binding_descriptors = _binding_descriptors(catalogs["binding_descriptors"])
@@ -1533,6 +1763,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             _str(value, f"traceability[{index}].test_ref_ids")
     operations = _operations(raw["operations"])
     operation_ids = {operation.operation_id for operation in operations}
+    if len(operation_ids) != len(operations):
+        raise ContractError("operations IDs must be unique")
     if operation_ids != {
         _str(value, "scope.operation_ids")
         for value in _list(scope["operation_ids"], "scope.operation_ids")
@@ -1564,6 +1796,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         validator_definitions=validator_definitions,
         binding_descriptors=binding_descriptors,
         responses=responses,
+        update_field_policies=update_field_policies,
         test_vectors=vectors,
         legacy_argv_migration=migration,
         raw=raw,
@@ -1648,6 +1881,10 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             )
         source_ref_ids = {item.source_ref_id for item in contract.source_refs}
         test_ref_ids = {item.test_ref_id for item in contract.test_refs}
+        if not operation.source_ref_ids or not operation.test_ref_ids:
+            raise ContractError(
+                f"operation {operation.operation_id!r} must have source and test evidence"
+            )
         if not set(operation.source_ref_ids) <= source_ref_ids:
             raise ContractError(
                 f"operation {operation.operation_id!r} references an unknown source ref"
@@ -1684,6 +1921,19 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             }:
                 raise ContractError(
                     f"binding descriptor {descriptor.descriptor_id!r} references an unknown validator"
+                )
+    source_ref_ids = {item.source_ref_id for item in contract.source_refs}
+    for model in contract.update_field_policies:
+        if not set(model.source_ref_ids) <= source_ref_ids:
+            raise ContractError(f"update model {model.model_id!r} references an unknown source ref")
+        for field in model.fields:
+            if not set(field.source_ref_ids) <= source_ref_ids:
+                raise ContractError(
+                    f"update field {model.model_id}.{field.field_name} references an unknown source ref"
+                )
+            if not set(field.clear_source_ref_ids) <= source_ref_ids:
+                raise ContractError(
+                    f"clear mapping {model.model_id}.{field.field_name} references an unknown source ref"
                 )
     descriptors_by_pair = {
         (descriptor.operation_id, descriptor.entrypoint_id): descriptor

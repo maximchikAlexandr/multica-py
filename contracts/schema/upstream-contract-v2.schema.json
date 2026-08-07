@@ -480,6 +480,13 @@
           },
           "default": {},
           "type": "object"
+        },
+        "update_field_policies": {
+          "additionalProperties": {
+            "$ref": "#/$defs/UpdateModelPolicy"
+          },
+          "default": {},
+          "type": "object"
         }
       },
       "required": [
@@ -675,6 +682,60 @@
         "malformed_output"
       ],
       "title": "ResponseCatalogEntry",
+      "type": "object"
+    },
+    "UpdateFieldPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "nullable": {
+          "type": "boolean"
+        },
+        "source_ref_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "presence": {
+          "additionalProperties": false,
+          "properties": {
+            "omitted": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"},
+            "null": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"},
+            "empty": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"},
+            "zero": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"},
+            "false": {"enum": ["omit", "reject", "emit", "not_applicable"], "type": "string"}
+          },
+          "required": ["omitted", "null", "empty", "zero", "false"],
+          "type": "object"
+        },
+        "clear": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"enum": ["none", "flag", "dedicated_flag", "composite", "empty_collection"], "type": "string"},
+            "source_ref_ids": {"items": {"type": "string"}, "type": "array"},
+            "mapping": {"items": {"type": "string"}, "type": "array"}
+          },
+          "required": ["kind", "source_ref_ids", "mapping"],
+          "type": "object"
+        }
+      },
+      "required": ["nullable", "source_ref_ids", "presence", "clear"],
+      "title": "UpdateFieldPolicy",
+      "type": "object"
+    },
+    "UpdateModelPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "source_ref_ids": {"items": {"type": "string"}, "minItems": 1, "type": "array"},
+        "fields": {
+          "additionalProperties": {"$ref": "#/$defs/UpdateFieldPolicy"},
+          "minProperties": 1,
+          "type": "object"
+        }
+      },
+      "required": ["source_ref_ids", "fields"],
+      "title": "UpdateModelPolicy",
       "type": "object"
     },
     "OperationEntrypoint": {

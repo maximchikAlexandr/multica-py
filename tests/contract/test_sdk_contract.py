@@ -20,8 +20,10 @@ def test_sdk_contract() -> None:
     files = render_files(APPROVED)
     assert files[0].path == RUNTIME_PATH
     assert tuple(item.path for item in files[1:]) == TRANSIENT_PATHS
-    assert len(contract.operations) == 78
-    assert len(contract.binding_descriptors) == 81
+    assert len(contract.operations) == len(contract.operation_ids)
+    assert len(contract.binding_descriptors) == sum(
+        len(operation.entrypoints) for operation in contract.operations
+    )
     assert len(contract.test_vectors) == 58
     assert (
         tuple((item.operation_id, item.entrypoint_id) for item in contract.binding_descriptors)

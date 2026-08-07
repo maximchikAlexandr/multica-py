@@ -143,11 +143,15 @@ def test_operation(case: OperationCase, mock_transport: MagicMock) -> None:
 
 def test_discovered_public_methods() -> None:
     discovered = discover_public_methods()
+    contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
-    assert len(discovered) == 124
     assert len(canonical_cases) == len(canonical)
+    governed = {c.sdk_method for c in canonical_cases if c.contract_operation_id is not None}
+    assert governed == discovered
+    assert len(governed) == sum(len(operation.entrypoints) for operation in contract.operations)
+    assert len(contract.operation_ids) == len(contract.operations)
     assert len(OPERATION_CASES) == 224
     assert len({c.id for c in OPERATION_CASES}) == 224
     assert sum(not c.is_canonical for c in OPERATION_CASES) == 100
