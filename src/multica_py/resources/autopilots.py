@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import datetime
 import math
+import shlex
 from collections.abc import Callable
+from dataclasses import replace
 from types import MappingProxyType
 from typing import TYPE_CHECKING, cast
 
@@ -14,6 +16,7 @@ from multica_py._generated.approved_sdk import (
     AUTOPILOT_TRIGGER_UPDATE_BINDING,
     validate_nonblank,
 )
+from multica_py._internal.commands import Command, _replace_plan
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _autopilot_from_wire,
@@ -45,7 +48,11 @@ from multica_py.models.autopilots import (
     AutopilotTriggerUpdate,
 )
 from multica_py.models.issue_activity import RunMessage
-from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
+from multica_py.models.relations import (
+    LazyCollection,
+    OffsetLazyCollection,
+    OffsetPage,
+)
 from multica_py.resources._base import BaseResource
 from multica_py.types import JsonValue
 
@@ -98,6 +105,60 @@ def _make_subscribers_loader(
         return relation.all()
 
     return loader
+
+
+def _bound_relation_command(
+    client: MulticaClient,
+    autopilot_id: str,
+    relation_name: str,
+) -> Command[tuple[object, ...]]:
+    command = client.autopilots.get_command(autopilot_id)
+
+    def finalize(autopilot: Autopilot) -> tuple[object, ...]:
+        relation = cast("LazyCollection[object]", getattr(autopilot, relation_name))
+        if not relation.loaded:
+            raise RelationPaginationError(f"Autopilot.{relation_name}", "missing complete get seed")
+        return tuple(relation.all())
+
+    return command._map(finalize)
+
+
+def _runs_page_command(
+    client: MulticaClient, autopilot_id: str, limit: int | None, offset: int
+) -> Command[OffsetPage[AutopilotRun]]:
+    command = client.autopilots.history_command(autopilot_id, limit=limit, offset=offset)
+    plan = command._plan
+    source_step = plan.steps[0]
+
+    def decode_page(stdout: bytes, command_text: str) -> object:
+        if source_step.decode is None:
+            raise RuntimeError("autopilot history command has no decoder")
+        wire_page = cast("_AutopilotRunListPageWire", source_step.decode(stdout, command_text))
+        words = shlex.split(command_text)
+        current_offset = int(words[words.index("--offset") + 1]) if "--offset" in words else offset
+        page = _autopilot_run_list_page_from_wire(
+            wire_page,
+            limit=limit,
+            offset=current_offset,
+        )
+        return OffsetPage(
+            items=tuple(run._with_client(client) for run in page.runs),
+            total=page.total,
+            limit=page.limit or (20 if limit is None else limit),
+            offset=page.offset if page.offset is not None else current_offset,
+            has_more=page.has_more,
+        )
+
+    def finalize(results: tuple[object, ...]) -> OffsetPage[AutopilotRun]:
+        return cast("OffsetPage[AutopilotRun]", results[0])
+
+    return Command(
+        _replace_plan(
+            plan,
+            steps=(replace(source_step, decode=decode_page),),
+            finalize=finalize,
+        )
+    )
 
 
 class AutopilotRun(_BoundEntity):  # type: ignore[misc]
@@ -182,16 +243,45 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
                         "AutopilotRun", self.id, "messages", "task_id"
                     )
 
-                self._set_runtime("_messages", LazyCollection(missing_context))
+                def missing_context_command() -> Command[tuple[RunMessage, ...]]:
+                    raise MissingRelationContextError(
+                        "AutopilotRun", self.id, "messages", "task_id"
+                    )
+
+                self._set_runtime(
+                    "_messages",
+                    LazyCollection[RunMessage](
+                        missing_context, command_loader=missing_context_command
+                    ),
+                )
             else:
                 task_id = self.task_id
                 issue_id = self.issue_id
+                issues = client.issues
 
                 def loader() -> tuple[RunMessage, ...]:
-                    return client.issues.run_messages(task_id, issue_id=issue_id)
+                    return issues.run_messages(task_id, issue_id=issue_id)
 
-                self._set_runtime("_messages", LazyCollection(loader))
+                self._set_runtime(
+                    "_messages",
+                    LazyCollection[RunMessage](
+                        loader,
+                        command_loader=lambda: issues.run_messages_command(
+                            task_id, issue_id=issue_id
+                        ),
+                    ),
+                )
         return self._messages  # type: ignore[return-value]
+
+    def messages_command(self) -> Command[tuple[RunMessage, ...]]:
+        client = self._require_client(
+            entity_type="AutopilotRun", entity_id=self.id, relation_name="messages"
+        )
+        if self.task_id is None:
+            raise MissingRelationContextError("AutopilotRun", self.id, "messages", "task_id")
+        task_id = self.task_id
+        issue_id = self.issue_id
+        return client.issues.run_messages_command(task_id, issue_id=issue_id)
 
 
 class Autopilot(_BoundEntity):  # type: ignore[misc]
@@ -279,7 +369,16 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
         )
         if triggers is not msgspec.UNSET:
             _triggers: LazyCollection[AutopilotTrigger] = LazyCollection(
-                _make_triggers_loader(client, autopilot_id), initial=triggers
+                _make_triggers_loader(client, autopilot_id),
+                initial=triggers,
+                command_loader=(
+                    None
+                    if client is None
+                    else lambda: cast(
+                        "Command[tuple[AutopilotTrigger, ...]]",
+                        _bound_relation_command(client, autopilot_id, "triggers"),
+                    )
+                ),
             )
             self._set_runtime("_triggers", _triggers)
 
@@ -289,7 +388,16 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
         )
         if subscribers is not msgspec.UNSET:
             _subscribers: LazyCollection[AutopilotSubscriber] = LazyCollection(
-                _make_subscribers_loader(client, autopilot_id), initial=subscribers
+                _make_subscribers_loader(client, autopilot_id),
+                initial=subscribers,
+                command_loader=(
+                    None
+                    if client is None
+                    else lambda: cast(
+                        "Command[tuple[AutopilotSubscriber, ...]]",
+                        _bound_relation_command(client, autopilot_id, "subscribers"),
+                    )
+                ),
             )
             self._set_runtime("_subscribers", _subscribers)
 
@@ -300,6 +408,16 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
                 client = cast("MulticaClient | None", object.__getattribute__(self, "_client"))
                 autopilot_id = cast("str", object.__getattribute__(self, "id"))
                 relation = LazyCollection(_make_triggers_loader(client, autopilot_id))
+                if client is not None:
+                    relation = LazyCollection(
+                        _make_triggers_loader(client, autopilot_id),
+                        command_loader=lambda: cast(
+                            "Command[tuple[AutopilotTrigger, ...]]",
+                            _bound_relation_command(
+                                cast("MulticaClient", client), autopilot_id, "triggers"
+                            ),
+                        ),
+                    )
                 self._set_runtime("_triggers", relation)
             return relation
         if name == "subscribers":
@@ -308,6 +426,14 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
                 client = cast("MulticaClient | None", object.__getattribute__(self, "_client"))
                 autopilot_id = cast("str", object.__getattribute__(self, "id"))
                 subscriber_relation = LazyCollection(_make_subscribers_loader(client, autopilot_id))
+                if client is not None:
+                    subscriber_relation = LazyCollection(
+                        _make_subscribers_loader(client, autopilot_id),
+                        command_loader=lambda: cast(
+                            "Command[tuple[AutopilotSubscriber, ...]]",
+                            _bound_relation_command(client, autopilot_id, "subscribers"),
+                        ),
+                    )
                 self._set_runtime("_subscribers", subscriber_relation)
             return subscriber_relation
         return super().__getattribute__(name)
@@ -326,7 +452,12 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             result._set_runtime(
                 "_triggers",
                 LazyCollection(
-                    _make_triggers_loader(client, autopilot_id), initial=trigger_initial
+                    _make_triggers_loader(client, autopilot_id),
+                    initial=trigger_initial,
+                    command_loader=lambda: cast(
+                        "Command[tuple[AutopilotTrigger, ...]]",
+                        _bound_relation_command(client, autopilot_id, "triggers"),
+                    ),
                 ),
             )
         subscribers = cast(
@@ -338,7 +469,12 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             result._set_runtime(
                 "_subscribers",
                 LazyCollection(
-                    _make_subscribers_loader(client, autopilot_id), initial=subscriber_initial
+                    _make_subscribers_loader(client, autopilot_id),
+                    initial=subscriber_initial,
+                    command_loader=lambda: cast(
+                        "Command[tuple[AutopilotSubscriber, ...]]",
+                        _bound_relation_command(client, autopilot_id, "subscribers"),
+                    ),
                 ),
             )
         return result
@@ -363,58 +499,99 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
                     has_more=page.has_more,
                 )
 
-            self._set_runtime("_runs", OffsetLazyCollection(page_loader, default_limit=20))
+            self._set_runtime(
+                "_runs",
+                OffsetLazyCollection(
+                    page_loader,
+                    default_limit=20,
+                    page_command_loader=lambda limit, offset: _runs_page_command(
+                        client, autopilot_id, limit, offset
+                    ),
+                ),
+            )
         return self._runs  # type: ignore[return-value]
 
     def trigger_add(self, request: AutopilotTriggerCreate) -> AutopilotTrigger:
+        return self.trigger_add_command(request).run()
+
+    def trigger_add_command(self, request: AutopilotTriggerCreate) -> Command[AutopilotTrigger]:
         client = self._require_client(
             entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
         )
-        result = client.autopilots.trigger_add(self.id, request)
-        self.triggers.invalidate()
-        return result
+
+        def invalidate(result: AutopilotTrigger) -> AutopilotTrigger:
+            self.triggers.invalidate()
+            return result
+
+        return client.autopilots.trigger_add_command(self.id, request)._map(invalidate)
 
     def trigger_update(self, trigger_id: str, request: AutopilotTriggerUpdate) -> AutopilotTrigger:
+        return self.trigger_update_command(trigger_id, request).run()
+
+    def trigger_update_command(
+        self, trigger_id: str, request: AutopilotTriggerUpdate
+    ) -> Command[AutopilotTrigger]:
         client = self._require_client(
             entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
         )
-        result = client.autopilots.trigger_update(self.id, trigger_id, request)
-        self.triggers.invalidate()
-        return result
+
+        def invalidate(result: AutopilotTrigger) -> AutopilotTrigger:
+            self.triggers.invalidate()
+            return result
+
+        return client.autopilots.trigger_update_command(self.id, trigger_id, request)._map(
+            invalidate
+        )
 
     def trigger_delete(self, trigger_id: str) -> None:
+        self.trigger_delete_command(trigger_id).run()
+
+    def trigger_delete_command(self, trigger_id: str) -> Command[None]:
         client = self._require_client(
             entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
         )
-        client.autopilots.trigger_delete(self.id, trigger_id)
-        self.triggers.invalidate()
+        return client.autopilots.trigger_delete_command(self.id, trigger_id)._map(
+            lambda result: self.triggers.invalidate()
+        )
 
 
 class AutopilotResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
 
+    def list_command(self) -> Command[AutopilotListPage[Autopilot]]:
+        def finalize(page: _AutopilotListWire) -> AutopilotListPage[Autopilot]:
+            return AutopilotListPage(
+                autopilots=tuple(
+                    self._bind_autopilot(_autopilot_from_wire(item)) for item in page.autopilots
+                ),
+                total=page.total,
+            )
+
+        return self._decoded_command(("autopilot", "list"), _AutopilotListWire)._map(finalize)
+
     def list(self) -> AutopilotListPage[Autopilot]:
-        page = self._run_json_decode(("autopilot", "list"), _AutopilotListWire)
-        return AutopilotListPage(
-            autopilots=tuple(
-                self._bind_autopilot(_autopilot_from_wire(item)) for item in page.autopilots
-            ),
-            total=page.total,
+        return self.list_command().run()
+
+    def get_command(self, autopilot_id: str) -> Command[Autopilot]:
+        validate_nonblank(autopilot_id)
+
+        def finalize(wire: _AutopilotGetWire) -> Autopilot:
+            result = _autopilot_get_from_wire(wire)
+            return self._bind_autopilot(
+                result.data,
+                triggers=result.triggers,
+                subscribers=result.subscribers,
+            )
+
+        return self._decoded_command(("autopilot", "get", autopilot_id), _AutopilotGetWire)._map(
+            finalize
         )
 
     def get(self, autopilot_id: str) -> Autopilot:
-        validate_nonblank(autopilot_id)
-        result = _autopilot_get_from_wire(
-            self._run_json_decode(("autopilot", "get", autopilot_id), _AutopilotGetWire)
-        )
-        return self._bind_autopilot(
-            result.data,
-            triggers=result.triggers,
-            subscribers=result.subscribers,
-        )
+        return self.get_command(autopilot_id).run()
 
-    def create(
+    def create_command(
         self,
         title: str,
         *,
@@ -425,7 +602,7 @@ class AutopilotResource(BaseResource):
         project_id: str | None = None,
         issue_title_template: str | None = None,
         subscribers: tuple[str, ...] = (),
-    ) -> Autopilot:
+    ) -> Command[Autopilot]:
         args = [
             "autopilot",
             "create",
@@ -448,11 +625,32 @@ class AutopilotResource(BaseResource):
             raise ValueError("subscribers must be nonblank")
         for ref in subscribers:
             args.extend(["--subscriber", ref])
-        return self._bind_autopilot(
-            _autopilot_from_wire(self._run_json_decode(tuple(args), _AutopilotWire))
-        )
+        return self._decoded_command(tuple(args), _AutopilotWire)._map(self._bind_autopilot_wire)
 
-    def update(
+    def create(
+        self,
+        title: str,
+        *,
+        description: str | None = None,
+        agent: str,
+        execution_mode: AutopilotExecutionMode,
+        priority: str = "none",
+        project_id: str | None = None,
+        issue_title_template: str | None = None,
+        subscribers: tuple[str, ...] = (),
+    ) -> Autopilot:
+        return self.create_command(
+            title,
+            description=description,
+            agent=agent,
+            execution_mode=execution_mode,
+            priority=priority,
+            project_id=project_id,
+            issue_title_template=issue_title_template,
+            subscribers=subscribers,
+        ).run()
+
+    def update_command(
         self,
         autopilot_id: str,
         *,
@@ -466,7 +664,7 @@ class AutopilotResource(BaseResource):
         issue_title_template: str | None = None,
         subscribers: tuple[str, ...] | None = None,
         clear_subscribers: bool = False,
-    ) -> Autopilot:
+    ) -> Command[Autopilot]:
         if clear_subscribers and subscribers is not None:
             raise ValueError("clear_subscribers and subscribers are mutually exclusive")
         if subscribers is not None and any(not ref.strip() for ref in subscribers):
@@ -493,27 +691,59 @@ class AutopilotResource(BaseResource):
         elif subscribers is not None:
             for ref in subscribers:
                 args.extend(["--subscriber", ref])
-        return self._bind_autopilot(
-            _autopilot_from_wire(self._run_json_decode(tuple(args), _AutopilotWire))
-        )
+        return self._decoded_command(tuple(args), _AutopilotWire)._map(self._bind_autopilot_wire)
+
+    def update(
+        self,
+        autopilot_id: str,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+        agent: str | None = None,
+        project_id: str | None = None,
+        priority: str | None = None,
+        status: str | None = None,
+        execution_mode: AutopilotExecutionMode | None = None,
+        issue_title_template: str | None = None,
+        subscribers: tuple[str, ...] | None = None,
+        clear_subscribers: bool = False,
+    ) -> Autopilot:
+        return self.update_command(
+            autopilot_id,
+            title=title,
+            description=description,
+            agent=agent,
+            project_id=project_id,
+            priority=priority,
+            status=status,
+            execution_mode=execution_mode,
+            issue_title_template=issue_title_template,
+            subscribers=subscribers,
+            clear_subscribers=clear_subscribers,
+        ).run()
+
+    def delete_command(self, autopilot_id: str) -> Command[None]:
+        return self._none_command(("autopilot", "delete", autopilot_id))
 
     def delete(self, autopilot_id: str) -> None:
-        self._transport.run_text(("autopilot", "delete", autopilot_id))
+        self.delete_command(autopilot_id).run()
+
+    def trigger_command(self, autopilot_id: str) -> Command[AutopilotRun]:
+        validate_nonblank(autopilot_id)
+        return self._decoded_command(
+            ("autopilot", "trigger", autopilot_id), _AutopilotRunWire
+        )._map(self._bind_autopilot_run)
 
     def trigger(self, autopilot_id: str) -> AutopilotRun:
-        validate_nonblank(autopilot_id)
-        run = _autopilot_run_from_wire(
-            self._run_json_decode(("autopilot", "trigger", autopilot_id), _AutopilotRunWire)
-        )
-        return run._with_client(self._client)
+        return self.trigger_command(autopilot_id).run()
 
-    def history(
+    def history_command(
         self,
         autopilot_id: str,
         *,
         limit: int | None = None,
         offset: int | None = None,
-    ) -> AutopilotRunListPage[AutopilotRun]:
+    ) -> Command[AutopilotRunListPage[AutopilotRun]]:
         if limit is not None and limit < 0:
             raise ValueError("limit must be nonnegative")
         if offset is not None and offset < 0:
@@ -523,17 +753,31 @@ class AutopilotResource(BaseResource):
             args.extend(["--limit", str(limit)])
         if offset is not None:
             args.extend(["--offset", str(offset)])
-        page = self._run_json_decode(tuple(args), _AutopilotRunListPageWire)
-        adapted = _autopilot_run_list_page_from_wire(page, limit=limit, offset=offset)
-        return AutopilotRunListPage(
-            runs=tuple(run._with_client(self._client) for run in adapted.runs),
-            total=adapted.total,
-            limit=adapted.limit,
-            offset=adapted.offset,
-            has_more=adapted.has_more,
-        )
 
-    def trigger_add(self, autopilot_id: str, request: AutopilotTriggerCreate) -> AutopilotTrigger:
+        def finalize(wire: _AutopilotRunListPageWire) -> AutopilotRunListPage[AutopilotRun]:
+            page = _autopilot_run_list_page_from_wire(wire, limit=limit, offset=offset)
+            return AutopilotRunListPage(
+                runs=tuple(run._with_client(self._client) for run in page.runs),
+                total=page.total,
+                limit=page.limit,
+                offset=page.offset,
+                has_more=page.has_more,
+            )
+
+        return self._decoded_command(tuple(args), _AutopilotRunListPageWire)._map(finalize)
+
+    def history(
+        self,
+        autopilot_id: str,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> AutopilotRunListPage[AutopilotRun]:
+        return self.history_command(autopilot_id, limit=limit, offset=offset).run()
+
+    def trigger_add_command(
+        self, autopilot_id: str, request: AutopilotTriggerCreate
+    ) -> Command[AutopilotTrigger]:
         _ = cast("object", AUTOPILOT_TRIGGER_ADD_BINDING)
         validate_nonblank(autopilot_id)
         validate_nonblank(request.title)
@@ -546,14 +790,17 @@ class AutopilotResource(BaseResource):
             "--kind",
             request.kind,
         )
-        return trigger_from_wire(self._run_json_decode(args, _AutopilotTriggerWire))
+        return self._decoded_command(args, _AutopilotTriggerWire)._map(trigger_from_wire)
 
-    def trigger_update(
+    def trigger_add(self, autopilot_id: str, request: AutopilotTriggerCreate) -> AutopilotTrigger:
+        return self.trigger_add_command(autopilot_id, request).run()
+
+    def trigger_update_command(
         self,
         autopilot_id: str,
         trigger_id: str,
         request: AutopilotTriggerUpdate,
-    ) -> AutopilotTrigger:
+    ) -> Command[AutopilotTrigger]:
         _ = cast("object", AUTOPILOT_TRIGGER_UPDATE_BINDING)
         validate_nonblank(autopilot_id)
         validate_nonblank(trigger_id)
@@ -562,13 +809,24 @@ class AutopilotResource(BaseResource):
             args.extend(["--title", request.title])
         if request.kind is not msgspec.UNSET:
             args.extend(["--kind", request.kind])
-        return trigger_from_wire(self._run_json_decode(tuple(args), _AutopilotTriggerWire))
+        return self._decoded_command(tuple(args), _AutopilotTriggerWire)._map(trigger_from_wire)
 
-    def trigger_delete(self, autopilot_id: str, trigger_id: str) -> None:
+    def trigger_update(
+        self,
+        autopilot_id: str,
+        trigger_id: str,
+        request: AutopilotTriggerUpdate,
+    ) -> AutopilotTrigger:
+        return self.trigger_update_command(autopilot_id, trigger_id, request).run()
+
+    def trigger_delete_command(self, autopilot_id: str, trigger_id: str) -> Command[None]:
         _ = cast("object", AUTOPILOT_TRIGGER_DELETE_BINDING)
         validate_nonblank(autopilot_id)
         validate_nonblank(trigger_id)
-        self._transport.run_text(("autopilot", "trigger-delete", autopilot_id, trigger_id))
+        return self._none_command(("autopilot", "trigger-delete", autopilot_id, trigger_id))
+
+    def trigger_delete(self, autopilot_id: str, trigger_id: str) -> None:
+        self.trigger_delete_command(autopilot_id, trigger_id).run()
 
     def _bind_autopilot(
         self,
@@ -583,3 +841,9 @@ class AutopilotResource(BaseResource):
         if subscribers is not msgspec.UNSET:
             autopilot = msgspec.structs.replace(autopilot, subscribers=subscribers)
         return autopilot
+
+    def _bind_autopilot_wire(self, wire: _AutopilotWire) -> Autopilot:
+        return self._bind_autopilot(_autopilot_from_wire(wire))
+
+    def _bind_autopilot_run(self, wire: _AutopilotRunWire) -> AutopilotRun:
+        return _autopilot_run_from_wire(wire)._with_client(self._client)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import sys
 from dataclasses import dataclass
+from subprocess import CompletedProcess
 
 import pytest
 
@@ -85,6 +86,87 @@ def test_transport_redacts_split_token_args():
     redacted = redact_argv(("multica", "auth", "login", "--token", "secret123"))
     assert "secret123" not in " ".join(redacted)
     assert redacted[-1] == "***"
+
+
+def test_command_plan_repr_never_exposes_secret_bearing_state() -> None:
+    from multica_py.client import MulticaClient
+
+    client = MulticaClient(
+        ClientConfig(environment=(("MULTICA_TOKEN", "env-secret"),)),
+    )
+    command = client.auth.login_command("argv-secret")
+
+    rendered = " ".join((repr(command), repr(command._plan), repr(command._plan.steps[0])))
+    assert "argv-secret" not in rendered
+    assert "env-secret" not in rendered
+
+
+def test_client_config_rejects_server_url_userinfo() -> None:
+    with pytest.raises(ValueError, match="must not contain username or password"):
+        ClientConfig(server_url="https://alice:s3cr3t@example.com")
+
+
+@pytest.mark.parametrize(
+    ("server_url", "secret"),
+    (
+        ("https://example.com/api?access_token=query-secret", "query-secret"),
+        ("https://example.com/api#fragment-secret", "fragment-secret"),
+    ),
+)
+def test_client_config_rejects_server_url_query_or_fragment(server_url: str, secret: str) -> None:
+    with pytest.raises(ValueError, match="must not contain query or fragment") as excinfo:
+        ClientConfig(server_url=server_url)
+    assert secret not in str(excinfo.value)
+
+
+def test_server_url_query_secret_is_redacted_across_public_surfaces(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import multica_py.config as config_module
+    from multica_py.client import MulticaClient
+
+    query_secret = "query-secret"
+    server_url = f"https://example.com/api?access_token={query_secret}"
+    monkeypatch.setattr(config_module, "_validate_server_url", lambda url: None)
+    config = ClientConfig(server_url=server_url)
+    command = MulticaClient(config).auth.status_command()
+
+    assert query_secret not in " ".join(command.commands)
+    assert query_secret not in repr(command)
+    assert "access_token=***" in " ".join(command.commands)
+
+    executed: list[tuple[str, ...]] = []
+
+    def fake_run_with_timeout(
+        argv: tuple[str, ...],
+        *,
+        stdin: bytes | None,
+        timeout: datetime.timedelta | None,
+        cwd: str | None,
+        env: dict[str, str],
+    ) -> CompletedProcess[bytes]:
+        del stdin, timeout, cwd, env
+        executed.append(argv)
+        return CompletedProcess(
+            argv,
+            2,
+            stdout=f"stdout {query_secret}".encode(),
+            stderr=f"stderr {query_secret}".encode(),
+        )
+
+    monkeypatch.setattr("multica_py._internal.transport.run_with_timeout", fake_run_with_timeout)
+    transport = CliTransport(config)
+    with pytest.raises(NetworkError) as excinfo:
+        transport.run_text(("auth", "status"))
+
+    exc = excinfo.value
+    assert executed == [("multica", "--server-url", server_url, "auth", "status")]
+    assert query_secret not in exc.argv
+    assert query_secret not in exc.stdout
+    assert query_secret not in exc.stderr
+    assert "***" in exc.argv[2]
+    assert "***" in exc.stdout
+    assert "***" in exc.stderr
 
 
 def test_transport_environment_isolation():
@@ -206,6 +288,55 @@ def test_transport_warn_policy_rejects_unparseable_version_output_from_check():
     transport = CliTransport(config)
     with pytest.warns(UserWarning, match="Failed to parse CLI version output"):
         transport._check_compat()
+
+
+@pytest.mark.parametrize("policy", (CompatibilityPolicy.strict, CompatibilityPolicy.warn))
+def test_snapshot_transports_share_compatibility_preflight_cache(
+    policy: CompatibilityPolicy,
+) -> None:
+    class RecordingTransport(CliTransport):
+        def __init__(self, config: ClientConfig) -> None:
+            super().__init__(config)
+            self.commands: list[tuple[str, ...]] = []
+
+        def _execute(
+            self,
+            command_args: tuple[str, ...],
+            *,
+            check_compat: bool = True,
+            stdin: bytes | None = None,
+            timeout: datetime.timedelta | None = None,
+        ) -> RawCommandResult:
+            del stdin, timeout
+            if check_compat:
+                self._check_compat()
+            self.commands.append(command_args)
+            stdout = b'{"version":"1.0.0"}' if command_args == ("version",) else b"{}"
+            return RawCommandResult(
+                argv=("multica", *command_args),
+                exit_code=0,
+                stdout=stdout,
+                stderr=b"",
+                duration=datetime.timedelta(),
+            )
+
+    config = ClientConfig(
+        compatibility=policy,
+        min_cli_version="0.0.0",
+        max_cli_version="2.0.0",
+    )
+    transport = RecordingTransport(config)
+    from multica_py.resources.auth import AuthResource
+
+    auth = AuthResource(transport, config)
+    auth.status()
+    auth.logout()
+
+    assert transport.commands == [
+        ("version",),
+        ("auth", "status", "--output", "json"),
+        ("auth", "logout", "--output", "json"),
+    ]
 
 
 def test_transport_strict_policy_rejects_unparseable_version_output_from_check():

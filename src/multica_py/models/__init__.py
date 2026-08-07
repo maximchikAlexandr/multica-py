@@ -1,7 +1,4 @@
-from multica_py.models.autopilots import (
-    AutopilotTriggerCreate,
-    AutopilotTriggerUpdate,
-)
+from multica_py.models.autopilots import AutopilotTriggerCreate, AutopilotTriggerUpdate
 from multica_py.models.issues import IssueChildrenResult
 from multica_py.models.project_resources import (
     LocalDirectoryResourceRef,

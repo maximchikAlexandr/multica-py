@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import datetime
 import re
-from typing import TYPE_CHECKING, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypeVar, cast
 
 import msgspec
 
+from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.specs import TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _CommentThreadWire,
@@ -29,6 +32,8 @@ from multica_py.resources._base import BaseResource
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
+
+P = TypeVar("P")
 
 _CURSOR_PATTERN = re.compile(r"(?:next[_ -]?cursor|cursor)[:=]\s*(\S+)", re.IGNORECASE)
 _BEFORE_PATTERN = re.compile(r"(?:before|next[_ -]?before)[:=]\s*(\S+)", re.IGNORECASE)
@@ -102,7 +107,27 @@ class CommentThread(_BoundEntity):  # type: ignore[misc]
                     next_cursor=cast("CommentCursor | None", page.next_cursor),
                 )
 
-            _comments: CursorLazyCollection[Comment] = CursorLazyCollection(page_loader)
+            def page_command_loader(cursor: CommentCursor | None) -> Command[CursorPage[Comment]]:
+                request = CommentListThreadRequest(
+                    issue_id=issue_id,
+                    thread_id=thread_id,
+                    cursor=cursor,
+                    limit=50,
+                )
+                return _adapt_cursor_page_command(
+                    client.issues.comments.list_thread_command(request),
+                    lambda page: CursorPage(
+                        items=tuple(
+                            _bind_comment(item, client)
+                            for item in cast("tuple[Comment, ...]", getattr(page, "items"))
+                        ),
+                        next_cursor=cast("CommentCursor | None", getattr(page, "next_cursor")),
+                    ),
+                )
+
+            _comments: CursorLazyCollection[Comment] = CursorLazyCollection(
+                page_loader, page_command_loader=page_command_loader
+            )
             self._set_runtime("_comments", _comments)
         return self._comments  # type: ignore[return-value]
 
@@ -123,32 +148,53 @@ def _bind_thread(
     return result
 
 
+def _adapt_cursor_page_command(
+    command: Command[object],
+    convert: Callable[[object], CursorPage[P]],
+) -> Command[CursorPage[P]]:
+    return command._map(convert)
+
+
 class IssueCommentResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
 
-    def list(self, issue_id: str) -> tuple[Comment, ...]:
-        return tuple(
-            _bind_comment(comment_from_wire(item), self._client)
-            for item in self._run_json_decode_list(
-                ("issue", "comment", "list", issue_id), _CommentWire
+    def list_command(self, issue_id: str) -> Command[tuple[Comment, ...]]:
+        return self._decoded_list_command(
+            ("issue", "comment", "list", issue_id), _CommentWire
+        )._map(
+            lambda items: tuple(
+                _bind_comment(comment_from_wire(item), self._client) for item in items
             )
         )
 
-    def list_flat(self, request: CommentListFlatRequest) -> Page[Comment]:
+    def list(self, issue_id: str) -> tuple[Comment, ...]:
+        return self.list_command(issue_id).run()
+
+    def list_flat_command(self, request: CommentListFlatRequest) -> Command[Page[Comment]]:
         args = ["issue", "comment", "list", request.issue_id]
         since = _format_since(request.since)
         if since is not None:
             args.extend(["--since", since])
-        result = self._transport.run_text((*args, "--output", "json"))
-        return Page(
-            items=tuple(
-                _bind_comment(item, self._client) for item in self._run_decode_comments(result.text)
-            ),
-            next_cursor=_extract_cursor(result.stderr),
+
+        def finalize(results: tuple[object, ...]) -> Page[Comment]:
+            result = cast("TextResult", results[0])
+            return Page(
+                items=tuple(
+                    _bind_comment(item, self._client)
+                    for item in self._run_decode_comments(result.text)
+                ),
+                next_cursor=_extract_cursor(result.stderr),
+            )
+
+        return self._plan(
+            steps=(_Step((*args, "--output", "json"), "run_text"),), finalize=finalize
         )
 
-    def list_thread(self, request: CommentListThreadRequest) -> Page[Comment]:
+    def list_flat(self, request: CommentListFlatRequest) -> Page[Comment]:
+        return self.list_flat_command(request).run()
+
+    def list_thread_command(self, request: CommentListThreadRequest) -> Command[Page[Comment]]:
         if request.cursor is not None and request.limit is None:
             raise ValueError("cursor requires limit")
         if request.limit is not None and request.limit < 0:
@@ -162,78 +208,106 @@ class IssueCommentResource(BaseResource):
             request.thread_id,
         ]
         if request.cursor is not None:
-            args.extend(["--before", request.cursor.before])
-            args.extend(["--before-id", request.cursor.before_id])
+            args.extend(
+                ["--before", request.cursor.before, "--before-id", request.cursor.before_id]
+            )
         if request.limit is not None:
             args.extend(["--tail", str(request.limit)])
         since = _format_since(request.since)
         if since is not None:
             args.extend(["--since", since])
-        result = self._transport.run_text((*args, "--output", "json"))
-        return Page(
-            items=tuple(
-                _bind_comment(item, self._client) for item in self._run_decode_comments(result.text)
-            ),
-            next_cursor=_extract_cursor(result.stderr),
+
+        def finalize(results: tuple[object, ...]) -> Page[Comment]:
+            result = cast("TextResult", results[0])
+            return Page(
+                items=tuple(
+                    _bind_comment(item, self._client)
+                    for item in self._run_decode_comments(result.text)
+                ),
+                next_cursor=_extract_cursor(result.stderr),
+            )
+
+        return self._plan(
+            steps=(_Step((*args, "--output", "json"), "run_text"),), finalize=finalize
         )
 
-    def list_recent(self, request: CommentListRecentRequest) -> Page[CommentThread]:
+    def list_thread(self, request: CommentListThreadRequest) -> Page[Comment]:
+        return self.list_thread_command(request).run()
+
+    def list_recent_command(
+        self, request: CommentListRecentRequest
+    ) -> Command[Page[CommentThread]]:
         if request.limit < 1:
             raise ValueError("limit must be positive")
         args = ["issue", "comment", "list", request.issue_id, "--recent", str(request.limit)]
         if request.cursor is not None:
-            args.extend(["--before", request.cursor.before])
-            args.extend(["--before-id", request.cursor.before_id])
+            args.extend(
+                ["--before", request.cursor.before, "--before-id", request.cursor.before_id]
+            )
         since = _format_since(request.since)
         if since is not None:
             args.extend(["--since", since])
-        result = self._transport.run_text((*args, "--output", "json"))
-        return Page(
-            items=tuple(
-                _bind_thread(item, self._client, request.issue_id)
-                for item in self._run_decode_threads(result.text)
-            ),
-            next_cursor=_extract_cursor(result.stderr),
+
+        def finalize(results: tuple[object, ...]) -> Page[CommentThread]:
+            result = cast("TextResult", results[0])
+            return Page(
+                items=tuple(
+                    _bind_thread(item, self._client, request.issue_id)
+                    for item in self._run_decode_threads(result.text)
+                ),
+                next_cursor=_extract_cursor(result.stderr),
+            )
+
+        return self._plan(
+            steps=(_Step((*args, "--output", "json"), "run_text"),), finalize=finalize
         )
+
+    def list_recent(self, request: CommentListRecentRequest) -> Page[CommentThread]:
+        return self.list_recent_command(request).run()
+
+    def add_command(self, issue_id: str, body: str) -> Command[Comment]:
+        return self._decoded_command(
+            ("issue", "comment", "add", issue_id, "--content", body), _CommentWire
+        )._map(lambda wire: _bind_comment(comment_from_wire(wire), self._client))
 
     def add(self, issue_id: str, body: str) -> Comment:
-        return _bind_comment(
-            comment_from_wire(
-                self._run_json_decode(
-                    ("issue", "comment", "add", issue_id, "--content", body), _CommentWire
-                )
+        return self.add_command(issue_id, body).run()
+
+    def reply_command(self, issue_id: str, thread_id: str, body: str) -> Command[Comment]:
+        return self._decoded_command(
+            (
+                "issue",
+                "comment",
+                "add",
+                issue_id,
+                "--content",
+                body,
+                "--parent",
+                thread_id,
             ),
-            self._client,
-        )
+            _CommentWire,
+        )._map(lambda wire: _bind_comment(comment_from_wire(wire), self._client))
 
     def reply(self, issue_id: str, thread_id: str, body: str) -> Comment:
-        return _bind_comment(
-            comment_from_wire(
-                self._run_json_decode(
-                    (
-                        "issue",
-                        "comment",
-                        "add",
-                        issue_id,
-                        "--content",
-                        body,
-                        "--parent",
-                        thread_id,
-                    ),
-                    _CommentWire,
-                )
-            ),
-            self._client,
-        )
+        return self.reply_command(issue_id, thread_id, body).run()
+
+    def delete_command(self, comment_id: str) -> Command[None]:
+        return self._none_command(("issue", "comment", "delete", comment_id))
 
     def delete(self, comment_id: str) -> None:
-        self._transport.run_text(("issue", "comment", "delete", comment_id))
+        self.delete_command(comment_id).run()
+
+    def resolve_command(self, thread_id: str) -> Command[None]:
+        return self._none_command(("issue", "comment", "resolve", thread_id))
 
     def resolve(self, thread_id: str) -> None:
-        self._transport.run_text(("issue", "comment", "resolve", thread_id))
+        self.resolve_command(thread_id).run()
+
+    def unresolve_command(self, thread_id: str) -> Command[None]:
+        return self._none_command(("issue", "comment", "unresolve", thread_id))
 
     def unresolve(self, thread_id: str) -> None:
-        self._transport.run_text(("issue", "comment", "unresolve", thread_id))
+        self.unresolve_command(thread_id).run()
 
     def _run_decode_comments(self, payload: str) -> tuple[Comment, ...]:
         return tuple(

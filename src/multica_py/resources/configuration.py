@@ -1,14 +1,24 @@
 from __future__ import annotations
 
+from multica_py._internal.commands import Command
 from multica_py.resources._base import BaseResource
 
 
 class ConfigurationResource(BaseResource):
+    def show_command(self) -> Command[str]:
+        return self._text_command(("config", "show"))
+
     def show(self) -> str:
-        return self._transport.run_text(("config", "show")).text
+        return self.show_command().run()
+
+    def get_command(self, key: str) -> Command[str]:
+        return self._text_command(("config", "get", key))
 
     def get(self, key: str) -> str:
-        return self._transport.run_text(("config", "get", key)).text
+        return self.get_command(key).run()
+
+    def set_command(self, key: str, value: str) -> Command[None]:
+        return self._none_command(("config", "set", key, value))
 
     def set(self, key: str, value: str) -> None:
-        self._transport.run_text(("config", "set", key, value))
+        self.set_command(key, value).run()

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
+from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.specs import TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import MetadataValueType
@@ -26,13 +29,21 @@ class IssueMetadataResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
 
-    def list(self, issue_id: str) -> dict[str, MetadataValue]:
-        result = self._transport.run_bytes(
-            ("issue", "metadata", "list", issue_id, "--output", "json")
-        )
-        return decode_json(result.stdout, dict[str, MetadataValue], command=" ".join(result.argv))
+    def list_command(self, issue_id: str) -> Command[dict[str, MetadataValue]]:
+        args = ("issue", "metadata", "list", issue_id, "--output", "json")
 
-    def query(self, request: MetadataListRequest) -> MetadataPage:
+        def decode(stdout: bytes, command: str) -> object:
+            return decode_json(stdout, dict[str, MetadataValue], command=command)
+
+        return self._plan(
+            steps=(_Step(args, "run_bytes", decode=decode),),
+            finalize=lambda results: cast("dict[str, MetadataValue]", results[0]),
+        )
+
+    def list(self, issue_id: str) -> dict[str, MetadataValue]:
+        return self.list_command(issue_id).run()
+
+    def query_command(self, request: MetadataListRequest) -> Command[MetadataPage]:
         args = ["issue", "metadata", "list", request.issue_id]
         for predicate in request.predicates:
             args.extend(_predicate_args(predicate))
@@ -40,19 +51,34 @@ class IssueMetadataResource(BaseResource):
             args.extend(["--cursor", request.cursor])
         if request.limit is not None:
             args.extend(["--limit", str(request.limit)])
-        result = self._transport.run_text((*args, "--output", "json"))
-        items = tuple(decode_json(result.text.encode("utf-8"), list[MetadataEntry]))
-        return MetadataPage(items=items, next_cursor=_extract_metadata_cursor(result.stderr))
 
-    def get(self, issue_id: str, key: str) -> MetadataEntry:
-        return self._run_json_decode(
+        def finalize(results: tuple[object, ...]) -> MetadataPage:
+            result = cast("TextResult", results[0])
+            items = tuple(decode_json(result.text.encode("utf-8"), list[MetadataEntry]))
+            return MetadataPage(items=items, next_cursor=_extract_metadata_cursor(result.stderr))
+
+        return self._plan(
+            steps=(_Step((*args, "--output", "json"), "run_text"),), finalize=finalize
+        )
+
+    def query(self, request: MetadataListRequest) -> MetadataPage:
+        return self.query_command(request).run()
+
+    def get_command(self, issue_id: str, key: str) -> Command[MetadataEntry]:
+        return self._decoded_command(
             ("issue", "metadata", "get", issue_id, "--key", key), MetadataEntry
         )
 
-    def set(self, issue_id: str, key: str, value: MetadataValue) -> MetadataEntry:
-        return self.set_typed(MetadataSetRequest(issue_id=issue_id, key=key, value=value))
+    def get(self, issue_id: str, key: str) -> MetadataEntry:
+        return self.get_command(issue_id, key).run()
 
-    def set_typed(self, request: MetadataSetRequest) -> MetadataEntry:
+    def set_command(self, issue_id: str, key: str, value: MetadataValue) -> Command[MetadataEntry]:
+        return self.set_typed_command(MetadataSetRequest(issue_id=issue_id, key=key, value=value))
+
+    def set(self, issue_id: str, key: str, value: MetadataValue) -> MetadataEntry:
+        return self.set_command(issue_id, key, value).run()
+
+    def set_typed_command(self, request: MetadataSetRequest) -> Command[MetadataEntry]:
         args = [
             "issue",
             "metadata",
@@ -66,10 +92,16 @@ class IssueMetadataResource(BaseResource):
         inferred = request.value_type or _infer_metadata_value_type(request.value)
         if inferred is not None:
             args.extend(["--type", inferred.value])
-        return self._run_json_decode(tuple(args), MetadataEntry)
+        return self._decoded_command(tuple(args), MetadataEntry)
+
+    def set_typed(self, request: MetadataSetRequest) -> MetadataEntry:
+        return self.set_typed_command(request).run()
+
+    def delete_command(self, issue_id: str, key: str) -> Command[None]:
+        return self._none_command(("issue", "metadata", "delete", issue_id, "--key", key))
 
     def delete(self, issue_id: str, key: str) -> None:
-        self._transport.run_text(("issue", "metadata", "delete", issue_id, "--key", key))
+        self.delete_command(issue_id, key).run()
 
 
 def _infer_metadata_value_type(value: MetadataValue) -> MetadataValueType | None:

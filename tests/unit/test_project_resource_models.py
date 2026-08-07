@@ -125,6 +125,11 @@ _REJECT_CASES = (
         "local_path must be an absolute path",
     ),
     RejectCase(
+        "empty-reference-daemon-id",
+        lambda: LocalDirectoryResourceRef(local_path="/tmp/sandbox", daemon_id=" "),
+        "daemon_id must be non-empty",
+    ),
+    RejectCase(
         "empty-daemon-id",
         lambda: ProjectResourceAddLocalDirectoryRequest(local_path="/tmp/sandbox", daemon_id=""),
         "daemon_id must be non-empty",

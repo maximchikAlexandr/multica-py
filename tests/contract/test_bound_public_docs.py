@@ -55,10 +55,30 @@ MIGRATION_CASES = (
 )
 
 
+COMMAND_DOCUMENTATION_CASES = (
+    DocumentationCase(ROOT / "docs/api.md", "Command[T]"),
+    DocumentationCase(ROOT / "docs/api.md", "commands` is always a tuple"),
+    DocumentationCase(ROOT / "docs/api.md", "Preview performs no"),
+    DocumentationCase(ROOT / "docs/api.md", "immutable plan"),
+    DocumentationCase(ROOT / "docs/service-usage.md", 'client.issues.get_command("issue_123")'),
+    DocumentationCase(ROOT / "docs/service-usage.md", "${create.id}"),
+    DocumentationCase(ROOT / "docs/migration.md", "only new public type is"),
+)
+
+
 @pytest.mark.parametrize(
     "case", MIGRATION_CASES, ids=tuple(case.required_text for case in MIGRATION_CASES)
 )
 def test_migration_table_covers_required_surface(case: DocumentationCase) -> None:
+    assert case.required_text in case.path.read_text()
+
+
+@pytest.mark.parametrize(
+    "case",
+    COMMAND_DOCUMENTATION_CASES,
+    ids=tuple(case.required_text for case in COMMAND_DOCUMENTATION_CASES),
+)
+def test_command_preview_documentation_is_pinned(case: DocumentationCase) -> None:
     assert case.required_text in case.path.read_text()
 
 

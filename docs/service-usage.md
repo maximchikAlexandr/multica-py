@@ -39,6 +39,33 @@ issue = workspace_client.issues.get("issue_456")
 Derived views keep independent immutable configuration and share the original
 process semaphore. Closing one view does not close another.
 
+## Inspect a command before running it
+
+Eager methods remain the default. When an integration needs an audit trail or
+debuggable CLI routing, use the matching `*_command()` sibling. Construction
+performs no transport I/O, `commands` is a tuple of redacted shell previews,
+and `run()` executes the same immutable plan:
+
+```python
+command = client.issues.get_command("issue_123")
+print(command.commands)
+issue = command.run()
+```
+
+Composite operations expose their ordered steps and result references. For
+example, creating labels with an issue shows the create step, one label-add
+step per label, and the final get step; the add and get steps refer to the
+created object as `${create.id}`:
+
+```python
+command = client.issues.create_command(
+    title="Deploy",
+    label_ids=("release", "queued"),
+)
+assert any("${create.id}" in rendered for rendered in command.commands)
+issue = command.run()
+```
+
 ## Direct keyword vs request object
 
 Most methods accept input either as a request object or as direct keyword arguments. The two styles are mutually exclusive — passing both raises `TypeError("Pass either a request object or keyword arguments, not both.")`. Passing neither raises `TypeError("Pass a ... or its keyword arguments; got neither.")`.

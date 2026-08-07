@@ -2,14 +2,29 @@ from __future__ import annotations
 
 from typing import overload
 
+from multica_py._internal.commands import Command
 from multica_py.models.system import AuthenticationStatus
 from multica_py.process import ManagedProcess
 from multica_py.resources._base import BaseResource
 
 
 class AuthResource(BaseResource):
+    def status_command(self) -> Command[AuthenticationStatus]:
+        return self._decoded_command(("auth", "status"), AuthenticationStatus)
+
     def status(self) -> AuthenticationStatus:
-        return self._run_json_decode(("auth", "status"), AuthenticationStatus)
+        return self.status_command().run()
+
+    @overload
+    def login_command(self, token: str) -> Command[str]: ...
+
+    @overload
+    def login_command(self, token: None = None) -> Command[ManagedProcess]: ...
+
+    def login_command(self, token: str | None = None) -> Command[str] | Command[ManagedProcess]:
+        if token is not None:
+            return self._text_command(("auth", "login", "--token", token))
+        return self._spawn_command(("auth", "login"))
 
     @overload
     def login(self, token: str) -> str: ...
@@ -18,10 +33,10 @@ class AuthResource(BaseResource):
     def login(self, token: None = None) -> ManagedProcess: ...
 
     def login(self, token: str | None = None) -> str | ManagedProcess:
-        if token is not None:
-            # ponytail: multica binary only accepts --token on argv, visible via ps on shared hosts; redaction scrubs it from logs/errors. Env-based token not supported by upstream CLI.
-            return self._transport.run_text(("auth", "login", "--token", token)).text
-        return self._transport.spawn(("auth", "login"))
+        return self.login_command(token).run()
+
+    def logout_command(self) -> Command[AuthenticationStatus]:
+        return self._decoded_command(("auth", "logout"), AuthenticationStatus)
 
     def logout(self) -> AuthenticationStatus:
-        return self._run_json_decode(("auth", "logout"), AuthenticationStatus)
+        return self.logout_command().run()

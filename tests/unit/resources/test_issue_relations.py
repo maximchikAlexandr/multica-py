@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal, cast
 from unittest.mock import MagicMock
 
 import pytest
 
+from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.wire_models import _issue_from_wire, _IssueWire
@@ -37,6 +39,7 @@ from multica_py.models.relations import (
     OffsetLazyCollection,
     OffsetPage,
 )
+from multica_py.resources._base import BaseResource
 from multica_py.resources.issue_comments import Comment, CommentThread
 from multica_py.resources.issues import Issue, IssueResource, TaskRun
 
@@ -190,6 +193,11 @@ def _issue(client: MulticaClient | None = None) -> Issue:
 
 def _client() -> MagicMock:
     client = MagicMock()
+    command_resource = BaseResource(MagicMock(), ClientConfig())
+
+    def empty_command(loader: Callable[[], object]) -> Command[object]:
+        return command_resource._plan(steps=(), finalize=lambda _results: loader())
+
     client.issues.comments.list_flat.return_value = Page(items=())
     client.issues.comments.list_recent.return_value = Page(items=(), next_cursor=None)
     client.issues.comments.list_thread.return_value = Page(items=(), next_cursor=None)
@@ -199,6 +207,58 @@ def _client() -> MagicMock:
     client.issues.pull_requests.return_value = ()
     client.issues.children.return_value = IssueChildrenResult()
     client.issues.runs.return_value = ()
+    client.issues.comments.list_flat_command = lambda request: empty_command(
+        lambda: client.issues.comments.list_flat(request)
+    )
+    client.issues.comments.list_recent_command = lambda request: empty_command(
+        lambda: client.issues.comments.list_recent(request)
+    )
+    client.issues.comments.list_thread_command = lambda request: empty_command(
+        lambda: client.issues.comments.list_thread(request)
+    )
+    client.issues.labels.list_command = lambda issue_id: empty_command(
+        lambda: client.issues.labels.list(issue_id)
+    )
+    client.issues.subscribers.list_command = lambda issue_id: empty_command(
+        lambda: client.issues.subscribers.list(issue_id)
+    )
+    client.issues.metadata.list_command = lambda issue_id: empty_command(
+        lambda: client.issues.metadata.list(issue_id)
+    )
+    client.issues.pull_requests_command = lambda issue_id: empty_command(
+        lambda: client.issues.pull_requests(issue_id)
+    )
+    client.issues.children_command = lambda issue_id: empty_command(
+        lambda: client.issues.children(issue_id)
+    )
+
+    def runs_command(issue_id):
+        def loader():
+            return tuple(
+                TaskRun(
+                    id=run.id,
+                    status=run.status,
+                    agent_id=run.agent_id,
+                    started_at=run.started_at,
+                    completed_at=run.completed_at,
+                    _client=client,
+                    _issue_id=issue_id,
+                )
+                for run in client.issues.runs(issue_id)
+            )
+
+        return empty_command(loader)
+
+    client.issues.runs_command = runs_command
+    client.issues.run_messages_command = lambda run_id, *, issue_id=None: empty_command(
+        lambda: client.issues.run_messages(run_id, issue_id=issue_id)
+    )
+    client.issues.comments.add_command = lambda issue_id, body: empty_command(
+        lambda: client.issues.comments.add(issue_id, body)
+    )
+    client.issues.comments.reply_command = lambda issue_id, thread_id, body: empty_command(
+        lambda: client.issues.comments.reply(issue_id, thread_id, body)
+    )
     return client
 
 
@@ -436,20 +496,22 @@ def _direct_result(
     operation: Literal["list", "list_flat", "list_thread", "list_recent", "add", "reply", "runs"],
 ) -> object:
     if operation == "list":
-        return resource.comments.list("iss_1")
+        return resource.comments.list_command("iss_1").run()
     if operation == "list_flat":
-        return resource.comments.list_flat(CommentListFlatRequest(issue_id="iss_1"))
+        return resource.comments.list_flat_command(CommentListFlatRequest(issue_id="iss_1")).run()
     if operation == "list_thread":
-        return resource.comments.list_thread(
+        return resource.comments.list_thread_command(
             CommentListThreadRequest(issue_id="iss_1", thread_id="th_1", limit=10)
-        )
+        ).run()
     if operation == "list_recent":
-        return resource.comments.list_recent(CommentListRecentRequest(issue_id="iss_1"))
+        return resource.comments.list_recent_command(
+            CommentListRecentRequest(issue_id="iss_1")
+        ).run()
     if operation == "add":
-        return resource.comments.add("iss_1", "comment")
+        return resource.comments.add_command("iss_1", "comment").run()
     if operation == "reply":
-        return resource.comments.reply("iss_1", "th_1", "reply")
-    return resource.runs("iss_1")
+        return resource.comments.reply_command("iss_1", "th_1", "reply").run()
+    return resource.runs_command("iss_1").run()
 
 
 def _bound_item(result: object) -> Comment | CommentThread | TaskRun:
@@ -512,7 +574,11 @@ def test_issue_aggregate_and_mapping_adapters(method: str, stdout: bytes, expect
     transport.run_bytes.return_value = _raw(stdout)
     resource = IssueResource(transport, ClientConfig())
 
-    result = resource.metadata.list("i1") if method == "metadata" else resource.pull_requests("i1")
+    result = (
+        resource.metadata.list_command("i1").run()
+        if method == "metadata"
+        else resource.pull_requests_command("i1").run()
+    )
 
     assert result == expected
 
@@ -528,11 +594,11 @@ def test_issue_legacy_list_shapes_are_rejected(method: str, stdout: bytes) -> No
 
     with pytest.raises(OutputShapeError):
         if method == "metadata":
-            resource.metadata.list("i1")
+            resource.metadata.list_command("i1").run()
         elif method == "children":
-            resource.children("i1")
+            resource.children_command("i1").run()
         else:
-            resource.pull_requests("i1")
+            resource.pull_requests_command("i1").run()
 
 
 def test_run_messages_uses_task_id_and_optional_issue_flag() -> None:
@@ -540,7 +606,7 @@ def test_run_messages_uses_task_id_and_optional_issue_flag() -> None:
     transport.run_bytes.return_value = _raw(b"[]")
     resource = IssueResource(transport, ClientConfig())
 
-    resource.run_messages("run_1", issue_id="issue_1")
+    resource.run_messages_command("run_1", issue_id="issue_1").run()
 
     transport.run_bytes.assert_called_once_with(
         (
@@ -564,7 +630,7 @@ def test_issue_addressing_commands_are_exact(case: IssueAddressingCase) -> None:
     getattr(transport, case.transport_method).return_value = ""
     resource = IssueResource(transport, ClientConfig())
 
-    getattr(resource, case.method)(*case.args)
+    getattr(resource, f"{case.method}_command")(*case.args).run()
 
     selected = getattr(transport, case.transport_method)
     selected.assert_called_once_with(case.expected_argv)

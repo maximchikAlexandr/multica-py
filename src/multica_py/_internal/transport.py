@@ -3,6 +3,8 @@ from __future__ import annotations
 import datetime
 import os
 import re
+from copy import copy
+from dataclasses import dataclass
 
 from multica_py._internal.argv import build_global_args
 from multica_py._internal.compat import check_version_from_config, parse_cli_version
@@ -43,6 +45,11 @@ _NETWORK_MARKERS = (
     "network is unreachable",
     "tls:",
 )
+
+
+@dataclass(slots=True)
+class _CompatibilityState:
+    checked: bool = False
 
 
 def _semantic_exit_code_for_http_status(status: int) -> int | None:
@@ -86,7 +93,7 @@ class CliTransport:
     def __init__(self, config: ClientConfig, semaphore: ProcessSemaphore | None = None) -> None:
         self._config = config
         self._semaphore = semaphore
-        self._version_checked = False
+        self._compatibility_state = _CompatibilityState()
 
     def __enter__(self) -> CliTransport:
         return self
@@ -97,10 +104,18 @@ class CliTransport:
     def close(self) -> None:
         """Release transport-owned resources after subprocess calls."""
 
-    def _build_full_argv(self, command_args: tuple[str, ...]) -> tuple[str, ...]:
+    def _snapshot(self, config: ClientConfig) -> CliTransport:
+        view = copy(self)
+        view._config = config
+        return view
+
+    def build_full_argv(self, command_args: tuple[str, ...]) -> tuple[str, ...]:
         executable = str(self._config.executable)
         global_args = build_global_args(self._config)
         return (executable, *global_args, *command_args)
+
+    def _build_full_argv(self, command_args: tuple[str, ...]) -> tuple[str, ...]:
+        return self.build_full_argv(command_args)
 
     def run_bytes(
         self,
@@ -127,14 +142,15 @@ class CliTransport:
         )
 
     def _check_compat(self) -> None:
-        if self._version_checked or self._config.compatibility.value == "ignore":
-            self._version_checked = True
+        state = self._compatibility_state
+        if state.checked or self._config.compatibility.value == "ignore":
+            state.checked = True
             return
         result = self._execute(("version",), check_compat=False)
         raw = decode_text(result.stdout, command=" ".join(result.argv))
         parsed = parse_cli_version(raw)
         check_version_from_config(parsed, self._config)
-        self._version_checked = True
+        state.checked = True
 
     def _execute(
         self,

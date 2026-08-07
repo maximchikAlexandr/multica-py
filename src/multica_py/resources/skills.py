@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import overload
+from typing import cast, overload
 
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
+from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
@@ -35,11 +36,18 @@ class Skill(_BoundEntity):  # type: ignore[misc]
                 entity_type="Skill", entity_id=self.id, relation_name="files"
             )
             sid = self.id
+            files = client.skills.files
 
             def loader() -> tuple[SkillFile, ...]:
-                return client.skills.files.list(sid)
+                return files.list(sid)
 
-            self._set_runtime("_files", LazyCollection(loader))
+            self._set_runtime(
+                "_files",
+                LazyCollection[SkillFile](
+                    loader,
+                    command_loader=lambda: files.list_command(sid),
+                ),
+            )
         return self._files  # type: ignore[return-value]
 
     def _invalidate_files(self) -> None:
@@ -47,21 +55,29 @@ class Skill(_BoundEntity):  # type: ignore[misc]
             self._files.invalidate()
 
     def upsert_file(self, path: str, content: str) -> SkillFile:
+        return self.upsert_file_command(path, content).run()
+
+    def upsert_file_command(self, path: str, content: str) -> Command[SkillFile]:
         client = self._require_client(
             entity_type="Skill", entity_id=self.id, relation_name="upsert_file"
         )
-        files = client.skills.files
-        result = files.upsert(self.id, path, content)
-        self._invalidate_files()
-        return result
+
+        def invalidate(result: SkillFile) -> SkillFile:
+            self._invalidate_files()
+            return result
+
+        return client.skills.files.upsert_command(self.id, path, content)._map(invalidate)
 
     def delete_file(self, file_id: str) -> None:
+        self.delete_file_command(file_id).run()
+
+    def delete_file_command(self, file_id: str) -> Command[None]:
         client = self._require_client(
             entity_type="Skill", entity_id=self.id, relation_name="delete_file"
         )
-        files = client.skills.files
-        files.delete(self.id, file_id)
-        self._invalidate_files()
+        return client.skills.files.delete_command(self.id, file_id)._map(
+            lambda result: self._invalidate_files()
+        )
 
 
 class SkillResource(BaseResource):
@@ -69,28 +85,70 @@ class SkillResource(BaseResource):
         super().__init__(transport, config)
         self.files = SkillFileResource(transport, config)
 
+    def list_command(self) -> Command[tuple[Skill, ...]]:
+        return self._decoded_list_command(("skill", "list"), Skill)._map(
+            lambda items: tuple(skill._with_client(self._client) for skill in items)
+        )
+
     def list(self) -> tuple[Skill, ...]:
-        items = self._run_json_decode_list(("skill", "list"), Skill)
-        return tuple(s._with_client(self._client) for s in items)
+        return self.list_command().run()
+
+    def get_command(self, skill_id: str) -> Command[Skill]:
+        validate_nonblank(skill_id)
+        return self._decoded_command(("skill", "get", skill_id), Skill)._map(
+            lambda skill: skill._with_client(self._client)
+        )
 
     def get(self, skill_id: str) -> Skill:
-        validate_nonblank(skill_id)
-        s = self._run_json_decode(("skill", "get", skill_id), Skill)
-        return s._with_client(self._client)
+        return self.get_command(skill_id).run()
+
+    @overload
+    def create_command(self, request: SkillCreateRequest, /) -> Command[Skill]: ...
+    @overload
+    def create_command(self, *, name: str, description: str | None = None) -> Command[Skill]: ...
+
+    def create_command(  # type: ignore[misc]
+        self, request: SkillCreateRequest | None = None, /, **kwargs: object
+    ) -> Command[Skill]:
+        req = _resolve_request(request, kwargs, SkillCreateRequest)
+        validate_nonblank(req.name)
+        args = ["skill", "create", "--name", req.name]
+        if req.description is not None:
+            args.extend(["--description", req.description])
+        return self._decoded_command(tuple(args), Skill)._map(
+            lambda skill: skill._with_client(self._client)
+        )
 
     @overload
     def create(self, request: SkillCreateRequest, /) -> Skill: ...
     @overload
     def create(self, *, name: str, description: str | None = None) -> Skill: ...
 
-    def create(self, request: SkillCreateRequest | None = None, /, **kwargs: object) -> Skill:  # type: ignore[misc]
-        req = _resolve_request(request, kwargs, SkillCreateRequest)
-        validate_nonblank(req.name)
-        args = ["skill", "create", "--name", req.name]
+    def create(  # type: ignore[misc]
+        self, request: SkillCreateRequest | None = None, /, **kwargs: object
+    ) -> Skill:
+        return self.create_command(cast("SkillCreateRequest", request), **kwargs).run()
+
+    @overload
+    def update_command(self, skill_id: str, request: SkillUpdateRequest, /) -> Command[Skill]: ...
+    @overload
+    def update_command(
+        self, skill_id: str, *, name: str | None = None, description: str | None = None
+    ) -> Command[Skill]: ...
+
+    def update_command(  # type: ignore[misc]
+        self, skill_id: str, request: SkillUpdateRequest | None = None, /, **kwargs: object
+    ) -> Command[Skill]:
+        validate_nonblank(skill_id)
+        req = _resolve_request(request, kwargs, SkillUpdateRequest)
+        args = ["skill", "update", skill_id]
+        if req.name is not None:
+            args.extend(["--name", req.name])
         if req.description is not None:
             args.extend(["--description", req.description])
-        s = self._run_json_decode(tuple(args), Skill)
-        return s._with_client(self._client)
+        return self._decoded_command(tuple(args), Skill)._map(
+            lambda skill: skill._with_client(self._client)
+        )
 
     @overload
     def update(self, skill_id: str, request: SkillUpdateRequest, /) -> Skill: ...
@@ -102,20 +160,19 @@ class SkillResource(BaseResource):
     def update(  # type: ignore[misc]
         self, skill_id: str, request: SkillUpdateRequest | None = None, /, **kwargs: object
     ) -> Skill:
+        return self.update_command(skill_id, cast("SkillUpdateRequest", request), **kwargs).run()
+
+    def delete_command(self, skill_id: str) -> Command[None]:
         validate_nonblank(skill_id)
-        req = _resolve_request(request, kwargs, SkillUpdateRequest)
-        args = ["skill", "update", skill_id]
-        if req.name is not None:
-            args.extend(["--name", req.name])
-        if req.description is not None:
-            args.extend(["--description", req.description])
-        s = self._run_json_decode(tuple(args), Skill)
-        return s._with_client(self._client)
+        return self._none_command(("skill", "delete", skill_id))
 
     def delete(self, skill_id: str) -> None:
-        validate_nonblank(skill_id)
-        self._transport.run_text(("skill", "delete", skill_id))
+        self.delete_command(skill_id).run()
+
+    def import_from_url_command(self, url: str) -> Command[Skill]:
+        return self._decoded_command(("skill", "import", "--url", url), Skill)._map(
+            lambda skill: skill._with_client(self._client)
+        )
 
     def import_from_url(self, url: str) -> Skill:
-        s = self._run_json_decode(("skill", "import", "--url", url), Skill)
-        return s._with_client(self._client)
+        return self.import_from_url_command(url).run()

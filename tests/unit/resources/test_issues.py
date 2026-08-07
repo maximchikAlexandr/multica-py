@@ -18,6 +18,10 @@ from multica_py._internal.wire_models import (
 )
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
+from multica_py.models.issue_activity import (
+    CommentListFlatRequest,
+    MetadataSetRequest,
+)
 from multica_py.models.issues import (
     InlineDescription,
     IssueAssignmentRequest,
@@ -29,7 +33,11 @@ from multica_py.models.issues import (
     NoDescription,
 )
 from multica_py.models.system import AttachmentResult
-from multica_py.resources.issues import Issue, IssueResource
+from multica_py.resources.issue_comments import IssueCommentResource
+from multica_py.resources.issue_labels import IssueLabelResource
+from multica_py.resources.issue_metadata import IssueMetadataResource
+from multica_py.resources.issue_subscribers import IssueSubscriberResource
+from multica_py.resources.issues import Issue, IssueResource, TaskRun
 
 
 @dataclass(frozen=True)
@@ -164,6 +172,71 @@ def test_issue_resource_list_returns_issue_list_page(mock_transport: MagicMock) 
     mock_transport.run_bytes.return_value.stdout = b'{"issues":[]}'
     page = IssueResource(mock_transport, ClientConfig()).list()
     assert type(page) is IssueListPage
+
+
+def test_issue_entity_commands_route_relations_and_mutations_lazily(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    client = MagicMock()
+    resource = IssueResource(mock_transport, ClientConfig())
+    resource._set_client(client)
+    client.issues = resource
+    issue = Issue(id="i1", title="Issue", status=IssueStatus.todo, _client=client)
+
+    commands = (
+        issue.comments.all_command(),
+        issue.add_comment_command("body"),
+        issue.reply_command("thread", "reply"),
+        issue.add_subscriber_command("u1"),
+        issue.remove_subscriber_command("u1"),
+        issue.set_metadata_command("key", True),
+        issue.delete_metadata_command("key"),
+    )
+
+    assert tuple(command.commands[0] for command in commands) == (
+        "multica issue comment list i1 --output json",
+        "multica issue comment add i1 --content body --output json",
+        "multica issue comment add i1 --content reply --parent thread --output json",
+        "multica issue subscriber add i1 --user-id u1",
+        "multica issue subscriber remove i1 --user-id u1",
+        "multica issue metadata set i1 --key key --value true --type boolean --output json",
+        "multica issue metadata delete i1 --key key",
+    )
+    mock_transport.run_bytes.assert_not_called()
+    mock_transport.run_text.assert_not_called()
+
+
+def test_task_run_messages_command_delegates_to_issue_resource(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    client = MagicMock()
+    resource = IssueResource(mock_transport, ClientConfig())
+    resource._set_client(client)
+    client.issues = resource
+    task_run = TaskRun(id="run1", status="completed", _client=client, _issue_id="i1")
+
+    command = task_run.messages_command()
+
+    assert command.commands == ("multica issue run-messages run1 --issue i1 --output json",)
+    mock_transport.run_bytes.assert_not_called()
+
+
+def test_task_run_messages_relation_command_delegates_to_issue_resource(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    client = MagicMock()
+    resource = IssueResource(mock_transport, ClientConfig())
+    resource._set_client(client)
+    client.issues = resource
+    task_run = TaskRun(id="run1", status="completed", _client=client, _issue_id="i1")
+
+    command = task_run.messages.all_command()
+
+    assert command.commands == ("multica issue run-messages run1 --issue i1 --output json",)
+    mock_transport.run_bytes.assert_not_called()
 
 
 @pytest.mark.parametrize(

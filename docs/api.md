@@ -14,6 +14,20 @@ Migration details and removed/renamed surfaces are documented in
 - `MulticaClient.with_environment(environment)` — clone with merged environment overrides
 - `ClientConfig` — frozen `msgspec.Struct`: `executable`, `server_url`, `workspace_id`, `profile`, `cwd`, `environment` (immutable tuple), `timeout`, `compatibility` (CompatibilityPolicy enum), `debug`, `encoding`, `max_processes`
 
+## Inspectable command plans
+
+Every CLI-executing resource method also has a typed `*_command()` sibling.
+It returns the public `Command[T]` type, where `T` is the same result type as
+the eager method. `Command[T].commands` is always a tuple: it is empty for a
+cache-hit no-op, has one item for a single CLI call, and contains ordered
+commands or reference templates for a composite operation. Preview performs no
+I/O. Calling `run()` executes that same immutable plan and returns `T`.
+
+The preview is shell-rendered and redacted for display; execution still passes
+the original argv values to the transport. Composite plans expose dependencies
+such as `${create.id}` in their ordered command templates. The eager API remains
+the default when inspection is not needed.
+
 ## Resources
 
 All resources accessed as attributes of `MulticaClient`:

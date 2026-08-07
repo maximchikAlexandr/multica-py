@@ -1,3 +1,4 @@
+from multica_py._internal.commands import Command
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.enums import (
@@ -85,6 +86,7 @@ __all__ = [
     "AutopilotTriggerCreate",
     "AutopilotTriggerUpdate",
     "ClientConfig",
+    "Command",
     "CommandCancelledError",
     "CommandExecutionError",
     "CommandTimeoutError",

@@ -44,54 +44,61 @@ def test_release_identity(prepared_client: MulticaClient) -> None:
 
 def test_project_crud(prepared_client: MulticaClient) -> None:
     with ExitStack() as stack:
-        project = prepared_client.projects.create(ProjectCreateRequest(name=_live_name()))
-        stack.callback(prepared_client.projects.delete, project.id)
-        assert prepared_client.projects.get(project.id).id == project.id
+        project = prepared_client.projects.create_command(
+            ProjectCreateRequest(name=_live_name())
+        ).run()
+        stack.callback(prepared_client.projects.delete_command(project.id).run)
+        assert prepared_client.projects.get_command(project.id).run().id == project.id
 
-        updated = prepared_client.projects.update(
+        updated = prepared_client.projects.update_command(
             project.id, ProjectUpdateRequest(name=f"{project.name}-updated")
-        )
+        ).run()
         assert updated.name == f"{project.name}-updated"
-        assert prepared_client.projects.get(project.id).name == updated.name
+        assert prepared_client.projects.get_command(project.id).run().name == updated.name
 
         stack.close()
         with pytest.raises(NotFoundError):
-            prepared_client.projects.get(project.id)
+            prepared_client.projects.get_command(project.id).run()
 
 
 def test_comment_list(prepared_client: MulticaClient) -> None:
     with ExitStack() as stack:
-        project = prepared_client.projects.create(ProjectCreateRequest(name=_live_name()))
-        stack.callback(prepared_client.projects.delete, project.id)
-        issue = prepared_client.issues.create(
+        project = prepared_client.projects.create_command(
+            ProjectCreateRequest(name=_live_name())
+        ).run()
+        stack.callback(prepared_client.projects.delete_command(project.id).run)
+        issue = prepared_client.issues.create_command(
             IssueCreateRequest(title=_live_name(), project_id=project.id)
-        )
+        ).run()
         comments = tuple(
-            prepared_client.issues.comments.add(issue.id, f"comment-{index}") for index in range(3)
+            prepared_client.issues.comments.add_command(issue.id, f"comment-{index}").run()
+            for index in range(3)
         )
 
-        listed = prepared_client.issues.comments.list(issue.id)
+        listed = prepared_client.issues.comments.list_command(issue.id).run()
         assert tuple(comment.id for comment in listed) == tuple(comment.id for comment in comments)
 
 
 def test_not_found_mapping(prepared_client: MulticaClient) -> None:
     with pytest.raises(NotFoundError):
-        prepared_client.projects.get(_ABSENT_PROJECT_ID)
+        prepared_client.projects.get_command(_ABSENT_PROJECT_ID).run()
 
 
 def test_project_update_presence(prepared_client: MulticaClient) -> None:
     with ExitStack() as stack:
-        project = prepared_client.projects.create(
+        project = prepared_client.projects.create_command(
             ProjectCreateRequest(name=_live_name(), description="before")
-        )
-        stack.callback(prepared_client.projects.delete, project.id)
+        ).run()
+        stack.callback(prepared_client.projects.delete_command(project.id).run)
 
-        omitted = prepared_client.projects.update(
+        omitted = prepared_client.projects.update_command(
             project.id, ProjectUpdateRequest(name=f"{project.name}-updated")
-        )
+        ).run()
         assert omitted.description == "before"
 
-        empty = prepared_client.projects.update(project.id, ProjectUpdateRequest(description=""))
+        empty = prepared_client.projects.update_command(
+            project.id, ProjectUpdateRequest(description="")
+        ).run()
         assert empty.description == ""
 
         with (
@@ -99,34 +106,36 @@ def test_project_update_presence(prepared_client: MulticaClient) -> None:
             patch.object(prepared_client._transport, "run_text") as run_text,
         ):
             with pytest.raises(ValidationError):
-                prepared_client.projects.update(project.id, ProjectUpdateRequest(description=None))
+                prepared_client.projects.update_command(
+                    project.id, ProjectUpdateRequest(description=None)
+                )
             run_bytes.assert_not_called()
             run_text.assert_not_called()
 
 
 def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
     workspace_id = os.environ["MULTICA_LIVE_WORKSPACE_ID"]
-    workspace = prepared_client.workspaces.get(workspace_id)
+    workspace = prepared_client.workspaces.get_command(workspace_id).run()
 
-    members = workspace.members.all()
-    agents = workspace.agents.all()
-    skills = workspace.skills.all()
-    squads = workspace.squads.all()
-    autopilots = workspace.autopilots.all()
+    members = workspace.members.all_command().run()
+    agents = workspace.agents.all_command().run()
+    skills = workspace.skills.all_command().run()
+    squads = workspace.squads.all_command().run()
+    autopilots = workspace.autopilots.all_command().run()
     assert members, "prepared workspace must contain a member"
     assert agents, "prepared workspace must contain an agent"
     assert skills, "prepared workspace must contain a skill"
     assert squads, "prepared workspace must contain a squad"
     assert autopilots, "prepared workspace must contain an autopilot"
 
-    workspace.issues.page(limit=1)
-    workspace.projects.all()
-    workspace.labels.all()
-    workspace.repositories.all()
-    workspace.runtimes.all()
+    workspace.issues.page_command(limit=1).run()
+    workspace.projects.all_command().run()
+    workspace.labels.all_command().run()
+    workspace.repositories.all_command().run()
+    workspace.runtimes.all_command().run()
 
-    first_workspace = prepared_client.workspaces.get(workspace_id)
-    second_workspace = prepared_client.workspaces.get(workspace_id)
+    first_workspace = prepared_client.workspaces.get_command(workspace_id).run()
+    second_workspace = prepared_client.workspaces.get_command(workspace_id).run()
     assert first_workspace is not second_workspace
     assert first_workspace.id == second_workspace.id
     assert first_workspace.name == second_workspace.name
@@ -138,53 +147,55 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
     assert first_workspace.members.loaded
     assert second_workspace.members.loaded
 
-    agent = prepared_client.agents.get(agents[0].id)
-    agent.skills.all()
-    agent.tasks.all()
-    agent.issues.page(limit=1)
+    agent = prepared_client.agents.get_command(agents[0].id).run()
+    agent.skills.all_command().run()
+    agent.tasks.all_command().run()
+    agent.issues.page_command(limit=1).run()
 
-    skill = prepared_client.skills.get(skills[0].id)
-    skill.files.all()
+    skill = prepared_client.skills.get_command(skills[0].id).run()
+    skill.files.all_command().run()
 
-    squad = prepared_client.squads.get(squads[0].id)
-    squad.members.all()
-    squad.issues.page(limit=1)
+    squad = prepared_client.squads.get_command(squads[0].id).run()
+    squad.members.all_command().run()
+    squad.issues.page_command(limit=1).run()
 
-    autopilot = prepared_client.autopilots.get(autopilots[0].id)
-    autopilot.triggers.all()
-    autopilot.subscribers.all()
-    autopilot_runs = autopilot.runs.page(limit=20)
+    autopilot = prepared_client.autopilots.get_command(autopilots[0].id).run()
+    autopilot.triggers.all_command().run()
+    autopilot.subscribers.all_command().run()
+    autopilot_runs = autopilot.runs.page_command(limit=20).run()
     autopilot_run = next(
         (run for run in autopilot_runs.items if run.task_id is not None),
         None,
     )
     assert autopilot_run is not None, "prepared autopilot must have a run with task context"
-    autopilot_run.messages.all()
+    autopilot_run.messages.all_command().run()
 
     with ExitStack() as stack:
-        project = prepared_client.projects.create(ProjectCreateRequest(name=_live_name()))
-        stack.callback(prepared_client.projects.delete, project.id)
-        project_entity = prepared_client.projects.get(project.id)
-        project_entity.resources.all()
-        project_entity.issues.page(limit=1)
+        project = prepared_client.projects.create_command(
+            ProjectCreateRequest(name=_live_name())
+        ).run()
+        stack.callback(prepared_client.projects.delete_command(project.id).run)
+        project_entity = prepared_client.projects.get_command(project.id).run()
+        project_entity.resources.all_command().run()
+        project_entity.issues.page_command(limit=1).run()
 
-        issue = prepared_client.issues.create(
+        issue = prepared_client.issues.create_command(
             IssueCreateRequest(title=_live_name(), project_id=project.id)
-        )
+        ).run()
         comments = issue.comments
-        assert comments.all() == ()
+        assert comments.all_command().run() == ()
         comment = issue.add_comment(_live_name())
         assert not comments.loaded
-        assert comment.id in {item.id for item in comments.all()}
+        assert comment.id in {item.id for item in comments.all_command().run()}
 
         recent_threads = issue.recent_comment_threads(limit=1)
-        thread_page = recent_threads.page()
+        thread_page = recent_threads.page_command().run()
         assert thread_page.items, "new comment must appear in recent thread query"
-        cast("_ThreadRelationOwner", thread_page.items[0]).comments.page()
+        cast("_ThreadRelationOwner", thread_page.items[0]).comments.page_command().run()
 
         metadata_key = f"live_{uuid4().hex}"
         metadata = issue.metadata
-        dict(metadata)
+        metadata.all_command().run()
         issue.set_metadata(metadata_key, "verified")
         assert not metadata.loaded
         assert metadata[metadata_key] == "verified"
@@ -192,19 +203,21 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
         assert not metadata.loaded
         assert metadata_key not in metadata
 
-        issue.labels.all()
-        issue.subscribers.all()
-        issue.pull_requests.all()
-        issue.children.all()
+        issue.labels.all_command().run()
+        issue.subscribers.all_command().run()
+        issue.pull_requests.all_command().run()
+        issue.children.all_command().run()
 
         prepared_run = None
-        for summary in workspace.issues.page(limit=50).items:
-            candidate_runs = prepared_client.issues.get(summary.id).runs.all()
+        for summary in workspace.issues.page_command(limit=50).run().items:
+            candidate_runs = (
+                prepared_client.issues.get_command(summary.id).run().runs.all_command().run()
+            )
             if candidate_runs:
                 prepared_run = candidate_runs[0]
                 break
         assert prepared_run is not None, "prepared workspace must contain an issue task run"
-        prepared_run.messages.all()
+        prepared_run.messages.all_command().run()
 
         print(
             json.dumps(

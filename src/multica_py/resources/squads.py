@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
+from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
@@ -17,7 +18,10 @@ from multica_py.models.relations import (
 )
 from multica_py.models.system import SquadMember
 from multica_py.resources._base import BaseResource
-from multica_py.resources.issues import _issue_summary_offset_page
+from multica_py.resources.issues import (
+    _issue_summary_offset_page,
+    _issue_summary_offset_page_command,
+)
 from multica_py.resources.squad_members import SquadMemberResource
 
 if TYPE_CHECKING:
@@ -34,6 +38,22 @@ def _page_squad_issues(
         offset=offset,
     )
     return _issue_summary_offset_page(client.issues, flt)
+
+
+def _squad_members_command(
+    client: MulticaClient, squad_id: str
+) -> Command[tuple[SquadMember, ...]]:
+    validate_nonblank(squad_id)
+    return client.squads.members.list_command(squad_id)
+
+
+def _squad_issues_page_command(
+    client: MulticaClient, squad_id: str, limit: int | None, offset: int
+) -> Command[OffsetPage[IssueSummary]]:
+    return _issue_summary_offset_page_command(
+        client.issues,
+        IssueListFilter(assignee_id=squad_id, limit=limit, offset=offset),
+    )
 
 
 class Squad(_BoundEntity):  # type: ignore[misc]
@@ -56,7 +76,13 @@ class Squad(_BoundEntity):  # type: ignore[misc]
             )
             sid = self.id
             members = client.squads.members
-            self._set_runtime("_members", LazyCollection(lambda: members.list(sid)))
+            self._set_runtime(
+                "_members",
+                LazyCollection(
+                    lambda: members.list(sid),
+                    command_loader=lambda: _squad_members_command(client, sid),
+                ),
+            )
         return self._members  # type: ignore[return-value]
 
     @property
@@ -70,7 +96,16 @@ class Squad(_BoundEntity):  # type: ignore[misc]
             def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
                 return _page_squad_issues(client, sid, limit, offset)
 
-            self._set_runtime("_issues", OffsetLazyCollection(page_loader))
+            self._set_runtime(
+                "_issues",
+                OffsetLazyCollection(
+                    page_loader,
+                    default_limit=50,
+                    page_command_loader=lambda limit, offset: _squad_issues_page_command(
+                        client, sid, limit, offset
+                    ),
+                ),
+            )
         return self._issues  # type: ignore[return-value]
 
     def _invalidate_members(self) -> None:
@@ -78,20 +113,28 @@ class Squad(_BoundEntity):  # type: ignore[misc]
             self._members.invalidate()
 
     def add_member(self, member_id: str) -> None:
+        self.add_member_command(member_id).run()
+
+    def add_member_command(self, member_id: str) -> Command[None]:
         validate_nonblank(member_id)
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="add_member"
         )
-        client.squads.members.add(self.id, member_id)
-        self._invalidate_members()
+        return client.squads.members.add_command(self.id, member_id)._map(
+            lambda result: self._invalidate_members()
+        )
 
     def remove_member(self, member_id: str) -> None:
+        self.remove_member_command(member_id).run()
+
+    def remove_member_command(self, member_id: str) -> Command[None]:
         validate_nonblank(member_id)
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="remove_member"
         )
-        client.squads.members.remove(self.id, member_id)
-        self._invalidate_members()
+        return client.squads.members.remove_command(self.id, member_id)._map(
+            lambda result: self._invalidate_members()
+        )
 
 
 class SquadResource(BaseResource):
@@ -99,11 +142,19 @@ class SquadResource(BaseResource):
         super().__init__(transport, config)
         self.members = SquadMemberResource(transport, config)
 
+    def list_command(self) -> Command[tuple[Squad, ...]]:
+        return self._decoded_list_command(("squad", "list"), Squad)._map(
+            lambda items: tuple(squad._with_client(self._client) for squad in items)
+        )
+
     def list(self) -> tuple[Squad, ...]:
-        items = self._run_json_decode_list(("squad", "list"), Squad)
-        return tuple(s._with_client(self._client) for s in items)
+        return self.list_command().run()
+
+    def get_command(self, squad_id: str) -> Command[Squad]:
+        validate_nonblank(squad_id)
+        return self._decoded_command(("squad", "get", squad_id), Squad)._map(
+            lambda squad: squad._with_client(self._client)
+        )
 
     def get(self, squad_id: str) -> Squad:
-        validate_nonblank(squad_id)
-        s = self._run_json_decode(("squad", "get", squad_id), Squad)
-        return s._with_client(self._client)
+        return self.get_command(squad_id).run()

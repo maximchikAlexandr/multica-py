@@ -5,13 +5,16 @@ import hashlib
 import importlib
 import inspect
 import pathlib
+import typing
 from typing import cast
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from multica_py import Command
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
+from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from tests.cases.operations import (
     GENERATED_OPERATION_CASES,
@@ -25,6 +28,18 @@ from tests.cases.operations import (
 from tools.upstream_contract.contract import validate_contract
 
 _RESOURCE_MAP: dict[str, type] = dict(RESOURCE_SPECS)
+
+
+def _call_contracts(method: object) -> tuple[tuple[inspect.Signature, object], ...]:
+    assert inspect.isfunction(method)
+    functions = typing.get_overloads(method) or (method,)
+    return tuple(
+        (
+            inspect.signature(function).replace(return_annotation=inspect.Signature.empty),
+            typing.get_type_hints(function)["return"],
+        )
+        for function in functions
+    )
 
 
 def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
@@ -55,43 +70,60 @@ def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
         )
 
 
-def _normalized_argv(call_argv: tuple[str, ...], case: OperationCase) -> tuple[str, ...]:
-    normalized = list(call_argv)
-    for position in case.dynamic_argv_positions:
-        normalized[position] = case.expected_argv[position]
-    return tuple(normalized)
-
-
 def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> None:
     transport = cast("CliTransport", mock_transport)
-    config = ClientConfig()
-    ra = _resource_attr(case.sdk_method)
-    cls = _RESOURCE_MAP[ra]
-    resource = cls(transport, config)
-    method = getattr(resource, case.method)
-    result = method(*case.args, **dict(case.kwargs))
+    initial_profile = case.snapshot_profiles[0] if case.snapshot_profiles is not None else None
+    mock_transport.build_full_argv.side_effect = lambda args: (
+        ("multica", "--profile", initial_profile, *args)
+        if initial_profile is not None
+        else ("multica", *args)
+    )
+    config = ClientConfig(profile=initial_profile)
+    if case.public_route:
+        client = MulticaClient(config)
+        resource: object = client
+        for attribute in case.sdk_method.split(".")[:-1]:
+            resource = getattr(resource, attribute)
+        setattr(resource, "_transport", transport)
+    else:
+        ra = _resource_attr(case.sdk_method)
+        cls = _RESOURCE_MAP[ra]
+        resource = cls(transport, config)
+    command = getattr(resource, f"{case.method}_command")(*case.args, **dict(case.kwargs))
+    assert command.commands == case.expected_commands
+    mock_transport.run_bytes.assert_not_called()
+    mock_transport.run_text.assert_not_called()
+    mock_transport.spawn.assert_not_called()
+    if case.expected_exception is None:
+        result = command.run()
+    else:
+        with pytest.raises(case.expected_exception):
+            command.run()
+        result = None
 
-    if case.assert_result is not None:
+    if case.expected_exception is None and case.assert_result is not None:
         case.assert_result(result, mock_transport)
 
+    expected_argvs = case.expected_transport_argvs or (case.expected_argv,)
+    transport_call = getattr(mock_transport, case.transport_method)
+    assert transport_call.call_count == len(expected_argvs)
+    for call, expected_argv in zip(transport_call.call_args_list, expected_argvs, strict=True):
+        actual_argv = cast("tuple[str, ...]", call.args[0])
+        normalized = list(actual_argv)
+        for position in case.dynamic_argv_positions:
+            normalized[position] = expected_argv[position]
+        assert tuple(normalized) == expected_argv
+
     if case.transport_method == "run_bytes":
-        mock_transport.run_bytes.assert_called_once()
-        call_args = mock_transport.run_bytes.call_args
-        assert (
-            _normalized_argv(cast("tuple[str, ...]", call_args.args[0]), case) == case.expected_argv
-        )
-        assert call_args.kwargs.get("stdin") == case.stdin
-        assert call_args.kwargs.get("timeout") == (
-            datetime.timedelta(seconds=case.timeout) if case.timeout is not None else None
-        )
+        for call in mock_transport.run_bytes.call_args_list:
+            assert call.kwargs.get("stdin") == case.stdin
+            assert call.kwargs.get("timeout") == (
+                datetime.timedelta(seconds=case.timeout) if case.timeout is not None else None
+            )
     elif case.transport_method == "run_text":
-        mock_transport.run_text.assert_called_once()
-        call_args = mock_transport.run_text.call_args
-        assert (
-            _normalized_argv(cast("tuple[str, ...]", call_args.args[0]), case) == case.expected_argv
-        )
+        assert mock_transport.run_text.call_count == len(expected_argvs)
     elif case.transport_method == "spawn":
-        mock_transport.spawn.assert_called_once_with(tuple(case.expected_argv))
+        assert mock_transport.spawn.call_count == len(expected_argvs)
 
 
 @pytest.mark.parametrize("case", list(OPERATION_CASES), ids=lambda c: c.id)
@@ -107,6 +139,21 @@ def test_discovered_public_methods() -> None:
     assert discovered == canonical
     assert len(canonical_cases) == len(canonical)
     assert len({c.id for c in OPERATION_CASES}) == len(OPERATION_CASES)
+    for case in canonical_cases:
+        cls = _RESOURCE_MAP[case.resource_attr]
+        eager = getattr(cls, case.method)
+        command = getattr(cls, f"{case.method}_command", None)
+        assert command is not None, case.sdk_method
+        assert case.expected_commands, case.sdk_method
+        eager_contracts = _call_contracts(eager)
+        command_contracts = _call_contracts(command)
+        assert len(eager_contracts) == len(command_contracts), case.sdk_method
+        for (eager_signature, eager_return), (command_signature, command_return) in zip(
+            eager_contracts, command_contracts, strict=True
+        ):
+            assert command_signature == eager_signature, case.sdk_method
+            assert typing.get_origin(command_return) is Command, case.sdk_method
+            assert typing.get_args(command_return) == (eager_return,), case.sdk_method
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
@@ -198,3 +245,33 @@ def test_legacy_payload_bijection() -> None:
             continue
         actual = hashlib.sha256(repr(payload(final_by_id[final_id])).encode()).hexdigest()
         assert legacy_by_id[legacy_id] == actual
+
+
+@pytest.mark.parametrize(
+    "case",
+    [case for case in OPERATION_CASES if case.snapshot_profiles is not None],
+    ids=lambda case: case.id,
+)
+def test_command_preview_snapshot_case(case: OperationCase) -> None:
+    assert case.snapshot_profiles is not None
+    profile_a, profile_b = case.snapshot_profiles
+    client = MulticaClient(ClientConfig(profile=profile_a))
+    run_bytes = MagicMock(
+        return_value=RawCommandResult(
+            argv=case.expected_argv,
+            exit_code=0,
+            stdout=case.stdout,
+            stderr=b"",
+            duration=datetime.timedelta(),
+        )
+    )
+    with patch.object(client._transport, "run_bytes", run_bytes):
+        command = getattr(client.issues, f"{case.method}_command")(*case.args, **dict(case.kwargs))
+        switched = client.with_profile(profile_b)
+
+        assert command.commands == case.expected_commands
+        assert switched.issues.get_command(cast("str", case.args[0])).commands == (
+            "multica --profile profile-b issue get i1 --output json",
+        )
+        assert getattr(command.run(), "id") == "i1"
+        assert run_bytes.call_args.args[0] == case.expected_argv

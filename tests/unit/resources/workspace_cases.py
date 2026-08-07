@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import datetime
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import cast
 from unittest.mock import MagicMock
 
+from multica_py._internal.commands import Command, _Step
+from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.transport import CliTransport
+from multica_py.config import ClientConfig
 from multica_py.models.autopilots import AutopilotListPage
-from multica_py.models.issues import IssueListPage
+from multica_py.models.issues import IssueListFilter, IssueListPage
 from multica_py.models.system import RepositoryRecord, RuntimeDefinition
+from multica_py.resources._base import BaseResource
 from multica_py.resources.agents import Agent
 from multica_py.resources.autopilots import Autopilot
 from multica_py.resources.labels import Label
@@ -35,6 +43,14 @@ def make_workspace_clients(
 ) -> WorkspaceClients:
     origin = MagicMock(name="origin_client")
     scoped = MagicMock(name="workspace_client")
+    command_resource = BaseResource(MagicMock(spec=CliTransport), ClientConfig())
+
+    def empty_command(loader: Callable[[], object]) -> Command[object]:
+        return command_resource._plan(steps=(), finalize=lambda _results: loader())
+
+    def direct_list_command(loader: Callable[[], object]) -> Callable[[], Command[object]]:
+        return lambda: empty_command(loader)
+
     origin.with_workspace.return_value = scoped
     scoped.workspaces.members.return_value = members
     scoped.agents.list.return_value = agents
@@ -51,6 +67,54 @@ def make_workspace_clients(
     else:
         scoped.issues.list.side_effect = issues
     scoped.autopilots.list.return_value = autopilots or AutopilotListPage(autopilots=(), total=0)
+
+    def issues_command(issue_filter: IssueListFilter) -> Command[object]:
+        def decode(_stdout: bytes, command_text: str) -> object:
+            words = command_text.split()
+            offset = int(words[words.index("--offset") + 1])
+            limit = int(words[words.index("--limit") + 1])
+            request = IssueListFilter(limit=limit, offset=offset)
+            return scoped.issues.list(request)
+
+        def run_bytes(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
+            return RawCommandResult(
+                argv=argv,
+                exit_code=0,
+                stdout=b"",
+                stderr=b"",
+                duration=datetime.timedelta(),
+            )
+
+        cast("MagicMock", command_resource._transport.run_bytes).side_effect = run_bytes
+        args = (
+            "issue",
+            "list",
+            "--limit",
+            str(issue_filter.limit),
+            "--offset",
+            str(issue_filter.offset),
+            "--output",
+            "json",
+        )
+        return command_resource._plan(
+            steps=(_Step(args, "run_bytes", decode=decode),),
+            finalize=lambda results: results[0],
+        )
+
+    scoped.issues.list_command = issues_command
+
+    scoped.workspaces.members_command = lambda workspace_id: empty_command(
+        lambda: scoped.workspaces.members(workspace_id)
+    )
+    scoped.agents.list_command = direct_list_command(scoped.agents.list)
+    scoped.skills.list_command = direct_list_command(scoped.skills.list)
+    scoped.projects.list_command = direct_list_command(scoped.projects.list)
+    scoped.labels.list_command = direct_list_command(scoped.labels.list)
+    scoped.repositories.list_command = direct_list_command(scoped.repositories.list)
+    scoped.runtimes.list_command = direct_list_command(scoped.runtimes.list)
+    scoped.squads.list_command = direct_list_command(scoped.squads.list)
+    scoped.autopilots.list_command = direct_list_command(scoped.autopilots.list)
+
     return WorkspaceClients(origin=origin, scoped=scoped)
 
 

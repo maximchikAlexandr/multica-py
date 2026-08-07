@@ -1,22 +1,31 @@
 from __future__ import annotations
 
 import datetime
+import os
+import shlex
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
 
-from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.commands import Command, _Step
+from multica_py._internal.specs import RawCommandResult, TextResult
+from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import DetachedEntityError
-from multica_py.models.issues import IssueListPage, IssueSummary
+from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceRecord,
 )
 from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
-from multica_py.models.relations import OffsetPage
+from multica_py.models.relations import LazyCollection, OffsetPage
+from multica_py.resources._base import BaseResource
+from multica_py.resources.issues import IssueResource
+from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.resources.projects import Project, ProjectResource
 
 _TODO = IssueStatus("todo")
@@ -122,25 +131,155 @@ class ProjectParentValidationCase:
 PROJECT_PARENT_VALIDATION_CASES = (ProjectParentValidationCase("remove_resource", ("",), "remove"),)
 
 
+@dataclass(frozen=True)
+class ProjectRelationCommandCase:
+    name: str
+    relation: str
+    method: str
+    limit: int | None
+    offset: int
+    expected_argv: tuple[str, ...]
+
+
+PROJECT_RELATION_COMMAND_CASES = (
+    ProjectRelationCommandCase(
+        "resources all",
+        "resources",
+        "all_command",
+        None,
+        0,
+        ("project", "resource", "list", "p1", "--output", "json"),
+    ),
+    ProjectRelationCommandCase(
+        "issues page",
+        "issues",
+        "page_command",
+        2,
+        3,
+        (
+            "issue",
+            "list",
+            "--limit",
+            "2",
+            "--offset",
+            "3",
+            "--project",
+            "p1",
+            "--output",
+            "json",
+        ),
+    ),
+    ProjectRelationCommandCase(
+        "issues all",
+        "issues",
+        "all_command",
+        None,
+        0,
+        (
+            "issue",
+            "list",
+            "--limit",
+            "50",
+            "--offset",
+            "0",
+            "--project",
+            "p1",
+            "--output",
+            "json",
+        ),
+    ),
+)
+
+
 def _make_mock_resources(
     project_list_result: tuple[object, ...] = (),
     resource_list_result: tuple[ProjectResourceRecord, ...] = (),
     issue_page_results: list[IssueListPage] | None = None,
 ) -> MagicMock:
     client = MagicMock()
+
+    def mutation_command(
+        loader: Callable[[], object], argv: tuple[str, ...] = ("project", "resource", "mutation")
+    ) -> Command[object]:
+        transport = MagicMock(spec=CliTransport)
+        result: dict[str, object] = {}
+
+        def run_text(_argv: tuple[str, ...]) -> TextResult:
+            result["value"] = loader()
+            return TextResult("", "", 0)
+
+        cast("MagicMock", transport.run_text).side_effect = run_text
+        resource = BaseResource(transport, ClientConfig())
+        return resource._plan(
+            steps=(_Step(argv, "run_text"),),
+            finalize=lambda _results: result["value"],
+        )
+
     client.projects.resources.list.return_value = resource_list_result
+    client.projects.resources.list_command = lambda project_id: mutation_command(
+        lambda: client.projects.resources.list(project_id),
+        ("project", "resource", "list", project_id),
+    )
+    client.projects.resources.add_local_directory_command = lambda project_id, request: (
+        mutation_command(lambda: client.projects.resources.add_local_directory(project_id, request))
+    )
+    client.projects.resources.remove_command = lambda project_id, resource_id: mutation_command(
+        lambda: client.projects.resources.remove(project_id, resource_id)
+    )
     if issue_page_results is not None:
         client.issues.list.side_effect = issue_page_results
     else:
         client.issues.list.return_value = IssueListPage(
             issues=(), has_more=False, limit=50, offset=0, total=0
         )
+
+    def issue_list_command(issue_filter: object) -> Command[object]:
+        args = ["issue", "list"]
+        limit = getattr(issue_filter, "limit")
+        offset = getattr(issue_filter, "offset")
+        project_id = getattr(issue_filter, "project_id")
+        if limit is not None:
+            args.extend(("--limit", str(limit)))
+        if offset is not None:
+            args.extend(("--offset", str(offset)))
+        if project_id is not None:
+            args.extend(("--project", project_id))
+
+        def decode_page(_stdout: bytes, command_text: str) -> IssueListPage:
+            command_args = command_text.split()
+            command_limit = int(command_args[command_args.index("--limit") + 1])
+            command_offset = int(command_args[command_args.index("--offset") + 1])
+            command_project = command_args[command_args.index("--project") + 1]
+            return client.issues.list(
+                IssueListFilter(
+                    limit=command_limit,
+                    offset=command_offset,
+                    project_id=command_project,
+                )
+            )
+
+        transport = MagicMock(spec=CliTransport)
+        transport.run_text.return_value = TextResult("", "", 0)
+        resource = BaseResource(transport, ClientConfig())
+        return resource._plan(
+            steps=(
+                _Step(
+                    tuple(args),
+                    "run_text",
+                    decode=decode_page,
+                ),
+            ),
+            finalize=lambda results: results[0],
+        )
+
+    client.issues.list_command = issue_list_command
     return client
 
 
 @pytest.mark.parametrize("case", PROJECT_BINDING_CASES, ids=lambda case: case.name)
 def test_project_resource_returns_bound_immutable_projects(case: ProjectBindingCase) -> None:
     transport = MagicMock()
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     transport.run_bytes.return_value = RawCommandResult(
         argv=case.expected_argv,
         exit_code=0,
@@ -152,14 +291,17 @@ def test_project_resource_returns_bound_immutable_projects(case: ProjectBindingC
     client = MagicMock()
     resource._set_client(client)
 
-    result = getattr(resource, case.method)(*case.args)
+    command = getattr(resource, f"{case.method}_command")(*case.args)
+    assert command.commands == (f"multica {shlex.join(case.expected_argv)}",)
+    assert transport.run_bytes.call_count == 0
+    result = command.run()
     project = result[0] if isinstance(result, tuple) else result
 
     assert isinstance(project, Project)
     assert project._client is client
     assert client.mock_calls == []
     transport.run_bytes.assert_called_once_with(case.expected_argv, stdin=None, timeout=None)
-    transport.run_text.assert_not_called()
+    assert transport.run_text.call_count == 0
 
 
 def test_project_resources_loads_once() -> None:
@@ -181,12 +323,147 @@ def test_project_resources_loads_once() -> None:
     assert isinstance(result[0], ProjectResourceRecord)
     assert result[0].id == "r1"
     assert client.projects.resources.list.call_count == 1
-    client.projects.resources.list.assert_called_once_with("p1")
 
     # Second .all() uses cache, no new call
     result2 = entity.resources.all()
     assert len(result2) == 1
     assert client.projects.resources.list.call_count == 1
+
+
+@pytest.mark.parametrize("case", PROJECT_RELATION_COMMAND_CASES, ids=lambda case: case.name)
+def test_project_relation_commands_preserve_project_scope(
+    case: ProjectRelationCommandCase,
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    projects = ProjectResource(transport, ClientConfig())
+    issue_resource = IssueResource(transport, ClientConfig())
+    client = MagicMock()
+    client.projects = projects
+    client.issues = issue_resource
+    projects._set_client(client)
+    issue_resource._set_client(client)
+    entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
+
+    relation = getattr(entity, case.relation)
+    if case.method == "page_command":
+        command = getattr(relation, case.method)(limit=case.limit, offset=case.offset)
+    else:
+        command = getattr(relation, case.method)()
+
+    assert command.commands[0] == f"multica {shlex.join(case.expected_argv)}"
+    transport.run_bytes.assert_not_called()
+    transport.run_text.assert_not_called()
+
+
+def test_project_add_local_directory_command_freezes_path_and_invalidates_after_success() -> None:
+    transport = MagicMock()
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(
+            "project",
+            "resource",
+            "add",
+            "p1",
+            "--type",
+            "local_directory",
+            "--local-path",
+            os.path.abspath("relative/sandbox"),
+            "--daemon-id",
+            "d1",
+            "--output",
+            "json",
+        ),
+        exit_code=0,
+        stdout=(
+            b'{"id":"r1","project_id":"p1","resource_type":"local_directory",'
+            b'"resource_ref":{"local_path":"/tmp/sandbox","daemon_id":"d1"}}'
+        ),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    projects = ProjectResource(transport, ClientConfig())
+    client = MagicMock()
+    client.projects = projects
+    projects._set_client(client)
+    entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
+    entity._set_runtime("_resources", LazyCollection(lambda: ()))
+    entity.resources.all()
+
+    command = entity.add_local_directory_command(
+        ProjectResourceAddLocalDirectoryRequest(local_path="relative/sandbox", daemon_id="d1")
+    )
+
+    assert command.commands == (
+        "multica project resource add p1 --type local_directory --local-path "
+        f"{os.path.abspath('relative/sandbox')} --daemon-id d1 --output json",
+    )
+    assert entity.resources.loaded
+    assert transport.run_bytes.call_count == 0
+
+    result = command.run()
+
+    assert result.id == "r1"
+    assert not entity.resources.loaded
+
+
+def test_project_resource_mutation_command_failure_preserves_cache_and_remove_invalidates() -> None:
+    transport = MagicMock()
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    projects = ProjectResource(transport, ClientConfig())
+    client = MagicMock()
+    client.projects = projects
+    projects._set_client(client)
+    entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
+    entity._set_runtime("_resources", LazyCollection(lambda: ()))
+    entity.resources.all()
+
+    transport.run_bytes.side_effect = RuntimeError("transport failed")
+    command = entity.add_local_directory_command(
+        ProjectResourceAddLocalDirectoryRequest(local_path="/tmp/sandbox", daemon_id="d1")
+    )
+    with pytest.raises(RuntimeError, match="transport failed"):
+        command.run()
+    assert entity.resources.loaded
+
+    transport.run_bytes.side_effect = None
+    remove_command = entity.remove_resource_command("r1")
+    assert remove_command.commands == ("multica project resource remove p1 r1",)
+    assert transport.run_text.call_count == 0
+    remove_command.run()
+    assert not entity.resources.loaded
+
+
+@pytest.mark.parametrize(
+    ("method", "entity_id", "resource_id", "daemon_id"),
+    (
+        ("add_local_directory_command", "", "r1", "d1"),
+        ("add_local_directory_command", "p1", "r1", ""),
+        ("remove_resource_command", "", "r1", "d1"),
+        ("remove_resource_command", "p1", "", "d1"),
+    ),
+)
+def test_project_mutation_commands_validate_before_transport(
+    method: str, entity_id: str, resource_id: str, daemon_id: str
+) -> None:
+    transport = MagicMock()
+    client = MagicMock()
+    client.projects = ProjectResource(transport, ClientConfig())
+    entity = Project(id=entity_id, name="Test", status=_PLANNED, _client=client)
+
+    with pytest.raises(ValueError):
+        if method == "add_local_directory_command":
+            entity.add_local_directory_command(
+                ProjectResourceAddLocalDirectoryRequest(
+                    local_path="/tmp/sandbox", daemon_id=daemon_id
+                )
+            )
+        else:
+            entity.remove_resource_command(resource_id)
+
+    assert transport.run_bytes.call_count == 0
+    assert transport.run_text.call_count == 0
+    assert transport.spawn.call_count == 0
 
 
 @pytest.mark.parametrize("case", PROJECT_PARENT_MUTATION_CASES, ids=lambda case: case.name)

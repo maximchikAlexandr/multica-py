@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, cast
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
+from multica_py._internal.commands import Command
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.autopilots import AutopilotListPage
 from multica_py.models.issues import IssueListFilter, IssueSummary
@@ -20,7 +21,10 @@ from multica_py.models.system import RepositoryRecord, RuntimeDefinition
 from multica_py.resources._base import BaseResource
 from multica_py.resources.agents import Agent
 from multica_py.resources.autopilots import Autopilot
-from multica_py.resources.issues import _issue_summary_offset_page
+from multica_py.resources.issues import (
+    _issue_summary_offset_page,
+    _issue_summary_offset_page_command,
+)
 from multica_py.resources.labels import Label
 from multica_py.resources.projects import Project
 from multica_py.resources.skills import Skill
@@ -39,6 +43,29 @@ def _workspace_page_issues(
         offset=offset,
     )
     return _issue_summary_offset_page(client.issues, flt)
+
+
+def _workspace_issues_page_command(
+    client: MulticaClient,
+    assignee_id: str | None,
+    limit: int | None,
+    offset: int,
+) -> Command[OffsetPage[IssueSummary]]:
+    return _issue_summary_offset_page_command(
+        client.issues,
+        IssueListFilter(assignee_id=assignee_id, limit=limit, offset=offset),
+    )
+
+
+def _workspace_autopilots_command(
+    client: MulticaClient,
+) -> Command[_RelationLoad[Autopilot]]:
+    command = client.autopilots.list_command()
+
+    def finalize(page: AutopilotListPage[Autopilot]) -> _RelationLoad[Autopilot]:
+        return _RelationLoad(page.autopilots, RelationMetadata(total=page.total))
+
+    return command._map(finalize)
 
 
 class WorkspaceMember(_BoundEntity):  # type: ignore[misc]
@@ -69,7 +96,16 @@ class WorkspaceMember(_BoundEntity):  # type: ignore[misc]
                 )
                 return _issue_summary_offset_page(client.issues, flt)
 
-            self._set_runtime("_issues", OffsetLazyCollection(page_loader))
+            self._set_runtime(
+                "_issues",
+                OffsetLazyCollection(
+                    page_loader,
+                    default_limit=50,
+                    page_command_loader=lambda limit, offset: _workspace_issues_page_command(
+                        client, mid, limit, offset
+                    ),
+                ),
+            )
         return self._issues  # type: ignore[return-value]
 
 
@@ -110,7 +146,10 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
             )
             self._set_runtime(
                 "_members",
-                LazyCollection[WorkspaceMember](lambda: members(wid)),
+                LazyCollection[WorkspaceMember](
+                    lambda: members(wid),
+                    command_loader=lambda: client.workspaces.members_command(wid),
+                ),
             )
         return self._members  # type: ignore[return-value]
 
@@ -119,7 +158,13 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         if self._agents is None:
             client = self._check_client("agents")
 
-            self._set_runtime("_agents", LazyCollection(client.agents.list))
+            self._set_runtime(
+                "_agents",
+                LazyCollection(
+                    client.agents.list,
+                    command_loader=client.agents.list_command,
+                ),
+            )
         return self._agents  # type: ignore[return-value]
 
     @property
@@ -127,14 +172,26 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         if self._skills is None:
             client = self._check_client("skills")
 
-            self._set_runtime("_skills", LazyCollection(client.skills.list))
+            self._set_runtime(
+                "_skills",
+                LazyCollection(
+                    client.skills.list,
+                    command_loader=client.skills.list_command,
+                ),
+            )
         return self._skills  # type: ignore[return-value]
 
     @property
     def projects(self) -> LazyCollection[Project]:
         if self._projects is None:
             client = self._check_client("projects")
-            self._set_runtime("_projects", LazyCollection(client.projects.list))
+            self._set_runtime(
+                "_projects",
+                LazyCollection(
+                    client.projects.list,
+                    command_loader=client.projects.list_command,
+                ),
+            )
         return self._projects  # type: ignore[return-value]
 
     @property
@@ -142,7 +199,13 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         if self._labels is None:
             client = self._check_client("labels")
 
-            self._set_runtime("_labels", LazyCollection(client.labels.list))
+            self._set_runtime(
+                "_labels",
+                LazyCollection(
+                    client.labels.list,
+                    command_loader=client.labels.list_command,
+                ),
+            )
         return self._labels  # type: ignore[return-value]
 
     @property
@@ -150,7 +213,13 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         if self._repositories is None:
             client = self._check_client("repositories")
 
-            self._set_runtime("_repositories", LazyCollection(client.repositories.list))
+            self._set_runtime(
+                "_repositories",
+                LazyCollection(
+                    client.repositories.list,
+                    command_loader=client.repositories.list_command,
+                ),
+            )
         return self._repositories  # type: ignore[return-value]
 
     @property
@@ -158,7 +227,13 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         if self._runtimes is None:
             client = self._check_client("runtimes")
 
-            self._set_runtime("_runtimes", LazyCollection(client.runtimes.list))
+            self._set_runtime(
+                "_runtimes",
+                LazyCollection(
+                    client.runtimes.list,
+                    command_loader=client.runtimes.list_command,
+                ),
+            )
         return self._runtimes  # type: ignore[return-value]
 
     @property
@@ -166,7 +241,13 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         if self._squads is None:
             client = self._check_client("squads")
 
-            self._set_runtime("_squads", LazyCollection(client.squads.list))
+            self._set_runtime(
+                "_squads",
+                LazyCollection(
+                    client.squads.list,
+                    command_loader=client.squads.list_command,
+                ),
+            )
         return self._squads  # type: ignore[return-value]
 
     @property
@@ -177,7 +258,16 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
             def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
                 return _workspace_page_issues(client, limit, offset)
 
-            self._set_runtime("_issues", OffsetLazyCollection(page_loader))
+            self._set_runtime(
+                "_issues",
+                OffsetLazyCollection(
+                    page_loader,
+                    default_limit=50,
+                    page_command_loader=lambda limit, offset: _workspace_issues_page_command(
+                        client, None, limit, offset
+                    ),
+                ),
+            )
         return self._issues  # type: ignore[return-value]
 
     @property
@@ -192,33 +282,55 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
                     RelationMetadata(total=page.total),
                 )
 
-            _autopilots = LazyCollection(loader, metadata=RelationMetadata(total=None))
+            _autopilots = LazyCollection(
+                loader,
+                metadata=RelationMetadata(total=None),
+                command_loader=lambda: _workspace_autopilots_command(client),
+            )
             self._set_runtime("_autopilots", _autopilots)
         return self._autopilots  # type: ignore[return-value]
 
 
 class WorkspaceResource(BaseResource):
+    def list_command(self) -> Command[tuple[Workspace, ...]]:
+        return self._decoded_list_command(("workspace", "list"), Workspace)._map(
+            lambda items: tuple(item._with_client(self._client) for item in items)
+        )
+
     def list(self) -> tuple[Workspace, ...]:
-        items = self._run_json_decode_list(("workspace", "list"), Workspace)
-        return tuple(w._with_client(self._client) for w in items)
+        return self.list_command().run()
+
+    def get_command(self, workspace_id: str) -> Command[Workspace]:
+        validate_nonblank(workspace_id)
+        return self._decoded_command(("workspace", "get", workspace_id), Workspace)._map(
+            lambda workspace: workspace._with_client(self._client)
+        )
 
     def get(self, workspace_id: str) -> Workspace:
-        validate_nonblank(workspace_id)
-        w = self._run_json_decode(("workspace", "get", workspace_id), Workspace)
-        return w._with_client(self._client)
+        return self.get_command(workspace_id).run()
+
+    def members_command(self, workspace_id: str) -> Command[tuple[WorkspaceMember, ...]]:
+        return self._decoded_list_command(
+            ("workspace", "member", "list", workspace_id), WorkspaceMember
+        )._map(lambda items: tuple(item._with_client(self._client) for item in items))
 
     def members(self, workspace_id: str) -> tuple[WorkspaceMember, ...]:
-        members = self._run_json_decode_list(
-            ("workspace", "member", "list", workspace_id),
-            WorkspaceMember,
-        )
-        return tuple(item._with_client(self._client) for item in members)
+        return self.members_command(workspace_id).run()
+
+    def switch_command(self, workspace_id: str) -> Command[None]:
+        return self._none_command(("workspace", "switch", workspace_id))
 
     def switch(self, workspace_id: str) -> None:
-        self._transport.run_text(("workspace", "switch", workspace_id))
+        self.switch_command(workspace_id).run()
+
+    def watch_command(self, workspace_id: str) -> Command[None]:
+        return self._none_command(("workspace", "watch", workspace_id))
 
     def watch(self, workspace_id: str) -> None:
-        self._transport.run_text(("workspace", "watch", workspace_id))
+        self.watch_command(workspace_id).run()
+
+    def unwatch_command(self, workspace_id: str) -> Command[None]:
+        return self._none_command(("workspace", "unwatch", workspace_id))
 
     def unwatch(self, workspace_id: str) -> None:
-        self._transport.run_text(("workspace", "unwatch", workspace_id))
+        self.unwatch_command(workspace_id).run()
