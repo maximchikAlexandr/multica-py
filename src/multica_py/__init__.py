@@ -32,6 +32,7 @@ from multica_py.exceptions import (
     UnsupportedCliVersionError,
     ValidationError,
 )
+from multica_py.models.agents import AgentCreateRequest, AgentUpdateRequest
 from multica_py.models.autopilots import (
     AutopilotListPage,
     AutopilotRunListPage,
@@ -39,14 +40,30 @@ from multica_py.models.autopilots import (
     AutopilotTriggerUpdate,
 )
 from multica_py.models.common import ActionResult, CommentCursor, Page
-from multica_py.models.issue_activity import MetadataPage
-from multica_py.models.issues import IssueChildrenResult, IssueListPage
+from multica_py.models.issue_activity import (
+    CommentListFlatRequest,
+    CommentListRecentRequest,
+    CommentListThreadRequest,
+    MetadataListRequest,
+    MetadataPage,
+    MetadataSetRequest,
+)
+from multica_py.models.issues import (
+    IssueAssignmentRequest,
+    IssueChildrenResult,
+    IssueCreateRequest,
+    IssueListFilter,
+    IssueListPage,
+    IssueReorderRequest,
+    IssueUpdateRequest,
+)
 from multica_py.models.project_resources import (
     LocalDirectoryResourceRef,
     ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceRecord,
     ProjectResourceUpdateLocalDirectoryRequest,
 )
+from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
 from multica_py.models.relations import (
     CursorLazyCollection,
     CursorPage,
@@ -56,6 +73,7 @@ from multica_py.models.relations import (
     OffsetPage,
     RelationMetadata,
 )
+from multica_py.models.skills import SkillCreateRequest, SkillUpdateRequest
 from multica_py.models.system import (
     RepositoryMutationResult,
     RepositoryRecord,
@@ -82,6 +100,8 @@ from multica_py.types import JsonScalar, JsonValue, MetadataValue
 __all__ = [
     "ActionResult",
     "Agent",
+    "AgentCreateRequest",
+    "AgentUpdateRequest",
     "AuthenticationError",
     "AuthorizationError",
     "Autopilot",
@@ -97,6 +117,9 @@ __all__ = [
     "CommandTimeoutError",
     "Comment",
     "CommentCursor",
+    "CommentListFlatRequest",
+    "CommentListRecentRequest",
+    "CommentListThreadRequest",
     "CommentThread",
     "CompatibilityPolicy",
     "ConflictError",
@@ -107,9 +130,14 @@ __all__ = [
     "ExecutableNotFoundError",
     "ExecutableNotRunnableError",
     "Issue",
+    "IssueAssignmentRequest",
     "IssueChildrenResult",
+    "IssueCreateRequest",
+    "IssueListFilter",
     "IssueListPage",
+    "IssueReorderRequest",
     "IssueStatus",
+    "IssueUpdateRequest",
     "JsonOutputError",
     "JsonScalar",
     "JsonValue",
@@ -118,7 +146,9 @@ __all__ = [
     "LazyMapping",
     "LocalDirectoryResourceRef",
     "ManagedProcess",
+    "MetadataListRequest",
     "MetadataPage",
+    "MetadataSetRequest",
     "MetadataValue",
     "MetadataValueType",
     "MissingRelationContextError",
@@ -132,10 +162,12 @@ __all__ = [
     "OutputShapeError",
     "Page",
     "Project",
+    "ProjectCreateRequest",
     "ProjectResourceAddLocalDirectoryRequest",
     "ProjectResourceRecord",
     "ProjectResourceUpdateLocalDirectoryRequest",
     "ProjectStatus",
+    "ProjectUpdateRequest",
     "ProtocolError",
     "RelationError",
     "RelationMetadata",
@@ -147,6 +179,8 @@ __all__ = [
     "RuntimeUpdateResult",
     "RuntimeUsage",
     "Skill",
+    "SkillCreateRequest",
+    "SkillUpdateRequest",
     "Squad",
     "TaskRun",
     "UnknownCommandError",

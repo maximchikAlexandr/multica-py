@@ -136,14 +136,61 @@ def test_no_any_in_public_api() -> None:
 def test_public_model_exports() -> None:
     import multica_py
 
-    exports = {
-        "LocalDirectoryResourceRef": LocalDirectoryResourceRef,
-        "ProjectResourceAddLocalDirectoryRequest": ProjectResourceAddLocalDirectoryRequest,
-        "ProjectResourceRecord": ProjectResourceRecord,
-        "ProjectResourceUpdateLocalDirectoryRequest": ProjectResourceUpdateLocalDirectoryRequest,
-    }
-    for name, model in exports.items():
-        assert getattr(multica_py, name) is model
+    assert len(multica_py.__all__) == len(set(multica_py.__all__))
+    assert len(models_pkg.__all__) == len(set(models_pkg.__all__))
+    exports = (
+        "ActionResult",
+        "AgentCreateRequest",
+        "AgentUpdateRequest",
+        "AutopilotListPage",
+        "AutopilotRunListPage",
+        "AutopilotTriggerCreate",
+        "AutopilotTriggerUpdate",
+        "CommentCursor",
+        "CommentListFlatRequest",
+        "CommentListRecentRequest",
+        "CommentListThreadRequest",
+        "IssueAssignmentRequest",
+        "IssueChildrenResult",
+        "IssueCreateRequest",
+        "IssueListFilter",
+        "IssueListPage",
+        "IssueReorderRequest",
+        "IssueUpdateRequest",
+        "LocalDirectoryResourceRef",
+        "MetadataListRequest",
+        "MetadataPage",
+        "MetadataSetRequest",
+        "Page",
+        "ProjectCreateRequest",
+        "ProjectResourceAddLocalDirectoryRequest",
+        "ProjectResourceRecord",
+        "ProjectResourceUpdateLocalDirectoryRequest",
+        "ProjectUpdateRequest",
+        "RuntimeUpdate",
+        "SkillCreateRequest",
+        "SkillUpdateRequest",
+        "UserProfileUpdate",
+    )
+    for name in exports:
+        assert name in multica_py.__all__
+        assert name in models_pkg.__all__
+        assert getattr(multica_py, name) is getattr(models_pkg, name)
+
+
+def test_public_model_annotations_are_closed() -> None:
+    import multica_py
+
+    for name in (
+        "ActionResult",
+        "AutopilotListPage",
+        "AutopilotRunListPage",
+        "IssueChildrenResult",
+        "IssueListPage",
+        "Page",
+    ):
+        model = getattr(multica_py, name)
+        assert_public_annotations_precise(cast("type[object]", model))
 
 
 def test_models_are_frozen() -> None:
