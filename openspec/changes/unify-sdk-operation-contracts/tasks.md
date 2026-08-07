@@ -71,12 +71,12 @@
 
 ## 7. Canonical surface and routing gates
 
-- [ ] 7.1 Extend `OperationCase` with expected category and public response ID, populate them from the approved contract for every canonical row, and retain unique case IDs and one canonical row per discovered method.
-- [ ] 7.2 Strengthen `test_discovered_public_methods` to assert discovered-method/convention-record bijection, eager/command parameter parity, `Command[T]` result parity, typed-input mode, presence policy completeness, and category/response annotation compatibility.
-- [ ] 7.3 Add a closed rule that every canonical CLI/direct-resource collection tuple response has migrated to a page, while relation `.all()` tuple snapshots remain explicitly exempt; every former void action has migrated to `ActionResult[None]`, and scalar/mapping/process exceptions exactly match the approved matrix.
-- [ ] 7.4 Update generated and manual canonical result assertions, legacy payload migration fingerprints where public results intentionally changed, and component routing cases without duplicating argv expectations.
-- [ ] 7.5 Update public-export, bound-surface, baseline-spec, SDK-contract, packaging, and generated-runtime tests for the new generic models and annotations; preserve clean import without a CLI.
-- [ ] 7.6 Re-run command-preview focused cases for no-I/O construction, redaction, snapshot configuration, multi-step clears, no-op reads, runtime references, composite failure stop, and all transport modes to prove the existing plan remains the single execution path.
+- [x] 7.1 Extend `OperationCase` with expected category and public response ID, populate them from the approved contract for every canonical row, and retain unique case IDs and one canonical row per discovered method.
+- [x] 7.2 Strengthen `test_discovered_public_methods` to assert discovered-method/convention-record bijection, eager/command parameter parity, `Command[T]` result parity, typed-input mode, presence policy completeness, and category/response annotation compatibility.
+- [x] 7.3 Add a closed rule that every canonical CLI/direct-resource collection tuple response has migrated to a page, while relation `.all()` tuple snapshots remain explicitly exempt; every former void action has migrated to `ActionResult[None]`, and scalar/mapping/process exceptions exactly match the approved matrix.
+- [x] 7.4 Update generated and manual canonical result assertions, legacy payload migration fingerprints where public results intentionally changed, and component routing cases without duplicating argv expectations.
+- [x] 7.5 Update public-export, bound-surface, baseline-spec, SDK-contract, packaging, and generated-runtime tests for the new generic models and annotations; preserve clean import without a CLI.
+- [x] 7.6 Re-run command-preview focused cases for no-I/O construction, redaction, snapshot configuration, multi-step clears, no-op reads, runtime references, composite failure stop, and all transport modes to prove the existing plan remains the single execution path.
 
 ## 8. Documentation and migration
 

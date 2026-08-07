@@ -49,6 +49,8 @@ class OperationCase:
     expected_commands: tuple[str, ...] = ()
     expected_category: str | None = None
     expected_response_id: str | None = None
+    expected_typed_input_id: str | None = None
+    expected_input_mode: str | None = None
     presence_policy_ids: tuple[str, ...] = ()
     transport_method: str = "run_bytes"
     args: tuple[object, ...] = ()
@@ -374,6 +376,8 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 expected_commands=_expected_commands(vector.expected_argv),
                 expected_category=entrypoint.category,
                 expected_response_id=entrypoint.response_id,
+                expected_typed_input_id=entrypoint.typed_input_id,
+                expected_input_mode=entrypoint.input_mode,
                 presence_policy_ids=entrypoint.presence_policy_ids,
                 transport_method=vector.transport_method,
                 args=tuple(materialize(value) for value in vector.args),
@@ -2985,9 +2989,56 @@ _CONTRACT_LINKED_MANUAL_OPERATION_CASES = tuple(
     for case in _DEDUPE_MANUAL_OPERATION_CASES
 )
 
+
+def _approved_canonical_conventions(
+    cases: tuple[OperationCase, ...], catalog: object
+) -> tuple[OperationCase, ...]:
+    """Project convention metadata onto canonical cases from the validated contract.
+
+    Manual cases intentionally contain no result/category declarations.  Keeping this
+    projection at the single table boundary prevents a hand-written case from becoming
+    a second public-convention source.
+    """
+    from tools.upstream_contract.contract import ContractCatalog
+
+    if not isinstance(catalog, ContractCatalog):
+        raise TypeError("canonical conventions require a validated ContractCatalog")
+    entrypoints = {
+        (operation.operation_id, entrypoint.entrypoint_id): entrypoint
+        for operation in catalog.operations
+        for entrypoint in operation.entrypoints
+    }
+    projected: list[OperationCase] = []
+    for case in cases:
+        if not case.is_canonical:
+            projected.append(case)
+            continue
+        if case.contract_operation_id is None:
+            raise ValueError(f"canonical case is not linked to the approved contract: {case.id}")
+        if case.id.startswith("generated:"):
+            entrypoint_id = case.id.removeprefix("generated:").rsplit(":", 2)[1]
+        else:
+            entrypoint_id = "default"
+        entrypoint = entrypoints[(case.contract_operation_id, entrypoint_id)]
+        projected.append(
+            replace(
+                case,
+                expected_category=entrypoint.category,
+                expected_response_id=entrypoint.response_id,
+                expected_typed_input_id=entrypoint.typed_input_id,
+                expected_input_mode=entrypoint.input_mode,
+                presence_policy_ids=entrypoint.presence_policy_ids,
+            )
+        )
+    return tuple(projected)
+
+
 OPERATION_CASES: tuple[OperationCase, ...] = tuple(
     sorted(
-        (*_CONTRACT_LINKED_MANUAL_OPERATION_CASES, *GENERATED_OPERATION_CASES),
+        _approved_canonical_conventions(
+            (*_CONTRACT_LINKED_MANUAL_OPERATION_CASES, *GENERATED_OPERATION_CASES),
+            _APPROVED_CATALOG,
+        ),
         key=lambda c: c.id,
     )
 )
