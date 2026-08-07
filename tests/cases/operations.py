@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import shlex
 import typing
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path as _Path
 from typing import cast
@@ -255,8 +255,36 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         if assertion.kind == "decoded_type":
             expected = str(assertion.expected["value"])
 
+            def assert_sequence_contract(result: object) -> None:
+                if not isinstance(result, Page) and not hasattr(result, "items"):
+                    raise AssertionError("expected a Page-compatible sequence")
+                sequence = cast("Sequence[object]", result)
+                items = cast("tuple[object, ...]", getattr(result, "items"))
+                if tuple(sequence) != items or len(sequence) != len(items):
+                    raise AssertionError("Page sequence API does not expose items consistently")
+                if items and (sequence[0] is not items[0] or sequence[:] != items):
+                    raise AssertionError("Page indexing/slicing does not preserve items")
+                for field in ("limit", "offset", "total", "has_more"):
+                    if not hasattr(result, field):
+                        raise AssertionError(f"Page metadata field {field!r} is missing")
+                if isinstance(result, Page) and not hasattr(result, "next_cursor"):
+                    raise AssertionError("Page cursor metadata field is missing")
+
+            aliases = {
+                "multica_py.models.issues.IssueListPage": "issues",
+                "multica_py.models.autopilots.AutopilotListPage": "autopilots",
+                "multica_py.models.autopilots.AutopilotRunListPage": "runs",
+                "multica_py.models.issues.IssueChildrenResult": "children",
+            }
+
             def assert_type(result: object, _mt: MagicMock = MagicMock()) -> None:
                 actual = f"{type(result).__module__}.{type(result).__qualname__}"
+                if expected == "multica_py.models.common.Page":
+                    assert_sequence_contract(result)
+                if expected in aliases and actual == expected:
+                    assert_sequence_contract(result)
+                    if getattr(result, aliases[expected]) is not getattr(result, "items"):
+                        raise AssertionError("compatibility alias is not identical to items")
                 if expected == "multica_py.models.issues.Issue" and actual == (
                     "multica_py.resources.issues.Issue"
                 ):
