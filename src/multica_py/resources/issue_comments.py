@@ -159,16 +159,23 @@ class IssueCommentResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
 
-    def list_command(self, issue_id: str) -> Command[tuple[Comment, ...]]:
-        return self._decoded_list_command(
+    def list_command(self, issue_id: str) -> Command[Page[Comment]]:
+        return self._decoded_page_command(
             ("issue", "comment", "list", issue_id), _CommentWire
         )._map(
-            lambda items: tuple(
-                _bind_comment(comment_from_wire(item), self._client) for item in items
+            lambda page: Page(
+                items=tuple(
+                    _bind_comment(comment_from_wire(item), self._client) for item in page.items
+                ),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
             )
         )
 
-    def list(self, issue_id: str) -> tuple[Comment, ...]:
+    def list(self, issue_id: str) -> Page[Comment]:
         return self.list_command(issue_id).run()
 
     @overload

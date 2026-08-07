@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, cast
 
 import msgspec
@@ -9,6 +8,7 @@ from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.autopilots import AutopilotListPage
+from multica_py.models.common import Page
 from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.relations import (
     LazyCollection,
@@ -18,7 +18,7 @@ from multica_py.models.relations import (
     _RelationLoad,
 )
 from multica_py.models.system import RepositoryRecord, RuntimeDefinition
-from multica_py.resources._base import BaseResource
+from multica_py.resources._base import BaseResource, _page_items
 from multica_py.resources.agents import Agent
 from multica_py.resources.autopilots import Autopilot
 from multica_py.resources.issues import (
@@ -141,14 +141,14 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         if self._members is None:
             client = self._check_client("members")
             wid = self.id
-            members = cast(
-                "Callable[[str], tuple[WorkspaceMember, ...]]", client.workspaces.members
-            )
             self._set_runtime(
                 "_members",
                 LazyCollection[WorkspaceMember](
-                    lambda: members(wid),
-                    command_loader=lambda: client.workspaces.members_command(wid),
+                    lambda: client.workspaces.members(wid).items,  # type: ignore[misc]
+                    command_loader=lambda: cast(  # type: ignore[misc]
+                        "Command[tuple[WorkspaceMember, ...]]",
+                        client.workspaces.members_command(wid)._map(_page_items),
+                    ),
                 ),
             )
         return self._members  # type: ignore[return-value]
@@ -160,9 +160,12 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
 
             self._set_runtime(
                 "_agents",
-                LazyCollection(
-                    client.agents.list,
-                    command_loader=client.agents.list_command,
+                LazyCollection[Agent](
+                    lambda: client.agents.list().items,  # type: ignore[misc]
+                    command_loader=lambda: cast(  # type: ignore[misc]
+                        "Command[tuple[Agent, ...]]",
+                        client.agents.list_command()._map(_page_items),
+                    ),
                 ),
             )
         return self._agents  # type: ignore[return-value]
@@ -174,9 +177,12 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
 
             self._set_runtime(
                 "_skills",
-                LazyCollection(
-                    client.skills.list,
-                    command_loader=client.skills.list_command,
+                LazyCollection[Skill](
+                    lambda: client.skills.list().items,  # type: ignore[misc]
+                    command_loader=lambda: cast(  # type: ignore[misc]
+                        "Command[tuple[Skill, ...]]",
+                        client.skills.list_command()._map(_page_items),
+                    ),
                 ),
             )
         return self._skills  # type: ignore[return-value]
@@ -187,9 +193,12 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
             client = self._check_client("projects")
             self._set_runtime(
                 "_projects",
-                LazyCollection(
-                    client.projects.list,
-                    command_loader=client.projects.list_command,
+                LazyCollection[Project](
+                    lambda: client.projects.list().items,  # type: ignore[misc]
+                    command_loader=lambda: cast(  # type: ignore[misc]
+                        "Command[tuple[Project, ...]]",
+                        client.projects.list_command()._map(_page_items),
+                    ),
                 ),
             )
         return self._projects  # type: ignore[return-value]
@@ -201,9 +210,12 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
 
             self._set_runtime(
                 "_labels",
-                LazyCollection(
-                    client.labels.list,
-                    command_loader=client.labels.list_command,
+                LazyCollection[Label](
+                    lambda: client.labels.list().items,  # type: ignore[misc]
+                    command_loader=lambda: cast(  # type: ignore[misc]
+                        "Command[tuple[Label, ...]]",
+                        client.labels.list_command()._map(_page_items),
+                    ),
                 ),
             )
         return self._labels  # type: ignore[return-value]
@@ -215,9 +227,12 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
 
             self._set_runtime(
                 "_repositories",
-                LazyCollection(
-                    client.repositories.list,
-                    command_loader=client.repositories.list_command,
+                LazyCollection[RepositoryRecord](
+                    lambda: client.repositories.list().items,  # type: ignore[misc]
+                    command_loader=lambda: cast(  # type: ignore[misc]
+                        "Command[tuple[RepositoryRecord, ...]]",
+                        client.repositories.list_command()._map(_page_items),
+                    ),
                 ),
             )
         return self._repositories  # type: ignore[return-value]
@@ -229,9 +244,12 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
 
             self._set_runtime(
                 "_runtimes",
-                LazyCollection(
-                    client.runtimes.list,
-                    command_loader=client.runtimes.list_command,
+                LazyCollection[RuntimeDefinition](
+                    lambda: client.runtimes.list().items,  # type: ignore[misc]
+                    command_loader=lambda: cast(  # type: ignore[misc]
+                        "Command[tuple[RuntimeDefinition, ...]]",
+                        client.runtimes.list_command()._map(_page_items),
+                    ),
                 ),
             )
         return self._runtimes  # type: ignore[return-value]
@@ -243,9 +261,12 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
 
             self._set_runtime(
                 "_squads",
-                LazyCollection(
-                    client.squads.list,
-                    command_loader=client.squads.list_command,
+                LazyCollection[Squad](
+                    lambda: client.squads.list().items,  # type: ignore[misc]
+                    command_loader=lambda: cast(  # type: ignore[misc]
+                        "Command[tuple[Squad, ...]]",
+                        client.squads.list_command()._map(_page_items),
+                    ),
                 ),
             )
         return self._squads  # type: ignore[return-value]
@@ -292,12 +313,19 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
 
 
 class WorkspaceResource(BaseResource):
-    def list_command(self) -> Command[tuple[Workspace, ...]]:
-        return self._decoded_list_command(("workspace", "list"), Workspace)._map(
-            lambda items: tuple(item._with_client(self._client) for item in items)
+    def list_command(self) -> Command[Page[Workspace]]:
+        return self._decoded_page_command(("workspace", "list"), Workspace)._map(
+            lambda page: Page(
+                items=tuple(item._with_client(self._client) for item in page.items),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
+            )
         )
 
-    def list(self) -> tuple[Workspace, ...]:
+    def list(self) -> Page[Workspace]:
         return self.list_command().run()
 
     def get_command(self, workspace_id: str) -> Command[Workspace]:
@@ -309,12 +337,21 @@ class WorkspaceResource(BaseResource):
     def get(self, workspace_id: str) -> Workspace:
         return self.get_command(workspace_id).run()
 
-    def members_command(self, workspace_id: str) -> Command[tuple[WorkspaceMember, ...]]:
-        return self._decoded_list_command(
+    def members_command(self, workspace_id: str) -> Command[Page[WorkspaceMember]]:
+        return self._decoded_page_command(
             ("workspace", "member", "list", workspace_id), WorkspaceMember
-        )._map(lambda items: tuple(item._with_client(self._client) for item in items))
+        )._map(
+            lambda page: Page(
+                items=tuple(item._with_client(self._client) for item in page.items),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
+            )
+        )
 
-    def members(self, workspace_id: str) -> tuple[WorkspaceMember, ...]:
+    def members(self, workspace_id: str) -> Page[WorkspaceMember]:
         return self.members_command(workspace_id).run()
 
     def switch_command(self, workspace_id: str) -> Command[None]:

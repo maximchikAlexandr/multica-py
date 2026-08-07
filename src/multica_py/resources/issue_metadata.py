@@ -65,7 +65,11 @@ class IssueMetadataResource(BaseResource):
         def finalize(results: tuple[object, ...]) -> MetadataPage:
             result = cast("TextResult", results[0])
             items = tuple(decode_json(result.text.encode("utf-8"), list[MetadataEntry]))
-            return MetadataPage(items=items, next_cursor=_extract_metadata_cursor(result.stderr))
+            return MetadataPage(
+                items=items,
+                total=len(items),
+                next_cursor=_extract_metadata_cursor(result.stderr),
+            )
 
         return self._plan(
             steps=(_Step((*args, "--output", "json"), "run_text"),), finalize=finalize

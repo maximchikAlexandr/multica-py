@@ -65,6 +65,7 @@ _REQUEST_TYPES = frozenset(
 _DECODED_TYPES = frozenset(
     {
         "builtins.tuple",
+        "multica_py.models.common.Page",
         "multica_py.models.issue_activity.Comment",
         "multica_py.models.issues.Issue",
         "multica_py.models.projects.Project",

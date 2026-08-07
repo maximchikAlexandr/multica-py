@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 from multica_py._internal.commands import Command
+from multica_py.models.common import Page
 from multica_py.models.system import RepositoryMutationResult, RepositoryRecord
 from multica_py.resources._base import BaseResource
 
 
 class RepositoryResource(BaseResource):
-    def list_command(self) -> Command[tuple[RepositoryRecord, ...]]:
-        return self._decoded_list_command(("repo", "list"), RepositoryRecord)
+    def list_command(self) -> Command[Page[RepositoryRecord]]:
+        return self._decoded_page_command(("repo", "list"), RepositoryRecord)
 
-    def list(self) -> tuple[RepositoryRecord, ...]:
+    def list(self) -> Page[RepositoryRecord]:
         return self.list_command().run()
 
     def add_command(

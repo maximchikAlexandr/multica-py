@@ -5,6 +5,7 @@ from typing import cast, overload
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
 from multica_py.models._bound import _BoundEntity
+from multica_py.models.common import Page
 from multica_py.models.labels import LabelUpdateRequest
 from multica_py.resources._base import BaseResource, _resolve_request
 from multica_py.sentinels import Unset, UnsetType
@@ -19,12 +20,19 @@ class Label(_BoundEntity):  # type: ignore[misc]
 
 
 class LabelResource(BaseResource):
-    def list_command(self) -> Command[tuple[Label, ...]]:
-        return self._decoded_list_command(("label", "list"), Label)._map(
-            lambda items: tuple(item._with_client(self._client) for item in items)
+    def list_command(self) -> Command[Page[Label]]:
+        return self._decoded_page_command(("label", "list"), Label)._map(
+            lambda page: Page(
+                items=tuple(item._with_client(self._client) for item in page.items),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
+            )
         )
 
-    def list(self) -> tuple[Label, ...]:
+    def list(self) -> Page[Label]:
         return self.list_command().run()
 
     def get_command(self, label_id: str) -> Command[Label]:

@@ -565,7 +565,10 @@ def test_direct_issue_activity_operations_bind_origin_and_context(case: DirectBo
         (
             "pull_requests",
             b'{"pull_requests":[{"url":"https://example.test/pr/1"}]}',
-            (LinkedPullRequest(url="https://example.test/pr/1"),),
+            Page(
+                items=(LinkedPullRequest(url="https://example.test/pr/1"),),
+                total=1,
+            ),
         ),
     ],
 )

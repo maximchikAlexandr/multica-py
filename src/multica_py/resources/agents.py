@@ -17,9 +17,10 @@ from multica_py.models.agents import (
     AgentTask,
     AgentUpdateRequest,
 )
+from multica_py.models.common import Page
 from multica_py.models.issues import IssueSummary
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
-from multica_py.resources._base import BaseResource, _resolve_request
+from multica_py.resources._base import BaseResource, _page_items, _resolve_request
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.sentinels import Unset, UnsetType
 
@@ -50,8 +51,8 @@ class Agent(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_skills",
                 LazyCollection(
-                    lambda: skills.list(aid),
-                    command_loader=lambda: skills.list_command(aid),
+                    lambda: _page_items(skills.list(aid)),
+                    command_loader=lambda: skills.list_command(aid)._map(_page_items),
                 ),
             )
         return self._skills  # type: ignore[return-value]
@@ -68,7 +69,7 @@ class Agent(_BoundEntity):  # type: ignore[misc]
                 "_tasks",
                 LazyCollection(
                     lambda: agents.tasks(aid),
-                    command_loader=lambda: agents.tasks_command(aid),
+                    command_loader=lambda: agents.tasks_command(aid)._map(_page_items),
                 ),
             )
         return self._tasks  # type: ignore[return-value]
@@ -134,12 +135,19 @@ class AgentResource(BaseResource):
         super().__init__(transport, config)
         self.skills = AgentSkillResource(transport, config)
 
-    def list_command(self) -> Command[tuple[Agent, ...]]:
-        return self._decoded_list_command(("agent", "list"), Agent)._map(
-            lambda items: tuple(agent._with_client(self._client) for agent in items)
+    def list_command(self) -> Command[Page[Agent]]:
+        return self._decoded_page_command(("agent", "list"), Agent)._map(
+            lambda page: Page(
+                items=tuple(agent._with_client(self._client) for agent in page.items),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
+            )
         )
 
-    def list(self) -> tuple[Agent, ...]:
+    def list(self) -> Page[Agent]:
         return self.list_command().run()
 
     def get_command(self, agent_id: str) -> Command[Agent]:
@@ -380,11 +388,11 @@ class AgentResource(BaseResource):
     def restore(self, agent_id: str) -> None:
         self.restore_command(agent_id).run()
 
-    def tasks_command(self, agent_id: str) -> Command[tuple[AgentTask, ...]]:
+    def tasks_command(self, agent_id: str) -> Command[Page[AgentTask]]:
         validate_nonblank(agent_id)
-        return self._decoded_list_command(("agent", "tasks", agent_id), AgentTask)
+        return self._decoded_page_command(("agent", "tasks", agent_id), AgentTask)
 
-    def tasks(self, agent_id: str) -> tuple[AgentTask, ...]:
+    def tasks(self, agent_id: str) -> Page[AgentTask]:
         return self.tasks_command(agent_id).run()
 
     def avatar_command(self, agent_id: str, file: pathlib.Path) -> Command[None]:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import cast, overload
 
 from multica_py._internal.commands import Command
+from multica_py.models.common import Page
 from multica_py.models.system import (
     RuntimeActivity,
     RuntimeDefinition,
@@ -14,32 +15,30 @@ from multica_py.resources._base import BaseResource, _resolve_request
 
 
 class RuntimeResource(BaseResource):
-    def list_command(self) -> Command[tuple[RuntimeDefinition, ...]]:
-        return self._decoded_list_command(("runtime", "list"), RuntimeDefinition)
+    def list_command(self) -> Command[Page[RuntimeDefinition]]:
+        return self._decoded_page_command(("runtime", "list"), RuntimeDefinition)
 
-    def list(self) -> tuple[RuntimeDefinition, ...]:
+    def list(self) -> Page[RuntimeDefinition]:
         return self.list_command().run()
 
-    def usage_command(
-        self, runtime_id: str, *, days: int = 90
-    ) -> Command[tuple[RuntimeUsage, ...]]:
+    def usage_command(self, runtime_id: str, *, days: int = 90) -> Command[Page[RuntimeUsage]]:
         if not runtime_id.strip():
             raise ValueError("runtime_id must be nonblank")
         if not 1 <= days <= 365:
             raise ValueError("days must be between 1 and 365")
-        return self._decoded_list_command(
+        return self._decoded_page_command(
             ("runtime", "usage", runtime_id, "--days", str(days)), RuntimeUsage
         )
 
-    def usage(self, runtime_id: str, *, days: int = 90) -> tuple[RuntimeUsage, ...]:
+    def usage(self, runtime_id: str, *, days: int = 90) -> Page[RuntimeUsage]:
         return self.usage_command(runtime_id, days=days).run()
 
-    def activity_command(self, runtime_id: str) -> Command[tuple[RuntimeActivity, ...]]:
+    def activity_command(self, runtime_id: str) -> Command[Page[RuntimeActivity]]:
         if not runtime_id.strip():
             raise ValueError("runtime_id must be nonblank")
-        return self._decoded_list_command(("runtime", "activity", runtime_id), RuntimeActivity)
+        return self._decoded_page_command(("runtime", "activity", runtime_id), RuntimeActivity)
 
-    def activity(self, runtime_id: str) -> tuple[RuntimeActivity, ...]:
+    def activity(self, runtime_id: str) -> Page[RuntimeActivity]:
         return self.activity_command(runtime_id).run()
 
     @overload

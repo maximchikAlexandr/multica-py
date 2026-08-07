@@ -16,6 +16,7 @@ from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import DetachedEntityError
+from multica_py.models.common import Page
 from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
@@ -295,7 +296,7 @@ def test_project_resource_returns_bound_immutable_projects(case: ProjectBindingC
     assert command.commands == (f"multica {shlex.join(case.expected_argv)}",)
     assert transport.run_bytes.call_count == 0
     result = command.run()
-    project = result[0] if isinstance(result, tuple) else result
+    project = result.items[0] if isinstance(result, Page) else result
 
     assert isinstance(project, Project)
     assert project._client is client

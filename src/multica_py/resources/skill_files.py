@@ -9,17 +9,18 @@ from multica_py._generated.approved_sdk import (
     validate_nonblank,
 )
 from multica_py._internal.commands import Command
+from multica_py.models.common import Page
 from multica_py.models.skills import SkillFile
 from multica_py.resources._base import BaseResource
 
 
 class SkillFileResource(BaseResource):
-    def list_command(self, skill_id: str) -> Command[tuple[SkillFile, ...]]:
+    def list_command(self, skill_id: str) -> Command[Page[SkillFile]]:
         _ = cast("object", SKILL_FILES_LIST_BINDING)
         validate_nonblank(skill_id)
-        return self._decoded_list_command(("skill", "files", "list", skill_id), SkillFile)
+        return self._decoded_page_command(("skill", "files", "list", skill_id), SkillFile)
 
-    def list(self, skill_id: str) -> tuple[SkillFile, ...]:
+    def list(self, skill_id: str) -> Page[SkillFile]:
         return self.list_command(skill_id).run()
 
     def upsert_command(self, skill_id: str, path: str, content: str) -> Command[SkillFile]:

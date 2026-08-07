@@ -9,13 +9,14 @@ from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
+from multica_py.models.common import Page
 from multica_py.models.relations import LazyCollection
 from multica_py.models.skills import (
     SkillCreateRequest,
     SkillFile,
     SkillUpdateRequest,
 )
-from multica_py.resources._base import BaseResource, _resolve_request
+from multica_py.resources._base import BaseResource, _page_items, _resolve_request
 from multica_py.resources.skill_files import SkillFileResource
 from multica_py.sentinels import Unset, UnsetType
 
@@ -40,13 +41,13 @@ class Skill(_BoundEntity):  # type: ignore[misc]
             files = client.skills.files
 
             def loader() -> tuple[SkillFile, ...]:
-                return files.list(sid)
+                return _page_items(files.list(sid))
 
             self._set_runtime(
                 "_files",
                 LazyCollection[SkillFile](
                     loader,
-                    command_loader=lambda: files.list_command(sid),
+                    command_loader=lambda: files.list_command(sid)._map(_page_items),
                 ),
             )
         return self._files  # type: ignore[return-value]
@@ -86,12 +87,19 @@ class SkillResource(BaseResource):
         super().__init__(transport, config)
         self.files = SkillFileResource(transport, config)
 
-    def list_command(self) -> Command[tuple[Skill, ...]]:
-        return self._decoded_list_command(("skill", "list"), Skill)._map(
-            lambda items: tuple(skill._with_client(self._client) for skill in items)
+    def list_command(self) -> Command[Page[Skill]]:
+        return self._decoded_page_command(("skill", "list"), Skill)._map(
+            lambda page: Page(
+                items=tuple(skill._with_client(self._client) for skill in page.items),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
+            )
         )
 
-    def list(self) -> tuple[Skill, ...]:
+    def list(self) -> Page[Skill]:
         return self.list_command().run()
 
     def get_command(self, skill_id: str) -> Command[Skill]:

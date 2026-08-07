@@ -9,17 +9,18 @@ from multica_py._generated.approved_sdk import (
     validate_nonblank,
 )
 from multica_py._internal.commands import Command
+from multica_py.models.common import Page
 from multica_py.models.system import SquadMember
 from multica_py.resources._base import BaseResource
 
 
 class SquadMemberResource(BaseResource):
-    def list_command(self, squad_id: str) -> Command[tuple[SquadMember, ...]]:
+    def list_command(self, squad_id: str) -> Command[Page[SquadMember]]:
         _ = cast("object", SQUAD_MEMBERS_LIST_BINDING)
         validate_nonblank(squad_id)
-        return self._decoded_list_command(("squad", "member", "list", squad_id), SquadMember)
+        return self._decoded_page_command(("squad", "member", "list", squad_id), SquadMember)
 
-    def list(self, squad_id: str) -> tuple[SquadMember, ...]:
+    def list(self, squad_id: str) -> Page[SquadMember]:
         return self.list_command(squad_id).run()
 
     def add_command(self, squad_id: str, member_id: str) -> Command[None]:

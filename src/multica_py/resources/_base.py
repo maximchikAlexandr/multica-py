@@ -11,6 +11,7 @@ from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.models.common import Page
 from multica_py.process import ManagedProcess
 
 if TYPE_CHECKING:
@@ -19,6 +20,10 @@ if TYPE_CHECKING:
 S = TypeVar("S", bound=msgspec.Struct)
 R = TypeVar("R", bound=msgspec.Struct)
 T = TypeVar("T")
+
+
+def _page_items(value: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
+    return value.items if isinstance(value, Page) else value
 
 
 def _is_transport(value: object) -> bool:
@@ -110,6 +115,11 @@ class BaseResource:
         return self._plan(
             steps=(_Step(plan_args, "run_bytes", decode=decode),),
             finalize=lambda results: cast("tuple[S, ...]", results[0]),
+        )
+
+    def _decoded_page_command(self, args: tuple[str, ...], item_type: type[S]) -> Command[Page[S]]:
+        return self._decoded_list_command(args, item_type)._map(
+            lambda items: Page(items=items, total=len(items))
         )
 
     def _text_command(

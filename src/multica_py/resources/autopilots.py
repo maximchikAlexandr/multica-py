@@ -56,7 +56,7 @@ from multica_py.models.relations import (
     OffsetLazyCollection,
     OffsetPage,
 )
-from multica_py.resources._base import BaseResource, _resolve_request
+from multica_py.resources._base import BaseResource, _page_items, _resolve_request
 from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import JsonValue
 
@@ -275,7 +275,7 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
                 issues = client.issues
 
                 def loader() -> tuple[RunMessage, ...]:
-                    return issues.run_messages(task_id, issue_id=issue_id)
+                    return _page_items(issues.run_messages(task_id, issue_id=issue_id))
 
                 self._set_runtime(
                     "_messages",
@@ -283,7 +283,7 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
                         loader,
                         command_loader=lambda: issues.run_messages_command(
                             task_id, issue_id=issue_id
-                        ),
+                        )._map(_page_items),
                     ),
                 )
         return self._messages  # type: ignore[return-value]
@@ -296,7 +296,7 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
             raise MissingRelationContextError("AutopilotRun", self.id, "messages", "task_id")
         task_id = self.task_id
         issue_id = self.issue_id
-        return client.issues.run_messages_command(task_id, issue_id=issue_id)
+        return client.issues.run_messages_command(task_id, issue_id=issue_id)._map(_page_items)
 
 
 class Autopilot(_BoundEntity):  # type: ignore[misc]
