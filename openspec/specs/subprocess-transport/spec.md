@@ -37,9 +37,9 @@ transport, services, and close behavior.
 - **THEN** executor concurrency observes `N` while each CLI process also observes the shared `max_processes` semaphore
 
 ### Requirement: Decode and diagnostics
-The SDK MUST decode supported structured output, map reliable failures to typed
-errors, preserve actionable upstream detail, and redact secrets from all
-diagnostics. A raw HTTP `409`, the stable `v0.4.20` localized conflict prefixes,
+The SDK MUST decode supported structured output, map reliable failures to typed errors, and redact secrets from diagnostics.
+Classified failures MUST preserve actionable upstream detail. A raw HTTP `409`,
+the stable `v0.4.20` localized conflict prefixes,
 and the localized generic conflict fallback SHALL map to `ConflictError` even
 though upstream has no conflict-specific process exit code. Known validation
 failures SHALL map to `ValidationError` through exit code `5`, raw HTTP
@@ -53,8 +53,13 @@ attributes, reprs, or previews. When no safe detail exists, the existing
 generic command-failed message SHALL remain the fallback.
 
 #### Scenario: Failures expose typed redacted diagnostics
+- **WHEN** malformed output or nonzero exit occurs
+- **THEN** the diagnostic has redacted command context and the documented error type.
+<!-- Source IDs: 001:FR-011–FR-014,FR-040–FR-044 -->
+
+#### Scenario: Failures retain redacted streams
 - **WHEN** malformed output or a nonzero CLI exit occurs
-- **THEN** the diagnostic has redacted command context, captured redacted streams, and the documented error type
+- **THEN** the diagnostic retains captured redacted streams without exposing secrets
 
 #### Scenario: Conflict detail reaches str of exception
 - **WHEN** the CLI emits `Request conflict: <server detail>` for an HTTP `409`
