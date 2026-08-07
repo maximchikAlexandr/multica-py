@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import cast
 
 from multica_py._internal.commands import Command, _Step
@@ -12,17 +11,12 @@ from multica_py.enums import MetadataValueType
 from multica_py.models.issue_activity import (
     MetadataEntry,
     MetadataListRequest,
+    MetadataPage,
     MetadataPredicate,
     MetadataSetRequest,
 )
 from multica_py.resources._base import BaseResource
 from multica_py.types import MetadataValue
-
-
-@dataclass(frozen=True, slots=True)
-class MetadataPage:
-    items: tuple[MetadataEntry, ...]
-    next_cursor: str | None = None
 
 
 class IssueMetadataResource(BaseResource):

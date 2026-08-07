@@ -12,10 +12,10 @@
 
 ## 2. Common page and action result models
 
-- [ ] 2.1 Replace the duplicate common and issue-activity page cores with one frozen generic `multica_py.models.common.Page[T]` carrying `items`, `limit`, `offset`, `total`, `has_more`, and the existing closed cursor union.
-- [ ] 2.2 Implement typed `__iter__`, `__len__`, and integer/slice `__getitem__` on `Page[T]`, with no hidden I/O and no mutable collection exposure.
-- [ ] 2.3 Convert `IssueListPage`, `AutopilotListPage[T]`, `AutopilotRunListPage[T]`, `MetadataPage`, and `IssueChildrenResult` into compatible page shapes; retain warning-free read-only `issues`, `autopilots`, `runs`, and `children` aliases that return the identical `items` tuple.
-- [ ] 2.4 Generalize the existing frozen `ActionResult` to `ActionResult[T]` with typed `value`, `success`, and optional non-secret `message`, while keeping CLI/validation/decode failures exceptional.
+- [x] 2.1 Replace the duplicate common and issue-activity page cores with one frozen generic `multica_py.models.common.Page[T]` carrying `items`, `limit`, `offset`, `total`, `has_more`, and the existing closed cursor union.
+- [x] 2.2 Implement typed `__iter__`, `__len__`, and integer/slice `__getitem__` on `Page[T]`, with no hidden I/O and no mutable collection exposure.
+- [x] 2.3 Convert `IssueListPage`, `AutopilotListPage[T]`, `AutopilotRunListPage[T]`, `MetadataPage`, and `IssueChildrenResult` into compatible page shapes; retain warning-free read-only `issues`, `autopilots`, `runs`, and `children` aliases that return the identical `items` tuple.
+- [x] 2.4 Generalize the existing frozen `ActionResult` to `ActionResult[T]` with typed `value`, `success`, and optional non-secret `message`, while keeping CLI/validation/decode failures exceptional.
 - [ ] 2.5 Export `Page`, `ActionResult`, all retained page names, and the new update request models through `multica_py.models` and `multica_py.__init__`; update `__all__` and public-surface contract tables without exporting internal helpers.
 - [ ] 2.6 Add focused unit and contract tests for canonical/direct-resource page immutability, tuple identity, iteration, length, integer/slice indexing, neutral unpaged metadata, offset/cursor metadata, compatibility aliases, relation `.all()` tuple snapshots, generic action values, encoding/decoding where supported, and no public `Any`.
 - [ ] 2.7 Run the focused model/public-surface tests plus `uv run mypy src` and `uv run mypy tests`; resolve any `msgspec.Struct` inheritance limitation with concrete compatible frozen structs as allowed by the design, not by weakening the public contract.

@@ -1,24 +1,28 @@
 from __future__ import annotations
 
 import datetime
-from typing import Generic, TypeVar
 
 import msgspec
 
 from multica_py.enums import MetadataValueType
+from multica_py.models.common import CommentCursor, Page
 from multica_py.types import MetadataValue
 
-T = TypeVar("T")
-
-
-class CommentCursor(msgspec.Struct, frozen=True, kw_only=True, forbid_unknown_fields=True):
-    before: str
-    before_id: str
-
-
-class Page(msgspec.Struct, Generic[T], frozen=True, kw_only=True):
-    items: tuple[T, ...]
-    total_count: int | None = None
+__all__ = [
+    "CommentCursor",
+    "CommentListFlatRequest",
+    "CommentListRecentRequest",
+    "CommentListThreadRequest",
+    "IssueUsage",
+    "MetadataEntry",
+    "MetadataListRequest",
+    "MetadataPage",
+    "MetadataPredicate",
+    "MetadataSetRequest",
+    "Page",
+    "RunMessage",
+    "Subscriber",
+]
 
 
 class CommentListFlatRequest(msgspec.Struct, frozen=True, kw_only=True):
@@ -52,6 +56,9 @@ class Subscriber(msgspec.Struct, frozen=True, kw_only=True):
 class MetadataEntry(msgspec.Struct, frozen=True, kw_only=True):
     key: str
     value: MetadataValue
+
+
+MetadataPage = Page[MetadataEntry]
 
 
 class MetadataPredicate(msgspec.Struct, frozen=True, kw_only=True):

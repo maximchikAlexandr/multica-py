@@ -33,11 +33,14 @@ from multica_py.exceptions import (
     ValidationError,
 )
 from multica_py.models.autopilots import (
+    AutopilotListPage,
+    AutopilotRunListPage,
     AutopilotTriggerCreate,
     AutopilotTriggerUpdate,
 )
-from multica_py.models.common import ActionResult, Page
-from multica_py.models.issues import IssueChildrenResult
+from multica_py.models.common import ActionResult, CommentCursor, Page
+from multica_py.models.issue_activity import MetadataPage
+from multica_py.models.issues import IssueChildrenResult, IssueListPage
 from multica_py.models.project_resources import (
     LocalDirectoryResourceRef,
     ProjectResourceAddLocalDirectoryRequest,
@@ -82,7 +85,9 @@ __all__ = [
     "AuthenticationError",
     "AuthorizationError",
     "Autopilot",
+    "AutopilotListPage",
     "AutopilotRun",
+    "AutopilotRunListPage",
     "AutopilotTriggerCreate",
     "AutopilotTriggerUpdate",
     "ClientConfig",
@@ -91,6 +96,7 @@ __all__ = [
     "CommandExecutionError",
     "CommandTimeoutError",
     "Comment",
+    "CommentCursor",
     "CommentThread",
     "CompatibilityPolicy",
     "ConflictError",
@@ -102,6 +108,7 @@ __all__ = [
     "ExecutableNotRunnableError",
     "Issue",
     "IssueChildrenResult",
+    "IssueListPage",
     "IssueStatus",
     "JsonOutputError",
     "JsonScalar",
@@ -111,6 +118,7 @@ __all__ = [
     "LazyMapping",
     "LocalDirectoryResourceRef",
     "ManagedProcess",
+    "MetadataPage",
     "MetadataValue",
     "MetadataValueType",
     "MissingRelationContextError",
