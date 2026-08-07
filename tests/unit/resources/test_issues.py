@@ -11,8 +11,10 @@ from multica_py._internal.argv import build_global_args
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.wire_models import (
+    _issue_children_result_from_wire,
     _issue_from_wire,
     _issue_list_page_from_wire,
+    _IssueChildrenResultWire,
     _IssueListPageWire,
     _IssueWire,
 )
@@ -25,6 +27,7 @@ from multica_py.models.issue_activity import (
 from multica_py.models.issues import (
     InlineDescription,
     IssueAssignmentRequest,
+    IssueChildrenResult,
     IssueCreateRequest,
     IssueListFilter,
     IssueListPage,
@@ -170,6 +173,18 @@ def test_issue_list_page_decodes_summary_collections(case: _IssueListProjectionC
     assert page.issues[0].label_names == case.expected_labels
     assert page.issues[0].metadata_snapshot == case.expected_metadata
     assert page.issues[0].match_source is case.expected_match_source
+
+
+def test_issue_children_wire_finalizer_returns_page_with_neutral_metadata() -> None:
+    page = _issue_children_result_from_wire(_IssueChildrenResultWire())
+
+    assert isinstance(page, IssueChildrenResult)
+    assert page.items is page.children
+    assert page.limit is None
+    assert page.offset is None
+    assert page.total == 0
+    assert page.has_more is False
+    assert page.next_cursor is None
 
 
 def test_issue_resource_list_returns_issue_list_page(mock_transport: MagicMock) -> None:

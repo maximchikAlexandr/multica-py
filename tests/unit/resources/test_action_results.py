@@ -200,33 +200,12 @@ def test_bound_action_mapper_preserves_identity_and_gates_invalidation(success: 
 
 
 def test_action_case_table_contains_all_approved_void_surfaces() -> None:
-    approved = {
-        "agents.archive",
-        "agents.avatar",
-        "agents.restore",
-        "agents.skills.set",
-        "autopilots.delete",
-        "autopilots.trigger_delete",
-        "configuration.set",
-        "issues.cancel_task",
-        "issues.comments.delete",
-        "issues.comments.resolve",
-        "issues.comments.unresolve",
-        "issues.metadata.delete",
-        "issues.rerun",
-        "issues.subscribers.add",
-        "issues.subscribers.remove",
-        "labels.delete",
-        "projects.delete",
-        "projects.resources.remove",
-        "runtimes.delete",
-        "skills.delete",
-        "skills.files.delete",
-        "squads.members.add",
-        "squads.members.remove",
-        "workspaces.switch",
-        "workspaces.watch",
-        "workspaces.unwatch",
+    approved = APPROVED_ACTION_METHODS - {
+        "auth.login",
+        "issues.deprioritize",
+        "repositories.add",
+        "repositories.remove",
+        "runtimes.update",
     }
     covered = {case.sdk_method for case in OPERATION_CASES if case.sdk_method in approved}
     assert covered == approved

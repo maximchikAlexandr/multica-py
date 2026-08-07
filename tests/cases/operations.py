@@ -575,7 +575,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         AutopilotTriggerCreate,
         AutopilotTriggerUpdate,
     )
-    from multica_py.models.common import ActionResult
+    from multica_py.models.common import ActionResult, Page
     from multica_py.models.issue_activity import (
         CommentCursor,
         CommentListFlatRequest,
@@ -592,6 +592,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         FileDescription,
         InlineDescription,
         IssueAssignmentRequest,
+        IssueChildrenResult,
         IssueChildStageGroup,
         IssueCreateRequest,
         IssueListFilter,
@@ -868,6 +869,17 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
 
     def _assert_composite_issue(result: object, _mt: MagicMock) -> None:
         assert getattr(result, "id") == "i1"
+
+    def _assert_issue_children_page(result: object, _mt: MagicMock) -> None:
+        page = cast("IssueChildrenResult", result)
+        assert isinstance(page, IssueChildrenResult)
+        assert isinstance(page, Page)
+        assert page.items is page.children
+        assert page.limit is None
+        assert page.offset is None
+        assert page.total == 0
+        assert page.has_more is False
+        assert page.next_cursor is None
 
     def _c(
         sdk_method: str,
@@ -2389,6 +2401,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("iss_1",),
             stdout=b'{"children":[],"total":0,"child_stages":[],"unstaged":[]}',
             id="manual:issues.children:canonical",
+            assert_result=_assert_issue_children_page,
         ),
         _c(
             "issues.pull_requests",

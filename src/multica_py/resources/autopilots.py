@@ -634,7 +634,7 @@ class AutopilotResource(BaseResource):
     def list_command(self) -> Command[AutopilotListPage[Autopilot]]:
         def finalize(page: _AutopilotListWire) -> AutopilotListPage[Autopilot]:
             return AutopilotListPage(
-                autopilots=tuple(
+                items=tuple(
                     self._bind_autopilot(_autopilot_from_wire(item)) for item in page.autopilots
                 ),
                 total=page.total,
@@ -887,7 +887,7 @@ class AutopilotResource(BaseResource):
         def finalize(wire: _AutopilotRunListPageWire) -> AutopilotRunListPage[AutopilotRun]:
             page = _autopilot_run_list_page_from_wire(wire, limit=limit, offset=offset)
             return AutopilotRunListPage(
-                runs=tuple(run._with_client(self._client) for run in page.runs),
+                items=tuple(run._with_client(self._client) for run in page.runs),
                 total=page.total,
                 limit=page.limit,
                 offset=page.offset,

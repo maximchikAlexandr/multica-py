@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import msgspec
 
 from multica_py.enums import IssueSort, IssueStatus, SortDirection
-from multica_py.models.common import _PageSequence
+from multica_py.models.common import Page
 from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import MetadataValue
 
@@ -51,11 +51,7 @@ class IssueChildStageGroup(msgspec.Struct, frozen=True, kw_only=True):
     count: int
 
 
-class IssueChildrenResult(_PageSequence[object], msgspec.Struct, frozen=True, kw_only=True):
-    if TYPE_CHECKING:
-        children: tuple[Issue, ...] = ()
-    else:
-        children: tuple[object, ...] = ()
+class IssueChildrenResult(Page[object], frozen=True, kw_only=True):
     total: int = 0
     child_stages: tuple[IssueChildStageGroup, ...] = ()
     if TYPE_CHECKING:
@@ -64,8 +60,8 @@ class IssueChildrenResult(_PageSequence[object], msgspec.Struct, frozen=True, kw
         unstaged: tuple[object, ...] = ()
 
     @property
-    def items(self) -> tuple[Issue, ...]:
-        return self.children
+    def children(self) -> tuple[Issue, ...]:
+        return cast("tuple[Issue, ...]", self.items)
 
 
 class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
@@ -80,16 +76,10 @@ class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
     metadata: tuple[IssueMetadataItem, ...] = ()
 
 
-class IssueListPage(_PageSequence[IssueSummary], msgspec.Struct, frozen=True, kw_only=True):
-    issues: tuple[IssueSummary, ...] = ()
-    has_more: bool = False
-    limit: int | None = None
-    offset: int | None = None
-    total: int | None = None
-
+class IssueListPage(Page[IssueSummary], frozen=True, kw_only=True):
     @property
-    def items(self) -> tuple[IssueSummary, ...]:
-        return self.issues
+    def issues(self) -> tuple[IssueSummary, ...]:
+        return self.items
 
 
 class InlineDescription(msgspec.Struct, frozen=True, kw_only=True):

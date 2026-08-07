@@ -6,7 +6,7 @@ from typing import Generic, TypeVar
 import msgspec
 
 from multica_py.enums import AutopilotExecutionMode
-from multica_py.models.common import _PageSequence
+from multica_py.models.common import Page
 from multica_py.sentinels import Unset, UnsetType
 
 TAutopilot = TypeVar("TAutopilot")
@@ -19,34 +19,20 @@ class AutopilotSubscriber(msgspec.Struct, frozen=True, kw_only=True):
     created_at: datetime.datetime | None = None
 
 
-class AutopilotListPage(
-    _PageSequence[TAutopilot], msgspec.Struct, Generic[TAutopilot], frozen=True, kw_only=True
-):
-    autopilots: tuple[TAutopilot, ...] = ()
+class AutopilotListPage(Page[TAutopilot], Generic[TAutopilot], frozen=True, kw_only=True):
     total: int = 0
-    limit: int | None = None
-    offset: int | None = None
-    has_more: bool = False
-    next_cursor: str | None = None
 
     @property
-    def items(self) -> tuple[TAutopilot, ...]:
-        return self.autopilots
+    def autopilots(self) -> tuple[TAutopilot, ...]:
+        return self.items
 
 
-class AutopilotRunListPage(
-    _PageSequence[TAutopilotRun], msgspec.Struct, Generic[TAutopilotRun], frozen=True, kw_only=True
-):
-    runs: tuple[TAutopilotRun, ...] = ()
+class AutopilotRunListPage(Page[TAutopilotRun], Generic[TAutopilotRun], frozen=True, kw_only=True):
     total: int = 0
-    limit: int | None = None
-    offset: int | None = None
-    has_more: bool = False
-    next_cursor: str | None = None
 
     @property
-    def items(self) -> tuple[TAutopilotRun, ...]:
-        return self.runs
+    def runs(self) -> tuple[TAutopilotRun, ...]:
+        return self.items
 
 
 class TriggerConfigItem(msgspec.Struct, frozen=True, kw_only=True):

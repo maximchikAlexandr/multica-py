@@ -231,7 +231,7 @@ def _make_mock_resources(
         client.issues.list.side_effect = issue_page_results
     else:
         client.issues.list.return_value = IssueListPage(
-            issues=(), has_more=False, limit=50, offset=0, total=0
+            items=(), has_more=False, limit=50, offset=0, total=0
         )
 
     def issue_list_command(issue_filter: object) -> Command[object]:
@@ -471,7 +471,7 @@ def test_project_mutation_commands_validate_before_transport(
 def test_project_parent_mutations_invalidate_only_resources(
     case: ProjectParentMutationCase,
 ) -> None:
-    page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
+    page = IssueListPage(items=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_mock_resources(
         resource_list_result=(_RESOURCE_RECORD,), issue_page_results=[page]
     )
@@ -536,7 +536,7 @@ def test_project_parent_validation_preserves_loaded_resources(
 
 def test_project_issues_two_pages() -> None:
     page1 = IssueListPage(
-        issues=(
+        items=(
             IssueSummary(id="i1", title="Task 1", status=_TODO),
             IssueSummary(id="i2", title="Task 2", status=_TODO),
         ),
@@ -546,7 +546,7 @@ def test_project_issues_two_pages() -> None:
         total=3,
     )
     page2 = IssueListPage(
-        issues=(IssueSummary(id="i3", title="Task 3", status=_DONE),),
+        items=(IssueSummary(id="i3", title="Task 3", status=_DONE),),
         has_more=False,
         limit=2,
         offset=2,
@@ -578,7 +578,7 @@ def test_project_issues_two_pages() -> None:
 
 def test_project_issues_single_page() -> None:
     page = IssueListPage(
-        issues=(IssueSummary(id="i1", title="One", status=_TODO),),
+        items=(IssueSummary(id="i1", title="One", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -602,7 +602,7 @@ def test_project_issues_single_page() -> None:
 
 
 def test_project_issues_cached_after_all() -> None:
-    page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
+    page = IssueListPage(items=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_mock_resources(issue_page_results=[page])
     entity = Project(
         id="p1",
@@ -618,7 +618,7 @@ def test_project_issues_cached_after_all() -> None:
 
 
 def test_project_issues_invalidate_triggers_new_load() -> None:
-    page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
+    page = IssueListPage(items=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_mock_resources(issue_page_results=[page, page])
     entity = Project(
         id="p1",

@@ -15,6 +15,7 @@ from multica_py.models.autopilots import (
     AutopilotTrigger,
     TriggerConfigItem,
 )
+from multica_py.models.common import CommentCursor
 from multica_py.models.issues import (
     IssueAssignee,
     IssueChildrenResult,
@@ -83,6 +84,7 @@ class _IssueListPageWire(msgspec.Struct, frozen=True, kw_only=True):
     limit: int | None = None
     offset: int | None = None
     total: int | None = None
+    next_cursor: str | CommentCursor | None = None
 
 
 class _IssueSearchResultWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -92,11 +94,12 @@ class _IssueSearchResultWire(msgspec.Struct, frozen=True, kw_only=True):
 
 def _issue_list_page_from_wire(wire: _IssueListPageWire) -> IssueListPage:
     return IssueListPage(
-        issues=tuple(issue_summary_from_wire(item) for item in wire.issues),
+        items=tuple(issue_summary_from_wire(item) for item in wire.issues),
         has_more=wire.has_more,
         limit=wire.limit,
         offset=wire.offset,
         total=wire.total,
+        next_cursor=wire.next_cursor,
     )
 
 
@@ -162,14 +165,22 @@ class _IssueChildrenResultWire(msgspec.Struct, frozen=True, kw_only=True):
     total: int = 0
     child_stages: tuple[IssueChildStageGroup, ...] = ()
     unstaged: tuple[_IssueWire, ...] = ()
+    limit: int | None = None
+    offset: int | None = None
+    has_more: bool = False
+    next_cursor: str | CommentCursor | None = None
 
 
 def _issue_children_result_from_wire(wire: _IssueChildrenResultWire) -> IssueChildrenResult:
     return IssueChildrenResult(
-        children=tuple(_issue_from_wire(item) for item in wire.children),
+        items=tuple(_issue_from_wire(item) for item in wire.children),
         total=wire.total,
         child_stages=wire.child_stages,
         unstaged=tuple(_issue_from_wire(item) for item in wire.unstaged),
+        limit=wire.limit,
+        offset=wire.offset,
+        has_more=wire.has_more,
+        next_cursor=wire.next_cursor,
     )
 
 
@@ -262,7 +273,7 @@ class _AutopilotListWire(msgspec.Struct, frozen=True, kw_only=True):
 def _autopilot_list_page_from_wire(wire: _AutopilotListWire) -> AutopilotListPage[object]:
 
     return AutopilotListPage(
-        autopilots=tuple(_autopilot_from_wire(a) for a in wire.autopilots),
+        items=tuple(_autopilot_from_wire(a) for a in wire.autopilots),
         total=wire.total,
     )
 
@@ -438,7 +449,7 @@ def _autopilot_run_list_page_from_wire(
     runs = tuple(_autopilot_run_from_wire(r) for r in wire.runs)
     has_more = (offset or 0) + len(runs) < wire.total
     return AutopilotRunListPage(
-        runs=runs,
+        items=runs,
         total=wire.total,
         limit=limit,
         offset=offset,

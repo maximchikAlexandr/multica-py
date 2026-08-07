@@ -114,7 +114,7 @@ def _make_client(
         client.issues.list.side_effect = issues
     else:
         client.issues.list.return_value = IssueListPage(
-            issues=(), has_more=False, limit=50, offset=0, total=0
+            items=(), has_more=False, limit=50, offset=0, total=0
         )
     client.skills.files.list.return_value = files
     client.skills.files.upsert.return_value = None
@@ -318,14 +318,14 @@ def test_agent_tasks_cached_after_all() -> None:
 @pytest.mark.parametrize("case", ASSIGNEE_ISSUE_RELATION_CASES, ids=lambda case: case.name)
 def test_assignee_issue_relations_paginate_offset(case: AssigneeIssueRelationCase) -> None:
     p1 = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=True,
         limit=1,
         offset=0,
         total=2,
     )
     p2 = IssueListPage(
-        issues=(IssueSummary(id="i2", title="t2", status=_TODO),),
+        items=(IssueSummary(id="i2", title="t2", status=_TODO),),
         has_more=False,
         limit=1,
         offset=1,
@@ -350,7 +350,7 @@ def test_assignee_issue_relations_paginate_offset(case: AssigneeIssueRelationCas
 
 def test_agent_issues_single_page() -> None:
     p = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -726,7 +726,7 @@ SQUAD_PARENT_VALIDATION_CASES = (
 
 @pytest.mark.parametrize("case", SQUAD_PARENT_MUTATION_CASES, ids=lambda case: case.name)
 def test_squad_parent_mutations_invalidate_only_members(case: SquadParentMutationCase) -> None:
-    page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
+    page = IssueListPage(items=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_client(
         members=(SquadMember(member_id="m1", member_type="agent", role="dev"),), issues=[page]
     )
@@ -787,7 +787,7 @@ def test_squad_parent_validation_preserves_loaded_members(case: SquadParentValid
 
 def test_squad_issues_uses_assignee_id() -> None:
     p = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -805,14 +805,14 @@ def test_squad_issues_uses_assignee_id() -> None:
 
 def test_squad_issues_two_pages() -> None:
     p1 = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=True,
         limit=1,
         offset=0,
         total=2,
     )
     p2 = IssueListPage(
-        issues=(IssueSummary(id="i2", title="t2", status=_TODO),),
+        items=(IssueSummary(id="i2", title="t2", status=_TODO),),
         has_more=False,
         limit=1,
         offset=1,
@@ -847,7 +847,7 @@ def test_squad_issues_two_pages() -> None:
 
 def test_workspace_member_issues_uses_assignee_id() -> None:
     p = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -865,14 +865,14 @@ def test_workspace_member_issues_uses_assignee_id() -> None:
 
 def test_workspace_member_issues_two_pages() -> None:
     p1 = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=True,
         limit=1,
         offset=0,
         total=2,
     )
     p2 = IssueListPage(
-        issues=(IssueSummary(id="i2", title="t2", status=_TODO),),
+        items=(IssueSummary(id="i2", title="t2", status=_TODO),),
         has_more=False,
         limit=1,
         offset=1,

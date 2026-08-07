@@ -290,7 +290,7 @@ def test_issue_children_preserve_aggregate_metadata() -> None:
     client = _client()
     child = Issue(id="child", title="Child", status=IssueStatus.done)
     client.issues.children.return_value = IssueChildrenResult(
-        children=(child,),
+        items=(child,),
         total=2,
         child_stages=(IssueChildStageGroup(name="done", count=1),),
         unstaged=(child,),
