@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 from typing import cast, overload
 
 import msgspec
@@ -99,18 +100,58 @@ class Project(_BoundEntity):  # type: ignore[misc]
         if self._resources is not None:
             self._resources.invalidate()
 
+    @overload
     def add_local_directory(
-        self, request: ProjectResourceAddLocalDirectoryRequest
-    ) -> ProjectResourceRecord:
-        return self.add_local_directory_command(request).run()
+        self, request: ProjectResourceAddLocalDirectoryRequest, /
+    ) -> ProjectResourceRecord: ...
 
+    @overload
+    def add_local_directory(
+        self,
+        *,
+        local_path: str | pathlib.Path,
+        daemon_id: str,
+        label: str | None = None,
+    ) -> ProjectResourceRecord: ...
+
+    def add_local_directory(  # type: ignore[misc]
+        self,
+        request: ProjectResourceAddLocalDirectoryRequest | None = None,
+        /,
+        **kwargs: object,
+    ) -> ProjectResourceRecord:
+        return self.add_local_directory_command(
+            cast("ProjectResourceAddLocalDirectoryRequest", request), **kwargs
+        ).run()
+
+    @overload
     def add_local_directory_command(
-        self, request: ProjectResourceAddLocalDirectoryRequest
+        self, request: ProjectResourceAddLocalDirectoryRequest, /
+    ) -> Command[ProjectResourceRecord]: ...
+
+    @overload
+    def add_local_directory_command(
+        self,
+        *,
+        local_path: str | pathlib.Path,
+        daemon_id: str,
+        label: str | None = None,
+    ) -> Command[ProjectResourceRecord]: ...
+
+    def add_local_directory_command(  # type: ignore[misc]
+        self,
+        request: ProjectResourceAddLocalDirectoryRequest | None = None,
+        /,
+        **kwargs: object,
     ) -> Command[ProjectResourceRecord]:
         client = self._require_client(
             entity_type="Project", entity_id=self.id, relation_name="add_local_directory"
         )
-        command = client.projects.resources.add_local_directory_command(self.id, request)
+        command = client.projects.resources.add_local_directory_command(
+            self.id,
+            cast("ProjectResourceAddLocalDirectoryRequest", request),
+            **kwargs,
+        )
 
         def invalidate(result: ProjectResourceRecord) -> ProjectResourceRecord:
             self._invalidate_resources()

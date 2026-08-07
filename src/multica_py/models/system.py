@@ -43,6 +43,10 @@ class RuntimeUpdate(msgspec.Struct, frozen=True, kw_only=True):
     target_version: str
     wait: bool = False
 
+    def __post_init__(self) -> None:
+        if self.target_version is None:
+            raise TypeError("target_version must be non-null")
+
 
 class RuntimeUpdateResult(msgspec.Struct, frozen=True, kw_only=True):
     id: str

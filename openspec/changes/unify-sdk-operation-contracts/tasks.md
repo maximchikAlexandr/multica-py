@@ -30,9 +30,9 @@
 - [x] 3.6 Add dual overloads to `issues.metadata.query` and `set_typed` and their command siblings; preserve predicate order, JSON scalar typing, cursor rules, and the existing direct `set(issue_id, key, value)` sibling.
 - [x] 3.7 Add dual overloads to top-level and bound autopilot `trigger_add`/`trigger_update` eager and command methods, routing both forms through the same request validation and bound cache invalidation.
 - [x] 3.8 Convert `autopilots.update` and `labels.update` plus command siblings to dual-input methods over `AutopilotUpdateRequest` and `LabelUpdateRequest`; retain stable target identifiers as positional arguments and make request fields keyword-only.
-- [ ] 3.9 Add one frozen typed-input case table that discovers every governed request/filter annotation across resource and bound methods and asserts exact request-field names, types, defaults, eager/command overload parity, and no unlisted object-only exception.
-- [ ] 3.10 Add table rows for object/direct command parity, mixed input, missing required input, optional empty input, unknown keyword, and request `__post_init__` failures; assert exact preview/argv/mode/stdin/timeout/result equality and zero transport calls on every invalid case.
-- [ ] 3.11 Run `uv run pytest -m "not live" tests/unit/resources -k 'request or direct or operation'`, `uv run mypy src`, and `uv run mypy tests` before presence-aware command changes.
+- [x] 3.9 Add one frozen typed-input case table that discovers every governed request/filter annotation across resource and bound methods and asserts exact request-field names, types, defaults, eager/command overload parity, and no unlisted object-only exception.
+- [x] 3.10 Add table rows for object/direct command parity, mixed input, missing required input, optional empty input, unknown keyword, and request `__post_init__` failures; assert exact preview/argv/mode/stdin/timeout/result equality and zero transport calls on every invalid case.
+- [x] 3.11 Run `uv run pytest -m "not live" tests/unit/resources -k 'request or direct or operation'`, `uv run mypy src`, and `uv run mypy tests` before presence-aware command changes.
 
 ## 4. Presence-aware update command plans
 

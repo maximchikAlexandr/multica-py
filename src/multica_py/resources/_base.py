@@ -35,6 +35,8 @@ def _resolve_request(
     if request is not None and kwargs:
         raise TypeError("Pass either a request object or keyword arguments, not both.")
     if request is not None:
+        if not isinstance(request, cls):
+            raise TypeError(f"Expected {cls.__name__}, got {type(request).__name__}.")
         return request
     if not kwargs:
         if allow_empty:
