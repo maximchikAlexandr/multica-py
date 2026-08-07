@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import re
 from collections.abc import Callable
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, TypeVar, cast, overload
 
 import msgspec
 
@@ -28,7 +28,7 @@ from multica_py.models.issue_activity import (
     CommentListThreadRequest,
 )
 from multica_py.models.relations import CursorLazyCollection, CursorPage
-from multica_py.resources._base import BaseResource
+from multica_py.resources._base import BaseResource, _resolve_request
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
@@ -171,7 +171,21 @@ class IssueCommentResource(BaseResource):
     def list(self, issue_id: str) -> tuple[Comment, ...]:
         return self.list_command(issue_id).run()
 
-    def list_flat_command(self, request: CommentListFlatRequest) -> Command[Page[Comment]]:
+    @overload
+    def list_flat_command(self, request: CommentListFlatRequest, /) -> Command[Page[Comment]]: ...
+
+    @overload
+    def list_flat_command(
+        self, *, issue_id: str, since: datetime.datetime | None = None
+    ) -> Command[Page[Comment]]: ...
+
+    def list_flat_command(  # type: ignore[misc]
+        self,
+        request: CommentListFlatRequest | None = None,
+        /,
+        **kwargs: object,
+    ) -> Command[Page[Comment]]:
+        request = _resolve_request(request, kwargs, CommentListFlatRequest)
         args = ["issue", "comment", "list", request.issue_id]
         since = _format_since(request.since)
         if since is not None:
@@ -191,10 +205,45 @@ class IssueCommentResource(BaseResource):
             steps=(_Step((*args, "--output", "json"), "run_text"),), finalize=finalize
         )
 
-    def list_flat(self, request: CommentListFlatRequest) -> Page[Comment]:
-        return self.list_flat_command(request).run()
+    @overload
+    def list_flat(self, request: CommentListFlatRequest, /) -> Page[Comment]: ...
 
-    def list_thread_command(self, request: CommentListThreadRequest) -> Command[Page[Comment]]:
+    @overload
+    def list_flat(
+        self, *, issue_id: str, since: datetime.datetime | None = None
+    ) -> Page[Comment]: ...
+
+    def list_flat(  # type: ignore[misc]
+        self,
+        request: CommentListFlatRequest | None = None,
+        /,
+        **kwargs: object,
+    ) -> Page[Comment]:
+        return self.list_flat_command(cast("CommentListFlatRequest", request), **kwargs).run()
+
+    @overload
+    def list_thread_command(
+        self, request: CommentListThreadRequest, /
+    ) -> Command[Page[Comment]]: ...
+
+    @overload
+    def list_thread_command(
+        self,
+        *,
+        issue_id: str,
+        thread_id: str,
+        cursor: CommentCursor | None = None,
+        limit: int | None = None,
+        since: datetime.datetime | None = None,
+    ) -> Command[Page[Comment]]: ...
+
+    def list_thread_command(  # type: ignore[misc]
+        self,
+        request: CommentListThreadRequest | None = None,
+        /,
+        **kwargs: object,
+    ) -> Command[Page[Comment]]:
+        request = _resolve_request(request, kwargs, CommentListThreadRequest)
         if request.cursor is not None and request.limit is None:
             raise ValueError("cursor requires limit")
         if request.limit is not None and request.limit < 0:
@@ -231,12 +280,50 @@ class IssueCommentResource(BaseResource):
             steps=(_Step((*args, "--output", "json"), "run_text"),), finalize=finalize
         )
 
-    def list_thread(self, request: CommentListThreadRequest) -> Page[Comment]:
-        return self.list_thread_command(request).run()
+    @overload
+    def list_thread(self, request: CommentListThreadRequest, /) -> Page[Comment]: ...
 
+    @overload
+    def list_thread(
+        self,
+        *,
+        issue_id: str,
+        thread_id: str,
+        cursor: CommentCursor | None = None,
+        limit: int | None = None,
+        since: datetime.datetime | None = None,
+    ) -> Page[Comment]: ...
+
+    def list_thread(  # type: ignore[misc]
+        self,
+        request: CommentListThreadRequest | None = None,
+        /,
+        **kwargs: object,
+    ) -> Page[Comment]:
+        return self.list_thread_command(cast("CommentListThreadRequest", request), **kwargs).run()
+
+    @overload
     def list_recent_command(
-        self, request: CommentListRecentRequest
+        self, request: CommentListRecentRequest, /
+    ) -> Command[Page[CommentThread]]: ...
+
+    @overload
+    def list_recent_command(
+        self,
+        *,
+        issue_id: str,
+        cursor: CommentCursor | None = None,
+        limit: int = 10,
+        since: datetime.datetime | None = None,
+    ) -> Command[Page[CommentThread]]: ...
+
+    def list_recent_command(  # type: ignore[misc]
+        self,
+        request: CommentListRecentRequest | None = None,
+        /,
+        **kwargs: object,
     ) -> Command[Page[CommentThread]]:
+        request = _resolve_request(request, kwargs, CommentListRecentRequest)
         if request.limit < 1:
             raise ValueError("limit must be positive")
         args = ["issue", "comment", "list", request.issue_id, "--recent", str(request.limit)]
@@ -262,8 +349,26 @@ class IssueCommentResource(BaseResource):
             steps=(_Step((*args, "--output", "json"), "run_text"),), finalize=finalize
         )
 
-    def list_recent(self, request: CommentListRecentRequest) -> Page[CommentThread]:
-        return self.list_recent_command(request).run()
+    @overload
+    def list_recent(self, request: CommentListRecentRequest, /) -> Page[CommentThread]: ...
+
+    @overload
+    def list_recent(
+        self,
+        *,
+        issue_id: str,
+        cursor: CommentCursor | None = None,
+        limit: int = 10,
+        since: datetime.datetime | None = None,
+    ) -> Page[CommentThread]: ...
+
+    def list_recent(  # type: ignore[misc]
+        self,
+        request: CommentListRecentRequest | None = None,
+        /,
+        **kwargs: object,
+    ) -> Page[CommentThread]:
+        return self.list_recent_command(cast("CommentListRecentRequest", request), **kwargs).run()
 
     def add_command(self, issue_id: str, body: str) -> Command[Comment]:
         return self._decoded_command(

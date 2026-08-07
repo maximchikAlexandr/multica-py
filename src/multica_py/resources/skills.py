@@ -17,6 +17,7 @@ from multica_py.models.skills import (
 )
 from multica_py.resources._base import BaseResource, _resolve_request
 from multica_py.resources.skill_files import SkillFileResource
+from multica_py.sentinels import Unset, UnsetType
 
 
 class Skill(_BoundEntity):  # type: ignore[misc]
@@ -133,18 +134,22 @@ class SkillResource(BaseResource):
     def update_command(self, skill_id: str, request: SkillUpdateRequest, /) -> Command[Skill]: ...
     @overload
     def update_command(
-        self, skill_id: str, *, name: str | None = None, description: str | None = None
+        self,
+        skill_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
     ) -> Command[Skill]: ...
 
     def update_command(  # type: ignore[misc]
         self, skill_id: str, request: SkillUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Skill]:
         validate_nonblank(skill_id)
-        req = _resolve_request(request, kwargs, SkillUpdateRequest)
+        req = _resolve_request(request, kwargs, SkillUpdateRequest, allow_empty=True)
         args = ["skill", "update", skill_id]
-        if req.name is not None:
+        if req.name is not Unset:
             args.extend(["--name", req.name])
-        if req.description is not None:
+        if req.description is not Unset and req.description is not None:
             args.extend(["--description", req.description])
         return self._decoded_command(tuple(args), Skill)._map(
             lambda skill: skill._with_client(self._client)
@@ -154,7 +159,11 @@ class SkillResource(BaseResource):
     def update(self, skill_id: str, request: SkillUpdateRequest, /) -> Skill: ...
     @overload
     def update(
-        self, skill_id: str, *, name: str | None = None, description: str | None = None
+        self,
+        skill_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
     ) -> Skill: ...
 
     def update(  # type: ignore[misc]

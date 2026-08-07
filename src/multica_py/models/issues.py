@@ -7,6 +7,7 @@ import msgspec
 
 from multica_py.enums import IssueSort, IssueStatus, SortDirection
 from multica_py.models.common import _PageSequence
+from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
@@ -141,17 +142,29 @@ class IssueCreateRequest(msgspec.Struct, frozen=True, kw_only=True):
 
 
 class IssueUpdateRequest(msgspec.Struct, frozen=True, kw_only=True):
-    title: str | None = None
-    description: str | None = None
-    priority: str | None = None
-    assignee_id: str | None = None
-    project_id: str | None = None
-    parent_id: str | None = None
+    title: str | UnsetType = Unset
+    description: str | None | UnsetType = Unset
+    priority: str | UnsetType = Unset
+    assignee_id: str | None | UnsetType = Unset
+    project_id: str | None | UnsetType = Unset
+    parent_id: str | None | UnsetType = Unset
 
     def __post_init__(self) -> None:
-        if self.project_id is not None and not self.project_id.strip():
+        if self.title is None:
+            raise TypeError("title must be non-null")
+        if self.priority is None:
+            raise TypeError("priority must be non-null")
+        if (
+            self.project_id is not Unset
+            and self.project_id is not None
+            and not self.project_id.strip()
+        ):
             raise ValueError("project_id must be non-empty when set")
-        if self.parent_id is not None and not self.parent_id.strip():
+        if (
+            self.parent_id is not Unset
+            and self.parent_id is not None
+            and not self.parent_id.strip()
+        ):
             raise ValueError("parent_id must be non-empty when set")
 
 

@@ -195,7 +195,7 @@ class ProjectResource(BaseResource):
     def update_command(  # type: ignore[misc]
         self, project_id: str, request: ProjectUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Project]:
-        req = _resolve_request(request, kwargs, ProjectUpdateRequest)
+        req = _resolve_request(request, kwargs, ProjectUpdateRequest, allow_empty=True)
         args = ["project", "update", project_id]
         if req.name is not Unset:
             args.extend(["--title", req.name])

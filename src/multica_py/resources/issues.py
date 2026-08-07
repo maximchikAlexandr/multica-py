@@ -30,7 +30,7 @@ from multica_py._internal.wire_models import (
     issue_summary_from_wire,
 )
 from multica_py.config import ClientConfig
-from multica_py.enums import IssueStatus
+from multica_py.enums import IssueSort, IssueStatus, SortDirection
 from multica_py.exceptions import JsonOutputError, OutputShapeError
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.common import Page
@@ -84,6 +84,7 @@ from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.resources.labels import Label
+from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
@@ -626,62 +627,105 @@ class IssueResource(BaseResource):
         self.subscribers._set_client(client)
         self.labels._set_client(client)
 
-    def list_command(self, filter: IssueListFilter | None = None) -> Command[IssueListPage]:
+    @overload
+    def list_command(self, filter: IssueListFilter, /) -> Command[IssueListPage]: ...
+
+    @overload
+    def list_command(
+        self,
+        *,
+        status: IssueStatus | None = None,
+        priority: str | None = None,
+        assignee_id: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        project_id: str | None = None,
+        sort: IssueSort | None = None,
+        direction: SortDirection | None = None,
+        metadata: tuple[IssueMetadataItem, ...] = (),
+    ) -> Command[IssueListPage]: ...
+
+    def list_command(  # type: ignore[misc]
+        self, filter: IssueListFilter | None = None, /, **kwargs: object
+    ) -> Command[IssueListPage]:
+        filter = _resolve_request(
+            filter,
+            kwargs,
+            IssueListFilter,
+            allow_empty=True,
+        )
         args = ["issue", "list"]
-        if filter is not None:
-            status = cast("IssueStatus | None", _field_value(filter, "status"))
-            priority = cast("str | None", _field_value(filter, "priority"))
-            assignee_id = cast("str | None", _field_value(filter, "assignee_id"))
-            limit = cast("int | None", _field_value(filter, "limit"))
-            offset = cast("int | None", _field_value(filter, "offset"))
-            project_id = cast("str | None", _field_value(filter, "project_id"))
-            metadata = cast("tuple[IssueMetadataItem, ...]", _field_value(filter, "metadata"))
-            sort = cast("str | None", _field_value(filter, "sort"))
-            direction = cast("str | None", _field_value(filter, "direction"))
-            if offset is not None and offset < 0:
-                raise ValueError(
-                    "IssueResource.list: offset must be nonnegative (offset_nonnegative)"
-                )
-            if direction is not None and sort is None:
-                raise ValueError(
-                    "IssueResource.list: direction requires sort (direction_requires_sort)"
-                )
-            if status is not None:
-                args.extend(["--status", status.value])
-            if priority is not None:
-                args.extend(["--priority", priority])
-            if assignee_id is not None:
-                args.extend(["--assignee-id", assignee_id])
-            if limit is not None:
-                args.extend(["--limit", str(limit)])
-            if offset is not None:
-                args.extend(["--offset", str(offset)])
-            if project_id is not None:
-                args.extend(["--project", project_id])
-            seen_metadata_keys: set[str] = set()
-            for item in metadata:
-                if not item.key.strip() or "=" in item.key:
-                    raise ValueError(f"IssueResource.list: invalid metadata key {item.key!r}")
-                if item.key in seen_metadata_keys:
-                    raise ValueError(f"IssueResource.list: duplicate metadata key {item.key!r}")
-                seen_metadata_keys.add(item.key)
-                encoded = json.dumps(
-                    item.value,
-                    ensure_ascii=False,
-                    separators=(",", ":"),
-                    allow_nan=False,
-                )
-                args.extend(["--metadata", f"{item.key}={encoded}"])
-            if sort is not None:
-                args.extend(["--sort", sort])
-            if direction is not None:
-                args.extend(["--direction", direction])
+        status = cast("IssueStatus | None", _field_value(filter, "status"))
+        priority = cast("str | None", _field_value(filter, "priority"))
+        assignee_id = cast("str | None", _field_value(filter, "assignee_id"))
+        limit = cast("int | None", _field_value(filter, "limit"))
+        offset = cast("int | None", _field_value(filter, "offset"))
+        project_id = cast("str | None", _field_value(filter, "project_id"))
+        metadata = cast("tuple[IssueMetadataItem, ...]", _field_value(filter, "metadata"))
+        sort = cast("str | None", _field_value(filter, "sort"))
+        direction = cast("str | None", _field_value(filter, "direction"))
+        if offset is not None and offset < 0:
+            raise ValueError("IssueResource.list: offset must be nonnegative (offset_nonnegative)")
+        if direction is not None and sort is None:
+            raise ValueError(
+                "IssueResource.list: direction requires sort (direction_requires_sort)"
+            )
+        if status is not None:
+            args.extend(["--status", status.value])
+        if priority is not None:
+            args.extend(["--priority", priority])
+        if assignee_id is not None:
+            args.extend(["--assignee-id", assignee_id])
+        if limit is not None:
+            args.extend(["--limit", str(limit)])
+        if offset is not None:
+            args.extend(["--offset", str(offset)])
+        if project_id is not None:
+            args.extend(["--project", project_id])
+        seen_metadata_keys: set[str] = set()
+        for item in metadata:
+            if not item.key.strip() or "=" in item.key:
+                raise ValueError(f"IssueResource.list: invalid metadata key {item.key!r}")
+            if item.key in seen_metadata_keys:
+                raise ValueError(f"IssueResource.list: duplicate metadata key {item.key!r}")
+            seen_metadata_keys.add(item.key)
+            encoded = json.dumps(
+                item.value,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            args.extend(["--metadata", f"{item.key}={encoded}"])
+        if sort is not None:
+            args.extend(["--sort", sort])
+        if direction is not None:
+            args.extend(["--direction", direction])
         return self._decoded_command(tuple(args), _IssueListPageWire)._map(
             _issue_list_page_from_wire
         )
 
-    def list(self, filter: IssueListFilter | None = None) -> IssueListPage:
-        return self.list_command(filter).run()
+    @overload
+    def list(self, filter: IssueListFilter, /) -> IssueListPage: ...
+
+    @overload
+    def list(
+        self,
+        *,
+        status: IssueStatus | None = None,
+        priority: str | None = None,
+        assignee_id: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        project_id: str | None = None,
+        sort: IssueSort | None = None,
+        direction: SortDirection | None = None,
+        metadata: tuple[IssueMetadataItem, ...] = (),
+    ) -> IssueListPage: ...
+
+    def list(  # type: ignore[misc]
+        self, filter: IssueListFilter | None = None, /, **kwargs: object
+    ) -> IssueListPage:
+        return self.list_command(cast("IssueListFilter", filter), **kwargs).run()
 
     def get_command(self, issue_id: str) -> Command[Issue]:
         validate_nonblank(issue_id)
@@ -804,30 +848,30 @@ class IssueResource(BaseResource):
         self,
         issue_id: str,
         *,
-        title: str | None = None,
-        description: str | None = None,
-        priority: str | None = None,
-        assignee_id: str | None = None,
-        project_id: str | None = None,
-        parent_id: str | None = None,
+        title: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+        priority: str | UnsetType = Unset,
+        assignee_id: str | None | UnsetType = Unset,
+        project_id: str | None | UnsetType = Unset,
+        parent_id: str | None | UnsetType = Unset,
     ) -> Command[Issue]: ...
 
     def update_command(  # type: ignore[misc]
         self, issue_id: str, request: IssueUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Issue]:
-        req = _resolve_request(request, kwargs, IssueUpdateRequest)
+        req = _resolve_request(request, kwargs, IssueUpdateRequest, allow_empty=True)
         args = ["issue", "update", issue_id]
-        if req.title is not None:
+        if req.title is not msgspec.UNSET:
             args.extend(["--title", req.title])
-        if req.description is not None:
+        if req.description is not msgspec.UNSET and req.description is not None:
             args.extend(["--description", req.description])
-        if req.priority is not None:
+        if req.priority is not msgspec.UNSET:
             args.extend(["--priority", req.priority])
-        if req.assignee_id is not None:
+        if req.assignee_id is not msgspec.UNSET and req.assignee_id is not None:
             args.extend(["--assignee-id", req.assignee_id])
-        if req.project_id is not None:
+        if req.project_id is not msgspec.UNSET and req.project_id is not None:
             args.extend(["--project", req.project_id])
-        if req.parent_id is not None:
+        if req.parent_id is not msgspec.UNSET and req.parent_id is not None:
             args.extend(["--parent", req.parent_id])
         return self._decoded_command(tuple(args), _IssueWire)._map(self._bind_issue)
 
@@ -838,12 +882,12 @@ class IssueResource(BaseResource):
         self,
         issue_id: str,
         *,
-        title: str | None = None,
-        description: str | None = None,
-        priority: str | None = None,
-        assignee_id: str | None = None,
-        project_id: str | None = None,
-        parent_id: str | None = None,
+        title: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+        priority: str | UnsetType = Unset,
+        assignee_id: str | None | UnsetType = Unset,
+        project_id: str | None | UnsetType = Unset,
+        parent_id: str | None | UnsetType = Unset,
     ) -> Issue: ...
 
     def update(  # type: ignore[misc]

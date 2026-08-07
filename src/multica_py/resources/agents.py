@@ -327,18 +327,22 @@ class AgentResource(BaseResource):
     def update_command(self, agent_id: str, request: AgentUpdateRequest, /) -> Command[Agent]: ...
     @overload
     def update_command(
-        self, agent_id: str, *, name: str | None = None, description: str | None = None
+        self,
+        agent_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
     ) -> Command[Agent]: ...
 
     def update_command(  # type: ignore[misc]
         self, agent_id: str, request: AgentUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Agent]:
         validate_nonblank(agent_id)
-        req = _resolve_request(request, kwargs, AgentUpdateRequest)
+        req = _resolve_request(request, kwargs, AgentUpdateRequest, allow_empty=True)
         args = ["agent", "update", agent_id]
-        if req.name is not None:
+        if req.name is not Unset:
             args.extend(["--name", req.name])
-        if req.description is not None:
+        if req.description is not Unset and req.description is not None:
             args.extend(["--description", req.description])
         return self._decoded_command(tuple(args), Agent)._map(
             lambda agent: agent._with_client(self._client)
@@ -348,7 +352,11 @@ class AgentResource(BaseResource):
     def update(self, agent_id: str, request: AgentUpdateRequest, /) -> Agent: ...
     @overload
     def update(
-        self, agent_id: str, *, name: str | None = None, description: str | None = None
+        self,
+        agent_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
     ) -> Agent: ...
 
     def update(  # type: ignore[misc]

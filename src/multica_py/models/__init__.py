@@ -4,6 +4,7 @@ from multica_py.models.autopilots import (
     AutopilotRunListPage,
     AutopilotTriggerCreate,
     AutopilotTriggerUpdate,
+    AutopilotUpdateRequest,
 )
 from multica_py.models.common import ActionResult, CommentCursor, Page
 from multica_py.models.issue_activity import (
@@ -23,6 +24,7 @@ from multica_py.models.issues import (
     IssueReorderRequest,
     IssueUpdateRequest,
 )
+from multica_py.models.labels import LabelUpdateRequest
 from multica_py.models.project_resources import (
     LocalDirectoryResourceRef,
     ProjectResourceAddLocalDirectoryRequest,
@@ -50,6 +52,7 @@ __all__ = [
     "AutopilotRunListPage",
     "AutopilotTriggerCreate",
     "AutopilotTriggerUpdate",
+    "AutopilotUpdateRequest",
     "CommentCursor",
     "CommentListFlatRequest",
     "CommentListRecentRequest",
@@ -63,6 +66,7 @@ __all__ = [
     "IssueListPage",
     "IssueReorderRequest",
     "IssueUpdateRequest",
+    "LabelUpdateRequest",
     "LazyCollection",
     "LazyMapping",
     "LocalDirectoryResourceRef",

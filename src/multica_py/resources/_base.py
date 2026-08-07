@@ -25,12 +25,20 @@ def _is_transport(value: object) -> bool:
     return isinstance(value, CliTransport)
 
 
-def _resolve_request(request: R | None, kwargs: dict[str, object], cls: type[R]) -> R:
+def _resolve_request(
+    request: R | None,
+    kwargs: dict[str, object],
+    cls: type[R],
+    *,
+    allow_empty: bool = False,
+) -> R:
     if request is not None and kwargs:
         raise TypeError("Pass either a request object or keyword arguments, not both.")
     if request is not None:
         return request
     if not kwargs:
+        if allow_empty:
+            return cls()
         raise TypeError(f"Pass a {cls.__name__} or its keyword arguments; got neither.")
     return cls(**kwargs)
 
