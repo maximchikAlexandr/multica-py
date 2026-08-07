@@ -55,6 +55,16 @@ INVALID_CONTRACT_CASES = (
     InvalidContractCase("generated-strenum", "generated_strenum"),
     InvalidContractCase("generated-builtin-parameter", "generated_builtin_parameter"),
     InvalidContractCase("generated-enum-sunder", "generated_enum_sunder"),
+    InvalidContractCase("convention-missing", "convention_missing"),
+    InvalidContractCase("convention-category", "convention_category"),
+    InvalidContractCase("convention-input-mode", "convention_input_mode"),
+    InvalidContractCase("convention-typed-input", "convention_typed_input"),
+    InvalidContractCase("convention-presence", "convention_presence"),
+    InvalidContractCase("convention-presence-empty", "convention_presence_empty"),
+    InvalidContractCase("convention-command", "convention_command"),
+    InvalidContractCase("response-extra", "response_extra"),
+    InvalidContractCase("response-any", "response_any"),
+    InvalidContractCase("response-category", "response_category"),
 )
 
 
@@ -121,6 +131,37 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
         document["catalogs"]["validator_definitions"][0]["parameter_name"] = "str"
     elif mutation == "generated_enum_sunder":
         document["catalogs"]["enum_definitions"][0]["members"][0]["name"] = "_ignore_"
+    elif mutation.startswith("convention_"):
+        entrypoint = document["operations"][0]["entrypoints"][0]
+        if mutation == "convention_missing":
+            del entrypoint["category"]
+        elif mutation == "convention_category":
+            entrypoint["category"] = "unknown"
+        elif mutation == "convention_input_mode":
+            entrypoint["input_mode"] = "object_only"
+        elif mutation == "convention_typed_input":
+            entrypoint["typed_input_id"] = "UnknownRequest"
+        elif mutation == "convention_presence":
+            entrypoint["presence_policy_ids"] = ["unknown_policy"]
+        elif mutation == "convention_presence_empty":
+            entrypoint = document["operations"][3]["entrypoints"][0]
+            entrypoint["presence_policy_ids"] = []
+        elif mutation == "convention_command":
+            entrypoint["command_symbol"] = "not_a_command"
+    elif mutation == "response_extra":
+        document["catalogs"]["responses"]["unexpected"] = {
+            "public_type_id": "Unexpected",
+            "wire_type_id": None,
+            "decoder_id": "decode_none",
+            "success_exit_codes": [0],
+            "malformed_output": "raise",
+        }
+    elif mutation == "response_any":
+        document["catalogs"]["responses"]["action_result_none"]["public_type_id"] = "Any"
+    elif mutation == "response_category":
+        entrypoint = document["operations"][0]["entrypoints"][0]
+        entrypoint["response_id"] = "page_comments"
+        entrypoint["category"] = "retrieve"
     destination = tmp_path / f"{mutation}.json"
     destination.write_text(json.dumps(document), encoding="utf-8")
     return destination
@@ -148,6 +189,40 @@ def test_v3_catalogs_and_legacy_mapping_are_closed() -> None:
         "AutopilotExecutionMode",
     }
     assert all(item.parameter_name.isidentifier() for item in contract.validator_definitions)
+
+
+def test_public_conventions_and_response_catalog_are_typed_and_closed() -> None:
+    contract = validate_contract(APPROVED)
+    entrypoints = tuple(
+        entrypoint for operation in contract.operations for entrypoint in operation.entrypoints
+    )
+    assert len(entrypoints) == 81
+    assert all(entrypoint.command_symbol.endswith("_command") for entrypoint in entrypoints)
+    assert all(
+        entrypoint.category
+        in {
+            "retrieve",
+            "create",
+            "update",
+            "collection",
+            "action",
+            "process",
+            "scalar",
+            "mapping",
+        }
+        for entrypoint in entrypoints
+    )
+    assert {
+        "page_agent",
+        "page_comments",
+        "page_project",
+        "page_workspace",
+        "action_result_none",
+        "action_result_str",
+        "action_result_repository_mutation_result",
+        "action_result_runtime_update_result",
+    } <= contract.response_by_id.keys()
+    assert all("any" not in response.public_type_id.lower() for response in contract.responses)
 
 
 def test_current_target_and_source_refs_are_pinned_to_v0420() -> None:

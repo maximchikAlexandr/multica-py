@@ -1062,20 +1062,76 @@
         ],
         "output": "json",
         "mappings": [
-          ["source_agent_id", "pos:0", "path:source_agent_id"],
-          ["name", "--name", "json_body:name"],
-          ["runtime_id", "--runtime-id", "json_body:runtime_id"],
-          ["description", "--description", "json_body:description"],
-          ["instructions", "--instructions", "json_body:instructions"],
-          ["model", "--model", "json_body:model"],
-          ["thinking_level", "--thinking-level", "json_body:thinking_level"],
-          ["service_tier", "--service-tier", "json_body:service_tier"],
-          ["custom_args", "--custom-args", "json_body:custom_args"],
-          ["max_concurrent_tasks", "--max-concurrent-tasks", "json_body:max_concurrent_tasks"],
-          ["permission_mode", "--permission-mode", "json_body:permission_mode"],
-          ["public_to_workspace", "--public-to-workspace", "json_body:public_to_workspace"],
-          ["public_to_member_ids", "repeat:--public-to-member", "json_body:public_to_member_ids"],
-          ["copy_skills", "--no-skills", "local_control:copy_skills"]
+          [
+            "source_agent_id",
+            "pos:0",
+            "path:source_agent_id"
+          ],
+          [
+            "name",
+            "--name",
+            "json_body:name"
+          ],
+          [
+            "runtime_id",
+            "--runtime-id",
+            "json_body:runtime_id"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ],
+          [
+            "instructions",
+            "--instructions",
+            "json_body:instructions"
+          ],
+          [
+            "model",
+            "--model",
+            "json_body:model"
+          ],
+          [
+            "thinking_level",
+            "--thinking-level",
+            "json_body:thinking_level"
+          ],
+          [
+            "service_tier",
+            "--service-tier",
+            "json_body:service_tier"
+          ],
+          [
+            "custom_args",
+            "--custom-args",
+            "json_body:custom_args"
+          ],
+          [
+            "max_concurrent_tasks",
+            "--max-concurrent-tasks",
+            "json_body:max_concurrent_tasks"
+          ],
+          [
+            "permission_mode",
+            "--permission-mode",
+            "json_body:permission_mode"
+          ],
+          [
+            "public_to_workspace",
+            "--public-to-workspace",
+            "json_body:public_to_workspace"
+          ],
+          [
+            "public_to_member_ids",
+            "repeat:--public-to-member",
+            "json_body:public_to_member_ids"
+          ],
+          [
+            "copy_skills",
+            "--no-skills",
+            "local_control:copy_skills"
+          ]
         ],
         "constraints": [
           "nonblank:source_agent_id",
@@ -2651,125 +2707,8 @@
       ]
     },
     "responses": {
-      "autopilot": {
-        "public_type_id": "autopilot",
-        "wire_type_id": "autopilot_wire",
-        "decoder_id": "decode_autopilot",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "autopilot_run": {
-        "public_type_id": "autopilot_run",
-        "wire_type_id": "autopilot_run_wire",
-        "decoder_id": "decode_autopilot_run",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "autopilot_list_page": {
-        "public_type_id": "autopilot_list_page",
-        "wire_type_id": "autopilot_list_page_wire",
-        "decoder_id": "decode_autopilot_list_page",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "autopilot_run_list_page": {
-        "public_type_id": "autopilot_run_list_page",
-        "wire_type_id": "autopilot_run_list_page_wire",
-        "decoder_id": "decode_autopilot_run_list_page",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "comment": {
-        "public_type_id": "comment",
-        "wire_type_id": "comment_wire",
-        "decoder_id": "decode_comment",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "comments": {
-        "public_type_id": "comments",
-        "wire_type_id": "comments_wire",
-        "decoder_id": "decode_comments",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "comment_page": {
-        "public_type_id": "comment_page",
-        "wire_type_id": "comments_wire",
-        "decoder_id": "decode_comment_page",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "comment_thread_page": {
-        "public_type_id": "comment_thread_page",
-        "wire_type_id": "comment_threads_wire",
-        "decoder_id": "decode_comment_thread_page",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "issue": {
-        "public_type_id": "issue",
-        "wire_type_id": "issue_wire",
-        "decoder_id": "decode_issue",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "issue_summaries": {
-        "public_type_id": "issue_summaries",
-        "wire_type_id": "issue_list_page_wire",
-        "decoder_id": "decode_issue_summaries",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "issue_search": {
-        "public_type_id": "issue_summaries",
-        "wire_type_id": "issue_list_page_wire",
-        "decoder_id": "decode_issue_summaries",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "accept_issues_envelope_or_legacy_array_via_handwritten_adapter"
-      },
-      "issue_list_page": {
-        "public_type_id": "issue_list_page",
-        "wire_type_id": "issue_list_page_wire",
-        "decoder_id": "decode_issue_list_page",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "labels": {
-        "public_type_id": "labels",
-        "wire_type_id": "labels_wire",
-        "decoder_id": "decode_labels",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "none": {
-        "public_type_id": "none",
+      "action_result_none": {
+        "public_type_id": "ActionResult[None]",
         "wire_type_id": null,
         "decoder_id": "decode_none",
         "success_exit_codes": [
@@ -2777,28 +2716,28 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "project": {
-        "public_type_id": "project",
-        "wire_type_id": "project_wire",
-        "decoder_id": "decode_project",
+      "action_result_repository_mutation_result": {
+        "public_type_id": "ActionResult[RepositoryMutationResult]",
+        "wire_type_id": "repository_mutation_result_wire",
+        "decoder_id": "decode_repository_mutation_result",
         "success_exit_codes": [
           0
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "project_resource": {
-        "public_type_id": "project_resource",
-        "wire_type_id": "project_resource_wire",
-        "decoder_id": "decode_project_resource",
+      "action_result_runtime_update_result": {
+        "public_type_id": "ActionResult[RuntimeUpdateResult]",
+        "wire_type_id": "runtime_update_result_wire",
+        "decoder_id": "decode_runtime_update_result",
         "success_exit_codes": [
           0
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "project_resources": {
-        "public_type_id": "project_resources",
-        "wire_type_id": "project_resources_wire",
-        "decoder_id": "decode_project_resources",
+      "action_result_str": {
+        "public_type_id": "ActionResult[str]",
+        "wire_type_id": null,
+        "decoder_id": "decode_none",
         "success_exit_codes": [
           0
         ],
@@ -2840,10 +2779,37 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "path": {
-        "public_type_id": "path",
-        "wire_type_id": null,
-        "decoder_id": "decode_path",
+      "autopilot": {
+        "public_type_id": "autopilot",
+        "wire_type_id": "autopilot_wire",
+        "decoder_id": "decode_autopilot",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "autopilot_list_page": {
+        "public_type_id": "autopilot_list_page",
+        "wire_type_id": "autopilot_list_page_wire",
+        "decoder_id": "decode_autopilot_list_page",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "autopilot_run": {
+        "public_type_id": "autopilot_run",
+        "wire_type_id": "autopilot_run_wire",
+        "decoder_id": "decode_autopilot_run",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "autopilot_run_list_page": {
+        "public_type_id": "autopilot_run_list_page",
+        "wire_type_id": "autopilot_run_list_page_wire",
+        "decoder_id": "decode_autopilot_run_list_page",
         "success_exit_codes": [
           0
         ],
@@ -2867,10 +2833,91 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
+      "comment": {
+        "public_type_id": "comment",
+        "wire_type_id": "comment_wire",
+        "decoder_id": "decode_comment",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "comment_page": {
+        "public_type_id": "comment_page",
+        "wire_type_id": "comments_wire",
+        "decoder_id": "decode_comment_page",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "comment_thread_page": {
+        "public_type_id": "comment_thread_page",
+        "wire_type_id": "comment_threads_wire",
+        "decoder_id": "decode_comment_thread_page",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "comments": {
+        "public_type_id": "comments",
+        "wire_type_id": "comments_wire",
+        "decoder_id": "decode_comments",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue": {
+        "public_type_id": "issue",
+        "wire_type_id": "issue_wire",
+        "decoder_id": "decode_issue",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
       "issue_children_result": {
         "public_type_id": "issue_child_stage_groups",
         "wire_type_id": "issue_children_result_wire",
         "decoder_id": "decode_issue_children",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_list_page": {
+        "public_type_id": "issue_list_page",
+        "wire_type_id": "issue_list_page_wire",
+        "decoder_id": "decode_issue_list_page",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_search": {
+        "public_type_id": "issue_summaries",
+        "wire_type_id": "issue_list_page_wire",
+        "decoder_id": "decode_issue_summaries",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "accept_issues_envelope_or_legacy_array_via_handwritten_adapter"
+      },
+      "issue_summaries": {
+        "public_type_id": "issue_summaries",
+        "wire_type_id": "issue_list_page_wire",
+        "decoder_id": "decode_issue_summaries",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "labels": {
+        "public_type_id": "labels",
+        "wire_type_id": "labels_wire",
+        "decoder_id": "decode_labels",
         "success_exit_codes": [
           0
         ],
@@ -2894,10 +2941,244 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "repository_records": {
-        "public_type_id": "repository_records",
+      "none": {
+        "public_type_id": "none",
+        "wire_type_id": null,
+        "decoder_id": "decode_none",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_agent": {
+        "public_type_id": "Page[agent]",
+        "wire_type_id": "agent_wire",
+        "decoder_id": "decode_agent",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_agent_skills": {
+        "public_type_id": "Page[agent_skills]",
+        "wire_type_id": "agent_skills_wire",
+        "decoder_id": "decode_agent_skills",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_agent_tasks": {
+        "public_type_id": "Page[agent_tasks]",
+        "wire_type_id": "agent_tasks_wire",
+        "decoder_id": "decode_agent_tasks",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_comments": {
+        "public_type_id": "Page[Comment]",
+        "wire_type_id": "comments_wire",
+        "decoder_id": "decode_comments",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_issue_summaries": {
+        "public_type_id": "Page[issue_summaries]",
+        "wire_type_id": "issue_list_page_wire",
+        "decoder_id": "decode_issue_summaries",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_labels": {
+        "public_type_id": "Page[labels]",
+        "wire_type_id": "labels_wire",
+        "decoder_id": "decode_labels",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_linked_pull_requests": {
+        "public_type_id": "Page[linked_pull_requests]",
+        "wire_type_id": "issue_pull_requests_result_wire",
+        "decoder_id": "decode_linked_pull_requests",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_project": {
+        "public_type_id": "Page[project]",
+        "wire_type_id": "project_wire",
+        "decoder_id": "decode_project",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_project_resources": {
+        "public_type_id": "Page[project_resources]",
+        "wire_type_id": "project_resources_wire",
+        "decoder_id": "decode_project_resources",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_repository_records": {
+        "public_type_id": "Page[repository_records]",
         "wire_type_id": "repository_records_wire",
         "decoder_id": "decode_repository_records",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_run_messages": {
+        "public_type_id": "Page[run_messages]",
+        "wire_type_id": "run_messages_wire",
+        "decoder_id": "decode_run_messages",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_runtime_activity": {
+        "public_type_id": "Page[runtime_activity]",
+        "wire_type_id": "runtime_activity_wire",
+        "decoder_id": "decode_runtime_activity",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_runtime_definitions": {
+        "public_type_id": "Page[runtime_definitions]",
+        "wire_type_id": "runtime_definitions_wire",
+        "decoder_id": "decode_runtime_definitions",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_runtime_usage": {
+        "public_type_id": "Page[runtime_usage]",
+        "wire_type_id": "runtime_usage_wire",
+        "decoder_id": "decode_runtime_usage",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_skill": {
+        "public_type_id": "Page[skill]",
+        "wire_type_id": "skill_wire",
+        "decoder_id": "decode_skill",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_skill_files": {
+        "public_type_id": "Page[skill_files]",
+        "wire_type_id": "skill_files_wire",
+        "decoder_id": "decode_skill_files",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_squad": {
+        "public_type_id": "Page[squad]",
+        "wire_type_id": "squad_wire",
+        "decoder_id": "decode_squad",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_squad_members": {
+        "public_type_id": "Page[squad_members]",
+        "wire_type_id": "squad_members_wire",
+        "decoder_id": "decode_squad_members",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_subscribers": {
+        "public_type_id": "Page[subscribers]",
+        "wire_type_id": "subscribers_wire",
+        "decoder_id": "decode_subscribers",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_task_runs": {
+        "public_type_id": "Page[task_runs]",
+        "wire_type_id": "task_runs_wire",
+        "decoder_id": "decode_task_runs",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_workspace": {
+        "public_type_id": "Page[workspace]",
+        "wire_type_id": "workspace_wire",
+        "decoder_id": "decode_workspace",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_workspace_members": {
+        "public_type_id": "Page[workspace_members]",
+        "wire_type_id": "workspace_members_wire",
+        "decoder_id": "decode_workspace_members",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "path": {
+        "public_type_id": "path",
+        "wire_type_id": null,
+        "decoder_id": "decode_path",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "project": {
+        "public_type_id": "project",
+        "wire_type_id": "project_wire",
+        "decoder_id": "decode_project",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "project_resource": {
+        "public_type_id": "project_resource",
+        "wire_type_id": "project_resource_wire",
+        "decoder_id": "decode_project_resource",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "project_resources": {
+        "public_type_id": "project_resources",
+        "wire_type_id": "project_resources_wire",
+        "decoder_id": "decode_project_resources",
         "success_exit_codes": [
           0
         ],
@@ -2912,10 +3193,10 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "runtime_update_result": {
-        "public_type_id": "runtime_update_result",
-        "wire_type_id": "runtime_update_result_wire",
-        "decoder_id": "decode_runtime_update_result",
+      "repository_records": {
+        "public_type_id": "repository_records",
+        "wire_type_id": "repository_records_wire",
+        "decoder_id": "decode_repository_records",
         "success_exit_codes": [
           0
         ],
@@ -2930,10 +3211,10 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "runtime_definitions": {
-        "public_type_id": "runtime_definitions",
-        "wire_type_id": "runtime_definitions_wire",
-        "decoder_id": "decode_runtime_definitions",
+      "runtime_activity": {
+        "public_type_id": "runtime_activity",
+        "wire_type_id": "runtime_activity_wire",
+        "decoder_id": "decode_runtime_activity",
         "success_exit_codes": [
           0
         ],
@@ -2948,6 +3229,24 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
+      "runtime_definitions": {
+        "public_type_id": "runtime_definitions",
+        "wire_type_id": "runtime_definitions_wire",
+        "decoder_id": "decode_runtime_definitions",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_update_result": {
+        "public_type_id": "runtime_update_result",
+        "wire_type_id": "runtime_update_result_wire",
+        "decoder_id": "decode_runtime_update_result",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
       "runtime_usage": {
         "public_type_id": "runtime_usage",
         "wire_type_id": "runtime_usage_wire",
@@ -2957,10 +3256,19 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "runtime_activity": {
-        "public_type_id": "runtime_activity",
-        "wire_type_id": "runtime_activity_wire",
-        "decoder_id": "decode_runtime_activity",
+      "skill": {
+        "public_type_id": "skill",
+        "wire_type_id": "skill_wire",
+        "decoder_id": "decode_skill",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "skill_file": {
+        "public_type_id": "skill_file",
+        "wire_type_id": "skill_files_wire",
+        "decoder_id": "decode_skill_file",
         "success_exit_codes": [
           0
         ],
@@ -2975,10 +3283,10 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "skill_file": {
-        "public_type_id": "skill_file",
-        "wire_type_id": "skill_files_wire",
-        "decoder_id": "decode_skill_file",
+      "squad": {
+        "public_type_id": "squad",
+        "wire_type_id": "squad_wire",
+        "decoder_id": "decode_squad",
         "success_exit_codes": [
           0
         ],
@@ -3020,37 +3328,19 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "workspace_members": {
-        "public_type_id": "workspace_members",
-        "wire_type_id": "workspace_members_wire",
-        "decoder_id": "decode_workspace_members",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "skill": {
-        "public_type_id": "skill",
-        "wire_type_id": "skill_wire",
-        "decoder_id": "decode_skill",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "squad": {
-        "public_type_id": "squad",
-        "wire_type_id": "squad_wire",
-        "decoder_id": "decode_squad",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
       "workspace": {
         "public_type_id": "workspace",
         "wire_type_id": "workspace_wire",
         "decoder_id": "decode_workspace",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "workspace_members": {
+        "public_type_id": "workspace_members",
+        "wire_type_id": "workspace_members_wire",
+        "decoder_id": "decode_workspace_members",
         "success_exit_codes": [
           0
         ],
@@ -4632,20 +4922,76 @@
           "copy"
         ],
         "mappings": [
-          {"source": "source_agent_id", "binding": "pos:0", "destination": "path:source_agent_id"},
-          {"source": "name", "binding": "--name", "destination": "json_body:name"},
-          {"source": "runtime_id", "binding": "--runtime-id", "destination": "json_body:runtime_id"},
-          {"source": "description", "binding": "--description", "destination": "json_body:description"},
-          {"source": "instructions", "binding": "--instructions", "destination": "json_body:instructions"},
-          {"source": "model", "binding": "--model", "destination": "json_body:model"},
-          {"source": "thinking_level", "binding": "--thinking-level", "destination": "json_body:thinking_level"},
-          {"source": "service_tier", "binding": "--service-tier", "destination": "json_body:service_tier"},
-          {"source": "custom_args", "binding": "--custom-args", "destination": "json_body:custom_args"},
-          {"source": "max_concurrent_tasks", "binding": "--max-concurrent-tasks", "destination": "json_body:max_concurrent_tasks"},
-          {"source": "permission_mode", "binding": "--permission-mode", "destination": "json_body:permission_mode"},
-          {"source": "public_to_workspace", "binding": "--public-to-workspace", "destination": "json_body:public_to_workspace"},
-          {"source": "public_to_member_ids", "binding": "repeat:--public-to-member", "destination": "json_body:public_to_member_ids"},
-          {"source": "copy_skills", "binding": "--no-skills", "destination": "local_control:copy_skills"}
+          {
+            "source": "source_agent_id",
+            "binding": "pos:0",
+            "destination": "path:source_agent_id"
+          },
+          {
+            "source": "name",
+            "binding": "--name",
+            "destination": "json_body:name"
+          },
+          {
+            "source": "runtime_id",
+            "binding": "--runtime-id",
+            "destination": "json_body:runtime_id"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          },
+          {
+            "source": "instructions",
+            "binding": "--instructions",
+            "destination": "json_body:instructions"
+          },
+          {
+            "source": "model",
+            "binding": "--model",
+            "destination": "json_body:model"
+          },
+          {
+            "source": "thinking_level",
+            "binding": "--thinking-level",
+            "destination": "json_body:thinking_level"
+          },
+          {
+            "source": "service_tier",
+            "binding": "--service-tier",
+            "destination": "json_body:service_tier"
+          },
+          {
+            "source": "custom_args",
+            "binding": "--custom-args",
+            "destination": "json_body:custom_args"
+          },
+          {
+            "source": "max_concurrent_tasks",
+            "binding": "--max-concurrent-tasks",
+            "destination": "json_body:max_concurrent_tasks"
+          },
+          {
+            "source": "permission_mode",
+            "binding": "--permission-mode",
+            "destination": "json_body:permission_mode"
+          },
+          {
+            "source": "public_to_workspace",
+            "binding": "--public-to-workspace",
+            "destination": "json_body:public_to_workspace"
+          },
+          {
+            "source": "public_to_member_ids",
+            "binding": "repeat:--public-to-member",
+            "destination": "json_body:public_to_member_ids"
+          },
+          {
+            "source": "copy_skills",
+            "binding": "--no-skills",
+            "destination": "local_control:copy_skills"
+          }
         ],
         "validator_ids": [
           "nonblank:source_agent_id",
@@ -8147,7 +8493,7 @@
       "repository": "multica-ai/multica",
       "commit": "93342d04a7a9f788fec921e5aa736f86c7f22d8f",
       "path": "server/internal/cli/errors.go",
-      "symbol": "HTTPError/Kind/KindConflict/KindValidation/serverMessagePrefixes/Invalid request: /请求无效：/Request conflict: /请求冲突：",
+      "symbol": "HTTPError/Kind/KindConflict/KindValidation/serverMessagePrefixes/Invalid request: /\u8bf7\u6c42\u65e0\u6548\uff1a/Request conflict: /\u8bf7\u6c42\u51b2\u7a81\uff1a",
       "line_start": 154,
       "line_end": 354
     },
@@ -9087,7 +9433,12 @@
           "signature_id": "comment_add",
           "binding_id": "comment_add",
           "response_id": "comment",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.add_command"
         }
       ]
     },
@@ -9109,8 +9460,13 @@
           "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.delete",
           "signature_id": "comment_delete",
           "binding_id": "comment_delete",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.delete_command"
         }
       ]
     },
@@ -9135,8 +9491,13 @@
           "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list",
           "signature_id": "comment_list",
           "binding_id": "comment_list",
-          "response_id": "comments",
-          "errors": "standard"
+          "response_id": "page_comments",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_command"
         },
         {
           "entrypoint_id": "flat",
@@ -9144,7 +9505,14 @@
           "signature_id": "comment_list_flat",
           "binding_id": "comment_list_flat",
           "response_id": "comment_page",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": "CommentListFlatRequest",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_flat_command"
         },
         {
           "entrypoint_id": "thread",
@@ -9152,7 +9520,14 @@
           "signature_id": "comment_list_thread",
           "binding_id": "comment_list_thread",
           "response_id": "comment_page",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": "CommentListThreadRequest",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_thread_command"
         },
         {
           "entrypoint_id": "recent",
@@ -9160,7 +9535,14 @@
           "signature_id": "comment_list_recent",
           "binding_id": "comment_list_recent",
           "response_id": "comment_thread_page",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": "CommentListRecentRequest",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_recent_command"
         }
       ]
     },
@@ -9182,7 +9564,14 @@
           "signature_id": "issue_create",
           "binding_id": "issue_create",
           "response_id": "issue",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": "IssueCreateRequest",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.issues.IssueResource.create_command"
         }
       ]
     },
@@ -9203,8 +9592,13 @@
           "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.add",
           "signature_id": "issue_labels_add",
           "binding_id": "issue_labels_add",
-          "response_id": "labels",
-          "errors": "standard"
+          "response_id": "page_labels",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_labels.IssueLabelResource.add_command"
         }
       ]
     },
@@ -9225,8 +9619,13 @@
           "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.list",
           "signature_id": "issue_labels_list",
           "binding_id": "issue_labels_list",
-          "response_id": "labels",
-          "errors": "standard"
+          "response_id": "page_labels",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_labels.IssueLabelResource.list_command"
         }
       ]
     },
@@ -9247,8 +9646,13 @@
           "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.remove",
           "signature_id": "issue_labels_remove",
           "binding_id": "issue_labels_remove",
-          "response_id": "labels",
-          "errors": "standard"
+          "response_id": "page_labels",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_labels.IssueLabelResource.remove_command"
         }
       ]
     },
@@ -9281,7 +9685,14 @@
           "signature_id": "issue_list",
           "binding_id": "issue_list",
           "response_id": "issue_list_page",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": "IssueListFilter",
+          "input_mode": "dual_optional",
+          "presence_policy_ids": [
+            "optional_omit"
+          ],
+          "command_symbol": "multica_py.resources.issues.IssueResource.list_command"
         }
       ]
     },
@@ -9307,8 +9718,13 @@
           "public_symbol": "multica_py.resources.issues.IssueResource.search",
           "signature_id": "issue_search",
           "binding_id": "issue_search",
-          "response_id": "issue_search",
-          "errors": "standard"
+          "response_id": "page_issue_summaries",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.search_command"
         }
       ]
     },
@@ -9329,7 +9745,12 @@
           "signature_id": "issue_status",
           "binding_id": "issue_status",
           "response_id": "issue",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.set_status_command"
         }
       ]
     },
@@ -9350,7 +9771,14 @@
           "signature_id": "project_create",
           "binding_id": "project_create",
           "response_id": "project",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": "ProjectCreateRequest",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.projects.ProjectResource.create_command"
         }
       ]
     },
@@ -9371,7 +9799,14 @@
           "signature_id": "project_resource_add",
           "binding_id": "project_resource_add",
           "response_id": "project_resource",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": "ProjectResourceAddLocalDirectoryRequest",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory_command"
         }
       ]
     },
@@ -9392,8 +9827,13 @@
           "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.list",
           "signature_id": "project_resource_list",
           "binding_id": "project_resource_list",
-          "response_id": "project_resources",
-          "errors": "standard"
+          "response_id": "page_project_resources",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.list_command"
         }
       ]
     },
@@ -9413,8 +9853,13 @@
           "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.remove",
           "signature_id": "project_resource_remove",
           "binding_id": "project_resource_remove",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.remove_command"
         }
       ]
     },
@@ -9435,7 +9880,14 @@
           "signature_id": "project_resource_update",
           "binding_id": "project_resource_update",
           "response_id": "project_resource",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": "ProjectResourceUpdateLocalDirectoryRequest",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory_command"
         }
       ]
     },
@@ -9456,7 +9908,12 @@
           "signature_id": "project_status",
           "binding_id": "project_status",
           "response_id": "project",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.projects.ProjectResource.set_status_command"
         }
       ]
     },
@@ -9477,7 +9934,14 @@
           "signature_id": "project_update",
           "binding_id": "project_update",
           "response_id": "project",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": "ProjectUpdateRequest",
+          "input_mode": "dual_optional",
+          "presence_policy_ids": [
+            "optional_omit"
+          ],
+          "command_symbol": "multica_py.resources.projects.ProjectResource.update_command"
         }
       ]
     },
@@ -9499,7 +9963,12 @@
           "signature_id": "autopilot_list",
           "binding_id": "autopilot_list",
           "response_id": "autopilot_list_page",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.list_command"
         }
       ]
     },
@@ -9522,7 +9991,12 @@
           "signature_id": "autopilot_get",
           "binding_id": "autopilot_get",
           "response_id": "autopilot",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.get_command"
         }
       ]
     },
@@ -9543,7 +10017,12 @@
           "signature_id": "autopilot_create",
           "binding_id": "autopilot_create",
           "response_id": "autopilot",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.create_command"
         }
       ]
     },
@@ -9564,7 +10043,14 @@
           "signature_id": "autopilot_update",
           "binding_id": "autopilot_update",
           "response_id": "autopilot",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": "AutopilotUpdateRequest",
+          "input_mode": "dual_optional",
+          "presence_policy_ids": [
+            "optional_omit"
+          ],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.update_command"
         }
       ]
     },
@@ -9584,8 +10070,13 @@
           "public_symbol": "multica_py.resources.autopilots.AutopilotResource.delete",
           "signature_id": "autopilot_delete",
           "binding_id": "autopilot_delete",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.delete_command"
         }
       ]
     },
@@ -9607,7 +10098,12 @@
           "signature_id": "autopilot_history",
           "binding_id": "autopilot_history",
           "response_id": "autopilot_run_list_page",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.history_command"
         }
       ]
     },
@@ -9628,8 +10124,13 @@
           "public_symbol": "multica_py.resources.agents.AgentResource.list",
           "signature_id": "agent_list",
           "binding_id": "agent_list",
-          "response_id": "agent",
-          "errors": "standard"
+          "response_id": "page_agent",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agents.AgentResource.list_command"
         }
       ]
     },
@@ -9650,7 +10151,12 @@
           "signature_id": "agent_get",
           "binding_id": "agent_get",
           "response_id": "agent",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agents.AgentResource.get_command"
         }
       ]
     },
@@ -9677,7 +10183,12 @@
           "signature_id": "agent_copy",
           "binding_id": "agent_copy",
           "response_id": "agent",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agents.AgentResource.copy_command"
         }
       ]
     },
@@ -9698,8 +10209,13 @@
           "public_symbol": "multica_py.resources.agents.AgentResource.tasks",
           "signature_id": "agent_tasks",
           "binding_id": "agent_tasks",
-          "response_id": "task_runs",
-          "errors": "standard"
+          "response_id": "page_task_runs",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agents.AgentResource.tasks_command"
         }
       ]
     },
@@ -9720,8 +10236,13 @@
           "public_symbol": "multica_py.resources.agent_skills.AgentSkillResource.list",
           "signature_id": "agent_skills_list",
           "binding_id": "agent_skills_list",
-          "response_id": "agent_skills",
-          "errors": "standard"
+          "response_id": "page_agent_skills",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agent_skills.AgentSkillResource.list_command"
         }
       ]
     },
@@ -9741,8 +10262,13 @@
           "public_symbol": "multica_py.resources.agent_skills.AgentSkillResource.set",
           "signature_id": "agent_skills_set",
           "binding_id": "agent_skills_set",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agent_skills.AgentSkillResource.set_command"
         }
       ]
     },
@@ -9762,8 +10288,13 @@
           "public_symbol": "multica_py.resources.agents.AgentResource.avatar",
           "signature_id": "agent_avatar",
           "binding_id": "agent_avatar",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agents.AgentResource.avatar_command"
         }
       ]
     },
@@ -9784,7 +10315,12 @@
           "signature_id": "attachment_upload",
           "binding_id": "attachment_upload",
           "response_id": "attachment_result",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.attachments.AttachmentResource.upload_command"
         }
       ]
     },
@@ -9805,7 +10341,12 @@
           "signature_id": "attachment_download",
           "binding_id": "attachment_download",
           "response_id": "path",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "scalar",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.attachments.AttachmentResource.download_command"
         }
       ]
     },
@@ -9826,7 +10367,12 @@
           "signature_id": "autopilot_trigger",
           "binding_id": "autopilot_trigger",
           "response_id": "autopilot_run",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_command"
         }
       ]
     },
@@ -9847,7 +10393,14 @@
           "signature_id": "autopilot_trigger_add",
           "binding_id": "autopilot_trigger_add",
           "response_id": "autopilot_trigger",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": "AutopilotTriggerCreate",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_add_command"
         }
       ]
     },
@@ -9868,7 +10421,14 @@
           "signature_id": "autopilot_trigger_update",
           "binding_id": "autopilot_trigger_update",
           "response_id": "autopilot_trigger",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": "AutopilotTriggerUpdate",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_update_command"
         }
       ]
     },
@@ -9888,8 +10448,13 @@
           "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_delete",
           "signature_id": "autopilot_trigger_delete",
           "binding_id": "autopilot_trigger_delete",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_delete_command"
         }
       ]
     },
@@ -9913,7 +10478,12 @@
           "signature_id": "issue_get",
           "binding_id": "issue_get",
           "response_id": "issue",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.get_command"
         }
       ]
     },
@@ -9934,8 +10504,13 @@
           "public_symbol": "multica_py.resources.issues.IssueResource.pull_requests",
           "signature_id": "issue_pull_requests",
           "binding_id": "issue_pull_requests",
-          "response_id": "linked_pull_requests",
-          "errors": "standard"
+          "response_id": "page_linked_pull_requests",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.pull_requests_command"
         }
       ]
     },
@@ -9957,7 +10532,12 @@
           "signature_id": "issue_children",
           "binding_id": "issue_children",
           "response_id": "issue_children_result",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.children_command"
         }
       ]
     },
@@ -9978,8 +10558,13 @@
           "public_symbol": "multica_py.resources.issues.IssueResource.runs",
           "signature_id": "issue_runs",
           "binding_id": "issue_runs",
-          "response_id": "task_runs",
-          "errors": "standard"
+          "response_id": "page_task_runs",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.runs_command"
         }
       ]
     },
@@ -10001,8 +10586,13 @@
           "public_symbol": "multica_py.resources.issues.IssueResource.run_messages",
           "signature_id": "issue_run_messages",
           "binding_id": "issue_run_messages",
-          "response_id": "run_messages",
-          "errors": "standard"
+          "response_id": "page_run_messages",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.run_messages_command"
         }
       ]
     },
@@ -10022,8 +10612,13 @@
           "public_symbol": "multica_py.resources.issues.IssueResource.rerun",
           "signature_id": "issue_rerun",
           "binding_id": "issue_rerun",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.rerun_command"
         }
       ]
     },
@@ -10043,8 +10638,13 @@
           "public_symbol": "multica_py.resources.issues.IssueResource.cancel_task",
           "signature_id": "issue_cancel_task",
           "binding_id": "issue_cancel_task",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.cancel_task_command"
         }
       ]
     },
@@ -10065,8 +10665,13 @@
           "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.list",
           "signature_id": "issue_subscribers_list",
           "binding_id": "issue_subscribers_list",
-          "response_id": "subscribers",
-          "errors": "standard"
+          "response_id": "page_subscribers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.list_command"
         }
       ]
     },
@@ -10086,8 +10691,13 @@
           "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.add",
           "signature_id": "issue_subscribers_add",
           "binding_id": "issue_subscribers_add",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.add_command"
         }
       ]
     },
@@ -10107,8 +10717,13 @@
           "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.remove",
           "signature_id": "issue_subscribers_remove",
           "binding_id": "issue_subscribers_remove",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.remove_command"
         }
       ]
     },
@@ -10130,7 +10745,12 @@
           "signature_id": "issue_metadata_list",
           "binding_id": "issue_metadata_list",
           "response_id": "metadata_entries",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.list_command"
         }
       ]
     },
@@ -10151,7 +10771,12 @@
           "signature_id": "issue_metadata_get",
           "binding_id": "issue_metadata_get",
           "response_id": "metadata_entries",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.get_command"
         }
       ]
     },
@@ -10172,7 +10797,12 @@
           "signature_id": "issue_metadata_set",
           "binding_id": "issue_metadata_set",
           "response_id": "metadata_entries",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.set_command"
         }
       ]
     },
@@ -10192,8 +10822,13 @@
           "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.delete",
           "signature_id": "issue_metadata_delete",
           "binding_id": "issue_metadata_delete",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.delete_command"
         }
       ]
     },
@@ -10214,8 +10849,13 @@
           "public_symbol": "multica_py.resources.labels.LabelResource.list",
           "signature_id": "label_list",
           "binding_id": "label_list",
-          "response_id": "labels",
-          "errors": "standard"
+          "response_id": "page_labels",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.labels.LabelResource.list_command"
         }
       ]
     },
@@ -10236,7 +10876,12 @@
           "signature_id": "label_get",
           "binding_id": "label_get",
           "response_id": "labels",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.labels.LabelResource.get_command"
         }
       ]
     },
@@ -10257,8 +10902,13 @@
           "public_symbol": "multica_py.resources.projects.ProjectResource.list",
           "signature_id": "project_list",
           "binding_id": "project_list",
-          "response_id": "project",
-          "errors": "standard"
+          "response_id": "page_project",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.projects.ProjectResource.list_command"
         }
       ]
     },
@@ -10279,7 +10929,12 @@
           "signature_id": "project_get",
           "binding_id": "project_get",
           "response_id": "project",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.projects.ProjectResource.get_command"
         }
       ]
     },
@@ -10300,8 +10955,13 @@
           "public_symbol": "multica_py.resources.skills.SkillResource.list",
           "signature_id": "skill_list",
           "binding_id": "skill_list",
-          "response_id": "skill",
-          "errors": "standard"
+          "response_id": "page_skill",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skills.SkillResource.list_command"
         }
       ]
     },
@@ -10322,7 +10982,12 @@
           "signature_id": "skill_get",
           "binding_id": "skill_get",
           "response_id": "skill",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skills.SkillResource.get_command"
         }
       ]
     },
@@ -10343,8 +11008,13 @@
           "public_symbol": "multica_py.resources.skill_files.SkillFileResource.list",
           "signature_id": "skill_files_list",
           "binding_id": "skill_files_list",
-          "response_id": "skill_files",
-          "errors": "standard"
+          "response_id": "page_skill_files",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skill_files.SkillFileResource.list_command"
         }
       ]
     },
@@ -10365,7 +11035,12 @@
           "signature_id": "skill_files_upsert",
           "binding_id": "skill_files_upsert",
           "response_id": "skill_file",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skill_files.SkillFileResource.upsert_command"
         }
       ]
     },
@@ -10385,8 +11060,13 @@
           "public_symbol": "multica_py.resources.skill_files.SkillFileResource.delete",
           "signature_id": "skill_files_delete",
           "binding_id": "skill_files_delete",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skill_files.SkillFileResource.delete_command"
         }
       ]
     },
@@ -10407,8 +11087,13 @@
           "public_symbol": "multica_py.resources.squads.SquadResource.list",
           "signature_id": "squad_list",
           "binding_id": "squad_list",
-          "response_id": "squad",
-          "errors": "standard"
+          "response_id": "page_squad",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squads.SquadResource.list_command"
         }
       ]
     },
@@ -10429,7 +11114,12 @@
           "signature_id": "squad_get",
           "binding_id": "squad_get",
           "response_id": "squad",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squads.SquadResource.get_command"
         }
       ]
     },
@@ -10450,8 +11140,13 @@
           "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.list",
           "signature_id": "squad_members_list",
           "binding_id": "squad_members_list",
-          "response_id": "squad_members",
-          "errors": "standard"
+          "response_id": "page_squad_members",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squad_members.SquadMemberResource.list_command"
         }
       ]
     },
@@ -10471,8 +11166,13 @@
           "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.add",
           "signature_id": "squad_members_add",
           "binding_id": "squad_members_add",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squad_members.SquadMemberResource.add_command"
         }
       ]
     },
@@ -10492,8 +11192,13 @@
           "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.remove",
           "signature_id": "squad_members_remove",
           "binding_id": "squad_members_remove",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squad_members.SquadMemberResource.remove_command"
         }
       ]
     },
@@ -10514,7 +11219,12 @@
           "signature_id": "user_profile_get",
           "binding_id": "user_profile_get",
           "response_id": "user_profile",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.users.UserResource.profile_get_command"
         }
       ]
     },
@@ -10535,7 +11245,14 @@
           "signature_id": "user_profile_update",
           "binding_id": "user_profile_update",
           "response_id": "user_profile",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": "UserProfileUpdate",
+          "input_mode": "dual_optional",
+          "presence_policy_ids": [
+            "optional_omit"
+          ],
+          "command_symbol": "multica_py.resources.users.UserResource.profile_update_command"
         }
       ]
     },
@@ -10556,8 +11273,13 @@
           "public_symbol": "multica_py.resources.repositories.RepositoryResource.list",
           "signature_id": "repositories_list",
           "binding_id": "repositories_list",
-          "response_id": "repository_records",
-          "errors": "standard"
+          "response_id": "page_repository_records",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.repositories.RepositoryResource.list_command"
         }
       ]
     },
@@ -10577,8 +11299,13 @@
           "public_symbol": "multica_py.resources.repositories.RepositoryResource.add",
           "signature_id": "repositories_add",
           "binding_id": "repositories_add",
-          "response_id": "repository_mutation_result",
-          "errors": "standard"
+          "response_id": "action_result_repository_mutation_result",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.repositories.RepositoryResource.add_command"
         }
       ]
     },
@@ -10598,8 +11325,13 @@
           "public_symbol": "multica_py.resources.repositories.RepositoryResource.remove",
           "signature_id": "repositories_remove",
           "binding_id": "repositories_remove",
-          "response_id": "repository_mutation_result",
-          "errors": "standard"
+          "response_id": "action_result_repository_mutation_result",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.repositories.RepositoryResource.remove_command"
         }
       ]
     },
@@ -10620,8 +11352,13 @@
           "public_symbol": "multica_py.resources.runtimes.RuntimeResource.list",
           "signature_id": "runtime_list",
           "binding_id": "runtime_list",
-          "response_id": "runtime_definitions",
-          "errors": "standard"
+          "response_id": "page_runtime_definitions",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtimes.RuntimeResource.list_command"
         }
       ]
     },
@@ -10641,8 +11378,13 @@
           "public_symbol": "multica_py.resources.runtimes.RuntimeResource.usage",
           "signature_id": "runtime_usage",
           "binding_id": "runtime_usage",
-          "response_id": "runtime_usage",
-          "errors": "standard"
+          "response_id": "page_runtime_usage",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtimes.RuntimeResource.usage_command"
         }
       ]
     },
@@ -10662,8 +11404,13 @@
           "public_symbol": "multica_py.resources.runtimes.RuntimeResource.activity",
           "signature_id": "runtime_activity",
           "binding_id": "runtime_activity",
-          "response_id": "runtime_activity",
-          "errors": "standard"
+          "response_id": "page_runtime_activity",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtimes.RuntimeResource.activity_command"
         }
       ]
     },
@@ -10683,8 +11430,15 @@
           "public_symbol": "multica_py.resources.runtimes.RuntimeResource.update",
           "signature_id": "runtime_update",
           "binding_id": "runtime_update",
-          "response_id": "runtime_update_result",
-          "errors": "standard"
+          "response_id": "action_result_runtime_update_result",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": "RuntimeUpdate",
+          "input_mode": "dual_required",
+          "presence_policy_ids": [
+            "required_value"
+          ],
+          "command_symbol": "multica_py.resources.runtimes.RuntimeResource.update_command"
         }
       ]
     },
@@ -10705,7 +11459,12 @@
           "signature_id": "runtime_rename",
           "binding_id": "runtime_rename",
           "response_id": "runtime_definition",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtimes.RuntimeResource.rename_command"
         }
       ]
     },
@@ -10728,8 +11487,13 @@
           "public_symbol": "multica_py.resources.runtimes.RuntimeResource.delete",
           "signature_id": "runtime_delete",
           "binding_id": "runtime_delete",
-          "response_id": "none",
-          "errors": "standard"
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtimes.RuntimeResource.delete_command"
         }
       ]
     },
@@ -10749,8 +11513,13 @@
           "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.list",
           "signature_id": "workspace_list",
           "binding_id": "workspace_list",
-          "response_id": "workspace",
-          "errors": "standard"
+          "response_id": "page_workspace",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.list_command"
         }
       ]
     },
@@ -10771,7 +11540,12 @@
           "signature_id": "workspace_get",
           "binding_id": "workspace_get",
           "response_id": "workspace",
-          "errors": "standard"
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.get_command"
         }
       ]
     },
@@ -10795,8 +11569,13 @@
           "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.members",
           "signature_id": "workspace_members_list",
           "binding_id": "workspace_members_list",
-          "response_id": "workspace_members",
-          "errors": "standard"
+          "response_id": "page_workspace_members",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.members_command"
         }
       ]
     }
