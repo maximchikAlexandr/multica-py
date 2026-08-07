@@ -6,7 +6,7 @@ import shlex
 from collections.abc import Callable
 from dataclasses import replace
 from types import MappingProxyType
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, overload
 
 import msgspec
 
@@ -46,6 +46,7 @@ from multica_py.models.autopilots import (
     AutopilotTrigger,
     AutopilotTriggerCreate,
     AutopilotTriggerUpdate,
+    AutopilotUpdateRequest,
 )
 from multica_py.models.issue_activity import RunMessage
 from multica_py.models.relations import (
@@ -53,7 +54,8 @@ from multica_py.models.relations import (
     OffsetLazyCollection,
     OffsetPage,
 )
-from multica_py.resources._base import BaseResource
+from multica_py.resources._base import BaseResource, _resolve_request
+from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import JsonValue
 
 if TYPE_CHECKING:
@@ -511,25 +513,27 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             )
         return self._runs  # type: ignore[return-value]
 
-    def trigger_add(self, request: AutopilotTriggerCreate) -> AutopilotTrigger:
-        return self.trigger_add_command(request).run()
+    @overload
+    def trigger_add(self, request: AutopilotTriggerCreate, /) -> AutopilotTrigger: ...
 
-    def trigger_add_command(self, request: AutopilotTriggerCreate) -> Command[AutopilotTrigger]:
-        client = self._require_client(
-            entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
-        )
+    @overload
+    def trigger_add(self, *, title: str, kind: str) -> AutopilotTrigger: ...
 
-        def invalidate(result: AutopilotTrigger) -> AutopilotTrigger:
-            self.triggers.invalidate()
-            return result
+    def trigger_add(  # type: ignore[misc]
+        self, request: AutopilotTriggerCreate | None = None, /, **kwargs: object
+    ) -> AutopilotTrigger:
+        return self.trigger_add_command(cast("AutopilotTriggerCreate", request), **kwargs).run()
 
-        return client.autopilots.trigger_add_command(self.id, request)._map(invalidate)
+    @overload
+    def trigger_add_command(
+        self, request: AutopilotTriggerCreate, /
+    ) -> Command[AutopilotTrigger]: ...
 
-    def trigger_update(self, trigger_id: str, request: AutopilotTriggerUpdate) -> AutopilotTrigger:
-        return self.trigger_update_command(trigger_id, request).run()
+    @overload
+    def trigger_add_command(self, *, title: str, kind: str) -> Command[AutopilotTrigger]: ...
 
-    def trigger_update_command(
-        self, trigger_id: str, request: AutopilotTriggerUpdate
+    def trigger_add_command(  # type: ignore[misc]
+        self, request: AutopilotTriggerCreate | None = None, /, **kwargs: object
     ) -> Command[AutopilotTrigger]:
         client = self._require_client(
             entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
@@ -539,9 +543,59 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             self.triggers.invalidate()
             return result
 
-        return client.autopilots.trigger_update_command(self.id, trigger_id, request)._map(
-            invalidate
+        return client.autopilots.trigger_add_command(
+            self.id, cast("AutopilotTriggerCreate", request), **kwargs
+        )._map(invalidate)
+
+    @overload
+    def trigger_update(
+        self, trigger_id: str, request: AutopilotTriggerUpdate, /
+    ) -> AutopilotTrigger: ...
+
+    @overload
+    def trigger_update(
+        self,
+        trigger_id: str,
+        *,
+        title: str | UnsetType = Unset,
+        kind: str | UnsetType = Unset,
+    ) -> AutopilotTrigger: ...
+
+    def trigger_update(  # type: ignore[misc]
+        self, trigger_id: str, request: AutopilotTriggerUpdate | None = None, /, **kwargs: object
+    ) -> AutopilotTrigger:
+        return self.trigger_update_command(
+            trigger_id, cast("AutopilotTriggerUpdate", request), **kwargs
+        ).run()
+
+    @overload
+    def trigger_update_command(
+        self, trigger_id: str, request: AutopilotTriggerUpdate, /
+    ) -> Command[AutopilotTrigger]: ...
+
+    @overload
+    def trigger_update_command(
+        self,
+        trigger_id: str,
+        *,
+        title: str | UnsetType = Unset,
+        kind: str | UnsetType = Unset,
+    ) -> Command[AutopilotTrigger]: ...
+
+    def trigger_update_command(  # type: ignore[misc]
+        self, trigger_id: str, request: AutopilotTriggerUpdate | None = None, /, **kwargs: object
+    ) -> Command[AutopilotTrigger]:
+        client = self._require_client(
+            entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
         )
+
+        def invalidate(result: AutopilotTrigger) -> AutopilotTrigger:
+            self.triggers.invalidate()
+            return result
+
+        return client.autopilots.trigger_update_command(
+            self.id, trigger_id, cast("AutopilotTriggerUpdate", request), **kwargs
+        )._map(invalidate)
 
     def trigger_delete(self, trigger_id: str) -> None:
         self.trigger_delete_command(trigger_id).run()
@@ -650,76 +704,112 @@ class AutopilotResource(BaseResource):
             subscribers=subscribers,
         ).run()
 
+    @overload
+    def update_command(
+        self, autopilot_id: str, request: AutopilotUpdateRequest, /
+    ) -> Command[Autopilot]: ...
+
+    @overload
     def update_command(
         self,
         autopilot_id: str,
         *,
-        title: str | None = None,
-        description: str | None = None,
-        agent: str | None = None,
-        project_id: str | None = None,
-        priority: str | None = None,
-        status: str | None = None,
-        execution_mode: AutopilotExecutionMode | None = None,
-        issue_title_template: str | None = None,
+        title: str | UnsetType = Unset,
+        agent: str | UnsetType = Unset,
+        priority: str | UnsetType = Unset,
+        status: str | UnsetType = Unset,
+        execution_mode: AutopilotExecutionMode | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+        project_id: str | None | UnsetType = Unset,
+        issue_title_template: str | None | UnsetType = Unset,
+        subscribers: tuple[str, ...] | UnsetType = Unset,
+    ) -> Command[Autopilot]: ...
+
+    @overload
+    def update_command(
+        self,
+        autopilot_id: str,
+        *,
         subscribers: tuple[str, ...] | None = None,
         clear_subscribers: bool = False,
+    ) -> Command[Autopilot]: ...
+
+    def update_command(  # type: ignore[misc]
+        self,
+        autopilot_id: str,
+        request: AutopilotUpdateRequest | None = None,
+        /,
+        **kwargs: object,
     ) -> Command[Autopilot]:
-        if clear_subscribers and subscribers is not None:
-            raise ValueError("clear_subscribers and subscribers are mutually exclusive")
-        if subscribers is not None and any(not ref.strip() for ref in subscribers):
+        validate_nonblank(autopilot_id)
+        legacy_clear = kwargs.pop("clear_subscribers", Unset)
+        if legacy_clear is not Unset and legacy_clear:
+            subscribers = kwargs.get("subscribers", Unset)
+            if subscribers is not Unset and subscribers is not None:
+                raise ValueError("clear_subscribers and subscribers are mutually exclusive")
+            kwargs["subscribers"] = ()
+        request = _resolve_request(request, kwargs, AutopilotUpdateRequest, allow_empty=True)
+        if request.subscribers is not Unset and any(not ref.strip() for ref in request.subscribers):
             raise ValueError("subscribers must be nonblank")
         args = ["autopilot", "update", autopilot_id]
-        if title is not None:
-            args.extend(["--title", title])
-        if description is not None:
-            args.extend(["--description", description])
-        if agent is not None:
-            args.extend(["--agent", agent])
-        if project_id is not None:
-            args.extend(["--project", project_id])
-        if priority is not None:
-            args.extend(["--priority", priority])
-        if status is not None:
-            args.extend(["--status", status])
-        if execution_mode is not None:
-            args.extend(["--mode", execution_mode.value])
-        if issue_title_template is not None:
-            args.extend(["--issue-title-template", issue_title_template])
-        if clear_subscribers:
-            args.append("--clear-subscribers")
-        elif subscribers is not None:
-            for ref in subscribers:
+        if request.title is not Unset:
+            args.extend(["--title", request.title])
+        if request.description is not Unset and request.description is not None:
+            args.extend(["--description", request.description])
+        if request.agent is not Unset:
+            args.extend(["--agent", request.agent])
+        if request.project_id is not Unset and request.project_id is not None:
+            args.extend(["--project", request.project_id])
+        if request.priority is not Unset:
+            args.extend(["--priority", request.priority])
+        if request.status is not Unset:
+            args.extend(["--status", request.status])
+        if request.execution_mode is not Unset:
+            args.extend(["--mode", request.execution_mode.value])
+        if request.issue_title_template is not Unset and request.issue_title_template is not None:
+            args.extend(["--issue-title-template", request.issue_title_template])
+        if request.subscribers is not Unset:
+            for ref in request.subscribers:
                 args.extend(["--subscriber", ref])
         return self._decoded_command(tuple(args), _AutopilotWire)._map(self._bind_autopilot_wire)
 
+    @overload
+    def update(self, autopilot_id: str, request: AutopilotUpdateRequest, /) -> Autopilot: ...
+
+    @overload
     def update(
         self,
         autopilot_id: str,
         *,
-        title: str | None = None,
-        description: str | None = None,
-        agent: str | None = None,
-        project_id: str | None = None,
-        priority: str | None = None,
-        status: str | None = None,
-        execution_mode: AutopilotExecutionMode | None = None,
-        issue_title_template: str | None = None,
+        title: str | UnsetType = Unset,
+        agent: str | UnsetType = Unset,
+        priority: str | UnsetType = Unset,
+        status: str | UnsetType = Unset,
+        execution_mode: AutopilotExecutionMode | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+        project_id: str | None | UnsetType = Unset,
+        issue_title_template: str | None | UnsetType = Unset,
+        subscribers: tuple[str, ...] | UnsetType = Unset,
+    ) -> Autopilot: ...
+
+    @overload
+    def update(
+        self,
+        autopilot_id: str,
+        *,
         subscribers: tuple[str, ...] | None = None,
         clear_subscribers: bool = False,
+    ) -> Autopilot: ...
+
+    def update(  # type: ignore[misc]
+        self,
+        autopilot_id: str,
+        request: AutopilotUpdateRequest | None = None,
+        /,
+        **kwargs: object,
     ) -> Autopilot:
         return self.update_command(
-            autopilot_id,
-            title=title,
-            description=description,
-            agent=agent,
-            project_id=project_id,
-            priority=priority,
-            status=status,
-            execution_mode=execution_mode,
-            issue_title_template=issue_title_template,
-            subscribers=subscribers,
-            clear_subscribers=clear_subscribers,
+            autopilot_id, cast("AutopilotUpdateRequest", request), **kwargs
         ).run()
 
     def delete_command(self, autopilot_id: str) -> Command[None]:
@@ -775,11 +865,22 @@ class AutopilotResource(BaseResource):
     ) -> AutopilotRunListPage[AutopilotRun]:
         return self.history_command(autopilot_id, limit=limit, offset=offset).run()
 
+    @overload
     def trigger_add_command(
-        self, autopilot_id: str, request: AutopilotTriggerCreate
+        self, autopilot_id: str, request: AutopilotTriggerCreate, /
+    ) -> Command[AutopilotTrigger]: ...
+
+    @overload
+    def trigger_add_command(
+        self, autopilot_id: str, *, title: str, kind: str
+    ) -> Command[AutopilotTrigger]: ...
+
+    def trigger_add_command(  # type: ignore[misc]
+        self, autopilot_id: str, request: AutopilotTriggerCreate | None = None, /, **kwargs: object
     ) -> Command[AutopilotTrigger]:
         _ = cast("object", AUTOPILOT_TRIGGER_ADD_BINDING)
         validate_nonblank(autopilot_id)
+        request = _resolve_request(request, kwargs, AutopilotTriggerCreate)
         validate_nonblank(request.title)
         args = (
             "autopilot",
@@ -792,18 +893,48 @@ class AutopilotResource(BaseResource):
         )
         return self._decoded_command(args, _AutopilotTriggerWire)._map(trigger_from_wire)
 
-    def trigger_add(self, autopilot_id: str, request: AutopilotTriggerCreate) -> AutopilotTrigger:
-        return self.trigger_add_command(autopilot_id, request).run()
+    @overload
+    def trigger_add(
+        self, autopilot_id: str, request: AutopilotTriggerCreate, /
+    ) -> AutopilotTrigger: ...
 
+    @overload
+    def trigger_add(self, autopilot_id: str, *, title: str, kind: str) -> AutopilotTrigger: ...
+
+    def trigger_add(  # type: ignore[misc]
+        self, autopilot_id: str, request: AutopilotTriggerCreate | None = None, /, **kwargs: object
+    ) -> AutopilotTrigger:
+        return self.trigger_add_command(
+            autopilot_id, cast("AutopilotTriggerCreate", request), **kwargs
+        ).run()
+
+    @overload
+    def trigger_update_command(
+        self, autopilot_id: str, trigger_id: str, request: AutopilotTriggerUpdate, /
+    ) -> Command[AutopilotTrigger]: ...
+
+    @overload
     def trigger_update_command(
         self,
         autopilot_id: str,
         trigger_id: str,
-        request: AutopilotTriggerUpdate,
+        *,
+        title: str | UnsetType = Unset,
+        kind: str | UnsetType = Unset,
+    ) -> Command[AutopilotTrigger]: ...
+
+    def trigger_update_command(  # type: ignore[misc]
+        self,
+        autopilot_id: str,
+        trigger_id: str,
+        request: AutopilotTriggerUpdate | None = None,
+        /,
+        **kwargs: object,
     ) -> Command[AutopilotTrigger]:
         _ = cast("object", AUTOPILOT_TRIGGER_UPDATE_BINDING)
         validate_nonblank(autopilot_id)
         validate_nonblank(trigger_id)
+        request = _resolve_request(request, kwargs, AutopilotTriggerUpdate, allow_empty=True)
         args = ["autopilot", "trigger-update", autopilot_id, trigger_id]
         if request.title is not msgspec.UNSET:
             args.extend(["--title", request.title])
@@ -811,13 +942,32 @@ class AutopilotResource(BaseResource):
             args.extend(["--kind", request.kind])
         return self._decoded_command(tuple(args), _AutopilotTriggerWire)._map(trigger_from_wire)
 
+    @overload
+    def trigger_update(
+        self, autopilot_id: str, trigger_id: str, request: AutopilotTriggerUpdate, /
+    ) -> AutopilotTrigger: ...
+
+    @overload
     def trigger_update(
         self,
         autopilot_id: str,
         trigger_id: str,
-        request: AutopilotTriggerUpdate,
+        *,
+        title: str | UnsetType = Unset,
+        kind: str | UnsetType = Unset,
+    ) -> AutopilotTrigger: ...
+
+    def trigger_update(  # type: ignore[misc]
+        self,
+        autopilot_id: str,
+        trigger_id: str,
+        request: AutopilotTriggerUpdate | None = None,
+        /,
+        **kwargs: object,
     ) -> AutopilotTrigger:
-        return self.trigger_update_command(autopilot_id, trigger_id, request).run()
+        return self.trigger_update_command(
+            autopilot_id, trigger_id, cast("AutopilotTriggerUpdate", request), **kwargs
+        ).run()
 
     def trigger_delete_command(self, autopilot_id: str, trigger_id: str) -> Command[None]:
         _ = cast("object", AUTOPILOT_TRIGGER_DELETE_BINDING)

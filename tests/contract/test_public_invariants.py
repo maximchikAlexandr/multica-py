@@ -44,6 +44,18 @@ _DIRECT_KEYWORD_METHODS = frozenset(
         ("IssueCommentResource", "list_thread_command"),
         ("IssueCommentResource", "list_recent"),
         ("IssueCommentResource", "list_recent_command"),
+        ("IssueMetadataResource", "query"),
+        ("IssueMetadataResource", "query_command"),
+        ("IssueMetadataResource", "set_typed"),
+        ("IssueMetadataResource", "set_typed_command"),
+        ("AutopilotResource", "trigger_add"),
+        ("AutopilotResource", "trigger_add_command"),
+        ("AutopilotResource", "trigger_update"),
+        ("AutopilotResource", "trigger_update_command"),
+        ("AutopilotResource", "update"),
+        ("AutopilotResource", "update_command"),
+        ("LabelResource", "update"),
+        ("LabelResource", "update_command"),
         ("ProjectResource", "create"),
         ("ProjectResource", "create_command"),
         ("ProjectResource", "update"),
@@ -268,4 +280,6 @@ def assert_public_annotations_precise(public_class: type[object]) -> None:
                 )
         assert "return" in hints, f"{public_class.__name__}.{name} has no return annotation"
         for hint_name, annotation in hints.items():
+            if hint_name == "kwargs" and annotation is object:
+                continue
             assert_annotation(annotation, f"{public_class.__name__}.{name}.{hint_name}")

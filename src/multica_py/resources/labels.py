@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from typing import cast, overload
+
+from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
 from multica_py.models._bound import _BoundEntity
-from multica_py.resources._base import BaseResource
+from multica_py.models.labels import LabelUpdateRequest
+from multica_py.resources._base import BaseResource, _resolve_request
+from multica_py.sentinels import Unset, UnsetType
 
 
 class Label(_BoundEntity):  # type: ignore[misc]
@@ -41,20 +46,48 @@ class LabelResource(BaseResource):
     def create(self, name: str, color: str | None = None) -> Label:
         return self.create_command(name, color).run()
 
+    @overload
+    def update_command(self, label_id: str, request: LabelUpdateRequest, /) -> Command[Label]: ...
+
+    @overload
     def update_command(
-        self, label_id: str, name: str | None = None, color: str | None = None
+        self,
+        label_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        color: str | UnsetType = Unset,
+    ) -> Command[Label]: ...
+
+    def update_command(  # type: ignore[misc]
+        self, label_id: str, request: LabelUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Label]:
+        validate_nonblank(label_id)
+        request = _resolve_request(request, kwargs, LabelUpdateRequest, allow_empty=True)
         args = ["label", "update", label_id]
-        if name is not None:
-            args.extend(["--name", name])
-        if color is not None:
-            args.extend(["--color", color])
+        if request.name is not Unset:
+            args.extend(["--name", request.name])
+        if request.color is not Unset:
+            args.extend(["--color", request.color])
         return self._decoded_command(tuple(args), Label)._map(
             lambda label: label._with_client(self._client)
         )
 
-    def update(self, label_id: str, name: str | None = None, color: str | None = None) -> Label:
-        return self.update_command(label_id, name, color).run()
+    @overload
+    def update(self, label_id: str, request: LabelUpdateRequest, /) -> Label: ...
+
+    @overload
+    def update(
+        self,
+        label_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        color: str | UnsetType = Unset,
+    ) -> Label: ...
+
+    def update(  # type: ignore[misc]
+        self, label_id: str, request: LabelUpdateRequest | None = None, /, **kwargs: object
+    ) -> Label:
+        return self.update_command(label_id, cast("LabelUpdateRequest", request), **kwargs).run()
 
     def delete_command(self, label_id: str) -> Command[None]:
         return self._none_command(("label", "delete", label_id))

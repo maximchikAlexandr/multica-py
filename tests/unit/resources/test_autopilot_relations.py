@@ -727,17 +727,27 @@ def test_trigger_requests_are_frozen_and_default_to_unset() -> None:
         (
             "trigger_add",
             (
-                ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-                ("request", inspect.Parameter.POSITIONAL_OR_KEYWORD, AutopilotTriggerCreate),
+                ("autopilot_id", inspect.Parameter.POSITIONAL_ONLY, str),
+                (
+                    "request",
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    AutopilotTriggerCreate | None,
+                ),
+                ("kwargs", inspect.Parameter.VAR_KEYWORD, object),
             ),
             AutopilotTrigger,
         ),
         (
             "trigger_update",
             (
-                ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-                ("trigger_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-                ("request", inspect.Parameter.POSITIONAL_OR_KEYWORD, AutopilotTriggerUpdate),
+                ("autopilot_id", inspect.Parameter.POSITIONAL_ONLY, str),
+                ("trigger_id", inspect.Parameter.POSITIONAL_ONLY, str),
+                (
+                    "request",
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    AutopilotTriggerUpdate | None,
+                ),
+                ("kwargs", inspect.Parameter.VAR_KEYWORD, object),
             ),
             AutopilotTrigger,
         ),
