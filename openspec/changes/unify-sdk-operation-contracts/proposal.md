@@ -14,16 +14,20 @@ preview invariant.
   metadata requests, and autopilot trigger requests. Eager and `*_command()`
   forms expose identical overloads; mixing the two input styles is rejected
   before I/O.
-- Make every update surface presence-aware: omitted fields use `Unset` and are
-  not sent, explicit `None` clears only fields whose public contract is
-  nullable, and falsey non-null values remain present. A request containing no
-  changes is a valid no-op read that returns the current entity.
-- **BREAKING**: normalize public collection reads on an immutable, directly
-  iterable `Page[T]` contract with `.items` and common optional pagination
-  metadata. Existing `IssueListPage`, `AutopilotListPage`,
-  `AutopilotRunListPage`, comment-page, and metadata-page types remain as
-  compatibility types, and their resource-named item properties remain
-  deprecated read-only aliases.
+- Make all-optional update surfaces presence-aware: omitted fields use `Unset`
+  and are not sent, explicit `None` clears only fields whose public contract is
+  nullable, and falsey non-null values remain present. Omitting every mutable
+  field is a valid read-only no-op that returns the current entity. Required-
+  value update surfaces retain required, non-null inputs and do not promise an
+  omitted-field no-op.
+- **BREAKING**: normalize canonical CLI collection operations and direct
+  resource collection results on an immutable, directly iterable `Page[T]`
+  contract with `.items` and common optional pagination metadata. Existing
+  `IssueListPage`, `AutopilotListPage`, `AutopilotRunListPage`, comment-page,
+  and metadata-page types remain as compatibility types, and their
+  resource-named item properties remain deprecated read-only aliases. Relation
+  snapshots from `.all()` on `LazyCollection`, `OffsetLazyCollection`, or
+  `CursorLazyCollection` remain tuples and are outside this page requirement.
 - **BREAKING**: normalize action-style operations that do not naturally return
   an entity, scalar read value, or running process on `ActionResult[T]`.
   Delete/remove/toggle operations return `ActionResult[None]`; actions with
@@ -46,9 +50,10 @@ None.
 ### Modified Capabilities
 
 - `sdk-surface`: Replace the finite dual-input exception list with an
-  all-request/filter rule; define presence-aware updates, operation-category
-  return conventions, the shared page interface, and the universal eager/
-  command equivalence contract.
+  all-request/filter rule; define all-optional versus required-value update
+  semantics, operation-category return conventions, the shared page interface
+  for canonical CLI/direct-resource collections, the relation-snapshot tuple
+  exception, and the universal eager/command equivalence contract.
 - `verification-and-release`: Require a complete category/return matrix,
   structural overload parity, presence-vector tests, page protocol tests,
   action-result tests, and documentation/migration gates across the canonical
@@ -60,8 +65,9 @@ None.
   `multica_py.__init__` gain the canonical generic `Page[T]` and
   `ActionResult[T]` contracts and presence-aware update models.
 - Resource signatures and command builders in `src/multica_py/resources/`
-  adopt complete dual-input overloads, no-op update reads, consistent clear
-  mappings, page finalizers, and action-result adapters.
+  adopt complete dual-input overloads, all-optional no-op update reads,
+  required-value validation, consistent clear mappings, page finalizers, and
+  action-result adapters; relation snapshot tuples remain compatible.
 - `contracts/sdk-contract.json`, its schema/tooling, and the canonical
   operation table record and verify each method's operation category and public
   response convention; this change does not infer behavior from unapproved

@@ -70,12 +70,20 @@ the two forms.
   object and without its required direct fields
 - **THEN** the SDK raises `TypeError` before I/O and names the missing input.
 
-#### Scenario: Update input may contain no changed fields
+#### Scenario: All-optional update input may contain no changed fields
 
-- **WHEN** an update-style method is called with only its target identifier or
-  with an all-`Unset` request
+- **WHEN** an all-optional update-style method is called with only its target
+  identifier or with an all-`Unset` request
 - **THEN** it performs no mutation and returns the current entity through the
   corresponding inspectable read command.
+
+#### Scenario: Required-value update input may not be omitted
+
+- **WHEN** `ProjectResourceCollection.update_local_directory()` is called
+  without `local_path`, or `RuntimeResource.update()` is called without
+  `target_version`
+- **THEN** the SDK raises `TypeError` before I/O; neither method treats the
+  missing required value as an all-optional no-op.
 
 #### Scenario: Static signatures expose both forms
 
@@ -95,9 +103,9 @@ the two forms.
 The SDK documentation SHALL present direct keyword arguments as the default
 form for every typed-input method and SHALL present the typed object as the
 reusable alternative. Documentation SHALL describe the exactly-one-style rule,
-optional-filter empty call, update no-op call, and pre-I/O `TypeError` for
-mixed input. Documentation SHALL NOT retain a list of request-object-only
-exceptions.
+optional-filter empty call, all-optional update no-op call, required-value
+update validation, and pre-I/O `TypeError` for mixed input. Documentation SHALL
+NOT retain a list of request-object-only exceptions.
 
 #### Scenario: Docs show direct keyword form first
 
@@ -121,14 +129,22 @@ exceptions.
 
 ### Requirement: Presence-aware update contract
 
-Every update-style public input SHALL distinguish omission from an explicit
-value. Omitted fields SHALL use `Unset` and SHALL NOT be sent. Explicit `None`
-SHALL clear a field only when that field's public update type is nullable;
-`None` for a non-nullable field SHALL raise `TypeError` or `ValueError` before
-I/O. Explicit empty strings, empty tuples, `False`, and `0` SHALL remain present
-when accepted by the field type and SHALL never be removed by truthiness tests.
+Update-style public inputs SHALL be divided into an all-optional partial-update
+set and a required-value set. The all-optional set is exactly
+`ProjectUpdateRequest`, `AgentUpdateRequest`, `SkillUpdateRequest`,
+`IssueUpdateRequest`, `AutopilotUpdateRequest`, `LabelUpdateRequest`,
+`AutopilotTriggerUpdate`, and `UserProfileUpdate`. Each mutable field on these
+models SHALL default to `Unset` and SHALL distinguish omission from an explicit
+value. Omitted fields SHALL NOT be sent, and omission of every mutable field
+SHALL be a read-only no-op returning the current entity.
 
-The presence-aware update models SHALL be:
+Explicit `None` SHALL clear a field only when that field's public update type is
+nullable; `None` for a non-nullable field SHALL raise `TypeError` or
+`ValueError` before I/O. Explicit empty strings, empty tuples, `False`, and `0`
+SHALL remain present when accepted by the field type and SHALL never be removed
+by truthiness tests.
+
+The all-optional update model field contract SHALL be:
 
 - `ProjectUpdateRequest`: `name: str | UnsetType`; nullable `description`.
 - `AgentUpdateRequest`: `name: str | UnsetType`; nullable `description`.
@@ -143,30 +159,39 @@ The presence-aware update models SHALL be:
   `Unset`.
 - `LabelUpdateRequest`: non-nullable `name` and `color`, both defaulting to
   `Unset`.
-- Existing `ProjectResourceUpdateLocalDirectoryRequest`,
-  `AutopilotTriggerUpdate`, and `UserProfileUpdate` SHALL follow the same rule;
-  user profile `description=None` SHALL explicitly clear the description.
+- `UserProfileUpdate`: nullable `description`, defaulting to `Unset`; an
+  explicit `None` SHALL clear the description.
+
+The required-value update set SHALL be exactly
+`ProjectResourceUpdateLocalDirectoryRequest` and `RuntimeUpdate`.
+`ProjectResourceUpdateLocalDirectoryRequest.local_path` and
+`RuntimeUpdate.target_version` SHALL be required, non-null, and nonblank where
+the existing model validation requires nonblank text. Omission or explicit
+`None` for either required field SHALL fail before I/O. `RuntimeUpdate.wait`
+remains an optional control field, but `RuntimeUpdate` as a whole SHALL NOT
+support an all-omitted no-op.
 
 Each nullable clear SHALL map to approved upstream behavior. If the pinned CLI
 cannot represent a required clear distinctly, the SDK change SHALL fail closed
 at contract validation rather than silently treating `None` as omission.
 
-#### Scenario: Omitted update field is not sent
+#### Scenario: Omitted all-optional update field is not sent
 
-- **WHEN** an update request leaves a field as `Unset`
+- **WHEN** an all-optional update request leaves a field as `Unset`
 - **THEN** neither the field's flag nor any clearing action appears in the
   inspectable command plan.
 
 #### Scenario: Explicit nullable None clears
 
-- **WHEN** a nullable update field is passed as `None`
+- **WHEN** a nullable field on an all-optional update is passed as `None`
 - **THEN** the command plan contains the approved clear representation and the
   returned entity exposes that field as cleared.
 
 #### Scenario: None is rejected for non-nullable field
 
-- **WHEN** a non-nullable update field such as a name, title, status, priority,
-  color, or execution mode is passed as `None`
+- **WHEN** a non-nullable all-optional field such as a name, title, status,
+  priority, color, or execution mode, or a required-value field such as
+  `local_path` or `target_version`, is passed as `None`
 - **THEN** validation fails before subprocess I/O instead of treating the value
   as omitted.
 
@@ -183,16 +208,24 @@ at contract validation rather than silently treating `None` as omission.
 - **THEN** the command uses the approved clear-subscribers behavior, while an
   omitted `subscribers` field leaves the subscriber set unchanged.
 
-#### Scenario: Empty update delegates to retrieval
+#### Scenario: Empty all-optional update delegates to retrieval
 
-- **WHEN** every mutable field is omitted
+- **WHEN** every mutable field on an all-optional update is omitted
 - **THEN** `update_command()` exposes the corresponding read command, `run()`
   returns the current entity, and no update command is executed.
 
-#### Scenario: Presence behavior matches both input forms
+#### Scenario: Required-value update rejects omission and null
 
-- **WHEN** equivalent request-object and direct-keyword update calls exercise
-  omitted, `None`, empty, false, and zero values
+- **WHEN** a required-value update omits or passes `None` for
+  `ProjectResourceUpdateLocalDirectoryRequest.local_path` or
+  `RuntimeUpdate.target_version`
+- **THEN** validation fails before I/O and no read-only no-op command is
+  constructed.
+
+#### Scenario: All-optional presence behavior matches both input forms
+
+- **WHEN** equivalent request-object and direct-keyword calls for an
+  all-optional update exercise omitted, `None`, empty, false, and zero values
 - **THEN** their command plans and returned values are identical.
 
 ### Requirement: SDK-wide operation return categories
@@ -260,13 +293,21 @@ SHALL use the response convention for that category.
 - **THEN** the sets are equal and each operation has exactly one public response
   convention.
 
-### Requirement: Common page contract
+### Requirement: Canonical collection page contract
 
-Every public collection result SHALL expose an immutable, generic page
-interface with `items: tuple[T, ...]`, `limit: int | None`,
+Every canonical CLI collection operation and every direct resource collection
+result SHALL expose an immutable, generic page interface with
+`items: tuple[T, ...]`, `limit: int | None`,
 `offset: int | None`, `total: int | None`, `has_more: bool`, and the supported
 typed cursor metadata. A page SHALL implement direct iteration, `len(page)`,
 and integer/slice indexing over `items` without performing I/O.
+
+Relation snapshots returned by `.all()` on `LazyCollection`,
+`OffsetLazyCollection`, or `CursorLazyCollection` are explicitly outside this
+page requirement and SHALL remain tuples. A relation container is not a
+canonical CLI collection operation/direct resource collection result; where a
+relation exposes a direct `.page()` operation, that page result follows the
+contract above.
 
 Unpaged collection reads SHALL return a page with `total == len(items)`,
 `limit is None`, `offset is None`, `has_more is False`, and no next cursor.
@@ -280,11 +321,19 @@ mapping rather than pretending key/value entries are a sequence page.
 `.items` for the documented compatibility window. New documentation and code
 SHALL use `.items`.
 
-#### Scenario: Items are common across resources
+#### Scenario: Items are common across canonical collection results
 
-- **WHEN** callers list issues, projects, agents, skills, workspaces,
-  autopilots, runs, comments, or any other collection resource
+- **WHEN** callers invoke canonical CLI collection operations or direct resource
+  collection methods for issues, projects, agents, skills, workspaces,
+  autopilots, runs, comments, or other approved collection resources
 - **THEN** the returned page exposes the typed elements through `.items`.
+
+#### Scenario: Relation snapshots retain tuple semantics
+
+- **WHEN** callers call `.all()` on a `LazyCollection`,
+  `OffsetLazyCollection`, or `CursorLazyCollection` relation
+- **THEN** the loaded relation snapshot remains a tuple and is not required to
+  expose page metadata or `.items`.
 
 #### Scenario: Page is directly iterable
 

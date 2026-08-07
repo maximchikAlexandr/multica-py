@@ -56,21 +56,36 @@ valid, mixed, missing-required, and validation-failure cases.
 
 ### Requirement: Update presence vector verification
 
-Every field on every update-style public input SHALL have an approved and
-tested presence vector covering omission, `None`, empty string or empty tuple,
-zero, and false wherever each value is type-applicable. Tests SHALL assert the
-exact command plan and final transport argv, including multi-step clear
-operations and no-op read delegation.
+Every field on every all-optional update-style public input SHALL have an
+approved and tested presence vector covering omission, `None`, empty string or
+empty tuple, zero, and false wherever each value is type-applicable. The
+all-optional set is exactly `ProjectUpdateRequest`, `AgentUpdateRequest`,
+`SkillUpdateRequest`, `IssueUpdateRequest`, `AutopilotUpdateRequest`,
+`LabelUpdateRequest`, `AutopilotTriggerUpdate`, and `UserProfileUpdate`.
+Tests SHALL assert the exact command plan and final transport argv, including
+multi-step clear operations and all-optional no-op read delegation. The
+required-value update inputs `ProjectResourceUpdateLocalDirectoryRequest` and
+`RuntimeUpdate` SHALL instead have explicit missing/null rejection vectors for
+`local_path` and `target_version`; they are excluded from the no-op guarantee.
 
-#### Scenario: Presence vectors are field-complete
+#### Scenario: All-optional presence vectors are field-complete
 
-- **WHEN** update model fields and direct update parameters are discovered
+- **WHEN** all-optional update model fields and direct update parameters are
+  discovered
 - **THEN** each field maps to exactly one approved presence vector and one
   table-driven verification row per applicable input state.
 
-#### Scenario: No-op update is read-only
+#### Scenario: Required-value update boundary is explicit
 
-- **WHEN** every update field is omitted
+- **WHEN** required-value update models are discovered
+- **THEN** tests cover omission and explicit `None` for
+  `ProjectResourceUpdateLocalDirectoryRequest.local_path` and
+  `RuntimeUpdate.target_version`, and expect pre-I/O validation rather than a
+  no-op read.
+
+#### Scenario: All-optional no-op update is read-only
+
+- **WHEN** every mutable field is omitted from an all-optional update model
 - **THEN** the focused case asserts the read command preview, one read
   invocation, no update invocation, and the normal entity result.
 
@@ -101,19 +116,29 @@ exceptions to the common conventions.
   payload-bearing action groups expose their payload only through typed
   `ActionResult.value`.
 
-#### Scenario: Collection migration is complete
+#### Scenario: Canonical collection migration is complete
 
-- **WHEN** collection-read return annotations and runtime results are inspected
+- **WHEN** canonical CLI collection operation and direct resource collection
+  return annotations and runtime results are inspected
 - **THEN** every result is `Page[T]` or an approved compatible subtype with
   `.items` and direct sequence behavior.
+
+#### Scenario: Relation snapshot exception is preserved
+
+- **WHEN** relation loaders expose `.all()` snapshots from
+  `LazyCollection`, `OffsetLazyCollection`, or `CursorLazyCollection`
+- **THEN** those snapshots remain tuples and are excluded from the page-result
+  migration gate; any direct relation `.page()` result remains page-checked.
 
 ### Requirement: Operation convention documentation gate
 
 Public API and migration documentation SHALL describe one SDK-wide calling,
-presence, command, return-category, and page contract. Contract tests SHALL pin
-the primary direct-keyword examples, the typed-object alternative, update
-presence table, action-result migration, iterable `.items` page examples, and
-legacy page aliases.
+presence, command, return-category, and page contract. It SHALL distinguish
+all-optional update no-op reads from required-value update validation and SHALL
+state the tuple contract for relation snapshots. Contract tests SHALL pin the
+primary direct-keyword examples, the typed-object alternative, update presence
+table, action-result migration, iterable `.items` page examples, relation
+snapshot tuple examples, and legacy page aliases.
 
 #### Scenario: Documentation examples type-check
 

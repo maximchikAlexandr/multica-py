@@ -34,10 +34,12 @@ extends that approved layer instead of creating a second runtime registry.
 
 - Make typed-object and direct-keyword calls mechanically complete and
   identical across eager, command, nested-resource, and bound-entity surfaces.
-- Give every update field an explicit omitted/null/empty/zero/false contract,
-  with no-op updates returning the current entity without mutation.
-- Normalize direct resource collection results around one immutable sequence
-  page API while retaining temporary resource-named aliases.
+- Give every all-optional update field an explicit omitted/null/empty/zero/false
+  contract, with all-omitted calls returning the current entity without
+  mutation; keep required-value update validation explicit.
+- Normalize canonical CLI collection operations and direct resource collection
+  results around one immutable sequence page API while retaining temporary
+  resource-named aliases.
 - Normalize action-only results around one generic wrapper without discarding
   useful typed payloads.
 - Preserve the command plan as the single execution path and make return
@@ -53,8 +55,10 @@ extends that approved layer instead of creating a second runtime registry.
 - No change to wire response shapes or Multica persistence semantics.
 - No conversion of lazy relation containers (`LazyCollection`,
   `OffsetLazyCollection`, `CursorLazyCollection`, `LazyMapping`) into pages;
-  they already provide a common iterable relation abstraction. Their resource
-  page loaders adopt the new page result where applicable.
+  they already provide a common iterable relation abstraction. Their
+  relation snapshots from `.all()` remain tuples and are explicitly outside
+  the page contract; their direct page loaders adopt the new page result where
+  applicable.
 - No removal of request classes, resource-specific page class names, or page
   item aliases in this release.
 - No expansion of upstream command coverage merely because newer flags exist;
@@ -127,14 +131,19 @@ The three resource-named item aliases and `children` are warning-free during
 the compatibility window; docs and new code use `.items`. Removal requires a
 future major release and a separate change.
 
-Every canonical resource operation whose current public return is
-`tuple[T, ...]` becomes `Page[T]`. Existing page-returning operations populate
-the common fields from their wire metadata. An unpaged array becomes
-`Page(items=..., total=len(items))` with neutral limit/offset/cursor fields.
+Every canonical CLI collection operation and every direct resource collection
+result whose current public return is `tuple[T, ...]` becomes `Page[T]`.
+Existing page-returning operations populate the common fields from their wire
+metadata. An unpaged array becomes `Page(items=..., total=len(items))` with
+neutral limit/offset/cursor fields.
 `issues.metadata.list` remains `Mapping[str, MetadataValue]`; scalar bytes,
 paths, strings, and state snapshots remain scalar/retrieve results. Lazy
-relation `.all()` continues returning its existing tuple because the lazy
-container, not its loaded value, is the common relation interface.
+relation snapshots from `LazyCollection.all()`,
+`OffsetLazyCollection.all()`, and `CursorLazyCollection.all()` continue
+returning their existing tuples because a lazy relation container, not its
+loaded snapshot, is the common relation interface. Those snapshots are not
+canonical CLI collection operation/direct resource collection results; a
+relation `.page()` result remains a page where that operation exists.
 
 Why: one concrete core gives autocomplete and runtime consistency without
 forcing all resource-specific metadata into a lowest-common-denominator
@@ -228,8 +237,8 @@ autocomplete, permits signature drift, and violates the no-public-`Any` rule.
 
 ### Decision 5: Encode update presence in models and approved field policies
 
-All optional update fields default to `Unset`, never `None`. Field types then
-state nullability explicitly:
+All-optional update models default every mutable field to `Unset`, never `None`.
+Field types then state nullability explicitly:
 
 | Model | Non-nullable present fields | Nullable clear fields | Collection clear |
 |---|---|---|---|
@@ -242,9 +251,21 @@ state nullability explicitly:
 | `AutopilotTriggerUpdate` | `title`, `kind` | — | — |
 | `UserProfileUpdate` | — | `description` | — |
 
-`ProjectResourceUpdateLocalDirectoryRequest` remains required-value-only; the
-same presence rules still apply because its field cannot be omitted or null.
-The direct overloads mirror these annotations exactly.
+The all-optional update set is exactly `ProjectUpdateRequest`,
+`AgentUpdateRequest`, `SkillUpdateRequest`, `IssueUpdateRequest`,
+`AutopilotUpdateRequest`, `LabelUpdateRequest`, `AutopilotTriggerUpdate`, and
+`UserProfileUpdate`. Their direct overloads mirror these annotations and an
+all-omitted call is a read-only no-op.
+
+Required-value update models are intentionally separate:
+
+| Model | Required non-null field(s) | Optional control field | No-op contract |
+|---|---|---|---|
+| `ProjectResourceUpdateLocalDirectoryRequest` | `local_path` | — | omission/null rejected; no all-omitted no-op |
+| `RuntimeUpdate` | `target_version` | `wait` | omission/null for `target_version` rejected; no all-omitted no-op |
+
+The direct overloads for these models require their required keyword fields.
+They are not included in the all-optional `Unset`/no-op guarantee.
 
 The approved binding owns how a nullable clear is represented: a documented
 empty flag, a dedicated clear flag, or a command-plan step such as unassign
@@ -255,12 +276,15 @@ clear affordances (`issue --parent ""`, `autopilot --project ""`, user profile
 distinguish clear from omit, contract validation blocks that binding; runtime
 code must not guess.
 
-No-op update behavior is uniform. When every field is `Unset`, the command
-builder returns the target's existing get/profile-get command instead of
-emitting a mutation with no flags. Trigger update, which lacks a direct trigger
-get command, uses the approved autopilot get command and extracts the matching
-trigger in the finalizer. No-op command previews therefore honestly show the
-read that will execute.
+No-op update behavior applies only to the all-optional update set above. When
+every mutable field is `Unset`, the command builder returns the target's
+existing get/profile-get command instead of emitting a mutation with no flags.
+Trigger update, which lacks a direct trigger get command, uses the approved
+autopilot get command and extracts the matching trigger in the finalizer.
+Required-value updates (`ProjectResourceUpdateLocalDirectoryRequest` and
+`RuntimeUpdate`) always require their required non-null value and never enter
+this no-op branch. No-op command previews therefore honestly show the read that
+will execute only for the all-optional set.
 
 Why: a sentinel makes omission explicit and lets `None`, `""`, `False`, `0`,
 and `()` retain their normal values. Placing clear encodings in the approved
@@ -296,12 +320,16 @@ Extend frozen table cases instead of creating per-resource test files:
 - `OperationCase` gains expected category and public response ID.
 - A frozen typed-input case table covers object/keyword parity and dispatch
   failures.
-- A frozen update-field table covers every applicable omitted/null/empty/
-  zero/false vector and its exact command plan.
-- Existing canonical operation rows change expected results to `Page` or
-  `ActionResult`; the discovery gate remains a strict set equality.
+- A frozen all-optional update-field table covers every applicable
+  omitted/null/empty/zero/false vector and its exact command plan; a separate
+  required-value table covers missing/null rejection for project-resource and
+  runtime updates and never expects a no-op.
+- Existing canonical CLI/direct-resource collection rows change expected
+  results to `Page` or `ActionResult`; relation `.all()` snapshot rows remain
+  tuple assertions, and the discovery gate remains a strict set equality.
 - Focused page tests cover immutability, `.items`, iteration, length, indexing,
-  all metadata modes, and alias identity.
+  all metadata modes, alias identity, and the explicit tuple contract for
+  relation snapshots.
 - Contract documentation tests pin one SDK-wide conventions section and the
   migration matrix rather than repeating resource-specific explanations.
 
