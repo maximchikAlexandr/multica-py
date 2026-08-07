@@ -16,7 +16,7 @@ from multica_py._internal.wire_models import (
     _ProjectResourceRecordWire,
     project_resource_from_wire,
 )
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceRecord,
@@ -196,11 +196,11 @@ class ProjectResourceCollection(BaseResource):
             project_resource_from_wire
         )
 
-    def remove_command(self, project_id: str, resource_id: str) -> Command[None]:
+    def remove_command(self, project_id: str, resource_id: str) -> Command[ActionResult[None]]:
         _ = cast("object", PROJECT_RESOURCE_REMOVE_BINDING)
         validate_nonblank(project_id)
         validate_nonblank(resource_id)
-        return self._none_command(("project", "resource", "remove", project_id, resource_id))
+        return self._action_command(("project", "resource", "remove", project_id, resource_id))
 
-    def remove(self, project_id: str, resource_id: str) -> None:
-        self.remove_command(project_id, resource_id).run()
+    def remove(self, project_id: str, resource_id: str) -> ActionResult[None]:
+        return self.remove_command(project_id, resource_id).run()

@@ -3,7 +3,7 @@ from __future__ import annotations
 from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import Subscriber
 from multica_py.resources._base import BaseResource
 
@@ -18,14 +18,16 @@ class IssueSubscriberResource(BaseResource):
     def list(self, issue_id: str) -> Page[Subscriber]:
         return self.list_command(issue_id).run()
 
-    def add_command(self, issue_id: str, user_id: str) -> Command[None]:
-        return self._none_command(("issue", "subscriber", "add", issue_id, "--user-id", user_id))
+    def add_command(self, issue_id: str, user_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("issue", "subscriber", "add", issue_id, "--user-id", user_id))
 
-    def add(self, issue_id: str, user_id: str) -> None:
-        self.add_command(issue_id, user_id).run()
+    def add(self, issue_id: str, user_id: str) -> ActionResult[None]:
+        return self.add_command(issue_id, user_id).run()
 
-    def remove_command(self, issue_id: str, user_id: str) -> Command[None]:
-        return self._none_command(("issue", "subscriber", "remove", issue_id, "--user-id", user_id))
+    def remove_command(self, issue_id: str, user_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(
+            ("issue", "subscriber", "remove", issue_id, "--user-id", user_id)
+        )
 
-    def remove(self, issue_id: str, user_id: str) -> None:
-        self.remove_command(issue_id, user_id).run()
+    def remove(self, issue_id: str, user_id: str) -> ActionResult[None]:
+        return self.remove_command(issue_id, user_id).run()

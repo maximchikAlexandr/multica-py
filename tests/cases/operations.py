@@ -172,7 +172,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         ProjectStatus,
         SortDirection,
     )
-    from multica_py.models.common import Page
+    from multica_py.models.common import ActionResult, Page
     from multica_py.models.issue_activity import (
         CommentCursor,
         CommentListFlatRequest,
@@ -251,6 +251,24 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         assertion: ResultAssertion, operation_id: str
     ) -> Callable[[object, MagicMock], None] | None:
         if assertion.kind == "none":
+            if operation_id in {
+                "autopilots.delete",
+                "issues.comments.delete",
+                "projects.resources.remove",
+            }:
+
+                def assert_action_none(result: object, _mt: MagicMock = MagicMock()) -> None:
+                    if (
+                        type(result).__module__ != "multica_py.models.common"
+                        or type(result).__qualname__ != "ActionResult"
+                        or not getattr(result, "success", False)
+                        or getattr(result, "value", object()) is not None
+                    ):
+                        raise AssertionError(
+                            f"expected successful ActionResult[None], got {result!r}"
+                        )
+
+                return assert_action_none
             return _assert_none
         if assertion.kind == "decoded_type":
             expected = str(assertion.expected["value"])
@@ -553,6 +571,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         AutopilotTriggerCreate,
         AutopilotTriggerUpdate,
     )
+    from multica_py.models.common import ActionResult
     from multica_py.models.issue_activity import (
         CommentCursor,
         CommentListFlatRequest,
@@ -782,6 +801,67 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
 
         raise NetworkError("first composite step failed")
 
+    def _assert_action_none(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, ActionResult)
+        assert result.success
+        assert result.value is None
+
+    def _assert_action_str(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, ActionResult)
+        assert result.success
+        assert isinstance(result.value, str)
+
+    def _assert_action_repository(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, ActionResult)
+        assert result.success
+        assert isinstance(result.value, RepositoryMutationResult)
+
+    def _assert_action_runtime(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, ActionResult)
+        assert result.success
+        assert isinstance(result.value, RuntimeUpdateResult)
+
+    action_assertions: dict[str, Callable[[object, MagicMock], None]] = dict.fromkeys(
+        (
+            "agents.archive",
+            "agents.avatar",
+            "agents.restore",
+            "agents.skills.set",
+            "autopilots.delete",
+            "autopilots.trigger_delete",
+            "configuration.set",
+            "issues.cancel_task",
+            "issues.comments.delete",
+            "issues.comments.resolve",
+            "issues.comments.unresolve",
+            "issues.metadata.delete",
+            "issues.rerun",
+            "issues.subscribers.add",
+            "issues.subscribers.remove",
+            "labels.delete",
+            "projects.delete",
+            "projects.resources.remove",
+            "runtimes.delete",
+            "skills.delete",
+            "skills.files.delete",
+            "squads.members.add",
+            "squads.members.remove",
+            "workspaces.switch",
+            "workspaces.watch",
+            "workspaces.unwatch",
+        ),
+        _assert_action_none,
+    )
+    action_assertions.update(
+        {
+            "issues.deprioritize": _assert_action_str,
+            "auth.login": _assert_action_str,
+            "repositories.add": _assert_action_repository,
+            "repositories.remove": _assert_action_repository,
+            "runtimes.update": _assert_action_runtime,
+        }
+    )
+
     def _assert_composite_issue(result: object, _mt: MagicMock) -> None:
         assert getattr(result, "id") == "i1"
 
@@ -856,7 +936,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             )
             if not id.startswith("generated:")
             else None,
-            assert_result=assert_result,
+            assert_result=assert_result or action_assertions.get(sdk_method),
             dynamic_argv_positions=dynamic_argv_positions,
             transport_side_effect=transport_side_effect,
             expected_transport_argvs=expected_transport_argvs,

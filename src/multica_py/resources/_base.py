@@ -8,10 +8,11 @@ import msgspec
 
 from multica_py._internal.commands import Command, _CommandPlan, _Step, _TempProvider
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.redaction import redact_text
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.process import ManagedProcess
 
 if TYPE_CHECKING:
@@ -20,6 +21,11 @@ if TYPE_CHECKING:
 S = TypeVar("S", bound=msgspec.Struct)
 R = TypeVar("R", bound=msgspec.Struct)
 T = TypeVar("T")
+
+
+def _redacted_text(value: object) -> str | None:
+    text = value.text if isinstance(value, TextResult) else value if isinstance(value, str) else ""
+    return redact_text(text).strip() or None
 
 
 def _page_items(value: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
@@ -134,11 +140,28 @@ class BaseResource:
             finalize=lambda results: cast("TextResult", results[0]).text,
         )
 
-    def _none_command(self, args: tuple[str, ...]) -> Command[None]:
+    def _action_command(self, args: tuple[str, ...]) -> Command[ActionResult[None]]:
+        def finalize(results: tuple[object, ...]) -> ActionResult[None]:
+            return ActionResult(value=None, message=_redacted_text(results[0]))
+
         return self._plan(
             steps=(_Step(args, "run_text"),),
-            finalize=lambda results: None,
+            finalize=finalize,
         )
+
+    def _action_text_command(self, args: tuple[str, ...]) -> Command[ActionResult[str]]:
+        def finalize(results: tuple[object, ...]) -> ActionResult[str]:
+            return ActionResult(value=_redacted_text(results[0]) or "")
+
+        return self._plan(
+            steps=(_Step(args, "run_text"),),
+            finalize=finalize,
+        )
+
+    def _action_decoded_command(
+        self, args: tuple[str, ...], model_type: type[S]
+    ) -> Command[ActionResult[S]]:
+        return self._decoded_command(args, model_type)._map(lambda value: ActionResult(value=value))
 
     def _raw_command(
         self,

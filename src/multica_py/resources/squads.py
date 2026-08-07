@@ -10,7 +10,7 @@ from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.relations import (
     LazyCollection,
@@ -113,29 +113,35 @@ class Squad(_BoundEntity):  # type: ignore[misc]
         if self._members is not None:
             self._members.invalidate()
 
-    def add_member(self, member_id: str) -> None:
-        self.add_member_command(member_id).run()
+    def add_member(self, member_id: str) -> ActionResult[None]:
+        return self.add_member_command(member_id).run()
 
-    def add_member_command(self, member_id: str) -> Command[None]:
+    def add_member_command(self, member_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(member_id)
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="add_member"
         )
-        return client.squads.members.add_command(self.id, member_id)._map(
-            lambda result: self._invalidate_members()
-        )
 
-    def remove_member(self, member_id: str) -> None:
-        self.remove_member_command(member_id).run()
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            self._invalidate_members()
+            return result
 
-    def remove_member_command(self, member_id: str) -> Command[None]:
+        return client.squads.members.add_command(self.id, member_id)._map(invalidate)
+
+    def remove_member(self, member_id: str) -> ActionResult[None]:
+        return self.remove_member_command(member_id).run()
+
+    def remove_member_command(self, member_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(member_id)
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="remove_member"
         )
-        return client.squads.members.remove_command(self.id, member_id)._map(
-            lambda result: self._invalidate_members()
-        )
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            self._invalidate_members()
+            return result
+
+        return client.squads.members.remove_command(self.id, member_id)._map(invalidate)
 
 
 class SquadResource(BaseResource):

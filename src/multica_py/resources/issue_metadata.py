@@ -8,6 +8,7 @@ from multica_py._internal.specs import TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import MetadataValueType
+from multica_py.models.common import ActionResult
 from multica_py.models.issue_activity import (
     MetadataEntry,
     MetadataListRequest,
@@ -157,11 +158,11 @@ class IssueMetadataResource(BaseResource):
     ) -> MetadataEntry:
         return self.set_typed_command(cast("MetadataSetRequest", request), **kwargs).run()
 
-    def delete_command(self, issue_id: str, key: str) -> Command[None]:
-        return self._none_command(("issue", "metadata", "delete", issue_id, "--key", key))
+    def delete_command(self, issue_id: str, key: str) -> Command[ActionResult[None]]:
+        return self._action_command(("issue", "metadata", "delete", issue_id, "--key", key))
 
-    def delete(self, issue_id: str, key: str) -> None:
-        self.delete_command(issue_id, key).run()
+    def delete(self, issue_id: str, key: str) -> ActionResult[None]:
+        return self.delete_command(issue_id, key).run()
 
 
 def _infer_metadata_value_type(value: MetadataValue) -> MetadataValueType | None:

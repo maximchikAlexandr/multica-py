@@ -17,7 +17,7 @@ from multica_py._internal.wire_models import (
 from multica_py.config import ClientConfig
 from multica_py.enums import ProjectStatus
 from multica_py.models._bound import _BoundEntity
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
@@ -159,18 +159,21 @@ class Project(_BoundEntity):  # type: ignore[misc]
 
         return command._map(invalidate)
 
-    def remove_resource(self, resource_id: str) -> None:
-        self.remove_resource_command(resource_id).run()
+    def remove_resource(self, resource_id: str) -> ActionResult[None]:
+        return self.remove_resource_command(resource_id).run()
 
-    def remove_resource_command(self, resource_id: str) -> Command[None]:
+    def remove_resource_command(self, resource_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(self.id)
         validate_nonblank(resource_id)
         client = self._require_client(
             entity_type="Project", entity_id=self.id, relation_name="remove_resource"
         )
-        return client.projects.resources.remove_command(self.id, resource_id)._map(
-            lambda result: self._invalidate_resources()
-        )
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            self._invalidate_resources()
+            return result
+
+        return client.projects.resources.remove_command(self.id, resource_id)._map(invalidate)
 
 
 class ProjectResource(BaseResource):
@@ -275,11 +278,11 @@ class ProjectResource(BaseResource):
             project_id, cast("ProjectUpdateRequest", request), **kwargs
         ).run()
 
-    def delete_command(self, project_id: str) -> Command[None]:
-        return self._none_command(("project", "delete", project_id))
+    def delete_command(self, project_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("project", "delete", project_id))
 
-    def delete(self, project_id: str) -> None:
-        self.delete_command(project_id).run()
+    def delete(self, project_id: str) -> ActionResult[None]:
+        return self.delete_command(project_id).run()
 
     def set_status_command(self, project_id: str, status: ProjectStatus) -> Command[Project]:
         return self._decoded_command(

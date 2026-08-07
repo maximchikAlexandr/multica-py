@@ -20,7 +20,7 @@ from multica_py._internal.wire_models import (
 from multica_py.config import ClientConfig
 from multica_py.exceptions import MissingRelationContextError, OutputShapeError
 from multica_py.models._bound import _BoundEntity
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import (
     CommentCursor,
     CommentListFlatRequest,
@@ -403,23 +403,23 @@ class IssueCommentResource(BaseResource):
     def reply(self, issue_id: str, thread_id: str, body: str) -> Comment:
         return self.reply_command(issue_id, thread_id, body).run()
 
-    def delete_command(self, comment_id: str) -> Command[None]:
-        return self._none_command(("issue", "comment", "delete", comment_id))
+    def delete_command(self, comment_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("issue", "comment", "delete", comment_id))
 
-    def delete(self, comment_id: str) -> None:
-        self.delete_command(comment_id).run()
+    def delete(self, comment_id: str) -> ActionResult[None]:
+        return self.delete_command(comment_id).run()
 
-    def resolve_command(self, thread_id: str) -> Command[None]:
-        return self._none_command(("issue", "comment", "resolve", thread_id))
+    def resolve_command(self, thread_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("issue", "comment", "resolve", thread_id))
 
-    def resolve(self, thread_id: str) -> None:
-        self.resolve_command(thread_id).run()
+    def resolve(self, thread_id: str) -> ActionResult[None]:
+        return self.resolve_command(thread_id).run()
 
-    def unresolve_command(self, thread_id: str) -> Command[None]:
-        return self._none_command(("issue", "comment", "unresolve", thread_id))
+    def unresolve_command(self, thread_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("issue", "comment", "unresolve", thread_id))
 
-    def unresolve(self, thread_id: str) -> None:
-        self.unresolve_command(thread_id).run()
+    def unresolve(self, thread_id: str) -> ActionResult[None]:
+        return self.unresolve_command(thread_id).run()
 
     def _run_decode_comments(self, payload: str) -> tuple[Comment, ...]:
         return tuple(

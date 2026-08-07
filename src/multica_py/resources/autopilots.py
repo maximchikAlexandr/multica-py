@@ -50,6 +50,7 @@ from multica_py.models.autopilots import (
     AutopilotTriggerUpdate,
     AutopilotUpdateRequest,
 )
+from multica_py.models.common import ActionResult
 from multica_py.models.issue_activity import RunMessage
 from multica_py.models.relations import (
     LazyCollection,
@@ -610,16 +611,19 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             self.id, trigger_id, cast("AutopilotTriggerUpdate", request), **kwargs
         )._map(invalidate)
 
-    def trigger_delete(self, trigger_id: str) -> None:
-        self.trigger_delete_command(trigger_id).run()
+    def trigger_delete(self, trigger_id: str) -> ActionResult[None]:
+        return self.trigger_delete_command(trigger_id).run()
 
-    def trigger_delete_command(self, trigger_id: str) -> Command[None]:
+    def trigger_delete_command(self, trigger_id: str) -> Command[ActionResult[None]]:
         client = self._require_client(
             entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
         )
-        return client.autopilots.trigger_delete_command(self.id, trigger_id)._map(
-            lambda result: self.triggers.invalidate()
-        )
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            self.triggers.invalidate()
+            return result
+
+        return client.autopilots.trigger_delete_command(self.id, trigger_id)._map(invalidate)
 
 
 class AutopilotResource(BaseResource):
@@ -847,11 +851,11 @@ class AutopilotResource(BaseResource):
             autopilot_id, cast("AutopilotUpdateRequest", request), **kwargs
         ).run()
 
-    def delete_command(self, autopilot_id: str) -> Command[None]:
-        return self._none_command(("autopilot", "delete", autopilot_id))
+    def delete_command(self, autopilot_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("autopilot", "delete", autopilot_id))
 
-    def delete(self, autopilot_id: str) -> None:
-        self.delete_command(autopilot_id).run()
+    def delete(self, autopilot_id: str) -> ActionResult[None]:
+        return self.delete_command(autopilot_id).run()
 
     def trigger_command(self, autopilot_id: str) -> Command[AutopilotRun]:
         validate_nonblank(autopilot_id)
@@ -1018,14 +1022,16 @@ class AutopilotResource(BaseResource):
             autopilot_id, trigger_id, cast("AutopilotTriggerUpdate", request), **kwargs
         ).run()
 
-    def trigger_delete_command(self, autopilot_id: str, trigger_id: str) -> Command[None]:
+    def trigger_delete_command(
+        self, autopilot_id: str, trigger_id: str
+    ) -> Command[ActionResult[None]]:
         _ = cast("object", AUTOPILOT_TRIGGER_DELETE_BINDING)
         validate_nonblank(autopilot_id)
         validate_nonblank(trigger_id)
-        return self._none_command(("autopilot", "trigger-delete", autopilot_id, trigger_id))
+        return self._action_command(("autopilot", "trigger-delete", autopilot_id, trigger_id))
 
-    def trigger_delete(self, autopilot_id: str, trigger_id: str) -> None:
-        self.trigger_delete_command(autopilot_id, trigger_id).run()
+    def trigger_delete(self, autopilot_id: str, trigger_id: str) -> ActionResult[None]:
+        return self.trigger_delete_command(autopilot_id, trigger_id).run()
 
     def _bind_autopilot(
         self,

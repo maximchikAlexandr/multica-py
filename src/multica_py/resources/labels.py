@@ -5,7 +5,7 @@ from typing import cast, overload
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
 from multica_py.models._bound import _BoundEntity
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.labels import LabelUpdateRequest
 from multica_py.resources._base import BaseResource, _resolve_request
 from multica_py.sentinels import Unset, UnsetType
@@ -99,8 +99,8 @@ class LabelResource(BaseResource):
     ) -> Label:
         return self.update_command(label_id, cast("LabelUpdateRequest", request), **kwargs).run()
 
-    def delete_command(self, label_id: str) -> Command[None]:
-        return self._none_command(("label", "delete", label_id))
+    def delete_command(self, label_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("label", "delete", label_id))
 
-    def delete(self, label_id: str) -> None:
-        self.delete_command(label_id).run()
+    def delete(self, label_id: str) -> ActionResult[None]:
+        return self.delete_command(label_id).run()

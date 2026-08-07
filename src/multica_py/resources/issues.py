@@ -33,7 +33,7 @@ from multica_py.config import ClientConfig
 from multica_py.enums import IssueSort, IssueStatus, SortDirection
 from multica_py.exceptions import JsonOutputError, OutputShapeError
 from multica_py.models._bound import _BoundEntity
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import (
     CommentCursor,
     CommentListFlatRequest,
@@ -567,27 +567,33 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     def remove_label(self, label_id: str) -> Page[Label]:
         return self.remove_label_command(label_id).run()
 
-    def add_subscriber_command(self, user_id: str) -> Command[None]:
+    def add_subscriber_command(self, user_id: str) -> Command[ActionResult[None]]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="subscribers"
         )
-        return client.issues.subscribers.add_command(self.id, user_id)._map(
-            lambda result: self._invalidate_subscribers()
-        )
 
-    def add_subscriber(self, user_id: str) -> None:
-        self.add_subscriber_command(user_id).run()
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            self._invalidate_subscribers()
+            return result
 
-    def remove_subscriber_command(self, user_id: str) -> Command[None]:
+        return client.issues.subscribers.add_command(self.id, user_id)._map(invalidate)
+
+    def add_subscriber(self, user_id: str) -> ActionResult[None]:
+        return self.add_subscriber_command(user_id).run()
+
+    def remove_subscriber_command(self, user_id: str) -> Command[ActionResult[None]]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="subscribers"
         )
-        return client.issues.subscribers.remove_command(self.id, user_id)._map(
-            lambda result: self._invalidate_subscribers()
-        )
 
-    def remove_subscriber(self, user_id: str) -> None:
-        self.remove_subscriber_command(user_id).run()
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            self._invalidate_subscribers()
+            return result
+
+        return client.issues.subscribers.remove_command(self.id, user_id)._map(invalidate)
+
+    def remove_subscriber(self, user_id: str) -> ActionResult[None]:
+        return self.remove_subscriber_command(user_id).run()
 
     def set_metadata_command(self, key: str, value: MetadataValue) -> Command[MetadataEntry]:
         client = self._require_client(
@@ -603,16 +609,19 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     def set_metadata(self, key: str, value: MetadataValue) -> MetadataEntry:
         return self.set_metadata_command(key, value).run()
 
-    def delete_metadata_command(self, key: str) -> Command[None]:
+    def delete_metadata_command(self, key: str) -> Command[ActionResult[None]]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="metadata"
         )
-        return client.issues.metadata.delete_command(self.id, key)._map(
-            lambda result: self._invalidate_metadata()
-        )
 
-    def delete_metadata(self, key: str) -> None:
-        self.delete_metadata_command(key).run()
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            self._invalidate_metadata()
+            return result
+
+        return client.issues.metadata.delete_command(self.id, key)._map(invalidate)
+
+    def delete_metadata(self, key: str) -> ActionResult[None]:
+        return self.delete_metadata_command(key).run()
 
     def _invalidate_comments(self) -> None:
         if self._comments is not None:
@@ -1007,10 +1016,10 @@ class IssueResource(BaseResource):
     def set_status(self, issue_id: str, status: IssueStatus) -> Issue:
         return self.set_status_command(issue_id, status).run()
 
-    def deprioritize_command(self, issue_id: str) -> Command[str]:
-        return self._text_command(("issue", "deprioritize", issue_id))
+    def deprioritize_command(self, issue_id: str) -> Command[ActionResult[str]]:
+        return self._action_text_command(("issue", "deprioritize", issue_id))
 
-    def deprioritize(self, issue_id: str) -> str:
+    def deprioritize(self, issue_id: str) -> ActionResult[str]:
         return self.deprioritize_command(issue_id).run()
 
     @overload
@@ -1116,24 +1125,26 @@ class IssueResource(BaseResource):
     def usage(self, issue_id: str) -> IssueUsage:
         return self.usage_command(issue_id).run()
 
-    def rerun_command(self, issue_id: str) -> Command[None]:
+    def rerun_command(self, issue_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(issue_id)
-        return self._none_command(("issue", "rerun", issue_id))
+        return self._action_command(("issue", "rerun", issue_id))
 
-    def rerun(self, issue_id: str) -> None:
-        self.rerun_command(issue_id).run()
+    def rerun(self, issue_id: str) -> ActionResult[None]:
+        return self.rerun_command(issue_id).run()
 
-    def cancel_task_command(self, task_id: str, *, issue_id: str | None = None) -> Command[None]:
+    def cancel_task_command(
+        self, task_id: str, *, issue_id: str | None = None
+    ) -> Command[ActionResult[None]]:
         validate_nonblank(task_id)
         args = ["issue", "cancel-task", task_id]
         if issue_id is not None:
             validate_nonblank(issue_id)
             args.extend(["--issue", issue_id])
 
-        return self._none_command(tuple(args))
+        return self._action_command(tuple(args))
 
-    def cancel_task(self, task_id: str, *, issue_id: str | None = None) -> None:
-        self.cancel_task_command(task_id, issue_id=issue_id).run()
+    def cancel_task(self, task_id: str, *, issue_id: str | None = None) -> ActionResult[None]:
+        return self.cancel_task_command(task_id, issue_id=issue_id).run()
 
     def _bind_issue(self, wire: _IssueWire) -> Issue:
         return _issue_from_wire(wire)._with_client(self._client)

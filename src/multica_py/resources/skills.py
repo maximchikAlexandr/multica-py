@@ -9,7 +9,7 @@ from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.relations import LazyCollection
 from multica_py.models.skills import (
     SkillCreateRequest,
@@ -70,16 +70,19 @@ class Skill(_BoundEntity):  # type: ignore[misc]
 
         return client.skills.files.upsert_command(self.id, path, content)._map(invalidate)
 
-    def delete_file(self, file_id: str) -> None:
-        self.delete_file_command(file_id).run()
+    def delete_file(self, file_id: str) -> ActionResult[None]:
+        return self.delete_file_command(file_id).run()
 
-    def delete_file_command(self, file_id: str) -> Command[None]:
+    def delete_file_command(self, file_id: str) -> Command[ActionResult[None]]:
         client = self._require_client(
             entity_type="Skill", entity_id=self.id, relation_name="delete_file"
         )
-        return client.skills.files.delete_command(self.id, file_id)._map(
-            lambda result: self._invalidate_files()
-        )
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            self._invalidate_files()
+            return result
+
+        return client.skills.files.delete_command(self.id, file_id)._map(invalidate)
 
 
 class SkillResource(BaseResource):
@@ -181,12 +184,12 @@ class SkillResource(BaseResource):
     ) -> Skill:
         return self.update_command(skill_id, cast("SkillUpdateRequest", request), **kwargs).run()
 
-    def delete_command(self, skill_id: str) -> Command[None]:
+    def delete_command(self, skill_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(skill_id)
-        return self._none_command(("skill", "delete", skill_id))
+        return self._action_command(("skill", "delete", skill_id))
 
-    def delete(self, skill_id: str) -> None:
-        self.delete_command(skill_id).run()
+    def delete(self, skill_id: str) -> ActionResult[None]:
+        return self.delete_command(skill_id).run()
 
     def import_from_url_command(self, url: str) -> Command[Skill]:
         return self._decoded_command(("skill", "import", "--url", url), Skill)._map(

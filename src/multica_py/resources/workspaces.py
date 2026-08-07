@@ -8,7 +8,7 @@ from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.autopilots import AutopilotListPage
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.relations import (
     LazyCollection,
@@ -354,20 +354,20 @@ class WorkspaceResource(BaseResource):
     def members(self, workspace_id: str) -> Page[WorkspaceMember]:
         return self.members_command(workspace_id).run()
 
-    def switch_command(self, workspace_id: str) -> Command[None]:
-        return self._none_command(("workspace", "switch", workspace_id))
+    def switch_command(self, workspace_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("workspace", "switch", workspace_id))
 
-    def switch(self, workspace_id: str) -> None:
-        self.switch_command(workspace_id).run()
+    def switch(self, workspace_id: str) -> ActionResult[None]:
+        return self.switch_command(workspace_id).run()
 
-    def watch_command(self, workspace_id: str) -> Command[None]:
-        return self._none_command(("workspace", "watch", workspace_id))
+    def watch_command(self, workspace_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("workspace", "watch", workspace_id))
 
-    def watch(self, workspace_id: str) -> None:
-        self.watch_command(workspace_id).run()
+    def watch(self, workspace_id: str) -> ActionResult[None]:
+        return self.watch_command(workspace_id).run()
 
-    def unwatch_command(self, workspace_id: str) -> Command[None]:
-        return self._none_command(("workspace", "unwatch", workspace_id))
+    def unwatch_command(self, workspace_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("workspace", "unwatch", workspace_id))
 
-    def unwatch(self, workspace_id: str) -> None:
-        self.unwatch_command(workspace_id).run()
+    def unwatch(self, workspace_id: str) -> ActionResult[None]:
+        return self.unwatch_command(workspace_id).run()

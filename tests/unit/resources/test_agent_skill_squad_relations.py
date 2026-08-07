@@ -33,6 +33,7 @@ from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.agents import AgentSkill, AgentTask
+from multica_py.models.common import ActionResult
 from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection
 from multica_py.models.skills import SkillFile
@@ -1004,7 +1005,8 @@ def test_skill_files_use_authoritative_argv(case: SkillFileArgvCase) -> None:
     result = getattr(resource, f"{case.method}_command")(*case.args).run()
 
     if case.stdout is None:
-        assert result is None
+        assert isinstance(result, ActionResult)
+        assert result.success and result.value is None
         transport.run_text.assert_called_once_with(case.expected_argv)
         transport.run_bytes.assert_not_called()
     else:
@@ -1129,5 +1131,5 @@ def test_avatar_public_signature_and_legacy_absence() -> None:
         ("agent_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
         ("file", inspect.Parameter.POSITIONAL_OR_KEYWORD, pathlib.Path),
     )
-    assert signature.return_annotation is None
+    assert signature.return_annotation == ActionResult[None]
     assert not hasattr(AgentResource, "upload_avatar")

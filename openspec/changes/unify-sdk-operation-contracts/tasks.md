@@ -60,10 +60,10 @@
 
 ## 6. Action-result migration
 
-- [ ] 6.1 Add private base-resource plan adapters for successful void and payload actions that wrap exactly once in `ActionResult[T]`, preserve redacted public messages only, and leave transport/decode exceptions unchanged.
-- [ ] 6.2 Convert the 26 canonical void actions listed in `design.md` to `ActionResult[None]` in both eager and command annotations/finalizers; update bound and nested delegators to reuse the same wrapper rather than nesting it.
-- [ ] 6.3 Convert `issues.deprioritize` and token-based `auth.login` to `ActionResult[str]`; retain `auth.login(token=None) -> ManagedProcess` with precise eager/command overloads and spawn execution.
-- [ ] 6.4 Convert `repositories.add/remove` to `ActionResult[RepositoryMutationResult]` and `runtimes.update` to `ActionResult[RuntimeUpdateResult]`, preserving every decoded payload field under `.value`.
+- [x] 6.1 Add private base-resource plan adapters for successful void and payload actions that wrap exactly once in `ActionResult[T]`, preserve redacted public messages only, and leave transport/decode exceptions unchanged.
+- [x] 6.2 Convert the 26 canonical void actions listed in `design.md` to `ActionResult[None]` in both eager and command annotations/finalizers; update bound and nested delegators to reuse the same wrapper rather than nesting it.
+- [x] 6.3 Convert `issues.deprioritize` and token-based `auth.login` to `ActionResult[str]`; retain `auth.login(token=None) -> ManagedProcess` with precise eager/command overloads and spawn execution.
+- [x] 6.4 Convert `repositories.add/remove` to `ActionResult[RepositoryMutationResult]` and `runtimes.update` to `ActionResult[RuntimeUpdateResult]`, preserving every decoded payload field under `.value`.
 - [ ] 6.5 Keep entity, state-snapshot, comment, metadata-entry, attachment, page, scalar read, mapping, and process operations on their natural categories; add negative assertions preventing opportunistic `ActionResult` use outside the approved matrix.
 - [ ] 6.6 Update cache invalidation maps on bound actions so invalidation runs only after a successful wrapped action and the original `ActionResult` is returned unchanged.
 - [ ] 6.7 Add table-driven cases for each action payload family, representative void actions from every resource, token/interactive login overloads, transport failures, decode failures, and bound invalidation; assert no CLI-executing public method retains a bare `None` return annotation.

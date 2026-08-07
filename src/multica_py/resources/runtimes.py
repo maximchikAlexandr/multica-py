@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import cast, overload
 
 from multica_py._internal.commands import Command
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.system import (
     RuntimeActivity,
     RuntimeDefinition,
@@ -44,33 +44,35 @@ class RuntimeResource(BaseResource):
     @overload
     def update_command(
         self, runtime_id: str, request: RuntimeUpdate, /
-    ) -> Command[RuntimeUpdateResult]: ...
+    ) -> Command[ActionResult[RuntimeUpdateResult]]: ...
     @overload
     def update_command(
         self, runtime_id: str, *, target_version: str, wait: bool = False
-    ) -> Command[RuntimeUpdateResult]: ...
+    ) -> Command[ActionResult[RuntimeUpdateResult]]: ...
 
     def update_command(  # type: ignore[misc]
         self, runtime_id: str, request: RuntimeUpdate | None = None, /, **kwargs: object
-    ) -> Command[RuntimeUpdateResult]:
+    ) -> Command[ActionResult[RuntimeUpdateResult]]:
         req = _resolve_request(request, kwargs, RuntimeUpdate)
         if not runtime_id.strip() or not req.target_version.strip():
             raise ValueError("runtime_id and target_version must be nonblank")
         args = ["runtime", "update", runtime_id, "--target-version", req.target_version]
         if req.wait:
             args.append("--wait")
-        return self._decoded_command(tuple(args), RuntimeUpdateResult)
+        return self._action_decoded_command(tuple(args), RuntimeUpdateResult)
 
     @overload
-    def update(self, runtime_id: str, request: RuntimeUpdate, /) -> RuntimeUpdateResult: ...
+    def update(
+        self, runtime_id: str, request: RuntimeUpdate, /
+    ) -> ActionResult[RuntimeUpdateResult]: ...
     @overload
     def update(
         self, runtime_id: str, *, target_version: str, wait: bool = False
-    ) -> RuntimeUpdateResult: ...
+    ) -> ActionResult[RuntimeUpdateResult]: ...
 
     def update(  # type: ignore[misc]
         self, runtime_id: str, request: RuntimeUpdate | None = None, /, **kwargs: object
-    ) -> RuntimeUpdateResult:
+    ) -> ActionResult[RuntimeUpdateResult]:
         return self.update_command(runtime_id, cast("RuntimeUpdate", request), **kwargs).run()
 
     def rename_command(
@@ -86,7 +88,9 @@ class RuntimeResource(BaseResource):
     def rename(self, runtime_id: str, name: str, *, machine: bool = False) -> RuntimeDefinition:
         return self.rename_command(runtime_id, name, machine=machine).run()
 
-    def delete_command(self, runtime_id: str, *, cascade: bool = False) -> Command[None]:
+    def delete_command(
+        self, runtime_id: str, *, cascade: bool = False
+    ) -> Command[ActionResult[None]]:
         """Build a runtime-delete plan, optionally cascading to dependents.
 
         ``cascade=True`` asks the upstream CLI to unbind dependent agents,
@@ -98,8 +102,8 @@ class RuntimeResource(BaseResource):
         args = ["runtime", "delete", runtime_id]
         if cascade:
             args.append("--cascade")
-        return self._none_command(tuple(args))
+        return self._action_command(tuple(args))
 
-    def delete(self, runtime_id: str, *, cascade: bool = False) -> None:
+    def delete(self, runtime_id: str, *, cascade: bool = False) -> ActionResult[None]:
         """Delete a runtime; cascade preserves dependent agents and their history."""
-        self.delete_command(runtime_id, cascade=cascade).run()
+        return self.delete_command(runtime_id, cascade=cascade).run()

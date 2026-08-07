@@ -17,7 +17,7 @@ from multica_py.models.agents import (
     AgentTask,
     AgentUpdateRequest,
 )
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueSummary
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
 from multica_py.resources._base import BaseResource, _page_items, _resolve_request
@@ -116,18 +116,21 @@ class Agent(_BoundEntity):  # type: ignore[misc]
         if self._skills is not None:
             self._skills.invalidate()
 
-    def set_skills(self, skill_ids: tuple[str, ...]) -> None:
+    def set_skills(self, skill_ids: tuple[str, ...]) -> ActionResult[None]:
         """Set the agent's assigned skills and invalidate cached skills cache."""
-        self.set_skills_command(skill_ids).run()
+        return self.set_skills_command(skill_ids).run()
 
-    def set_skills_command(self, skill_ids: tuple[str, ...]) -> Command[None]:
+    def set_skills_command(self, skill_ids: tuple[str, ...]) -> Command[ActionResult[None]]:
         """Build a lazy command to set skills and invalidate the cache on success."""
         client = self._require_client(
             entity_type="Agent", entity_id=self.id, relation_name="set_skills"
         )
-        return client.agents.skills.set_command(self.id, skill_ids)._map(
-            lambda result: self._invalidate_skills()
-        )
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            self._invalidate_skills()
+            return result
+
+        return client.agents.skills.set_command(self.id, skill_ids)._map(invalidate)
 
 
 class AgentResource(BaseResource):
@@ -374,19 +377,19 @@ class AgentResource(BaseResource):
     ) -> Agent:
         return self.update_command(agent_id, cast("AgentUpdateRequest", request), **kwargs).run()
 
-    def archive_command(self, agent_id: str) -> Command[None]:
+    def archive_command(self, agent_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(agent_id)
-        return self._none_command(("agent", "archive", agent_id))
+        return self._action_command(("agent", "archive", agent_id))
 
-    def archive(self, agent_id: str) -> None:
-        self.archive_command(agent_id).run()
+    def archive(self, agent_id: str) -> ActionResult[None]:
+        return self.archive_command(agent_id).run()
 
-    def restore_command(self, agent_id: str) -> Command[None]:
+    def restore_command(self, agent_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(agent_id)
-        return self._none_command(("agent", "restore", agent_id))
+        return self._action_command(("agent", "restore", agent_id))
 
-    def restore(self, agent_id: str) -> None:
-        self.restore_command(agent_id).run()
+    def restore(self, agent_id: str) -> ActionResult[None]:
+        return self.restore_command(agent_id).run()
 
     def tasks_command(self, agent_id: str) -> Command[Page[AgentTask]]:
         validate_nonblank(agent_id)
@@ -395,13 +398,13 @@ class AgentResource(BaseResource):
     def tasks(self, agent_id: str) -> Page[AgentTask]:
         return self.tasks_command(agent_id).run()
 
-    def avatar_command(self, agent_id: str, file: pathlib.Path) -> Command[None]:
+    def avatar_command(self, agent_id: str, file: pathlib.Path) -> Command[ActionResult[None]]:
         _ = AGENT_AVATAR_BINDING
         validate_nonblank(agent_id)
         path = file.resolve()
         if not path.is_file():
             raise ValueError(f"file must be an existing local file: {file}")
-        return self._none_command(("agent", "avatar", agent_id, "--file", str(path)))
+        return self._action_command(("agent", "avatar", agent_id, "--file", str(path)))
 
-    def avatar(self, agent_id: str, file: pathlib.Path) -> None:
-        self.avatar_command(agent_id, file).run()
+    def avatar(self, agent_id: str, file: pathlib.Path) -> ActionResult[None]:
+        return self.avatar_command(agent_id, file).run()

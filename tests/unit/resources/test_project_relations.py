@@ -16,7 +16,7 @@ from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import DetachedEntityError
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
@@ -477,7 +477,9 @@ def test_project_parent_mutations_invalidate_only_resources(
     )
     child = getattr(client.projects.resources, case.child_method)
     if case.succeeds:
-        child.return_value = _RESOURCE_RECORD
+        child.return_value = (
+            _RESOURCE_RECORD if case.method == "add_local_directory" else ActionResult(value=None)
+        )
     else:
         child.side_effect = RuntimeError("transport failed")
     entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
@@ -489,7 +491,8 @@ def test_project_parent_mutations_invalidate_only_resources(
         if case.method == "add_local_directory":
             assert isinstance(result, ProjectResourceRecord)
         else:
-            assert result is None
+            assert isinstance(result, ActionResult)
+            assert result.success and result.value is None
         assert entity.resources.all() == cached_resources
         assert client.projects.resources.list.call_count == 2
     else:
