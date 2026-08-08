@@ -155,8 +155,10 @@ class BaseResource:
         )
 
     def _action_text_command(self, args: tuple[str, ...]) -> Command[ActionResult[str]]:
+        secret_values = collect_secret_values(args)
+
         def finalize(results: tuple[object, ...]) -> ActionResult[str]:
-            return ActionResult(value=_redacted_text(results[0]) or "")
+            return ActionResult(value=_redacted_text(results[0], secret_values=secret_values) or "")
 
         return self._plan(
             steps=(_Step(args, "run_text"),),

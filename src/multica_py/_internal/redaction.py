@@ -18,6 +18,12 @@ _secret_env_key_pattern = re.compile(
 )
 
 
+def _is_secret_config_key(key: str) -> bool:
+    return _secret_env_key_pattern.search(key) is not None or any(
+        separator in key for separator in (".", ":", "/")
+    )
+
+
 def collect_secret_values(argv: tuple[str, ...]) -> tuple[str, ...]:
     secrets: list[str] = []
     i = 0
@@ -27,7 +33,7 @@ def collect_secret_values(argv: tuple[str, ...]) -> tuple[str, ...]:
             arg == "config"
             and i + 3 < len(argv)
             and argv[i + 1] == "set"
-            and _secret_env_key_pattern.search(argv[i + 2]) is not None
+            and _is_secret_config_key(argv[i + 2])
         ):
             secrets.append(argv[i + 3])
             i += 4

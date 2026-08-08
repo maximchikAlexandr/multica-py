@@ -82,14 +82,20 @@ def test_void_adapter_wraps_success_once_and_redacts_public_message() -> None:
     assert not isinstance(result.value, ActionResult)
 
 
-def test_configuration_set_redacts_bare_secret_from_preview_and_message() -> None:
+@pytest.mark.parametrize(
+    ("key", "secret"),
+    (
+        ("third_party_api_key", "opaque-secret-7Yp9"),
+        ("openai.api_key", "opaque-config-secret-5Mz7"),
+    ),
+)
+def test_configuration_set_redacts_bare_secret_from_preview_and_message(
+    key: str, secret: str
+) -> None:
     transport = _transport()
-    secret = "opaque-secret-7Yp9"
     transport.run_text.return_value = TextResult(f"stored {secret}", "", 0)
 
-    command = ConfigurationResource(transport, ClientConfig()).set_command(
-        "third_party_api_key", secret
-    )
+    command = ConfigurationResource(transport, ClientConfig()).set_command(key, secret)
 
     assert secret not in command.commands[0]
     assert secret not in repr(command)
@@ -158,6 +164,23 @@ def test_token_login_wraps_scalar_and_interactive_login_stays_process() -> None:
     assert token_result == ActionResult(value="login successful")
     assert auth.login_command(None).commands == ("multica auth login",)
     assert auth.login_command("secret-token").commands == ("multica auth login --token '***'",)
+
+
+def test_token_login_redacts_echoed_bare_token_from_action_value() -> None:
+    transport = _transport()
+    secret = "opaque-login-secret-4Qx8"
+    auth = AuthResource(transport, ClientConfig())
+    transport.run_text.return_value = TextResult(f"authenticated {secret}", "", 0)
+
+    command = auth.login_command(secret)
+
+    assert secret not in command.commands[0]
+    assert secret not in repr(command)
+
+    result = command.run()
+
+    assert result.value == "authenticated ***"
+    assert secret not in (result.value or "")
 
 
 def test_interactive_login_runs_as_managed_process() -> None:
