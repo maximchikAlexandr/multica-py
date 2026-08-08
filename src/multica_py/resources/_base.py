@@ -8,9 +8,11 @@ import msgspec
 
 from multica_py._internal.commands import Command, _CommandPlan, _Step, _TempProvider
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.redaction import collect_secret_values, redact_text
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.models.common import ActionResult, Page
 from multica_py.process import ManagedProcess
 
 if TYPE_CHECKING:
@@ -21,16 +23,35 @@ R = TypeVar("R", bound=msgspec.Struct)
 T = TypeVar("T")
 
 
+def _redacted_text(value: object, *, secret_values: tuple[str, ...] = ()) -> str | None:
+    text = value.text if isinstance(value, TextResult) else value if isinstance(value, str) else ""
+    return redact_text(text, secret_values=secret_values).strip() or None
+
+
+def _page_items(value: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
+    return value.items if isinstance(value, Page) else value
+
+
 def _is_transport(value: object) -> bool:
     return isinstance(value, CliTransport)
 
 
-def _resolve_request(request: R | None, kwargs: dict[str, object], cls: type[R]) -> R:
+def _resolve_request(
+    request: R | None,
+    kwargs: dict[str, object],
+    cls: type[R],
+    *,
+    allow_empty: bool = False,
+) -> R:
     if request is not None and kwargs:
         raise TypeError("Pass either a request object or keyword arguments, not both.")
     if request is not None:
+        if not isinstance(request, cls):
+            raise TypeError(f"Expected {cls.__name__}, got {type(request).__name__}.")
         return request
     if not kwargs:
+        if allow_empty:
+            return cls()
         raise TypeError(f"Pass a {cls.__name__} or its keyword arguments; got neither.")
     return cls(**kwargs)
 
@@ -102,6 +123,11 @@ class BaseResource:
             finalize=lambda results: cast("tuple[S, ...]", results[0]),
         )
 
+    def _decoded_page_command(self, args: tuple[str, ...], item_type: type[S]) -> Command[Page[S]]:
+        return self._decoded_list_command(args, item_type)._map(
+            lambda items: Page(items=items, total=len(items))
+        )
+
     def _text_command(
         self,
         args: tuple[str, ...],
@@ -114,11 +140,35 @@ class BaseResource:
             finalize=lambda results: cast("TextResult", results[0]).text,
         )
 
-    def _none_command(self, args: tuple[str, ...]) -> Command[None]:
+    def _action_command(self, args: tuple[str, ...]) -> Command[ActionResult[None]]:
+        secret_values = collect_secret_values(args)
+
+        def finalize(results: tuple[object, ...]) -> ActionResult[None]:
+            return ActionResult(
+                value=None,
+                message=_redacted_text(results[0], secret_values=secret_values),
+            )
+
         return self._plan(
             steps=(_Step(args, "run_text"),),
-            finalize=lambda results: None,
+            finalize=finalize,
         )
+
+    def _action_text_command(self, args: tuple[str, ...]) -> Command[ActionResult[str]]:
+        secret_values = collect_secret_values(args)
+
+        def finalize(results: tuple[object, ...]) -> ActionResult[str]:
+            return ActionResult(value=_redacted_text(results[0], secret_values=secret_values) or "")
+
+        return self._plan(
+            steps=(_Step(args, "run_text"),),
+            finalize=finalize,
+        )
+
+    def _action_decoded_command(
+        self, args: tuple[str, ...], model_type: type[S]
+    ) -> Command[ActionResult[S]]:
+        return self._decoded_command(args, model_type)._map(lambda value: ActionResult(value=value))
 
     def _raw_command(
         self,

@@ -15,7 +15,7 @@ client = MulticaClient(config)
 
 
 def list_projects() -> None:
-    for project in client.projects.list():
+    for project in client.projects.list().items:
         print(project.name)
 
 

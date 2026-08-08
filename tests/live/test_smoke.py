@@ -122,17 +122,25 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
     skills = workspace.skills.all_command().run()
     squads = workspace.squads.all_command().run()
     autopilots = workspace.autopilots.all_command().run()
+    assert all(
+        isinstance(snapshot, tuple) for snapshot in (members, agents, skills, squads, autopilots)
+    )
     assert members, "prepared workspace must contain a member"
     assert agents, "prepared workspace must contain an agent"
     assert skills, "prepared workspace must contain a skill"
     assert squads, "prepared workspace must contain a squad"
     assert autopilots, "prepared workspace must contain an autopilot"
 
-    workspace.issues.page_command(limit=1).run()
-    workspace.projects.all_command().run()
-    workspace.labels.all_command().run()
-    workspace.repositories.all_command().run()
-    workspace.runtimes.all_command().run()
+    issue_page = workspace.issues.page_command(limit=1).run()
+    assert isinstance(issue_page.items, tuple)
+    project_snapshot = workspace.projects.all_command().run()
+    label_snapshot = workspace.labels.all_command().run()
+    repository_snapshot = workspace.repositories.all_command().run()
+    runtime_snapshot = workspace.runtimes.all_command().run()
+    assert all(
+        isinstance(snapshot, tuple)
+        for snapshot in (project_snapshot, label_snapshot, repository_snapshot, runtime_snapshot)
+    )
 
     first_workspace = prepared_client.workspaces.get_command(workspace_id).run()
     second_workspace = prepared_client.workspaces.get_command(workspace_id).run()
@@ -163,6 +171,7 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
     autopilot.triggers.all_command().run()
     autopilot.subscribers.all_command().run()
     autopilot_runs = autopilot.runs.page_command(limit=20).run()
+    assert isinstance(autopilot_runs.items, tuple)
     autopilot_run = next(
         (run for run in autopilot_runs.items if run.task_id is not None),
         None,
@@ -176,8 +185,9 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
         ).run()
         stack.callback(prepared_client.projects.delete_command(project.id).run)
         project_entity = prepared_client.projects.get_command(project.id).run()
-        project_entity.resources.all_command().run()
-        project_entity.issues.page_command(limit=1).run()
+        assert isinstance(project_entity.resources.all_command().run(), tuple)
+        project_issue_page = project_entity.issues.page_command(limit=1).run()
+        assert isinstance(project_issue_page.items, tuple)
 
         issue = prepared_client.issues.create_command(
             IssueCreateRequest(title=_live_name(), project_id=project.id)
@@ -186,11 +196,14 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
         assert comments.all_command().run() == ()
         comment = issue.add_comment(_live_name())
         assert not comments.loaded
-        assert comment.id in {item.id for item in comments.all_command().run()}
+        comment_snapshot = comments.all_command().run()
+        assert isinstance(comment_snapshot, tuple)
+        assert comment.id in {item.id for item in comment_snapshot}
 
         recent_threads = issue.recent_comment_threads(limit=1)
         thread_page = recent_threads.page_command().run()
         assert thread_page.items, "new comment must appear in recent thread query"
+        assert isinstance(thread_page.items, tuple)
         cast("_ThreadRelationOwner", thread_page.items[0]).comments.page_command().run()
 
         metadata_key = f"live_{uuid4().hex}"

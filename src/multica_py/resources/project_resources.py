@@ -16,6 +16,7 @@ from multica_py._internal.wire_models import (
     _ProjectResourceRecordWire,
     project_resource_from_wire,
 )
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceRecord,
@@ -25,13 +26,22 @@ from multica_py.resources._base import BaseResource, _resolve_request
 
 
 class ProjectResourceCollection(BaseResource):
-    def list_command(self, project_id: str) -> Command[tuple[ProjectResourceRecord, ...]]:
+    def list_command(self, project_id: str) -> Command[Page[ProjectResourceRecord]]:
         _ = cast("object", PROJECT_RESOURCE_LIST_BINDING)
-        return self._decoded_list_command(
+        return self._decoded_page_command(
             ("project", "resource", "list", project_id), _ProjectResourceRecordWire
-        )._map(lambda items: tuple(project_resource_from_wire(item) for item in items))
+        )._map(
+            lambda page: Page(
+                items=tuple(project_resource_from_wire(item) for item in page.items),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
+            )
+        )
 
-    def list(self, project_id: str) -> tuple[ProjectResourceRecord, ...]:
+    def list(self, project_id: str) -> Page[ProjectResourceRecord]:
         return self.list_command(project_id).run()
 
     @overload
@@ -186,11 +196,11 @@ class ProjectResourceCollection(BaseResource):
             project_resource_from_wire
         )
 
-    def remove_command(self, project_id: str, resource_id: str) -> Command[None]:
+    def remove_command(self, project_id: str, resource_id: str) -> Command[ActionResult[None]]:
         _ = cast("object", PROJECT_RESOURCE_REMOVE_BINDING)
         validate_nonblank(project_id)
         validate_nonblank(resource_id)
-        return self._none_command(("project", "resource", "remove", project_id, resource_id))
+        return self._action_command(("project", "resource", "remove", project_id, resource_id))
 
-    def remove(self, project_id: str, resource_id: str) -> None:
-        self.remove_command(project_id, resource_id).run()
+    def remove(self, project_id: str, resource_id: str) -> ActionResult[None]:
+        return self.remove_command(project_id, resource_id).run()

@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 from multica_py._internal.commands import Command
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.system import RepositoryMutationResult, RepositoryRecord
 from multica_py.resources._base import BaseResource
 
 
 class RepositoryResource(BaseResource):
-    def list_command(self) -> Command[tuple[RepositoryRecord, ...]]:
-        return self._decoded_list_command(("repo", "list"), RepositoryRecord)
+    def list_command(self) -> Command[Page[RepositoryRecord]]:
+        return self._decoded_page_command(("repo", "list"), RepositoryRecord)
 
-    def list(self) -> tuple[RepositoryRecord, ...]:
+    def list(self) -> Page[RepositoryRecord]:
         return self.list_command().run()
 
     def add_command(
         self, urls: tuple[str, ...], *, description: str | None = None
-    ) -> Command[RepositoryMutationResult]:
+    ) -> Command[ActionResult[RepositoryMutationResult]]:
         if not urls or any(not url.strip() for url in urls):
             raise ValueError("urls must contain nonblank values")
         if description is not None and len(urls) != 1:
@@ -22,17 +23,19 @@ class RepositoryResource(BaseResource):
         args = ["repo", "add", *urls]
         if description is not None:
             args.extend(["--description", description])
-        return self._decoded_command(tuple(args), RepositoryMutationResult)
+        return self._action_decoded_command(tuple(args), RepositoryMutationResult)
 
     def add(
         self, urls: tuple[str, ...], *, description: str | None = None
-    ) -> RepositoryMutationResult:
+    ) -> ActionResult[RepositoryMutationResult]:
         return self.add_command(urls, description=description).run()
 
-    def remove_command(self, urls: tuple[str, ...]) -> Command[RepositoryMutationResult]:
+    def remove_command(
+        self, urls: tuple[str, ...]
+    ) -> Command[ActionResult[RepositoryMutationResult]]:
         if not urls or any(not url.strip() for url in urls):
             raise ValueError("urls must contain nonblank values")
-        return self._decoded_command(("repo", "remove", *urls), RepositoryMutationResult)
+        return self._action_decoded_command(("repo", "remove", *urls), RepositoryMutationResult)
 
-    def remove(self, urls: tuple[str, ...]) -> RepositoryMutationResult:
+    def remove(self, urls: tuple[str, ...]) -> ActionResult[RepositoryMutationResult]:
         return self.remove_command(urls).run()

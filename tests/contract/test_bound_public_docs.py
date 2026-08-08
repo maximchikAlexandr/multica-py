@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import typing
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -66,7 +69,30 @@ COMMAND_DOCUMENTATION_CASES = (
     DocumentationCase(ROOT / "docs/api.md", "immutable plan"),
     DocumentationCase(ROOT / "docs/service-usage.md", 'client.issues.get_command("issue_123")'),
     DocumentationCase(ROOT / "docs/service-usage.md", "${create.id}"),
-    DocumentationCase(ROOT / "docs/migration.md", "only new public type is"),
+    DocumentationCase(ROOT / "docs/migration.md", "`Command[T]`"),
+)
+
+
+CONVENTION_DOCUMENTATION_CASES = (
+    DocumentationCase(ROOT / "docs/api.md", "## SDK-wide operation conventions"),
+    DocumentationCase(ROOT / "docs/api.md", "direct = client.issues.list"),
+    DocumentationCase(ROOT / "docs/api.md", "all-optional updates"),
+    DocumentationCase(ROOT / "docs/api.md", "ActionResult[None]"),
+    DocumentationCase(ROOT / "docs/api.md", "Bound relation `.all()` snapshots"),
+    DocumentationCase(
+        ROOT / "docs/service-usage.md", "## Direct keywords, typed objects, and presence"
+    ),
+    DocumentationCase(ROOT / "docs/service-usage.md", "mutation.value.added"),
+    DocumentationCase(ROOT / "README.md", "client.issues.list(status=IssueStatus.backlog"),
+    DocumentationCase(ROOT / "README.md", "ActionResult[T]"),
+    DocumentationCase(ROOT / "docs/migration.md", "### Breaking return matrix"),
+    DocumentationCase(
+        ROOT / "docs/migration.md", "Relation `.all()` snapshots are explicitly unchanged"
+    ),
+    DocumentationCase(ROOT / "CHANGELOG.md", "## Unreleased — unified SDK operation contracts"),
+    DocumentationCase(ROOT / "CHANGELOG.md", "Repository mutations"),
+    DocumentationCase(ROOT / "examples/issue_queue.py", "yield from page.items"),
+    DocumentationCase(ROOT / "examples/self_hosted_local.py", "client.projects.list().items"),
 )
 
 
@@ -84,6 +110,60 @@ def test_migration_table_covers_required_surface(case: DocumentationCase) -> Non
 )
 def test_command_preview_documentation_is_pinned(case: DocumentationCase) -> None:
     assert case.required_text in case.path.read_text()
+
+
+@pytest.mark.parametrize(
+    "case",
+    CONVENTION_DOCUMENTATION_CASES,
+    ids=tuple(case.required_text for case in CONVENTION_DOCUMENTATION_CASES),
+)
+def test_operation_conventions_are_documented(case: DocumentationCase) -> None:
+    assert case.required_text in case.path.read_text()
+
+
+def test_documented_result_examples_follow_current_signatures() -> None:
+    from multica_py.models.common import ActionResult, Page
+    from multica_py.resources.autopilots import AutopilotResource
+    from multica_py.resources.issues import IssueResource
+    from multica_py.resources.projects import ProjectResource
+
+    api = (ROOT / "docs/api.md").read_text()
+    service = (ROOT / "docs/service-usage.md").read_text()
+
+    def return_annotation(method: object) -> object:
+        hints = cast(
+            "dict[str, object]",
+            typing.get_type_hints(cast("Callable[[], object]", method)),
+        )
+        return hints["return"]
+
+    read_types = (
+        return_annotation(cast("object", getattr(IssueResource, "list"))),
+        return_annotation(cast("object", getattr(ProjectResource, "list"))),
+    )
+    assert any(cast("object", typing.get_origin(result)) is Page for result in read_types)
+    assert any(
+        cast("object", getattr(result, "__name__", "")) == "IssueListPage" for result in read_types
+    )
+    assert "Page[T]" in api and "Page[IssueSummary]" in service
+
+    action_return = return_annotation(cast("object", getattr(AutopilotResource, "delete")))
+    assert cast("object", typing.get_origin(action_return)) is ActionResult
+    assert "ActionResult[None]" in api
+
+
+def test_docs_do_not_reintroduce_legacy_request_or_result_conventions() -> None:
+    documents = "\n".join(
+        (ROOT / relative).read_text()
+        for relative in ("docs/api.md", "docs/service-usage.md", "README.md", "docs/migration.md")
+    )
+    forbidden = (
+        "The request-object form is the only option",
+        "returns `tuple[IssueSummary, ...]`",
+        "returns `Command[tuple[IssueSummary, ...]]`",
+        "Use `entity.to_data()`",
+    )
+    assert not any(phrase in documents for phrase in forbidden)
 
 
 CONSUMER_DOCUMENTATION_CASES = (
