@@ -16,6 +16,7 @@ from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import DetachedEntityError
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
@@ -230,7 +231,7 @@ def _make_mock_resources(
         client.issues.list.side_effect = issue_page_results
     else:
         client.issues.list.return_value = IssueListPage(
-            issues=(), has_more=False, limit=50, offset=0, total=0
+            items=(), has_more=False, limit=50, offset=0, total=0
         )
 
     def issue_list_command(issue_filter: object) -> Command[object]:
@@ -295,7 +296,7 @@ def test_project_resource_returns_bound_immutable_projects(case: ProjectBindingC
     assert command.commands == (f"multica {shlex.join(case.expected_argv)}",)
     assert transport.run_bytes.call_count == 0
     result = command.run()
-    project = result[0] if isinstance(result, tuple) else result
+    project = result.items[0] if isinstance(result, Page) else result
 
     assert isinstance(project, Project)
     assert project._client is client
@@ -470,13 +471,15 @@ def test_project_mutation_commands_validate_before_transport(
 def test_project_parent_mutations_invalidate_only_resources(
     case: ProjectParentMutationCase,
 ) -> None:
-    page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
+    page = IssueListPage(items=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_mock_resources(
         resource_list_result=(_RESOURCE_RECORD,), issue_page_results=[page]
     )
     child = getattr(client.projects.resources, case.child_method)
     if case.succeeds:
-        child.return_value = _RESOURCE_RECORD
+        child.return_value = (
+            _RESOURCE_RECORD if case.method == "add_local_directory" else ActionResult(value=None)
+        )
     else:
         child.side_effect = RuntimeError("transport failed")
     entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
@@ -488,7 +491,8 @@ def test_project_parent_mutations_invalidate_only_resources(
         if case.method == "add_local_directory":
             assert isinstance(result, ProjectResourceRecord)
         else:
-            assert result is None
+            assert isinstance(result, ActionResult)
+            assert result.success and result.value is None
         assert entity.resources.all() == cached_resources
         assert client.projects.resources.list.call_count == 2
     else:
@@ -532,7 +536,7 @@ def test_project_parent_validation_preserves_loaded_resources(
 
 def test_project_issues_two_pages() -> None:
     page1 = IssueListPage(
-        issues=(
+        items=(
             IssueSummary(id="i1", title="Task 1", status=_TODO),
             IssueSummary(id="i2", title="Task 2", status=_TODO),
         ),
@@ -542,7 +546,7 @@ def test_project_issues_two_pages() -> None:
         total=3,
     )
     page2 = IssueListPage(
-        issues=(IssueSummary(id="i3", title="Task 3", status=_DONE),),
+        items=(IssueSummary(id="i3", title="Task 3", status=_DONE),),
         has_more=False,
         limit=2,
         offset=2,
@@ -574,7 +578,7 @@ def test_project_issues_two_pages() -> None:
 
 def test_project_issues_single_page() -> None:
     page = IssueListPage(
-        issues=(IssueSummary(id="i1", title="One", status=_TODO),),
+        items=(IssueSummary(id="i1", title="One", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -598,7 +602,7 @@ def test_project_issues_single_page() -> None:
 
 
 def test_project_issues_cached_after_all() -> None:
-    page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
+    page = IssueListPage(items=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_mock_resources(issue_page_results=[page])
     entity = Project(
         id="p1",
@@ -614,7 +618,7 @@ def test_project_issues_cached_after_all() -> None:
 
 
 def test_project_issues_invalidate_triggers_new_load() -> None:
-    page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
+    page = IssueListPage(items=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_mock_resources(issue_page_results=[page, page])
     entity = Project(
         id="p1",

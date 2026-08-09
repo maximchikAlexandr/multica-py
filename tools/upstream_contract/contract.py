@@ -65,6 +65,7 @@ _REQUEST_TYPES = frozenset(
 _DECODED_TYPES = frozenset(
     {
         "builtins.tuple",
+        "multica_py.models.common.Page",
         "multica_py.models.issue_activity.Comment",
         "multica_py.models.issues.Issue",
         "multica_py.models.projects.Project",
@@ -98,6 +99,167 @@ _DECODED_TYPES = frozenset(
         "multica_py.models.users.UserProfile",
         "multica_py.models.workspaces.Workspace",
         "multica_py.models.workspaces.WorkspaceMember",
+    }
+)
+_OPERATION_CATEGORIES = frozenset(
+    {
+        "retrieve",
+        "create",
+        "update",
+        "collection",
+        "action",
+        "process",
+        "scalar",
+        "mapping",
+    }
+)
+_INPUT_MODES = frozenset({"direct", "dual_required", "dual_optional"})
+_TYPED_INPUT_IDS = frozenset(
+    {
+        "AgentCreateRequest",
+        "AgentUpdateRequest",
+        "AutopilotTriggerCreate",
+        "AutopilotTriggerUpdate",
+        "AutopilotUpdateRequest",
+        "CommentListFlatRequest",
+        "CommentListRecentRequest",
+        "CommentListThreadRequest",
+        "IssueAssignmentRequest",
+        "IssueCreateRequest",
+        "IssueListFilter",
+        "IssueReorderRequest",
+        "IssueUpdateRequest",
+        "LabelUpdateRequest",
+        "MetadataListRequest",
+        "MetadataSetRequest",
+        "ProjectCreateRequest",
+        "ProjectResourceAddLocalDirectoryRequest",
+        "ProjectResourceUpdateLocalDirectoryRequest",
+        "ProjectUpdateRequest",
+        "RuntimeUpdate",
+        "SkillCreateRequest",
+        "SkillUpdateRequest",
+        "UserProfileUpdate",
+    }
+)
+_PRESENCE_POLICY_IDS = frozenset(
+    {
+        "empty_collection_clear",
+        "empty_present",
+        "false_present",
+        "nullable_clear",
+        "omit",
+        "required_nonnull",
+        "zero_present",
+    }
+)
+_UPDATE_PRESENCE_VALUES = frozenset({"omit", "reject", "emit", "not_applicable"})
+_UPDATE_CLEAR_KINDS = frozenset({"none", "flag", "dedicated_flag", "composite", "empty_collection"})
+_UPDATE_POLICY_FIELDS = {
+    "ProjectUpdateRequest": frozenset({"name", "description"}),
+    "AgentUpdateRequest": frozenset({"name", "description"}),
+    "SkillUpdateRequest": frozenset({"name", "description"}),
+    "IssueUpdateRequest": frozenset(
+        {"title", "description", "priority", "assignee_id", "project_id", "parent_id"}
+    ),
+    "AutopilotUpdateRequest": frozenset(
+        {
+            "title",
+            "description",
+            "agent",
+            "priority",
+            "status",
+            "execution_mode",
+            "project_id",
+            "issue_title_template",
+            "subscribers",
+        }
+    ),
+    "AutopilotTriggerUpdate": frozenset({"title", "kind"}),
+    "LabelUpdateRequest": frozenset({"name", "color"}),
+    "ProjectResourceUpdateLocalDirectoryRequest": frozenset({"local_path"}),
+    "RuntimeUpdate": frozenset({"target_version", "wait"}),
+    "UserProfileUpdate": frozenset({"description"}),
+}
+_RESPONSE_CATALOG_IDS = frozenset(
+    {
+        "action_result_none",
+        "action_result_repository_mutation_result",
+        "action_result_runtime_update_result",
+        "action_result_str",
+        "bytes",
+        "agent",
+        "agent_skills",
+        "agent_tasks",
+        "attachment_result",
+        "autopilot",
+        "autopilot_list_page",
+        "autopilot_run",
+        "autopilot_run_list_page",
+        "autopilot_trigger",
+        "autopilot_triggers",
+        "comment",
+        "comment_page",
+        "comment_thread_page",
+        "comments",
+        "issue",
+        "issue_children_result",
+        "issue_list_page",
+        "issue_search",
+        "issue_summaries",
+        "labels",
+        "linked_pull_requests",
+        "metadata_entries",
+        "none",
+        "mapping_config",
+        "page_agent",
+        "page_agent_skills",
+        "page_agent_tasks",
+        "page_comments",
+        "page_daemon_disk_usage",
+        "page_issue_summaries",
+        "page_issue_usage",
+        "page_labels",
+        "page_linked_pull_requests",
+        "page_project",
+        "page_project_resources",
+        "page_repository_records",
+        "page_run_messages",
+        "page_runtime_activity",
+        "page_runtime_definitions",
+        "page_runtime_usage",
+        "page_skill",
+        "page_skill_files",
+        "page_squad",
+        "page_squad_members",
+        "page_subscribers",
+        "page_task_runs",
+        "page_workspace",
+        "page_workspace_members",
+        "path",
+        "project",
+        "project_resource",
+        "project_resources",
+        "repository_mutation_result",
+        "repository_records",
+        "run_messages",
+        "runtime_activity",
+        "runtime_definition",
+        "runtime_definitions",
+        "runtime_update_result",
+        "runtime_usage",
+        "scalar_str",
+        "skill",
+        "skill_file",
+        "skill_files",
+        "squad",
+        "squad_members",
+        "subscribers",
+        "task_runs",
+        "process",
+        "user_profile",
+        "workspace",
+        "workspace_members",
     }
 )
 _BODY_KINDS = frozenset(
@@ -400,6 +562,56 @@ _AUXILIARY_CATALOG_KEYS = {
         }
     ),
 }
+_MANUAL_SIGNATURE_IDS = frozenset(
+    {
+        "agents_archive_manual",
+        "agents_create_manual",
+        "agents_restore_manual",
+        "agents_update_manual",
+        "attachments_download_bytes_manual",
+        "attachments_upload_bytes_manual",
+        "auth_login_manual",
+        "auth_logout_manual",
+        "auth_status_manual",
+        "configuration_get_manual",
+        "configuration_set_manual",
+        "configuration_show_manual",
+        "daemon_disk_usage_manual",
+        "daemon_logs_manual",
+        "daemon_restart_manual",
+        "daemon_start_manual",
+        "daemon_status_manual",
+        "daemon_stop_manual",
+        "issues_assign_manual",
+        "issues_comments_reply_manual",
+        "issues_comments_resolve_manual",
+        "issues_comments_unresolve_manual",
+        "issues_deprioritize_manual",
+        "issues_metadata_query_manual",
+        "issues_metadata_set_typed_manual",
+        "issues_reorder_manual",
+        "issues_update_manual",
+        "issues_usage_manual",
+        "labels_create_manual",
+        "labels_delete_manual",
+        "labels_update_manual",
+        "maintenance_update_manual",
+        "maintenance_version_manual",
+        "projects_delete_manual",
+        "setup_cloud_manual",
+        "setup_self_host_manual",
+        "skills_create_manual",
+        "skills_delete_manual",
+        "skills_import_from_url_manual",
+        "skills_update_manual",
+        "workspaces_switch_manual",
+        "workspaces_unwatch_manual",
+        "workspaces_watch_manual",
+    }
+)
+_AUXILIARY_CATALOG_KEYS["signatures"] = (
+    _AUXILIARY_CATALOG_KEYS["signatures"] | _MANUAL_SIGNATURE_IDS
+)
 _VECTOR_KEYS = frozenset(
     {
         "vector_id",
@@ -539,6 +751,44 @@ class BindingDescriptor:
 
 
 @dataclass(frozen=True)
+class PublicConvention:
+    category: str
+    response_id: str
+    typed_input_id: str | None
+    input_mode: str
+    presence_policy_ids: tuple[str, ...]
+    command_symbol: str
+
+
+@dataclass(frozen=True)
+class ResponseCatalogEntry:
+    response_id: str
+    public_type_id: str
+    wire_type_id: str | None
+    decoder_id: str
+    success_exit_codes: tuple[int, ...]
+    malformed_output: str
+
+
+@dataclass(frozen=True)
+class UpdateFieldPolicy:
+    field_name: str
+    nullable: bool
+    source_ref_ids: tuple[str, ...]
+    presence: tuple[tuple[str, str], ...]
+    clear_kind: str
+    clear_source_ref_ids: tuple[str, ...]
+    clear_mapping: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class UpdateModelPolicy:
+    model_id: str
+    source_ref_ids: tuple[str, ...]
+    fields: tuple[UpdateFieldPolicy, ...]
+
+
+@dataclass(frozen=True)
 class Entrypoint:
     entrypoint_id: str
     public_symbol: str
@@ -546,6 +796,27 @@ class Entrypoint:
     binding_id: str
     response_id: str
     errors: str
+    convention: PublicConvention
+
+    @property
+    def category(self) -> str:
+        return self.convention.category
+
+    @property
+    def typed_input_id(self) -> str | None:
+        return self.convention.typed_input_id
+
+    @property
+    def input_mode(self) -> str:
+        return self.convention.input_mode
+
+    @property
+    def presence_policy_ids(self) -> tuple[str, ...]:
+        return self.convention.presence_policy_ids
+
+    @property
+    def command_symbol(self) -> str:
+        return self.convention.command_symbol
 
 
 @dataclass(frozen=True)
@@ -592,6 +863,8 @@ class ContractCatalog:
     enum_definitions: tuple[EnumDefinition, ...]
     validator_definitions: tuple[ValidatorDefinition, ...]
     binding_descriptors: tuple[BindingDescriptor, ...]
+    responses: tuple[ResponseCatalogEntry, ...]
+    update_field_policies: tuple[UpdateModelPolicy, ...]
     test_vectors: tuple[TestVector, ...]
     legacy_argv_migration: dict[str, str]
     raw: dict[str, object]
@@ -603,6 +876,10 @@ class ContractCatalog:
     @property
     def vector_by_id(self) -> dict[str, TestVector]:
         return {item.vector_id: item for item in self.test_vectors}
+
+    @property
+    def response_by_id(self) -> dict[str, ResponseCatalogEntry]:
+        return {item.response_id: item for item in self.responses}
 
 
 def _python_identifier(value: object, label: str) -> str:
@@ -898,6 +1175,77 @@ def _binding_descriptors(value: object) -> tuple[BindingDescriptor, ...]:
     return tuple(descriptors)
 
 
+def _public_convention(value: object, label: str) -> PublicConvention:
+    item = _dict(value, label)
+    _exact_keys(
+        item,
+        frozenset(
+            {
+                "category",
+                "response_id",
+                "typed_input_id",
+                "input_mode",
+                "presence_policy_ids",
+                "command_symbol",
+            }
+        ),
+        label,
+    )
+    category = _str(item["category"], f"{label}.category")
+    if category not in _OPERATION_CATEGORIES:
+        raise ContractError(f"{label}.category is not a closed operation category")
+    response_id = _contract_identifier(item["response_id"], f"{label}.response_id")
+    if response_id not in _RESPONSE_CATALOG_IDS:
+        raise ContractError(f"{label}.response_id is not an approved response")
+    if response_id.startswith("action_result_") and category != "action":
+        raise ContractError(f"{label} assigns an action response to a non-action category")
+    if response_id.startswith("page_") and category != "collection":
+        raise ContractError(f"{label} assigns a page response to a non-collection category")
+    typed_input_value = item["typed_input_id"]
+    if typed_input_value is None:
+        typed_input_id = None
+    else:
+        typed_input_id = _str(typed_input_value, f"{label}.typed_input_id")
+        if typed_input_id not in _TYPED_INPUT_IDS:
+            raise ContractError(f"{label}.typed_input_id is not an approved request type")
+    input_mode = _str(item["input_mode"], f"{label}.input_mode")
+    if input_mode not in _INPUT_MODES:
+        raise ContractError(f"{label}.input_mode is not a closed input mode")
+    policy_ids = tuple(
+        _contract_identifier(policy, f"{label}.presence_policy_ids[{index}]")
+        for index, policy in enumerate(
+            _list(item["presence_policy_ids"], f"{label}.presence_policy_ids")
+        )
+    )
+    if len(set(policy_ids)) != len(policy_ids):
+        raise ContractError(f"{label}.presence_policy_ids must not contain duplicates")
+    if not set(policy_ids) <= _PRESENCE_POLICY_IDS:
+        raise ContractError(f"{label}.presence_policy_ids contains an unknown policy")
+    if typed_input_id is None:
+        if input_mode != "direct" or policy_ids:
+            raise ContractError(
+                f"{label} without typed input must be direct and have no presence policies"
+            )
+    elif input_mode == "direct" or not policy_ids:
+        raise ContractError(
+            f"{label} with typed input must use a dual mode and non-empty presence policies"
+        )
+    command_symbol = _str(item["command_symbol"], f"{label}.command_symbol")
+    parts = command_symbol.split(".")
+    if len(parts) < 2 or any(not _PYTHON_IDENTIFIER.fullmatch(part) for part in parts):
+        raise ContractError(f"{label}.command_symbol must be fully-qualified")
+    if not parts[-1].endswith("_command"):
+        raise ContractError(f"{label}.command_symbol must name a *_command sibling")
+    return PublicConvention(
+        category,
+        response_id,
+        typed_input_id,
+        input_mode,
+        policy_ids,
+        command_symbol,
+    )
+
+
 def _operations(value: object) -> tuple[Operation, ...]:
     operations: list[Operation] = []
     for index, raw in enumerate(_list(value, "operations")):
@@ -928,25 +1276,49 @@ def _operations(value: object) -> tuple[Operation, ...]:
                         "binding_id",
                         "response_id",
                         "errors",
+                        "category",
+                        "typed_input_id",
+                        "input_mode",
+                        "presence_policy_ids",
+                        "command_symbol",
                     }
                 ),
                 "entrypoint",
             )
+            convention = _public_convention(
+                {
+                    key: ep[key]
+                    for key in (
+                        "category",
+                        "response_id",
+                        "typed_input_id",
+                        "input_mode",
+                        "presence_policy_ids",
+                        "command_symbol",
+                    )
+                },
+                f"entrypoint[{ep_index}].convention",
+            )
+            public_symbol = _str(ep["public_symbol"], "entrypoint.public_symbol")
+            if convention.command_symbol != f"{public_symbol}_command":
+                raise ContractError("entrypoint.command_symbol must match its public symbol")
+            if convention.response_id != _str(ep["response_id"], "entrypoint.response_id"):
+                raise ContractError("entrypoint.response_id disagrees with its convention")
             entrypoints.append(
                 Entrypoint(
-                    *(
-                        _str(ep[key], f"entrypoint.{key}")
-                        for key in (
-                            "entrypoint_id",
-                            "public_symbol",
-                            "signature_id",
-                            "binding_id",
-                            "response_id",
-                            "errors",
-                        )
-                    )
+                    entrypoint_id=_str(ep["entrypoint_id"], "entrypoint.entrypoint_id"),
+                    public_symbol=_str(ep["public_symbol"], "entrypoint.public_symbol"),
+                    signature_id=_str(ep["signature_id"], "entrypoint.signature_id"),
+                    binding_id=_str(ep["binding_id"], "entrypoint.binding_id"),
+                    response_id=_str(ep["response_id"], "entrypoint.response_id"),
+                    errors=_str(ep["errors"], "entrypoint.errors"),
+                    convention=convention,
                 )
             )
+        if not entrypoints:
+            raise ContractError(f"operations[{index}] must approve at least one entrypoint")
+        if len({entrypoint.entrypoint_id for entrypoint in entrypoints}) != len(entrypoints):
+            raise ContractError(f"operations[{index}] repeats an entrypoint ID")
         operations.append(
             Operation(
                 _str(item["operation_id"], "operation_id"),
@@ -1037,7 +1409,191 @@ def _test_refs(value: object) -> tuple[TestRef, ...]:
     return tuple(refs)
 
 
-def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> None:
+def _response_catalog(value: object) -> tuple[ResponseCatalogEntry, ...]:
+    responses = _dict(value, "catalogs.responses")
+    if set(responses) != _RESPONSE_CATALOG_IDS:
+        raise ContractError("catalogs.responses must contain exactly the approved response IDs")
+    entries: list[ResponseCatalogEntry] = []
+    for key, value in responses.items():
+        item = _dict(value, f"catalogs.responses[{key!r}]")
+        _exact_keys(
+            item,
+            frozenset(
+                {
+                    "public_type_id",
+                    "wire_type_id",
+                    "decoder_id",
+                    "success_exit_codes",
+                    "malformed_output",
+                }
+            ),
+            f"catalogs.responses[{key!r}]",
+        )
+        response_id = _contract_identifier(key, f"catalogs.responses key {key!r}")
+        public_type_id = _str(item["public_type_id"], f"catalogs.responses[{key!r}].public_type_id")
+        if (
+            not public_type_id
+            or "any" in public_type_id.lower()
+            or public_type_id
+            in {
+                "object",
+                "typing.Any",
+            }
+        ):
+            raise ContractError(f"catalogs.responses[{key!r}] exposes a public Any type")
+        wire_type_value = item["wire_type_id"]
+        wire_type_id = (
+            None
+            if wire_type_value is None
+            else _str(wire_type_value, f"catalogs.responses[{key!r}].wire_type_id")
+        )
+        decoder_id = _str(item["decoder_id"], f"catalogs.responses[{key!r}].decoder_id")
+        success_exit_codes = tuple(
+            _int(code, f"catalogs.responses[{key!r}].success_exit_codes[{index}]")
+            for index, code in enumerate(
+                _list(item["success_exit_codes"], f"catalogs.responses[{key!r}].success_exit_codes")
+            )
+        )
+        if not success_exit_codes:
+            raise ContractError(f"catalogs.responses[{key!r}] must approve an exit code")
+        malformed_output = _str(
+            item["malformed_output"], f"catalogs.responses[{key!r}].malformed_output"
+        )
+        entries.append(
+            ResponseCatalogEntry(
+                response_id,
+                public_type_id,
+                wire_type_id,
+                decoder_id,
+                success_exit_codes,
+                malformed_output,
+            )
+        )
+    return tuple(entries)
+
+
+def _update_field_policies(value: object) -> tuple[UpdateModelPolicy, ...]:
+    models = _dict(value, "catalogs.update_field_policies")
+    if set(models) != set(_UPDATE_POLICY_FIELDS):
+        raise ContractError(
+            "catalogs.update_field_policies must contain exactly the approved update models"
+        )
+    result: list[UpdateModelPolicy] = []
+    for model_id, raw_model in models.items():
+        model = _dict(raw_model, f"update_field_policies[{model_id!r}]")
+        _exact_keys(model, frozenset({"source_ref_ids", "fields"}), f"update model {model_id}")
+        model_source_refs = tuple(
+            _str(item, f"update model {model_id}.source_ref_ids[{index}]")
+            for index, item in enumerate(
+                _list(model["source_ref_ids"], f"update model {model_id}.source_ref_ids")
+            )
+        )
+        fields = _dict(model["fields"], f"update model {model_id}.fields")
+        if set(fields) != _UPDATE_POLICY_FIELDS[model_id]:
+            raise ContractError(f"update model {model_id} must list its exact approved fields")
+        parsed_fields: list[UpdateFieldPolicy] = []
+        for field_name, raw_field in fields.items():
+            field = _dict(raw_field, f"update field {model_id}.{field_name}")
+            _exact_keys(
+                field,
+                frozenset({"nullable", "source_ref_ids", "presence", "clear"}),
+                f"update field {model_id}.{field_name}",
+            )
+            nullable = _bool(field["nullable"], f"update field {model_id}.{field_name}.nullable")
+            source_ref_ids = tuple(
+                _str(item, f"update field {model_id}.{field_name}.source_ref_ids[{index}]")
+                for index, item in enumerate(
+                    _list(
+                        field["source_ref_ids"],
+                        f"update field {model_id}.{field_name}.source_ref_ids",
+                    )
+                )
+            )
+            presence = _dict(field["presence"], f"update field {model_id}.{field_name}.presence")
+            _exact_keys(
+                presence,
+                frozenset({"omitted", "null", "empty", "zero", "false"}),
+                f"update field {model_id}.{field_name}.presence",
+            )
+            presence_values = tuple(
+                (
+                    key,
+                    _str(
+                        presence[key],
+                        f"update field {model_id}.{field_name}.presence.{key}",
+                    ),
+                )
+                for key in ("omitted", "null", "empty", "zero", "false")
+            )
+            if any(value not in _UPDATE_PRESENCE_VALUES for _, value in presence_values):
+                raise ContractError(
+                    f"update field {model_id}.{field_name} has an unknown presence mapping"
+                )
+            clear = _dict(field["clear"], f"update field {model_id}.{field_name}.clear")
+            _exact_keys(
+                clear,
+                frozenset({"kind", "source_ref_ids", "mapping"}),
+                f"update field {model_id}.{field_name}.clear",
+            )
+            clear_kind = _str(clear["kind"], f"update field {model_id}.{field_name}.clear.kind")
+            if clear_kind not in _UPDATE_CLEAR_KINDS:
+                raise ContractError(
+                    f"update field {model_id}.{field_name} has an unknown clear kind"
+                )
+            clear_source_refs = tuple(
+                _str(item, f"update field {model_id}.{field_name}.clear.source_ref_ids[{index}]")
+                for index, item in enumerate(
+                    _list(
+                        clear["source_ref_ids"],
+                        f"update field {model_id}.{field_name}.clear.source_ref_ids",
+                    )
+                )
+            )
+            clear_mapping = tuple(
+                _str(item, f"update field {model_id}.{field_name}.clear.mapping[{index}]")
+                for index, item in enumerate(
+                    _list(clear["mapping"], f"update field {model_id}.{field_name}.clear.mapping")
+                )
+            )
+            if nullable and (clear_kind == "none" or not clear_source_refs or not clear_mapping):
+                raise ContractError(
+                    f"nullable update field {model_id}.{field_name} lacks distinct clear evidence"
+                )
+            if not nullable and (
+                clear_kind not in {"none", "empty_collection"}
+                or (clear_kind == "none" and (clear_source_refs or clear_mapping))
+                or (
+                    clear_kind == "empty_collection"
+                    and (not clear_source_refs or not clear_mapping)
+                )
+            ):
+                raise ContractError(
+                    f"non-nullable update field {model_id}.{field_name} has a clear mapping"
+                )
+            if clear_kind == "composite" and len(clear_mapping) < 2:
+                raise ContractError(
+                    f"composite clear for {model_id}.{field_name} must contain multiple steps"
+                )
+            if clear_kind == "empty_collection" and presence_values[2][1] != "emit":
+                raise ContractError(
+                    f"collection clear for {model_id}.{field_name} must preserve an empty value"
+                )
+            parsed_fields.append(
+                UpdateFieldPolicy(
+                    field_name,
+                    nullable,
+                    source_ref_ids,
+                    presence_values,
+                    clear_kind,
+                    clear_source_refs,
+                    clear_mapping,
+                )
+            )
+        result.append(UpdateModelPolicy(model_id, model_source_refs, tuple(parsed_fields)))
+    return tuple(result)
+
+
+def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> tuple[ResponseCatalogEntry, ...]:
     """Validate retained contract metadata before any generator can observe it."""
 
     for name in ("types", "signatures", "decoders", "validators"):
@@ -1047,6 +1603,9 @@ def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> None:
         for key, value in values.items():
             _str(key, f"catalogs.{name} key")
             _str(value, f"catalogs.{name}[{key!r}]")
+    presence_catalog = _dict(catalogs["presence"], "catalogs.presence")
+    if set(presence_catalog) != _PRESENCE_POLICY_IDS:
+        raise ContractError("catalogs.presence must contain exactly the normalized policy IDs")
     for name in ("binding_source_refs", "mapping_presence"):
         values = _dict(catalogs[name], f"catalogs.{name}")
         if set(values) != _AUXILIARY_CATALOG_KEYS["signatures"]:
@@ -1055,6 +1614,26 @@ def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> None:
             _str(key, f"catalogs.{name} key")
             for index, item in enumerate(_list(value, f"catalogs.{name}[{key!r}]")):
                 _str(item, f"catalogs.{name}[{key!r}][{index}]")
+    bindings_for_presence = _dict(catalogs["bindings"], "catalogs.bindings")
+    mapping_presence = _dict(catalogs["mapping_presence"], "catalogs.mapping_presence")
+    for key, value in mapping_presence.items():
+        policies = _list(value, f"catalogs.mapping_presence[{key!r}]")
+        mappings = _list(
+            _dict(bindings_for_presence[key], f"catalogs.bindings[{key!r}]")["mappings"],
+            f"catalogs.bindings[{key!r}].mappings",
+        )
+        if len(policies) != len(mappings):
+            raise ContractError(
+                f"catalogs.mapping_presence[{key!r}] must map every binding field exactly once"
+            )
+        for index, policy in enumerate(policies):
+            if (
+                _str(policy, f"catalogs.mapping_presence[{key!r}][{index}]")
+                not in _PRESENCE_POLICY_IDS
+            ):
+                raise ContractError(
+                    f"catalogs.mapping_presence[{key!r}] references an unknown policy"
+                )
     for name in ("presence", "validator_evidence"):
         values = _dict(catalogs[name], f"catalogs.{name}")
         for key, value in values.items():
@@ -1090,30 +1669,7 @@ def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> None:
                 _str(part, f"binding.mappings[{index}][{part_index}]")
         for index, constraint in enumerate(_list(item["constraints"], "binding.constraints")):
             _str(constraint, f"binding.constraints[{index}]")
-    responses = _dict(catalogs["responses"], "catalogs.responses")
-    for key, value in responses.items():
-        item = _dict(value, f"catalogs.responses[{key!r}]")
-        _exact_keys(
-            item,
-            frozenset(
-                {
-                    "public_type_id",
-                    "wire_type_id",
-                    "decoder_id",
-                    "success_exit_codes",
-                    "malformed_output",
-                }
-            ),
-            f"catalogs.responses[{key!r}]",
-        )
-        for field in ("public_type_id", "decoder_id", "malformed_output"):
-            _str(item[field], f"catalogs.responses[{key!r}].{field}")
-        if item["wire_type_id"] is not None:
-            _str(item["wire_type_id"], f"catalogs.responses[{key!r}].wire_type_id")
-        for index, code in enumerate(
-            _list(item["success_exit_codes"], "response.success_exit_codes")
-        ):
-            _int(code, f"response.success_exit_codes[{index}]")
+    return _response_catalog(catalogs["responses"])
 
 
 def load_contract(path: pathlib.Path) -> ContractCatalog:
@@ -1162,6 +1718,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "presence",
             "mapping_presence",
             "responses",
+            "update_field_policies",
             "decoders",
             "validators",
             "validator_evidence",
@@ -1172,7 +1729,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         }
     )
     _exact_keys(catalogs, catalog_required, "catalogs")
-    _closed_auxiliary_catalogs(catalogs)
+    responses = _closed_auxiliary_catalogs(catalogs)
+    update_field_policies = _update_field_policies(catalogs["update_field_policies"])
     enum_definitions = _enum_definitions(catalogs["enum_definitions"])
     validator_definitions = _validator_definitions(catalogs["validator_definitions"])
     binding_descriptors = _binding_descriptors(catalogs["binding_descriptors"])
@@ -1229,6 +1787,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             _str(value, f"traceability[{index}].test_ref_ids")
     operations = _operations(raw["operations"])
     operation_ids = {operation.operation_id for operation in operations}
+    if len(operation_ids) != len(operations):
+        raise ContractError("operations IDs must be unique")
     if operation_ids != {
         _str(value, "scope.operation_ids")
         for value in _list(scope["operation_ids"], "scope.operation_ids")
@@ -1259,6 +1819,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         enum_definitions=enum_definitions,
         validator_definitions=validator_definitions,
         binding_descriptors=binding_descriptors,
+        responses=responses,
+        update_field_policies=update_field_policies,
         test_vectors=vectors,
         legacy_argv_migration=migration,
         raw=raw,
@@ -1343,6 +1905,10 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             )
         source_ref_ids = {item.source_ref_id for item in contract.source_refs}
         test_ref_ids = {item.test_ref_id for item in contract.test_refs}
+        if not operation.source_ref_ids or not operation.test_ref_ids:
+            raise ContractError(
+                f"operation {operation.operation_id!r} must have source and test evidence"
+            )
         if not set(operation.source_ref_ids) <= source_ref_ids:
             raise ContractError(
                 f"operation {operation.operation_id!r} references an unknown source ref"
@@ -1380,17 +1946,63 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
                 raise ContractError(
                     f"binding descriptor {descriptor.descriptor_id!r} references an unknown validator"
                 )
+    source_ref_ids = {item.source_ref_id for item in contract.source_refs}
+    for model in contract.update_field_policies:
+        if not set(model.source_ref_ids) <= source_ref_ids:
+            raise ContractError(f"update model {model.model_id!r} references an unknown source ref")
+        for field in model.fields:
+            if not set(field.source_ref_ids) <= source_ref_ids:
+                raise ContractError(
+                    f"update field {model.model_id}.{field.field_name} references an unknown source ref"
+                )
+            if not set(field.clear_source_ref_ids) <= source_ref_ids:
+                raise ContractError(
+                    f"clear mapping {model.model_id}.{field.field_name} references an unknown source ref"
+                )
     descriptors_by_pair = {
         (descriptor.operation_id, descriptor.entrypoint_id): descriptor
         for descriptor in contract.binding_descriptors
     }
+    raw_catalogs = _dict(contract.raw["catalogs"], "catalogs")
+    raw_bindings = _dict(raw_catalogs["bindings"], "catalogs.bindings")
     for vector in contract.test_vectors:
         descriptor = descriptors_by_pair[(vector.operation_id, vector.entrypoint_id)]
         command = tuple(vector.expected_argv[: len(descriptor.command)])
         if command != descriptor.command:
-            raise ContractError(
-                f"{vector.vector_id} disagrees with binding {descriptor.descriptor_id!r}"
+            binding = _dict(
+                raw_bindings[descriptor.descriptor_id],
+                f"catalogs.bindings[{descriptor.descriptor_id!r}]",
             )
+            constraints = tuple(
+                _str(item, "binding.constraint")
+                for item in _list(binding["constraints"], "binding.constraints")
+            )
+            read_ids = tuple(
+                item.removeprefix("all_unset_reads:")
+                for item in constraints
+                if item.startswith("all_unset_reads:")
+            )
+            empty_request = not vector.kwargs and all(
+                item.get("kind") != "request" or item.get("fields") == [] for item in vector.args
+            )
+            read_descriptor = next(
+                (
+                    item
+                    for item in contract.binding_descriptors
+                    if item.operation_id in read_ids and item.entrypoint_id == vector.entrypoint_id
+                ),
+                None,
+            )
+            if (
+                not empty_request
+                or len(read_ids) != 1
+                or read_descriptor is None
+                or tuple(vector.expected_argv[: len(read_descriptor.command)])
+                != read_descriptor.command
+            ):
+                raise ContractError(
+                    f"{vector.vector_id} disagrees with binding {descriptor.descriptor_id!r}"
+                )
     base_count = sum(":canonical" in vector.vector_id for vector in contract.test_vectors)
     variant_count = len(contract.test_vectors) - base_count
     if (base_count, variant_count) != (46, 12):

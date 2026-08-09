@@ -33,6 +33,7 @@ from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.agents import AgentSkill, AgentTask
+from multica_py.models.common import ActionResult
 from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection
 from multica_py.models.skills import SkillFile
@@ -103,21 +104,21 @@ def _make_client(
         resource = BaseResource(transport, ClientConfig())
         return resource._plan(
             steps=(_Step(("squad", "member", "mutation"), "run_text"),),
-            finalize=lambda _results: None,
+            finalize=lambda _results: ActionResult[None](value=None),
         )
 
     client.agents.skills.list.return_value = skills
-    client.agents.skills.set.return_value = None
+    client.agents.skills.set.return_value = ActionResult[None](value=None)
     client.agents.tasks.return_value = tasks
     if issues is not None:
         client.issues.list.side_effect = issues
     else:
         client.issues.list.return_value = IssueListPage(
-            issues=(), has_more=False, limit=50, offset=0, total=0
+            items=(), has_more=False, limit=50, offset=0, total=0
         )
     client.skills.files.list.return_value = files
     client.skills.files.upsert.return_value = None
-    client.skills.files.delete.return_value = None
+    client.skills.files.delete.return_value = ActionResult[None](value=None)
     client.squads.members.list.return_value = members
     client.agents.skills.list_command = lambda agent_id: empty_command(
         lambda: client.agents.skills.list(agent_id)
@@ -317,14 +318,14 @@ def test_agent_tasks_cached_after_all() -> None:
 @pytest.mark.parametrize("case", ASSIGNEE_ISSUE_RELATION_CASES, ids=lambda case: case.name)
 def test_assignee_issue_relations_paginate_offset(case: AssigneeIssueRelationCase) -> None:
     p1 = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=True,
         limit=1,
         offset=0,
         total=2,
     )
     p2 = IssueListPage(
-        issues=(IssueSummary(id="i2", title="t2", status=_TODO),),
+        items=(IssueSummary(id="i2", title="t2", status=_TODO),),
         has_more=False,
         limit=1,
         offset=1,
@@ -349,7 +350,7 @@ def test_assignee_issue_relations_paginate_offset(case: AssigneeIssueRelationCas
 
 def test_agent_issues_single_page() -> None:
     p = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -725,7 +726,7 @@ SQUAD_PARENT_VALIDATION_CASES = (
 
 @pytest.mark.parametrize("case", SQUAD_PARENT_MUTATION_CASES, ids=lambda case: case.name)
 def test_squad_parent_mutations_invalidate_only_members(case: SquadParentMutationCase) -> None:
-    page = IssueListPage(issues=(), has_more=False, limit=50, offset=0, total=0)
+    page = IssueListPage(items=(), has_more=False, limit=50, offset=0, total=0)
     client = _make_client(
         members=(SquadMember(member_id="m1", member_type="agent", role="dev"),), issues=[page]
     )
@@ -737,7 +738,9 @@ def test_squad_parent_mutations_invalidate_only_members(case: SquadParentMutatio
     cached_members = entity.members.all()
     entity.issues.all()
     if case.succeeds:
-        assert getattr(entity, case.method)(case.member_id) is None
+        result = getattr(entity, case.method)(case.member_id)
+        assert isinstance(result, ActionResult)
+        assert result.success and result.value is None
         assert entity.members.all() == cached_members
         assert client.squads.members.list.call_count == 2
     else:
@@ -784,7 +787,7 @@ def test_squad_parent_validation_preserves_loaded_members(case: SquadParentValid
 
 def test_squad_issues_uses_assignee_id() -> None:
     p = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -802,14 +805,14 @@ def test_squad_issues_uses_assignee_id() -> None:
 
 def test_squad_issues_two_pages() -> None:
     p1 = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=True,
         limit=1,
         offset=0,
         total=2,
     )
     p2 = IssueListPage(
-        issues=(IssueSummary(id="i2", title="t2", status=_TODO),),
+        items=(IssueSummary(id="i2", title="t2", status=_TODO),),
         has_more=False,
         limit=1,
         offset=1,
@@ -844,7 +847,7 @@ def test_squad_issues_two_pages() -> None:
 
 def test_workspace_member_issues_uses_assignee_id() -> None:
     p = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -862,14 +865,14 @@ def test_workspace_member_issues_uses_assignee_id() -> None:
 
 def test_workspace_member_issues_two_pages() -> None:
     p1 = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=True,
         limit=1,
         offset=0,
         total=2,
     )
     p2 = IssueListPage(
-        issues=(IssueSummary(id="i2", title="t2", status=_TODO),),
+        items=(IssueSummary(id="i2", title="t2", status=_TODO),),
         has_more=False,
         limit=1,
         offset=1,
@@ -1004,7 +1007,8 @@ def test_skill_files_use_authoritative_argv(case: SkillFileArgvCase) -> None:
     result = getattr(resource, f"{case.method}_command")(*case.args).run()
 
     if case.stdout is None:
-        assert result is None
+        assert isinstance(result, ActionResult)
+        assert result.success and result.value is None
         transport.run_text.assert_called_once_with(case.expected_argv)
         transport.run_bytes.assert_not_called()
     else:
@@ -1129,5 +1133,5 @@ def test_avatar_public_signature_and_legacy_absence() -> None:
         ("agent_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
         ("file", inspect.Parameter.POSITIONAL_OR_KEYWORD, pathlib.Path),
     )
-    assert signature.return_annotation is None
+    assert signature.return_annotation == ActionResult[None]
     assert not hasattr(AgentResource, "upload_avatar")

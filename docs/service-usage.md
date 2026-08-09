@@ -78,18 +78,17 @@ through as open upstream strings. `copy_skills=False` emits `--no-skills`.
 Secret and machine-local configuration is excluded from this surface:
 `custom_env`, `mcp_config`, and `runtime_config` are not accepted or emitted.
 
-Search keeps a small immutable result shape suitable for queue discovery:
+Search returns a small immutable page suitable for queue discovery:
 
 ```python
 matches = client.issues.search("deploy")
-assert isinstance(matches, tuple)
-for summary in matches:
+for summary in matches.items:
     print(summary.id, summary.match_source)
 ```
 
 The command remains `issue search <query> --output json`; the SDK adapts both
 the v0.4.20 `{"issues": [...], "total": ...}` envelope and the legacy array
-to `tuple[IssueSummary, ...]`. `match_source` is an optional open string and
+to `Page[IssueSummary]`. `match_source` is an optional open string and
 can be absent or a future upstream value.
 
 Composite operations expose their ordered steps and result references. For
@@ -106,13 +105,50 @@ assert any("${create.id}" in rendered for rendered in command.commands)
 issue = command.run()
 ```
 
-## Direct keyword vs request object
+## Direct keywords, typed objects, and presence
 
-Most methods accept input either as a request object or as direct keyword arguments. The two styles are mutually exclusive — passing both raises `TypeError("Pass either a request object or keyword arguments, not both.")`. Passing neither raises `TypeError("Pass a ... or its keyword arguments; got neither.")`.
+Governed resource methods accept either a frozen request/filter object or its
+explicit keyword-only fields. The forms share one resolver and one command
+plan; passing both raises `TypeError("Pass either a request object or keyword
+arguments, not both.")`, and required operations preserve their exact missing
+input error. Optional filters and all-optional updates may omit every field.
 
-Direct keyword form is available for: `projects.create`, `projects.update`, `agents.create`, `agents.update`, `skills.create`, `skills.update`, `issues.create`, `issues.update`, `issues.assign`, `issues.reorder`, `runtimes.update`, `project_resources.add_local_directory`, `project_resources.update_local_directory`, `users.profile_update`.
+Use direct keywords first when the call is local and readable, or retain a
+typed object when values are reused or assembled by another layer:
 
-For these methods, request objects remain valuable when you need to reuse a parameter set, validate input early, store pending input, or assemble arguments across layers. The request-object form is the only option for: `issue_comments.list_flat`, `issue_comments.list_thread`, `issue_comments.list_recent`, `issue_metadata.query`, `issue_metadata.set_typed`.
+```python
+from multica_py import IssueStatus
+from multica_py.models.issues import IssueListFilter
+
+direct_page = client.issues.list(status=IssueStatus.backlog, limit=50)
+request = IssueListFilter(status=IssueStatus.backlog, limit=50)
+typed_page = client.issues.list(request)
+assert direct_page.items == typed_page.items
+```
+
+The same dual form is available for create/update requests, issue/comment
+filters, metadata query/set, autopilot trigger add/update, and autopilot/label
+updates. Stable IDs remain positional; request fields are keyword-only. Every
+`*_command()` sibling has the same parameters and returns `Command[T]` for the
+eager method's exact `T`.
+
+Update presence is explicit: `Unset` omits a field, approved nullable `None`
+values clear it, and accepted empty strings, empty tuples, `False`, and `0`
+are sent as values. All-optional update models use a read-only no-op plan when
+all mutable fields are `Unset`. Project-resource `local_path` and runtime
+`target_version` are required-value updates; omitted or `None` fails before
+transport and never becomes a no-op read.
+
+Actions return `ActionResult[T]` with payloads in `.value`; void actions use
+`ActionResult[None]`. Scalar/entity/process operations retain their natural
+typed result, and transport/decode/validation failures remain exceptions.
+
+```python
+mutation = client.repositories.add("https://example.com/team/repo.git")
+if mutation.success:
+    for record in mutation.value.added:
+        print(record.url)
+```
 
 ## Filter and page before local selection
 
@@ -131,19 +167,17 @@ def iter_backlog(client: MulticaClient, project_id: str) -> Iterator[IssueSummar
     offset = 0
     while True:
         page = client.issues.list(
-            IssueListFilter(
-                project_id=project_id,
-                status=IssueStatus.backlog,
-                limit=100,
-                offset=offset,
-            )
+            project_id=project_id,
+            status=IssueStatus.backlog,
+            limit=100,
+            offset=offset,
         )
-        yield from page.issues
+        yield from page.items
         if not page.has_more:
             return
-        if not page.issues:
+        if not page.items:
             raise RuntimeError("issue pagination stopped making progress")
-        offset += len(page.issues)
+        offset += len(page.items)
 ```
 
 Use the project relation when all project summaries are genuinely needed:

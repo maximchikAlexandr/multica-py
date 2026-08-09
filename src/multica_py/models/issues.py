@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast, overload
 
 import msgspec
 
 from multica_py.enums import IssueSort, IssueStatus, SortDirection
+from multica_py.models.common import CommentCursor, Page
+from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
@@ -49,17 +51,59 @@ class IssueChildStageGroup(msgspec.Struct, frozen=True, kw_only=True):
     count: int
 
 
-class IssueChildrenResult(msgspec.Struct, frozen=True, kw_only=True):
-    if TYPE_CHECKING:
-        children: tuple[Issue, ...] = ()
-    else:
-        children: tuple[object, ...] = ()
-    total: int = 0
-    child_stages: tuple[IssueChildStageGroup, ...] = ()
-    if TYPE_CHECKING:
+if TYPE_CHECKING:
+
+    class _IssueChildrenResultStatic(Page[Issue], frozen=True, kw_only=True):
+        total: int = 0
+        child_stages: tuple[IssueChildStageGroup, ...] = ()
         unstaged: tuple[Issue, ...] = ()
-    else:
+
+        @overload
+        def __init__(
+            self,
+            *,
+            items: tuple[Issue, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+            child_stages: tuple[IssueChildStageGroup, ...] = ...,
+            unstaged: tuple[Issue, ...] = ...,
+        ) -> None: ...
+
+        @overload
+        def __init__(
+            self,
+            *,
+            children: tuple[Issue, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+            child_stages: tuple[IssueChildStageGroup, ...] = ...,
+            unstaged: tuple[Issue, ...] = ...,
+        ) -> None: ...
+
+        def __init__(self, **kwargs: object) -> None: ...
+
+        @property
+        def children(self) -> tuple[Issue, ...]:
+            return self.items
+
+    IssueChildrenResult = _IssueChildrenResultStatic
+
+else:
+
+    class IssueChildrenResult(Page["Issue"], frozen=True, kw_only=True):
+        total: int = 0
+        child_stages: tuple[IssueChildStageGroup, ...] = ()
         unstaged: tuple[object, ...] = ()
+
+        @property
+        def children(self) -> tuple[Issue, ...]:
+            return cast("tuple[Issue, ...]", self.items)
 
 
 class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
@@ -74,12 +118,47 @@ class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
     metadata: tuple[IssueMetadataItem, ...] = ()
 
 
-class IssueListPage(msgspec.Struct, frozen=True, kw_only=True):
-    issues: tuple[IssueSummary, ...] = ()
-    has_more: bool = False
-    limit: int | None = None
-    offset: int | None = None
-    total: int | None = None
+if TYPE_CHECKING:
+
+    class _IssueListPageStatic(Page[IssueSummary], frozen=True, kw_only=True):
+        @overload
+        def __init__(
+            self,
+            *,
+            items: tuple[IssueSummary, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int | None = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+        ) -> None: ...
+
+        @overload
+        def __init__(
+            self,
+            *,
+            issues: tuple[IssueSummary, ...] = ...,
+            limit: int | None = ...,
+            offset: int | None = ...,
+            total: int | None = ...,
+            has_more: bool = ...,
+            next_cursor: str | CommentCursor | None = ...,
+        ) -> None: ...
+
+        def __init__(self, **kwargs: object) -> None: ...
+
+        @property
+        def issues(self) -> tuple[IssueSummary, ...]:
+            return self.items
+
+    IssueListPage = _IssueListPageStatic
+
+else:
+
+    class IssueListPage(Page[IssueSummary], frozen=True, kw_only=True):
+        @property
+        def issues(self) -> tuple[IssueSummary, ...]:
+            return self.items
 
 
 class InlineDescription(msgspec.Struct, frozen=True, kw_only=True):
@@ -132,17 +211,29 @@ class IssueCreateRequest(msgspec.Struct, frozen=True, kw_only=True):
 
 
 class IssueUpdateRequest(msgspec.Struct, frozen=True, kw_only=True):
-    title: str | None = None
-    description: str | None = None
-    priority: str | None = None
-    assignee_id: str | None = None
-    project_id: str | None = None
-    parent_id: str | None = None
+    title: str | UnsetType = Unset
+    description: str | None | UnsetType = Unset
+    priority: str | UnsetType = Unset
+    assignee_id: str | None | UnsetType = Unset
+    project_id: str | None | UnsetType = Unset
+    parent_id: str | None | UnsetType = Unset
 
     def __post_init__(self) -> None:
-        if self.project_id is not None and not self.project_id.strip():
+        if self.title is None:
+            raise TypeError("title must be non-null")
+        if self.priority is None:
+            raise TypeError("priority must be non-null")
+        if (
+            self.project_id is not Unset
+            and self.project_id is not None
+            and not self.project_id.strip()
+        ):
             raise ValueError("project_id must be non-empty when set")
-        if self.parent_id is not None and not self.parent_id.strip():
+        if (
+            self.parent_id is not Unset
+            and self.parent_id is not None
+            and not self.parent_id.strip()
+        ):
             raise ValueError("parent_id must be non-empty when set")
 
 

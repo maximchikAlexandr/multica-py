@@ -10,42 +10,59 @@ import pytest
 
 
 @pytest.mark.packaging
-def test_wheel_exports_generated_runtime(tmp_path: pathlib.Path) -> None:
+def test_artifacts_export_public_contract(tmp_path: pathlib.Path) -> None:
     root = pathlib.Path(__file__).parents[2]
     subprocess.run(["uv", "build"], cwd=root, check=True, env=_uv_env())
-    empty = tmp_path / "empty"
-    empty.mkdir()
-    venv = tmp_path / "venv"
-    subprocess.run(["uv", "venv", "--seed", str(venv)], cwd=root, check=True, env=_uv_env())
     wheels = sorted((root / "dist").glob("multica_py-*.whl"))
-    assert wheels
-    python = venv / "bin" / "python"
-    subprocess.run(
-        ["uv", "pip", "install", "--python", str(python), "msgspec"],
-        cwd=root,
-        check=True,
-        env=_uv_env(),
-    )
-    subprocess.run(
-        [str(python), "-m", "pip", "install", "--no-deps", str(wheels[-1])],
-        cwd=root,
-        check=True,
-        env=_uv_env(),
-    )
-    code = (
-        "import multica_py, multica_py.enums, multica_py._generated.approved_sdk as generated; "
-        "assert generated.IssueSort and generated.SortDirection; "
-        "assert generated.TARGET_VERSION == generated.MIN_CLI_VERSION; "
-        "assert generated.MAX_CLI_VERSION; "
-        "assert generated.OPERATION_BINDINGS; "
-        "assert all(hasattr(generated, name) for name in generated.__all__)"
-    )
-    subprocess.run(
-        [str(python), "-c", code],
-        cwd=empty,
-        check=True,
-        env={key: value for key, value in _uv_env().items() if key != "PYTHONPATH"},
-    )
+    sdists = sorted((root / "dist").glob("multica_py-*.tar.gz"))
+    assert wheels and sdists
+
+    for artifact in (*wheels, *sdists):
+        empty = tmp_path / artifact.suffixes[-1].lstrip(".")
+        empty.mkdir()
+        venv = tmp_path / f"venv-{artifact.suffixes[-1].lstrip('.')}"
+        subprocess.run(["uv", "venv", "--seed", str(venv)], cwd=root, check=True, env=_uv_env())
+        python = venv / "bin" / "python"
+        subprocess.run(
+            ["uv", "pip", "install", "--python", str(python), "msgspec"],
+            cwd=root,
+            check=True,
+            env=_uv_env(),
+        )
+        subprocess.run(
+            [str(python), "-m", "pip", "install", "--no-deps", str(artifact)],
+            cwd=root,
+            check=True,
+            env=_uv_env(),
+        )
+        code = (
+            "import pathlib, multica_py, multica_py.models as models, "
+            "multica_py.enums, multica_py._generated.approved_sdk as generated; "
+            "symbols = ('Page', 'ActionResult', 'AutopilotListPage', 'AutopilotRunListPage', "
+            "'IssueChildrenResult', 'IssueListPage', 'MetadataPage', 'CursorPage', 'OffsetPage', "
+            "'AgentCreateRequest', 'AgentUpdateRequest', 'AutopilotTriggerCreate', "
+            "'AutopilotTriggerUpdate', 'AutopilotUpdateRequest', 'CommentListFlatRequest', "
+            "'CommentListRecentRequest', 'CommentListThreadRequest', 'MetadataListRequest', "
+            "'MetadataSetRequest', 'IssueAssignmentRequest', 'IssueCreateRequest', "
+            "'IssueListFilter', 'IssueReorderRequest', 'IssueUpdateRequest', "
+            "'LabelUpdateRequest', 'ProjectCreateRequest', 'ProjectUpdateRequest', "
+            "'ProjectResourceAddLocalDirectoryRequest', "
+            "'ProjectResourceUpdateLocalDirectoryRequest', 'RuntimeUpdate', "
+            "'SkillCreateRequest', 'SkillUpdateRequest', 'UserProfileUpdate'); "
+            "assert all(hasattr(multica_py, name) and hasattr(models, name) for name in symbols); "
+            "assert (pathlib.Path(multica_py.__file__).parent / 'py.typed').is_file(); "
+            "assert generated.IssueSort and generated.SortDirection; "
+            "assert generated.TARGET_VERSION == generated.MIN_CLI_VERSION; "
+            "assert generated.MAX_CLI_VERSION; "
+            "assert generated.OPERATION_BINDINGS; "
+            "assert all(hasattr(generated, name) for name in generated.__all__)"
+        )
+        subprocess.run(
+            [str(python), "-c", code],
+            cwd=empty,
+            check=True,
+            env={key: value for key, value in _uv_env().items() if key != "PYTHONPATH"},
+        )
 
 
 def _uv_env() -> dict[str, str]:

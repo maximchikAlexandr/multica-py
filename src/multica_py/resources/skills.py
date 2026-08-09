@@ -9,14 +9,16 @@ from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.relations import LazyCollection
 from multica_py.models.skills import (
     SkillCreateRequest,
     SkillFile,
     SkillUpdateRequest,
 )
-from multica_py.resources._base import BaseResource, _resolve_request
+from multica_py.resources._base import BaseResource, _page_items, _resolve_request
 from multica_py.resources.skill_files import SkillFileResource
+from multica_py.sentinels import Unset, UnsetType
 
 
 class Skill(_BoundEntity):  # type: ignore[misc]
@@ -39,13 +41,13 @@ class Skill(_BoundEntity):  # type: ignore[misc]
             files = client.skills.files
 
             def loader() -> tuple[SkillFile, ...]:
-                return files.list(sid)
+                return _page_items(files.list(sid))
 
             self._set_runtime(
                 "_files",
                 LazyCollection[SkillFile](
                     loader,
-                    command_loader=lambda: files.list_command(sid),
+                    command_loader=lambda: files.list_command(sid)._map(_page_items),
                 ),
             )
         return self._files  # type: ignore[return-value]
@@ -68,16 +70,20 @@ class Skill(_BoundEntity):  # type: ignore[misc]
 
         return client.skills.files.upsert_command(self.id, path, content)._map(invalidate)
 
-    def delete_file(self, file_id: str) -> None:
-        self.delete_file_command(file_id).run()
+    def delete_file(self, file_id: str) -> ActionResult[None]:
+        return self.delete_file_command(file_id).run()
 
-    def delete_file_command(self, file_id: str) -> Command[None]:
+    def delete_file_command(self, file_id: str) -> Command[ActionResult[None]]:
         client = self._require_client(
             entity_type="Skill", entity_id=self.id, relation_name="delete_file"
         )
-        return client.skills.files.delete_command(self.id, file_id)._map(
-            lambda result: self._invalidate_files()
-        )
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            if result.success:
+                self._invalidate_files()
+            return result
+
+        return client.skills.files.delete_command(self.id, file_id)._map(invalidate)
 
 
 class SkillResource(BaseResource):
@@ -85,12 +91,19 @@ class SkillResource(BaseResource):
         super().__init__(transport, config)
         self.files = SkillFileResource(transport, config)
 
-    def list_command(self) -> Command[tuple[Skill, ...]]:
-        return self._decoded_list_command(("skill", "list"), Skill)._map(
-            lambda items: tuple(skill._with_client(self._client) for skill in items)
+    def list_command(self) -> Command[Page[Skill]]:
+        return self._decoded_page_command(("skill", "list"), Skill)._map(
+            lambda page: Page(
+                items=tuple(skill._with_client(self._client) for skill in page.items),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
+            )
         )
 
-    def list(self) -> tuple[Skill, ...]:
+    def list(self) -> Page[Skill]:
         return self.list_command().run()
 
     def get_command(self, skill_id: str) -> Command[Skill]:
@@ -133,19 +146,25 @@ class SkillResource(BaseResource):
     def update_command(self, skill_id: str, request: SkillUpdateRequest, /) -> Command[Skill]: ...
     @overload
     def update_command(
-        self, skill_id: str, *, name: str | None = None, description: str | None = None
+        self,
+        skill_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
     ) -> Command[Skill]: ...
 
     def update_command(  # type: ignore[misc]
         self, skill_id: str, request: SkillUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Skill]:
         validate_nonblank(skill_id)
-        req = _resolve_request(request, kwargs, SkillUpdateRequest)
+        req = _resolve_request(request, kwargs, SkillUpdateRequest, allow_empty=True)
+        if req.name is Unset and req.description is Unset:
+            return self.get_command(skill_id)
         args = ["skill", "update", skill_id]
-        if req.name is not None:
+        if req.name is not Unset:
             args.extend(["--name", req.name])
-        if req.description is not None:
-            args.extend(["--description", req.description])
+        if req.description is not Unset:
+            args.extend(["--description", "" if req.description is None else req.description])
         return self._decoded_command(tuple(args), Skill)._map(
             lambda skill: skill._with_client(self._client)
         )
@@ -154,7 +173,11 @@ class SkillResource(BaseResource):
     def update(self, skill_id: str, request: SkillUpdateRequest, /) -> Skill: ...
     @overload
     def update(
-        self, skill_id: str, *, name: str | None = None, description: str | None = None
+        self,
+        skill_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
     ) -> Skill: ...
 
     def update(  # type: ignore[misc]
@@ -162,12 +185,12 @@ class SkillResource(BaseResource):
     ) -> Skill:
         return self.update_command(skill_id, cast("SkillUpdateRequest", request), **kwargs).run()
 
-    def delete_command(self, skill_id: str) -> Command[None]:
+    def delete_command(self, skill_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(skill_id)
-        return self._none_command(("skill", "delete", skill_id))
+        return self._action_command(("skill", "delete", skill_id))
 
-    def delete(self, skill_id: str) -> None:
-        self.delete_command(skill_id).run()
+    def delete(self, skill_id: str) -> ActionResult[None]:
+        return self.delete_command(skill_id).run()
 
     def import_from_url_command(self, url: str) -> Command[Skill]:
         return self._decoded_command(("skill", "import", "--url", url), Skill)._map(

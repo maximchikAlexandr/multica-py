@@ -45,9 +45,13 @@ client = MulticaClient(
         max_processes=4,
     )
 )
-page = client.issues.list(IssueListFilter(status=IssueStatus.backlog, limit=50))
-for issue in page.issues:
+page = client.issues.list(status=IssueStatus.backlog, limit=50)
+for issue in page.items:
     print(issue.title)
+
+# A reusable typed request is equivalent to the direct-keyword form.
+request = IssueListFilter(status=IssueStatus.backlog, limit=50)
+assert client.issues.list(request).items == page.items
 ```
 
 `ClientConfig` is immutable. Keep one configured client at an integration
@@ -72,8 +76,13 @@ for project in projects:
 ```
 
 Bound entities retain their originating client context and own their lazy
-cache. Use `entity.to_data()` when you need a passive immutable snapshot for
-serialization, comparison, or a message boundary.
+cache. Use `entity.to_dict()` or `entity.to_json()` when you need a passive
+immutable snapshot for serialization, comparison, or a message boundary.
+
+Successful actions return `ActionResult[T]`; inspect payloads through
+`.value` (void actions use `ActionResult[None]`). Canonical/direct-resource
+collections expose immutable `Page[T]` values and `.items`; relation
+`.all()` snapshots intentionally remain tuples.
 
 ### Reliable automation patterns
 

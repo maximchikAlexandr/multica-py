@@ -17,9 +17,10 @@ from multica_py.models.agents import (
     AgentTask,
     AgentUpdateRequest,
 )
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueSummary
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
-from multica_py.resources._base import BaseResource, _resolve_request
+from multica_py.resources._base import BaseResource, _page_items, _resolve_request
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.sentinels import Unset, UnsetType
 
@@ -50,8 +51,8 @@ class Agent(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_skills",
                 LazyCollection(
-                    lambda: skills.list(aid),
-                    command_loader=lambda: skills.list_command(aid),
+                    lambda: _page_items(skills.list(aid)),
+                    command_loader=lambda: skills.list_command(aid)._map(_page_items),
                 ),
             )
         return self._skills  # type: ignore[return-value]
@@ -68,7 +69,7 @@ class Agent(_BoundEntity):  # type: ignore[misc]
                 "_tasks",
                 LazyCollection(
                     lambda: agents.tasks(aid),
-                    command_loader=lambda: agents.tasks_command(aid),
+                    command_loader=lambda: agents.tasks_command(aid)._map(_page_items),
                 ),
             )
         return self._tasks  # type: ignore[return-value]
@@ -115,18 +116,22 @@ class Agent(_BoundEntity):  # type: ignore[misc]
         if self._skills is not None:
             self._skills.invalidate()
 
-    def set_skills(self, skill_ids: tuple[str, ...]) -> None:
+    def set_skills(self, skill_ids: tuple[str, ...]) -> ActionResult[None]:
         """Set the agent's assigned skills and invalidate cached skills cache."""
-        self.set_skills_command(skill_ids).run()
+        return self.set_skills_command(skill_ids).run()
 
-    def set_skills_command(self, skill_ids: tuple[str, ...]) -> Command[None]:
+    def set_skills_command(self, skill_ids: tuple[str, ...]) -> Command[ActionResult[None]]:
         """Build a lazy command to set skills and invalidate the cache on success."""
         client = self._require_client(
             entity_type="Agent", entity_id=self.id, relation_name="set_skills"
         )
-        return client.agents.skills.set_command(self.id, skill_ids)._map(
-            lambda result: self._invalidate_skills()
-        )
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            if result.success:
+                self._invalidate_skills()
+            return result
+
+        return client.agents.skills.set_command(self.id, skill_ids)._map(invalidate)
 
 
 class AgentResource(BaseResource):
@@ -134,12 +139,19 @@ class AgentResource(BaseResource):
         super().__init__(transport, config)
         self.skills = AgentSkillResource(transport, config)
 
-    def list_command(self) -> Command[tuple[Agent, ...]]:
-        return self._decoded_list_command(("agent", "list"), Agent)._map(
-            lambda items: tuple(agent._with_client(self._client) for agent in items)
+    def list_command(self) -> Command[Page[Agent]]:
+        return self._decoded_page_command(("agent", "list"), Agent)._map(
+            lambda page: Page(
+                items=tuple(agent._with_client(self._client) for agent in page.items),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
+            )
         )
 
-    def list(self) -> tuple[Agent, ...]:
+    def list(self) -> Page[Agent]:
         return self.list_command().run()
 
     def get_command(self, agent_id: str) -> Command[Agent]:
@@ -327,19 +339,25 @@ class AgentResource(BaseResource):
     def update_command(self, agent_id: str, request: AgentUpdateRequest, /) -> Command[Agent]: ...
     @overload
     def update_command(
-        self, agent_id: str, *, name: str | None = None, description: str | None = None
+        self,
+        agent_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
     ) -> Command[Agent]: ...
 
     def update_command(  # type: ignore[misc]
         self, agent_id: str, request: AgentUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Agent]:
         validate_nonblank(agent_id)
-        req = _resolve_request(request, kwargs, AgentUpdateRequest)
+        req = _resolve_request(request, kwargs, AgentUpdateRequest, allow_empty=True)
+        if req.name is Unset and req.description is Unset:
+            return self.get_command(agent_id)
         args = ["agent", "update", agent_id]
-        if req.name is not None:
+        if req.name is not Unset:
             args.extend(["--name", req.name])
-        if req.description is not None:
-            args.extend(["--description", req.description])
+        if req.description is not Unset:
+            args.extend(["--description", "" if req.description is None else req.description])
         return self._decoded_command(tuple(args), Agent)._map(
             lambda agent: agent._with_client(self._client)
         )
@@ -348,7 +366,11 @@ class AgentResource(BaseResource):
     def update(self, agent_id: str, request: AgentUpdateRequest, /) -> Agent: ...
     @overload
     def update(
-        self, agent_id: str, *, name: str | None = None, description: str | None = None
+        self,
+        agent_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
     ) -> Agent: ...
 
     def update(  # type: ignore[misc]
@@ -356,34 +378,34 @@ class AgentResource(BaseResource):
     ) -> Agent:
         return self.update_command(agent_id, cast("AgentUpdateRequest", request), **kwargs).run()
 
-    def archive_command(self, agent_id: str) -> Command[None]:
+    def archive_command(self, agent_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(agent_id)
-        return self._none_command(("agent", "archive", agent_id))
+        return self._action_command(("agent", "archive", agent_id))
 
-    def archive(self, agent_id: str) -> None:
-        self.archive_command(agent_id).run()
+    def archive(self, agent_id: str) -> ActionResult[None]:
+        return self.archive_command(agent_id).run()
 
-    def restore_command(self, agent_id: str) -> Command[None]:
+    def restore_command(self, agent_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(agent_id)
-        return self._none_command(("agent", "restore", agent_id))
+        return self._action_command(("agent", "restore", agent_id))
 
-    def restore(self, agent_id: str) -> None:
-        self.restore_command(agent_id).run()
+    def restore(self, agent_id: str) -> ActionResult[None]:
+        return self.restore_command(agent_id).run()
 
-    def tasks_command(self, agent_id: str) -> Command[tuple[AgentTask, ...]]:
+    def tasks_command(self, agent_id: str) -> Command[Page[AgentTask]]:
         validate_nonblank(agent_id)
-        return self._decoded_list_command(("agent", "tasks", agent_id), AgentTask)
+        return self._decoded_page_command(("agent", "tasks", agent_id), AgentTask)
 
-    def tasks(self, agent_id: str) -> tuple[AgentTask, ...]:
+    def tasks(self, agent_id: str) -> Page[AgentTask]:
         return self.tasks_command(agent_id).run()
 
-    def avatar_command(self, agent_id: str, file: pathlib.Path) -> Command[None]:
+    def avatar_command(self, agent_id: str, file: pathlib.Path) -> Command[ActionResult[None]]:
         _ = AGENT_AVATAR_BINDING
         validate_nonblank(agent_id)
         path = file.resolve()
         if not path.is_file():
             raise ValueError(f"file must be an existing local file: {file}")
-        return self._none_command(("agent", "avatar", agent_id, "--file", str(path)))
+        return self._action_command(("agent", "avatar", agent_id, "--file", str(path)))
 
-    def avatar(self, agent_id: str, file: pathlib.Path) -> None:
-        self.avatar_command(agent_id, file).run()
+    def avatar(self, agent_id: str, file: pathlib.Path) -> ActionResult[None]:
+        return self.avatar_command(agent_id, file).run()

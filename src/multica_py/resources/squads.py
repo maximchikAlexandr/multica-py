@@ -10,6 +10,7 @@ from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models._bound import _BoundEntity
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.relations import (
     LazyCollection,
@@ -17,7 +18,7 @@ from multica_py.models.relations import (
     OffsetPage,
 )
 from multica_py.models.system import SquadMember
-from multica_py.resources._base import BaseResource
+from multica_py.resources._base import BaseResource, _page_items
 from multica_py.resources.issues import (
     _issue_summary_offset_page,
     _issue_summary_offset_page_command,
@@ -44,7 +45,7 @@ def _squad_members_command(
     client: MulticaClient, squad_id: str
 ) -> Command[tuple[SquadMember, ...]]:
     validate_nonblank(squad_id)
-    return client.squads.members.list_command(squad_id)
+    return client.squads.members.list_command(squad_id)._map(_page_items)
 
 
 def _squad_issues_page_command(
@@ -79,7 +80,7 @@ class Squad(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_members",
                 LazyCollection(
-                    lambda: members.list(sid),
+                    lambda: _page_items(members.list(sid)),
                     command_loader=lambda: _squad_members_command(client, sid),
                 ),
             )
@@ -112,29 +113,37 @@ class Squad(_BoundEntity):  # type: ignore[misc]
         if self._members is not None:
             self._members.invalidate()
 
-    def add_member(self, member_id: str) -> None:
-        self.add_member_command(member_id).run()
+    def add_member(self, member_id: str) -> ActionResult[None]:
+        return self.add_member_command(member_id).run()
 
-    def add_member_command(self, member_id: str) -> Command[None]:
+    def add_member_command(self, member_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(member_id)
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="add_member"
         )
-        return client.squads.members.add_command(self.id, member_id)._map(
-            lambda result: self._invalidate_members()
-        )
 
-    def remove_member(self, member_id: str) -> None:
-        self.remove_member_command(member_id).run()
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            if result.success:
+                self._invalidate_members()
+            return result
 
-    def remove_member_command(self, member_id: str) -> Command[None]:
+        return client.squads.members.add_command(self.id, member_id)._map(invalidate)
+
+    def remove_member(self, member_id: str) -> ActionResult[None]:
+        return self.remove_member_command(member_id).run()
+
+    def remove_member_command(self, member_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(member_id)
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="remove_member"
         )
-        return client.squads.members.remove_command(self.id, member_id)._map(
-            lambda result: self._invalidate_members()
-        )
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            if result.success:
+                self._invalidate_members()
+            return result
+
+        return client.squads.members.remove_command(self.id, member_id)._map(invalidate)
 
 
 class SquadResource(BaseResource):
@@ -142,12 +151,15 @@ class SquadResource(BaseResource):
         super().__init__(transport, config)
         self.members = SquadMemberResource(transport, config)
 
-    def list_command(self) -> Command[tuple[Squad, ...]]:
+    def list_command(self) -> Command[Page[Squad]]:
         return self._decoded_list_command(("squad", "list"), Squad)._map(
-            lambda items: tuple(squad._with_client(self._client) for squad in items)
+            lambda items: Page(
+                items=tuple(squad._with_client(self._client) for squad in items),
+                total=len(items),
+            )
         )
 
-    def list(self) -> tuple[Squad, ...]:
+    def list(self) -> Page[Squad]:
         return self.list_command().run()
 
     def get_command(self, squad_id: str) -> Command[Squad]:

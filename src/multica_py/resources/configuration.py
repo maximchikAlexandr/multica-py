@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from multica_py._internal.commands import Command
+from multica_py.models.common import ActionResult
 from multica_py.resources._base import BaseResource
 
 
@@ -17,8 +18,8 @@ class ConfigurationResource(BaseResource):
     def get(self, key: str) -> str:
         return self.get_command(key).run()
 
-    def set_command(self, key: str, value: str) -> Command[None]:
-        return self._none_command(("config", "set", key, value))
+    def set_command(self, key: str, value: str) -> Command[ActionResult[None]]:
+        return self._action_command(("config", "set", key, value))
 
-    def set(self, key: str, value: str) -> None:
-        self.set_command(key, value).run()
+    def set(self, key: str, value: str) -> ActionResult[None]:
+        return self.set_command(key, value).run()
