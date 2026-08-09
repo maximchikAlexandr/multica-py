@@ -45,5 +45,7 @@ class ProjectResourceUpdateLocalDirectoryRequest(msgspec.Struct, frozen=True, kw
     local_path: str | Path
 
     def __post_init__(self) -> None:
+        if self.local_path is None:
+            raise TypeError("local_path must be non-null")
         if not str(self.local_path).strip():
             raise ValueError("local_path must be non-empty")

@@ -11,14 +11,22 @@ import pytest
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.models.agents import AgentCreateRequest, AgentUpdateRequest
+from multica_py.models.autopilots import AutopilotUpdateRequest
+from multica_py.models.issue_activity import (
+    CommentListFlatRequest,
+    CommentListRecentRequest,
+    CommentListThreadRequest,
+)
 from multica_py.models.issues import (
     InlineDescription,
     IssueAssignmentRequest,
     IssueCreateRequest,
+    IssueListFilter,
     IssueReorderRequest,
     IssueUpdateRequest,
     NoDescription,
 )
+from multica_py.models.labels import LabelUpdateRequest
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceUpdateLocalDirectoryRequest,
@@ -28,6 +36,7 @@ from multica_py.models.skills import SkillCreateRequest, SkillUpdateRequest
 from multica_py.models.system import RuntimeUpdate, UserProfileUpdate
 from multica_py.resources._base import _resolve_request
 from multica_py.resources.agents import AgentResource
+from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.resources.projects import ProjectResource
@@ -77,6 +86,11 @@ class _DummyRequest(msgspec.Struct, frozen=True, kw_only=True):
     value: int = 0
 
 
+class _OptionalDummyRequest(msgspec.Struct, frozen=True, kw_only=True):
+    name: str = ""
+    value: int = 0
+
+
 class TestResolveRequest:
     def test_request_only_returns_it(self) -> None:
         req = _DummyRequest(name="x")
@@ -86,6 +100,11 @@ class TestResolveRequest:
         result = _resolve_request(None, {"name": "x", "value": 42}, _DummyRequest)
         assert result.name == "x"
         assert result.value == 42
+
+    def test_allow_empty_constructs_default_model(self) -> None:
+        result = _resolve_request(None, {}, _OptionalDummyRequest, allow_empty=True)
+        assert result.name == ""
+        assert result.value == 0
 
     def test_mixed_raises_type_error(self) -> None:
         req = _DummyRequest(name="x")
@@ -103,6 +122,129 @@ class TestResolveRequest:
     def test_unknown_kwarg_re_raises_type_error(self) -> None:
         with pytest.raises(TypeError):
             _resolve_request(None, {"unknown": "x"}, _DummyRequest)
+
+
+def test_all_optional_update_models_default_to_unset() -> None:
+    requests = (
+        ProjectUpdateRequest(),
+        AgentUpdateRequest(),
+        SkillUpdateRequest(),
+        IssueUpdateRequest(),
+        AutopilotUpdateRequest(),
+        LabelUpdateRequest(),
+        UserProfileUpdate(),
+    )
+    for request in requests:
+        assert all(
+            getattr(request, field.name) is Unset
+            for field in msgspec.structs.fields(request.__class__)
+        )
+
+
+@pytest.mark.parametrize(
+    ("factory", "field"),
+    (
+        (lambda: ProjectUpdateRequest(name=typing.cast("str", None)), "name"),
+        (lambda: AgentUpdateRequest(name=typing.cast("str", None)), "name"),
+        (lambda: SkillUpdateRequest(name=typing.cast("str", None)), "name"),
+        (lambda: IssueUpdateRequest(title=typing.cast("str", None)), "title"),
+        (lambda: IssueUpdateRequest(priority=typing.cast("str", None)), "priority"),
+        (lambda: AutopilotUpdateRequest(title=typing.cast("str", None)), "title"),
+        (lambda: AutopilotUpdateRequest(agent=typing.cast("str", None)), "agent"),
+        (lambda: AutopilotUpdateRequest(priority=typing.cast("str", None)), "priority"),
+        (lambda: AutopilotUpdateRequest(status=typing.cast("str", None)), "status"),
+        (
+            lambda: AutopilotUpdateRequest(
+                execution_mode=typing.cast("object", None)  # type: ignore[arg-type]
+            ),
+            "execution_mode",
+        ),
+        (
+            lambda: AutopilotUpdateRequest(subscribers=typing.cast("tuple[str, ...]", None)),
+            "subscribers",
+        ),
+        (lambda: LabelUpdateRequest(name=typing.cast("str", None)), "name"),
+        (lambda: LabelUpdateRequest(color=typing.cast("str", None)), "color"),
+    ),
+)
+def test_non_nullable_update_fields_reject_none(factory: object, field: str) -> None:
+    with pytest.raises(TypeError, match=f"{field} must be non-null"):
+        factory()  # type: ignore[operator]
+
+
+_OPTIONAL_DIRECT_CASES = (
+    (IssueResource, "list", IssueListFilter),
+    (IssueResource, "list_command", IssueListFilter),
+    (IssueCommentResource, "list_flat", CommentListFlatRequest),
+    (IssueCommentResource, "list_flat_command", CommentListFlatRequest),
+    (IssueCommentResource, "list_thread", CommentListThreadRequest),
+    (IssueCommentResource, "list_thread_command", CommentListThreadRequest),
+    (IssueCommentResource, "list_recent", CommentListRecentRequest),
+    (IssueCommentResource, "list_recent_command", CommentListRecentRequest),
+)
+
+
+@pytest.mark.parametrize("resource_cls, method_name, request_cls", _OPTIONAL_DIRECT_CASES)
+def test_optional_direct_overloads_match_request_fields(
+    resource_cls: type, method_name: str, request_cls: type
+) -> None:
+    overload = _get_direct_overload(resource_cls, method_name)
+    assert overload is not None
+    signature = inspect.signature(overload)  # type: ignore[arg-type]
+    params = [
+        parameter
+        for parameter in signature.parameters.values()
+        if parameter.kind == inspect.Parameter.KEYWORD_ONLY
+    ]
+    assert {parameter.name for parameter in params} == {
+        field.name for field in msgspec.structs.fields(request_cls)
+    }
+    hints = typing.get_type_hints(overload)
+    assert {name: hints[name] for name in (parameter.name for parameter in params)} == {
+        field.name: field.type for field in msgspec.structs.fields(request_cls)
+    }
+
+
+def test_issue_list_object_and_direct_forms_have_identical_empty_and_filtered_plans(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = IssueResource(mock_transport, ClientConfig())
+    request = IssueListFilter(limit=10, offset=2)
+
+    assert (
+        resource.list_command(request).commands
+        == resource.list_command(limit=10, offset=2).commands
+    )
+    assert resource.list_command().commands == resource.list_command(IssueListFilter()).commands
+    mock_transport.run_bytes.assert_not_called()
+    mock_transport.run_text.assert_not_called()
+
+
+def test_comment_list_object_and_direct_forms_have_identical_plans(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = IssueCommentResource(mock_transport, ClientConfig())
+    cursor = CommentListThreadRequest(issue_id="iss", thread_id="th", limit=5)
+    cases = (
+        (
+            resource.list_flat_command(CommentListFlatRequest(issue_id="iss", since=None)),
+            resource.list_flat_command(issue_id="iss", since=None),
+        ),
+        (
+            resource.list_thread_command(cursor),
+            resource.list_thread_command(issue_id="iss", thread_id="th", limit=5),
+        ),
+        (
+            resource.list_recent_command(CommentListRecentRequest(issue_id="iss", limit=3)),
+            resource.list_recent_command(issue_id="iss", limit=3),
+        ),
+    )
+    for object_command, direct_command in cases:
+        assert object_command.commands == direct_command.commands
+    mock_transport.run_bytes.assert_not_called()
+    mock_transport.run_text.assert_not_called()
 
 
 def _get_direct_overload(resource_cls: type, method_name: str) -> object | None:
@@ -228,6 +370,14 @@ _NEITHER_CASES = tuple(
     )
     for case in _IN_SCOPE
     for method_name in (case.sdk_method.rsplit(".", 1)[-1],)
+    if case.sdk_method
+    not in {
+        "projects.update",
+        "agents.update",
+        "skills.update",
+        "issues.update",
+        "users.profile_update",
+    }
 )
 
 
@@ -352,15 +502,6 @@ _POST_INIT_CASES = (
         ("pr_1", "res_1"),
         (("local_path", ""),),
         "local_path must be non-empty",
-    ),
-    PostInitCase(
-        "users.profile_update:unset-description",
-        "users.profile_update",
-        UserResource,
-        "profile_update",
-        (),
-        (("description", msgspec.UNSET),),
-        "description must be provided",
     ),
 )
 

@@ -21,15 +21,17 @@ class UserResource(BaseResource):
     def profile_update_command(self, request: UserProfileUpdate, /) -> Command[UserProfile]: ...
     @overload
     def profile_update_command(
-        self, *, description: str | msgspec.UnsetType = msgspec.UNSET
+        self, *, description: str | None | msgspec.UnsetType = msgspec.UNSET
     ) -> Command[UserProfile]: ...
 
     def profile_update_command(  # type: ignore[misc]
         self, request: UserProfileUpdate | None = None, /, **kwargs: object
     ) -> Command[UserProfile]:
-        req = _resolve_request(request, kwargs, UserProfileUpdate)
+        req = _resolve_request(request, kwargs, UserProfileUpdate, allow_empty=True)
         if req.description is Unset:
-            raise ValueError("description must be provided")
+            return self.profile_get_command()
+        if req.description is None:
+            return self._decoded_command(("user", "profile", "update", "--clear"), UserProfile)
         args = ("user", "profile", "update", "--description", req.description)
         return self._decoded_command(args, UserProfile)
 
@@ -37,7 +39,7 @@ class UserResource(BaseResource):
     def profile_update(self, request: UserProfileUpdate, /) -> UserProfile: ...
     @overload
     def profile_update(
-        self, *, description: str | msgspec.UnsetType = msgspec.UNSET
+        self, *, description: str | None | msgspec.UnsetType = msgspec.UNSET
     ) -> UserProfile: ...
 
     def profile_update(  # type: ignore[misc]

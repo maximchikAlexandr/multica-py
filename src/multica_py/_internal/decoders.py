@@ -20,22 +20,28 @@ def _decode_with_private_autopilot_wire(
     model annotations.
     """
     from multica_py._internal.wire_models import (
+        _autopilot_list_page_from_wire,
         _autopilot_run_from_wire,
+        _AutopilotListWire,
         _AutopilotRunListPageWire,
         _AutopilotRunWire,
     )
-    from multica_py.models.autopilots import AutopilotRunListPage
-    from multica_py.resources.autopilots import AutopilotRun
+    from multica_py.models.autopilots import AutopilotListPage, AutopilotRunListPage
+    from multica_py.resources.autopilots import Autopilot, AutopilotRun
+
+    if model_type == AutopilotListPage[Autopilot]:
+        wire_page = decode_json(data, _AutopilotListWire, command=command)
+        return _autopilot_list_page_from_wire(wire_page)
 
     if model_type is AutopilotRun:
         wire_run = decode_json(data, _AutopilotRunWire, command=command)
         return _autopilot_run_from_wire(wire_run)
 
     if model_type == AutopilotRunListPage[AutopilotRun]:
-        wire_page = decode_json(data, _AutopilotRunListPageWire, command=command)
+        run_wire_page = decode_json(data, _AutopilotRunListPageWire, command=command)
         return AutopilotRunListPage(
-            runs=tuple(_autopilot_run_from_wire(run) for run in wire_page.runs),
-            total=wire_page.total,
+            items=tuple(_autopilot_run_from_wire(run) for run in run_wire_page.runs),
+            total=run_wire_page.total,
         )
     return None
 

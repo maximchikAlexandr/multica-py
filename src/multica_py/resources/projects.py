@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 from typing import cast, overload
 
 import msgspec
@@ -15,8 +16,8 @@ from multica_py._internal.wire_models import (
 )
 from multica_py.config import ClientConfig
 from multica_py.enums import ProjectStatus
-from multica_py.exceptions import ValidationError
 from multica_py.models._bound import _BoundEntity
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter, IssueSummary
 from multica_py.models.project_resources import (
     ProjectResourceAddLocalDirectoryRequest,
@@ -27,7 +28,7 @@ from multica_py.models.projects import (
     ProjectUpdateRequest,
 )
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
-from multica_py.resources._base import BaseResource, _resolve_request
+from multica_py.resources._base import BaseResource, _page_items, _resolve_request
 from multica_py.resources.issues import (
     IssueResource,
     _issue_summary_offset_page,
@@ -60,8 +61,8 @@ class Project(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_resources",
                 LazyCollection(
-                    lambda: resources.list(pid),
-                    command_loader=lambda: resources.list_command(pid),
+                    lambda: _page_items(resources.list(pid)),
+                    command_loader=lambda: resources.list_command(pid)._map(_page_items),
                 ),
             )
         return self._resources  # type: ignore[return-value]
@@ -99,18 +100,58 @@ class Project(_BoundEntity):  # type: ignore[misc]
         if self._resources is not None:
             self._resources.invalidate()
 
+    @overload
     def add_local_directory(
-        self, request: ProjectResourceAddLocalDirectoryRequest
-    ) -> ProjectResourceRecord:
-        return self.add_local_directory_command(request).run()
+        self, request: ProjectResourceAddLocalDirectoryRequest, /
+    ) -> ProjectResourceRecord: ...
 
+    @overload
+    def add_local_directory(
+        self,
+        *,
+        local_path: str | pathlib.Path,
+        daemon_id: str,
+        label: str | None = None,
+    ) -> ProjectResourceRecord: ...
+
+    def add_local_directory(  # type: ignore[misc]
+        self,
+        request: ProjectResourceAddLocalDirectoryRequest | None = None,
+        /,
+        **kwargs: object,
+    ) -> ProjectResourceRecord:
+        return self.add_local_directory_command(
+            cast("ProjectResourceAddLocalDirectoryRequest", request), **kwargs
+        ).run()
+
+    @overload
     def add_local_directory_command(
-        self, request: ProjectResourceAddLocalDirectoryRequest
+        self, request: ProjectResourceAddLocalDirectoryRequest, /
+    ) -> Command[ProjectResourceRecord]: ...
+
+    @overload
+    def add_local_directory_command(
+        self,
+        *,
+        local_path: str | pathlib.Path,
+        daemon_id: str,
+        label: str | None = None,
+    ) -> Command[ProjectResourceRecord]: ...
+
+    def add_local_directory_command(  # type: ignore[misc]
+        self,
+        request: ProjectResourceAddLocalDirectoryRequest | None = None,
+        /,
+        **kwargs: object,
     ) -> Command[ProjectResourceRecord]:
         client = self._require_client(
             entity_type="Project", entity_id=self.id, relation_name="add_local_directory"
         )
-        command = client.projects.resources.add_local_directory_command(self.id, request)
+        command = client.projects.resources.add_local_directory_command(
+            self.id,
+            cast("ProjectResourceAddLocalDirectoryRequest", request),
+            **kwargs,
+        )
 
         def invalidate(result: ProjectResourceRecord) -> ProjectResourceRecord:
             self._invalidate_resources()
@@ -118,18 +159,22 @@ class Project(_BoundEntity):  # type: ignore[misc]
 
         return command._map(invalidate)
 
-    def remove_resource(self, resource_id: str) -> None:
-        self.remove_resource_command(resource_id).run()
+    def remove_resource(self, resource_id: str) -> ActionResult[None]:
+        return self.remove_resource_command(resource_id).run()
 
-    def remove_resource_command(self, resource_id: str) -> Command[None]:
+    def remove_resource_command(self, resource_id: str) -> Command[ActionResult[None]]:
         validate_nonblank(self.id)
         validate_nonblank(resource_id)
         client = self._require_client(
             entity_type="Project", entity_id=self.id, relation_name="remove_resource"
         )
-        return client.projects.resources.remove_command(self.id, resource_id)._map(
-            lambda result: self._invalidate_resources()
-        )
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            if result.success:
+                self._invalidate_resources()
+            return result
+
+        return client.projects.resources.remove_command(self.id, resource_id)._map(invalidate)
 
 
 class ProjectResource(BaseResource):
@@ -140,12 +185,19 @@ class ProjectResource(BaseResource):
     def _bind(self, project: _ProjectWire) -> Project:
         return _project_from_wire(project)._with_client(self._client)
 
-    def list_command(self) -> Command[tuple[Project, ...]]:
-        return self._decoded_list_command(("project", "list"), _ProjectWire)._map(
-            lambda projects: tuple(map(self._bind, projects))
+    def list_command(self) -> Command[Page[Project]]:
+        return self._decoded_page_command(("project", "list"), _ProjectWire)._map(
+            lambda page: Page(
+                items=tuple(map(self._bind, page.items)),
+                limit=page.limit,
+                offset=page.offset,
+                total=page.total,
+                has_more=page.has_more,
+                next_cursor=page.next_cursor,
+            )
         )
 
-    def list(self) -> tuple[Project, ...]:
+    def list(self) -> Page[Project]:
         return self.list_command().run()
 
     def get_command(self, project_id: str) -> Command[Project]:
@@ -195,14 +247,16 @@ class ProjectResource(BaseResource):
     def update_command(  # type: ignore[misc]
         self, project_id: str, request: ProjectUpdateRequest | None = None, /, **kwargs: object
     ) -> Command[Project]:
-        req = _resolve_request(request, kwargs, ProjectUpdateRequest)
+        req = _resolve_request(request, kwargs, ProjectUpdateRequest, allow_empty=True)
+        if req.name is Unset and req.description is Unset:
+            return self.get_command(project_id)
         args = ["project", "update", project_id]
         if req.name is not Unset:
             args.extend(["--title", req.name])
         if req.description is Unset:
             pass
         elif req.description is None:
-            raise ValidationError("description=None is not supported for project update via CLI")
+            args.extend(["--description", ""])
         else:
             args.extend(["--description", req.description])
         return self._decoded_command(tuple(args), _ProjectWire)._map(self._bind)
@@ -225,11 +279,11 @@ class ProjectResource(BaseResource):
             project_id, cast("ProjectUpdateRequest", request), **kwargs
         ).run()
 
-    def delete_command(self, project_id: str) -> Command[None]:
-        return self._none_command(("project", "delete", project_id))
+    def delete_command(self, project_id: str) -> Command[ActionResult[None]]:
+        return self._action_command(("project", "delete", project_id))
 
-    def delete(self, project_id: str) -> None:
-        self.delete_command(project_id).run()
+    def delete(self, project_id: str) -> ActionResult[None]:
+        return self.delete_command(project_id).run()
 
     def set_status_command(self, project_id: str, status: ProjectStatus) -> Command[Project]:
         return self._decoded_command(

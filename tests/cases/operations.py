@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import shlex
 import typing
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path as _Path
 from typing import cast
@@ -47,6 +47,11 @@ class OperationCase:
     method: str
     expected_argv: tuple[str, ...] = ()
     expected_commands: tuple[str, ...] = ()
+    expected_category: str | None = None
+    expected_response_id: str | None = None
+    expected_typed_input_id: str | None = None
+    expected_input_mode: str | None = None
+    presence_policy_ids: tuple[str, ...] = ()
     transport_method: str = "run_bytes"
     args: tuple[object, ...] = ()
     kwargs: tuple[tuple[str, object], ...] = ()
@@ -169,7 +174,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         ProjectStatus,
         SortDirection,
     )
-    from multica_py.models.common import Page
+    from multica_py.models.common import ActionResult, Page
     from multica_py.models.issue_activity import (
         CommentCursor,
         CommentListFlatRequest,
@@ -248,12 +253,58 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         assertion: ResultAssertion, operation_id: str
     ) -> Callable[[object, MagicMock], None] | None:
         if assertion.kind == "none":
+            if operation_id in {
+                "autopilots.delete",
+                "issues.comments.delete",
+                "projects.resources.remove",
+            }:
+
+                def assert_action_none(result: object, _mt: MagicMock = MagicMock()) -> None:
+                    if (
+                        type(result).__module__ != "multica_py.models.common"
+                        or type(result).__qualname__ != "ActionResult"
+                        or not getattr(result, "success", False)
+                        or getattr(result, "value", object()) is not None
+                    ):
+                        raise AssertionError(
+                            f"expected successful ActionResult[None], got {result!r}"
+                        )
+
+                return assert_action_none
             return _assert_none
         if assertion.kind == "decoded_type":
             expected = str(assertion.expected["value"])
 
+            def assert_sequence_contract(result: object) -> None:
+                if not isinstance(result, Page) and not hasattr(result, "items"):
+                    raise AssertionError("expected a Page-compatible sequence")
+                sequence = cast("Sequence[object]", result)
+                items = cast("tuple[object, ...]", getattr(result, "items"))
+                if tuple(sequence) != items or len(sequence) != len(items):
+                    raise AssertionError("Page sequence API does not expose items consistently")
+                if items and (sequence[0] is not items[0] or sequence[:] != items):
+                    raise AssertionError("Page indexing/slicing does not preserve items")
+                for field in ("limit", "offset", "total", "has_more"):
+                    if not hasattr(result, field):
+                        raise AssertionError(f"Page metadata field {field!r} is missing")
+                if isinstance(result, Page) and not hasattr(result, "next_cursor"):
+                    raise AssertionError("Page cursor metadata field is missing")
+
+            aliases = {
+                "multica_py.models.issues.IssueListPage": "issues",
+                "multica_py.models.autopilots.AutopilotListPage": "autopilots",
+                "multica_py.models.autopilots.AutopilotRunListPage": "runs",
+                "multica_py.models.issues.IssueChildrenResult": "children",
+            }
+
             def assert_type(result: object, _mt: MagicMock = MagicMock()) -> None:
                 actual = f"{type(result).__module__}.{type(result).__qualname__}"
+                if expected == "multica_py.models.common.Page":
+                    assert_sequence_contract(result)
+                if expected in aliases and actual == expected:
+                    assert_sequence_contract(result)
+                    if getattr(result, aliases[expected]) is not getattr(result, "items"):
+                        raise AssertionError("compatibility alias is not identical to items")
                 if expected == "multica_py.models.issues.Issue" and actual == (
                     "multica_py.resources.issues.Issue"
                 ):
@@ -323,6 +374,11 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 method=method,
                 expected_argv=vector.expected_argv,
                 expected_commands=_expected_commands(vector.expected_argv),
+                expected_category=entrypoint.category,
+                expected_response_id=entrypoint.response_id,
+                expected_typed_input_id=entrypoint.typed_input_id,
+                expected_input_mode=entrypoint.input_mode,
+                presence_policy_ids=entrypoint.presence_policy_ids,
                 transport_method=vector.transport_method,
                 args=tuple(materialize(value) for value in vector.args),
                 kwargs=tuple((name, materialize(value)) for name, value in vector.kwargs),
@@ -519,6 +575,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         AutopilotTriggerCreate,
         AutopilotTriggerUpdate,
     )
+    from multica_py.models.common import ActionResult, Page
     from multica_py.models.issue_activity import (
         CommentCursor,
         CommentListFlatRequest,
@@ -535,6 +592,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         FileDescription,
         InlineDescription,
         IssueAssignmentRequest,
+        IssueChildrenResult,
         IssueChildStageGroup,
         IssueCreateRequest,
         IssueListFilter,
@@ -591,6 +649,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             created_by_type="member",
             created_by_id="u1",
         )
+    )
+    _AP_GET = msgspec.json.encode(
+        {
+            "autopilot": msgspec.json.decode(_AP),
+            "triggers": [{"id": "tr_001", "type": "webhook", "config": {}}],
+        }
     )
     _APRUN = msgspec.json.encode(
         AutopilotRun(id="r1", autopilot_id="a1", source="manual", status="running")
@@ -742,8 +806,80 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
 
         raise NetworkError("first composite step failed")
 
+    def _assert_action_none(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, ActionResult)
+        assert result.success
+        assert result.value is None
+
+    def _assert_action_str(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, ActionResult)
+        assert result.success
+        assert isinstance(result.value, str)
+
+    def _assert_action_repository(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, ActionResult)
+        assert result.success
+        assert isinstance(result.value, RepositoryMutationResult)
+
+    def _assert_action_runtime(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, ActionResult)
+        assert result.success
+        assert isinstance(result.value, RuntimeUpdateResult)
+
+    action_assertions: dict[str, Callable[[object, MagicMock], None]] = dict.fromkeys(
+        (
+            "agents.archive",
+            "agents.avatar",
+            "agents.restore",
+            "agents.skills.set",
+            "autopilots.delete",
+            "autopilots.trigger_delete",
+            "configuration.set",
+            "issues.cancel_task",
+            "issues.comments.delete",
+            "issues.comments.resolve",
+            "issues.comments.unresolve",
+            "issues.metadata.delete",
+            "issues.rerun",
+            "issues.subscribers.add",
+            "issues.subscribers.remove",
+            "labels.delete",
+            "projects.delete",
+            "projects.resources.remove",
+            "runtimes.delete",
+            "skills.delete",
+            "skills.files.delete",
+            "squads.members.add",
+            "squads.members.remove",
+            "workspaces.switch",
+            "workspaces.watch",
+            "workspaces.unwatch",
+        ),
+        _assert_action_none,
+    )
+    action_assertions.update(
+        {
+            "issues.deprioritize": _assert_action_str,
+            "auth.login": _assert_action_str,
+            "repositories.add": _assert_action_repository,
+            "repositories.remove": _assert_action_repository,
+            "runtimes.update": _assert_action_runtime,
+        }
+    )
+
     def _assert_composite_issue(result: object, _mt: MagicMock) -> None:
         assert getattr(result, "id") == "i1"
+
+    def _assert_issue_children_page(result: object, _mt: MagicMock) -> None:
+        page = cast("IssueChildrenResult", result)
+        assert isinstance(page, IssueChildrenResult)
+        assert isinstance(page, Page)
+        assert page.items is page.children
+        assert page.limit is None
+        assert page.offset is None
+        assert page.total == 0
+        assert page.has_more is False
+        assert page.next_cursor is None
 
     def _c(
         sdk_method: str,
@@ -816,7 +952,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             )
             if not id.startswith("generated:")
             else None,
-            assert_result=assert_result,
+            assert_result=assert_result or action_assertions.get(sdk_method),
             dynamic_argv_positions=dynamic_argv_positions,
             transport_side_effect=transport_side_effect,
             expected_transport_argvs=expected_transport_argvs,
@@ -890,7 +1026,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "agents.update",
-            ("agent", "update", "a1", "--output", "json"),
+            ("agent", "get", "a1", "--output", "json"),
             args=("a1", AgentUpdateRequest()),
             stdout=_AG,
             id="manual:agents.update:canonical",
@@ -1211,7 +1347,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "autopilots.update",
-            ("autopilot", "update", "a1", "--output", "json"),
+            ("autopilot", "get", "a1", "--output", "json"),
             args=("a1",),
             stdout=_AP,
             method="update",
@@ -1792,7 +1928,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "projects.update",
-            ("project", "update", "pr_1", "--output", "json"),
+            ("project", "get", "pr_1", "--output", "json"),
             args=("pr_1", ProjectUpdateRequest()),
             stdout=b'{"id":"pr_1","title":"Alpha","status":"planned"}',
             id="generated:projects.update:default:canonical",
@@ -2040,7 +2176,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "skills.update",
-            ("skill", "update", "s1", "--output", "json"),
+            ("skill", "get", "s1", "--output", "json"),
             args=("s1", SkillUpdateRequest()),
             stdout=_SK,
             id="manual:skills.update:canonical",
@@ -2265,6 +2401,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("iss_1",),
             stdout=b'{"children":[],"total":0,"child_stages":[],"unstaged":[]}',
             id="manual:issues.children:canonical",
+            assert_result=_assert_issue_children_page,
         ),
         _c(
             "issues.pull_requests",
@@ -2426,9 +2563,9 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "autopilots.trigger_update",
-            ("autopilot", "trigger-update", "ap_001", "tr_001", "--output", "json"),
+            ("autopilot", "get", "ap_001", "--output", "json"),
             args=("ap_001", "tr_001", AutopilotTriggerUpdate()),
-            stdout=b'{"id":"tr_001","type":"webhook","config":{}}',
+            stdout=_AP_GET,
             id="manual:autopilots.trigger_update:variant:03",
             source_ref="manual:autopilots.trigger_update:canonical",
         ),
@@ -2865,9 +3002,56 @@ _CONTRACT_LINKED_MANUAL_OPERATION_CASES = tuple(
     for case in _DEDUPE_MANUAL_OPERATION_CASES
 )
 
+
+def _approved_canonical_conventions(
+    cases: tuple[OperationCase, ...], catalog: object
+) -> tuple[OperationCase, ...]:
+    """Project convention metadata onto canonical cases from the validated contract.
+
+    Manual cases intentionally contain no result/category declarations.  Keeping this
+    projection at the single table boundary prevents a hand-written case from becoming
+    a second public-convention source.
+    """
+    from tools.upstream_contract.contract import ContractCatalog
+
+    if not isinstance(catalog, ContractCatalog):
+        raise TypeError("canonical conventions require a validated ContractCatalog")
+    entrypoints = {
+        (operation.operation_id, entrypoint.entrypoint_id): entrypoint
+        for operation in catalog.operations
+        for entrypoint in operation.entrypoints
+    }
+    projected: list[OperationCase] = []
+    for case in cases:
+        if not case.is_canonical:
+            projected.append(case)
+            continue
+        if case.contract_operation_id is None:
+            raise ValueError(f"canonical case is not linked to the approved contract: {case.id}")
+        if case.id.startswith("generated:"):
+            entrypoint_id = case.id.removeprefix("generated:").rsplit(":", 2)[1]
+        else:
+            entrypoint_id = "default"
+        entrypoint = entrypoints[(case.contract_operation_id, entrypoint_id)]
+        projected.append(
+            replace(
+                case,
+                expected_category=entrypoint.category,
+                expected_response_id=entrypoint.response_id,
+                expected_typed_input_id=entrypoint.typed_input_id,
+                expected_input_mode=entrypoint.input_mode,
+                presence_policy_ids=entrypoint.presence_policy_ids,
+            )
+        )
+    return tuple(projected)
+
+
 OPERATION_CASES: tuple[OperationCase, ...] = tuple(
     sorted(
-        (*_CONTRACT_LINKED_MANUAL_OPERATION_CASES, *GENERATED_OPERATION_CASES),
+        _approved_canonical_conventions(
+            (*_CONTRACT_LINKED_MANUAL_OPERATION_CASES, *GENERATED_OPERATION_CASES),
+            _APPROVED_CATALOG,
+        ),
         key=lambda c: c.id,
     )
 )

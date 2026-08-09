@@ -122,7 +122,7 @@ def test_workspace_members_preserve_user_identity() -> None:
     )
     client = MagicMock()
     client.issues.list.return_value = IssueListPage(
-        issues=(IssueSummary(id="i1", title="Issue", status=_TODO),),
+        items=(IssueSummary(id="i1", title="Issue", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -213,7 +213,7 @@ def test_workspace_member_creator_reconciliation_is_typed() -> None:
 
 def test_workspace_issues_paginates_offset() -> None:
     p1 = IssueListPage(
-        issues=(
+        items=(
             IssueSummary(id="i1", title="t1", status=_TODO),
             IssueSummary(id="i2", title="t2", status=_TODO),
         ),
@@ -223,7 +223,7 @@ def test_workspace_issues_paginates_offset() -> None:
         total=3,
     )
     p2 = IssueListPage(
-        issues=(IssueSummary(id="i3", title="t3", status=_TODO),),
+        items=(IssueSummary(id="i3", title="t3", status=_TODO),),
         has_more=False,
         limit=2,
         offset=2,
@@ -246,7 +246,7 @@ def test_workspace_issues_paginates_offset() -> None:
 
 def test_workspace_issues_single_page() -> None:
     page = IssueListPage(
-        issues=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,

@@ -290,7 +290,7 @@ def test_issue_children_preserve_aggregate_metadata() -> None:
     client = _client()
     child = Issue(id="child", title="Child", status=IssueStatus.done)
     client.issues.children.return_value = IssueChildrenResult(
-        children=(child,),
+        items=(child,),
         total=2,
         child_stages=(IssueChildStageGroup(name="done", count=1),),
         unstaged=(child,),
@@ -565,7 +565,10 @@ def test_direct_issue_activity_operations_bind_origin_and_context(case: DirectBo
         (
             "pull_requests",
             b'{"pull_requests":[{"url":"https://example.test/pr/1"}]}',
-            (LinkedPullRequest(url="https://example.test/pr/1"),),
+            Page(
+                items=(LinkedPullRequest(url="https://example.test/pr/1"),),
+                total=1,
+            ),
         ),
     ],
 )

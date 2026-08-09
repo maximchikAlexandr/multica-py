@@ -62,11 +62,11 @@ def make_workspace_clients(
     scoped.squads.list.return_value = squads
     if issues is None:
         scoped.issues.list.return_value = IssueListPage(
-            issues=(), has_more=False, limit=50, offset=0, total=0
+            items=(), has_more=False, limit=50, offset=0, total=0
         )
     else:
         scoped.issues.list.side_effect = issues
-    scoped.autopilots.list.return_value = autopilots or AutopilotListPage(autopilots=(), total=0)
+    scoped.autopilots.list.return_value = autopilots or AutopilotListPage(items=(), total=0)
 
     def issues_command(issue_filter: IssueListFilter) -> Command[object]:
         def decode(_stdout: bytes, command_text: str) -> object:

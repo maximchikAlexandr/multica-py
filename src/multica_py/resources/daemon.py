@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from multica_py._internal.commands import Command
+from multica_py.models.common import Page
 from multica_py.models.system import DaemonDiskUsageEntry, DaemonStatus
 from multica_py.process import ManagedProcess
 from multica_py.resources._base import BaseResource
@@ -31,10 +32,10 @@ class DaemonResource(BaseResource):
     def restart(self) -> DaemonStatus:
         return self.restart_command().run()
 
-    def disk_usage_command(self) -> Command[tuple[DaemonDiskUsageEntry, ...]]:
-        return self._decoded_list_command(("daemon", "disk-usage"), DaemonDiskUsageEntry)
+    def disk_usage_command(self) -> Command[Page[DaemonDiskUsageEntry]]:
+        return self._decoded_page_command(("daemon", "disk-usage"), DaemonDiskUsageEntry)
 
-    def disk_usage(self) -> tuple[DaemonDiskUsageEntry, ...]:
+    def disk_usage(self) -> Page[DaemonDiskUsageEntry]:
         return self.disk_usage_command().run()
 
     def logs_command(self, follow: bool = False) -> Command[ManagedProcess]:

@@ -13,3 +13,7 @@ class ProjectCreateRequest(msgspec.Struct, frozen=True, kw_only=True):
 class ProjectUpdateRequest(msgspec.Struct, frozen=True, kw_only=True):
     name: str | UnsetType = Unset
     description: str | None | UnsetType = Unset
+
+    def __post_init__(self) -> None:
+        if self.name is None:
+            raise TypeError("name must be non-null")
