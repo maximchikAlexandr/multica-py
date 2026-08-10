@@ -50,8 +50,8 @@ ATTACHMENT_CASES = (
         "download",
         ("a1",),
         (("output_dir", _OUTPUT_DIR),),
-        ("attachment", "download", "a1", "--output-dir", str(_OUTPUT_DIR), "--output", "json"),
-        msgspec.json.encode(str(_OUTPUT_DIR / "file.txt")),
+        ("attachment", "download", "a1", "--output-dir", str(_OUTPUT_DIR)),
+        msgspec.json.encode({"path": str(_OUTPUT_DIR / "file.txt")}),
     ),
 )
 
@@ -189,7 +189,7 @@ def test_attachment_byte_helpers_preserve_content_and_clean_temporary_files(
             path = directory / case.name
             path.write_bytes(case.payload)
             temporary_directories.append(directory)
-            stdout = msgspec.json.encode(str(path))
+            stdout = msgspec.json.encode({"path": str(path)})
         return RawCommandResult(argv, 0, stdout, b"", datetime.timedelta())
 
     transport.run_bytes.side_effect = complete
@@ -271,7 +271,7 @@ def test_download_bytes_rejects_untrusted_cli_paths(kind: str, tmp_path: pathlib
             link.symlink_to(external)
             returned = link
         return RawCommandResult(
-            argv, 0, msgspec.json.encode(str(returned)), b"", datetime.timedelta()
+            argv, 0, msgspec.json.encode({"path": str(returned)}), b"", datetime.timedelta()
         )
 
     transport.run_bytes.side_effect = complete

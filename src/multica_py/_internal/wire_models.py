@@ -110,6 +110,8 @@ class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     status: IssueStatus
     priority: str | None = None
     assignee: IssueAssignee | None = None
+    assignee_id: str | None = None
+    assignee_type: str | None = None
     pull_requests: tuple[LinkedPullRequest, ...] | msgspec.UnsetType = msgspec.UNSET
     children: tuple[IssueChildStageGroup, ...] | msgspec.UnsetType = msgspec.UNSET
     labels: tuple[_LabelWire, ...] | msgspec.UnsetType = msgspec.UNSET
@@ -129,6 +131,27 @@ def _attachments_from_wire(wire: _IssueWire) -> tuple[AttachmentResult, ...]:
     return () if wire.attachments is msgspec.UNSET else wire.attachments
 
 
+def _issue_assignee_from_wire(wire: _IssueWire) -> IssueAssignee | None:
+    assignee = wire.assignee
+    if wire.assignee_id is None:
+        if wire.assignee_type is not None and assignee is None:
+            raise OutputShapeError("issue assignee_type requires assignee_id")
+        return assignee
+    if assignee is None:
+        return IssueAssignee(id=wire.assignee_id, type=wire.assignee_type)
+    if assignee.id != wire.assignee_id or (
+        assignee.type is not None
+        and wire.assignee_type is not None
+        and assignee.type != wire.assignee_type
+    ):
+        raise OutputShapeError("issue assignee projections conflict")
+    return IssueAssignee(
+        id=assignee.id,
+        name=assignee.name,
+        type=assignee.type or wire.assignee_type,
+    )
+
+
 def _issue_from_wire(wire: _IssueWire) -> Issue:
     from multica_py.resources.issues import Issue
 
@@ -143,7 +166,7 @@ def _issue_from_wire(wire: _IssueWire) -> Issue:
         description=wire.description,
         status=wire.status,
         priority=wire.priority,
-        assignee=wire.assignee,
+        assignee=_issue_assignee_from_wire(wire),
         pull_request_snapshot=pull_requests,
         child_stages=children,
         label_names=tuple(label.name for label in labels),
