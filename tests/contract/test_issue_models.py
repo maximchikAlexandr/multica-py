@@ -18,6 +18,7 @@ from multica_py._internal.wire_models import (
     issue_summary_from_wire,
 )
 from multica_py.config import ClientConfig
+from multica_py.exceptions import OutputShapeError
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.issues import (
     IssueCreateRequest,
@@ -64,6 +65,34 @@ def test_issue_get_decoding() -> None:
     assert issue.id == "iss_001"
     assert issue.title == "Test issue"
     assert issue.status.value == "todo"
+    assert issue.assignee is not None
+    assert issue.assignee.id == "usr_001"
+
+
+def test_issue_get_decodes_cli_scalar_assignee_projection() -> None:
+    wire = decode_json(
+        b'{"id":"iss_001","title":"T","status":"backlog",'
+        b'"assignee_id":"agent-1","assignee_type":"agent"}',
+        _IssueWire,
+    )
+
+    issue = _issue_from_wire(wire)
+
+    assert issue.assignee is not None
+    assert issue.assignee.id == "agent-1"
+    assert issue.assignee.type == "agent"
+
+
+def test_issue_get_rejects_conflicting_assignee_projections() -> None:
+    wire = decode_json(
+        b'{"id":"iss_001","title":"T","status":"backlog",'
+        b'"assignee":{"id":"agent-1","type":"agent"},'
+        b'"assignee_id":"agent-2","assignee_type":"agent"}',
+        _IssueWire,
+    )
+
+    with pytest.raises(OutputShapeError, match="assignee projections conflict"):
+        _issue_from_wire(wire)
 
 
 def test_issue_pull_request_snapshot_preserves_r26_relation_name() -> None:
