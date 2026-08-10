@@ -22,7 +22,6 @@ from multica_py.models.issues import (
     IssueChildStageGroup,
     IssueListPage,
     IssueMetadataItem,
-    IssueSummary,
     LinkedPullRequest,
 )
 from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
@@ -40,67 +39,6 @@ class _LabelWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     name: str
     color: str | None = None
-
-
-class _IssueSummaryWire(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    title: str
-    status: IssueStatus
-    priority: str | None = None
-    created_at: datetime.datetime | None = None
-    parent_issue_id: str | None = None
-    project_id: str | None = None
-    creator_id: str | None = None
-    creator_type: str | None = None
-    match_source: str | None = None
-    labels: tuple[_LabelWire, ...] | msgspec.UnsetType = msgspec.UNSET
-    metadata: dict[str, MetadataValue] | msgspec.UnsetType = msgspec.UNSET
-
-
-def issue_summary_from_wire(wire: _IssueSummaryWire) -> IssueSummary:
-    labels = () if wire.labels is msgspec.UNSET else wire.labels
-    metadata = {} if wire.metadata is msgspec.UNSET else wire.metadata
-    return IssueSummary(
-        id=wire.id,
-        title=wire.title,
-        status=wire.status,
-        priority=wire.priority,
-        created_at=wire.created_at,
-        parent_id=wire.parent_issue_id,
-        project_id=wire.project_id,
-        creator_id=wire.creator_id,
-        creator_type=wire.creator_type,
-        match_source=wire.match_source,
-        label_names=tuple(label.name for label in labels),
-        metadata_snapshot=tuple(
-            IssueMetadataItem(key=key, value=value) for key, value in metadata.items()
-        ),
-    )
-
-
-class _IssueListPageWire(msgspec.Struct, frozen=True, kw_only=True):
-    issues: tuple[_IssueSummaryWire, ...] = ()
-    has_more: bool = False
-    limit: int | None = None
-    offset: int | None = None
-    total: int | None = None
-    next_cursor: str | CommentCursor | None = None
-
-
-class _IssueSearchResultWire(msgspec.Struct, frozen=True, kw_only=True):
-    issues: tuple[_IssueSummaryWire, ...]
-    total: int | None = None
-
-
-def _issue_list_page_from_wire(wire: _IssueListPageWire) -> IssueListPage:
-    return IssueListPage(
-        items=tuple(issue_summary_from_wire(item) for item in wire.issues),
-        has_more=wire.has_more,
-        limit=wire.limit,
-        offset=wire.offset,
-        total=wire.total,
-        next_cursor=wire.next_cursor,
-    )
 
 
 class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -122,6 +60,32 @@ class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     creator_id: str | None = None
     creator_type: str | None = (
         None  # ponytail: free string, no enum — upstream values not stabilised; add CreatorType enum when they are
+    )
+    match_source: str | None = None
+
+
+class _IssueListPageWire(msgspec.Struct, frozen=True, kw_only=True):
+    issues: tuple[_IssueWire, ...] = ()
+    has_more: bool = False
+    limit: int | None = None
+    offset: int | None = None
+    total: int | None = None
+    next_cursor: str | CommentCursor | None = None
+
+
+class _IssueSearchResultWire(msgspec.Struct, frozen=True, kw_only=True):
+    issues: tuple[_IssueWire, ...]
+    total: int | None = None
+
+
+def _issue_list_page_from_wire(wire: _IssueListPageWire) -> IssueListPage:
+    return IssueListPage(
+        items=tuple(_issue_from_wire(item) for item in wire.issues),
+        has_more=wire.has_more,
+        limit=wire.limit,
+        offset=wire.offset,
+        total=wire.total,
+        next_cursor=wire.next_cursor,
     )
 
 
@@ -157,6 +121,7 @@ def _issue_from_wire(wire: _IssueWire) -> Issue:
         project_id=wire.project_id,
         creator_id=wire.creator_id,
         creator_type=wire.creator_type,
+        match_source=wire.match_source,
     )
 
 

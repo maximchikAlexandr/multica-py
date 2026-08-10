@@ -10,7 +10,6 @@ import pytest
 from multica_py._internal.specs import RawCommandResult
 from multica_py.config import ClientConfig
 from multica_py.exceptions import ConflictError
-from multica_py.models.system import RuntimeUpdate
 from multica_py.resources.runtimes import RuntimeResource
 
 
@@ -28,12 +27,12 @@ INVALID_RUNTIME_CASES: tuple[InvalidRuntimeCase, ...] = (
     InvalidRuntimeCase("activity-id", lambda resource: resource.activity(""), "runtime_id"),
     InvalidRuntimeCase(
         "update-id",
-        lambda resource: resource.update("", RuntimeUpdate(target_version="1.2.3")),
+        lambda resource: resource.update("", target_version="1.2.3"),
         "runtime_id and target_version",
     ),
     InvalidRuntimeCase(
         "update-version",
-        lambda resource: resource.update("r1", RuntimeUpdate(target_version=" ")),
+        lambda resource: resource.update("r1", target_version=" "),
         "runtime_id and target_version",
     ),
     InvalidRuntimeCase("rename-id", lambda resource: resource.rename(" ", "name"), "runtime_id"),

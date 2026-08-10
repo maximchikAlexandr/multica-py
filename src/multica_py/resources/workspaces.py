@@ -6,10 +6,11 @@ import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
+from multica_py.config import OperationOptions
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.autopilots import AutopilotListPage
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.issues import IssueListFilter, IssueSummary
+from multica_py.models.issues import IssueListFilter
 from multica_py.models.relations import (
     LazyCollection,
     OffsetLazyCollection,
@@ -22,8 +23,9 @@ from multica_py.resources._base import BaseResource, _page_items
 from multica_py.resources.agents import Agent
 from multica_py.resources.autopilots import Autopilot
 from multica_py.resources.issues import (
-    _issue_summary_offset_page,
-    _issue_summary_offset_page_command,
+    Issue,
+    _issue_offset_page,
+    _issue_offset_page_command,
 )
 from multica_py.resources.labels import Label
 from multica_py.resources.projects import Project
@@ -36,13 +38,13 @@ if TYPE_CHECKING:
 
 def _workspace_page_issues(
     client: MulticaClient, limit: int | None, offset: int
-) -> OffsetPage[IssueSummary]:
+) -> OffsetPage[Issue]:
 
     flt = IssueListFilter(
         limit=limit,
         offset=offset,
     )
-    return _issue_summary_offset_page(client.issues, flt)
+    return _issue_offset_page(client.issues, flt)
 
 
 def _workspace_issues_page_command(
@@ -50,8 +52,8 @@ def _workspace_issues_page_command(
     assignee_id: str | None,
     limit: int | None,
     offset: int,
-) -> Command[OffsetPage[IssueSummary]]:
-    return _issue_summary_offset_page_command(
+) -> Command[OffsetPage[Issue]]:
+    return _issue_offset_page_command(
         client.issues,
         IssueListFilter(assignee_id=assignee_id, limit=limit, offset=offset),
     )
@@ -75,26 +77,26 @@ class WorkspaceMember(_BoundEntity):  # type: ignore[misc]
     user_id: str | None = None
     email: str | None = None
 
-    _issues: OffsetLazyCollection[IssueSummary] | None = msgspec.field(default=None, name="_issues")
+    _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
 
     _PUBLIC_FIELDS = ("id", "name", "role", "user_id", "email")
 
     @property
-    def issues(self) -> OffsetLazyCollection[IssueSummary]:
+    def issues(self) -> OffsetLazyCollection[Issue]:
         if self._issues is None:
             client = self._require_client(
                 entity_type="WorkspaceMember", entity_id=self.id, relation_name="issues"
             )
             mid = self.id
 
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
+            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[Issue]:
 
                 flt = IssueListFilter(
                     assignee_id=mid,
                     limit=limit,
                     offset=offset,
                 )
-                return _issue_summary_offset_page(client.issues, flt)
+                return _issue_offset_page(client.issues, flt)
 
             self._set_runtime(
                 "_issues",
@@ -126,7 +128,7 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         default=None, name="_runtimes"
     )
     _squads: LazyCollection[Squad] | None = msgspec.field(default=None, name="_squads")
-    _issues: OffsetLazyCollection[IssueSummary] | None = msgspec.field(default=None, name="_issues")
+    _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
     _autopilots: LazyCollection[Autopilot] | None = msgspec.field(default=None, name="_autopilots")
 
     _PUBLIC_FIELDS = ("id", "name", "description")
@@ -272,11 +274,11 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         return self._squads  # type: ignore[return-value]
 
     @property
-    def issues(self) -> OffsetLazyCollection[IssueSummary]:
+    def issues(self) -> OffsetLazyCollection[Issue]:
         if self._issues is None:
             client = self._check_client("issues")
 
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
+            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[Issue]:
                 return _workspace_page_issues(client, limit, offset)
 
             self._set_runtime(
@@ -313,8 +315,8 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
 
 
 class WorkspaceResource(BaseResource):
-    def list_command(self) -> Command[Page[Workspace]]:
-        return self._decoded_page_command(("workspace", "list"), Workspace)._map(
+    def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Workspace]]:
+        return self._decoded_page_command(("workspace", "list"), Workspace, options=options)._map(
             lambda page: Page(
                 items=tuple(item._with_client(self._client) for item in page.items),
                 limit=page.limit,
@@ -325,21 +327,25 @@ class WorkspaceResource(BaseResource):
             )
         )
 
-    def list(self) -> Page[Workspace]:
-        return self.list_command().run()
+    def list(self, *, options: OperationOptions | None = None) -> Page[Workspace]:
+        return self.list_command(options=options).run()
 
-    def get_command(self, workspace_id: str) -> Command[Workspace]:
+    def get_command(
+        self, workspace_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Workspace]:
         validate_nonblank(workspace_id)
-        return self._decoded_command(("workspace", "get", workspace_id), Workspace)._map(
-            lambda workspace: workspace._with_client(self._client)
-        )
+        return self._decoded_command(
+            ("workspace", "get", workspace_id), Workspace, options=options
+        )._map(lambda workspace: workspace._with_client(self._client))
 
-    def get(self, workspace_id: str) -> Workspace:
-        return self.get_command(workspace_id).run()
+    def get(self, workspace_id: str, *, options: OperationOptions | None = None) -> Workspace:
+        return self.get_command(workspace_id, options=options).run()
 
-    def members_command(self, workspace_id: str) -> Command[Page[WorkspaceMember]]:
+    def members_command(
+        self, workspace_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[WorkspaceMember]]:
         return self._decoded_page_command(
-            ("workspace", "member", "list", workspace_id), WorkspaceMember
+            ("workspace", "member", "list", workspace_id), WorkspaceMember, options=options
         )._map(
             lambda page: Page(
                 items=tuple(item._with_client(self._client) for item in page.items),
@@ -351,23 +357,37 @@ class WorkspaceResource(BaseResource):
             )
         )
 
-    def members(self, workspace_id: str) -> Page[WorkspaceMember]:
-        return self.members_command(workspace_id).run()
+    def members(
+        self, workspace_id: str, *, options: OperationOptions | None = None
+    ) -> Page[WorkspaceMember]:
+        return self.members_command(workspace_id, options=options).run()
 
-    def switch_command(self, workspace_id: str) -> Command[ActionResult[None]]:
-        return self._action_command(("workspace", "switch", workspace_id))
+    def switch_command(
+        self, workspace_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
+        return self._action_command(("workspace", "switch", workspace_id), options=options)
 
-    def switch(self, workspace_id: str) -> ActionResult[None]:
-        return self.switch_command(workspace_id).run()
+    def switch(
+        self, workspace_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.switch_command(workspace_id, options=options).run()
 
-    def watch_command(self, workspace_id: str) -> Command[ActionResult[None]]:
-        return self._action_command(("workspace", "watch", workspace_id))
+    def watch_command(
+        self, workspace_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
+        return self._action_command(("workspace", "watch", workspace_id), options=options)
 
-    def watch(self, workspace_id: str) -> ActionResult[None]:
-        return self.watch_command(workspace_id).run()
+    def watch(
+        self, workspace_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.watch_command(workspace_id, options=options).run()
 
-    def unwatch_command(self, workspace_id: str) -> Command[ActionResult[None]]:
-        return self._action_command(("workspace", "unwatch", workspace_id))
+    def unwatch_command(
+        self, workspace_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
+        return self._action_command(("workspace", "unwatch", workspace_id), options=options)
 
-    def unwatch(self, workspace_id: str) -> ActionResult[None]:
-        return self.unwatch_command(workspace_id).run()
+    def unwatch(
+        self, workspace_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.unwatch_command(workspace_id, options=options).run()

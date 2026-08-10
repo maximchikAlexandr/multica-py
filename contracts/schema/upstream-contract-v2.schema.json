@@ -474,6 +474,13 @@
           },
           "type": "array"
         },
+        "local_only_symbols": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "response_catalog": {
           "additionalProperties": {
             "$ref": "#/$defs/ResponseCatalogEntry"
@@ -597,6 +604,18 @@
           "pattern": "^[a-z][a-z0-9_]*$",
           "type": "string"
         },
+        "signature": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "options": {
+          "enum": [
+            "none",
+            "optional"
+          ],
+          "default": "optional",
+          "type": "string"
+        },
         "typed_input_id": {
           "anyOf": [
             {
@@ -638,6 +657,8 @@
       "required": [
         "category",
         "response_id",
+        "signature",
+        "options",
         "typed_input_id",
         "input_mode",
         "presence_policy_ids",
@@ -649,6 +670,14 @@
     "ResponseCatalogEntry": {
       "additionalProperties": false,
       "properties": {
+        "aliases": {
+          "default": [],
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "type": "array"
+        },
         "public_type_id": {
           "not": {
             "anyOf": [
@@ -779,6 +808,18 @@
         "signature_id": {
           "type": "string"
         },
+        "signature": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "options": {
+          "enum": [
+            "none",
+            "optional"
+          ],
+          "default": "optional",
+          "type": "string"
+        },
         "binding_id": {
           "type": "string"
         },
@@ -823,6 +864,8 @@
         "response_id",
         "errors",
         "category",
+        "signature",
+        "options",
         "typed_input_id",
         "input_mode",
         "presence_policy_ids",

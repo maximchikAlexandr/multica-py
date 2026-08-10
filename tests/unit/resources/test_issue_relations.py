@@ -11,6 +11,7 @@ import pytest
 from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import _issue_from_wire, _IssueWire
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
@@ -19,16 +20,13 @@ from multica_py.exceptions import OutputShapeError, RelationPaginationError
 from multica_py.models.common import Page
 from multica_py.models.issue_activity import (
     CommentCursor,
-    CommentListFlatRequest,
-    CommentListRecentRequest,
-    CommentListThreadRequest,
     RunMessage,
 )
 from multica_py.models.issues import (
     IssueChildrenResult,
     IssueChildStageGroup,
+    IssueListFilter,
     IssueMetadataItem,
-    IssueSummary,
     LinkedPullRequest,
 )
 from multica_py.models.relations import (
@@ -40,8 +38,12 @@ from multica_py.models.relations import (
     OffsetPage,
 )
 from multica_py.resources._base import BaseResource
+from multica_py.resources.agents import Agent
 from multica_py.resources.issue_comments import Comment, CommentThread
-from multica_py.resources.issues import Issue, IssueResource, TaskRun
+from multica_py.resources.issues import Issue, IssueResource, TaskRun, _issue_offset_page_command
+from multica_py.resources.projects import Project
+from multica_py.resources.squads import Squad
+from multica_py.resources.workspaces import Workspace, WorkspaceMember
 
 
 @dataclass(frozen=True)
@@ -68,6 +70,33 @@ class DirectBoundCase:
     expected_argv: tuple[str, ...]
     expected_type: type[Comment | CommentThread | TaskRun]
     second_hop: Literal["none", "comments", "messages"]
+
+
+@dataclass(frozen=True)
+class IssueOriginCase:
+    name: str
+    origin: Literal[
+        "get",
+        "list",
+        "search",
+        "workspace",
+        "workspace-member",
+        "project",
+        "agent",
+        "squad",
+    ]
+
+
+ISSUE_ORIGIN_CASES = (
+    IssueOriginCase("issue get", "get"),
+    IssueOriginCase("issue list", "list"),
+    IssueOriginCase("issue search", "search"),
+    IssueOriginCase("workspace relation", "workspace"),
+    IssueOriginCase("workspace member relation", "workspace-member"),
+    IssueOriginCase("project relation", "project"),
+    IssueOriginCase("agent relation", "agent"),
+    IssueOriginCase("squad relation", "squad"),
+)
 
 
 RELATION_CASES = (
@@ -191,6 +220,92 @@ def _issue(client: MulticaClient | None = None) -> Issue:
     )
 
 
+@pytest.mark.parametrize("case", ISSUE_ORIGIN_CASES, ids=lambda case: case.name)
+def test_issue_origins_bind_actionable_items_to_the_origin_client(case: IssueOriginCase) -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    issue_wire = b'{"id":"i1","title":"Issue","status":"todo"}'
+    transport.run_bytes.side_effect = lambda argv, **_kwargs: RawCommandResult(
+        argv=argv,
+        exit_code=0,
+        stdout=(
+            b'{"issues":[{"id":"i1","title":"Issue","status":"todo"}],'
+            b'"has_more":false,"limit":50,"offset":0,"total":1}'
+            if argv[:2] in {("issue", "list"), ("issue", "search")}
+            else b'[{"id":"membership-1","name":"Member"}]'
+            if argv[:3] == ("workspace", "member", "list")
+            else b'{"id":"ws1","name":"Workspace"}'
+            if argv[:2] == ("workspace", "get")
+            else b'{"id":"p1","title":"Project","status":"planned"}'
+            if argv[:2] == ("project", "get")
+            else b'{"id":"a1","name":"Agent"}'
+            if argv[:2] == ("agent", "get")
+            else b'{"id":"sq1","name":"Squad"}'
+            if argv[:2] == ("squad", "get")
+            else issue_wire
+        ),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    client = MulticaClient()
+    client._transport = transport
+    for resource in (
+        client.issues,
+        client.projects,
+        client.workspaces,
+        client.agents,
+        client.squads,
+    ):
+        resource._transport = transport
+
+    expected_client = client
+    if case.origin == "get":
+        item = client.issues.get("i1")
+    elif case.origin == "list":
+        item = client.issues.list().items[0]
+    elif case.origin == "search":
+        item = client.issues.search("needle").items[0]
+    elif case.origin == "workspace":
+        workspace = client.workspaces.get("ws1")
+        original_with_workspace = client.with_workspace
+        scoped_clients: list[MulticaClient] = []
+
+        def scoped(workspace_id: str) -> MulticaClient:
+            scoped_client = original_with_workspace(workspace_id)
+            scoped_client.issues._transport = transport
+            scoped_clients.append(scoped_client)
+            return scoped_client
+
+        client.with_workspace = MagicMock(side_effect=scoped)  # type: ignore[method-assign]
+        item = workspace.issues.all()[0]
+        assert scoped_clients
+        expected_client = scoped_clients[0]
+    elif case.origin == "workspace-member":
+        item = client.workspaces.members("ws1").items[0].issues.all()[0]
+    elif case.origin == "project":
+        item = client.projects.get("p1").issues.all()[0]
+    elif case.origin == "agent":
+        item = client.agents.get("a1").issues.all()[0]
+    else:
+        item = client.squads.get("sq1").issues.all()[0]
+
+    assert isinstance(item, Issue)
+    assert item._client is expected_client
+    refresh = item.refresh_command()
+    assign = item.assign_command("member-1")
+    assert refresh.commands == ("multica issue get i1 --output json",)
+    assert assign.commands == ("multica issue assign i1 --to-id member-1 --output json",)
+    issue_get_calls = sum(
+        call.args[0][:2] == ("issue", "get") for call in transport.run_bytes.call_args_list
+    )
+    collection_calls = sum(
+        call.args[0][:2] in {("issue", "list"), ("issue", "search")}
+        for call in transport.run_bytes.call_args_list
+    )
+    assert issue_get_calls == (1 if case.origin == "get" else 0)
+    assert collection_calls == (0 if case.origin == "get" else 1)
+
+
 def _client() -> MagicMock:
     client = MagicMock()
     command_resource = BaseResource(MagicMock(), ClientConfig())
@@ -207,14 +322,14 @@ def _client() -> MagicMock:
     client.issues.pull_requests.return_value = ()
     client.issues.children.return_value = IssueChildrenResult()
     client.issues.runs.return_value = ()
-    client.issues.comments.list_flat_command = lambda request: empty_command(
-        lambda: client.issues.comments.list_flat(request)
+    client.issues.comments.list_flat_command = lambda **kwargs: empty_command(
+        lambda: client.issues.comments.list_flat(**kwargs)
     )
-    client.issues.comments.list_recent_command = lambda request: empty_command(
-        lambda: client.issues.comments.list_recent(request)
+    client.issues.comments.list_recent_command = lambda **kwargs: empty_command(
+        lambda: client.issues.comments.list_recent(**kwargs)
     )
-    client.issues.comments.list_thread_command = lambda request: empty_command(
-        lambda: client.issues.comments.list_thread(request)
+    client.issues.comments.list_thread_command = lambda **kwargs: empty_command(
+        lambda: client.issues.comments.list_thread(**kwargs)
     )
     client.issues.labels.list_command = lambda issue_id: empty_command(
         lambda: client.issues.labels.list(issue_id)
@@ -253,11 +368,11 @@ def _client() -> MagicMock:
     client.issues.run_messages_command = lambda run_id, *, issue_id=None: empty_command(
         lambda: client.issues.run_messages(run_id, issue_id=issue_id)
     )
-    client.issues.comments.add_command = lambda issue_id, body: empty_command(
+    client.issues.comments.add_command = lambda issue_id, body, *, options=None: empty_command(
         lambda: client.issues.comments.add(issue_id, body)
     )
-    client.issues.comments.reply_command = lambda issue_id, thread_id, body: empty_command(
-        lambda: client.issues.comments.reply(issue_id, thread_id, body)
+    client.issues.comments.reply_command = lambda issue_id, thread_id, body, *, options=None: (
+        empty_command(lambda: client.issues.comments.reply(issue_id, thread_id, body))
     )
     return client
 
@@ -289,8 +404,9 @@ def test_issue_snapshot_names_are_migrated() -> None:
 def test_issue_children_preserve_aggregate_metadata() -> None:
     client = _client()
     child = Issue(id="child", title="Child", status=IssueStatus.done)
+    second_child = Issue(id="child-2", title="Child 2", status=IssueStatus.todo)
     client.issues.children.return_value = IssueChildrenResult(
-        items=(child,),
+        items=(child, second_child),
         total=2,
         child_stages=(IssueChildStageGroup(name="done", count=1),),
         unstaged=(child,),
@@ -299,10 +415,12 @@ def test_issue_children_preserve_aggregate_metadata() -> None:
 
     result = entity.children.all()
 
-    assert [item.id for item in result] == ["child"]
+    assert [item.id for item in result] == ["child", "child-2"]
+    assert all(isinstance(item, Issue) for item in result)
     assert entity.children.metadata.total == 2
     assert entity.children.metadata.child_stages == (IssueChildStageGroup(name="done", count=1),)
     assert [item.id for item in entity.children.metadata.unstaged] == ["child"]
+    client.issues.get.assert_not_called()
 
 
 def test_issue_comments_and_query_views_invalidate_after_add() -> None:
@@ -339,9 +457,9 @@ def test_comment_thread_cursor_relation_inherits_issue_context() -> None:
     assert isinstance(bound_thread.comments, CursorLazyCollection)
     assert [comment.id for comment in bound_thread.comments.all()] == ["c1"]
     client.issues.comments.list_thread.assert_called_once()
-    request = client.issues.comments.list_thread.call_args.args[0]
-    assert request.issue_id == "iss_1"
-    assert request.thread_id == "th_1"
+    request = client.issues.comments.list_thread.call_args.kwargs
+    assert request["issue_id"] == "iss_1"
+    assert request["thread_id"] == "th_1"
 
 
 def test_task_run_messages_preserve_issue_and_task_ids() -> None:
@@ -363,9 +481,9 @@ def test_cursor_query_passes_complete_pair() -> None:
     cursor = CommentCursor(before="before", before_id="before-id")
     entity.recent_comment_threads(limit=5, cursor=cursor).page(cursor=cursor)
 
-    request = client.issues.comments.list_recent.call_args.args[0]
-    assert request.limit == 5
-    assert request.cursor == cursor
+    request = client.issues.comments.list_recent.call_args.kwargs
+    assert request["limit"] == 5
+    assert request["cursor"] == cursor
 
 
 def test_cursor_no_progress_is_typed_and_retryable() -> None:
@@ -456,7 +574,7 @@ def test_offset_pagination_uses_requested_offset_not_response_metadata() -> None
 
 
 def test_offset_pagination_rejects_empty_progress_page() -> None:
-    relation: OffsetLazyCollection[IssueSummary] = OffsetLazyCollection(
+    relation: OffsetLazyCollection[Issue] = OffsetLazyCollection(
         lambda *, limit, offset: OffsetPage((), 1, limit or 1, offset, True)
     )
 
@@ -491,6 +609,27 @@ def _raw(stdout: bytes) -> RawCommandResult:
     )
 
 
+def test_issue_offset_page_command_binds_rows_to_origin_client() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.run_bytes.return_value = _raw(
+        b'{"issues":[{"id":"i1","title":"Issue","status":"todo"}],'
+        b'"has_more":false,"limit":50,"offset":0,"total":1}'
+    )
+    resource = IssueResource(transport, ClientConfig())
+    client = MagicMock()
+    resource._set_client(client)
+
+    result = _issue_offset_page_command(
+        resource,
+        IssueListFilter(limit=50, offset=0),
+    ).run()
+
+    assert len(result.items) == 1
+    assert isinstance(result.items[0], Issue)
+    assert result.items[0]._client is client
+    client.issues.get.assert_not_called()
+
+
 def _direct_result(
     resource: IssueResource,
     operation: Literal["list", "list_flat", "list_thread", "list_recent", "add", "reply", "runs"],
@@ -498,15 +637,13 @@ def _direct_result(
     if operation == "list":
         return resource.comments.list_command("iss_1").run()
     if operation == "list_flat":
-        return resource.comments.list_flat_command(CommentListFlatRequest(issue_id="iss_1")).run()
+        return resource.comments.list_flat_command(issue_id="iss_1").run()
     if operation == "list_thread":
         return resource.comments.list_thread_command(
-            CommentListThreadRequest(issue_id="iss_1", thread_id="th_1", limit=10)
+            issue_id="iss_1", thread_id="th_1", limit=10
         ).run()
     if operation == "list_recent":
-        return resource.comments.list_recent_command(
-            CommentListRecentRequest(issue_id="iss_1")
-        ).run()
+        return resource.comments.list_recent_command(issue_id="iss_1").run()
     if operation == "add":
         return resource.comments.add_command("iss_1", "comment").run()
     if operation == "reply":
@@ -548,8 +685,8 @@ def test_direct_issue_activity_operations_bind_origin_and_context(case: DirectBo
             items=(Comment(id="c2", body="reply"),), next_cursor=None
         )
         assert [comment.id for comment in cast("CommentThread", item).comments.all()] == ["c2"]
-        request = client.issues.comments.list_thread.call_args.args[0]
-        assert (request.issue_id, request.thread_id) == ("iss_1", "th_1")
+        request = client.issues.comments.list_thread.call_args.kwargs
+        assert (request["issue_id"], request["thread_id"]) == ("iss_1", "th_1")
     if case.second_hop == "messages":
         client.issues.run_messages.return_value = (
             RunMessage(id="m1", run_id="run_1", role="assistant", content="ok"),

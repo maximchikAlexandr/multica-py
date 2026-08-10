@@ -176,6 +176,7 @@ def _runtime(catalog: ContractCatalog) -> bytes:
     exports.extend(
         item.name for item in sorted(validators_by_name.values(), key=validator_name_key)
     )
+    exports.sort(key=lambda name: (not name.isupper(), not name[:1].isupper(), name))
     lines.append(f"__all__ = {tuple(exports)!r}")
     lines.append("")
     return "\n".join(lines).encode()

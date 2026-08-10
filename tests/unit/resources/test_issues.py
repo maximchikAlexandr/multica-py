@@ -20,22 +20,18 @@ from multica_py._internal.wire_models import (
 )
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
-from multica_py.models.issue_activity import (
-    CommentListFlatRequest,
-    MetadataSetRequest,
-)
+from multica_py.exceptions import DetachedEntityError
 from multica_py.models.issues import (
     InlineDescription,
-    IssueAssignmentRequest,
     IssueChildrenResult,
-    IssueCreateRequest,
+    IssueDescriptionInput,
     IssueListFilter,
     IssueListPage,
     IssueMetadataItem,
-    IssueReorderRequest,
     NoDescription,
 )
 from multica_py.models.system import AttachmentResult
+from multica_py.resources.agents import Agent
 from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
@@ -65,6 +61,52 @@ class _MetadataValidationCase:
 class _IssueAttachmentCase:
     payload: bytes
     expected: tuple[AttachmentResult, ...]
+
+
+@dataclass(frozen=True)
+class _IssueCreateArgvCase:
+    name: str
+    description_input: IssueDescriptionInput
+    label_ids: tuple[str, ...]
+    expected_steps: tuple[tuple[str, ...], ...]
+
+
+_ISSUE_CREATE_ARGV_CASES = (
+    _IssueCreateArgvCase(
+        name="without description",
+        description_input=NoDescription(),
+        label_ids=(),
+        expected_steps=(("issue", "create", "--title", "Test", "--output", "json"),),
+    ),
+    _IssueCreateArgvCase(
+        name="with description",
+        description_input=InlineDescription(text="Description text"),
+        label_ids=(),
+        expected_steps=(
+            (
+                "issue",
+                "create",
+                "--title",
+                "Test",
+                "--description",
+                "Description text",
+                "--output",
+                "json",
+            ),
+        ),
+    ),
+    _IssueCreateArgvCase(
+        name="with labels",
+        description_input=NoDescription(),
+        label_ids=("bug", "urgent"),
+        expected_steps=(
+            ("issue", "create", "--title", "Test", "--output", "json"),
+            ("issue", "label", "add", "", "bug", "--output", "json"),
+            ("issue", "label", "add", "", "urgent", "--output", "json"),
+            ("issue", "get", "", "--output", "json"),
+        ),
+    ),
+)
 
 
 _ISSUE_LIST_PROJECTION_CASES = (
@@ -122,23 +164,14 @@ _ISSUE_ATTACHMENT_CASES = (
 )
 
 
-def test_issue_create_request_with_description():
-    req = IssueCreateRequest(
-        title="Test", description_input=InlineDescription(text="Description text")
+@pytest.mark.parametrize("case", _ISSUE_CREATE_ARGV_CASES, ids=lambda case: case.name)
+def test_issue_create_direct_uses_full_expected_argv(case: _IssueCreateArgvCase) -> None:
+    resource = IssueResource(MagicMock(), ClientConfig())
+    command = resource.create_command(
+        title="Test", description_input=case.description_input, label_ids=case.label_ids
     )
-    assert req.title == "Test"
-    assert isinstance(req.description_input, InlineDescription)
-    assert req.description_input.text == "Description text"
 
-
-def test_issue_create_request_no_description():
-    req = IssueCreateRequest(title="Test")
-    assert isinstance(req.description_input, NoDescription)
-
-
-def test_issue_create_request_with_labels():
-    req = IssueCreateRequest(title="Test", label_ids=("bug", "urgent"))
-    assert req.label_ids == ("bug", "urgent")
+    assert tuple(step.argv for step in command._plan.steps) == case.expected_steps
 
 
 def test_global_args_with_server_and_workspace():
@@ -193,6 +226,45 @@ def test_issue_resource_list_returns_issue_list_page(mock_transport: MagicMock) 
     assert type(page) is IssueListPage
 
 
+def test_issue_list_finalizer_binds_partial_rows_without_extra_get(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=("issue", "list", "--output", "json"),
+        exit_code=0,
+        stdout=(
+            b'{"issues":[{"id":"i1","title":"Partial","status":"todo",'
+            b'"parent_issue_id":"p1","match_source":"future-index"}]}'
+        ),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    client = MagicMock()
+    resource = IssueResource(mock_transport, ClientConfig())
+    resource._set_client(client)
+
+    page = resource.list()
+    issue = page.items[0]
+
+    assert page.issues is page.items
+    assert isinstance(issue, Issue)
+    assert issue._client is client
+    assert issue.description is None
+    assert issue.parent_id == "p1"
+    assert issue.match_source == "future-index"
+    assert issue.to_dict()["match_source"] == "future-index"
+    assert issue == Issue.from_dict(issue.to_dict())
+    assert issue.to_json() == Issue.from_dict(issue.to_dict()).to_json()
+    mock_transport.run_bytes.assert_called_once()
+    client.issues.get.assert_not_called()
+
+    client.issues = resource
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    action = issue.add_comment_command("ready")
+    assert action.commands == ("multica issue comment add i1 --content ready --output json",)
+    mock_transport.run_bytes.assert_called_once()
+
+
 def test_issue_entity_commands_route_relations_and_mutations_lazily(
     mock_transport: MagicMock,
 ) -> None:
@@ -224,6 +296,52 @@ def test_issue_entity_commands_route_relations_and_mutations_lazily(
     )
     mock_transport.run_bytes.assert_not_called()
     mock_transport.run_text.assert_not_called()
+
+
+def test_issue_continuation_commands_forward_fixed_id_and_entities(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    client = MagicMock()
+    resource = IssueResource(mock_transport, ClientConfig())
+    resource._set_client(client)
+    client.issues = resource
+    issue = Issue(id="i1", title="Issue", status=IssueStatus.todo, _client=client)
+    other = Issue(id="i2", title="Other", status=IssueStatus.todo)
+    agent = Agent(id="a1", name="Agent")
+
+    commands = (
+        issue.refresh_command(),
+        issue.update_command(title="Updated"),
+        issue.assign_command(agent),
+        issue.unassign_command(),
+        issue.set_status_command(IssueStatus.done),
+        issue.move_to_top_command(),
+        issue.move_to_bottom_command(),
+        issue.move_before_command(other),
+        issue.move_after_command("i3"),
+    )
+
+    assert tuple(command.commands[0] for command in commands) == (
+        "multica issue get i1 --output json",
+        "multica issue update i1 --title Updated --output json",
+        "multica issue assign i1 --to-id a1 --output json",
+        "multica issue assign i1 --unassign --output json",
+        "multica issue status i1 done --output json",
+        "multica issue reorder i1 --top --output json",
+        "multica issue reorder i1 --bottom --output json",
+        "multica issue reorder i1 --before i2 --output json",
+        "multica issue reorder i1 --after i3 --output json",
+    )
+    mock_transport.run_bytes.assert_not_called()
+
+
+def test_issue_continuations_require_client_before_command_construction() -> None:
+    issue = Issue(id="i1", title="Issue", status=IssueStatus.todo)
+    with pytest.raises(DetachedEntityError):
+        issue.refresh_command()
+    with pytest.raises(DetachedEntityError):
+        issue.assign_command("a1")
 
 
 def test_task_run_messages_command_delegates_to_issue_resource(
@@ -351,14 +469,22 @@ def test_issue_polling_uses_attachment_id_from_later_get(mock_transport: MagicMo
 
 def test_invalid_value_rejected():
     with pytest.raises(TypeError):
-        IssueCreateRequest(title="Test", description_input="some random string")  # type: ignore[arg-type]
+        IssueResource(MagicMock(), ClientConfig()).create_command(
+            title="Test",
+            description_input="some random string",  # type: ignore[arg-type]
+        )
 
 
-def test_issue_assignment_request_rejects_multiple_targets():
-    with pytest.raises(ValueError, match="Exactly one assignment target must be set"):
-        IssueAssignmentRequest(issue_id="iss_001", member_id="usr_001", unassign=True)
+def test_issue_assignment_rejects_blank_or_structural_targets_before_io():
+    resource = IssueResource(MagicMock(), ClientConfig())
+    with pytest.raises(ValueError, match="assignee must be non-empty"):
+        resource.assign_command("iss_001", " ")
+    with pytest.raises(TypeError, match="non-empty ID"):
+        resource.assign_command("iss_001", object())  # type: ignore[arg-type]
 
 
 def test_issue_reorder_request_rejects_multiple_targets():
     with pytest.raises(ValueError, match="Exactly one reorder target must be set"):
-        IssueReorderRequest(issue_id="iss_001", before_id="iss_002", bottom=True)
+        IssueResource(MagicMock(), ClientConfig()).reorder_command(
+            "iss_001", before_id="iss_002", bottom=True
+        )

@@ -199,6 +199,10 @@ _MARKER_LOOKALIKE_CASES: tuple[MarkerCase, ...] = (
 _ENVIRONMENT_SECRET_CASES: tuple[EnvironmentSecretCase, ...] = (
     EnvironmentSecretCase("multica-token", "MULTICA_TOKEN"),
     EnvironmentSecretCase("api-key", "THIRD_PARTY_API_KEY"),
+    EnvironmentSecretCase("prefixed-access-key", "SERVICE_ACCESS_KEY"),
+    EnvironmentSecretCase("suffixed-passwd", "PASSWD_SUFFIX"),
+    EnvironmentSecretCase("camel-client-secret", "clientSecret"),
+    EnvironmentSecretCase("whitespace-api-key", "api key"),
 )
 
 _URL_SECRET_CASES: tuple[UrlSecretCase, ...] = (

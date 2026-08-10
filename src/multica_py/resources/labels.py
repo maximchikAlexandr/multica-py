@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import cast, overload
-
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
+from multica_py.config import OperationOptions
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.labels import LabelUpdateRequest
-from multica_py.resources._base import BaseResource, _resolve_request
+from multica_py.resources._base import BaseResource, _validate_optional_string
 from multica_py.sentinels import Unset, UnsetType
 
 
@@ -20,8 +18,8 @@ class Label(_BoundEntity):  # type: ignore[misc]
 
 
 class LabelResource(BaseResource):
-    def list_command(self) -> Command[Page[Label]]:
-        return self._decoded_page_command(("label", "list"), Label)._map(
+    def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Label]]:
+        return self._decoded_page_command(("label", "list"), Label, options=options)._map(
             lambda page: Page(
                 items=tuple(item._with_client(self._client) for item in page.items),
                 limit=page.limit,
@@ -32,75 +30,76 @@ class LabelResource(BaseResource):
             )
         )
 
-    def list(self) -> Page[Label]:
-        return self.list_command().run()
+    def list(self, *, options: OperationOptions | None = None) -> Page[Label]:
+        return self.list_command(options=options).run()
 
-    def get_command(self, label_id: str) -> Command[Label]:
-        return self._decoded_command(("label", "get", label_id), Label)._map(
+    def get_command(
+        self, label_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Label]:
+        return self._decoded_command(("label", "get", label_id), Label, options=options)._map(
             lambda label: label._with_client(self._client)
         )
 
-    def get(self, label_id: str) -> Label:
-        return self.get_command(label_id).run()
+    def get(self, label_id: str, *, options: OperationOptions | None = None) -> Label:
+        return self.get_command(label_id, options=options).run()
 
-    def create_command(self, name: str, color: str | None = None) -> Command[Label]:
+    def create_command(
+        self, name: str, color: str | None = None, *, options: OperationOptions | None = None
+    ) -> Command[Label]:
         args = ["label", "create", "--name", name]
         if color is not None:
             args.extend(["--color", color])
-        return self._decoded_command(tuple(args), Label)._map(
+        return self._decoded_command(tuple(args), Label, options=options)._map(
             lambda label: label._with_client(self._client)
         )
 
-    def create(self, name: str, color: str | None = None) -> Label:
-        return self.create_command(name, color).run()
+    def create(
+        self, name: str, color: str | None = None, *, options: OperationOptions | None = None
+    ) -> Label:
+        return self.create_command(name, color, options=options).run()
 
-    @overload
-    def update_command(self, label_id: str, request: LabelUpdateRequest, /) -> Command[Label]: ...
-
-    @overload
     def update_command(
         self,
         label_id: str,
         *,
         name: str | UnsetType = Unset,
         color: str | UnsetType = Unset,
-    ) -> Command[Label]: ...
-
-    def update_command(  # type: ignore[misc]
-        self, label_id: str, request: LabelUpdateRequest | None = None, /, **kwargs: object
+        options: OperationOptions | None = None,
     ) -> Command[Label]:
         validate_nonblank(label_id)
-        request = _resolve_request(request, kwargs, LabelUpdateRequest, allow_empty=True)
-        if request.name is Unset and request.color is Unset:
-            return self.get_command(label_id)
+        if name is None or color is None:
+            raise TypeError("label update values must be non-null")
+        _validate_optional_string(name, "name")
+        _validate_optional_string(color, "color")
+        if name is Unset and color is Unset:
+            return self._decoded_command(("label", "get", label_id), Label, options=options)._map(
+                lambda label: label._with_client(self._client)
+            )
         args = ["label", "update", label_id]
-        if request.name is not Unset:
-            args.extend(["--name", request.name])
-        if request.color is not Unset:
-            args.extend(["--color", request.color])
-        return self._decoded_command(tuple(args), Label)._map(
+        if name is not Unset:
+            args.extend(["--name", name])
+        if color is not Unset:
+            args.extend(["--color", color])
+        return self._decoded_command(tuple(args), Label, options=options)._map(
             lambda label: label._with_client(self._client)
         )
 
-    @overload
-    def update(self, label_id: str, request: LabelUpdateRequest, /) -> Label: ...
-
-    @overload
     def update(
         self,
         label_id: str,
         *,
         name: str | UnsetType = Unset,
         color: str | UnsetType = Unset,
-    ) -> Label: ...
-
-    def update(  # type: ignore[misc]
-        self, label_id: str, request: LabelUpdateRequest | None = None, /, **kwargs: object
+        options: OperationOptions | None = None,
     ) -> Label:
-        return self.update_command(label_id, cast("LabelUpdateRequest", request), **kwargs).run()
+        return self.update_command(label_id, name=name, color=color, options=options).run()
 
-    def delete_command(self, label_id: str) -> Command[ActionResult[None]]:
-        return self._action_command(("label", "delete", label_id))
+    def delete_command(
+        self, label_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
+        return self._action_command(("label", "delete", label_id), options=options)
 
-    def delete(self, label_id: str) -> ActionResult[None]:
-        return self.delete_command(label_id).run()
+    def delete(
+        self, label_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.delete_command(label_id, options=options).run()

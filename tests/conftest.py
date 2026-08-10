@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import datetime
 import pathlib
+from collections.abc import Callable
+from unittest.mock import MagicMock
 
 import pytest
+
+from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.transport import CliTransport
+from multica_py.client import MulticaClient
+from multica_py.config import ClientConfig
+from multica_py.resources.cli import CliResource
 
 _LAYER_MARKERS: dict[str, str] = {
     "tests/unit": "unit",
@@ -31,3 +40,47 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         layer_marker = _layer_marker_for_path(item.path)
         if layer_marker is not None:
             item.add_marker(getattr(pytest.mark, layer_marker))
+
+
+@pytest.fixture
+def mock_transport() -> MagicMock:
+    return MagicMock(spec=CliTransport)
+
+
+@pytest.fixture
+def raw_result() -> Callable[..., RawCommandResult]:
+    def _raw_result(
+        argv: tuple[str, ...] = (),
+        *,
+        stdout: bytes = b"",
+        exit_code: int = 0,
+        stderr: bytes = b"",
+        duration: datetime.timedelta | None = None,
+        secret_values: tuple[str, ...] = (),
+    ) -> RawCommandResult:
+        return RawCommandResult(
+            argv=argv,
+            exit_code=exit_code,
+            stdout=stdout,
+            stderr=stderr,
+            duration=duration or datetime.timedelta(),
+            secret_values=secret_values,
+        )
+
+    return _raw_result
+
+
+@pytest.fixture
+def cli_resource_factory() -> Callable[..., tuple[CliResource, MagicMock]]:
+    def _factory(config: ClientConfig | None = None) -> tuple[CliResource, MagicMock]:
+        client = MulticaClient(config or ClientConfig())
+        transport = MagicMock(spec=CliTransport)
+        transport.build_full_argv.side_effect = lambda args: (
+            str(client.config.executable),
+            *args,
+        )
+        client.cli._transport = transport
+        client.cli._config = client.config
+        return client.cli, transport
+
+    return _factory

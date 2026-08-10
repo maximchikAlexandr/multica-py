@@ -10,39 +10,14 @@ from multica_py.types import MetadataValue
 
 __all__ = [
     "CommentCursor",
-    "CommentListFlatRequest",
-    "CommentListRecentRequest",
-    "CommentListThreadRequest",
     "IssueUsage",
     "MetadataEntry",
-    "MetadataListRequest",
     "MetadataPage",
     "MetadataPredicate",
-    "MetadataSetRequest",
     "Page",
     "RunMessage",
     "Subscriber",
 ]
-
-
-class CommentListFlatRequest(msgspec.Struct, frozen=True, kw_only=True):
-    issue_id: str
-    since: datetime.datetime | None = None
-
-
-class CommentListThreadRequest(msgspec.Struct, frozen=True, kw_only=True):
-    issue_id: str
-    thread_id: str
-    cursor: CommentCursor | None = None
-    limit: int | None = None
-    since: datetime.datetime | None = None
-
-
-class CommentListRecentRequest(msgspec.Struct, frozen=True, kw_only=True):
-    issue_id: str
-    cursor: CommentCursor | None = None
-    limit: int = 10
-    since: datetime.datetime | None = None
 
 
 class Subscriber(msgspec.Struct, frozen=True, kw_only=True):
@@ -62,20 +37,6 @@ MetadataPage = Page[MetadataEntry]
 
 
 class MetadataPredicate(msgspec.Struct, frozen=True, kw_only=True):
-    key: str
-    value: MetadataValue
-    value_type: MetadataValueType | None = None
-
-
-class MetadataListRequest(msgspec.Struct, frozen=True, kw_only=True):
-    issue_id: str
-    predicates: tuple[MetadataPredicate, ...] = ()
-    cursor: str | None = None
-    limit: int | None = None
-
-
-class MetadataSetRequest(msgspec.Struct, frozen=True, kw_only=True):
-    issue_id: str
     key: str
     value: MetadataValue
     value_type: MetadataValueType | None = None

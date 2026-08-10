@@ -16,6 +16,7 @@ from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
+from multica_py.exceptions import RelationPaginationError
 from multica_py.models.issue_activity import CommentCursor
 from multica_py.models.relations import (
     CursorLazyCollection,
@@ -247,6 +248,246 @@ def test_generic_relation_command_plans_preview_pages_and_mapping_cache() -> Non
     assert refresh.commands == ("multica mapping list --output json",)
     assert refresh.run() == {"key": "value"}
     assert transport.run_bytes.call_count == 6
+
+
+def test_relation_value_protocols_cover_empty_and_cached_paths() -> None:
+    page = OffsetPage(items=("one",), total=1, limit=1, offset=0, has_more=False)
+    assert page.next_offset is None
+
+    values: LazyCollection[str] = LazyCollection(lambda: ("one",))
+    assert "one" in values
+    assert len(values) == 1
+
+    mapping = LazyMapping(lambda: {"key": "value"})
+    assert mapping.all() == {"key": "value"}
+    assert mapping.all() == {"key": "value"}
+    assert list(mapping) == ["key"]
+    assert len(mapping) == 1
+    mapping.invalidate()
+    assert not mapping.loaded
+
+
+@pytest.mark.parametrize("case", ("repeated-offset", "item-budget", "empty-page"))
+def test_offset_command_guards_are_behavioral(
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    resource = BaseResource(transport, ClientConfig())
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    if case == "repeated-offset":
+        pages = iter(
+            (
+                OffsetPage(("one",), 2, 1, 0, True),
+                OffsetPage(("two",), 2, 1, 0, True),
+                OffsetPage(("three",), 3, 1, 1, False),
+            )
+        )
+    elif case == "item-budget":
+        monkeypatch.setattr("multica_py.models.relations._MAX_RELATION_ITEMS", 1)
+        pages = iter(
+            (
+                OffsetPage(("one",), 2, 1, 0, True),
+                OffsetPage(("two",), 3, 1, 1, True),
+                OffsetPage(("three",), 3, 1, 2, False),
+            )
+        )
+    else:
+        pages = iter(
+            (
+                OffsetPage(("one",), 2, 1, 0, True),
+                OffsetPage((), 2, 1, 1, True),
+            )
+        )
+
+    def page_command(limit: int | None, offset: int) -> Command[OffsetPage[str]]:
+        return resource._plan(
+            steps=(
+                _Step(
+                    (
+                        "items",
+                        "--limit",
+                        str(limit),
+                        "--offset",
+                        str(offset),
+                        "--output",
+                        "json",
+                    ),
+                    "run_bytes",
+                    decode=lambda _stdout, _command: next(pages),
+                ),
+            ),
+            finalize=lambda results: cast("OffsetPage[str]", results[0]),
+        )
+
+    relation = OffsetLazyCollection(
+        lambda *, limit, offset: OffsetPage((), 0, limit or 1, offset, False),
+        default_limit=1,
+        page_command_loader=page_command,
+    )
+    transport.run_bytes.side_effect = lambda argv, **_kwargs: RawCommandResult(
+        argv=argv,
+        exit_code=0,
+        stdout=b"{}",
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    with pytest.raises(RelationPaginationError, match=r"repeated_offset|empty_page"):
+        relation.all_command().run()
+
+
+def test_offset_command_requires_offset_in_page_argv() -> None:
+    resource = BaseResource(MagicMock(spec=CliTransport), ClientConfig())
+
+    def page_command(_limit: int | None, _offset: int) -> Command[OffsetPage[str]]:
+        return resource._plan(
+            steps=(_Step(("items", "--output", "json"), "run_bytes"),),
+            finalize=lambda results: cast("OffsetPage[str]", results[0]),
+        )
+
+    relation = OffsetLazyCollection(
+        lambda *, limit, offset: OffsetPage((), 0, limit or 1, offset, False),
+        page_command_loader=page_command,
+    )
+    with pytest.raises(RuntimeError, match="no --offset"):
+        relation.all_command()
+
+
+def test_offset_command_empty_plan_falls_back_to_loader() -> None:
+    resource = BaseResource(MagicMock(spec=CliTransport), ClientConfig())
+
+    def page_command(_limit: int | None, _offset: int) -> Command[OffsetPage[str]]:
+        return resource._plan(
+            steps=(),
+            finalize=lambda _results: OffsetPage((), 0, 1, 0, False),
+        )
+
+    relation = OffsetLazyCollection(
+        lambda *, limit, offset: OffsetPage(("loaded",), 1, limit or 1, offset, False),
+        page_command_loader=page_command,
+    )
+    assert relation.all_command().run() == ("loaded",)
+
+
+@pytest.mark.parametrize(
+    "argv",
+    (
+        ("comments", "--output", "json"),
+        ("comments", "--before", "old", "--before-id", "old-id", "--output", "json"),
+    ),
+)
+def test_cursor_command_preview_and_refresh_cover_cursor_bindings(
+    argv: tuple[str, ...],
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    resource = BaseResource(transport, ClientConfig())
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    first = CursorPage(("one",), CommentCursor(before="next", before_id="next-id"))
+    last = CursorPage(("two",), None)
+    pages = iter((first, last, first, last))
+
+    def page_command(_cursor: CommentCursor | None) -> Command[CursorPage[str]]:
+        return resource._plan(
+            steps=(_Step(argv, "run_bytes", decode=lambda _stdout, _command: next(pages)),),
+            finalize=lambda results: cast("CursorPage[str]", results[0]),
+        )
+
+    transport.run_bytes.side_effect = lambda request, **_kwargs: RawCommandResult(
+        argv=request,
+        exit_code=0,
+        stdout=b"{}",
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    relation = CursorLazyCollection(
+        lambda *, cursor: CursorPage((), None),
+        initial_cursor=(
+            CommentCursor(before="old", before_id="old-id") if "--before" in argv else None
+        ),
+        page_command_loader=page_command,
+    )
+    assert relation.all() == ("one", "two")
+    assert relation.refresh() == ("one", "two")
+    assert relation.all_command().commands == ()
+
+
+@pytest.mark.parametrize("case", ("page-budget", "item-budget", "empty-page", "repeated-cursor"))
+def test_cursor_command_guards_are_behavioral(
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    resource = BaseResource(transport, ClientConfig())
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    next_cursor = CommentCursor(before="next", before_id="next-id")
+    if case == "page-budget":
+        monkeypatch.setattr("multica_py.models.relations._MAX_RELATION_PAGES", 1)
+        pages = iter(
+            (
+                CursorPage(("one",), next_cursor),
+                CursorPage(("two",), next_cursor),
+                CursorPage(("three",), None),
+            )
+        )
+    elif case == "item-budget":
+        monkeypatch.setattr("multica_py.models.relations._MAX_RELATION_ITEMS", 1)
+        pages = iter(
+            (
+                CursorPage(("one",), next_cursor),
+                CursorPage(("two",), next_cursor),
+                CursorPage(("three",), None),
+            )
+        )
+    elif case == "empty-page":
+        pages = iter(
+            (
+                CursorPage(("one",), next_cursor),
+                CursorPage((), next_cursor),
+                CursorPage(("three",), None),
+            )
+        )
+    else:
+        pages = iter(
+            (
+                CursorPage(("one",), next_cursor),
+                CursorPage(("two",), next_cursor),
+                CursorPage(("three",), None),
+            )
+        )
+
+    def page_command(_cursor: CommentCursor | None) -> Command[CursorPage[str]]:
+        return resource._plan(
+            steps=(
+                _Step(
+                    ("comments", "--output", "json"),
+                    "run_bytes",
+                    decode=lambda _stdout, _command: next(pages),
+                ),
+            ),
+            finalize=lambda results: cast("CursorPage[str]", results[0]),
+        )
+
+    transport.run_bytes.side_effect = lambda request, **_kwargs: RawCommandResult(
+        argv=request,
+        exit_code=0,
+        stdout=b"{}",
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    relation = CursorLazyCollection(
+        lambda *, cursor: CursorPage((), None), page_command_loader=page_command
+    )
+    with pytest.raises(RelationPaginationError, match=r"repeated_cursor|empty_page"):
+        relation.all_command().run()
+
+
+def test_cursor_direct_loader_rejects_empty_progress_page() -> None:
+    next_cursor = CommentCursor(before="next", before_id="next-id")
+    relation: CursorLazyCollection[str] = CursorLazyCollection(
+        lambda *, cursor: CursorPage((), next_cursor)
+    )
+    with pytest.raises(RelationPaginationError, match="empty_page"):
+        relation.all()
 
 
 def test_mapping_command_runs_coalesce_and_retry_after_refresh_failure() -> None:

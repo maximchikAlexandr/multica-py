@@ -1,15 +1,30 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from unittest.mock import MagicMock
+
 import pytest
 
-from multica_py.models.issues import IssueCreateRequest, IssueUpdateRequest
+from multica_py.config import ClientConfig
+from multica_py.resources.issues import IssueResource
 
 
-def test_issue_create_rejects_empty_project_id() -> None:
+@dataclass(frozen=True)
+class EmptyProjectIdCase:
+    method: str
+    args: tuple[object, ...]
+    kwargs: tuple[tuple[str, object], ...]
+
+
+EMPTY_PROJECT_ID_CASES = (
+    EmptyProjectIdCase("create_command", (), (("title", "New issue"), ("project_id", ""))),
+    EmptyProjectIdCase("update_command", ("iss_1",), (("project_id", ""),)),
+)
+
+
+@pytest.mark.parametrize("case", EMPTY_PROJECT_ID_CASES, ids=lambda case: case.method)
+def test_issue_project_id_validation_is_consistent(case: EmptyProjectIdCase) -> None:
     with pytest.raises(ValueError, match="project_id must be non-empty"):
-        IssueCreateRequest(title="New issue", project_id="")
-
-
-def test_issue_update_rejects_empty_project_id() -> None:
-    with pytest.raises(ValueError, match="project_id must be non-empty"):
-        IssueUpdateRequest(project_id="")
+        getattr(IssueResource(MagicMock(), ClientConfig()), case.method)(
+            *case.args, **dict(case.kwargs)
+        )

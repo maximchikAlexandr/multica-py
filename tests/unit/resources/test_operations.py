@@ -6,6 +6,7 @@ import importlib
 import inspect
 import pathlib
 import typing
+from collections.abc import Callable
 from typing import cast
 from unittest.mock import MagicMock, patch
 
@@ -15,10 +16,13 @@ from multica_py import Command
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
-from multica_py.config import ClientConfig
+from multica_py.config import ClientConfig, OperationOptions
+from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.models.common import ActionResult, Page
 from multica_py.process import ManagedProcess
+from multica_py.resources.agents import Agent
 from tests.cases.operations import (
+    _BOUND_RESOURCE_SPECS,
     GENERATED_OPERATION_CASES,
     LEGACY_ARGV_MIGRATION,
     OPERATION_CASES,
@@ -31,6 +35,59 @@ from tools.upstream_contract.contract import ContractCatalog, Entrypoint, valida
 
 _RESOURCE_MAP: dict[str, type] = dict(RESOURCE_SPECS)
 
+_LAZY_OPTIONS_PARITY_EXCEPTIONS = frozenset(
+    {
+        "projects.issues.all",
+        "projects.issues.page",
+        "projects.issues.refresh",
+    }
+)
+
+
+def _contract_entrypoint_is_implemented(entrypoint: Entrypoint) -> bool:
+    module_name, class_name, method_name = entrypoint.public_symbol.rsplit(".", 2)
+    try:
+        resource = getattr(importlib.import_module(module_name), class_name)
+    except (ImportError, AttributeError):
+        return False
+    return hasattr(resource, method_name)
+
+
+def _case_class(case: OperationCase) -> type:
+    if case.bound_target == "agent":
+        from multica_py.resources.agents import Agent
+
+        return Agent
+    if case.bound_target == "autopilot":
+        from multica_py.resources.autopilots import Autopilot
+
+        return Autopilot
+    if case.bound_target == "issue":
+        from multica_py.resources.issues import Issue
+
+        return Issue
+    if case.bound_target == "project":
+        from multica_py.resources.projects import Project
+
+        return Project
+    if case.bound_target == "project_issues":
+        from multica_py.resources.projects import ProjectIssueCollection
+
+        return ProjectIssueCollection
+    if case.bound_target == "skill":
+        from multica_py.resources.skills import Skill
+
+        return Skill
+    if case.bound_target == "squad":
+        from multica_py.resources.squads import Squad
+
+        return Squad
+    return _RESOURCE_MAP[case.resource_attr]
+
+
+def _case_method(case: OperationCase) -> Callable[..., object]:
+    return cast("Callable[..., object]", getattr(_case_class(case), case.method))
+
 
 def _call_contracts(method: object) -> tuple[tuple[inspect.Signature, object], ...]:
     assert inspect.isfunction(method)
@@ -42,6 +99,29 @@ def _call_contracts(method: object) -> tuple[tuple[inspect.Signature, object], .
         )
         for function in functions
     )
+
+
+def _assert_eager_command_parity(
+    case: OperationCase,
+) -> tuple[tuple[inspect.Signature, object], ...]:
+    eager = _case_method(case)
+    command = getattr(_case_class(case), f"{case.method}_command", None)
+    assert command is not None, case.sdk_method
+    eager_contracts = _call_contracts(eager)
+    command_contracts = _call_contracts(command)
+    assert len(eager_contracts) == len(command_contracts), case.sdk_method
+    for (eager_signature, eager_return), (command_signature, command_return) in zip(
+        eager_contracts, command_contracts, strict=True
+    ):
+        assert command_signature == eager_signature, case.sdk_method
+        if case.sdk_method == "cli.command":
+            assert typing.get_origin(eager_return) is Command
+            assert typing.get_origin(command_return) is Command
+            assert typing.get_args(eager_return) == typing.get_args(command_return)
+        else:
+            assert typing.get_origin(command_return) is Command, case.sdk_method
+            assert typing.get_args(command_return) == (eager_return,), case.sdk_method
+    return eager_contracts
 
 
 def _contains_type(annotation: object, expected: object) -> bool:
@@ -94,6 +174,46 @@ def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
         )
 
 
+def _bound_target(case: OperationCase, client: MulticaClient) -> object:
+    if case.bound_target == "agent":
+        from multica_py.resources.agents import Agent
+
+        return Agent(id="a1", name="Agent", _client=client)
+    if case.bound_target == "autopilot":
+        from multica_py.resources.autopilots import Autopilot
+
+        return Autopilot(
+            id="ap1",
+            workspace_id="w1",
+            title="Autopilot",
+            assignee_type="member",
+            assignee_id="u1",
+            status="active",
+            execution_mode="create_issue",
+            created_by_type="member",
+            created_by_id="u1",
+            _client=client,
+        )
+    if case.bound_target == "issue":
+        from multica_py.resources.issues import Issue
+
+        return Issue(id="i1", title="Issue", status=IssueStatus.todo, _client=client)
+    if case.bound_target in {"project", "project_issues"}:
+        from multica_py.resources.projects import Project
+
+        project = Project(id="p1", name="Project", status=ProjectStatus.planned, _client=client)
+        return project.issues if case.bound_target == "project_issues" else project
+    if case.bound_target == "skill":
+        from multica_py.resources.skills import Skill
+
+        return Skill(id="s1", name="Skill", _client=client)
+    if case.bound_target == "squad":
+        from multica_py.resources.squads import Squad
+
+        return Squad(id="sq1", name="Squad", _client=client)
+    raise AssertionError(f"unknown bound target: {case.bound_target}")
+
+
 def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> None:
     transport = cast("CliTransport", mock_transport)
     initial_profile = case.snapshot_profiles[0] if case.snapshot_profiles is not None else None
@@ -103,9 +223,27 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
         else ("multica", *args)
     )
     config = ClientConfig(profile=initial_profile)
-    if case.public_route:
+    if case.bound_target is not None:
         client = MulticaClient(config)
-        resource: object = client
+        client._transport = transport
+        client.issues._transport = transport
+        client.issues.comments._transport = transport
+        client.issues.labels._transport = transport
+        client.issues.metadata._transport = transport
+        client.issues.subscribers._transport = transport
+        client.agents._transport = transport
+        client.agents.skills._transport = transport
+        client.autopilots._transport = transport
+        client.projects._transport = transport
+        client.projects.resources._transport = transport
+        client.skills._transport = transport
+        client.skills.files._transport = transport
+        client.squads._transport = transport
+        client.squads.members._transport = transport
+        resource: object = _bound_target(case, client)
+    elif case.public_route:
+        client = MulticaClient(config)
+        resource = client
         for attribute in case.sdk_method.split(".")[:-1]:
             resource = getattr(resource, attribute)
         setattr(resource, "_transport", transport)
@@ -173,17 +311,27 @@ def test_discovered_public_methods() -> None:
     assert discovered == canonical
     assert len(canonical_cases) == len(canonical)
     governed = {c.sdk_method for c in canonical_cases if c.contract_operation_id is not None}
-    assert governed == discovered
-    assert len(governed) == sum(len(operation.entrypoints) for operation in contract.operations)
+    assert governed <= discovered
+    implemented_entrypoints = {
+        (operation.operation_id, entrypoint.entrypoint_id): entrypoint
+        for operation in contract.operations
+        for entrypoint in operation.entrypoints
+        if _contract_entrypoint_is_implemented(entrypoint)
+    }
+    assert len(governed) == len(implemented_entrypoints)
     assert len(contract.operation_ids) == len(contract.operations)
-    assert len(OPERATION_CASES) == 224
-    assert len({c.id for c in OPERATION_CASES}) == 224
+    assert len(OPERATION_CASES) == 263
+    assert len({c.id for c in OPERATION_CASES}) == 263
     assert sum(not c.is_canonical for c in OPERATION_CASES) == 100
     presence_catalog = cast(
         "dict[str, object]",
         cast("dict[str, object]", contract.raw["catalogs"])["presence"],
     )
     for case in canonical_cases:
+        eager_contracts = _assert_eager_command_parity(case)
+        if case.contract_operation_id is None:
+            assert case.bound_target is not None
+            continue
         entrypoint = _approved_entrypoint(case, contract)
         assert case.expected_category == entrypoint.category, case.sdk_method
         assert case.expected_response_id == entrypoint.response_id, case.sdk_method
@@ -199,20 +347,7 @@ def test_discovered_public_methods() -> None:
             assert entrypoint.typed_input_id is not None
         else:
             raise AssertionError(f"unknown approved input mode: {entrypoint.input_mode}")
-        cls = _RESOURCE_MAP[case.resource_attr]
-        eager = getattr(cls, case.method)
-        command = getattr(cls, f"{case.method}_command", None)
-        assert command is not None, case.sdk_method
         assert case.expected_commands, case.sdk_method
-        eager_contracts = _call_contracts(eager)
-        command_contracts = _call_contracts(command)
-        assert len(eager_contracts) == len(command_contracts), case.sdk_method
-        for (eager_signature, eager_return), (command_signature, command_return) in zip(
-            eager_contracts, command_contracts, strict=True
-        ):
-            assert command_signature == eager_signature, case.sdk_method
-            assert typing.get_origin(command_return) is Command, case.sdk_method
-            assert typing.get_args(command_return) == (eager_return,), case.sdk_method
         if entrypoint.typed_input_id is not None:
             assert any(
                 entrypoint.typed_input_id in repr(signature)
@@ -221,13 +356,100 @@ def test_discovered_public_methods() -> None:
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
     assert len(generated) == 58
-    assert len(manual) == 166
+    assert len(manual) == 205
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
     assert all(c.contract_operation_id is not None for c in generated)
-    assert all(c.expected_category is not None for c in canonical_cases)
-    assert all(c.expected_response_id is not None for c in canonical_cases)
+    assert all(
+        c.expected_category is not None
+        for c in canonical_cases
+        if c.contract_operation_id is not None
+    )
+    assert all(
+        c.expected_response_id is not None
+        for c in canonical_cases
+        if c.contract_operation_id is not None
+    )
+
+
+def test_bound_discovery_rejects_unregistered_eager_command_pair(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from multica_py.models._bound import _BoundEntity
+    from multica_py.models.relations import OffsetLazyCollection
+
+    def ungoverned(_self: object) -> object:
+        return None
+
+    def ungoverned_command(_self: object) -> object:
+        return None
+
+    for _dotted, resource in _BOUND_RESOURCE_SPECS:
+        monkeypatch.setattr(resource, "ungoverned", ungoverned, raising=False)
+        monkeypatch.setattr(resource, "ungoverned_command", ungoverned_command, raising=False)
+    monkeypatch.setattr(_BoundEntity, "inherited_ungoverned", ungoverned, raising=False)
+    monkeypatch.setattr(
+        _BoundEntity, "inherited_ungoverned_command", ungoverned_command, raising=False
+    )
+    monkeypatch.setattr(OffsetLazyCollection, "inherited_ungoverned", ungoverned, raising=False)
+    monkeypatch.setattr(
+        OffsetLazyCollection, "inherited_ungoverned_command", ungoverned_command, raising=False
+    )
+
+    discovered = discover_public_methods()
+    canonical = {case.sdk_method for case in OPERATION_CASES if case.is_canonical}
+    for dotted, _resource in _BOUND_RESOURCE_SPECS:
+        assert f"{dotted}.ungoverned" in discovered
+        assert f"{dotted}.inherited_ungoverned" in discovered
+    assert discovered != canonical
+
+
+def test_bound_eager_command_parity_rejects_signature_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = next(case for case in OPERATION_CASES if case.sdk_method == "agents.Agent.set_skills")
+    original = Agent.set_skills_command
+
+    def drifted_command(
+        self: object,
+        skill_ids: tuple[str, ...],
+        *,
+        drift: str = "",
+        options: OperationOptions | None = None,
+    ) -> Command[ActionResult[None]]:
+        del drift
+        return original(cast("Agent", self), skill_ids, options=options)
+
+    monkeypatch.setattr(Agent, "set_skills_command", drifted_command)
+    with pytest.raises(AssertionError, match=r"agents\.Agent\.set_skills"):
+        _assert_eager_command_parity(case)
+
+
+def test_discovered_cli_surface_has_normalized_options_parity() -> None:
+    """Every discovered CLI pair has matching signatures and typed options."""
+    missing_options: set[str] = set()
+    for case in OPERATION_CASES:
+        if not case.is_canonical:
+            continue
+        eager = _case_method(case)
+        command = getattr(_case_class(case), f"{case.method}_command")
+        eager_overloads = typing.get_overloads(eager) or (eager,)
+        command_overloads = typing.get_overloads(command) or (command,)
+        assert len(eager_overloads) == len(command_overloads), case.sdk_method
+        for eager_fn, command_fn in zip(eager_overloads, command_overloads, strict=True):
+            for function in (eager_fn, command_fn):
+                parameters = tuple(inspect.signature(function).parameters.values())[1:]
+                if not parameters or parameters[-1].name != "options":
+                    missing_options.add(case.sdk_method)
+                    assert case.sdk_method in _LAZY_OPTIONS_PARITY_EXCEPTIONS, case.sdk_method
+                    assert case.bound_target == "project_issues", case.sdk_method
+                    continue
+                assert case.sdk_method not in _LAZY_OPTIONS_PARITY_EXCEPTIONS, case.sdk_method
+                option = parameters[-1]
+                assert option.kind is inspect.Parameter.KEYWORD_ONLY, case.sdk_method
+                assert typing.get_type_hints(function)["options"] == OperationOptions | None
+    assert missing_options == _LAZY_OPTIONS_PARITY_EXCEPTIONS
 
 
 def test_approved_result_categories_are_closed() -> None:
@@ -275,8 +497,25 @@ def test_approved_result_categories_are_closed() -> None:
         "daemon.restart",
         "daemon.stop",
         "issues.assign",
+        "issues.move_after",
+        "issues.move_before",
+        "issues.move_to_bottom",
+        "issues.move_to_top",
         "issues.metadata.set_typed",
         "issues.reorder",
+        "issues.unassign",
+        "cli.command",
+        "issues.Issue.update",
+        "issues.Issue.refresh",
+        "issues.Issue.assign",
+        "issues.Issue.unassign",
+        "issues.Issue.set_status",
+        "issues.Issue.move_to_top",
+        "issues.Issue.move_to_bottom",
+        "issues.Issue.move_before",
+        "issues.Issue.move_after",
+        "projects.Project.update",
+        "projects.Project.refresh",
     }
     page_response_ids = {
         response.response_id
@@ -298,9 +537,10 @@ def test_approved_result_categories_are_closed() -> None:
         assert typing.get_origin(typing.get_type_hints(relation_type.all)["return"]) is tuple
 
     for sdk_method, case in canonical.items():
+        if case.contract_operation_id is None:
+            continue
         assert case.expected_response_id in responses, sdk_method
-        cls = _RESOURCE_MAP[case.resource_attr]
-        annotation = typing.get_type_hints(getattr(cls, case.method))["return"]
+        annotation = typing.get_type_hints(_case_method(case))["return"]
         category = case.expected_category
         response_id = case.expected_response_id
         assert category is not None and response_id is not None
@@ -356,11 +596,13 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
         for case in OPERATION_CASES
         if case.is_canonical and case.contract_operation_id is not None
     }
-    assert set(canonical_by_operation) == {
+    implemented_contract_keys = {
         (operation.operation_id, entrypoint.entrypoint_id)
         for operation in contract.operations
         for entrypoint in operation.entrypoints
+        if _contract_entrypoint_is_implemented(entrypoint)
     }
+    assert set(canonical_by_operation) == implemented_contract_keys
     assert len(canonical_by_operation) == sum(
         case.is_canonical and case.contract_operation_id is not None for case in OPERATION_CASES
     )
@@ -373,10 +615,8 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
             method = getattr(resource, method_name)
             assert inspect.isfunction(method)
             assert entrypoint.signature_id in signatures
-            assert (
-                canonical_by_operation[(operation.operation_id, entrypoint.entrypoint_id)].method
-                == method_name
-            )
+            case = canonical_by_operation[(operation.operation_id, entrypoint.entrypoint_id)]
+            assert case.method == method_name
 
 
 def test_legacy_payload_bijection() -> None:

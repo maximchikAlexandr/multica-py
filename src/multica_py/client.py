@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-import pathlib
+import os
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, as_completed
 from typing import Protocol, TypeVar
@@ -10,12 +10,13 @@ import msgspec
 
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
-from multica_py.config import ClientConfig
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.models.relations import LazyLoadable
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
 from multica_py.resources.autopilots import AutopilotResource
+from multica_py.resources.cli import CliResource
 from multica_py.resources.configuration import ConfigurationResource
 from multica_py.resources.daemon import DaemonResource
 from multica_py.resources.issues import IssueResource
@@ -29,6 +30,7 @@ from multica_py.resources.skills import SkillResource
 from multica_py.resources.squads import SquadResource
 from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
+from multica_py.sentinels import Unset, UnsetType
 
 TEntity = TypeVar("TEntity", bound="_BoundEntity")
 TRelationValue_co = TypeVar("TRelationValue_co", covariant=True)
@@ -52,7 +54,13 @@ def _load_job(relation: LazyLoadable[TRelationValue_co]) -> Callable[[], None]:
 
 
 class MulticaClient:
-    def __init__(self, config: ClientConfig, _semaphore: ProcessSemaphore | None = None) -> None:
+    def __init__(
+        self,
+        config: ClientConfig | None = None,
+        _semaphore: ProcessSemaphore | None = None,
+    ) -> None:
+        if config is None:
+            config = ClientConfig()
         self._config = config
         self._semaphore = _semaphore or ProcessSemaphore(config.max_processes)
         self._transport = CliTransport(config, semaphore=self._semaphore)
@@ -70,6 +78,7 @@ class MulticaClient:
         self.repositories = RepositoryResource(self._transport, config)
         self.runtimes = RuntimeResource(self._transport, config)
         self.attachments = AttachmentResource(self._transport, config)
+        self.cli = CliResource(self._transport, config)
         self.configuration = ConfigurationResource(self._transport, config)
         self.squads = SquadResource(self._transport, config)
         self.users = UserResource(self._transport, config)
@@ -88,6 +97,7 @@ class MulticaClient:
             self.repositories,
             self.runtimes,
             self.attachments,
+            self.cli,
             self.configuration,
             self.squads,
             self.users,
@@ -102,30 +112,58 @@ class MulticaClient:
     def _replace_config(self, **changes: object) -> ClientConfig:
         return msgspec.structs.replace(self._config, **changes)
 
-    def with_profile(self, profile: str | None) -> MulticaClient:
-        return MulticaClient(self._replace_config(profile=profile), _semaphore=self._semaphore)
-
-    def with_workspace(self, workspace_id: str | None) -> MulticaClient:
+    def with_options(
+        self,
+        *,
+        profile: str | None | UnsetType = Unset,
+        workspace_id: str | None | UnsetType = Unset,
+        timeout: datetime.timedelta | float | None | UnsetType = Unset,
+        cwd: str | os.PathLike[str] | None | UnsetType = Unset,
+        environment: Mapping[str, str] | tuple[tuple[str, str], ...] | UnsetType = Unset,
+    ) -> MulticaClient:
+        options = OperationOptions(
+            profile=profile,
+            workspace_id=workspace_id,
+            timeout=timeout,
+            cwd=cwd,
+            environment=environment,
+        )
+        changes = {
+            field_name: value
+            for field_name, value in (
+                ("profile", options.profile),
+                ("workspace_id", options.workspace_id),
+                ("timeout", options.timeout),
+                ("cwd", options.cwd),
+                ("environment", options.environment),
+            )
+            if value is not Unset
+        }
         return MulticaClient(
-            self._replace_config(workspace_id=workspace_id), _semaphore=self._semaphore
+            self._replace_config(**changes),
+            _semaphore=self._semaphore,
         )
 
-    def with_timeout(self, timeout: datetime.timedelta | None) -> MulticaClient:
-        return MulticaClient(self._replace_config(timeout=timeout), _semaphore=self._semaphore)
+    def with_profile(self, profile: str | None) -> MulticaClient:
+        return self.with_options(profile=profile)
 
-    def with_cwd(self, cwd: pathlib.Path | None) -> MulticaClient:
-        return MulticaClient(self._replace_config(cwd=cwd), _semaphore=self._semaphore)
+    def with_workspace(self, workspace_id: str | None) -> MulticaClient:
+        return self.with_options(workspace_id=workspace_id)
+
+    def with_timeout(
+        self,
+        timeout: datetime.timedelta | float | None,
+    ) -> MulticaClient:
+        return self.with_options(timeout=timeout)
+
+    def with_cwd(self, cwd: str | os.PathLike[str] | None) -> MulticaClient:
+        return self.with_options(cwd=cwd)
 
     def with_environment(
         self,
         environment: Mapping[str, str] | tuple[tuple[str, str], ...],
     ) -> MulticaClient:
-        normalized = (
-            tuple(sorted(environment.items())) if isinstance(environment, Mapping) else environment
-        )
-        return MulticaClient(
-            self._replace_config(environment=normalized), _semaphore=self._semaphore
-        )
+        return self.with_options(environment=environment)
 
     def prefetch(
         self,

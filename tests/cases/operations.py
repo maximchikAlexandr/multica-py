@@ -9,29 +9,31 @@ from pathlib import Path as _Path
 from typing import cast
 from unittest.mock import MagicMock
 
+from multica_py.enums import IssueStatus as IssueStatusValue
 from multica_py.resources.agent_skills import AgentSkillResource
-from multica_py.resources.agents import AgentResource
+from multica_py.resources.agents import Agent, AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
-from multica_py.resources.autopilots import AutopilotResource
+from multica_py.resources.autopilots import Autopilot, AutopilotResource
+from multica_py.resources.cli import CliResource
 from multica_py.resources.configuration import ConfigurationResource
 from multica_py.resources.daemon import DaemonResource
 from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
-from multica_py.resources.issues import IssueResource
+from multica_py.resources.issues import Issue, IssueResource
 from multica_py.resources.labels import LabelResource
 from multica_py.resources.maintenance import MaintenanceResource
 from multica_py.resources.project_resources import ProjectResourceCollection
-from multica_py.resources.projects import ProjectResource
+from multica_py.resources.projects import Project, ProjectIssueCollection, ProjectResource
 from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.setup import SetupResource
 from multica_py.resources.skill_files import SkillFileResource
-from multica_py.resources.skills import SkillResource
+from multica_py.resources.skills import Skill, SkillResource
 from multica_py.resources.squad_members import SquadMemberResource
-from multica_py.resources.squads import SquadResource
+from multica_py.resources.squads import Squad, SquadResource
 from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
 from multica_py.sentinels import Unset
@@ -69,6 +71,7 @@ class OperationCase:
     expected_exception: type[Exception] | None = None
     public_route: bool = False
     snapshot_profiles: tuple[str, str] | None = None
+    bound_target: str | None = None
 
 
 RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
@@ -78,6 +81,7 @@ RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("auth", AuthResource),
     ("autopilots", AutopilotResource),
     ("configuration", ConfigurationResource),
+    ("cli", CliResource),
     ("daemon", DaemonResource),
     ("issue_comments", IssueCommentResource),
     ("issue_labels", IssueLabelResource),
@@ -114,6 +118,16 @@ _NESTED_DOTTED_PREFIXES: dict[str, str] = {
     resource_attr: f"{parent}.{attribute}"
     for (parent, attribute), resource_attr in _NESTED_RESOURCE_ATTRS.items()
 }
+
+_BOUND_RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
+    ("agents.Agent", Agent),
+    ("issues.Issue", Issue),
+    ("projects.Project", Project),
+    ("projects.issues", ProjectIssueCollection),
+    ("skills.Skill", Skill),
+    ("squads.Squad", Squad),
+    ("autopilots.Autopilot", Autopilot),
+)
 
 _SPAWN_SDK_METHODS: frozenset[str] = frozenset(
     {
@@ -160,7 +174,20 @@ def discover_public_methods() -> frozenset[str]:
             if function.__name__ != name:
                 continue
             methods.add(f"{dotted}.{name}")
+    for dotted, cls in _BOUND_RESOURCE_SPECS:
+        methods.update(f"{dotted}.{name}" for name in _discover_bound_methods(cls))
     return frozenset(methods)
+
+
+def _discover_bound_methods(cls: type) -> frozenset[str]:
+    """Discover eager/command pairs from the class's bound public surface."""
+    names: set[str] = set()
+    for name, _value in inspect.getmembers(cls, inspect.isroutine):
+        if name.startswith("_") or name.endswith("_command"):
+            continue
+        if inspect.isroutine(getattr(cls, f"{name}_command", None)):
+            names.add(name)
+    return frozenset(names)
 
 
 def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
@@ -177,37 +204,18 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
     from multica_py.models.common import ActionResult, Page
     from multica_py.models.issue_activity import (
         CommentCursor,
-        CommentListFlatRequest,
-        CommentListRecentRequest,
-        CommentListThreadRequest,
     )
     from multica_py.models.issues import (
         FileDescription,
         InlineDescription,
-        IssueCreateRequest,
         StdinDescription,
     )
-    from multica_py.models.project_resources import (
-        ProjectResourceAddLocalDirectoryRequest,
-        ProjectResourceUpdateLocalDirectoryRequest,
-    )
-    from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
     from multica_py.sentinels import Unset
     from tools.upstream_contract.contract import ContractCatalog, ResultAssertion
 
     if not isinstance(catalog, ContractCatalog):
         raise TypeError("generated_operation_cases requires a validated ContractCatalog")
 
-    request_types = {
-        "CommentListFlatRequest": CommentListFlatRequest,
-        "CommentListThreadRequest": CommentListThreadRequest,
-        "CommentListRecentRequest": CommentListRecentRequest,
-        "IssueCreateRequest": IssueCreateRequest,
-        "ProjectCreateRequest": ProjectCreateRequest,
-        "ProjectUpdateRequest": ProjectUpdateRequest,
-        "ProjectResourceAddLocalDirectoryRequest": ProjectResourceAddLocalDirectoryRequest,
-        "ProjectResourceUpdateLocalDirectoryRequest": ProjectResourceUpdateLocalDirectoryRequest,
-    }
     enum_types = {
         "IssueSort": IssueSort,
         "SortDirection": SortDirection,
@@ -240,13 +248,6 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         if kind == "list":
             items = cast("list[dict[str, object]]", tagged["items"])
             return tuple(materialize(item) for item in items)
-        if kind == "request":
-            request_type = request_types[str(tagged["type"])]
-            fields = {
-                str(name): materialize(value)
-                for name, value in cast("list[tuple[str, dict[str, object]]]", tagged["fields"])
-            }
-            return request_type(**fields)
         raise ValueError(f"unsupported tagged value {kind!r}")
 
     def assertion_for(
@@ -290,46 +291,16 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 if isinstance(result, Page) and not hasattr(result, "next_cursor"):
                     raise AssertionError("Page cursor metadata field is missing")
 
-            aliases = {
-                "multica_py.models.issues.IssueListPage": "issues",
-                "multica_py.models.autopilots.AutopilotListPage": "autopilots",
-                "multica_py.models.autopilots.AutopilotRunListPage": "runs",
-                "multica_py.models.issues.IssueChildrenResult": "children",
-            }
-
             def assert_type(result: object, _mt: MagicMock = MagicMock()) -> None:
                 actual = f"{type(result).__module__}.{type(result).__qualname__}"
-                if expected == "multica_py.models.common.Page":
+                if expected in {
+                    "multica_py.models.common.Page",
+                    "multica_py.models.autopilots.AutopilotListPage",
+                    "multica_py.models.autopilots.AutopilotRunListPage",
+                    "multica_py.models.issues.IssueChildrenResult",
+                    "multica_py.models.issues.IssueListPage",
+                }:
                     assert_sequence_contract(result)
-                if expected in aliases and actual == expected:
-                    assert_sequence_contract(result)
-                    if getattr(result, aliases[expected]) is not getattr(result, "items"):
-                        raise AssertionError("compatibility alias is not identical to items")
-                if expected == "multica_py.models.issues.Issue" and actual == (
-                    "multica_py.resources.issues.Issue"
-                ):
-                    return
-                if expected == "multica_py.models.projects.Project" and actual == (
-                    "multica_py.resources.projects.Project"
-                ):
-                    return
-                if expected == "multica_py.models.autopilots.Autopilot" and actual == (
-                    "multica_py.resources.autopilots.Autopilot"
-                ):
-                    return
-                if expected == "multica_py.models.autopilots.AutopilotRun" and actual == (
-                    "multica_py.resources.autopilots.AutopilotRun"
-                ):
-                    return
-                if expected == "multica_py.models.issue_activity.Comment" and actual == (
-                    "multica_py.resources.issue_comments.Comment"
-                ):
-                    return
-                if expected == "builtins.tuple" and actual == {
-                    "issues.children": "multica_py.models.issues.IssueChildrenResult",
-                    "issues.metadata.list": "builtins.dict",
-                }.get(operation_id):
-                    return
                 if actual != expected:
                     raise AssertionError(f"expected {expected}, got {actual}")
 
@@ -567,47 +538,33 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ProjectStatus,
     )
     from multica_py.exceptions import NetworkError
-    from multica_py.models.agents import AgentCreateRequest, AgentSkill, AgentUpdateRequest
+    from multica_py.models.agents import AgentSkill
     from multica_py.models.autopilots import (
         AutopilotListPage,
         AutopilotRunListPage,
         AutopilotSubscriber,
-        AutopilotTriggerCreate,
-        AutopilotTriggerUpdate,
+        AutopilotTrigger,
     )
     from multica_py.models.common import ActionResult, Page
     from multica_py.models.issue_activity import (
         CommentCursor,
-        CommentListFlatRequest,
-        CommentListRecentRequest,
-        CommentListThreadRequest,
         IssueUsage,
         MetadataEntry,
-        MetadataListRequest,
         MetadataPredicate,
-        MetadataSetRequest,
         RunMessage,
     )
     from multica_py.models.issues import (
         FileDescription,
         InlineDescription,
-        IssueAssignmentRequest,
         IssueChildrenResult,
         IssueChildStageGroup,
-        IssueCreateRequest,
         IssueListFilter,
         IssueMetadataItem,
-        IssueReorderRequest,
-        IssueUpdateRequest,
         LinkedPullRequest,
         StdinDescription,
     )
-    from multica_py.models.project_resources import (
-        ProjectResourceAddLocalDirectoryRequest,
-        ProjectResourceUpdateLocalDirectoryRequest,
-    )
-    from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
-    from multica_py.models.skills import SkillCreateRequest, SkillFile, SkillUpdateRequest
+    from multica_py.models.relations import OffsetPage
+    from multica_py.models.skills import SkillFile
     from multica_py.models.system import (
         AttachmentResult,
         AuthenticationStatus,
@@ -618,12 +575,10 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         RepositoryRecord,
         RuntimeActivity,
         RuntimeDefinition,
-        RuntimeUpdate,
         RuntimeUpdateResult,
         RuntimeUsage,
         SquadMember,
         UserProfile,
-        UserProfileUpdate,
     )
     from multica_py.resources.agents import Agent
     from multica_py.resources.autopilots import Autopilot, AutopilotRun
@@ -767,6 +722,38 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         assert type(result) is Agent
         assert getattr(result, "_client", None) is not None
 
+    def _assert_bound_issue(result: object, _mt: MagicMock) -> None:
+        from multica_py.resources.issues import Issue
+
+        assert type(result) is Issue
+        assert getattr(result, "_client", None) is not None
+
+    def _assert_bound_project(result: object, _mt: MagicMock) -> None:
+        from multica_py.resources.projects import Project
+
+        assert type(result) is Project
+        assert getattr(result, "_client", None) is not None
+
+    def _assert_bound_skill_file(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, SkillFile)
+        assert result.id == "f1"
+        assert result.path == "SKILL.md"
+
+    def _assert_bound_trigger(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, AutopilotTrigger)
+        assert result.id == "tr1"
+
+    def _assert_bound_issue_tuple(result: object, _mt: MagicMock) -> None:
+        assert result == ()
+
+    def _assert_bound_issue_page(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, OffsetPage)
+        assert result.items == ()
+        assert result.total == 0
+        assert result.limit == 25
+        assert result.offset == 5
+        assert not result.has_more
+
     def _assert_download_bytes(result: object, mt: MagicMock) -> None:
         assert result == b"\x00\x01binary"
         mt.run_bytes.assert_called_once()
@@ -904,6 +891,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         expected_exception: type[Exception] | None = None,
         public_route: bool = False,
         snapshot_profiles: tuple[str, str] | None = None,
+        contract_operation_id: str | None = None,
+        bound_target: str | None = None,
     ) -> OperationCase:
         if not transport:
             if sdk_method in _SPAWN_SDK_METHODS:
@@ -921,6 +910,11 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         is_canonical = (":canonical" in id) if canonical is None else canonical
         if id.startswith("generated:") and id not in _GENERATED_CANONICAL_IDS:
             is_canonical = False
+
+        if not stdout and bound_target in {"issue", "project_issues"}:
+            stdout = b'{"id":"i1","title":"Issue","status":"todo"}'
+        elif not stdout and bound_target == "project":
+            stdout = b'{"id":"p1","title":"Project","status":"planned"}'
 
         return OperationCase(
             id=id,
@@ -941,14 +935,18 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             stdin=stdin,
             timeout=timeout,
             contract_operation_id=(
-                id.removeprefix("generated:").rsplit(":", 2)[0]
-                if id.startswith("generated:")
-                else None
+                contract_operation_id
+                or (
+                    id.removeprefix("generated:").rsplit(":", 2)[0]
+                    if id.startswith("generated:")
+                    else None
+                )
             ),
             source_ref=(
                 legacy_key
                 or source_ref
                 or ("agent-copy-v0420" if sdk_method == "agents.copy" else None)
+                or ("bound-resource-contract" if bound_target is not None else None)
             )
             if not id.startswith("generated:")
             else None,
@@ -959,6 +957,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             expected_exception=expected_exception,
             public_route=public_route,
             snapshot_profiles=snapshot_profiles,
+            bound_target=bound_target,
         )
 
     cases: list[OperationCase] = [
@@ -986,21 +985,21 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "agents.create",
             ("agent", "create", "--name", "my-agent", "--output", "json"),
-            args=(AgentCreateRequest(name="my-agent"),),
+            kwargs=(("name", "my-agent"),),
             stdout=_AG,
             id="manual:agents.create:canonical",
         ),
         _c(
             "agents.create",
             ("agent", "create", "--name", "my-agent", "--description", "desc", "--output", "json"),
-            args=(AgentCreateRequest(name="my-agent", description="desc"),),
+            kwargs=(("name", "my-agent"), ("description", "desc")),
             stdout=_AG,
             id="manual:agents.create:variant:01",
         ),
         _c(
             "agents.create",
             ("agent", "create", "--name", "my-agent", "--runtime-id", "rt_001", "--output", "json"),
-            args=(AgentCreateRequest(name="my-agent", runtime_id="rt_001"),),
+            kwargs=(("name", "my-agent"), ("runtime_id", "rt_001")),
             stdout=_AG,
             id="manual:agents.create:variant:02",
         ),
@@ -1018,8 +1017,10 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                AgentCreateRequest(name="my-agent", runtime_id="rt_001", model="multica-test/fake"),
+            kwargs=(
+                ("name", "my-agent"),
+                ("runtime_id", "rt_001"),
+                ("model", "multica-test/fake"),
             ),
             stdout=_AG,
             id="manual:agents.create:variant:03",
@@ -1027,14 +1028,15 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "agents.update",
             ("agent", "get", "a1", "--output", "json"),
-            args=("a1", AgentUpdateRequest()),
+            args=("a1",),
             stdout=_AG,
             id="manual:agents.update:canonical",
         ),
         _c(
             "agents.update",
             ("agent", "update", "a1", "--name", "new", "--output", "json"),
-            args=("a1", AgentUpdateRequest(name="new")),
+            args=("a1",),
+            kwargs=(("name", "new"),),
             stdout=_AG,
             id="manual:agents.update:variant:01",
         ),
@@ -1510,11 +1512,9 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                CommentListFlatRequest(
-                    issue_id="iss_1",
-                    since=datetime.datetime(2026, 7, 12, 10, 0, tzinfo=datetime.UTC),
-                ),
+            kwargs=(
+                ("issue_id", "iss_1"),
+                ("since", datetime.datetime(2026, 7, 12, 10, 0, tzinfo=datetime.UTC)),
             ),
             stdout=b'[{"id":"c1","content":"hello"}]',
             method="list_flat",
@@ -1535,7 +1535,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(CommentListThreadRequest(issue_id="iss_1", thread_id="th_1", limit=10),),
+            kwargs=(("issue_id", "iss_1"), ("thread_id", "th_1"), ("limit", 10)),
             stdout=b'[{"id":"c1","content":"reply","parent_id":"th_1"}]',
             method="list_thread",
             transport="run_text",
@@ -1559,13 +1559,11 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                CommentListThreadRequest(
-                    issue_id="iss_1",
-                    thread_id="th_1",
-                    cursor=CommentCursor(before="cur_b", before_id="cur_id"),
-                    limit=10,
-                ),
+            kwargs=(
+                ("issue_id", "iss_1"),
+                ("thread_id", "th_1"),
+                ("cursor", CommentCursor(before="cur_b", before_id="cur_id")),
+                ("limit", 10),
             ),
             stdout=b'[{"id":"c1","content":"reply","parent_id":"th_1"}]',
             method="list_thread",
@@ -1575,7 +1573,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "issues.comments.list",
             ("issue", "comment", "list", "iss_1", "--recent", "5", "--output", "json"),
-            args=(CommentListRecentRequest(issue_id="iss_1", limit=5),),
+            kwargs=(("issue_id", "iss_1"), ("limit", 5)),
             stdout=b'[{"id":"th_1","comments":[{"id":"c1","content":"root comment"}],"resolved":false}]',
             method="list_recent",
             transport="run_text",
@@ -1584,7 +1582,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "issues.comments.list",
             ("issue", "comment", "list", "iss_1", "--recent", "10", "--output", "json"),
-            args=(CommentListRecentRequest(issue_id="iss_1"),),
+            kwargs=(("issue_id", "iss_1"),),
             stdout=b"[]",
             method="list_recent",
             transport="run_text",
@@ -1648,10 +1646,11 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                MetadataSetRequest(
-                    issue_id="iss_1", key="answer", value="42", value_type=MetadataValueType.integer
-                ),
+            kwargs=(
+                ("issue_id", "iss_1"),
+                ("key", "answer"),
+                ("value", "42"),
+                ("value_type", MetadataValueType.integer),
             ),
             stdout=b'{"key":"answer","value":"42"}',
             method="set_typed",
@@ -1680,16 +1679,17 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                MetadataListRequest(
-                    issue_id="iss_1",
-                    predicates=(
+            kwargs=(
+                ("issue_id", "iss_1"),
+                (
+                    "predicates",
+                    (
                         MetadataPredicate(key="priority", value="high"),
                         MetadataPredicate(key="visible", value=True),
                     ),
-                    cursor="cur_1",
-                    limit=25,
                 ),
+                ("cursor", "cur_1"),
+                ("limit", 25),
             ),
             stdout=b'[{"key":"priority","value":"high"}]',
             method="query",
@@ -1827,15 +1827,17 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "issues.create",
             ("issue", "create", "--title", "Test", "--output", "json"),
-            args=(IssueCreateRequest(title="Test"),),
+            kwargs=(("title", "Test"), ("label_ids", ())),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="generated:issues.create:default:canonical",
         ),
         _c(
             "issues.create",
             ("issue", "create", "--title", "Test", "--description", "hello", "--output", "json"),
-            args=(
-                IssueCreateRequest(title="Test", description_input=InlineDescription(text="hello")),
+            kwargs=(
+                ("title", "Test"),
+                ("description_input", InlineDescription(text="hello")),
+                ("label_ids", ()),
             ),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="generated:issues.create:default:variant:01",
@@ -1852,10 +1854,10 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                IssueCreateRequest(
-                    title="Test", description_input=FileDescription(path="/nonexistent/desc.txt")
-                ),
+            kwargs=(
+                ("title", "Test"),
+                ("description_input", FileDescription(path="/nonexistent/desc.txt")),
+                ("label_ids", ()),
             ),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="generated:issues.create:default:variant:02",
@@ -1863,21 +1865,25 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "issues.create",
             ("issue", "create", "--title", "Test", "--description-stdin", "--output", "json"),
-            args=(IssueCreateRequest(title="Test", description_input=StdinDescription()),),
+            kwargs=(
+                ("title", "Test"),
+                ("description_input", StdinDescription()),
+                ("label_ids", ()),
+            ),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="generated:issues.create:default:variant:03",
         ),
         _c(
             "issues.create",
             ("issue", "create", "--title", "Test", "--project", "pr_001", "--output", "json"),
-            args=(IssueCreateRequest(title="Test", project_id="pr_001"),),
+            kwargs=(("title", "Test"), ("project_id", "pr_001"), ("label_ids", ())),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="generated:issues.create:default:variant:04",
         ),
         _c(
             "issues.create",
             ("issue", "create", "--title", "Test", "--parent", "iss_parent", "--output", "json"),
-            args=(IssueCreateRequest(title="Test", parent_id="iss_parent"),),
+            kwargs=(("title", "Test"), ("parent_id", "iss_parent"), ("label_ids", ())),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.create:variant:05",
         ),
@@ -1895,7 +1901,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(IssueCreateRequest(title="Test", parent_id="iss_parent", project_id="pr_001"),),
+            kwargs=(
+                ("title", "Test"),
+                ("parent_id", "iss_parent"),
+                ("project_id", "pr_001"),
+                ("label_ids", ()),
+            ),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.create:variant:06",
         ),
@@ -1915,42 +1926,45 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "projects.create",
             ("project", "create", "--title", "Alpha", "--output", "json"),
-            args=(ProjectCreateRequest(name="Alpha"),),
+            kwargs=(("name", "Alpha"),),
             stdout=b'{"id":"pr_1","title":"Alpha","status":"planned"}',
             id="generated:projects.create:default:canonical",
         ),
         _c(
             "projects.create",
             ("project", "create", "--title", "Alpha", "--description", "desc", "--output", "json"),
-            args=(ProjectCreateRequest(name="Alpha", description="desc"),),
+            kwargs=(("name", "Alpha"), ("description", "desc")),
             stdout=b'{"id":"pr_1","title":"Alpha","status":"planned"}',
             id="generated:projects.create:default:variant:01",
         ),
         _c(
             "projects.update",
             ("project", "get", "pr_1", "--output", "json"),
-            args=("pr_1", ProjectUpdateRequest()),
+            args=("pr_1",),
             stdout=b'{"id":"pr_1","title":"Alpha","status":"planned"}',
             id="generated:projects.update:default:canonical",
         ),
         _c(
             "projects.update",
             ("project", "update", "pr_1", "--title", "only-title", "--output", "json"),
-            args=("pr_1", ProjectUpdateRequest(name="only-title")),
+            args=("pr_1",),
+            kwargs=(("name", "only-title"),),
             stdout=b'{"id":"pr_1","title":"New","status":"planned"}',
             id="generated:projects.update:default:variant:01",
         ),
         _c(
             "projects.update",
             ("project", "update", "pr_1", "--description", "", "--output", "json"),
-            args=("pr_1", ProjectUpdateRequest(description="")),
+            args=("pr_1",),
+            kwargs=(("description", ""),),
             stdout=b'{"id":"pr_1","title":"Alpha","status":"planned"}',
             id="generated:projects.update:default:variant:02",
         ),
         _c(
             "projects.update",
             ("project", "update", "pr_1", "--description", "new", "--output", "json"),
-            args=("pr_1", ProjectUpdateRequest(description="new")),
+            args=("pr_1",),
+            kwargs=(("description", "new"),),
             stdout=b'{"id":"pr_1","title":"Alpha","status":"planned"}',
             id="generated:projects.update:default:variant:03",
         ),
@@ -1983,12 +1997,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                "pr_001",
-                ProjectResourceAddLocalDirectoryRequest(
-                    local_path="/tmp/sandbox", daemon_id="daemon-001"
-                ),
-            ),
+            args=("pr_001",),
+            kwargs=(("local_path", "/tmp/sandbox"), ("daemon_id", "daemon-001")),
             stdout=_PR_RES_BYTES,
             id="generated:projects.resources.add_local_directory:default:canonical",
         ),
@@ -2010,11 +2020,11 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                "pr_001",
-                ProjectResourceAddLocalDirectoryRequest(
-                    local_path="/tmp/sandbox", daemon_id="daemon-001", label="main"
-                ),
+            args=("pr_001",),
+            kwargs=(
+                ("local_path", "/tmp/sandbox"),
+                ("daemon_id", "daemon-001"),
+                ("label", "main"),
             ),
             stdout=_PR_RES_BYTES,
             id="generated:projects.resources.add_local_directory:default:variant:01",
@@ -2032,11 +2042,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                "pr_001",
-                "res_001",
-                ProjectResourceUpdateLocalDirectoryRequest(local_path="/tmp/sandbox"),
-            ),
+            args=("pr_001", "res_001"),
+            kwargs=(("local_path", "/tmp/sandbox"),),
             stdout=_PR_RES_BYTES,
             id="generated:projects.resources.update_local_directory:default:canonical",
         ),
@@ -2110,7 +2117,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "runtimes.update",
             ("runtime", "update", "r1", "--target-version", "0.4.10", "--output", "json"),
-            args=("r1", RuntimeUpdate(target_version="0.4.10")),
+            args=("r1",),
+            kwargs=(("target_version", "0.4.10"),),
             stdout=_RT_UPDATE,
             id="manual:runtimes.update:canonical",
             source_ref="D17",
@@ -2163,28 +2171,29 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "skills.create",
             ("skill", "create", "--name", "my-sk", "--output", "json"),
-            args=(SkillCreateRequest(name="my-sk"),),
+            kwargs=(("name", "my-sk"),),
             stdout=_SK,
             id="manual:skills.create:canonical",
         ),
         _c(
             "skills.create",
             ("skill", "create", "--name", "my-sk", "--description", "desc", "--output", "json"),
-            args=(SkillCreateRequest(name="my-sk", description="desc"),),
+            kwargs=(("name", "my-sk"), ("description", "desc")),
             stdout=_SK,
             id="manual:skills.create:variant:01",
         ),
         _c(
             "skills.update",
             ("skill", "get", "s1", "--output", "json"),
-            args=("s1", SkillUpdateRequest()),
+            args=("s1",),
             stdout=_SK,
             id="manual:skills.update:canonical",
         ),
         _c(
             "skills.update",
             ("skill", "update", "s1", "--name", "new", "--output", "json"),
-            args=("s1", SkillUpdateRequest(name="new")),
+            args=("s1",),
+            kwargs=(("name", "new"),),
             stdout=_SK,
             id="manual:skills.update:variant:01",
         ),
@@ -2246,7 +2255,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "users.profile_update",
             ("user", "profile", "update", "--description", "bio", "--output", "json"),
-            args=(UserProfileUpdate(description="bio"),),
+            kwargs=(("description", "bio"),),
             stdout=_PROFILE,
             id="manual:users.profile_update:canonical",
             source_ref="D15",
@@ -2347,35 +2356,80 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "issues.update",
             ("issue", "update", "iss_1", "--title", "Updated", "--output", "json"),
-            args=("iss_1", IssueUpdateRequest(title="Updated")),
+            args=("iss_1",),
+            kwargs=(("title", "Updated"),),
             stdout=b'{"id":"iss_1","title":"Updated","status":"todo"}',
             id="manual:issues.update:canonical",
         ),
         _c(
             "issues.update",
             ("issue", "update", "iss_1", "--project", "pr_001", "--output", "json"),
-            args=("iss_1", IssueUpdateRequest(project_id="pr_001")),
+            args=("iss_1",),
+            kwargs=(("project_id", "pr_001"),),
             stdout=b'{"id":"iss_1","title":"Updated","status":"todo"}',
             id="manual:issues.update:variant:01",
         ),
         _c(
             "issues.update",
             ("issue", "update", "iss_1", "--parent", "iss_parent", "--output", "json"),
-            args=("iss_1", IssueUpdateRequest(parent_id="iss_parent")),
+            args=("iss_1",),
+            kwargs=(("parent_id", "iss_parent"),),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.update:variant:02",
         ),
         _c(
             "issues.assign",
             ("issue", "assign", "iss_1", "--to-id", "usr_1", "--output", "json"),
-            args=(IssueAssignmentRequest(issue_id="iss_1", member_id="usr_1"),),
+            args=("iss_1",),
+            kwargs=(("assignee", "usr_1"),),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.assign:canonical",
         ),
         _c(
+            "issues.unassign",
+            ("issue", "assign", "iss_1", "--unassign", "--output", "json"),
+            args=("iss_1",),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.unassign:canonical",
+            source_ref="entity-continuation-actions",
+        ),
+        _c(
+            "issues.move_to_top",
+            ("issue", "reorder", "iss_1", "--top", "--output", "json"),
+            args=("iss_1",),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.move_to_top:canonical",
+            source_ref="entity-continuation-actions",
+        ),
+        _c(
+            "issues.move_to_bottom",
+            ("issue", "reorder", "iss_1", "--bottom", "--output", "json"),
+            args=("iss_1",),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.move_to_bottom:canonical",
+            source_ref="entity-continuation-actions",
+        ),
+        _c(
+            "issues.move_before",
+            ("issue", "reorder", "iss_1", "--before", "iss_2", "--output", "json"),
+            args=("iss_1", "iss_2"),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.move_before:canonical",
+            source_ref="entity-continuation-actions",
+        ),
+        _c(
+            "issues.move_after",
+            ("issue", "reorder", "iss_1", "--after", "iss_2", "--output", "json"),
+            args=("iss_1", "iss_2"),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.move_after:canonical",
+            source_ref="entity-continuation-actions",
+        ),
+        _c(
             "issues.reorder",
             ("issue", "reorder", "iss_1", "--top", "--output", "json"),
-            args=(IssueReorderRequest(issue_id="iss_1", top=True),),
+            args=("iss_1",),
+            kwargs=(("top", True),),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.reorder:canonical",
         ),
@@ -2469,7 +2523,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=("ap_1", AutopilotTriggerCreate(title="Webhook", kind="webhook")),
+            args=("ap_1",),
+            kwargs=(("title", "Webhook"), ("kind", "webhook")),
             stdout=b'{"id":"tr_1","type":"webhook","config":{}}',
             id="manual:autopilots.trigger_add:canonical",
         ),
@@ -2519,11 +2574,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=(
-                "ap_001",
-                "tr_001",
-                AutopilotTriggerUpdate(title="Webhook", kind="webhook"),
-            ),
+            args=("ap_001", "tr_001"),
+            kwargs=(("title", "Webhook"), ("kind", "webhook")),
             stdout=b'{"id":"tr_001","type":"webhook","config":{"url":"https://example.com"}}',
             id="manual:autopilots.trigger_update:canonical",
         ),
@@ -2539,7 +2591,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=("ap_001", "tr_001", AutopilotTriggerUpdate(title="Webhook")),
+            args=("ap_001", "tr_001"),
+            kwargs=(("title", "Webhook"),),
             stdout=b'{"id":"tr_001","type":"webhook","config":{}}',
             id="manual:autopilots.trigger_update:variant:01",
             source_ref="manual:autopilots.trigger_update:canonical",
@@ -2556,7 +2609,8 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "--output",
                 "json",
             ),
-            args=("ap_001", "tr_001", AutopilotTriggerUpdate(kind="")),
+            args=("ap_001", "tr_001"),
+            kwargs=(("kind", ""),),
             stdout=b'{"id":"tr_001","type":"webhook","config":{}}',
             id="manual:autopilots.trigger_update:variant:02",
             source_ref="manual:autopilots.trigger_update:canonical",
@@ -2564,7 +2618,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "autopilots.trigger_update",
             ("autopilot", "get", "ap_001", "--output", "json"),
-            args=("ap_001", "tr_001", AutopilotTriggerUpdate()),
+            args=("ap_001", "tr_001"),
             stdout=_AP_GET,
             id="manual:autopilots.trigger_update:variant:03",
             source_ref="manual:autopilots.trigger_update:canonical",
@@ -2843,6 +2897,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.assign:direct:variant:01",
             source_ref="direct-keyword-arguments",
+            expected_exception=TypeError,
         ),
         _c(
             "issues.assign",
@@ -2851,6 +2906,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.assign:direct:variant:02",
             source_ref="direct-keyword-arguments",
+            expected_exception=TypeError,
         ),
         _c(
             "issues.reorder",
@@ -2972,6 +3028,428 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:users.profile_update:direct:variant:01",
             source_ref="direct-keyword-arguments",
         ),
+        _c(
+            "cli.command",
+            ("issue", "raw", "value with spaces", "$(safe)", ""),
+            args=("issue", "raw", "value with spaces", "$(safe)", ""),
+            stdout=b"raw output",
+            transport="run_bytes",
+            id="manual:cli.command:canonical",
+            source_ref="raw-cli-contract",
+        ),
+        _c(
+            "projects.issues.create",
+            ("issue", "create", "--title", "Deploy", "--project", "p1", "--output", "json"),
+            kwargs=(("title", "Deploy"),),
+            stdout=b'{"id":"i1","title":"Deploy","status":"todo"}',
+            id="manual:projects.issues.create:canonical",
+            contract_operation_id="projects.issues.create",
+            bound_target="project_issues",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.Issue.refresh",
+            ("issue", "get", "i1", "--output", "json"),
+            id="manual:issues.refresh:canonical",
+            contract_operation_id="issues.refresh",
+            bound_target="issue",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.Issue.update",
+            ("issue", "update", "i1", "--title", "Updated", "--output", "json"),
+            kwargs=(("title", "Updated"),),
+            stdout=b'{"id":"i1","title":"Updated","status":"todo"}',
+            id="manual:issues.update_bound:canonical",
+            contract_operation_id="issues.update_bound",
+            bound_target="issue",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.Issue.assign",
+            ("issue", "assign", "i1", "--to-id", "member-1", "--output", "json"),
+            args=("member-1",),
+            stdout=b'{"id":"i1","title":"Issue","status":"todo"}',
+            id="manual:issues.assign_bound:canonical",
+            contract_operation_id="issues.assign_bound",
+            bound_target="issue",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.Issue.unassign",
+            ("issue", "assign", "i1", "--unassign", "--output", "json"),
+            id="manual:issues.unassign_bound:canonical",
+            contract_operation_id="issues.unassign_bound",
+            bound_target="issue",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.Issue.set_status",
+            ("issue", "status", "i1", "done", "--output", "json"),
+            args=(IssueStatusValue.done,),
+            stdout=b'{"id":"i1","title":"Issue","status":"done"}',
+            id="manual:issues.set_status_bound:canonical",
+            contract_operation_id="issues.set_status_bound",
+            bound_target="issue",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "projects.Project.refresh",
+            ("project", "get", "p1", "--output", "json"),
+            id="manual:projects.refresh:canonical",
+            contract_operation_id="projects.refresh",
+            bound_target="project",
+            assert_result=_assert_bound_project,
+        ),
+        _c(
+            "projects.Project.update",
+            ("project", "update", "p1", "--title", "Updated", "--output", "json"),
+            kwargs=(("name", "Updated"),),
+            stdout=b'{"id":"p1","title":"Updated","status":"planned"}',
+            id="manual:projects.update_bound:canonical",
+            contract_operation_id="projects.update_bound",
+            bound_target="project",
+            assert_result=_assert_bound_project,
+        ),
+        _c(
+            "issues.Issue.move_to_top",
+            ("issue", "reorder", "i1", "--top", "--output", "json"),
+            id="manual:issues.move_to_top_bound:canonical",
+            contract_operation_id="issues.move_to_top_bound",
+            bound_target="issue",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.Issue.move_to_bottom",
+            ("issue", "reorder", "i1", "--bottom", "--output", "json"),
+            id="manual:issues.move_to_bottom_bound:canonical",
+            contract_operation_id="issues.move_to_bottom_bound",
+            bound_target="issue",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.Issue.move_before",
+            ("issue", "reorder", "i1", "--before", "i2", "--output", "json"),
+            args=("i2",),
+            id="manual:issues.move_before_bound:canonical",
+            contract_operation_id="issues.move_before_bound",
+            bound_target="issue",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.Issue.move_after",
+            ("issue", "reorder", "i1", "--after", "i2", "--output", "json"),
+            args=("i2",),
+            id="manual:issues.move_after_bound:canonical",
+            contract_operation_id="issues.move_after_bound",
+            bound_target="issue",
+            assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.Issue.add_comment",
+            ("issue", "comment", "add", "i1", "--content", "body", "--output", "json"),
+            args=("body",),
+            stdout=b'{"id":"c1","content":"body"}',
+            id="manual:issues.add_comment_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="issue",
+        ),
+        _c(
+            "issues.Issue.reply",
+            (
+                "issue",
+                "comment",
+                "add",
+                "i1",
+                "--content",
+                "body",
+                "--parent",
+                "t1",
+                "--output",
+                "json",
+            ),
+            args=("t1", "body"),
+            stdout=b'{"id":"c1","content":"body"}',
+            id="manual:issues.reply_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="issue",
+        ),
+        _c(
+            "issues.Issue.add_label",
+            ("issue", "label", "add", "i1", "l1", "--output", "json"),
+            args=("l1",),
+            stdout=_LBL,
+            id="manual:issues.add_label_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="issue",
+        ),
+        _c(
+            "issues.Issue.remove_label",
+            ("issue", "label", "remove", "i1", "l1", "--output", "json"),
+            args=("l1",),
+            stdout=b"[]",
+            id="manual:issues.remove_label_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="issue",
+        ),
+        _c(
+            "issues.Issue.add_subscriber",
+            ("issue", "subscriber", "add", "i1", "--user-id", "u1"),
+            args=("u1",),
+            id="manual:issues.add_subscriber_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="issue",
+        ),
+        _c(
+            "issues.Issue.remove_subscriber",
+            ("issue", "subscriber", "remove", "i1", "--user-id", "u1"),
+            args=("u1",),
+            id="manual:issues.remove_subscriber_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="issue",
+        ),
+        _c(
+            "issues.Issue.set_metadata",
+            (
+                "issue",
+                "metadata",
+                "set",
+                "i1",
+                "--key",
+                "k",
+                "--value",
+                "v",
+                "--type",
+                "string",
+                "--output",
+                "json",
+            ),
+            args=("k", "v"),
+            stdout=b'{"key":"k","value":"v"}',
+            id="manual:issues.set_metadata_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="issue",
+        ),
+        _c(
+            "issues.Issue.delete_metadata",
+            ("issue", "metadata", "delete", "i1", "--key", "k"),
+            args=("k",),
+            id="manual:issues.delete_metadata_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="issue",
+        ),
+        _c(
+            "projects.Project.add_local_directory",
+            (
+                "project",
+                "resource",
+                "add",
+                "p1",
+                "--type",
+                "local_directory",
+                "--local-path",
+                "/repo",
+                "--daemon-id",
+                "d1",
+                "--output",
+                "json",
+            ),
+            kwargs=(("local_path", "/repo"), ("daemon_id", "d1")),
+            stdout=_PR_RES_BYTES,
+            id="manual:projects.add_local_directory_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="project",
+        ),
+        _c(
+            "projects.Project.remove_resource",
+            ("project", "resource", "remove", "p1", "r1"),
+            args=("r1",),
+            id="manual:projects.remove_resource_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="project",
+        ),
+        _c(
+            "agents.Agent.set_skills",
+            ("agent", "skills", "set", "a1", "--skill-id", "sk1", "--skill-id", "sk2"),
+            args=(("sk1", "sk2"),),
+            stdout=b"updated",
+            id="manual:agents.set_skills_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="agent",
+            assert_result=_assert_action_none,
+        ),
+        _c(
+            "skills.Skill.upsert_file",
+            (
+                "skill",
+                "files",
+                "upsert",
+                "s1",
+                "--path",
+                "SKILL.md",
+                "--content",
+                "body",
+                "--output",
+                "json",
+            ),
+            args=("SKILL.md", "body"),
+            stdout=b'{"id":"f1","path":"SKILL.md"}',
+            id="manual:skills.upsert_file_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="skill",
+            assert_result=_assert_bound_skill_file,
+        ),
+        _c(
+            "skills.Skill.delete_file",
+            ("skill", "files", "delete", "s1", "f1"),
+            args=("f1",),
+            stdout=b"deleted",
+            id="manual:skills.delete_file_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="skill",
+            assert_result=_assert_action_none,
+        ),
+        _c(
+            "squads.Squad.add_member",
+            ("squad", "member", "add", "sq1", "u1"),
+            args=("u1",),
+            stdout=b"added",
+            id="manual:squads.add_member_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="squad",
+            assert_result=_assert_action_none,
+        ),
+        _c(
+            "squads.Squad.remove_member",
+            ("squad", "member", "remove", "sq1", "u1"),
+            args=("u1",),
+            stdout=b"removed",
+            id="manual:squads.remove_member_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="squad",
+            assert_result=_assert_action_none,
+        ),
+        _c(
+            "autopilots.Autopilot.trigger_add",
+            (
+                "autopilot",
+                "trigger-add",
+                "ap1",
+                "--title",
+                "Daily",
+                "--kind",
+                "schedule",
+                "--output",
+                "json",
+            ),
+            kwargs=(("title", "Daily"), ("kind", "schedule")),
+            stdout=b'{"id":"tr1","type":"schedule","config":{}}',
+            id="manual:autopilots.trigger_add_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="autopilot",
+            assert_result=_assert_bound_trigger,
+        ),
+        _c(
+            "autopilots.Autopilot.trigger_update",
+            (
+                "autopilot",
+                "trigger-update",
+                "ap1",
+                "tr1",
+                "--title",
+                "Nightly",
+                "--kind",
+                "schedule",
+                "--output",
+                "json",
+            ),
+            args=("tr1",),
+            kwargs=(("title", "Nightly"), ("kind", "schedule")),
+            stdout=b'{"id":"tr1","type":"schedule","config":{}}',
+            id="manual:autopilots.trigger_update_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="autopilot",
+            assert_result=_assert_bound_trigger,
+        ),
+        _c(
+            "autopilots.Autopilot.trigger_delete",
+            ("autopilot", "trigger-delete", "ap1", "tr1"),
+            args=("tr1",),
+            stdout=b"deleted",
+            id="manual:autopilots.trigger_delete_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="autopilot",
+            assert_result=_assert_action_none,
+        ),
+        _c(
+            "projects.issues.all",
+            (
+                "issue",
+                "list",
+                "--limit",
+                "50",
+                "--offset",
+                "0",
+                "--project",
+                "p1",
+                "--output",
+                "json",
+            ),
+            expected_commands=(
+                "multica issue list --limit 50 --offset 0 --project p1 --output json",
+                "multica issue list --limit 50 --offset '${page.next_offset}' --project p1 --output json",
+            ),
+            stdout=b'{"issues":[],"has_more":false,"limit":50,"offset":0,"total":0}',
+            id="manual:projects.issues.all_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="project_issues",
+            assert_result=_assert_bound_issue_tuple,
+        ),
+        _c(
+            "projects.issues.page",
+            (
+                "issue",
+                "list",
+                "--limit",
+                "25",
+                "--offset",
+                "5",
+                "--project",
+                "p1",
+                "--output",
+                "json",
+            ),
+            kwargs=(("limit", 25), ("offset", 5)),
+            stdout=b'{"issues":[],"has_more":false,"limit":25,"offset":5,"total":0}',
+            id="manual:projects.issues.page_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="project_issues",
+            assert_result=_assert_bound_issue_page,
+        ),
+        _c(
+            "projects.issues.refresh",
+            (
+                "issue",
+                "list",
+                "--limit",
+                "50",
+                "--offset",
+                "0",
+                "--project",
+                "p1",
+                "--output",
+                "json",
+            ),
+            expected_commands=(
+                "multica issue list --limit 50 --offset 0 --project p1 --output json",
+                "multica issue list --limit 50 --offset '${page.next_offset}' --project p1 --output json",
+            ),
+            stdout=b'{"issues":[],"has_more":false,"limit":50,"offset":0,"total":0}',
+            id="manual:projects.issues.refresh_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="project_issues",
+            assert_result=_assert_bound_issue_tuple,
+        ),
     ]
     return tuple(cases)
 
@@ -3027,7 +3505,12 @@ def _approved_canonical_conventions(
             projected.append(case)
             continue
         if case.contract_operation_id is None:
-            raise ValueError(f"canonical case is not linked to the approved contract: {case.id}")
+            if case.bound_target is None:
+                raise ValueError(
+                    f"canonical case is not linked to the approved contract: {case.id}"
+                )
+            projected.append(case)
+            continue
         if case.id.startswith("generated:"):
             entrypoint_id = case.id.removeprefix("generated:").rsplit(":", 2)[1]
         else:

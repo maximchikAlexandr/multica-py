@@ -28,9 +28,9 @@
       "comment_threads_wire": "list[CommentThreadWire]",
       "issue": "Issue",
       "issue_wire": "IssueWire",
-      "issue_summaries": "tuple[IssueSummary, ...]",
       "issue_list_page": "IssueListPage",
       "issue_list_page_wire": "IssueListPageWire",
+      "issue_search_result_wire": "IssueSearchResultWire",
       "labels": "tuple[Label, ...]",
       "labels_wire": "list[Label]",
       "none": "None",
@@ -48,11 +48,9 @@
       "attachment_result": "AttachmentResult",
       "attachment_result_wire": "AttachmentResultWire",
       "autopilot_trigger": "AutopilotTrigger",
-      "autopilot_trigger_create": "AutopilotTriggerCreate",
-      "autopilot_trigger_update": "AutopilotTriggerUpdate",
+      "autopilot_trigger_create": "TriggerCreateFields",
+      "autopilot_trigger_update": "TriggerUpdateFields",
       "autopilot_trigger_wire": "AutopilotTriggerWire",
-      "autopilot_triggers": "tuple[AutopilotTrigger, ...]",
-      "autopilot_triggers_wire": "list[AutopilotTriggerWire]",
       "issue_children_result_wire": "IssueChildrenResultWire",
       "issue_pull_requests_result_wire": "IssuePullRequestsResultWire",
       "linked_pull_request": "LinkedPullRequest",
@@ -100,134 +98,155 @@
       "workspace_member": "WorkspaceMember",
       "workspace_members": "tuple[WorkspaceMember, ...]",
       "workspace_members_wire": "list[WorkspaceMemberWire]",
-      "workspace_wire": "WorkspaceWire"
+      "workspace_wire": "WorkspaceWire",
+      "page_issues": "Page[Issue]",
+      "cli_result": "CliResult",
+      "operation_options": "OperationOptions"
     },
     "signatures": {
-      "agent_avatar": "(agent_id: str, file: pathlib.Path) -> ActionResult[None]",
-      "agent_copy": "(source_agent_id: str, *, name: str | UnsetType = Unset, runtime_id: str | UnsetType = Unset, description: str | UnsetType = Unset, instructions: str | UnsetType = Unset, model: str | UnsetType = Unset, thinking_level: str | UnsetType = Unset, service_tier: str | UnsetType = Unset, custom_args: tuple[str, ...] | UnsetType = Unset, max_concurrent_tasks: int | UnsetType = Unset, permission_mode: str | UnsetType = Unset, public_to_workspace: bool | UnsetType = Unset, public_to_member_ids: tuple[str, ...] | UnsetType = Unset, copy_skills: bool = True) -> Agent",
-      "agent_get": "(agent_id: str) -> Agent",
-      "agent_list": "() -> tuple[Agent, ...]",
-      "agent_skills_list": "(agent_id: str) -> tuple[AgentSkill, ...]",
-      "agent_skills_set": "(agent_id: str, skill_ids: tuple[str, ...]) -> ActionResult[None]",
-      "agent_tasks": "(agent_id: str) -> tuple[AgentTask, ...]",
-      "agents_archive_manual": "multica_py.resources.agents.AgentResource.archive(...): action_result_none",
-      "agents_create_manual": "multica_py.resources.agents.AgentResource.create(...): agent",
-      "agents_restore_manual": "multica_py.resources.agents.AgentResource.restore(...): action_result_none",
-      "agents_update_manual": "multica_py.resources.agents.AgentResource.update(...): agent",
-      "attachment_download": "(attachment_id: str, *, output_dir: pathlib.Path) -> pathlib.Path",
-      "attachment_upload": "(path: pathlib.Path, *, task_id: str | None = None) -> AttachmentResult",
-      "attachments_download_bytes_manual": "multica_py.resources.attachments.AttachmentResource.download_bytes(...): bytes",
-      "attachments_upload_bytes_manual": "multica_py.resources.attachments.AttachmentResource.upload_bytes(...): attachment_result",
-      "auth_login_manual": "multica_py.resources.auth.AuthResource.login(...): action_result_str",
-      "auth_logout_manual": "multica_py.resources.auth.AuthResource.logout(...): AuthenticationStatus",
-      "auth_status_manual": "multica_py.resources.auth.AuthResource.status(...): scalar_str",
-      "autopilot_create": "(title: str, *, description: str | None, agent: str, execution_mode: AutopilotExecutionMode, priority: str, project_id: str | None, issue_title_template: str | None, subscribers: tuple[str, ...]) -> Autopilot",
-      "autopilot_delete": "(autopilot_id: str) -> ActionResult[None]",
-      "autopilot_get": "(autopilot_id: str) -> Autopilot",
-      "autopilot_history": "(autopilot_id: str, *, limit: int | None, offset: int | None) -> AutopilotRunListPage",
-      "autopilot_list": "() -> AutopilotListPage",
-      "autopilot_run": "(autopilot_id: str) -> AutopilotRun",
-      "autopilot_trigger": "(autopilot_id: str) -> AutopilotRun",
-      "autopilot_trigger_add": "(autopilot_id: str, request: AutopilotTriggerCreate) -> AutopilotTrigger",
-      "autopilot_trigger_delete": "(autopilot_id: str, trigger_id: str) -> ActionResult[None]",
-      "autopilot_trigger_update": "(autopilot_id: str, trigger_id: str, request: AutopilotTriggerUpdate) -> AutopilotTrigger",
-      "autopilot_update": "(autopilot_id: str, request: AutopilotUpdateRequest) -> Autopilot",
-      "comment_add": "(issue_id: str, body: str) -> Comment",
-      "comment_delete": "(comment_id: str) -> ActionResult[None]",
-      "comment_list": "(issue_id: str) -> tuple[Comment, ...]",
-      "comment_list_flat": "(request: CommentListFlatRequest) -> Page[Comment]",
-      "comment_list_recent": "(request: CommentListRecentRequest) -> Page[CommentThread]",
-      "comment_list_thread": "(request: CommentListThreadRequest) -> Page[Comment]",
-      "configuration_get_manual": "multica_py.resources.configuration.ConfigurationResource.get(...): scalar_str",
-      "configuration_set_manual": "multica_py.resources.configuration.ConfigurationResource.set(...): action_result_none",
-      "configuration_show_manual": "multica_py.resources.configuration.ConfigurationResource.show(...): mapping_config",
-      "daemon_disk_usage_manual": "multica_py.resources.daemon.DaemonResource.disk_usage(...): page_daemon_disk_usage",
-      "daemon_logs_manual": "multica_py.resources.daemon.DaemonResource.logs(...): process",
-      "daemon_restart_manual": "multica_py.resources.daemon.DaemonResource.restart(...): DaemonStatus",
-      "daemon_start_manual": "multica_py.resources.daemon.DaemonResource.start(...): process",
-      "daemon_status_manual": "multica_py.resources.daemon.DaemonResource.status(...): runtime_definition",
-      "daemon_stop_manual": "multica_py.resources.daemon.DaemonResource.stop(...): DaemonStatus",
-      "issue_cancel_task": "(task_id: str, *, issue_id: str | None) -> ActionResult[None]",
-      "issue_children": "(issue_id: str) -> tuple[IssueChildStageGroup, ...]",
-      "issue_create": "(request: IssueCreateRequest) -> Issue",
-      "issue_get": "(issue_id: str) -> Issue",
-      "issue_labels_add": "(issue_id: str, label_id: str) -> tuple[Label, ...]",
-      "issue_labels_list": "(issue_id: str) -> tuple[Label, ...]",
-      "issue_labels_remove": "(issue_id: str, label_id: str) -> tuple[Label, ...]",
-      "issue_list": "(filter: IssueListFilter | None = None) -> IssueListPage",
-      "issue_metadata_delete": "(issue_id: str, key: str) -> ActionResult[None]",
-      "issue_metadata_get": "(issue_id: str, key: str) -> MetadataEntry",
-      "issue_metadata_list": "(issue_id: str) -> tuple[MetadataEntry, ...]",
-      "issue_metadata_set": "(issue_id: str, key: str, value: str) -> MetadataEntry",
-      "issue_pull_requests": "(issue_id: str) -> tuple[LinkedPullRequest, ...]",
-      "issue_rerun": "(issue_id: str) -> ActionResult[None]",
-      "issue_run_messages": "(task_run_id: str, *, issue_id: str | None) -> tuple[RunMessage, ...]",
-      "issue_runs": "(issue_id: str) -> tuple[TaskRun, ...]",
-      "issue_search": "(query: str) -> tuple[IssueSummary, ...]",
-      "issue_status": "(issue_id: str, status: IssueStatus) -> Issue",
-      "issue_subscribers_add": "(issue_id: str, user_id: str) -> ActionResult[None]",
-      "issue_subscribers_list": "(issue_id: str) -> tuple[Subscriber, ...]",
-      "issue_subscribers_remove": "(issue_id: str, user_id: str) -> ActionResult[None]",
-      "issues_assign_manual": "multica_py.resources.issues.IssueResource.assign(...): Issue",
-      "issues_comments_reply_manual": "multica_py.resources.issue_comments.IssueCommentResource.reply(...): comment",
-      "issues_comments_resolve_manual": "multica_py.resources.issue_comments.IssueCommentResource.resolve(...): action_result_none",
-      "issues_comments_unresolve_manual": "multica_py.resources.issue_comments.IssueCommentResource.unresolve(...): action_result_none",
-      "issues_deprioritize_manual": "multica_py.resources.issues.IssueResource.deprioritize(...): action_result_str",
-      "issues_metadata_query_manual": "multica_py.resources.issue_metadata.IssueMetadataResource.query(...): metadata_entries",
-      "issues_metadata_set_typed_manual": "multica_py.resources.issue_metadata.IssueMetadataResource.set_typed(...): MetadataEntry",
-      "issues_reorder_manual": "multica_py.resources.issues.IssueResource.reorder(...): Issue",
-      "issues_update_manual": "multica_py.resources.issues.IssueResource.update(...): issue",
-      "issues_usage_manual": "multica_py.resources.issues.IssueResource.usage(...): page_issue_usage",
-      "label_get": "(label_id: str) -> Label",
-      "label_list": "() -> tuple[Label, ...]",
-      "labels_create_manual": "multica_py.resources.labels.LabelResource.create(...): labels",
-      "labels_delete_manual": "multica_py.resources.labels.LabelResource.delete(...): action_result_none",
-      "labels_update_manual": "multica_py.resources.labels.LabelResource.update(...): labels",
-      "maintenance_update_manual": "multica_py.resources.maintenance.MaintenanceResource.update(...): process",
-      "maintenance_version_manual": "multica_py.resources.maintenance.MaintenanceResource.version(...): scalar_str",
-      "project_create": "(request: ProjectCreateRequest) -> Project",
-      "project_get": "(project_id: str) -> Project",
-      "project_list": "() -> tuple[Project, ...]",
-      "project_resource_add": "(project_id: str, request: ProjectResourceAddLocalDirectoryRequest) -> ProjectResourceRecord",
-      "project_resource_list": "(project_id: str) -> tuple[ProjectResourceRecord, ...]",
-      "project_resource_remove": "(project_id: str, resource_id: str) -> ActionResult[None]",
-      "project_resource_update": "(project_id: str, resource_id: str, request: ProjectResourceUpdateLocalDirectoryRequest) -> ProjectResourceRecord",
-      "project_status": "(project_id: str, status: ProjectStatus) -> Project",
-      "project_update": "(project_id: str, request: ProjectUpdateRequest) -> Project",
-      "projects_delete_manual": "multica_py.resources.projects.ProjectResource.delete(...): action_result_none",
-      "repositories_add": "(urls: tuple[str, ...], *, description: str | None = None) -> ActionResult[RepositoryMutationResult]",
-      "repositories_list": "() -> tuple[RepositoryRecord, ...]",
-      "repositories_remove": "(urls: tuple[str, ...]) -> ActionResult[RepositoryMutationResult]",
-      "runtime_activity": "(runtime_id: str) -> tuple[RuntimeActivity, ...]",
-      "runtime_delete": "(runtime_id: str, *, cascade: bool = False) -> ActionResult[None]",
-      "runtime_list": "() -> tuple[RuntimeDefinition, ...]",
-      "runtime_rename": "(runtime_id: str, name: str, *, machine: bool = False) -> RuntimeDefinition",
-      "runtime_update": "(runtime_id: str, request: RuntimeUpdate) -> ActionResult[RuntimeUpdateResult]",
-      "runtime_usage": "(runtime_id: str, *, days: int = 90) -> tuple[RuntimeUsage, ...]",
-      "setup_cloud_manual": "multica_py.resources.setup.SetupResource.cloud(...): process",
-      "setup_self_host_manual": "multica_py.resources.setup.SetupResource.self_host(...): process",
-      "skill_files_delete": "(skill_id: str, file_id: str) -> ActionResult[None]",
-      "skill_files_list": "(skill_id: str) -> tuple[SkillFile, ...]",
-      "skill_files_upsert": "(skill_id: str, path: str, content: str) -> SkillFile",
-      "skill_get": "(skill_id: str) -> Skill",
-      "skill_list": "() -> tuple[Skill, ...]",
-      "skills_create_manual": "multica_py.resources.skills.SkillResource.create(...): skill",
-      "skills_delete_manual": "multica_py.resources.skills.SkillResource.delete(...): action_result_none",
-      "skills_import_from_url_manual": "multica_py.resources.skills.SkillResource.import_from_url(...): skill",
-      "skills_update_manual": "multica_py.resources.skills.SkillResource.update(...): skill",
-      "squad_get": "(squad_id: str) -> Squad",
-      "squad_list": "() -> tuple[Squad, ...]",
-      "squad_members_add": "(squad_id: str, member_id: str) -> ActionResult[None]",
-      "squad_members_list": "(squad_id: str) -> tuple[SquadMember, ...]",
-      "squad_members_remove": "(squad_id: str, member_id: str) -> ActionResult[None]",
-      "user_profile_get": "() -> UserProfile",
-      "user_profile_update": "(request: UserProfileUpdate) -> UserProfile",
-      "workspace_get": "(workspace_id: str) -> Workspace",
-      "workspace_list": "() -> tuple[Workspace, ...]",
-      "workspace_members_list": "(workspace_id: str) -> tuple[WorkspaceMember, ...]",
-      "workspaces_switch_manual": "multica_py.resources.workspaces.WorkspaceResource.switch(...): action_result_none",
-      "workspaces_unwatch_manual": "multica_py.resources.workspaces.WorkspaceResource.unwatch(...): action_result_none",
-      "workspaces_watch_manual": "multica_py.resources.workspaces.WorkspaceResource.watch(...): action_result_none"
+      "agent_avatar": "(agent_id: str, file: pathlib.Path, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "agent_copy": "(source_agent_id: str, *, name: str | UnsetType = Unset, runtime_id: str | UnsetType = Unset, description: str | UnsetType = Unset, instructions: str | UnsetType = Unset, model: str | UnsetType = Unset, thinking_level: str | UnsetType = Unset, service_tier: str | UnsetType = Unset, custom_args: tuple[str, ...] | UnsetType = Unset, max_concurrent_tasks: int | UnsetType = Unset, permission_mode: str | UnsetType = Unset, public_to_workspace: bool | UnsetType = Unset, public_to_member_ids: tuple[str, ...] | UnsetType = Unset, copy_skills: bool = True, options: OperationOptions | None = None) -> Agent",
+      "agent_get": "(agent_id: str, *, options: OperationOptions | None = None) -> Agent",
+      "agent_list": "(, *, options: OperationOptions | None = None) -> tuple[Agent, ...]",
+      "agent_skills_list": "(agent_id: str, *, options: OperationOptions | None = None) -> tuple[AgentSkill, ...]",
+      "agent_skills_set": "(agent_id: str, skill_ids: tuple[str, ...], *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "agent_tasks": "(agent_id: str, *, options: OperationOptions | None = None) -> tuple[AgentTask, ...]",
+      "agents_archive_manual": "multica_py.resources.agents.AgentResource.archive(*, options: OperationOptions | None = None): action_result_none",
+      "agents_create_manual": "(*, name: str, description: str | None = None, runtime_id: str | None = None, model: str | None = None, options: OperationOptions | None = None) -> Agent",
+      "agents_restore_manual": "multica_py.resources.agents.AgentResource.restore(*, options: OperationOptions | None = None): action_result_none",
+      "agents_update_manual": "(agent_id: str, *, name: str | UnsetType = Unset, description: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> Agent",
+      "attachment_download": "(attachment_id: str, *, output_dir: pathlib.Path, options: OperationOptions | None = None) -> pathlib.Path",
+      "attachment_upload": "(path: pathlib.Path, *, task_id: str | None = None, options: OperationOptions | None = None) -> AttachmentResult",
+      "attachments_download_bytes_manual": "multica_py.resources.attachments.AttachmentResource.download_bytes(*, options: OperationOptions | None = None): bytes",
+      "attachments_upload_bytes_manual": "multica_py.resources.attachments.AttachmentResource.upload_bytes(*, options: OperationOptions | None = None): attachment_result",
+      "auth_login_manual": "multica_py.resources.auth.AuthResource.login(*, options: OperationOptions | None = None): action_result_str",
+      "auth_logout_manual": "multica_py.resources.auth.AuthResource.logout(*, options: OperationOptions | None = None): AuthenticationStatus",
+      "auth_status_manual": "multica_py.resources.auth.AuthResource.status(*, options: OperationOptions | None = None): scalar_str",
+      "autopilot_create": "(title: str, *, description: str | None, agent: str, execution_mode: AutopilotExecutionMode, priority: str, project_id: str | None, issue_title_template: str | None, subscribers: tuple[str, ...], options: OperationOptions | None = None) -> Autopilot",
+      "autopilot_delete": "(autopilot_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "autopilot_get": "(autopilot_id: str, *, options: OperationOptions | None = None) -> Autopilot",
+      "autopilot_history": "(autopilot_id: str, *, limit: int | None, offset: int | None, options: OperationOptions | None = None) -> AutopilotRunListPage",
+      "autopilot_list": "(, *, options: OperationOptions | None = None) -> AutopilotListPage",
+      "autopilot_run": "(autopilot_id: str, *, options: OperationOptions | None = None) -> AutopilotRun",
+      "autopilot_trigger": "(autopilot_id: str, *, options: OperationOptions | None = None) -> AutopilotRun",
+      "autopilot_trigger_add": "(autopilot_id: str, *, title: str, kind: str, options: OperationOptions | None = None) -> AutopilotTrigger",
+      "autopilot_trigger_delete": "(autopilot_id: str, trigger_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "autopilot_trigger_update": "(autopilot_id: str, trigger_id: str, *, title: str | UnsetType = Unset, kind: str | UnsetType = Unset, options: OperationOptions | None = None) -> AutopilotTrigger",
+      "autopilot_update": "(autopilot_id: str, *, title: str | UnsetType = Unset, description: str | None | UnsetType = Unset, agent: str | UnsetType = Unset, priority: str | UnsetType = Unset, status: str | UnsetType = Unset, execution_mode: AutopilotExecutionMode | UnsetType = Unset, project_id: str | None | UnsetType = Unset, issue_title_template: str | None | UnsetType = Unset, subscribers: tuple[str, ...] | UnsetType = Unset, options: OperationOptions | None = None) -> Autopilot",
+      "comment_add": "(issue_id: str, body: str, *, options: OperationOptions | None = None) -> Comment",
+      "comment_delete": "(comment_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "comment_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[Comment, ...]",
+      "comment_list_flat": "(*, issue_id: str, since: datetime.datetime | None = None, options: OperationOptions | None = None) -> Page[Comment]",
+      "comment_list_recent": "(*, issue_id: str, cursor: CommentCursor | None = None, limit: int = 10, since: datetime.datetime | None = None, options: OperationOptions | None = None) -> Page[CommentThread]",
+      "comment_list_thread": "(*, issue_id: str, thread_id: str, cursor: CommentCursor | None = None, limit: int | None = None, since: datetime.datetime | None = None, options: OperationOptions | None = None) -> Page[Comment]",
+      "configuration_get_manual": "multica_py.resources.configuration.ConfigurationResource.get(*, options: OperationOptions | None = None): scalar_str",
+      "configuration_set_manual": "multica_py.resources.configuration.ConfigurationResource.set(*, options: OperationOptions | None = None): action_result_none",
+      "configuration_show_manual": "multica_py.resources.configuration.ConfigurationResource.show(*, options: OperationOptions | None = None): mapping_config",
+      "daemon_disk_usage_manual": "multica_py.resources.daemon.DaemonResource.disk_usage(*, options: OperationOptions | None = None): page_daemon_disk_usage",
+      "daemon_logs_manual": "multica_py.resources.daemon.DaemonResource.logs(*, options: OperationOptions | None = None): process",
+      "daemon_restart_manual": "multica_py.resources.daemon.DaemonResource.restart(*, options: OperationOptions | None = None): DaemonStatus",
+      "daemon_start_manual": "multica_py.resources.daemon.DaemonResource.start(*, options: OperationOptions | None = None): process",
+      "daemon_status_manual": "multica_py.resources.daemon.DaemonResource.status(*, options: OperationOptions | None = None): runtime_definition",
+      "daemon_stop_manual": "multica_py.resources.daemon.DaemonResource.stop(*, options: OperationOptions | None = None): DaemonStatus",
+      "issue_cancel_task": "(task_id: str, *, issue_id: str | None, options: OperationOptions | None = None) -> ActionResult[None]",
+      "issue_children": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[IssueChildStageGroup, ...]",
+      "issue_create": "(*, title: str, description_input: IssueDescriptionInput = NoDescription(), priority: str | None = None, assignee_id: str | None = None, label_ids: tuple[str, ...] = (), project_id: str | None = None, parent_id: str | None = None, options: OperationOptions | None = None) -> Issue",
+      "issue_get": "(issue_id: str, *, options: OperationOptions | None = None) -> Issue",
+      "issue_labels_add": "(issue_id: str, label_id: str, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
+      "issue_labels_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
+      "issue_labels_remove": "(issue_id: str, label_id: str, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
+      "issue_list": "(filter: IssueListFilter | None = None, *, options: OperationOptions | None = None) -> IssueListPage",
+      "issue_metadata_delete": "(issue_id: str, key: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "issue_metadata_get": "(issue_id: str, key: str, *, options: OperationOptions | None = None) -> MetadataEntry",
+      "issue_metadata_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[MetadataEntry, ...]",
+      "issue_metadata_set": "(issue_id: str, key: str, value: str, *, options: OperationOptions | None = None) -> MetadataEntry",
+      "issue_pull_requests": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[LinkedPullRequest, ...]",
+      "issue_rerun": "(issue_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "issue_run_messages": "(task_run_id: str, *, issue_id: str | None, options: OperationOptions | None = None) -> tuple[RunMessage, ...]",
+      "issue_runs": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[TaskRun, ...]",
+      "issue_search": "(query: str, *, options: OperationOptions | None = None) -> Page[Issue]",
+      "issue_status": "(issue_id: str, status: IssueStatus, *, options: OperationOptions | None = None) -> Issue",
+      "issue_subscribers_add": "(issue_id: str, user_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "issue_subscribers_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[Subscriber, ...]",
+      "issue_subscribers_remove": "(issue_id: str, user_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "issues_assign_manual": "(issue_id: str, assignee: AssignmentTarget, *, options: OperationOptions | None = None) -> Issue",
+      "issues_comments_reply_manual": "multica_py.resources.issue_comments.IssueCommentResource.reply(*, options: OperationOptions | None = None): comment",
+      "issues_comments_resolve_manual": "multica_py.resources.issue_comments.IssueCommentResource.resolve(*, options: OperationOptions | None = None): action_result_none",
+      "issues_comments_unresolve_manual": "multica_py.resources.issue_comments.IssueCommentResource.unresolve(*, options: OperationOptions | None = None): action_result_none",
+      "issues_deprioritize_manual": "multica_py.resources.issues.IssueResource.deprioritize(*, options: OperationOptions | None = None): action_result_str",
+      "issues_metadata_query_manual": "(*, issue_id: str, predicates: tuple[MetadataPredicate, ...] = (), cursor: str | None = None, limit: int | None = None, options: OperationOptions | None = None) -> MetadataPage",
+      "issues_metadata_set_typed_manual": "(*, issue_id: str, key: str, value: MetadataValue, value_type: MetadataValueType | None = None, options: OperationOptions | None = None) -> MetadataEntry",
+      "issues_reorder_manual": "(issue_id: str, *, before_id: str | None = None, after_id: str | None = None, top: bool = False, bottom: bool = False, options: OperationOptions | None = None) -> Issue",
+      "issues_update_manual": "(issue_id: str, *, title: str | UnsetType = Unset, description: str | None | UnsetType = Unset, priority: str | UnsetType = Unset, assignee_id: str | None | UnsetType = Unset, project_id: str | None | UnsetType = Unset, parent_id: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> Issue",
+      "issues_usage_manual": "multica_py.resources.issues.IssueResource.usage(*, options: OperationOptions | None = None): page_issue_usage",
+      "label_get": "(label_id: str, *, options: OperationOptions | None = None) -> Label",
+      "label_list": "(, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
+      "labels_create_manual": "multica_py.resources.labels.LabelResource.create(*, options: OperationOptions | None = None): labels",
+      "labels_delete_manual": "multica_py.resources.labels.LabelResource.delete(*, options: OperationOptions | None = None): action_result_none",
+      "labels_update_manual": "(label_id: str, *, name: str | UnsetType = Unset, color: str | UnsetType = Unset, options: OperationOptions | None = None) -> Label",
+      "maintenance_update_manual": "multica_py.resources.maintenance.MaintenanceResource.update(*, options: OperationOptions | None = None): process",
+      "maintenance_version_manual": "multica_py.resources.maintenance.MaintenanceResource.version(*, options: OperationOptions | None = None): scalar_str",
+      "project_create": "(*, name: str, description: str | None = None, options: OperationOptions | None = None) -> Project",
+      "project_get": "(project_id: str, *, options: OperationOptions | None = None) -> Project",
+      "project_list": "(, *, options: OperationOptions | None = None) -> tuple[Project, ...]",
+      "project_resource_add": "(project_id: str, *, local_path: str | pathlib.Path, daemon_id: str, label: str | None = None, options: OperationOptions | None = None) -> ProjectResourceRecord",
+      "project_resource_list": "(project_id: str, *, options: OperationOptions | None = None) -> tuple[ProjectResourceRecord, ...]",
+      "project_resource_remove": "(project_id: str, resource_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "project_resource_update": "(project_id: str, resource_id: str, *, local_path: str | pathlib.Path, options: OperationOptions | None = None) -> ProjectResourceRecord",
+      "project_status": "(project_id: str, status: ProjectStatus, *, options: OperationOptions | None = None) -> Project",
+      "project_update": "(project_id: str, *, name: str | UnsetType = Unset, description: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> Project",
+      "projects_delete_manual": "multica_py.resources.projects.ProjectResource.delete(*, options: OperationOptions | None = None): action_result_none",
+      "repositories_add": "(urls: tuple[str, ...], *, description: str | None = None, options: OperationOptions | None = None) -> ActionResult[RepositoryMutationResult]",
+      "repositories_list": "(, *, options: OperationOptions | None = None) -> tuple[RepositoryRecord, ...]",
+      "repositories_remove": "(urls: tuple[str, ...], *, options: OperationOptions | None = None) -> ActionResult[RepositoryMutationResult]",
+      "runtime_activity": "(runtime_id: str, *, options: OperationOptions | None = None) -> tuple[RuntimeActivity, ...]",
+      "runtime_delete": "(runtime_id: str, *, cascade: bool = False, options: OperationOptions | None = None) -> ActionResult[None]",
+      "runtime_list": "(, *, options: OperationOptions | None = None) -> tuple[RuntimeDefinition, ...]",
+      "runtime_rename": "(runtime_id: str, name: str, *, machine: bool = False, options: OperationOptions | None = None) -> RuntimeDefinition",
+      "runtime_update": "(runtime_id: str, *, target_version: str, wait: bool = False, options: OperationOptions | None = None) -> ActionResult[RuntimeUpdateResult]",
+      "runtime_usage": "(runtime_id: str, *, days: int = 90, options: OperationOptions | None = None) -> tuple[RuntimeUsage, ...]",
+      "setup_cloud_manual": "multica_py.resources.setup.SetupResource.cloud(*, options: OperationOptions | None = None): process",
+      "setup_self_host_manual": "multica_py.resources.setup.SetupResource.self_host(*, options: OperationOptions | None = None): process",
+      "skill_files_delete": "(skill_id: str, file_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "skill_files_list": "(skill_id: str, *, options: OperationOptions | None = None) -> tuple[SkillFile, ...]",
+      "skill_files_upsert": "(skill_id: str, path: str, content: str, *, options: OperationOptions | None = None) -> SkillFile",
+      "skill_get": "(skill_id: str, *, options: OperationOptions | None = None) -> Skill",
+      "skill_list": "(, *, options: OperationOptions | None = None) -> tuple[Skill, ...]",
+      "skills_create_manual": "(*, name: str, description: str | None = None, options: OperationOptions | None = None) -> Skill",
+      "skills_delete_manual": "multica_py.resources.skills.SkillResource.delete(*, options: OperationOptions | None = None): action_result_none",
+      "skills_import_from_url_manual": "multica_py.resources.skills.SkillResource.import_from_url(*, options: OperationOptions | None = None): skill",
+      "skills_update_manual": "(skill_id: str, *, name: str | UnsetType = Unset, description: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> Skill",
+      "squad_get": "(squad_id: str, *, options: OperationOptions | None = None) -> Squad",
+      "squad_list": "(, *, options: OperationOptions | None = None) -> tuple[Squad, ...]",
+      "squad_members_add": "(squad_id: str, member_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "squad_members_list": "(squad_id: str, *, options: OperationOptions | None = None) -> tuple[SquadMember, ...]",
+      "squad_members_remove": "(squad_id: str, member_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "user_profile_get": "(, *, options: OperationOptions | None = None) -> UserProfile",
+      "user_profile_update": "(*, description: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> UserProfile",
+      "workspace_get": "(workspace_id: str, *, options: OperationOptions | None = None) -> Workspace",
+      "workspace_list": "(, *, options: OperationOptions | None = None) -> tuple[Workspace, ...]",
+      "workspace_members_list": "(workspace_id: str, *, options: OperationOptions | None = None) -> tuple[WorkspaceMember, ...]",
+      "workspaces_switch_manual": "multica_py.resources.workspaces.WorkspaceResource.switch(*, options: OperationOptions | None = None): action_result_none",
+      "workspaces_unwatch_manual": "multica_py.resources.workspaces.WorkspaceResource.unwatch(*, options: OperationOptions | None = None): action_result_none",
+      "workspaces_watch_manual": "multica_py.resources.workspaces.WorkspaceResource.watch(*, options: OperationOptions | None = None): action_result_none",
+      "issues_unassign": "(*, options: OperationOptions | None = None) -> issue",
+      "issues_move_to_top": "(*, options: OperationOptions | None = None) -> issue",
+      "issues_move_to_bottom": "(*, options: OperationOptions | None = None) -> issue",
+      "issues_move_before": "(*, options: OperationOptions | None = None) -> issue",
+      "issues_move_after": "(*, options: OperationOptions | None = None) -> issue",
+      "project_issue_create": "(*, options: OperationOptions | None = None) -> issue",
+      "cli_command": "(*argv: str, options: OperationOptions | None = None) -> Command[CliResult]",
+      "issues_refresh": "(*, options: OperationOptions | None = None) -> issue",
+      "issues_update_bound": "(*, options: OperationOptions | None = None) -> issue",
+      "issues_assign_bound": "(*, options: OperationOptions | None = None) -> issue",
+      "issues_unassign_bound": "(*, options: OperationOptions | None = None) -> issue",
+      "issues_set_status_bound": "(*, options: OperationOptions | None = None) -> issue",
+      "projects_refresh": "(*, options: OperationOptions | None = None) -> project",
+      "projects_update_bound": "(*, options: OperationOptions | None = None) -> project",
+      "issues_move_to_top_bound": "(*, options: OperationOptions | None = None) -> Issue",
+      "issues_move_to_bottom_bound": "(*, options: OperationOptions | None = None) -> Issue",
+      "issues_move_before_bound": "(*, options: OperationOptions | None = None) -> Issue",
+      "issues_move_after_bound": "(*, options: OperationOptions | None = None) -> Issue"
     },
     "bindings": {
       "agent_avatar": {
@@ -720,19 +739,19 @@
             "path:autopilot_id"
           ],
           [
-            "request.title",
+            "title",
             "--title",
             "json_body:title"
           ],
           [
-            "request.kind",
+            "kind",
             "--kind",
             "json_body:trigger_kind"
           ]
         ],
         "constraints": [
           "nonblank:autopilot_id",
-          "nonblank:request.title"
+          "nonblank:title"
         ]
       },
       "autopilot_trigger_delete": {
@@ -776,12 +795,12 @@
             "path:trigger_id"
           ],
           [
-            "request.title",
+            "title",
             "--title",
             "json_body:title"
           ],
           [
-            "request.kind",
+            "kind",
             "--kind",
             "json_body:trigger_kind"
           ]
@@ -927,12 +946,12 @@
         "output": "json",
         "mappings": [
           [
-            "request.issue_id",
+            "issue_id",
             "pos:0",
             "path:issue_id"
           ],
           [
-            "request.since",
+            "since",
             "--since",
             "query:since"
           ]
@@ -948,22 +967,22 @@
         "output": "json",
         "mappings": [
           [
-            "request.issue_id",
+            "issue_id",
             "pos:0",
             "path:issue_id"
           ],
           [
-            "request.limit",
+            "limit",
             "--recent",
             "query:recent"
           ],
           [
-            "request.cursor.before",
+            "cursor.before",
             "--before",
             "query:before"
           ],
           [
-            "request.cursor.before_id",
+            "cursor.before_id",
             "--before-id",
             "query:before_id"
           ]
@@ -982,27 +1001,27 @@
         "output": "json",
         "mappings": [
           [
-            "request.issue_id",
+            "issue_id",
             "pos:0",
             "path:issue_id"
           ],
           [
-            "request.thread_id",
+            "thread_id",
             "--thread",
             "query:thread"
           ],
           [
-            "request.limit",
+            "limit",
             "--tail",
             "query:tail"
           ],
           [
-            "request.cursor.before",
+            "cursor.before",
             "--before",
             "query:before"
           ],
           [
-            "request.cursor.before_id",
+            "cursor.before_id",
             "--before-id",
             "query:before_id"
           ]
@@ -1141,43 +1160,43 @@
         "output": "json",
         "mappings": [
           [
-            "request.title",
+            "title",
             "--title",
             "json_body:title"
           ],
           [
-            "request.description_input",
+            "description_input",
             "description-selector",
             "local_control:description"
           ],
           [
-            "request.priority",
+            "priority",
             "--priority",
             "json_body:priority"
           ],
           [
-            "request.assignee_id",
+            "assignee_id",
             "--assignee-id",
             "json_body:assignee_id"
           ],
           [
-            "request.project_id",
+            "project_id",
             "--project",
             "json_body:project_id"
           ],
           [
-            "request.parent_id",
+            "parent_id",
             "--parent",
             "json_body:parent_issue_id"
           ],
           [
-            "request.label_ids",
+            "label_ids",
             "repeat:issue label add",
             "json_body:label_id"
           ]
         ],
         "constraints": [
-          "nonblank:request.title",
+          "nonblank:title",
           "description_exactly_one"
         ]
       },
@@ -1603,8 +1622,22 @@
           "assign"
         ],
         "output": "json",
-        "mappings": [],
-        "constraints": []
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "assignee",
+            "--to-id",
+            "path:assignee"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:assignee"
+        ]
       },
       "issues_comments_reply_manual": {
         "command": [
@@ -1771,18 +1804,18 @@
         "output": "json",
         "mappings": [
           [
-            "request.name",
+            "name",
             "--title",
             "json_body:title"
           ],
           [
-            "request.description",
+            "description",
             "--description",
             "json_body:description"
           ]
         ],
         "constraints": [
-          "nonblank:request.name"
+          "nonblank:name"
         ]
       },
       "project_get": {
@@ -1825,17 +1858,17 @@
             "path:project_id"
           ],
           [
-            "request.local_path",
+            "local_path",
             "--local-path",
             "local_control:absolute_path"
           ],
           [
-            "request.daemon_id",
+            "daemon_id",
             "--daemon-id",
             "json_body:daemon_id"
           ],
           [
-            "request.label",
+            "label",
             "--ref-label",
             "json_body:label"
           ],
@@ -1847,8 +1880,8 @@
         ],
         "constraints": [
           "nonblank:project_id",
-          "nonblank:request.local_path",
-          "nonblank:request.daemon_id",
+          "nonblank:local_path",
+          "nonblank:daemon_id",
           "blank_label_omitted"
         ]
       },
@@ -1913,7 +1946,7 @@
             "path:resource_id"
           ],
           [
-            "request.local_path",
+            "local_path",
             "--local-path",
             "local_control:absolute_path"
           ]
@@ -1921,7 +1954,7 @@
         "constraints": [
           "nonblank:project_id",
           "nonblank:resource_id",
-          "nonblank:request.local_path",
+          "nonblank:local_path",
           "preserve_daemon_and_label"
         ]
       },
@@ -1960,12 +1993,12 @@
             "path:project_id"
           ],
           [
-            "request.name",
+            "name",
             "--title",
             "json_body:title"
           ],
           [
-            "request.description",
+            "description",
             "--description",
             "json_body:description"
           ]
@@ -2123,19 +2156,19 @@
             "path:runtime_id"
           ],
           [
-            "request.target_version",
+            "target_version",
             "--target-version",
             "json_body:target_version"
           ],
           [
-            "request.wait",
+            "wait",
             "--wait",
             "local_control:wait"
           ]
         ],
         "constraints": [
           "nonblank:runtime_id",
-          "nonblank:request.target_version"
+          "nonblank:target_version"
         ]
       },
       "runtime_usage": {
@@ -2425,15 +2458,15 @@
         "output": "json",
         "mappings": [
           [
-            "request.description",
+            "description",
             "--description",
             "json_body:profile_description"
           ]
         ],
         "constraints": [
-          "required:request.description",
-          "empty_emits:request.description",
-          "none_rejected:request.description"
+          "required:description",
+          "empty_emits:description",
+          "none_rejected:description"
         ]
       },
       "workspace_get": {
@@ -2505,6 +2538,267 @@
         ],
         "output": "json",
         "mappings": [],
+        "constraints": []
+      },
+      "issues_unassign": {
+        "command": [
+          "issue",
+          "assign"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "literal.true",
+            "--unassign",
+            "local_control:unassign"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issues_move_to_top": {
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "literal.true",
+            "--top",
+            "local_control:top"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issues_move_to_bottom": {
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "literal.true",
+            "--bottom",
+            "local_control:bottom"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issues_move_before": {
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "other_issue",
+            "--before",
+            "path:before_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issues_move_after": {
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "other_issue",
+            "--after",
+            "path:after_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "project_issue_create": {
+        "command": [
+          "issue",
+          "create"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "project_id",
+            "--project",
+            "json_body:project_id"
+          ],
+          [
+            "title",
+            "--title",
+            "json_body:title"
+          ]
+        ],
+        "constraints": [
+          "nonblank:project_id",
+          "nonblank:title"
+        ]
+      },
+      "cli_command": {
+        "command": [],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "issues_refresh": {
+        "command": [],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "issues_update_bound": {
+        "command": [],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "issues_assign_bound": {
+        "command": [],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "issues_unassign_bound": {
+        "command": [],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "issues_set_status_bound": {
+        "command": [],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "projects_refresh": {
+        "command": [],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "projects_update_bound": {
+        "command": [],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "issues_move_to_top_bound": {
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "literal.true",
+            "--top",
+            "local_control:top"
+          ]
+        ],
+        "constraints": []
+      },
+      "issues_move_to_bottom_bound": {
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "literal.true",
+            "--bottom",
+            "local_control:bottom"
+          ]
+        ],
+        "constraints": []
+      },
+      "issues_move_before_bound": {
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "other_issue",
+            "--before",
+            "path:before_id"
+          ]
+        ],
+        "constraints": []
+      },
+      "issues_move_after_bound": {
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "other_issue",
+            "--after",
+            "path:after_id"
+          ]
+        ],
         "constraints": []
       }
     },
@@ -2897,6 +3191,60 @@
       ],
       "workspaces_watch_manual": [
         "S-WORKSPACE"
+      ],
+      "issues_unassign": [
+        "S-ISSUE"
+      ],
+      "issues_move_to_top": [
+        "S-ISSUE"
+      ],
+      "issues_move_to_bottom": [
+        "S-ISSUE"
+      ],
+      "issues_move_before": [
+        "S-ISSUE"
+      ],
+      "issues_move_after": [
+        "S-ISSUE"
+      ],
+      "project_issue_create": [
+        "S-ISSUE"
+      ],
+      "cli_command": [
+        "S-ISSUE"
+      ],
+      "issues_refresh": [
+        "S-ISSUE"
+      ],
+      "issues_update_bound": [
+        "S-ISSUE"
+      ],
+      "issues_assign_bound": [
+        "S-ISSUE"
+      ],
+      "issues_unassign_bound": [
+        "S-ISSUE"
+      ],
+      "issues_set_status_bound": [
+        "S-ISSUE"
+      ],
+      "projects_refresh": [
+        "S-ISSUE"
+      ],
+      "projects_update_bound": [
+        "S-ISSUE"
+      ],
+      "issues_move_to_top_bound": [
+        "S-ISSUE"
+      ],
+      "issues_move_to_bottom_bound": [
+        "S-ISSUE"
+      ],
+      "issues_move_before_bound": [
+        "S-ISSUE"
+      ],
+      "issues_move_after_bound": [
+        "S-ISSUE"
       ]
     },
     "presence": {
@@ -3182,7 +3530,10 @@
         "required_nonnull",
         "required_nonnull"
       ],
-      "issues_assign_manual": [],
+      "issues_assign_manual": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
       "issues_comments_reply_manual": [],
       "issues_comments_resolve_manual": [],
       "issues_comments_unresolve_manual": [],
@@ -3318,7 +3669,55 @@
       ],
       "workspaces_switch_manual": [],
       "workspaces_unwatch_manual": [],
-      "workspaces_watch_manual": []
+      "workspaces_watch_manual": [],
+      "issues_unassign": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "issues_move_to_top": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "issues_move_to_bottom": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "issues_move_before": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "issues_move_after": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "project_issue_create": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "cli_command": [],
+      "issues_refresh": [],
+      "issues_update_bound": [],
+      "issues_assign_bound": [],
+      "issues_unassign_bound": [],
+      "issues_set_status_bound": [],
+      "projects_refresh": [],
+      "projects_update_bound": [],
+      "issues_move_to_top_bound": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "issues_move_to_bottom_bound": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "issues_move_before_bound": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "issues_move_after_bound": [
+        "required_nonnull",
+        "required_nonnull"
+      ]
     },
     "responses": {
       "action_result_none": {
@@ -3438,15 +3837,6 @@
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
       },
-      "autopilot_triggers": {
-        "public_type_id": "autopilot_triggers",
-        "wire_type_id": "autopilot_triggers_wire",
-        "decoder_id": "decode_autopilot_triggers",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
       "bytes": {
         "public_type_id": "bytes",
         "wire_type_id": null,
@@ -3514,24 +3904,6 @@
         "public_type_id": "issue_list_page",
         "wire_type_id": "issue_list_page_wire",
         "decoder_id": "decode_issue_list_page",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
-      },
-      "issue_search": {
-        "public_type_id": "issue_summaries",
-        "wire_type_id": "issue_list_page_wire",
-        "decoder_id": "decode_issue_summaries",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "accept_issues_envelope_or_legacy_array_via_handwritten_adapter"
-      },
-      "issue_summaries": {
-        "public_type_id": "issue_summaries",
-        "wire_type_id": "issue_list_page_wire",
-        "decoder_id": "decode_issue_summaries",
         "success_exit_codes": [
           0
         ],
@@ -3626,15 +3998,6 @@
           0
         ],
         "malformed_output": "raise"
-      },
-      "page_issue_summaries": {
-        "public_type_id": "Page[issue_summaries]",
-        "wire_type_id": "issue_list_page_wire",
-        "decoder_id": "decode_issue_summaries",
-        "success_exit_codes": [
-          0
-        ],
-        "malformed_output": "raise_output_shape_or_decode_error"
       },
       "page_issue_usage": {
         "public_type_id": "Page[issue_usage]",
@@ -4013,6 +4376,27 @@
           0
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "page_issues": {
+        "public_type_id": "Page[Issue]",
+        "wire_type_id": "issue_search_result_wire",
+        "decoder_id": "decode_issue_search",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "accept_issues_envelope_or_legacy_array_via_handwritten_adapter",
+        "aliases": [
+          "issue_search"
+        ]
+      },
+      "cli_result": {
+        "public_type_id": "CliResult",
+        "wire_type_id": null,
+        "decoder_id": "decode_cli_result",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raw stdout/stderr are preserved as bytes"
       }
     },
     "decoders": {
@@ -4025,7 +4409,7 @@
       "decode_comment_page": "multica_py.resources.issue_comments.IssueCommentResource._decode_comment_page",
       "decode_comment_thread_page": "multica_py.resources.issue_comments.IssueCommentResource._decode_comment_thread_page",
       "decode_issue": "multica_py._internal.wire_models.issue_from_wire",
-      "decode_issue_summaries": "multica_py._internal.wire_models.issue_summary_from_wire",
+      "decode_issue_search": "multica_py._internal.wire_models.issue_page_from_wire",
       "decode_issue_list_page": "multica_py._internal.wire_models.issue_list_page_from_wire",
       "decode_labels": "multica_py.resources.issue_labels._decode_labels",
       "decode_none": "multica_py.resources._base.decode_none",
@@ -4038,7 +4422,6 @@
       "decode_agent_tasks": "multica_py.resources.agents.AgentResource._decode_agent_tasks",
       "decode_attachment_result": "multica_py._internal.wire_models.attachment_result_from_wire",
       "decode_autopilot_trigger": "multica_py._internal.wire_models.autopilot_trigger_from_wire",
-      "decode_autopilot_triggers": "multica_py.resources.autopilot_triggers.AutopilotTriggerResource._decode_triggers",
       "decode_issue_children": "multica_py.resources.issues.IssueResource._decode_issue_children",
       "decode_linked_pull_requests": "multica_py.resources.issues.IssueResource._decode_pull_requests",
       "decode_metadata_entries": "multica_py.resources.issue_metadata.IssueMetadataResource._decode_metadata_entries",
@@ -4059,7 +4442,8 @@
       "decode_workspace_members": "multica_py.resources.workspaces.WorkspaceResource._decode_workspace_members",
       "decode_skill": "multica_py._internal.wire_models.skill_from_wire",
       "decode_squad": "multica_py._internal.wire_models.squad_from_wire",
-      "decode_workspace": "multica_py._internal.wire_models.workspace_from_wire"
+      "decode_workspace": "multica_py._internal.wire_models.workspace_from_wire",
+      "decode_cli_result": "multica_py.resources.cli.decode_cli_result"
     },
     "validators": {
       "at_least_one:name_description": "multica_py._generated.validators.validate_project_update",
@@ -4079,10 +4463,6 @@
       "nonblank:label_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:project_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:query": "multica_py._generated.validators.validate_nonblank",
-      "nonblank:request.daemon_id": "multica_py._generated.validators.validate_nonblank",
-      "nonblank:request.local_path": "multica_py._generated.validators.validate_nonblank",
-      "nonblank:request.name": "multica_py._generated.validators.validate_nonblank",
-      "nonblank:request.title": "multica_py._generated.validators.validate_nonblank",
       "nonblank:resource_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:autopilot_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:title": "multica_py._generated.validators.validate_nonblank",
@@ -4110,7 +4490,9 @@
       "nonblank:url": "multica_py._generated.validators.validate_nonblank",
       "nonblank:user_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:workspace_id": "multica_py._generated.validators.validate_nonblank",
-      "positive_int:max_concurrent_tasks": "multica_py._generated.validators.validate_positive_max_concurrent_tasks"
+      "positive_int:max_concurrent_tasks": "multica_py._generated.validators.validate_positive_max_concurrent_tasks",
+      "nonblank:daemon_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:local_path": "multica_py._generated.validators.validate_nonblank"
     },
     "validator_evidence": {
       "at_least_one:name_description": {
@@ -4181,22 +4563,6 @@
         "positive_case_id": "nonblank-query-valid",
         "negative_case_id": "nonblank-query-invalid"
       },
-      "nonblank:request.daemon_id": {
-        "positive_case_id": "nonblank-request-daemon-id-valid",
-        "negative_case_id": "nonblank-request-daemon-id-invalid"
-      },
-      "nonblank:request.local_path": {
-        "positive_case_id": "nonblank-request-local-path-valid",
-        "negative_case_id": "nonblank-request-local-path-invalid"
-      },
-      "nonblank:request.name": {
-        "positive_case_id": "nonblank-request-name-valid",
-        "negative_case_id": "nonblank-request-name-invalid"
-      },
-      "nonblank:request.title": {
-        "positive_case_id": "nonblank-request-title-valid",
-        "negative_case_id": "nonblank-request-title-invalid"
-      },
       "nonblank:resource_id": {
         "positive_case_id": "nonblank-resource-id-valid",
         "negative_case_id": "nonblank-resource-id-invalid"
@@ -4210,8 +4576,8 @@
         "negative_case_id": "nonblank-autopilot-id-invalid"
       },
       "nonblank:title": {
-        "positive_case_id": "nonblank-title-valid",
-        "negative_case_id": "nonblank-title-invalid"
+        "positive_case_id": "nonblank-request-title-valid",
+        "negative_case_id": "nonblank-request-title-invalid"
       },
       "nonblank:subscriber": {
         "positive_case_id": "nonblank-subscriber-valid",
@@ -4254,8 +4620,8 @@
         "negative_case_id": "nonblank-member_id-invalid"
       },
       "nonblank:name": {
-        "positive_case_id": "nonblank-name-valid",
-        "negative_case_id": "nonblank-name-invalid"
+        "positive_case_id": "nonblank-request-name-valid",
+        "negative_case_id": "nonblank-request-name-invalid"
       },
       "nonblank:runtime": {
         "positive_case_id": "nonblank-runtime-valid",
@@ -4308,6 +4674,14 @@
       "positive_int:max_concurrent_tasks": {
         "positive_case_id": "positive-max-concurrent-tasks-valid",
         "negative_case_id": "positive-max-concurrent-tasks-invalid"
+      },
+      "nonblank:daemon_id": {
+        "positive_case_id": "nonblank-request-daemon-id-valid",
+        "negative_case_id": "nonblank-request-daemon-id-invalid"
+      },
+      "nonblank:local_path": {
+        "positive_case_id": "nonblank-request-local-path-valid",
+        "negative_case_id": "nonblank-request-local-path-invalid"
       }
     },
     "enum_definitions": [
@@ -4474,25 +4848,25 @@
         "body_kind": "nonblank"
       },
       {
-        "validator_id": "nonblank:request.daemon_id",
+        "validator_id": "nonblank:daemon_id",
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
       },
       {
-        "validator_id": "nonblank:request.local_path",
+        "validator_id": "nonblank:local_path",
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
       },
       {
-        "validator_id": "nonblank:request.name",
+        "validator_id": "nonblank:name",
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
       },
       {
-        "validator_id": "nonblank:request.title",
+        "validator_id": "nonblank:title",
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
@@ -4505,12 +4879,6 @@
       },
       {
         "validator_id": "nonblank:autopilot_id",
-        "name": "validate_nonblank",
-        "parameter_name": "value",
-        "body_kind": "nonblank"
-      },
-      {
-        "validator_id": "nonblank:title",
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
@@ -4577,12 +4945,6 @@
       },
       {
         "validator_id": "nonblank:member_id",
-        "name": "validate_nonblank",
-        "parameter_name": "value",
-        "body_kind": "nonblank"
-      },
-      {
-        "validator_id": "nonblank:name",
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
@@ -5182,19 +5544,19 @@
             "destination": "path:autopilot_id"
           },
           {
-            "source": "request.title",
+            "source": "title",
             "binding": "--title",
             "destination": "json_body:title"
           },
           {
-            "source": "request.kind",
+            "source": "kind",
             "binding": "--kind",
             "destination": "json_body:trigger_kind"
           }
         ],
         "validator_ids": [
           "nonblank:autopilot_id",
-          "nonblank:request.title"
+          "nonblank:title"
         ]
       },
       {
@@ -5242,12 +5604,12 @@
             "destination": "path:trigger_id"
           },
           {
-            "source": "request.title",
+            "source": "title",
             "binding": "--title",
             "destination": "json_body:title"
           },
           {
-            "source": "request.kind",
+            "source": "kind",
             "binding": "--kind",
             "destination": "json_body:trigger_kind"
           }
@@ -5555,12 +5917,12 @@
         ],
         "mappings": [
           {
-            "source": "request.issue_id",
+            "source": "issue_id",
             "binding": "pos:0",
             "destination": "path:issue_id"
           },
           {
-            "source": "request.since",
+            "source": "since",
             "binding": "--since",
             "destination": "query:since"
           }
@@ -5578,22 +5940,22 @@
         ],
         "mappings": [
           {
-            "source": "request.issue_id",
+            "source": "issue_id",
             "binding": "pos:0",
             "destination": "path:issue_id"
           },
           {
-            "source": "request.limit",
+            "source": "limit",
             "binding": "--recent",
             "destination": "query:recent"
           },
           {
-            "source": "request.cursor.before",
+            "source": "cursor.before",
             "binding": "--before",
             "destination": "query:before"
           },
           {
-            "source": "request.cursor.before_id",
+            "source": "cursor.before_id",
             "binding": "--before-id",
             "destination": "query:before_id"
           }
@@ -5614,27 +5976,27 @@
         ],
         "mappings": [
           {
-            "source": "request.issue_id",
+            "source": "issue_id",
             "binding": "pos:0",
             "destination": "path:issue_id"
           },
           {
-            "source": "request.thread_id",
+            "source": "thread_id",
             "binding": "--thread",
             "destination": "query:thread"
           },
           {
-            "source": "request.limit",
+            "source": "limit",
             "binding": "--tail",
             "destination": "query:tail"
           },
           {
-            "source": "request.cursor.before",
+            "source": "cursor.before",
             "binding": "--before",
             "destination": "query:before"
           },
           {
-            "source": "request.cursor.before_id",
+            "source": "cursor.before_id",
             "binding": "--before-id",
             "destination": "query:before_id"
           }
@@ -5691,43 +6053,43 @@
         ],
         "mappings": [
           {
-            "source": "request.title",
+            "source": "title",
             "binding": "--title",
             "destination": "json_body:title"
           },
           {
-            "source": "request.description_input",
+            "source": "description_input",
             "binding": "description-selector",
             "destination": "local_control:description"
           },
           {
-            "source": "request.priority",
+            "source": "priority",
             "binding": "--priority",
             "destination": "json_body:priority"
           },
           {
-            "source": "request.assignee_id",
+            "source": "assignee_id",
             "binding": "--assignee-id",
             "destination": "json_body:assignee_id"
           },
           {
-            "source": "request.project_id",
+            "source": "project_id",
             "binding": "--project",
             "destination": "json_body:project_id"
           },
           {
-            "source": "request.parent_id",
+            "source": "parent_id",
             "binding": "--parent",
             "destination": "json_body:parent_issue_id"
           },
           {
-            "source": "request.label_ids",
+            "source": "label_ids",
             "binding": "repeat:issue label add",
             "destination": "json_body:label_id"
           }
         ],
         "validator_ids": [
-          "nonblank:request.title",
+          "nonblank:title",
           "description_exactly_one"
         ]
       },
@@ -6343,18 +6705,18 @@
         ],
         "mappings": [
           {
-            "source": "request.name",
+            "source": "name",
             "binding": "--title",
             "destination": "json_body:title"
           },
           {
-            "source": "request.description",
+            "source": "description",
             "binding": "--description",
             "destination": "json_body:description"
           }
         ],
         "validator_ids": [
-          "nonblank:request.name"
+          "nonblank:name"
         ]
       },
       {
@@ -6414,17 +6776,17 @@
             "destination": "path:project_id"
           },
           {
-            "source": "request.local_path",
+            "source": "local_path",
             "binding": "--local-path",
             "destination": "local_control:absolute_path"
           },
           {
-            "source": "request.daemon_id",
+            "source": "daemon_id",
             "binding": "--daemon-id",
             "destination": "json_body:daemon_id"
           },
           {
-            "source": "request.label",
+            "source": "label",
             "binding": "--ref-label",
             "destination": "json_body:label"
           },
@@ -6436,8 +6798,8 @@
         ],
         "validator_ids": [
           "nonblank:project_id",
-          "nonblank:request.local_path",
-          "nonblank:request.daemon_id",
+          "nonblank:local_path",
+          "nonblank:daemon_id",
           "blank_label_omitted"
         ]
       },
@@ -6508,7 +6870,7 @@
             "destination": "path:resource_id"
           },
           {
-            "source": "request.local_path",
+            "source": "local_path",
             "binding": "--local-path",
             "destination": "local_control:absolute_path"
           }
@@ -6516,7 +6878,7 @@
         "validator_ids": [
           "nonblank:project_id",
           "nonblank:resource_id",
-          "nonblank:request.local_path",
+          "nonblank:local_path",
           "preserve_daemon_and_label"
         ]
       },
@@ -6559,12 +6921,12 @@
             "destination": "path:project_id"
           },
           {
-            "source": "request.name",
+            "source": "name",
             "binding": "--title",
             "destination": "json_body:title"
           },
           {
-            "source": "request.description",
+            "source": "description",
             "binding": "--description",
             "destination": "json_body:description"
           }
@@ -6725,12 +7087,12 @@
             "destination": "path:runtime_id"
           },
           {
-            "source": "request.target_version",
+            "source": "target_version",
             "binding": "--target-version",
             "destination": "json_body:target_version"
           },
           {
-            "source": "request.wait",
+            "source": "wait",
             "binding": "--wait",
             "destination": "local_control:wait"
           }
@@ -7061,7 +7423,7 @@
         ],
         "mappings": [
           {
-            "source": "request.description",
+            "source": "description",
             "binding": "--description",
             "destination": "json_body:profile_description"
           }
@@ -7150,6 +7512,290 @@
         ],
         "mappings": [],
         "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_unassign",
+        "operation_id": "issues.unassign",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "assign"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "literal.true",
+            "binding": "--unassign",
+            "destination": "local_control:unassign"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_move_to_top",
+        "operation_id": "issues.move_to_top",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "literal.true",
+            "binding": "--top",
+            "destination": "local_control:top"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_move_to_bottom",
+        "operation_id": "issues.move_to_bottom",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "literal.true",
+            "binding": "--bottom",
+            "destination": "local_control:bottom"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_move_before",
+        "operation_id": "issues.move_before",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "other_issue",
+            "binding": "--before",
+            "destination": "path:before_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_move_after",
+        "operation_id": "issues.move_after",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "other_issue",
+            "binding": "--after",
+            "destination": "path:after_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "project_issue_create",
+        "operation_id": "projects.issues.create",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "create"
+        ],
+        "mappings": [
+          {
+            "source": "project_id",
+            "binding": "--project",
+            "destination": "json_body:project_id"
+          },
+          {
+            "source": "title",
+            "binding": "--title",
+            "destination": "json_body:title"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "cli_command",
+        "operation_id": "cli.command",
+        "entrypoint_id": "default",
+        "command": [],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_refresh",
+        "operation_id": "issues.refresh",
+        "entrypoint_id": "default",
+        "command": [],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_update_bound",
+        "operation_id": "issues.update_bound",
+        "entrypoint_id": "default",
+        "command": [],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_assign_bound",
+        "operation_id": "issues.assign_bound",
+        "entrypoint_id": "default",
+        "command": [],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_unassign_bound",
+        "operation_id": "issues.unassign_bound",
+        "entrypoint_id": "default",
+        "command": [],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_set_status_bound",
+        "operation_id": "issues.set_status_bound",
+        "entrypoint_id": "default",
+        "command": [],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "projects_refresh",
+        "operation_id": "projects.refresh",
+        "entrypoint_id": "default",
+        "command": [],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "projects_update_bound",
+        "operation_id": "projects.update_bound",
+        "entrypoint_id": "default",
+        "command": [],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_move_to_top_bound",
+        "operation_id": "issues.move_to_top_bound",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "literal.true",
+            "binding": "--top",
+            "destination": "local_control:top"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_move_to_bottom_bound",
+        "operation_id": "issues.move_to_bottom_bound",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "literal.true",
+            "binding": "--bottom",
+            "destination": "local_control:bottom"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_move_before_bound",
+        "operation_id": "issues.move_before_bound",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "other_issue",
+            "binding": "--before",
+            "destination": "path:before_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issues_move_after_bound",
+        "operation_id": "issues.move_after_bound",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "reorder"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "other_issue",
+            "binding": "--after",
+            "destination": "path:after_id"
+          }
+        ],
+        "validator_ids": []
       }
     ],
     "test_vectors": {
@@ -7193,29 +7839,23 @@
         "operation_id": "issues.comments.list",
         "entrypoint_id": "flat",
         "is_canonical": false,
-        "args": [
-          {
-            "kind": "request",
-            "type": "CommentListFlatRequest",
-            "fields": [
-              [
-                "issue_id",
-                {
-                  "kind": "primitive",
-                  "value": "iss_1"
-                }
-              ],
-              [
-                "since",
-                {
-                  "kind": "datetime",
-                  "value": "2026-07-12T10:00:00+00:00"
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "issue_id",
+            {
+              "kind": "primitive",
+              "value": "iss_1"
+            }
+          ],
+          [
+            "since",
+            {
+              "kind": "datetime",
+              "value": "2026-07-12T10:00:00+00:00"
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "W3siaWQiOiJjMSIsImNvbnRlbnQiOiJoZWxsbyJ9XQ==",
         "stderr": "",
         "exit_code": 0,
@@ -7251,36 +7891,30 @@
         "operation_id": "issues.comments.list",
         "entrypoint_id": "thread",
         "is_canonical": false,
-        "args": [
-          {
-            "kind": "request",
-            "type": "CommentListThreadRequest",
-            "fields": [
-              [
-                "issue_id",
-                {
-                  "kind": "primitive",
-                  "value": "iss_1"
-                }
-              ],
-              [
-                "thread_id",
-                {
-                  "kind": "primitive",
-                  "value": "th_1"
-                }
-              ],
-              [
-                "limit",
-                {
-                  "kind": "primitive",
-                  "value": 10
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "issue_id",
+            {
+              "kind": "primitive",
+              "value": "iss_1"
+            }
+          ],
+          [
+            "thread_id",
+            {
+              "kind": "primitive",
+              "value": "th_1"
+            }
+          ],
+          [
+            "limit",
+            {
+              "kind": "primitive",
+              "value": 10
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "W3siaWQiOiJjMSIsImNvbnRlbnQiOiJyZXBseSIsInBhcmVudF9pZCI6InRoXzEifV0=",
         "stderr": "",
         "exit_code": 0,
@@ -7318,44 +7952,38 @@
         "operation_id": "issues.comments.list",
         "entrypoint_id": "thread",
         "is_canonical": true,
-        "args": [
-          {
-            "kind": "request",
-            "type": "CommentListThreadRequest",
-            "fields": [
-              [
-                "issue_id",
-                {
-                  "kind": "primitive",
-                  "value": "iss_1"
-                }
-              ],
-              [
-                "thread_id",
-                {
-                  "kind": "primitive",
-                  "value": "th_1"
-                }
-              ],
-              [
-                "cursor",
-                {
-                  "kind": "comment_cursor",
-                  "before": "cur_b",
-                  "before_id": "cur_id"
-                }
-              ],
-              [
-                "limit",
-                {
-                  "kind": "primitive",
-                  "value": 10
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "issue_id",
+            {
+              "kind": "primitive",
+              "value": "iss_1"
+            }
+          ],
+          [
+            "thread_id",
+            {
+              "kind": "primitive",
+              "value": "th_1"
+            }
+          ],
+          [
+            "cursor",
+            {
+              "kind": "comment_cursor",
+              "before": "cur_b",
+              "before_id": "cur_id"
+            }
+          ],
+          [
+            "limit",
+            {
+              "kind": "primitive",
+              "value": 10
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "W3siaWQiOiJjMSIsImNvbnRlbnQiOiJyZXBseSIsInBhcmVudF9pZCI6InRoXzEifV0=",
         "stderr": "",
         "exit_code": 0,
@@ -7397,29 +8025,23 @@
         "operation_id": "issues.comments.list",
         "entrypoint_id": "recent",
         "is_canonical": false,
-        "args": [
-          {
-            "kind": "request",
-            "type": "CommentListRecentRequest",
-            "fields": [
-              [
-                "issue_id",
-                {
-                  "kind": "primitive",
-                  "value": "iss_1"
-                }
-              ],
-              [
-                "limit",
-                {
-                  "kind": "primitive",
-                  "value": 5
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "issue_id",
+            {
+              "kind": "primitive",
+              "value": "iss_1"
+            }
+          ],
+          [
+            "limit",
+            {
+              "kind": "primitive",
+              "value": 5
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "W3siaWQiOiJ0aF8xIiwiY29tbWVudHMiOlt7ImlkIjoiYzEiLCJjb250ZW50Ijoicm9vdCBjb21tZW50In1dLCJyZXNvbHZlZCI6ZmFsc2V9XQ==",
         "stderr": "",
         "exit_code": 0,
@@ -7455,29 +8077,23 @@
         "operation_id": "issues.comments.list",
         "entrypoint_id": "recent",
         "is_canonical": true,
-        "args": [
-          {
-            "kind": "request",
-            "type": "CommentListRecentRequest",
-            "fields": [
-              [
-                "issue_id",
-                {
-                  "kind": "primitive",
-                  "value": "iss_1"
-                }
-              ],
-              [
-                "limit",
-                {
-                  "kind": "primitive",
-                  "value": 10
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "issue_id",
+            {
+              "kind": "primitive",
+              "value": "iss_1"
+            }
+          ],
+          [
+            "limit",
+            {
+              "kind": "primitive",
+              "value": 10
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "W10=",
         "stderr": "",
         "exit_code": 0,
@@ -7651,29 +8267,23 @@
         "operation_id": "issues.create",
         "entrypoint_id": "default",
         "is_canonical": true,
-        "args": [
-          {
-            "kind": "request",
-            "type": "IssueCreateRequest",
-            "fields": [
-              [
-                "title",
-                {
-                  "kind": "primitive",
-                  "value": "Test"
-                }
-              ],
-              [
-                "label_ids",
-                {
-                  "kind": "list",
-                  "items": []
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "title",
+            {
+              "kind": "primitive",
+              "value": "Test"
+            }
+          ],
+          [
+            "label_ids",
+            {
+              "kind": "list",
+              "items": []
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
         "stderr": "",
         "exit_code": 0,
@@ -7693,7 +8303,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.issues.Issue"
+            "value": "multica_py.resources.issues.Issue"
           }
         }
       },
@@ -7702,36 +8312,30 @@
         "operation_id": "issues.create",
         "entrypoint_id": "default",
         "is_canonical": true,
-        "args": [
-          {
-            "kind": "request",
-            "type": "IssueCreateRequest",
-            "fields": [
-              [
-                "title",
-                {
-                  "kind": "primitive",
-                  "value": "Test"
-                }
-              ],
-              [
-                "description_input",
-                {
-                  "kind": "inline_description",
-                  "text": "hello"
-                }
-              ],
-              [
-                "label_ids",
-                {
-                  "kind": "list",
-                  "items": []
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "title",
+            {
+              "kind": "primitive",
+              "value": "Test"
+            }
+          ],
+          [
+            "description_input",
+            {
+              "kind": "inline_description",
+              "text": "hello"
+            }
+          ],
+          [
+            "label_ids",
+            {
+              "kind": "list",
+              "items": []
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
         "stderr": "",
         "exit_code": 0,
@@ -7753,7 +8357,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.issues.Issue"
+            "value": "multica_py.resources.issues.Issue"
           }
         }
       },
@@ -7762,36 +8366,30 @@
         "operation_id": "issues.create",
         "entrypoint_id": "default",
         "is_canonical": true,
-        "args": [
-          {
-            "kind": "request",
-            "type": "IssueCreateRequest",
-            "fields": [
-              [
-                "title",
-                {
-                  "kind": "primitive",
-                  "value": "Test"
-                }
-              ],
-              [
-                "description_input",
-                {
-                  "kind": "file_description",
-                  "path": "/nonexistent/desc.txt"
-                }
-              ],
-              [
-                "label_ids",
-                {
-                  "kind": "list",
-                  "items": []
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "title",
+            {
+              "kind": "primitive",
+              "value": "Test"
+            }
+          ],
+          [
+            "description_input",
+            {
+              "kind": "file_description",
+              "path": "/nonexistent/desc.txt"
+            }
+          ],
+          [
+            "label_ids",
+            {
+              "kind": "list",
+              "items": []
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
         "stderr": "",
         "exit_code": 0,
@@ -7813,7 +8411,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.issues.Issue"
+            "value": "multica_py.resources.issues.Issue"
           }
         }
       },
@@ -7822,35 +8420,29 @@
         "operation_id": "issues.create",
         "entrypoint_id": "default",
         "is_canonical": true,
-        "args": [
-          {
-            "kind": "request",
-            "type": "IssueCreateRequest",
-            "fields": [
-              [
-                "title",
-                {
-                  "kind": "primitive",
-                  "value": "Test"
-                }
-              ],
-              [
-                "description_input",
-                {
-                  "kind": "stdin_description"
-                }
-              ],
-              [
-                "label_ids",
-                {
-                  "kind": "list",
-                  "items": []
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "title",
+            {
+              "kind": "primitive",
+              "value": "Test"
+            }
+          ],
+          [
+            "description_input",
+            {
+              "kind": "stdin_description"
+            }
+          ],
+          [
+            "label_ids",
+            {
+              "kind": "list",
+              "items": []
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
         "stderr": "",
         "exit_code": 0,
@@ -7871,7 +8463,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.issues.Issue"
+            "value": "multica_py.resources.issues.Issue"
           }
         }
       },
@@ -7880,36 +8472,30 @@
         "operation_id": "issues.create",
         "entrypoint_id": "default",
         "is_canonical": true,
-        "args": [
-          {
-            "kind": "request",
-            "type": "IssueCreateRequest",
-            "fields": [
-              [
-                "title",
-                {
-                  "kind": "primitive",
-                  "value": "Test"
-                }
-              ],
-              [
-                "project_id",
-                {
-                  "kind": "primitive",
-                  "value": "pr_001"
-                }
-              ],
-              [
-                "label_ids",
-                {
-                  "kind": "list",
-                  "items": []
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "title",
+            {
+              "kind": "primitive",
+              "value": "Test"
+            }
+          ],
+          [
+            "project_id",
+            {
+              "kind": "primitive",
+              "value": "pr_001"
+            }
+          ],
+          [
+            "label_ids",
+            {
+              "kind": "list",
+              "items": []
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "eyJpZCI6Imlzc18xIiwidGl0bGUiOiJUZXN0Iiwic3RhdHVzIjoidG9kbyJ9",
         "stderr": "",
         "exit_code": 0,
@@ -7931,7 +8517,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.issues.Issue"
+            "value": "multica_py.resources.issues.Issue"
           }
         }
       },
@@ -7940,22 +8526,16 @@
         "operation_id": "projects.create",
         "entrypoint_id": "default",
         "is_canonical": true,
-        "args": [
-          {
-            "kind": "request",
-            "type": "ProjectCreateRequest",
-            "fields": [
-              [
-                "name",
-                {
-                  "kind": "primitive",
-                  "value": "Alpha"
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "name",
+            {
+              "kind": "primitive",
+              "value": "Alpha"
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6IkFscGhhIiwic3RhdHVzIjoicGxhbm5lZCJ9",
         "stderr": "",
         "exit_code": 0,
@@ -7975,7 +8555,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.projects.Project"
+            "value": "multica_py.resources.projects.Project"
           }
         }
       },
@@ -7984,29 +8564,23 @@
         "operation_id": "projects.create",
         "entrypoint_id": "default",
         "is_canonical": true,
-        "args": [
-          {
-            "kind": "request",
-            "type": "ProjectCreateRequest",
-            "fields": [
-              [
-                "name",
-                {
-                  "kind": "primitive",
-                  "value": "Alpha"
-                }
-              ],
-              [
-                "description",
-                {
-                  "kind": "primitive",
-                  "value": "desc"
-                }
-              ]
-            ]
-          }
+        "args": [],
+        "kwargs": [
+          [
+            "name",
+            {
+              "kind": "primitive",
+              "value": "Alpha"
+            }
+          ],
+          [
+            "description",
+            {
+              "kind": "primitive",
+              "value": "desc"
+            }
+          ]
         ],
-        "kwargs": [],
         "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6IkFscGhhIiwic3RhdHVzIjoicGxhbm5lZCJ9",
         "stderr": "",
         "exit_code": 0,
@@ -8028,7 +8602,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.projects.Project"
+            "value": "multica_py.resources.projects.Project"
           }
         }
       },
@@ -8041,11 +8615,6 @@
           {
             "kind": "primitive",
             "value": "pr_1"
-          },
-          {
-            "kind": "request",
-            "type": "ProjectUpdateRequest",
-            "fields": []
           }
         ],
         "kwargs": [],
@@ -8067,7 +8636,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.projects.Project"
+            "value": "multica_py.resources.projects.Project"
           }
         }
       },
@@ -8080,22 +8649,17 @@
           {
             "kind": "primitive",
             "value": "pr_1"
-          },
-          {
-            "kind": "request",
-            "type": "ProjectUpdateRequest",
-            "fields": [
-              [
-                "name",
-                {
-                  "kind": "primitive",
-                  "value": "only-title"
-                }
-              ]
-            ]
           }
         ],
-        "kwargs": [],
+        "kwargs": [
+          [
+            "name",
+            {
+              "kind": "primitive",
+              "value": "only-title"
+            }
+          ]
+        ],
         "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6Ik5ldyIsInN0YXR1cyI6InBsYW5uZWQifQ==",
         "stderr": "",
         "exit_code": 0,
@@ -8116,7 +8680,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.projects.Project"
+            "value": "multica_py.resources.projects.Project"
           }
         }
       },
@@ -8129,22 +8693,17 @@
           {
             "kind": "primitive",
             "value": "pr_1"
-          },
-          {
-            "kind": "request",
-            "type": "ProjectUpdateRequest",
-            "fields": [
-              [
-                "description",
-                {
-                  "kind": "primitive",
-                  "value": ""
-                }
-              ]
-            ]
           }
         ],
-        "kwargs": [],
+        "kwargs": [
+          [
+            "description",
+            {
+              "kind": "primitive",
+              "value": ""
+            }
+          ]
+        ],
         "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6IkFscGhhIiwic3RhdHVzIjoicGxhbm5lZCJ9",
         "stderr": "",
         "exit_code": 0,
@@ -8165,7 +8724,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.projects.Project"
+            "value": "multica_py.resources.projects.Project"
           }
         }
       },
@@ -8178,22 +8737,17 @@
           {
             "kind": "primitive",
             "value": "pr_1"
-          },
-          {
-            "kind": "request",
-            "type": "ProjectUpdateRequest",
-            "fields": [
-              [
-                "description",
-                {
-                  "kind": "primitive",
-                  "value": "new"
-                }
-              ]
-            ]
           }
         ],
-        "kwargs": [],
+        "kwargs": [
+          [
+            "description",
+            {
+              "kind": "primitive",
+              "value": "new"
+            }
+          ]
+        ],
         "stdout_base64": "eyJpZCI6InByXzEiLCJ0aXRsZSI6IkFscGhhIiwic3RhdHVzIjoicGxhbm5lZCJ9",
         "stderr": "",
         "exit_code": 0,
@@ -8214,7 +8768,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.projects.Project"
+            "value": "multica_py.resources.projects.Project"
           }
         }
       },
@@ -8262,29 +8816,24 @@
           {
             "kind": "primitive",
             "value": "pr_001"
-          },
-          {
-            "kind": "request",
-            "type": "ProjectResourceAddLocalDirectoryRequest",
-            "fields": [
-              [
-                "local_path",
-                {
-                  "kind": "path",
-                  "value": "/tmp/sandbox"
-                }
-              ],
-              [
-                "daemon_id",
-                {
-                  "kind": "primitive",
-                  "value": "daemon-001"
-                }
-              ]
-            ]
           }
         ],
-        "kwargs": [],
+        "kwargs": [
+          [
+            "local_path",
+            {
+              "kind": "path",
+              "value": "/tmp/sandbox"
+            }
+          ],
+          [
+            "daemon_id",
+            {
+              "kind": "primitive",
+              "value": "daemon-001"
+            }
+          ]
+        ],
         "stdout_base64": "eyJpZCI6InJlc18wMDEiLCJwcm9qZWN0X2lkIjoicHJfMDAxIiwicmVzb3VyY2VfdHlwZSI6ImxvY2FsX2RpcmVjdG9yeSIsInJlc291cmNlX3JlZiI6eyJsb2NhbF9wYXRoIjoiL3RtcC9zYW5kYm94IiwiZGFlbW9uX2lkIjoiZGFlbW9uLTAwMSIsImxhYmVsIjoibWFpbiJ9fQ==",
         "stderr": "",
         "exit_code": 0,
@@ -8323,36 +8872,31 @@
           {
             "kind": "primitive",
             "value": "pr_001"
-          },
-          {
-            "kind": "request",
-            "type": "ProjectResourceAddLocalDirectoryRequest",
-            "fields": [
-              [
-                "local_path",
-                {
-                  "kind": "path",
-                  "value": "/tmp/sandbox"
-                }
-              ],
-              [
-                "daemon_id",
-                {
-                  "kind": "primitive",
-                  "value": "daemon-001"
-                }
-              ],
-              [
-                "label",
-                {
-                  "kind": "primitive",
-                  "value": "main"
-                }
-              ]
-            ]
           }
         ],
-        "kwargs": [],
+        "kwargs": [
+          [
+            "local_path",
+            {
+              "kind": "path",
+              "value": "/tmp/sandbox"
+            }
+          ],
+          [
+            "daemon_id",
+            {
+              "kind": "primitive",
+              "value": "daemon-001"
+            }
+          ],
+          [
+            "label",
+            {
+              "kind": "primitive",
+              "value": "main"
+            }
+          ]
+        ],
         "stdout_base64": "eyJpZCI6InJlc18wMDEiLCJwcm9qZWN0X2lkIjoicHJfMDAxIiwicmVzb3VyY2VfdHlwZSI6ImxvY2FsX2RpcmVjdG9yeSIsInJlc291cmNlX3JlZiI6eyJsb2NhbF9wYXRoIjoiL3RtcC9zYW5kYm94IiwiZGFlbW9uX2lkIjoiZGFlbW9uLTAwMSIsImxhYmVsIjoibWFpbiJ9fQ==",
         "stderr": "",
         "exit_code": 0,
@@ -8397,22 +8941,17 @@
           {
             "kind": "primitive",
             "value": "res_001"
-          },
-          {
-            "kind": "request",
-            "type": "ProjectResourceUpdateLocalDirectoryRequest",
-            "fields": [
-              [
-                "local_path",
-                {
-                  "kind": "path",
-                  "value": "/tmp/sandbox"
-                }
-              ]
-            ]
           }
         ],
-        "kwargs": [],
+        "kwargs": [
+          [
+            "local_path",
+            {
+              "kind": "path",
+              "value": "/tmp/sandbox"
+            }
+          ]
+        ],
         "stdout_base64": "eyJpZCI6InJlc18wMDEiLCJwcm9qZWN0X2lkIjoicHJfMDAxIiwicmVzb3VyY2VfdHlwZSI6ImxvY2FsX2RpcmVjdG9yeSIsInJlc291cmNlX3JlZiI6eyJsb2NhbF9wYXRoIjoiL3RtcC9zYW5kYm94IiwiZGFlbW9uX2lkIjoiZGFlbW9uLTAwMSIsImxhYmVsIjoibWFpbiJ9fQ==",
         "stderr": "",
         "exit_code": 0,
@@ -8513,7 +9052,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.issues.Issue"
+            "value": "multica_py.resources.issues.Issue"
           }
         }
       },
@@ -8553,7 +9092,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.projects.Project"
+            "value": "multica_py.resources.projects.Project"
           }
         }
       },
@@ -8594,7 +9133,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.issue_activity.Comment"
+            "value": "multica_py.resources.issue_comments.Comment"
           }
         }
       },
@@ -8689,7 +9228,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.autopilots.Autopilot"
+            "value": "multica_py.resources.autopilots.Autopilot"
           }
         }
       },
@@ -8746,7 +9285,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.autopilots.Autopilot"
+            "value": "multica_py.resources.autopilots.Autopilot"
           }
         }
       },
@@ -8780,7 +9319,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.autopilots.Autopilot"
+            "value": "multica_py.resources.autopilots.Autopilot"
           }
         }
       },
@@ -8846,7 +9385,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.autopilots.AutopilotRun"
+            "value": "multica_py.resources.autopilots.AutopilotRun"
           }
         }
       },
@@ -9285,7 +9824,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "builtins.tuple"
+            "value": "builtins.dict"
           }
         }
       },
@@ -9353,7 +9892,7 @@
           "kind": "decoded_type",
           "expected": {
             "kind": "primitive",
-            "value": "builtins.tuple"
+            "value": "multica_py.models.issues.IssueChildrenResult"
           }
         }
       },
@@ -9586,7 +10125,55 @@
       }
     },
     "update_field_policies": {
-      "AgentUpdateRequest": {
+      "projects.update": {
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "fields": {
+          "name": {
+            "nullable": false,
+            "source_ref_ids": [
+              "S-PROJECT"
+            ],
+            "presence": {
+              "omitted": "omit",
+              "null": "reject",
+              "empty": "emit",
+              "zero": "not_applicable",
+              "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "none",
+              "source_ref_ids": [],
+              "mapping": []
+            }
+          },
+          "description": {
+            "nullable": true,
+            "source_ref_ids": [
+              "S-PROJECT"
+            ],
+            "presence": {
+              "omitted": "omit",
+              "null": "emit",
+              "empty": "emit",
+              "zero": "not_applicable",
+              "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "flag",
+              "source_ref_ids": [
+                "S-PROJECT"
+              ],
+              "mapping": [
+                "--description",
+                "empty-string"
+              ]
+            }
+          }
+        }
+      },
+      "agents.update": {
         "source_ref_ids": [
           "S-AUTO"
         ],
@@ -9634,15 +10221,15 @@
           }
         }
       },
-      "AutopilotTriggerUpdate": {
+      "skills.update": {
         "source_ref_ids": [
-          "S-AUTO"
+          "D09"
         ],
         "fields": {
-          "title": {
+          "name": {
             "nullable": false,
             "source_ref_ids": [
-              "S-AUTO"
+              "D09"
             ],
             "presence": {
               "omitted": "omit",
@@ -9657,10 +10244,40 @@
               "mapping": []
             }
           },
-          "kind": {
+          "description": {
+            "nullable": true,
+            "source_ref_ids": [
+              "D09"
+            ],
+            "presence": {
+              "omitted": "omit",
+              "null": "emit",
+              "empty": "emit",
+              "zero": "not_applicable",
+              "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "flag",
+              "source_ref_ids": [
+                "D09"
+              ],
+              "mapping": [
+                "--description",
+                "empty-string"
+              ]
+            }
+          }
+        }
+      },
+      "issues.update": {
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "fields": {
+          "title": {
             "nullable": false,
             "source_ref_ids": [
-              "S-AUTO"
+              "S-ISSUE"
             ],
             "presence": {
               "omitted": "omit",
@@ -9674,10 +10291,120 @@
               "source_ref_ids": [],
               "mapping": []
             }
+          },
+          "description": {
+            "nullable": true,
+            "source_ref_ids": [
+              "S-ISSUE"
+            ],
+            "presence": {
+              "omitted": "omit",
+              "null": "emit",
+              "empty": "emit",
+              "zero": "not_applicable",
+              "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "flag",
+              "source_ref_ids": [
+                "S-ISSUE"
+              ],
+              "mapping": [
+                "--description",
+                "empty-string"
+              ]
+            }
+          },
+          "priority": {
+            "nullable": false,
+            "source_ref_ids": [
+              "S-ISSUE"
+            ],
+            "presence": {
+              "omitted": "omit",
+              "null": "reject",
+              "empty": "emit",
+              "zero": "emit",
+              "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "none",
+              "source_ref_ids": [],
+              "mapping": []
+            }
+          },
+          "assignee_id": {
+            "nullable": true,
+            "source_ref_ids": [
+              "S-ISSUE"
+            ],
+            "presence": {
+              "omitted": "omit",
+              "null": "emit",
+              "empty": "emit",
+              "zero": "not_applicable",
+              "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "composite",
+              "source_ref_ids": [
+                "S-ISSUE"
+              ],
+              "mapping": [
+                "issue assign --unassign",
+                "issue get authoritative"
+              ]
+            }
+          },
+          "project_id": {
+            "nullable": true,
+            "source_ref_ids": [
+              "S-ISSUE"
+            ],
+            "presence": {
+              "omitted": "omit",
+              "null": "emit",
+              "empty": "emit",
+              "zero": "not_applicable",
+              "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "flag",
+              "source_ref_ids": [
+                "S-ISSUE"
+              ],
+              "mapping": [
+                "--project",
+                "empty-string"
+              ]
+            }
+          },
+          "parent_id": {
+            "nullable": true,
+            "source_ref_ids": [
+              "S-ISSUE"
+            ],
+            "presence": {
+              "omitted": "omit",
+              "null": "emit",
+              "empty": "emit",
+              "zero": "not_applicable",
+              "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "flag",
+              "source_ref_ids": [
+                "S-ISSUE"
+              ],
+              "mapping": [
+                "--parent",
+                "empty-string"
+              ]
+            }
           }
         }
       },
-      "AutopilotUpdateRequest": {
+      "autopilots.update": {
         "source_ref_ids": [
           "S-AUTO"
         ],
@@ -9865,15 +10592,15 @@
           }
         }
       },
-      "IssueUpdateRequest": {
+      "autopilots.trigger_update": {
         "source_ref_ids": [
-          "S-ISSUE"
+          "S-AUTO"
         ],
         "fields": {
           "title": {
             "nullable": false,
             "source_ref_ids": [
-              "S-ISSUE"
+              "S-AUTO"
             ],
             "presence": {
               "omitted": "omit",
@@ -9888,119 +10615,27 @@
               "mapping": []
             }
           },
-          "description": {
-            "nullable": true,
-            "source_ref_ids": [
-              "S-ISSUE"
-            ],
-            "presence": {
-              "omitted": "omit",
-              "null": "emit",
-              "empty": "emit",
-              "zero": "not_applicable",
-              "false": "not_applicable"
-            },
-            "clear": {
-              "kind": "flag",
-              "source_ref_ids": [
-                "S-ISSUE"
-              ],
-              "mapping": [
-                "--description",
-                "empty-string"
-              ]
-            }
-          },
-          "priority": {
+          "kind": {
             "nullable": false,
             "source_ref_ids": [
-              "S-ISSUE"
+              "S-AUTO"
             ],
             "presence": {
               "omitted": "omit",
               "null": "reject",
               "empty": "emit",
-              "zero": "emit",
+              "zero": "not_applicable",
               "false": "not_applicable"
             },
             "clear": {
               "kind": "none",
               "source_ref_ids": [],
               "mapping": []
-            }
-          },
-          "assignee_id": {
-            "nullable": true,
-            "source_ref_ids": [
-              "S-ISSUE"
-            ],
-            "presence": {
-              "omitted": "omit",
-              "null": "emit",
-              "empty": "emit",
-              "zero": "not_applicable",
-              "false": "not_applicable"
-            },
-            "clear": {
-              "kind": "composite",
-              "source_ref_ids": [
-                "S-ISSUE"
-              ],
-              "mapping": [
-                "issue assign --unassign",
-                "issue get authoritative"
-              ]
-            }
-          },
-          "project_id": {
-            "nullable": true,
-            "source_ref_ids": [
-              "S-ISSUE"
-            ],
-            "presence": {
-              "omitted": "omit",
-              "null": "emit",
-              "empty": "emit",
-              "zero": "not_applicable",
-              "false": "not_applicable"
-            },
-            "clear": {
-              "kind": "flag",
-              "source_ref_ids": [
-                "S-ISSUE"
-              ],
-              "mapping": [
-                "--project",
-                "empty-string"
-              ]
-            }
-          },
-          "parent_id": {
-            "nullable": true,
-            "source_ref_ids": [
-              "S-ISSUE"
-            ],
-            "presence": {
-              "omitted": "omit",
-              "null": "emit",
-              "empty": "emit",
-              "zero": "not_applicable",
-              "false": "not_applicable"
-            },
-            "clear": {
-              "kind": "flag",
-              "source_ref_ids": [
-                "S-ISSUE"
-              ],
-              "mapping": [
-                "--parent",
-                "empty-string"
-              ]
             }
           }
         }
       },
-      "LabelUpdateRequest": {
+      "labels.update": {
         "source_ref_ids": [
           "S-LABEL"
         ],
@@ -10043,7 +10678,7 @@
           }
         }
       },
-      "ProjectResourceUpdateLocalDirectoryRequest": {
+      "projects.resources.update_local_directory": {
         "source_ref_ids": [
           "S-PROJECT"
         ],
@@ -10068,55 +10703,7 @@
           }
         }
       },
-      "ProjectUpdateRequest": {
-        "source_ref_ids": [
-          "S-PROJECT"
-        ],
-        "fields": {
-          "name": {
-            "nullable": false,
-            "source_ref_ids": [
-              "S-PROJECT"
-            ],
-            "presence": {
-              "omitted": "omit",
-              "null": "reject",
-              "empty": "emit",
-              "zero": "not_applicable",
-              "false": "not_applicable"
-            },
-            "clear": {
-              "kind": "none",
-              "source_ref_ids": [],
-              "mapping": []
-            }
-          },
-          "description": {
-            "nullable": true,
-            "source_ref_ids": [
-              "S-PROJECT"
-            ],
-            "presence": {
-              "omitted": "omit",
-              "null": "emit",
-              "empty": "emit",
-              "zero": "not_applicable",
-              "false": "not_applicable"
-            },
-            "clear": {
-              "kind": "flag",
-              "source_ref_ids": [
-                "S-PROJECT"
-              ],
-              "mapping": [
-                "--description",
-                "empty-string"
-              ]
-            }
-          }
-        }
-      },
-      "RuntimeUpdate": {
+      "runtimes.update": {
         "source_ref_ids": [
           "S-CLIENT"
         ],
@@ -10159,55 +10746,7 @@
           }
         }
       },
-      "SkillUpdateRequest": {
-        "source_ref_ids": [
-          "D09"
-        ],
-        "fields": {
-          "name": {
-            "nullable": false,
-            "source_ref_ids": [
-              "D09"
-            ],
-            "presence": {
-              "omitted": "omit",
-              "null": "reject",
-              "empty": "emit",
-              "zero": "not_applicable",
-              "false": "not_applicable"
-            },
-            "clear": {
-              "kind": "none",
-              "source_ref_ids": [],
-              "mapping": []
-            }
-          },
-          "description": {
-            "nullable": true,
-            "source_ref_ids": [
-              "D09"
-            ],
-            "presence": {
-              "omitted": "omit",
-              "null": "emit",
-              "empty": "emit",
-              "zero": "not_applicable",
-              "false": "not_applicable"
-            },
-            "clear": {
-              "kind": "flag",
-              "source_ref_ids": [
-                "D09"
-              ],
-              "mapping": [
-                "--description",
-                "empty-string"
-              ]
-            }
-          }
-        }
-      },
-      "UserProfileUpdate": {
+      "users.profile_update": {
         "source_ref_ids": [
           "D15"
         ],
@@ -10960,7 +11499,25 @@
       "workspaces.members.list",
       "workspaces.switch",
       "workspaces.unwatch",
-      "workspaces.watch"
+      "workspaces.watch",
+      "issues.unassign",
+      "issues.move_to_top",
+      "issues.move_to_bottom",
+      "issues.move_before",
+      "issues.move_after",
+      "projects.issues.create",
+      "cli.command",
+      "issues.refresh",
+      "issues.update_bound",
+      "issues.assign_bound",
+      "issues.unassign_bound",
+      "issues.set_status_bound",
+      "projects.refresh",
+      "projects.update_bound",
+      "issues.move_to_top_bound",
+      "issues.move_to_bottom_bound",
+      "issues.move_before_bound",
+      "issues.move_after_bound"
     ],
     "ungoverned_policy": "existing_unrelated_operations_unchanged",
     "source_authority_ref": "specs/007-upstream-v0-4-9-migration/contracts/source-authority.json",
@@ -11250,6 +11807,10 @@
         ],
         "rationale": "Governed runtime operations."
       }
+    ],
+    "local_only_symbols": [
+      "multica_py.resources.issues.Issue.permalink",
+      "multica_py.resources.projects.Project.permalink"
     ]
   },
   "operations": [
@@ -11356,11 +11917,9 @@
           "response_id": "agent",
           "errors": "standard",
           "category": "create",
-          "typed_input_id": "AgentCreateRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.agents.AgentResource.create_command"
         }
       ]
@@ -11543,11 +12102,9 @@
           "response_id": "agent",
           "errors": "standard",
           "category": "update",
-          "typed_input_id": "AgentUpdateRequest",
-          "input_mode": "dual_optional",
-          "presence_policy_ids": [
-            "omit"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.agents.AgentResource.update_command"
         }
       ]
@@ -11913,11 +12470,9 @@
           "response_id": "autopilot_trigger",
           "errors": "standard",
           "category": "retrieve",
-          "typed_input_id": "AutopilotTriggerCreate",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_add_command"
         }
       ]
@@ -11967,11 +12522,9 @@
           "response_id": "autopilot_trigger",
           "errors": "standard",
           "category": "retrieve",
-          "typed_input_id": "AutopilotTriggerUpdate",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_update_command"
         }
       ]
@@ -11995,11 +12548,9 @@
           "response_id": "autopilot",
           "errors": "standard",
           "category": "update",
-          "typed_input_id": "AutopilotUpdateRequest",
-          "input_mode": "dual_optional",
-          "presence_policy_ids": [
-            "omit"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.autopilots.AutopilotResource.update_command"
         }
       ]
@@ -12254,14 +12805,12 @@
           "public_symbol": "multica_py.resources.issues.IssueResource.assign",
           "signature_id": "issues_assign_manual",
           "binding_id": "issues_assign_manual",
-          "response_id": "action_result_none",
+          "response_id": "issue",
           "errors": "standard",
           "category": "action",
-          "typed_input_id": "IssueAssignmentRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issues.IssueResource.assign_command"
         }
       ]
@@ -12412,11 +12961,9 @@
           "response_id": "comment_page",
           "errors": "standard",
           "category": "collection",
-          "typed_input_id": "CommentListFlatRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_flat_command"
         },
         {
@@ -12427,11 +12974,9 @@
           "response_id": "comment_page",
           "errors": "standard",
           "category": "collection",
-          "typed_input_id": "CommentListThreadRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_thread_command"
         },
         {
@@ -12442,11 +12987,9 @@
           "response_id": "comment_thread_page",
           "errors": "standard",
           "category": "collection",
-          "typed_input_id": "CommentListRecentRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list_recent_command"
         }
       ]
@@ -12549,11 +13092,9 @@
           "response_id": "issue",
           "errors": "standard",
           "category": "create",
-          "typed_input_id": "IssueCreateRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issues.IssueResource.create_command"
         }
       ]
@@ -12697,7 +13238,7 @@
     {
       "operation_id": "issues.list",
       "compatibility": "intentionally_changed",
-      "rationale": "Return type changes from BoundIssueListPage with bound compact entities to IssueListPage with immutable IssueSummary values, exposing pagination metadata; offset and project_id filters added. The approved metadata mapping repeats --metadata into the metadata query, while the reviewed list projection preserves labels and metadata on summaries without fabricating bound issues.",
+      "rationale": "Return type is the canonical IssueListPage with partial bound Issue values and pagination metadata; offset and project_id filters remain explicit. The approved metadata mapping repeats --metadata into the metadata query, while the reviewed list projection preserves fields already present in the wire row without extra reads.",
       "source_ref_ids": [
         "S-ISSUE",
         "S-ISSUE-LIST-METADATA-CLI",
@@ -12832,11 +13373,9 @@
           "response_id": "metadata_entries",
           "errors": "standard",
           "category": "mapping",
-          "typed_input_id": "MetadataListRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.query_command"
         }
       ]
@@ -12886,11 +13425,9 @@
           "response_id": "action_result_none",
           "errors": "standard",
           "category": "action",
-          "typed_input_id": "MetadataSetRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.set_typed_command"
         }
       ]
@@ -12941,11 +13478,9 @@
           "response_id": "action_result_none",
           "errors": "standard",
           "category": "action",
-          "typed_input_id": "IssueReorderRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issues.IssueResource.reorder_command"
         }
       ]
@@ -13053,7 +13588,7 @@
           "public_symbol": "multica_py.resources.issues.IssueResource.search",
           "signature_id": "issue_search",
           "binding_id": "issue_search",
-          "response_id": "page_issue_summaries",
+          "response_id": "page_issues",
           "errors": "standard",
           "category": "collection",
           "typed_input_id": null,
@@ -13187,11 +13722,9 @@
           "response_id": "issue",
           "errors": "standard",
           "category": "update",
-          "typed_input_id": "IssueUpdateRequest",
-          "input_mode": "dual_optional",
-          "presence_policy_ids": [
-            "omit"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issues.IssueResource.update_command"
         }
       ]
@@ -13346,11 +13879,9 @@
           "response_id": "labels",
           "errors": "standard",
           "category": "update",
-          "typed_input_id": "LabelUpdateRequest",
-          "input_mode": "dual_optional",
-          "presence_policy_ids": [
-            "omit"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.labels.LabelResource.update_command"
         }
       ]
@@ -13426,11 +13957,9 @@
           "response_id": "project",
           "errors": "standard",
           "category": "create",
-          "typed_input_id": "ProjectCreateRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.projects.ProjectResource.create_command"
         }
       ]
@@ -13533,11 +14062,9 @@
           "response_id": "project_resource",
           "errors": "standard",
           "category": "retrieve",
-          "typed_input_id": "ProjectResourceAddLocalDirectoryRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory_command"
         }
       ]
@@ -13614,11 +14141,9 @@
           "response_id": "project_resource",
           "errors": "standard",
           "category": "retrieve",
-          "typed_input_id": "ProjectResourceUpdateLocalDirectoryRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory_command"
         }
       ]
@@ -13668,11 +14193,9 @@
           "response_id": "project",
           "errors": "standard",
           "category": "update",
-          "typed_input_id": "ProjectUpdateRequest",
-          "input_mode": "dual_optional",
-          "presence_policy_ids": [
-            "omit"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.projects.ProjectResource.update_command"
         }
       ]
@@ -13883,11 +14406,9 @@
           "response_id": "action_result_runtime_update_result",
           "errors": "standard",
           "category": "action",
-          "typed_input_id": "RuntimeUpdate",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.runtimes.RuntimeResource.update_command"
         }
       ]
@@ -13989,11 +14510,9 @@
           "response_id": "skill",
           "errors": "standard",
           "category": "create",
-          "typed_input_id": "SkillCreateRequest",
-          "input_mode": "dual_required",
-          "presence_policy_ids": [
-            "required_nonnull"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.skills.SkillResource.create_command"
         }
       ]
@@ -14201,11 +14720,9 @@
           "response_id": "skill",
           "errors": "standard",
           "category": "update",
-          "typed_input_id": "SkillUpdateRequest",
-          "input_mode": "dual_optional",
-          "presence_policy_ids": [
-            "omit"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.skills.SkillResource.update_command"
         }
       ]
@@ -14387,11 +14904,9 @@
           "response_id": "user_profile",
           "errors": "standard",
           "category": "update",
-          "typed_input_id": "UserProfileUpdate",
-          "input_mode": "dual_optional",
-          "presence_policy_ids": [
-            "omit"
-          ],
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.users.UserResource.profile_update_command"
         }
       ]
@@ -14553,6 +15068,474 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.watch_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.unassign",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.unassign",
+          "signature_id": "issues_unassign",
+          "binding_id": "issues_unassign",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.unassign_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_to_top",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.move_to_top",
+          "signature_id": "issues_move_to_top",
+          "binding_id": "issues_move_to_top",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.move_to_top_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_to_bottom",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.move_to_bottom",
+          "signature_id": "issues_move_to_bottom",
+          "binding_id": "issues_move_to_bottom",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.move_to_bottom_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_before",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.move_before",
+          "signature_id": "issues_move_before",
+          "binding_id": "issues_move_before",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.move_before_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_after",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.move_after",
+          "signature_id": "issues_move_after",
+          "binding_id": "issues_move_after",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.move_after_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.issues.create",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.ProjectIssueCollection.create",
+          "signature_id": "project_issue_create",
+          "binding_id": "project_issue_create",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.projects.ProjectIssueCollection.create_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "cli.command",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.cli.CliResource.command",
+          "signature_id": "cli_command",
+          "binding_id": "cli_command",
+          "response_id": "cli_result",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.cli.CliResource.command_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.refresh",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.refresh",
+          "signature_id": "issues_refresh",
+          "binding_id": "issues_refresh",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.refresh_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.update_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.update",
+          "signature_id": "issues_update_bound",
+          "binding_id": "issues_update_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.update_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.assign_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.assign",
+          "signature_id": "issues_assign_bound",
+          "binding_id": "issues_assign_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.assign_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.unassign_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.unassign",
+          "signature_id": "issues_unassign_bound",
+          "binding_id": "issues_unassign_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.unassign_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.set_status_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.set_status",
+          "signature_id": "issues_set_status_bound",
+          "binding_id": "issues_set_status_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.set_status_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.refresh",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.Project.refresh",
+          "signature_id": "projects_refresh",
+          "binding_id": "projects_refresh",
+          "response_id": "project",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.projects.Project.refresh_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.update_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.Project.update",
+          "signature_id": "projects_update_bound",
+          "binding_id": "projects_update_bound",
+          "response_id": "project",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.projects.Project.update_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_to_top_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved bound issue continuation alias.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.move_to_top",
+          "signature_id": "issues_move_to_top_bound",
+          "binding_id": "issues_move_to_top_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.move_to_top_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_to_bottom_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved bound issue continuation alias.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.move_to_bottom",
+          "signature_id": "issues_move_to_bottom_bound",
+          "binding_id": "issues_move_to_bottom_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.move_to_bottom_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_before_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved bound issue continuation alias.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.move_before",
+          "signature_id": "issues_move_before_bound",
+          "binding_id": "issues_move_before_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.move_before_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_after_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved bound issue continuation alias.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.move_after",
+          "signature_id": "issues_move_after_bound",
+          "binding_id": "issues_move_after_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.move_after_command"
         }
       ]
     }

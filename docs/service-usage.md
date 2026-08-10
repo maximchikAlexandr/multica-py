@@ -39,6 +39,26 @@ issue = workspace_client.issues.get("issue_456")
 Derived views keep independent immutable configuration and share the original
 process semaphore. Closing one view does not close another.
 
+Web routing is configured independently when an application needs entity
+links. The API server URL is never used as a frontend fallback:
+
+```python
+client = MulticaClient(
+    ClientConfig(
+        server_url="https://api.example.test/api",
+        app_url="https://app.example.test",
+        workspace_slug="team-space",
+    )
+)
+issue = client.issues.get("issue_456")
+print(issue.permalink())
+```
+
+`permalink()` is a passive local helper. It URL-encodes the workspace and ID
+segments and raises `MissingPermalinkContextError` if the bound client lacks
+either setting; it never discovers routing context or performs CLI/network
+I/O. Use loopback HTTP only for local self-hosted deployments.
+
 ## Inspect a command before running it
 
 Eager methods remain the default. When an integration needs an audit trail or
@@ -51,6 +71,22 @@ command = client.issues.get_command("issue_123")
 print(command.commands)
 issue = command.run()
 ```
+
+For a bounded command that is not represented by a higher-level resource,
+use the controlled raw CLI view. It validates the argument shape before any
+transport access and keeps shell metacharacters as literal arguments:
+
+```python
+raw = client.cli.command("issue", "get", "issue_123", "$(literal)")
+assert raw.commands == ("multica issue get issue_123 '$(literal)'",)
+result = raw.run()
+print(result.stdout)
+```
+
+Raw commands do not accept shell strings, an alternate executable, or
+unbounded interactive/spawn modes. The result exposes only `stdout`, `stderr`,
+and `duration`, so diagnostic argv and secret values cannot leak through the
+public result.
 
 Copy an agent with the inspectable command path when the operation needs an
 audit preview. The eager method and command method have the same keyword-only
@@ -82,13 +118,13 @@ Search returns a small immutable page suitable for queue discovery:
 
 ```python
 matches = client.issues.search("deploy")
-for summary in matches.items:
-    print(summary.id, summary.match_source)
+for issue in matches.items:
+    print(issue.id, issue.match_source)
 ```
 
 The command remains `issue search <query> --output json`; the SDK adapts both
 the v0.4.20 `{"issues": [...], "total": ...}` envelope and the legacy array
-to `Page[IssueSummary]`. `match_source` is an optional open string and
+to `Page[Issue]`. `match_source` is an optional open string and
 can be absent or a future upstream value.
 
 Composite operations expose their ordered steps and result references. For
@@ -105,32 +141,33 @@ assert any("${create.id}" in rendered for rendered in command.commands)
 issue = command.run()
 ```
 
-## Direct keywords, typed objects, and presence
+## Direct inputs, options, and presence
 
-Governed resource methods accept either a frozen request/filter object or its
-explicit keyword-only fields. The forms share one resolver and one command
-plan; passing both raises `TypeError("Pass either a request object or keyword
-arguments, not both.")`, and required operations preserve their exact missing
-input error. Optional filters and all-optional updates may omit every field.
-
-Use direct keywords first when the call is local and readable, or retain a
-typed object when values are reused or assembled by another layer:
+CLI-backed methods use one explicit typed signature for eager and command
+forms. The final keyword-only parameter is
+`options: OperationOptions | None = None`; it scopes execution and is never
+added to operation argv. `IssueListFilter` remains a reusable filter value
+object for callers that assemble a list filter dynamically:
 
 ```python
-from multica_py import IssueStatus
+from datetime import timedelta
+
+from multica_py import IssueStatus, OperationOptions
 from multica_py.models.issues import IssueListFilter
 
-direct_page = client.issues.list(status=IssueStatus.backlog, limit=50)
-request = IssueListFilter(status=IssueStatus.backlog, limit=50)
-typed_page = client.issues.list(request)
-assert direct_page.items == typed_page.items
+options = OperationOptions(profile="automation", timeout=timedelta(seconds=30))
+direct_page = client.issues.list(
+    status=IssueStatus.backlog, limit=50, options=options
+)
+filter_value = IssueListFilter(status=IssueStatus.backlog, limit=50)
+filtered_page = client.issues.list(filter_value, options=options)
+assert direct_page.items == filtered_page.items
 ```
 
-The same dual form is available for create/update requests, issue/comment
-filters, metadata query/set, autopilot trigger add/update, and autopilot/label
-updates. Stable IDs remain positional; request fields are keyword-only. Every
-`*_command()` sibling has the same parameters and returns `Command[T]` for the
-eager method's exact `T`.
+Removed one-operation input DTOs do not have an object overload. Stable IDs
+remain positional and every explicit field is validated before transport.
+Every `*_command()` sibling has the same parameters and returns `Command[T]`
+for the eager method's exact `T`.
 
 Update presence is explicit: `Unset` omits a field, approved nullable `None`
 values clear it, and accepted empty strings, empty tuples, `False`, and `0`
@@ -150,6 +187,41 @@ if mutation.success:
         print(record.url)
 ```
 
+Use explicit domain verbs for issue assignment and ordering. The root
+`assign`, `unassign`, `move_to_top`, `move_to_bottom`, `move_before`, and
+`move_after` methods each have a matching command form; bound `Issue` methods
+forward the same operation and return a new immutable bound issue. The
+advanced `reorder` method requires exactly one target.
+
+```python
+issue = client.issues.get("issue_456")
+preview = issue.move_after_command("issue_457", options=options)
+next_issue = preview.run()
+client.issues.unassign("issue_456", options=options)
+```
+
+Project-scoped creation derives the project ID from the bound relation, so the
+public method has no duplicate `project_id` parameter:
+
+```python
+project = client.projects.get("project_123")
+issue = project.issues.create(title="Deploy", label_ids=("release",))
+```
+
+Attachments use one typed source API. Paths are passed through unchanged;
+bytes-like values and binary streams are materialized only by `run()` and
+cleaned up on every completion path. `upload_bytes(payload, filename=...)`
+is an exact compatibility alias for `upload(payload, filename=...)`.
+
+```python
+from pathlib import Path
+
+path_command = client.attachments.upload_command(
+    Path("artifact.zip"), filename="artifact.zip", task_id="task_123", options=options
+)
+uploaded = path_command.run()
+```
+
 ## Filter and page before local selection
 
 For a queue or polling loop, ask the server only for the relevant status and
@@ -160,10 +232,11 @@ first page:
 from collections.abc import Iterator
 
 from multica_py import IssueStatus, MulticaClient
-from multica_py.models.issues import IssueListFilter, IssueSummary
+from multica_py.models.issues import IssueListFilter
+from multica_py.resources.issues import Issue
 
 
-def iter_backlog(client: MulticaClient, project_id: str) -> Iterator[IssueSummary]:
+def iter_backlog(client: MulticaClient, project_id: str) -> Iterator[Issue]:
     offset = 0
     while True:
         page = client.issues.list(
@@ -181,8 +254,9 @@ def iter_backlog(client: MulticaClient, project_id: str) -> Iterator[IssueSummar
 ```
 
 Use the project relation when all project summaries are genuinely needed:
-`client.projects.get(project_id).issues.all()`. Both paths return
-`IssueSummary`; call `client.issues.get(summary.id)` only for a full issue.
+`client.projects.get(project_id).issues.all()`. Both paths return partial,
+bound `Issue` values, so action commands can be built directly without a
+follow-up `issues.get`.
 Prefer the filtered direct service for a status-specific queue.
 
 ## Use bound relations at graph boundaries
@@ -205,8 +279,7 @@ requires a current read from the server.
 For a batch of entities with the same client origin:
 
 ```python
-summaries = client.projects.get("project_123").issues.all()
-issues = tuple(client.issues.get(summary.id) for summary in summaries)
+issues = client.projects.get("project_123").issues.all()
 client.prefetch(issues, lambda issue: issue.labels, max_parallel=4)
 ```
 

@@ -12,8 +12,6 @@ import pytest
 
 from multica_py.client import MulticaClient
 from multica_py.exceptions import NotFoundError, ValidationError
-from multica_py.models.issues import IssueCreateRequest
-from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
 from multica_py.models.relations import CursorLazyCollection, LazyCollection
 
 pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
@@ -44,14 +42,12 @@ def test_release_identity(prepared_client: MulticaClient) -> None:
 
 def test_project_crud(prepared_client: MulticaClient) -> None:
     with ExitStack() as stack:
-        project = prepared_client.projects.create_command(
-            ProjectCreateRequest(name=_live_name())
-        ).run()
+        project = prepared_client.projects.create_command(name=_live_name()).run()
         stack.callback(prepared_client.projects.delete_command(project.id).run)
         assert prepared_client.projects.get_command(project.id).run().id == project.id
 
         updated = prepared_client.projects.update_command(
-            project.id, ProjectUpdateRequest(name=f"{project.name}-updated")
+            project.id, name=f"{project.name}-updated"
         ).run()
         assert updated.name == f"{project.name}-updated"
         assert prepared_client.projects.get_command(project.id).run().name == updated.name
@@ -63,12 +59,10 @@ def test_project_crud(prepared_client: MulticaClient) -> None:
 
 def test_comment_list(prepared_client: MulticaClient) -> None:
     with ExitStack() as stack:
-        project = prepared_client.projects.create_command(
-            ProjectCreateRequest(name=_live_name())
-        ).run()
+        project = prepared_client.projects.create_command(name=_live_name()).run()
         stack.callback(prepared_client.projects.delete_command(project.id).run)
         issue = prepared_client.issues.create_command(
-            IssueCreateRequest(title=_live_name(), project_id=project.id)
+            title=_live_name(), project_id=project.id
         ).run()
         comments = tuple(
             prepared_client.issues.comments.add_command(issue.id, f"comment-{index}").run()
@@ -87,18 +81,16 @@ def test_not_found_mapping(prepared_client: MulticaClient) -> None:
 def test_project_update_presence(prepared_client: MulticaClient) -> None:
     with ExitStack() as stack:
         project = prepared_client.projects.create_command(
-            ProjectCreateRequest(name=_live_name(), description="before")
+            name=_live_name(), description="before"
         ).run()
         stack.callback(prepared_client.projects.delete_command(project.id).run)
 
         omitted = prepared_client.projects.update_command(
-            project.id, ProjectUpdateRequest(name=f"{project.name}-updated")
+            project.id, name=f"{project.name}-updated"
         ).run()
         assert omitted.description == "before"
 
-        empty = prepared_client.projects.update_command(
-            project.id, ProjectUpdateRequest(description="")
-        ).run()
+        empty = prepared_client.projects.update_command(project.id, description="").run()
         assert empty.description == ""
 
         with (
@@ -106,9 +98,7 @@ def test_project_update_presence(prepared_client: MulticaClient) -> None:
             patch.object(prepared_client._transport, "run_text") as run_text,
         ):
             with pytest.raises(ValidationError):
-                prepared_client.projects.update_command(
-                    project.id, ProjectUpdateRequest(description=None)
-                )
+                prepared_client.projects.update_command(project.id, description=None)
             run_bytes.assert_not_called()
             run_text.assert_not_called()
 
@@ -180,9 +170,7 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
     autopilot_run.messages.all_command().run()
 
     with ExitStack() as stack:
-        project = prepared_client.projects.create_command(
-            ProjectCreateRequest(name=_live_name())
-        ).run()
+        project = prepared_client.projects.create_command(name=_live_name()).run()
         stack.callback(prepared_client.projects.delete_command(project.id).run)
         project_entity = prepared_client.projects.get_command(project.id).run()
         assert isinstance(project_entity.resources.all_command().run(), tuple)
@@ -190,7 +178,7 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
         assert isinstance(project_issue_page.items, tuple)
 
         issue = prepared_client.issues.create_command(
-            IssueCreateRequest(title=_live_name(), project_id=project.id)
+            title=_live_name(), project_id=project.id
         ).run()
         comments = issue.comments
         assert comments.all_command().run() == ()

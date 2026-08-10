@@ -170,7 +170,7 @@ AUTOPILOT_TRIGGER_BINDING = GeneratedBinding(
 
 AUTOPILOT_TRIGGER_ADD_BINDING = GeneratedBinding(
     'autopilots.trigger_add', 'default', ('autopilot', 'trigger-add'),
-    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('request.title', '--title', 'json_body:title'), GeneratedMapping('request.kind', '--kind', 'json_body:trigger_kind'),), ('nonblank:autopilot_id', 'nonblank:request.title'),
+    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('kind', '--kind', 'json_body:trigger_kind'),), ('nonblank:autopilot_id', 'nonblank:title'),
 )
 
 AUTOPILOT_TRIGGER_DELETE_BINDING = GeneratedBinding(
@@ -180,12 +180,17 @@ AUTOPILOT_TRIGGER_DELETE_BINDING = GeneratedBinding(
 
 AUTOPILOT_TRIGGER_UPDATE_BINDING = GeneratedBinding(
     'autopilots.trigger_update', 'default', ('autopilot', 'trigger-update'),
-    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('trigger_id', 'pos:1', 'path:trigger_id'), GeneratedMapping('request.title', '--title', 'json_body:title'), GeneratedMapping('request.kind', '--kind', 'json_body:trigger_kind'),), ('nonblank:autopilot_id', 'nonblank:trigger_id'),
+    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('trigger_id', 'pos:1', 'path:trigger_id'), GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('kind', '--kind', 'json_body:trigger_kind'),), ('nonblank:autopilot_id', 'nonblank:trigger_id'),
 )
 
 AUTOPILOT_UPDATE_BINDING = GeneratedBinding(
     'autopilots.update', 'default', ('autopilot', 'update'),
     (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'json_body:description'), GeneratedMapping('agent', '--agent', 'json_body:assignee_id'), GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('status', '--status', 'json_body:status'), GeneratedMapping('execution_mode', '--mode', 'json_body:execution_mode'), GeneratedMapping('issue_title_template', '--issue-title-template', 'json_body:issue_title_template'), GeneratedMapping('subscribers', 'repeat:--subscriber', 'json_body:subscribers'), GeneratedMapping('subscribers', '--clear-subscribers', 'json_body:clear_subscribers'),), ('nonblank:autopilot_id',),
+)
+
+CLI_COMMAND_BINDING = GeneratedBinding(
+    'cli.command', 'default', (),
+    (), (),
 )
 
 CONFIGURATION_GET_MANUAL_BINDING = GeneratedBinding(
@@ -238,6 +243,11 @@ ISSUES_ASSIGN_MANUAL_BINDING = GeneratedBinding(
     (), (),
 )
 
+ISSUES_ASSIGN_BOUND_BINDING = GeneratedBinding(
+    'issues.assign_bound', 'default', (),
+    (), (),
+)
+
 ISSUE_CANCEL_TASK_BINDING = GeneratedBinding(
     'issues.cancel_task', 'default', ('issue', 'cancel-task'),
     (GeneratedMapping('task_id', 'pos:0', 'path:task_id'), GeneratedMapping('issue_id', '--issue', 'query:issue_id'),), ('nonblank:task_id',),
@@ -265,17 +275,17 @@ COMMENT_LIST_BINDING = GeneratedBinding(
 
 COMMENT_LIST_FLAT_BINDING = GeneratedBinding(
     'issues.comments.list', 'flat', ('issue', 'comment', 'list'),
-    (GeneratedMapping('request.issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('request.since', '--since', 'query:since'),), (),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('since', '--since', 'query:since'),), (),
 )
 
 COMMENT_LIST_RECENT_BINDING = GeneratedBinding(
     'issues.comments.list', 'recent', ('issue', 'comment', 'list'),
-    (GeneratedMapping('request.issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('request.limit', '--recent', 'query:recent'), GeneratedMapping('request.cursor.before', '--before', 'query:before'), GeneratedMapping('request.cursor.before_id', '--before-id', 'query:before_id'),), ('cursor_pair', 'limit_positive'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('limit', '--recent', 'query:recent'), GeneratedMapping('cursor.before', '--before', 'query:before'), GeneratedMapping('cursor.before_id', '--before-id', 'query:before_id'),), ('cursor_pair', 'limit_positive'),
 )
 
 COMMENT_LIST_THREAD_BINDING = GeneratedBinding(
     'issues.comments.list', 'thread', ('issue', 'comment', 'list'),
-    (GeneratedMapping('request.issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('request.thread_id', '--thread', 'query:thread'), GeneratedMapping('request.limit', '--tail', 'query:tail'), GeneratedMapping('request.cursor.before', '--before', 'query:before'), GeneratedMapping('request.cursor.before_id', '--before-id', 'query:before_id'),), ('cursor_pair', 'cursor_requires_limit', 'limit_nonnegative'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('thread_id', '--thread', 'query:thread'), GeneratedMapping('limit', '--tail', 'query:tail'), GeneratedMapping('cursor.before', '--before', 'query:before'), GeneratedMapping('cursor.before_id', '--before-id', 'query:before_id'),), ('cursor_pair', 'cursor_requires_limit', 'limit_nonnegative'),
 )
 
 ISSUES_COMMENTS_REPLY_MANUAL_BINDING = GeneratedBinding(
@@ -295,7 +305,7 @@ ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING = GeneratedBinding(
 
 ISSUE_CREATE_BINDING = GeneratedBinding(
     'issues.create', 'default', ('issue', 'create'),
-    (GeneratedMapping('request.title', '--title', 'json_body:title'), GeneratedMapping('request.description_input', 'description-selector', 'local_control:description'), GeneratedMapping('request.priority', '--priority', 'json_body:priority'), GeneratedMapping('request.assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('request.project_id', '--project', 'json_body:project_id'), GeneratedMapping('request.parent_id', '--parent', 'json_body:parent_issue_id'), GeneratedMapping('request.label_ids', 'repeat:issue label add', 'json_body:label_id'),), ('nonblank:request.title', 'description_exactly_one'),
+    (GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description_input', 'description-selector', 'local_control:description'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('parent_id', '--parent', 'json_body:parent_issue_id'), GeneratedMapping('label_ids', 'repeat:issue label add', 'json_body:label_id'),), ('nonblank:title', 'description_exactly_one'),
 )
 
 ISSUES_DEPRIORITIZE_MANUAL_BINDING = GeneratedBinding(
@@ -358,9 +368,54 @@ ISSUES_METADATA_SET_TYPED_MANUAL_BINDING = GeneratedBinding(
     (), (),
 )
 
+ISSUES_MOVE_AFTER_BINDING = GeneratedBinding(
+    'issues.move_after', 'default', ('issue', 'reorder'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('other_issue', '--after', 'path:after_id'),), (),
+)
+
+ISSUES_MOVE_AFTER_BOUND_BINDING = GeneratedBinding(
+    'issues.move_after_bound', 'default', ('issue', 'reorder'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('other_issue', '--after', 'path:after_id'),), (),
+)
+
+ISSUES_MOVE_BEFORE_BINDING = GeneratedBinding(
+    'issues.move_before', 'default', ('issue', 'reorder'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('other_issue', '--before', 'path:before_id'),), (),
+)
+
+ISSUES_MOVE_BEFORE_BOUND_BINDING = GeneratedBinding(
+    'issues.move_before_bound', 'default', ('issue', 'reorder'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('other_issue', '--before', 'path:before_id'),), (),
+)
+
+ISSUES_MOVE_TO_BOTTOM_BINDING = GeneratedBinding(
+    'issues.move_to_bottom', 'default', ('issue', 'reorder'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('literal.true', '--bottom', 'local_control:bottom'),), (),
+)
+
+ISSUES_MOVE_TO_BOTTOM_BOUND_BINDING = GeneratedBinding(
+    'issues.move_to_bottom_bound', 'default', ('issue', 'reorder'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('literal.true', '--bottom', 'local_control:bottom'),), (),
+)
+
+ISSUES_MOVE_TO_TOP_BINDING = GeneratedBinding(
+    'issues.move_to_top', 'default', ('issue', 'reorder'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('literal.true', '--top', 'local_control:top'),), (),
+)
+
+ISSUES_MOVE_TO_TOP_BOUND_BINDING = GeneratedBinding(
+    'issues.move_to_top_bound', 'default', ('issue', 'reorder'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('literal.true', '--top', 'local_control:top'),), (),
+)
+
 ISSUE_PULL_REQUESTS_BINDING = GeneratedBinding(
     'issues.pull_requests', 'default', ('issue', 'pull-requests'),
     (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'),), ('nonblank:issue_id',),
+)
+
+ISSUES_REFRESH_BINDING = GeneratedBinding(
+    'issues.refresh', 'default', (),
+    (), (),
 )
 
 ISSUES_REORDER_MANUAL_BINDING = GeneratedBinding(
@@ -393,6 +448,11 @@ ISSUE_STATUS_BINDING = GeneratedBinding(
     (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('status', 'pos:1', 'json_body:status'),), ('strict:IssueStatus',),
 )
 
+ISSUES_SET_STATUS_BOUND_BINDING = GeneratedBinding(
+    'issues.set_status_bound', 'default', (),
+    (), (),
+)
+
 ISSUE_SUBSCRIBERS_ADD_BINDING = GeneratedBinding(
     'issues.subscribers.add', 'default', ('issue', 'subscriber', 'add'),
     (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('user_id', 'pos:1', 'path:user_id'),), ('nonblank:issue_id', 'nonblank:user_id'),
@@ -408,8 +468,23 @@ ISSUE_SUBSCRIBERS_REMOVE_BINDING = GeneratedBinding(
     (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('user_id', 'pos:1', 'path:user_id'),), ('nonblank:issue_id', 'nonblank:user_id'),
 )
 
+ISSUES_UNASSIGN_BINDING = GeneratedBinding(
+    'issues.unassign', 'default', ('issue', 'assign'),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('literal.true', '--unassign', 'local_control:unassign'),), (),
+)
+
+ISSUES_UNASSIGN_BOUND_BINDING = GeneratedBinding(
+    'issues.unassign_bound', 'default', (),
+    (), (),
+)
+
 ISSUES_UPDATE_MANUAL_BINDING = GeneratedBinding(
     'issues.update', 'default', ('issue', 'update'),
+    (), (),
+)
+
+ISSUES_UPDATE_BOUND_BINDING = GeneratedBinding(
+    'issues.update_bound', 'default', (),
     (), (),
 )
 
@@ -455,7 +530,7 @@ MAINTENANCE_VERSION_MANUAL_BINDING = GeneratedBinding(
 
 PROJECT_CREATE_BINDING = GeneratedBinding(
     'projects.create', 'default', ('project', 'create'),
-    (GeneratedMapping('request.name', '--title', 'json_body:title'), GeneratedMapping('request.description', '--description', 'json_body:description'),), ('nonblank:request.name',),
+    (GeneratedMapping('name', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'json_body:description'),), ('nonblank:name',),
 )
 
 PROJECTS_DELETE_MANUAL_BINDING = GeneratedBinding(
@@ -468,14 +543,24 @@ PROJECT_GET_BINDING = GeneratedBinding(
     (GeneratedMapping('project_id', 'pos:0', 'path:project_id'),), ('nonblank:project_id',),
 )
 
+PROJECT_ISSUE_CREATE_BINDING = GeneratedBinding(
+    'projects.issues.create', 'default', ('issue', 'create'),
+    (GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('title', '--title', 'json_body:title'),), (),
+)
+
 PROJECT_LIST_BINDING = GeneratedBinding(
     'projects.list', 'default', ('project', 'list'),
     (), (),
 )
 
+PROJECTS_REFRESH_BINDING = GeneratedBinding(
+    'projects.refresh', 'default', (),
+    (), (),
+)
+
 PROJECT_RESOURCE_ADD_BINDING = GeneratedBinding(
     'projects.resources.add_local_directory', 'default', ('project', 'resource', 'add'),
-    (GeneratedMapping('project_id', 'pos:0', 'path:project_id'), GeneratedMapping('request.local_path', '--local-path', 'local_control:absolute_path'), GeneratedMapping('request.daemon_id', '--daemon-id', 'json_body:daemon_id'), GeneratedMapping('request.label', '--ref-label', 'json_body:label'), GeneratedMapping('literal.local_directory', '--type', 'json_body:type'),), ('nonblank:project_id', 'nonblank:request.local_path', 'nonblank:request.daemon_id', 'blank_label_omitted'),
+    (GeneratedMapping('project_id', 'pos:0', 'path:project_id'), GeneratedMapping('local_path', '--local-path', 'local_control:absolute_path'), GeneratedMapping('daemon_id', '--daemon-id', 'json_body:daemon_id'), GeneratedMapping('label', '--ref-label', 'json_body:label'), GeneratedMapping('literal.local_directory', '--type', 'json_body:type'),), ('nonblank:project_id', 'nonblank:local_path', 'nonblank:daemon_id', 'blank_label_omitted'),
 )
 
 PROJECT_RESOURCE_LIST_BINDING = GeneratedBinding(
@@ -490,7 +575,7 @@ PROJECT_RESOURCE_REMOVE_BINDING = GeneratedBinding(
 
 PROJECT_RESOURCE_UPDATE_BINDING = GeneratedBinding(
     'projects.resources.update_local_directory', 'default', ('project', 'resource', 'update'),
-    (GeneratedMapping('project_id', 'pos:0', 'path:project_id'), GeneratedMapping('resource_id', 'pos:1', 'path:resource_id'), GeneratedMapping('request.local_path', '--local-path', 'local_control:absolute_path'),), ('nonblank:project_id', 'nonblank:resource_id', 'nonblank:request.local_path', 'preserve_daemon_and_label'),
+    (GeneratedMapping('project_id', 'pos:0', 'path:project_id'), GeneratedMapping('resource_id', 'pos:1', 'path:resource_id'), GeneratedMapping('local_path', '--local-path', 'local_control:absolute_path'),), ('nonblank:project_id', 'nonblank:resource_id', 'nonblank:local_path', 'preserve_daemon_and_label'),
 )
 
 PROJECT_STATUS_BINDING = GeneratedBinding(
@@ -500,7 +585,12 @@ PROJECT_STATUS_BINDING = GeneratedBinding(
 
 PROJECT_UPDATE_BINDING = GeneratedBinding(
     'projects.update', 'default', ('project', 'update'),
-    (GeneratedMapping('project_id', 'pos:0', 'path:project_id'), GeneratedMapping('request.name', '--title', 'json_body:title'), GeneratedMapping('request.description', '--description', 'json_body:description'),), ('at_least_one:name_description', 'description_none_rejected', 'unset_omits', 'empty_emits'),
+    (GeneratedMapping('project_id', 'pos:0', 'path:project_id'), GeneratedMapping('name', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'json_body:description'),), ('at_least_one:name_description', 'description_none_rejected', 'unset_omits', 'empty_emits'),
+)
+
+PROJECTS_UPDATE_BOUND_BINDING = GeneratedBinding(
+    'projects.update_bound', 'default', (),
+    (), (),
 )
 
 REPOSITORIES_ADD_BINDING = GeneratedBinding(
@@ -540,7 +630,7 @@ RUNTIME_RENAME_BINDING = GeneratedBinding(
 
 RUNTIME_UPDATE_BINDING = GeneratedBinding(
     'runtimes.update', 'default', ('runtime', 'update'),
-    (GeneratedMapping('runtime_id', 'pos:0', 'path:runtime_id'), GeneratedMapping('request.target_version', '--target-version', 'json_body:target_version'), GeneratedMapping('request.wait', '--wait', 'local_control:wait'),), ('nonblank:runtime',),
+    (GeneratedMapping('runtime_id', 'pos:0', 'path:runtime_id'), GeneratedMapping('target_version', '--target-version', 'json_body:target_version'), GeneratedMapping('wait', '--wait', 'local_control:wait'),), ('nonblank:runtime',),
 )
 
 RUNTIME_USAGE_BINDING = GeneratedBinding(
@@ -635,7 +725,7 @@ USER_PROFILE_GET_BINDING = GeneratedBinding(
 
 USER_PROFILE_UPDATE_BINDING = GeneratedBinding(
     'users.profile_update', 'default', ('user', 'profile', 'update'),
-    (GeneratedMapping('request.description', '--description', 'json_body:profile_description'),), (),
+    (GeneratedMapping('description', '--description', 'json_body:profile_description'),), (),
 )
 
 WORKSPACE_GET_BINDING = GeneratedBinding(
@@ -697,6 +787,7 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     AUTOPILOT_TRIGGER_DELETE_BINDING,
     AUTOPILOT_TRIGGER_UPDATE_BINDING,
     AUTOPILOT_UPDATE_BINDING,
+    CLI_COMMAND_BINDING,
     CONFIGURATION_GET_MANUAL_BINDING,
     CONFIGURATION_SET_MANUAL_BINDING,
     CONFIGURATION_SHOW_MANUAL_BINDING,
@@ -707,6 +798,7 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     DAEMON_STATUS_MANUAL_BINDING,
     DAEMON_STOP_MANUAL_BINDING,
     ISSUES_ASSIGN_MANUAL_BINDING,
+    ISSUES_ASSIGN_BOUND_BINDING,
     ISSUE_CANCEL_TASK_BINDING,
     ISSUE_CHILDREN_BINDING,
     COMMENT_ADD_BINDING,
@@ -731,17 +823,30 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     ISSUES_METADATA_QUERY_MANUAL_BINDING,
     ISSUE_METADATA_SET_BINDING,
     ISSUES_METADATA_SET_TYPED_MANUAL_BINDING,
+    ISSUES_MOVE_AFTER_BINDING,
+    ISSUES_MOVE_AFTER_BOUND_BINDING,
+    ISSUES_MOVE_BEFORE_BINDING,
+    ISSUES_MOVE_BEFORE_BOUND_BINDING,
+    ISSUES_MOVE_TO_BOTTOM_BINDING,
+    ISSUES_MOVE_TO_BOTTOM_BOUND_BINDING,
+    ISSUES_MOVE_TO_TOP_BINDING,
+    ISSUES_MOVE_TO_TOP_BOUND_BINDING,
     ISSUE_PULL_REQUESTS_BINDING,
+    ISSUES_REFRESH_BINDING,
     ISSUES_REORDER_MANUAL_BINDING,
     ISSUE_RERUN_BINDING,
     ISSUE_RUN_MESSAGES_BINDING,
     ISSUE_RUNS_BINDING,
     ISSUE_SEARCH_BINDING,
     ISSUE_STATUS_BINDING,
+    ISSUES_SET_STATUS_BOUND_BINDING,
     ISSUE_SUBSCRIBERS_ADD_BINDING,
     ISSUE_SUBSCRIBERS_LIST_BINDING,
     ISSUE_SUBSCRIBERS_REMOVE_BINDING,
+    ISSUES_UNASSIGN_BINDING,
+    ISSUES_UNASSIGN_BOUND_BINDING,
     ISSUES_UPDATE_MANUAL_BINDING,
+    ISSUES_UPDATE_BOUND_BINDING,
     ISSUES_USAGE_MANUAL_BINDING,
     LABELS_CREATE_MANUAL_BINDING,
     LABELS_DELETE_MANUAL_BINDING,
@@ -753,13 +858,16 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     PROJECT_CREATE_BINDING,
     PROJECTS_DELETE_MANUAL_BINDING,
     PROJECT_GET_BINDING,
+    PROJECT_ISSUE_CREATE_BINDING,
     PROJECT_LIST_BINDING,
+    PROJECTS_REFRESH_BINDING,
     PROJECT_RESOURCE_ADD_BINDING,
     PROJECT_RESOURCE_LIST_BINDING,
     PROJECT_RESOURCE_REMOVE_BINDING,
     PROJECT_RESOURCE_UPDATE_BINDING,
     PROJECT_STATUS_BINDING,
     PROJECT_UPDATE_BINDING,
+    PROJECTS_UPDATE_BOUND_BINDING,
     REPOSITORIES_ADD_BINDING,
     REPOSITORIES_LIST_BINDING,
     REPOSITORIES_REMOVE_BINDING,
@@ -817,8 +925,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'agents.create', 'default',
         'create', 'agent',
-        'AgentCreateRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.agents.AgentResource.create_command',
+        None, 'direct',
+        (), 'multica_py.resources.agents.AgentResource.create_command',
     ),
     GeneratedConvention(
         'agents.get', 'default',
@@ -859,8 +967,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'agents.update', 'default',
         'update', 'agent',
-        'AgentUpdateRequest', 'dual_optional',
-        ('omit',), 'multica_py.resources.agents.AgentResource.update_command',
+        None, 'direct',
+        (), 'multica_py.resources.agents.AgentResource.update_command',
     ),
     GeneratedConvention(
         'attachments.download', 'default',
@@ -943,8 +1051,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'autopilots.trigger_add', 'default',
         'retrieve', 'autopilot_trigger',
-        'AutopilotTriggerCreate', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.autopilots.AutopilotResource.trigger_add_command',
+        None, 'direct',
+        (), 'multica_py.resources.autopilots.AutopilotResource.trigger_add_command',
     ),
     GeneratedConvention(
         'autopilots.trigger_delete', 'default',
@@ -955,14 +1063,20 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'autopilots.trigger_update', 'default',
         'retrieve', 'autopilot_trigger',
-        'AutopilotTriggerUpdate', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.autopilots.AutopilotResource.trigger_update_command',
+        None, 'direct',
+        (), 'multica_py.resources.autopilots.AutopilotResource.trigger_update_command',
     ),
     GeneratedConvention(
         'autopilots.update', 'default',
         'update', 'autopilot',
-        'AutopilotUpdateRequest', 'dual_optional',
-        ('omit',), 'multica_py.resources.autopilots.AutopilotResource.update_command',
+        None, 'direct',
+        (), 'multica_py.resources.autopilots.AutopilotResource.update_command',
+    ),
+    GeneratedConvention(
+        'cli.command', 'default',
+        'action', 'cli_result',
+        None, 'direct',
+        (), 'multica_py.resources.cli.CliResource.command_command',
     ),
     GeneratedConvention(
         'configuration.get', 'default',
@@ -1020,9 +1134,15 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     ),
     GeneratedConvention(
         'issues.assign', 'default',
-        'action', 'action_result_none',
-        'IssueAssignmentRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.issues.IssueResource.assign_command',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.IssueResource.assign_command',
+    ),
+    GeneratedConvention(
+        'issues.assign_bound', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.Issue.assign_command',
     ),
     GeneratedConvention(
         'issues.cancel_task', 'default',
@@ -1057,20 +1177,20 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'issues.comments.list', 'flat',
         'collection', 'comment_page',
-        'CommentListFlatRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.issue_comments.IssueCommentResource.list_flat_command',
+        None, 'direct',
+        (), 'multica_py.resources.issue_comments.IssueCommentResource.list_flat_command',
     ),
     GeneratedConvention(
         'issues.comments.list', 'recent',
         'collection', 'comment_thread_page',
-        'CommentListRecentRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.issue_comments.IssueCommentResource.list_recent_command',
+        None, 'direct',
+        (), 'multica_py.resources.issue_comments.IssueCommentResource.list_recent_command',
     ),
     GeneratedConvention(
         'issues.comments.list', 'thread',
         'collection', 'comment_page',
-        'CommentListThreadRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.issue_comments.IssueCommentResource.list_thread_command',
+        None, 'direct',
+        (), 'multica_py.resources.issue_comments.IssueCommentResource.list_thread_command',
     ),
     GeneratedConvention(
         'issues.comments.reply', 'default',
@@ -1093,8 +1213,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'issues.create', 'default',
         'create', 'issue',
-        'IssueCreateRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.issues.IssueResource.create_command',
+        None, 'direct',
+        (), 'multica_py.resources.issues.IssueResource.create_command',
     ),
     GeneratedConvention(
         'issues.deprioritize', 'default',
@@ -1153,8 +1273,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'issues.metadata.query', 'default',
         'mapping', 'metadata_entries',
-        'MetadataListRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.issue_metadata.IssueMetadataResource.query_command',
+        None, 'direct',
+        (), 'multica_py.resources.issue_metadata.IssueMetadataResource.query_command',
     ),
     GeneratedConvention(
         'issues.metadata.set', 'default',
@@ -1165,8 +1285,56 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'issues.metadata.set_typed', 'default',
         'action', 'action_result_none',
-        'MetadataSetRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.issue_metadata.IssueMetadataResource.set_typed_command',
+        None, 'direct',
+        (), 'multica_py.resources.issue_metadata.IssueMetadataResource.set_typed_command',
+    ),
+    GeneratedConvention(
+        'issues.move_after', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.IssueResource.move_after_command',
+    ),
+    GeneratedConvention(
+        'issues.move_after_bound', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.Issue.move_after_command',
+    ),
+    GeneratedConvention(
+        'issues.move_before', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.IssueResource.move_before_command',
+    ),
+    GeneratedConvention(
+        'issues.move_before_bound', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.Issue.move_before_command',
+    ),
+    GeneratedConvention(
+        'issues.move_to_bottom', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.IssueResource.move_to_bottom_command',
+    ),
+    GeneratedConvention(
+        'issues.move_to_bottom_bound', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.Issue.move_to_bottom_command',
+    ),
+    GeneratedConvention(
+        'issues.move_to_top', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.IssueResource.move_to_top_command',
+    ),
+    GeneratedConvention(
+        'issues.move_to_top_bound', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.Issue.move_to_top_command',
     ),
     GeneratedConvention(
         'issues.pull_requests', 'default',
@@ -1175,10 +1343,16 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
         (), 'multica_py.resources.issues.IssueResource.pull_requests_command',
     ),
     GeneratedConvention(
+        'issues.refresh', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.Issue.refresh_command',
+    ),
+    GeneratedConvention(
         'issues.reorder', 'default',
         'action', 'action_result_none',
-        'IssueReorderRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.issues.IssueResource.reorder_command',
+        None, 'direct',
+        (), 'multica_py.resources.issues.IssueResource.reorder_command',
     ),
     GeneratedConvention(
         'issues.rerun', 'default',
@@ -1200,7 +1374,7 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     ),
     GeneratedConvention(
         'issues.search', 'default',
-        'collection', 'page_issue_summaries',
+        'collection', 'page_issues',
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.search_command',
     ),
@@ -1209,6 +1383,12 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
         'update', 'issue',
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.set_status_command',
+    ),
+    GeneratedConvention(
+        'issues.set_status_bound', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.Issue.set_status_command',
     ),
     GeneratedConvention(
         'issues.subscribers.add', 'default',
@@ -1229,10 +1409,28 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
         (), 'multica_py.resources.issue_subscribers.IssueSubscriberResource.remove_command',
     ),
     GeneratedConvention(
+        'issues.unassign', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.IssueResource.unassign_command',
+    ),
+    GeneratedConvention(
+        'issues.unassign_bound', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.Issue.unassign_command',
+    ),
+    GeneratedConvention(
         'issues.update', 'default',
         'update', 'issue',
-        'IssueUpdateRequest', 'dual_optional',
-        ('omit',), 'multica_py.resources.issues.IssueResource.update_command',
+        None, 'direct',
+        (), 'multica_py.resources.issues.IssueResource.update_command',
+    ),
+    GeneratedConvention(
+        'issues.update_bound', 'default',
+        'action', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.issues.Issue.update_command',
     ),
     GeneratedConvention(
         'issues.usage', 'default',
@@ -1267,8 +1465,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'labels.update', 'default',
         'update', 'labels',
-        'LabelUpdateRequest', 'dual_optional',
-        ('omit',), 'multica_py.resources.labels.LabelResource.update_command',
+        None, 'direct',
+        (), 'multica_py.resources.labels.LabelResource.update_command',
     ),
     GeneratedConvention(
         'maintenance.update', 'default',
@@ -1285,8 +1483,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'projects.create', 'default',
         'create', 'project',
-        'ProjectCreateRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.projects.ProjectResource.create_command',
+        None, 'direct',
+        (), 'multica_py.resources.projects.ProjectResource.create_command',
     ),
     GeneratedConvention(
         'projects.delete', 'default',
@@ -1301,16 +1499,28 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
         (), 'multica_py.resources.projects.ProjectResource.get_command',
     ),
     GeneratedConvention(
+        'projects.issues.create', 'default',
+        'create', 'issue',
+        None, 'direct',
+        (), 'multica_py.resources.projects.ProjectIssueCollection.create_command',
+    ),
+    GeneratedConvention(
         'projects.list', 'default',
         'collection', 'page_project',
         None, 'direct',
         (), 'multica_py.resources.projects.ProjectResource.list_command',
     ),
     GeneratedConvention(
+        'projects.refresh', 'default',
+        'action', 'project',
+        None, 'direct',
+        (), 'multica_py.resources.projects.Project.refresh_command',
+    ),
+    GeneratedConvention(
         'projects.resources.add_local_directory', 'default',
         'retrieve', 'project_resource',
-        'ProjectResourceAddLocalDirectoryRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory_command',
+        None, 'direct',
+        (), 'multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory_command',
     ),
     GeneratedConvention(
         'projects.resources.list', 'default',
@@ -1327,8 +1537,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'projects.resources.update_local_directory', 'default',
         'retrieve', 'project_resource',
-        'ProjectResourceUpdateLocalDirectoryRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory_command',
+        None, 'direct',
+        (), 'multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory_command',
     ),
     GeneratedConvention(
         'projects.set_status', 'default',
@@ -1339,8 +1549,14 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'projects.update', 'default',
         'update', 'project',
-        'ProjectUpdateRequest', 'dual_optional',
-        ('omit',), 'multica_py.resources.projects.ProjectResource.update_command',
+        None, 'direct',
+        (), 'multica_py.resources.projects.ProjectResource.update_command',
+    ),
+    GeneratedConvention(
+        'projects.update_bound', 'default',
+        'action', 'project',
+        None, 'direct',
+        (), 'multica_py.resources.projects.Project.update_command',
     ),
     GeneratedConvention(
         'repositories.add', 'default',
@@ -1387,8 +1603,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'runtimes.update', 'default',
         'action', 'action_result_runtime_update_result',
-        'RuntimeUpdate', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.runtimes.RuntimeResource.update_command',
+        None, 'direct',
+        (), 'multica_py.resources.runtimes.RuntimeResource.update_command',
     ),
     GeneratedConvention(
         'runtimes.usage', 'default',
@@ -1411,8 +1627,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'skills.create', 'default',
         'create', 'skill',
-        'SkillCreateRequest', 'dual_required',
-        ('required_nonnull',), 'multica_py.resources.skills.SkillResource.create_command',
+        None, 'direct',
+        (), 'multica_py.resources.skills.SkillResource.create_command',
     ),
     GeneratedConvention(
         'skills.delete', 'default',
@@ -1459,8 +1675,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'skills.update', 'default',
         'update', 'skill',
-        'SkillUpdateRequest', 'dual_optional',
-        ('omit',), 'multica_py.resources.skills.SkillResource.update_command',
+        None, 'direct',
+        (), 'multica_py.resources.skills.SkillResource.update_command',
     ),
     GeneratedConvention(
         'squads.get', 'default',
@@ -1501,8 +1717,8 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'users.profile_update', 'default',
         'update', 'user_profile',
-        'UserProfileUpdate', 'dual_optional',
-        ('omit',), 'multica_py.resources.users.UserResource.profile_update_command',
+        None, 'direct',
+        (), 'multica_py.resources.users.UserResource.profile_update_command',
     ),
     GeneratedConvention(
         'workspaces.get', 'default',
@@ -1598,4 +1814,4 @@ def validate_thread_cursor_limit(value: object) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ValueError('value must be a positive integer')
 
-__all__ = ('TARGET_VERSION', 'MIN_CLI_VERSION', 'MAX_CLI_VERSION', 'AutopilotExecutionMode', 'IssueSort', 'SortDirection', 'GeneratedMapping', 'GeneratedBinding', 'GeneratedConvention', 'AGENT_AVATAR_BINDING', 'AGENT_COPY_BINDING', 'AGENT_GET_BINDING', 'AGENT_LIST_BINDING', 'AGENT_SKILLS_LIST_BINDING', 'AGENT_SKILLS_SET_BINDING', 'AGENT_TASKS_BINDING', 'AGENTS_ARCHIVE_MANUAL_BINDING', 'AGENTS_CREATE_MANUAL_BINDING', 'AGENTS_RESTORE_MANUAL_BINDING', 'AGENTS_UPDATE_MANUAL_BINDING', 'ATTACHMENT_DOWNLOAD_BINDING', 'ATTACHMENT_UPLOAD_BINDING', 'ATTACHMENTS_DOWNLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENTS_UPLOAD_BYTES_MANUAL_BINDING', 'AUTH_LOGIN_MANUAL_BINDING', 'AUTH_LOGOUT_MANUAL_BINDING', 'AUTH_STATUS_MANUAL_BINDING', 'AUTOPILOT_CREATE_BINDING', 'AUTOPILOT_DELETE_BINDING', 'AUTOPILOT_GET_BINDING', 'AUTOPILOT_HISTORY_BINDING', 'AUTOPILOT_LIST_BINDING', 'AUTOPILOT_TRIGGER_BINDING', 'AUTOPILOT_TRIGGER_ADD_BINDING', 'AUTOPILOT_TRIGGER_DELETE_BINDING', 'AUTOPILOT_TRIGGER_UPDATE_BINDING', 'AUTOPILOT_UPDATE_BINDING', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'CONFIGURATION_GET_MANUAL_BINDING', 'CONFIGURATION_SET_MANUAL_BINDING', 'CONFIGURATION_SHOW_MANUAL_BINDING', 'DAEMON_DISK_USAGE_MANUAL_BINDING', 'DAEMON_LOGS_MANUAL_BINDING', 'DAEMON_RESTART_MANUAL_BINDING', 'DAEMON_START_MANUAL_BINDING', 'DAEMON_STATUS_MANUAL_BINDING', 'DAEMON_STOP_MANUAL_BINDING', 'ISSUE_CANCEL_TASK_BINDING', 'ISSUE_CHILDREN_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_GET_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_METADATA_DELETE_BINDING', 'ISSUE_METADATA_GET_BINDING', 'ISSUE_METADATA_LIST_BINDING', 'ISSUE_METADATA_SET_BINDING', 'ISSUE_PULL_REQUESTS_BINDING', 'ISSUE_RERUN_BINDING', 'ISSUE_RUN_MESSAGES_BINDING', 'ISSUE_RUNS_BINDING', 'ISSUE_SEARCH_BINDING', 'ISSUE_STATUS_BINDING', 'ISSUE_SUBSCRIBERS_ADD_BINDING', 'ISSUE_SUBSCRIBERS_LIST_BINDING', 'ISSUE_SUBSCRIBERS_REMOVE_BINDING', 'ISSUES_ASSIGN_MANUAL_BINDING', 'ISSUES_COMMENTS_REPLY_MANUAL_BINDING', 'ISSUES_COMMENTS_RESOLVE_MANUAL_BINDING', 'ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING', 'ISSUES_DEPRIORITIZE_MANUAL_BINDING', 'ISSUES_METADATA_QUERY_MANUAL_BINDING', 'ISSUES_METADATA_SET_TYPED_MANUAL_BINDING', 'ISSUES_REORDER_MANUAL_BINDING', 'ISSUES_UPDATE_MANUAL_BINDING', 'ISSUES_USAGE_MANUAL_BINDING', 'LABEL_GET_BINDING', 'LABEL_LIST_BINDING', 'LABELS_CREATE_MANUAL_BINDING', 'LABELS_DELETE_MANUAL_BINDING', 'LABELS_UPDATE_MANUAL_BINDING', 'MAINTENANCE_UPDATE_MANUAL_BINDING', 'MAINTENANCE_VERSION_MANUAL_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_GET_BINDING', 'PROJECT_LIST_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'PROJECTS_DELETE_MANUAL_BINDING', 'REPOSITORIES_ADD_BINDING', 'REPOSITORIES_LIST_BINDING', 'REPOSITORIES_REMOVE_BINDING', 'RUNTIME_ACTIVITY_BINDING', 'RUNTIME_DELETE_BINDING', 'RUNTIME_LIST_BINDING', 'RUNTIME_RENAME_BINDING', 'RUNTIME_UPDATE_BINDING', 'RUNTIME_USAGE_BINDING', 'SETUP_CLOUD_MANUAL_BINDING', 'SETUP_SELF_HOST_MANUAL_BINDING', 'SKILL_FILES_DELETE_BINDING', 'SKILL_FILES_LIST_BINDING', 'SKILL_FILES_UPSERT_BINDING', 'SKILL_GET_BINDING', 'SKILL_LIST_BINDING', 'SKILLS_CREATE_MANUAL_BINDING', 'SKILLS_DELETE_MANUAL_BINDING', 'SKILLS_IMPORT_FROM_URL_MANUAL_BINDING', 'SKILLS_UPDATE_MANUAL_BINDING', 'SQUAD_GET_BINDING', 'SQUAD_LIST_BINDING', 'SQUAD_MEMBERS_ADD_BINDING', 'SQUAD_MEMBERS_LIST_BINDING', 'SQUAD_MEMBERS_REMOVE_BINDING', 'USER_PROFILE_GET_BINDING', 'USER_PROFILE_UPDATE_BINDING', 'WORKSPACE_GET_BINDING', 'WORKSPACE_LIST_BINDING', 'WORKSPACE_MEMBERS_LIST_BINDING', 'WORKSPACES_SWITCH_MANUAL_BINDING', 'WORKSPACES_UNWATCH_MANUAL_BINDING', 'WORKSPACES_WATCH_MANUAL_BINDING', 'OPERATION_BINDINGS', 'OPERATION_CONVENTIONS', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_limit', 'validate_positive_max_concurrent_tasks', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_thread_cursor_limit')
+__all__ = ('AGENTS_ARCHIVE_MANUAL_BINDING', 'AGENTS_CREATE_MANUAL_BINDING', 'AGENTS_RESTORE_MANUAL_BINDING', 'AGENTS_UPDATE_MANUAL_BINDING', 'AGENT_AVATAR_BINDING', 'AGENT_COPY_BINDING', 'AGENT_GET_BINDING', 'AGENT_LIST_BINDING', 'AGENT_SKILLS_LIST_BINDING', 'AGENT_SKILLS_SET_BINDING', 'AGENT_TASKS_BINDING', 'ATTACHMENTS_DOWNLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENTS_UPLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENT_DOWNLOAD_BINDING', 'ATTACHMENT_UPLOAD_BINDING', 'AUTH_LOGIN_MANUAL_BINDING', 'AUTH_LOGOUT_MANUAL_BINDING', 'AUTH_STATUS_MANUAL_BINDING', 'AUTOPILOT_CREATE_BINDING', 'AUTOPILOT_DELETE_BINDING', 'AUTOPILOT_GET_BINDING', 'AUTOPILOT_HISTORY_BINDING', 'AUTOPILOT_LIST_BINDING', 'AUTOPILOT_TRIGGER_ADD_BINDING', 'AUTOPILOT_TRIGGER_BINDING', 'AUTOPILOT_TRIGGER_DELETE_BINDING', 'AUTOPILOT_TRIGGER_UPDATE_BINDING', 'AUTOPILOT_UPDATE_BINDING', 'CLI_COMMAND_BINDING', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'CONFIGURATION_GET_MANUAL_BINDING', 'CONFIGURATION_SET_MANUAL_BINDING', 'CONFIGURATION_SHOW_MANUAL_BINDING', 'DAEMON_DISK_USAGE_MANUAL_BINDING', 'DAEMON_LOGS_MANUAL_BINDING', 'DAEMON_RESTART_MANUAL_BINDING', 'DAEMON_START_MANUAL_BINDING', 'DAEMON_STATUS_MANUAL_BINDING', 'DAEMON_STOP_MANUAL_BINDING', 'ISSUES_ASSIGN_BOUND_BINDING', 'ISSUES_ASSIGN_MANUAL_BINDING', 'ISSUES_COMMENTS_REPLY_MANUAL_BINDING', 'ISSUES_COMMENTS_RESOLVE_MANUAL_BINDING', 'ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING', 'ISSUES_DEPRIORITIZE_MANUAL_BINDING', 'ISSUES_METADATA_QUERY_MANUAL_BINDING', 'ISSUES_METADATA_SET_TYPED_MANUAL_BINDING', 'ISSUES_MOVE_AFTER_BINDING', 'ISSUES_MOVE_AFTER_BOUND_BINDING', 'ISSUES_MOVE_BEFORE_BINDING', 'ISSUES_MOVE_BEFORE_BOUND_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BOUND_BINDING', 'ISSUES_MOVE_TO_TOP_BINDING', 'ISSUES_MOVE_TO_TOP_BOUND_BINDING', 'ISSUES_REFRESH_BINDING', 'ISSUES_REORDER_MANUAL_BINDING', 'ISSUES_SET_STATUS_BOUND_BINDING', 'ISSUES_UNASSIGN_BINDING', 'ISSUES_UNASSIGN_BOUND_BINDING', 'ISSUES_UPDATE_BOUND_BINDING', 'ISSUES_UPDATE_MANUAL_BINDING', 'ISSUES_USAGE_MANUAL_BINDING', 'ISSUE_CANCEL_TASK_BINDING', 'ISSUE_CHILDREN_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_GET_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_METADATA_DELETE_BINDING', 'ISSUE_METADATA_GET_BINDING', 'ISSUE_METADATA_LIST_BINDING', 'ISSUE_METADATA_SET_BINDING', 'ISSUE_PULL_REQUESTS_BINDING', 'ISSUE_RERUN_BINDING', 'ISSUE_RUNS_BINDING', 'ISSUE_RUN_MESSAGES_BINDING', 'ISSUE_SEARCH_BINDING', 'ISSUE_STATUS_BINDING', 'ISSUE_SUBSCRIBERS_ADD_BINDING', 'ISSUE_SUBSCRIBERS_LIST_BINDING', 'ISSUE_SUBSCRIBERS_REMOVE_BINDING', 'LABELS_CREATE_MANUAL_BINDING', 'LABELS_DELETE_MANUAL_BINDING', 'LABELS_UPDATE_MANUAL_BINDING', 'LABEL_GET_BINDING', 'LABEL_LIST_BINDING', 'MAINTENANCE_UPDATE_MANUAL_BINDING', 'MAINTENANCE_VERSION_MANUAL_BINDING', 'MAX_CLI_VERSION', 'MIN_CLI_VERSION', 'OPERATION_BINDINGS', 'OPERATION_CONVENTIONS', 'PROJECTS_DELETE_MANUAL_BINDING', 'PROJECTS_REFRESH_BINDING', 'PROJECTS_UPDATE_BOUND_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_GET_BINDING', 'PROJECT_ISSUE_CREATE_BINDING', 'PROJECT_LIST_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'REPOSITORIES_ADD_BINDING', 'REPOSITORIES_LIST_BINDING', 'REPOSITORIES_REMOVE_BINDING', 'RUNTIME_ACTIVITY_BINDING', 'RUNTIME_DELETE_BINDING', 'RUNTIME_LIST_BINDING', 'RUNTIME_RENAME_BINDING', 'RUNTIME_UPDATE_BINDING', 'RUNTIME_USAGE_BINDING', 'SETUP_CLOUD_MANUAL_BINDING', 'SETUP_SELF_HOST_MANUAL_BINDING', 'SKILLS_CREATE_MANUAL_BINDING', 'SKILLS_DELETE_MANUAL_BINDING', 'SKILLS_IMPORT_FROM_URL_MANUAL_BINDING', 'SKILLS_UPDATE_MANUAL_BINDING', 'SKILL_FILES_DELETE_BINDING', 'SKILL_FILES_LIST_BINDING', 'SKILL_FILES_UPSERT_BINDING', 'SKILL_GET_BINDING', 'SKILL_LIST_BINDING', 'SQUAD_GET_BINDING', 'SQUAD_LIST_BINDING', 'SQUAD_MEMBERS_ADD_BINDING', 'SQUAD_MEMBERS_LIST_BINDING', 'SQUAD_MEMBERS_REMOVE_BINDING', 'TARGET_VERSION', 'USER_PROFILE_GET_BINDING', 'USER_PROFILE_UPDATE_BINDING', 'WORKSPACES_SWITCH_MANUAL_BINDING', 'WORKSPACES_UNWATCH_MANUAL_BINDING', 'WORKSPACES_WATCH_MANUAL_BINDING', 'WORKSPACE_GET_BINDING', 'WORKSPACE_LIST_BINDING', 'WORKSPACE_MEMBERS_LIST_BINDING', 'AutopilotExecutionMode', 'GeneratedBinding', 'GeneratedConvention', 'GeneratedMapping', 'IssueSort', 'SortDirection', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_limit', 'validate_positive_max_concurrent_tasks', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_thread_cursor_limit')

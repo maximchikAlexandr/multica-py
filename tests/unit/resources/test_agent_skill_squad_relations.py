@@ -29,19 +29,22 @@ from multica_py._internal.commands import Command, _Step
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
-from multica_py.config import ClientConfig
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.common import ActionResult
-from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
+from multica_py.models.issues import (
+    IssueListFilter,
+    IssueListPage,
+)
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection
 from multica_py.models.skills import SkillFile
 from multica_py.models.system import SquadMember
 from multica_py.resources._base import BaseResource
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.resources.agents import Agent, AgentResource
-from multica_py.resources.issues import IssueResource
+from multica_py.resources.issues import Issue, IssueResource
 from multica_py.resources.skill_files import SkillFileResource
 from multica_py.resources.skills import Skill, SkillResource
 from multica_py.resources.squad_members import SquadMemberResource
@@ -123,7 +126,7 @@ def _make_client(
     client.agents.skills.list_command = lambda agent_id: empty_command(
         lambda: client.agents.skills.list(agent_id)
     )
-    client.agents.skills.set_command = lambda agent_id, skill_ids: empty_command(
+    client.agents.skills.set_command = lambda agent_id, skill_ids, **_kwargs: empty_command(
         lambda: client.agents.skills.set(agent_id, skill_ids)
     )
     client.agents.tasks_command = lambda agent_id: empty_command(
@@ -172,16 +175,16 @@ def _make_client(
     client.skills.files.list_command = lambda skill_id: empty_command(
         lambda: client.skills.files.list(skill_id)
     )
-    client.skills.files.upsert_command = lambda skill_id, path, content: empty_command(
+    client.skills.files.upsert_command = lambda skill_id, path, content, **_kwargs: empty_command(
         lambda: SkillFile(id="f1", path=path, content=content)
     )
-    client.skills.files.delete_command = lambda skill_id, file_id: empty_command(
+    client.skills.files.delete_command = lambda skill_id, file_id, **_kwargs: empty_command(
         lambda: client.skills.files.delete(skill_id, file_id)
     )
-    client.squads.members.add_command = lambda squad_id, member_id: effect_command(
+    client.squads.members.add_command = lambda squad_id, member_id, **_kwargs: effect_command(
         lambda: client.squads.members.add(squad_id, member_id)
     )
-    client.squads.members.remove_command = lambda squad_id, member_id: effect_command(
+    client.squads.members.remove_command = lambda squad_id, member_id, **_kwargs: effect_command(
         lambda: client.squads.members.remove(squad_id, member_id)
     )
     client.squads.members.list_command = lambda squad_id: empty_command(
@@ -318,14 +321,14 @@ def test_agent_tasks_cached_after_all() -> None:
 @pytest.mark.parametrize("case", ASSIGNEE_ISSUE_RELATION_CASES, ids=lambda case: case.name)
 def test_assignee_issue_relations_paginate_offset(case: AssigneeIssueRelationCase) -> None:
     p1 = IssueListPage(
-        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(Issue(id="i1", title="t1", status=_TODO),),
         has_more=True,
         limit=1,
         offset=0,
         total=2,
     )
     p2 = IssueListPage(
-        items=(IssueSummary(id="i2", title="t2", status=_TODO),),
+        items=(Issue(id="i2", title="t2", status=_TODO),),
         has_more=False,
         limit=1,
         offset=1,
@@ -336,7 +339,7 @@ def test_assignee_issue_relations_paginate_offset(case: AssigneeIssueRelationCas
     items = entity.issues.all()
     assert len(items) == 2
     assert client.issues.list.call_count == 2
-    assert all(isinstance(item, IssueSummary) for item in items)
+    assert all(isinstance(item, Issue) for item in items)
     flt = client.issues.list.call_args_list[0][0][0]
     assert flt.assignee_id == case.assignee_id
     assert flt.limit == 50
@@ -350,7 +353,7 @@ def test_assignee_issue_relations_paginate_offset(case: AssigneeIssueRelationCas
 
 def test_agent_issues_single_page() -> None:
     p = IssueListPage(
-        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(Issue(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -360,7 +363,7 @@ def test_agent_issues_single_page() -> None:
     entity = _agent(client=client)
     items = entity.issues.all()
     assert len(items) == 1
-    assert isinstance(items[0], IssueSummary)
+    assert isinstance(items[0], Issue)
     client.issues.get.assert_not_called()
     entity.issues.refresh()
     assert client.issues.list.call_count == 2
@@ -787,7 +790,7 @@ def test_squad_parent_validation_preserves_loaded_members(case: SquadParentValid
 
 def test_squad_issues_uses_assignee_id() -> None:
     p = IssueListPage(
-        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(Issue(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -797,7 +800,7 @@ def test_squad_issues_uses_assignee_id() -> None:
     entity = _squad(client=client)
     items = entity.issues.all()
     assert len(items) == 1
-    assert isinstance(items[0], IssueSummary)
+    assert isinstance(items[0], Issue)
     flt = client.issues.list.call_args_list[0][0][0]
     assert flt.assignee_id == "sq_1"
     client.issues.get.assert_not_called()
@@ -805,14 +808,14 @@ def test_squad_issues_uses_assignee_id() -> None:
 
 def test_squad_issues_two_pages() -> None:
     p1 = IssueListPage(
-        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(Issue(id="i1", title="t1", status=_TODO),),
         has_more=True,
         limit=1,
         offset=0,
         total=2,
     )
     p2 = IssueListPage(
-        items=(IssueSummary(id="i2", title="t2", status=_TODO),),
+        items=(Issue(id="i2", title="t2", status=_TODO),),
         has_more=False,
         limit=1,
         offset=1,
@@ -823,7 +826,7 @@ def test_squad_issues_two_pages() -> None:
     items = entity.issues.all()
     assert len(items) == 2
     assert client.issues.list.call_count == 2
-    assert all(isinstance(item, IssueSummary) for item in items)
+    assert all(isinstance(item, Issue) for item in items)
     first_filter = client.issues.list.call_args_list[0][0][0]
     second_filter = client.issues.list.call_args_list[1][0][0]
     assert first_filter.assignee_id == "sq_1"
@@ -847,7 +850,7 @@ def test_squad_issues_two_pages() -> None:
 
 def test_workspace_member_issues_uses_assignee_id() -> None:
     p = IssueListPage(
-        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(Issue(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -857,7 +860,7 @@ def test_workspace_member_issues_uses_assignee_id() -> None:
     entity = _workspace_member(client=client)
     items = entity.issues.all()
     assert len(items) == 1
-    assert isinstance(items[0], IssueSummary)
+    assert isinstance(items[0], Issue)
     flt = client.issues.list.call_args_list[0][0][0]
     assert flt.assignee_id == "wm_1"
     client.issues.get.assert_not_called()
@@ -865,14 +868,14 @@ def test_workspace_member_issues_uses_assignee_id() -> None:
 
 def test_workspace_member_issues_two_pages() -> None:
     p1 = IssueListPage(
-        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(Issue(id="i1", title="t1", status=_TODO),),
         has_more=True,
         limit=1,
         offset=0,
         total=2,
     )
     p2 = IssueListPage(
-        items=(IssueSummary(id="i2", title="t2", status=_TODO),),
+        items=(Issue(id="i2", title="t2", status=_TODO),),
         has_more=False,
         limit=1,
         offset=1,
@@ -883,7 +886,7 @@ def test_workspace_member_issues_two_pages() -> None:
     items = entity.issues.all()
     assert len(items) == 2
     assert client.issues.list.call_count == 2
-    assert all(isinstance(item, IssueSummary) for item in items)
+    assert all(isinstance(item, Issue) for item in items)
     first_filter = client.issues.list.call_args_list[0][0][0]
     second_filter = client.issues.list.call_args_list[1][0][0]
     assert first_filter.assignee_id == "wm_1"
@@ -1132,6 +1135,7 @@ def test_avatar_public_signature_and_legacy_absence() -> None:
     assert tuple((item.name, item.kind, item.annotation) for item in parameters) == (
         ("agent_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
         ("file", inspect.Parameter.POSITIONAL_OR_KEYWORD, pathlib.Path),
+        ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
     )
     assert signature.return_annotation == ActionResult[None]
     assert not hasattr(AgentResource, "upload_avatar")

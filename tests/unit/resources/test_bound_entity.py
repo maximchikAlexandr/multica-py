@@ -476,18 +476,18 @@ class TestBoundEntitySerialization:
             items=(Comment(id="comment-1", body="body"),),
             next_cursor=None,
         )
-        client.issues.comments.list_thread_command = lambda request: command_resource._plan(
+        client.issues.comments.list_thread_command = lambda **request: command_resource._plan(
             steps=(),
             finalize=lambda _results: CursorPage(
-                items=client.issues.comments.list_thread(request).items,
+                items=client.issues.comments.list_thread(**request).items,
                 next_cursor=None,
             ),
         )
         thread = CommentThread(id="thread-1", issue_id="issue-1", _client=client)
 
         assert thread.comments.all() == (Comment(id="comment-1", body="body"),)
-        request = client.issues.comments.list_thread.call_args.args[0]
-        assert (request.issue_id, request.thread_id) == ("issue-1", "thread-1")
+        request = client.issues.comments.list_thread.call_args.kwargs
+        assert (request["issue_id"], request["thread_id"]) == ("issue-1", "thread-1")
 
     def test_to_dict_returns_independent_nested_mutables(self) -> None:
         run = AutopilotRun(

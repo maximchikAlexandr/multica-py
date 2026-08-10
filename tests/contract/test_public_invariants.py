@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import inspect
 import pkgutil
+import re
 import types
 from collections.abc import Iterator
 from types import ModuleType
@@ -13,12 +14,25 @@ import msgspec
 import multica_py.models as models_pkg
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
+from multica_py.models.autopilots import AutopilotListPage, AutopilotRunListPage
+from multica_py.models.common import ActionResult, CommentCursor, Page
+from multica_py.models.issue_activity import MetadataPage
+from multica_py.models.issues import IssueChildrenResult, IssueListFilter, IssueListPage
 from multica_py.models.project_resources import (
     LocalDirectoryResourceRef,
-    ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceRecord,
-    ProjectResourceUpdateLocalDirectoryRequest,
 )
+from multica_py.models.relations import (
+    CursorLazyCollection,
+    CursorPage,
+    LazyCollection,
+    LazyMapping,
+    OffsetLazyCollection,
+    OffsetPage,
+    RelationMetadata,
+)
+from multica_py.models.system import RuntimeUpdateResult
+from multica_py.resources.cli import CliResult
 from multica_py.resources.issues import Issue
 from multica_py.resources.project_resources import ProjectResourceCollection
 
@@ -158,33 +172,152 @@ def test_public_model_exports() -> None:
 
     assert len(multica_py.__all__) == len(set(multica_py.__all__))
     assert len(models_pkg.__all__) == len(set(models_pkg.__all__))
-    exports = (
-        "ActionResult",
+    dedicated_exports = {
+        "AutopilotListPage": AutopilotListPage,
+        "AutopilotRunListPage": AutopilotRunListPage,
+        "CommentCursor": CommentCursor,
+        "CursorLazyCollection": CursorLazyCollection,
+        "CursorPage": CursorPage,
+        "IssueChildrenResult": IssueChildrenResult,
+        "IssueListFilter": IssueListFilter,
+        "IssueListPage": IssueListPage,
+        "LazyCollection": LazyCollection,
+        "LazyMapping": LazyMapping,
+        "LocalDirectoryResourceRef": LocalDirectoryResourceRef,
+        "MetadataPage": MetadataPage,
+        "OffsetLazyCollection": OffsetLazyCollection,
+        "OffsetPage": OffsetPage,
+        "ProjectResourceRecord": ProjectResourceRecord,
+        "RelationMetadata": RelationMetadata,
+        "RuntimeUpdateResult": RuntimeUpdateResult,
+    }
+    for name, value in dedicated_exports.items():
+        assert name not in multica_py.__all__
+        assert not hasattr(multica_py, name)
+        assert name in models_pkg.__all__
+        assert value is getattr(models_pkg, name)
+    for name, value in {
+        "CliResult": CliResult,
+        "IssueListFilter": IssueListFilter,
+        "IssueListPage": IssueListPage,
+    }.items():
+        assert name not in multica_py.__all__
+        assert not hasattr(multica_py, name)
+        assert value is not getattr(multica_py, name, None)
+
+
+EXPECTED_ROOT_EXPORTS = (
+    "ActionResult",
+    "Agent",
+    "AuthenticationError",
+    "AuthorizationError",
+    "Autopilot",
+    "AutopilotRun",
+    "ClientConfig",
+    "Command",
+    "CommandCancelledError",
+    "CommandExecutionError",
+    "CommandTimeoutError",
+    "Comment",
+    "CommentThread",
+    "CompatibilityPolicy",
+    "ConflictError",
+    "DetachedEntityError",
+    "EncodingError",
+    "ExecutableNotFoundError",
+    "ExecutableNotRunnableError",
+    "Issue",
+    "IssueStatus",
+    "JsonOutputError",
+    "Label",
+    "ManagedProcess",
+    "MissingPermalinkContextError",
+    "MissingRelationContextError",
+    "MulticaClient",
+    "MulticaError",
+    "NetworkError",
+    "NotFoundError",
+    "OperationOptions",
+    "OutputShapeError",
+    "Page",
+    "Project",
+    "ProjectStatus",
+    "ProtocolError",
+    "RelationError",
+    "RelationPaginationError",
+    "Skill",
+    "Squad",
+    "TaskRun",
+    "UnknownCommandError",
+    "Unset",
+    "UnsupportedCliVersionError",
+    "ValidationError",
+    "Workspace",
+    "WorkspaceMember",
+)
+
+
+def test_root_exports_match_curated_expected_table() -> None:
+    import multica_py
+
+    assert tuple(multica_py.__all__) == EXPECTED_ROOT_EXPORTS
+    assert all(hasattr(multica_py, name) for name in EXPECTED_ROOT_EXPORTS)
+
+    for removed_name in (
         "AgentCreateRequest",
         "AgentUpdateRequest",
-        "AutopilotListPage",
-        "AutopilotRunListPage",
-        "AutopilotTriggerCreate",
-        "AutopilotTriggerUpdate",
-        "CommentCursor",
+        "ProjectCreateRequest",
+        "ProjectUpdateRequest",
+        "SkillCreateRequest",
+        "SkillUpdateRequest",
         "CommentListFlatRequest",
         "CommentListRecentRequest",
         "CommentListThreadRequest",
         "IssueAssignmentRequest",
-        "IssueChildrenResult",
         "IssueCreateRequest",
-        "IssueListFilter",
-        "IssueListPage",
         "IssueReorderRequest",
         "IssueUpdateRequest",
-        "LocalDirectoryResourceRef",
+        "LabelUpdateRequest",
         "MetadataListRequest",
-        "MetadataPage",
         "MetadataSetRequest",
-        "Page",
+        "ProjectResourceAddLocalDirectoryRequest",
+        "ProjectResourceUpdateLocalDirectoryRequest",
+        "AutopilotUpdateRequest",
+        "AutopilotTriggerCreate",
+        "AutopilotTriggerUpdate",
+        "RuntimeUpdate",
+        "UserProfileUpdate",
+    ):
+        assert removed_name not in multica_py.__all__
+        assert removed_name not in models_pkg.__all__
+        assert not hasattr(multica_py, removed_name)
+        assert not hasattr(models_pkg, removed_name)
+
+
+def test_removed_request_flow_is_absent_from_package_sources() -> None:
+    import inspect
+
+    import multica_py
+    import multica_py.resources as resources_pkg
+
+    removed_names = (
+        "AgentCreateRequest",
+        "AgentUpdateRequest",
+        "AutopilotUpdateRequest",
+        "AutopilotTriggerCreate",
+        "AutopilotTriggerUpdate",
+        "CommentListFlatRequest",
+        "CommentListRecentRequest",
+        "CommentListThreadRequest",
+        "IssueAssignmentRequest",
+        "IssueCreateRequest",
+        "IssueReorderRequest",
+        "IssueUpdateRequest",
+        "LabelUpdateRequest",
+        "MetadataListRequest",
+        "MetadataSetRequest",
         "ProjectCreateRequest",
         "ProjectResourceAddLocalDirectoryRequest",
-        "ProjectResourceRecord",
         "ProjectResourceUpdateLocalDirectoryRequest",
         "ProjectUpdateRequest",
         "RuntimeUpdate",
@@ -192,24 +325,34 @@ def test_public_model_exports() -> None:
         "SkillUpdateRequest",
         "UserProfileUpdate",
     )
-    for name in exports:
-        assert name in multica_py.__all__
-        assert name in models_pkg.__all__
-        assert getattr(multica_py, name) is getattr(models_pkg, name)
+    for module_name, module in (("multica_py", multica_py),):
+        source = inspect.getsource(module)
+        assert "_resolve_request" not in source
+        assert not any(
+            re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", source)
+            for name in removed_names
+        ), module_name
+    for module_info in pkgutil.walk_packages(
+        resources_pkg.__path__, prefix="multica_py.resources."
+    ):
+        module = importlib.import_module(module_info.name)
+        source = inspect.getsource(module)
+        assert "_resolve_request" not in source, module_info.name
+        assert not any(
+            re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", source)
+            for name in removed_names
+        ), module_info.name
 
 
 def test_public_model_annotations_are_closed() -> None:
-    import multica_py
-
-    for name in (
-        "ActionResult",
-        "AutopilotListPage",
-        "AutopilotRunListPage",
-        "IssueChildrenResult",
-        "IssueListPage",
-        "Page",
+    for model in (
+        ActionResult,
+        AutopilotListPage,
+        AutopilotRunListPage,
+        IssueChildrenResult,
+        IssueListPage,
+        Page,
     ):
-        model = getattr(multica_py, name)
         assert_public_annotations_precise(cast("type[object]", model))
 
 

@@ -10,10 +10,8 @@ import pytest
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.wire_models import _ProjectResourceRecordWire, project_resource_from_wire
 from multica_py.models.issue_activity import IssueUsage
-from multica_py.models.issues import IssueCreateRequest, IssueUpdateRequest
 from multica_py.models.project_resources import (
     LocalDirectoryResourceRef,
-    ProjectResourceAddLocalDirectoryRequest,
     ProjectResourceRecord,
 )
 
@@ -128,21 +126,6 @@ _REJECT_CASES = (
         "empty-reference-daemon-id",
         lambda: LocalDirectoryResourceRef(local_path="/tmp/sandbox", daemon_id=" "),
         "daemon_id must be non-empty",
-    ),
-    RejectCase(
-        "empty-daemon-id",
-        lambda: ProjectResourceAddLocalDirectoryRequest(local_path="/tmp/sandbox", daemon_id=""),
-        "daemon_id must be non-empty",
-    ),
-    RejectCase(
-        "issue-create-empty-project-id",
-        lambda: IssueCreateRequest(title="Test", project_id=""),
-        "project_id must be non-empty",
-    ),
-    RejectCase(
-        "issue-update-empty-project-id",
-        lambda: IssueUpdateRequest(project_id=""),
-        "project_id must be non-empty",
     ),
 )
 

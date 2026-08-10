@@ -14,11 +14,15 @@ from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
-from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
+from multica_py.models.issues import (
+    IssueListFilter,
+    IssueListPage,
+)
 from multica_py.models.relations import OffsetLazyCollection
 from multica_py.resources._base import BaseResource
 from multica_py.resources.agents import Agent
-from multica_py.resources.projects import Project
+from multica_py.resources.issues import Issue
+from multica_py.resources.projects import Project, ProjectIssueCollection
 from multica_py.resources.squads import Squad
 from multica_py.resources.workspaces import (
     Workspace,
@@ -122,7 +126,7 @@ def test_workspace_members_preserve_user_identity() -> None:
     )
     client = MagicMock()
     client.issues.list.return_value = IssueListPage(
-        items=(IssueSummary(id="i1", title="Issue", status=_TODO),),
+        items=(Issue(id="i1", title="Issue", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -190,7 +194,7 @@ def test_workspace_members_preserve_user_identity() -> None:
 
 
 def test_workspace_member_creator_reconciliation_is_typed() -> None:
-    issue: IssueSummary = IssueSummary(
+    issue: Issue = Issue(
         id="i1",
         title="Issue",
         status=_TODO,
@@ -213,9 +217,12 @@ def test_workspace_member_creator_reconciliation_is_typed() -> None:
 
 def test_workspace_issues_paginates_offset() -> None:
     p1 = IssueListPage(
-        items=(
-            IssueSummary(id="i1", title="t1", status=_TODO),
-            IssueSummary(id="i2", title="t2", status=_TODO),
+        items=cast(
+            "tuple[Issue, ...]",
+            (
+                Issue(id="i1", title="t1", status=_TODO),
+                Issue(id="i2", title="t2", status=_TODO),
+            ),
         ),
         has_more=True,
         limit=2,
@@ -223,7 +230,7 @@ def test_workspace_issues_paginates_offset() -> None:
         total=3,
     )
     p2 = IssueListPage(
-        items=(IssueSummary(id="i3", title="t3", status=_TODO),),
+        items=(Issue(id="i3", title="t3", status=_TODO),),
         has_more=False,
         limit=2,
         offset=2,
@@ -234,7 +241,7 @@ def test_workspace_issues_paginates_offset() -> None:
     items = entity.issues.all()
     assert len(items) == 3
     assert clients.scoped.issues.list.call_count == 2
-    assert all(isinstance(item, IssueSummary) for item in items)
+    assert all(isinstance(item, Issue) for item in items)
     first_filter = clients.scoped.issues.list.call_args_list[0].args[0]
     second_filter = clients.scoped.issues.list.call_args_list[1].args[0]
     assert first_filter.limit == 50
@@ -246,7 +253,7 @@ def test_workspace_issues_paginates_offset() -> None:
 
 def test_workspace_issues_single_page() -> None:
     page = IssueListPage(
-        items=(IssueSummary(id="i1", title="t1", status=_TODO),),
+        items=(Issue(id="i1", title="t1", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -257,7 +264,7 @@ def test_workspace_issues_single_page() -> None:
     items = entity.issues.all()
     assert len(items) == 1
     assert clients.scoped.issues.list.call_count == 1
-    assert isinstance(items[0], IssueSummary)
+    assert isinstance(items[0], Issue)
     clients.scoped.issues.get.assert_not_called()
     entity.issues.refresh()
     assert clients.scoped.issues.list.call_count == 2
@@ -280,9 +287,10 @@ ISSUE_RELATION_TYPE_CASES = (
 
 
 @pytest.mark.parametrize("case", ISSUE_RELATION_TYPE_CASES, ids=lambda case: case.owner.__name__)
-def test_issue_relations_are_typed_as_summary_collections(case: IssueRelationTypeCase) -> None:
+def test_issue_relations_are_typed_as_bound_issue_collections(case: IssueRelationTypeCase) -> None:
     relation = getattr(case.owner, case.relation_name)
-    assert get_type_hints(relation.fget)["return"] == OffsetLazyCollection[IssueSummary]
+    expected = ProjectIssueCollection if case.owner is Project else OffsetLazyCollection[Issue]
+    assert get_type_hints(relation.fget)["return"] == expected
 
 
 def test_workspace_detached_access_raises() -> None:

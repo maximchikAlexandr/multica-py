@@ -316,8 +316,8 @@ def test_history_offset_zero(mock_transport: MagicMock) -> None:
 
 def test_update_rejects_clear_subscribers_with_subscribers(mock_transport: MagicMock) -> None:
     resource = _make_resource(mock_transport)
-    with pytest.raises(ValueError, match="clear_subscribers"):
-        resource.update("a1", clear_subscribers=True, subscribers=("u1",))
+    with pytest.raises(TypeError, match="unexpected keyword argument"):
+        resource.update("a1", clear_subscribers=True, subscribers=("u1",))  # type: ignore[call-arg]
     mock_transport.run_bytes.assert_not_called()
 
 

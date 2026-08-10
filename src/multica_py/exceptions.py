@@ -5,6 +5,23 @@ class MulticaError(Exception):
     pass
 
 
+class MissingPermalinkContextError(MulticaError):
+    def __init__(
+        self,
+        entity_type: str,
+        entity_id: str,
+        missing_fields: tuple[str, ...],
+    ) -> None:
+        fields = ", ".join(missing_fields)
+        super().__init__(
+            f"Cannot build {entity_type} '{entity_id}' permalink: "
+            f"missing web-routing context ({fields})."
+        )
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+        self.missing_fields = missing_fields
+
+
 class ExecutableNotFoundError(MulticaError):
     pass
 

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import datetime
 import inspect
+import io
 import os
 import pathlib
 from dataclasses import dataclass
+from typing import BinaryIO, cast
 from unittest.mock import MagicMock
 
 import msgspec
@@ -12,10 +14,10 @@ import pytest
 
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
-from multica_py.config import ClientConfig
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.models.system import AttachmentResult
 from multica_py.resources import attachments
-from multica_py.resources.attachments import AttachmentResource
+from multica_py.resources.attachments import AttachmentResource, UploadSource
 
 
 @dataclass(frozen=True)
@@ -92,8 +94,10 @@ ATTACHMENT_SIGNATURE_CASES = (
     AttachmentSignatureCase(
         "upload",
         (
-            ("path", inspect.Parameter.POSITIONAL_OR_KEYWORD, pathlib.Path),
+            ("source", inspect.Parameter.POSITIONAL_OR_KEYWORD, UploadSource),
+            ("filename", inspect.Parameter.KEYWORD_ONLY, str | None),
             ("task_id", inspect.Parameter.KEYWORD_ONLY, str | None),
+            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
         ),
         AttachmentResult,
     ),
@@ -102,6 +106,7 @@ ATTACHMENT_SIGNATURE_CASES = (
         (
             ("attachment_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
             ("output_dir", inspect.Parameter.KEYWORD_ONLY, pathlib.Path),
+            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
         ),
         pathlib.Path,
     ),
@@ -168,6 +173,180 @@ def test_attachment_public_signatures(case: AttachmentSignatureCase) -> None:
 
     assert tuple((item.name, item.kind, item.annotation) for item in parameters) == case.parameters
     assert signature.return_annotation == case.return_annotation
+
+
+class _NamedBytesIO(io.BytesIO):
+    name = "stream.bin"
+
+
+class _CountingBytesIO(io.BytesIO):
+    def __init__(self, payload: bytes) -> None:
+        super().__init__(payload)
+        self.read_calls = 0
+
+    def read(self, size: int | None = -1) -> bytes:
+        self.read_calls += 1
+        return super().read(size)
+
+
+class _UnreadableBytesIO(io.BytesIO):
+    def readable(self) -> bool:
+        return False
+
+
+def test_unified_upload_accepts_bytes_and_binary_streams_lazily() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    stream = _CountingBytesIO(b"stream-payload")
+    seen: list[pathlib.Path] = []
+
+    def complete(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
+        path = pathlib.Path(argv[2])
+        seen.append(path)
+        assert path.read_bytes() == b"stream-payload"
+        return RawCommandResult(argv, 0, _PAYLOAD, b"", datetime.timedelta())
+
+    transport.run_bytes.side_effect = complete
+    resource = AttachmentResource(transport, ClientConfig())
+    command = resource.upload_command(stream, filename="stream.bin", task_id="task_1")
+
+    assert stream.read_calls == 0
+    assert not stream.closed
+    assert command.commands == (
+        "multica attachment upload '${temp.path}' --task task_1 --output json",
+    )
+    assert transport.run_bytes.call_count == 0
+
+    result = command.run()
+
+    assert result == AttachmentResult(id="a1", filename="file.txt")
+    assert stream.read_calls == 1
+    assert stream.tell() == len(b"stream-payload")
+    assert not stream.closed
+    assert len(seen) == 1
+    assert not seen[0].exists()
+
+
+def test_unified_upload_derives_safe_stream_name_and_preserves_path_sources() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(), exit_code=0, stdout=_PAYLOAD, stderr=b"", duration=datetime.timedelta()
+    )
+    resource = AttachmentResource(transport, ClientConfig())
+    stream = _NamedBytesIO(b"payload")
+    stream_command = resource.upload_command(stream)
+    path_command = resource.upload_command("relative/file.txt")
+
+    assert stream_command.commands == ("multica attachment upload '${temp.path}' --output json",)
+    assert stream.tell() == 0
+    assert path_command.commands == (
+        f"multica attachment upload {pathlib.Path('relative/file.txt').resolve()} --output json",
+    )
+    assert path_command._plan._temp_provider is None
+    assert transport.run_bytes.call_count == 0
+
+
+def test_upload_bytes_alias_matches_unified_upload_preview_and_result() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    payload = b"alias-payload"
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(), exit_code=0, stdout=_PAYLOAD, stderr=b"", duration=datetime.timedelta()
+    )
+    resource = AttachmentResource(transport, ClientConfig())
+
+    unified = resource.upload_command(payload, filename="alias.bin")
+    alias = resource.upload_bytes_command("alias.bin", payload)
+
+    assert alias.commands == unified.commands
+    assert alias.run() == unified.run()
+    assert transport.run_bytes.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "source",
+    (
+        b"payload",
+        bytearray(b"payload"),
+        memoryview(b"payload"),
+        io.BytesIO(b"payload"),
+    ),
+)
+def test_in_memory_upload_requires_filename_before_filesystem_or_transport(
+    source: object,
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    resource = AttachmentResource(transport, ClientConfig())
+
+    with pytest.raises(ValueError, match="filename"):
+        resource.upload_command(cast("BinaryIO", source))
+
+    transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "source",
+    (
+        io.StringIO("text"),
+        io.BytesIO(b"closed"),
+        _UnreadableBytesIO(b"unreadable"),
+    ),
+)
+def test_upload_rejects_text_or_closed_stream_before_execution(source: object) -> None:
+    if isinstance(source, io.BytesIO):
+        source.close()
+    transport = MagicMock(spec=CliTransport)
+    resource = AttachmentResource(transport, ClientConfig())
+
+    with pytest.raises(ValueError, match="stream"):
+        resource.upload_command(cast("BinaryIO", source), filename="payload.bin")
+
+    transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "filename",
+    ("", "   ", ".", "..", "../payload.bin", "/absolute", "nested/file.bin", "nested\\file.bin"),
+)
+def test_unified_upload_rejects_unsafe_filenames_before_filesystem_access(filename: str) -> None:
+    transport = MagicMock(spec=CliTransport)
+    resource = AttachmentResource(transport, ClientConfig())
+
+    with pytest.raises(ValueError, match="filename"):
+        resource.upload_command(b"payload", filename=filename)
+
+    transport.run_bytes.assert_not_called()
+
+
+def test_unified_upload_accepts_double_dot_basename() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = AttachmentResource(transport, ClientConfig())
+
+    command = resource.upload_command(b"payload", filename="report..txt")
+
+    assert command.commands == ("multica attachment upload '${temp.path}' --output json",)
+
+
+def test_unified_upload_failure_cleans_stream_temp_directory() -> None:
+    transport = MagicMock(spec=CliTransport)
+    paths: list[pathlib.Path] = []
+
+    def fail(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
+        path = pathlib.Path(argv[2])
+        paths.append(path.parent)
+        assert path.read_bytes() == b"payload"
+        raise RuntimeError("upload failed")
+
+    transport.run_bytes.side_effect = fail
+    resource = AttachmentResource(transport, ClientConfig())
+
+    with pytest.raises(RuntimeError, match="upload failed"):
+        resource.upload_command(io.BytesIO(b"payload"), filename="payload.bin").run()
+
+    assert len(paths) == 1
+    assert not paths[0].exists()
 
 
 @pytest.mark.parametrize("case", ATTACHMENT_BYTES_CASES)

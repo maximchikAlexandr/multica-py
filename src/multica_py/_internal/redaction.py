@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable, Mapping
+from typing import cast
+from urllib.parse import unquote, unquote_plus, urlsplit
 
 REDACTED = "***"
 
@@ -9,18 +11,58 @@ _token_pattern = re.compile(r"--token(?:[= ])(\S+)", re.IGNORECASE)
 _token_text_pattern = re.compile(
     r"(?i)(--token(?:=|\s+)|token(?:=|:\s+)|bearer\s+|authorization:\s*)(\S+)"
 )
-_url_secret_pattern = re.compile(
-    r"(?i)([?&#](?:access_token|api_key|key|password|secret|token)=)([^&#\s]+)"
+_SECRET_KEY_PATTERNS = (
+    ("access", "key"),
+    ("access", "token"),
+    ("api", "key"),
+    ("auth", "token"),
+    ("client", "secret"),
+    ("credential",),
+    ("key",),
+    ("password",),
+    ("passwd",),
+    ("private", "key"),
+    ("secret",),
+    ("token",),
 )
-_secret_env_key_pattern = re.compile(
-    r"(?i)(?:^|_)(?:access[_-]?key|api[_-]?key|auth[_-]?token|"
-    r"client[_-]?secret|credential|password|passwd|private[_-]?key|secret|token)(?:$|_)"
+_SECRET_KEY_COMPACT_ALIASES = frozenset(
+    {"apikey", "accesskey", "accesstoken", "authtoken", "clientsecret", "privatekey"}
 )
+_SECRET_KEY_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
+_SECRET_KEY_SEPARATOR = re.compile(r"[^A-Za-z0-9]+")
 
 
 def _is_secret_config_key(key: str) -> bool:
-    return _secret_env_key_pattern.search(key) is not None or any(
-        separator in key for separator in (".", ":", "/")
+    return _is_secret_key(key) or any(separator in key for separator in (".", ":", "/"))
+
+
+def _is_secret_option(arg: str) -> bool:
+    """Return whether an option name conventionally carries a secret value."""
+    if not arg.startswith("--"):
+        return False
+    name = arg[2:].partition("=")[0]
+    return _is_secret_key(name)
+
+
+def _secret_key_segments(key: str) -> tuple[str, ...]:
+    separated = _SECRET_KEY_BOUNDARY.sub(" ", key)
+    parts = cast("list[str]", _SECRET_KEY_SEPARATOR.split(separated))
+    return tuple(part.casefold() for part in parts if part)
+
+
+def _is_secret_key(key: str) -> bool:
+    return _is_secret_key_with_policy(key, include_bare_key=False)
+
+
+def _is_secret_key_with_policy(key: str, *, include_bare_key: bool) -> bool:
+    segments = _secret_key_segments(key)
+    if any(segment in _SECRET_KEY_COMPACT_ALIASES for segment in segments):
+        return True
+    return any(
+        segments[index : index + len(pattern)] == pattern
+        for pattern in _SECRET_KEY_PATTERNS
+        if include_bare_key or pattern != ("key",)
+        for index in range(len(segments) - len(pattern) + 1)
     )
 
 
@@ -38,24 +80,59 @@ def collect_secret_values(argv: tuple[str, ...]) -> tuple[str, ...]:
             secrets.append(argv[i + 3])
             i += 4
             continue
-        if arg == "--token" and i + 1 < len(argv):
+        if _is_secret_option(arg) and "=" not in arg and i + 1 < len(argv):
             secrets.append(argv[i + 1])
             i += 2
             continue
-        match = _token_pattern.search(arg)
-        if match is not None:
-            secrets.append(match.group(1))
-        secrets.extend(match.group(2) for match in _url_secret_pattern.finditer(arg))
+        if _is_secret_option(arg) and "=" in arg:
+            _, _, value = arg.partition("=")
+            if value:
+                secrets.append(value)
+        secrets.extend(_collect_url_secret_values(arg))
         i += 1
     return normalize_secret_values(secrets)
+
+
+def _collect_url_secret_values(arg: str) -> tuple[str, ...]:
+    """Collect raw and decoded values from sensitive URL query/fragment keys."""
+    try:
+        parts = urlsplit(arg)
+    except ValueError:
+        return ()
+
+    secrets: list[str] = []
+    for component in _url_query_components(parts.query, parts.fragment):
+        for pair in component.split("&"):
+            raw_key, separator, raw_value = pair.partition("=")
+            if not separator:
+                continue
+            if not _is_secret_key_with_policy(unquote_plus(raw_key), include_bare_key=True):
+                continue
+            secrets.extend((raw_value, unquote_plus(raw_value)))
+    authority, at, _host = parts.netloc.rpartition("@")
+    if at:
+        _user, separator, raw_password = authority.partition(":")
+        if separator and raw_password:
+            secrets.extend((raw_password, unquote(raw_password)))
+    return tuple(secrets)
+
+
+def _url_query_components(query: str, fragment: str) -> tuple[str, ...]:
+    """Return query pairs from both URL query and hash-router query forms."""
+    components = [query]
+    if fragment.startswith("?"):
+        components.append(fragment[1:])
+    elif "?" in fragment:
+        components.append(fragment.split("?", 1)[1])
+    else:
+        components.append(fragment)
+    return tuple(component for component in components if component)
 
 
 def collect_secret_values_from_environment(env: Mapping[str, str]) -> tuple[str, ...]:
     """Collect values from environment keys that conventionally carry secrets."""
     return normalize_secret_values(
-        value
-        for key, value in env.items()
-        if value and _secret_env_key_pattern.search(key) is not None
+        value for key, value in env.items() if value and _is_secret_key(key)
     )
 
 
@@ -85,9 +162,14 @@ def redact_argv(argv: tuple[str, ...]) -> tuple[str, ...]:
     i = 0
     while i < len(argv):
         arg = argv[i]
-        if arg == "--token" and i + 1 < len(argv):
+        if _is_secret_option(arg) and "=" not in arg and i + 1 < len(argv):
             redacted.extend((arg, REDACTED))
             i += 2
+            continue
+        if _is_secret_option(arg) and "=" in arg:
+            name, _, _value = arg.partition("=")
+            redacted.append(f"{name}={REDACTED}")
+            i += 1
             continue
         redacted.append(_redact_url_secret_arg(_redact_token_arg(arg)))
         i += 1
@@ -108,6 +190,15 @@ def redact_text(text: str, *, secret_values: tuple[str, ...] = ()) -> str:
     return redacted
 
 
+def redact_bytes(data: bytes, *, secret_values: tuple[str, ...] = ()) -> bytes:
+    redacted = data
+    for secret in normalize_secret_values(secret_values):
+        encoded = secret.encode("utf-8")
+        if encoded:
+            redacted = redacted.replace(encoded, REDACTED.encode("utf-8"))
+    return redacted
+
+
 def _redact_token_match(match: re.Match[str]) -> str:
     return f"{match.group(1)}{REDACTED}"
 
@@ -117,8 +208,37 @@ def _redact_token_arg(arg: str) -> str:
 
 
 def _redact_url_secret_arg(arg: str) -> str:
-    return _url_secret_pattern.sub(_redact_url_secret_match, arg)
+    try:
+        parts = urlsplit(arg)
+    except ValueError:
+        return arg
+
+    redacted = arg
+    if parts.query:
+        redacted = redacted.replace(parts.query, _redact_url_query_component(parts.query), 1)
+    if parts.fragment:
+        redacted = redacted.replace(parts.fragment, _redact_url_query_component(parts.fragment), 1)
+
+    authority, at, host = parts.netloc.rpartition("@")
+    if at:
+        user, separator, _raw_password = authority.partition(":")
+        if separator:
+            redacted_netloc = f"{user}:{REDACTED}@{host}"
+            redacted = redacted.replace(parts.netloc, redacted_netloc, 1)
+    return redacted
 
 
-def _redact_url_secret_match(match: re.Match[str]) -> str:
-    return f"{match.group(1)}{REDACTED}"
+def _redact_url_query_component(component: str) -> str:
+    prefix = ""
+    query = component
+    if "?" in component:
+        route, query = component.split("?", 1)
+        prefix = f"{route}?"
+    pairs: list[str] = []
+    for pair in query.split("&"):
+        raw_key, separator, _raw_value = pair.partition("=")
+        if separator and _is_secret_key_with_policy(unquote_plus(raw_key), include_bare_key=True):
+            pairs.append(f"{raw_key}={REDACTED}")
+        else:
+            pairs.append(pair)
+    return prefix + "&".join(pairs)

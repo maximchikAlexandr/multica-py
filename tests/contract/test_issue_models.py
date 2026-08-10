@@ -2,44 +2,40 @@ from __future__ import annotations
 
 import datetime
 import json
-from typing import Protocol
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
+import multica_py
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _issue_from_wire,
     _issue_list_page_from_wire,
     _IssueListPageWire,
-    _IssueSummaryWire,
     _IssueWire,
-    issue_summary_from_wire,
 )
 from multica_py.config import ClientConfig
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.issues import (
-    IssueCreateRequest,
     IssueListFilter,
     IssueListPage,
-    IssueSummary,
-    IssueUpdateRequest,
     LinkedPullRequest,
 )
-from multica_py.resources.issues import IssueResource
+from multica_py.resources.issues import Issue, IssueResource
 
 
-class _IdFieldFactory(Protocol):
-    def __call__(self, **kw: object) -> IssueCreateRequest | IssueUpdateRequest: ...
+def test_issue_summary_is_not_a_public_model() -> None:
+    import multica_py.models.issues as issue_models
+
+    assert not hasattr(multica_py, "IssueSummary")
+    assert not hasattr(issue_models, "IssueSummary")
 
 
-def _make_create_req(**kw: object) -> IssueCreateRequest:
-    return IssueCreateRequest(title="t", **kw)  # type: ignore[arg-type]
-
-
-def _make_update_req(**kw: object) -> IssueUpdateRequest:
-    return IssueUpdateRequest(**kw)  # type: ignore[arg-type]
+def test_issue_summary_name_is_absent_from_package_source() -> None:
+    source_root = Path(__file__).parents[2] / "src" / "multica_py"
+    assert all("IssueSummary" not in path.read_text() for path in source_root.rglob("*.py"))
 
 
 def test_issue_get_decoding() -> None:
@@ -93,9 +89,10 @@ def test_issue_list_decoding() -> None:
         {"id": "iss_002", "title": "Issue two", "status": "in_progress", "priority": "medium"},
     ]
     for item in data:
-        summary = decode_json(json.dumps(item).encode(), IssueSummary)
-        assert summary.id
-        assert summary.title
+        issue = _issue_from_wire(decode_json(json.dumps(item).encode(), _IssueWire))
+        assert issue.id
+        assert issue.title
+        assert issue.description is None
 
 
 def test_issue_usage_decodes_cost_usd() -> None:
@@ -128,27 +125,6 @@ def test_issue_scalar_relation_fields_decoding() -> None:
     assert minimal_issue.creator_type is None
 
 
-@pytest.mark.parametrize(
-    ("factory", "field_name", "bad_value"),
-    [
-        (_make_create_req, "project_id", ""),
-        (_make_create_req, "parent_id", ""),
-        (_make_create_req, "parent_id", "  "),
-        (_make_update_req, "project_id", ""),
-        (_make_update_req, "parent_id", ""),
-        (_make_update_req, "parent_id", "  "),
-    ],
-)
-def test_request_rejects_empty_id_field(
-    factory: _IdFieldFactory,
-    field_name: str,
-    bad_value: str,
-) -> None:
-    with pytest.raises(ValueError) as exc:
-        factory(**{field_name: bad_value})
-    assert field_name in str(exc.value)
-
-
 def test_issue_list_page_decoding() -> None:
     full_data = (
         b'{"issues":[{"id":"i1","title":"t","status":"todo",'
@@ -163,6 +139,8 @@ def test_issue_list_page_decoding() -> None:
     assert page.offset == 20
     assert page.total == 137
     assert len(page.issues) == 1
+    assert page.items is page.issues
+    assert isinstance(page.items[0], Issue)
     assert page.issues[0].created_at == datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
     assert page.issues[0].parent_id == "p1"
     assert page.issues[0].project_id == "pr1"
@@ -179,27 +157,27 @@ def test_issue_list_page_decoding() -> None:
     assert empty_page.issues == ()
 
 
-def test_issue_summary_scalar_fields_decoding() -> None:
+def test_issue_collection_row_scalar_fields_decoding() -> None:
     minimal_data = b'{"id":"i1","title":"t","status":"todo"}'
-    minimal = decode_json(minimal_data, IssueSummary)
+    minimal = _issue_from_wire(decode_json(minimal_data, _IssueWire))
     assert minimal.created_at is None
     assert minimal.parent_id is None
     assert minimal.project_id is None
     assert minimal.creator_id is None
     assert minimal.creator_type is None
+    assert minimal.match_source is None
 
     full_data = (
         b'{"id":"i1","title":"t","status":"todo",'
         b'"created_at":"2026-01-01T00:00:00Z","parent_issue_id":"p1",'
         b'"project_id":"pr1","creator_id":"u1","creator_type":"member"}'
     )
-    wire = decode_json(full_data, _IssueSummaryWire)
-    summary = issue_summary_from_wire(wire)
-    assert summary.created_at == datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
-    assert summary.parent_id == "p1"
-    assert summary.project_id == "pr1"
-    assert summary.creator_id == "u1"
-    assert summary.creator_type == "member"
+    issue = _issue_from_wire(decode_json(full_data, _IssueWire))
+    assert issue.created_at == datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
+    assert issue.parent_id == "p1"
+    assert issue.project_id == "pr1"
+    assert issue.creator_id == "u1"
+    assert issue.creator_type == "member"
 
 
 @pytest.fixture

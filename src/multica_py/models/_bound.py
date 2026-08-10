@@ -178,3 +178,28 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
     def from_json(cls, payload: str | bytes) -> Self:
         data = msgspec.json.decode(payload, type=dict[str, object])
         return cls.from_dict(data)
+
+
+def _normalize_entity_id(
+    value: str | _BoundEntity,
+    *,
+    field_name: str,
+    allowed_types: tuple[type[_BoundEntity], ...],
+) -> str:
+    """Return an ID from a supported ID/entity input.
+
+    The allow-list is deliberately supplied by the caller.  Merely exposing an
+    ``id`` attribute is not enough: accepting arbitrary structural objects here
+    would make a typo in a public reference silently turn into a CLI request.
+    """
+    if isinstance(value, str):
+        if not value.strip():
+            raise ValueError(f"{field_name} must be non-empty")
+        return value
+    if not isinstance(value, allowed_types):
+        names = ", ".join(entity.__name__ for entity in allowed_types)
+        raise TypeError(f"{field_name} must be a non-empty ID or one of: {names}")
+    entity_id = value.id
+    if not isinstance(entity_id, str) or not entity_id.strip():
+        raise ValueError(f"{field_name} entity has an invalid ID")
+    return entity_id

@@ -9,7 +9,10 @@ from multica_py import ActionResult, Page
 from multica_py.models.autopilots import AutopilotListPage, AutopilotRunListPage
 from multica_py.models.common import CommentCursor
 from multica_py.models.issue_activity import MetadataEntry, MetadataPage
-from multica_py.models.issues import IssueChildrenResult, IssueListPage, IssueSummary
+from multica_py.models.issues import (
+    IssueChildrenResult,
+    IssueListPage,
+)
 from multica_py.resources.issues import Issue
 
 
@@ -33,7 +36,7 @@ def test_page_is_frozen_typed_sequence_with_closed_cursor() -> None:
     ("page", "alias_name", "expected"),
     (
         (
-            IssueListPage(items=cast("tuple[IssueSummary, ...]", ("issue",)), total=1),
+            IssueListPage(items=cast("tuple[Issue, ...]", ("issue",)), total=1),
             "issues",
             ("issue",),
         ),
@@ -67,7 +70,7 @@ def test_compatibility_pages_expose_identical_items_aliases(
     (
         (
             IssueListPage,
-            IssueListPage(items=cast("tuple[IssueSummary, ...]", ("issue",)), total=1),
+            IssueListPage(items=cast("tuple[Issue, ...]", ("issue",)), total=1),
             "issues",
         ),
         (
