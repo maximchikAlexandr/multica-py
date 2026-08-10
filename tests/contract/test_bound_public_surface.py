@@ -24,17 +24,12 @@ from multica_py import (
 )
 from multica_py.exceptions import (
     DetachedEntityError,
+    MissingPermalinkContextError,
     MissingRelationContextError,
     RelationError,
     RelationPaginationError,
 )
-from multica_py.models.issues import (
-    IssueChildrenResult,
-    IssueListFilter,
-    IssueListPage,
-    IssueMetadataItem,
-    IssueSummary,
-)
+from multica_py.models.issues import IssueListFilter, IssueListPage, IssueMetadataItem
 from multica_py.models.relations import (
     CursorLazyCollection,
     CursorPage,
@@ -51,7 +46,7 @@ from multica_py.models.system import (
 from multica_py.resources.issue_comments import Comment, CommentThread
 from multica_py.resources.issues import Issue, TaskRun
 from multica_py.resources.labels import Label
-from multica_py.resources.projects import Project
+from multica_py.resources.projects import Project, ProjectIssueCollection
 from tests.contract.test_public_invariants import assert_public_annotations_precise
 
 
@@ -87,36 +82,34 @@ def _consumer_type_examples(client: MulticaClient) -> None:
     page: IssueListPage = client.issues.list(
         IssueListFilter(metadata=(IssueMetadataItem(key="external_key", value="queue-key"),))
     )
-    summary: IssueSummary = page.issues[0]
-    bound_issue: Issue = client.issues.get(summary.id)
+    issue: Issue = page.issues[0]
+    bound_issue: Issue = client.issues.get(issue.id)
     if bound_issue.attachments:
         attachment_id: str = bound_issue.attachments[0].id
         assert attachment_id
 
-    workspace_issues: OffsetLazyCollection[IssueSummary] = client.workspaces.get(
-        "workspace_id"
-    ).issues
-    project_issues: OffsetLazyCollection[IssueSummary] = client.projects.get("project_id").issues
-    agent_issues: OffsetLazyCollection[IssueSummary] = client.agents.get("agent_id").issues
-    squad_issues: OffsetLazyCollection[IssueSummary] = client.squads.get("squad_id").issues
+    workspace_issues: OffsetLazyCollection[Issue] = client.workspaces.get("workspace_id").issues
+    project_issues: ProjectIssueCollection = client.projects.get("project_id").issues
+    agent_issues: OffsetLazyCollection[Issue] = client.agents.get("agent_id").issues
+    squad_issues: OffsetLazyCollection[Issue] = client.squads.get("squad_id").issues
     member: WorkspaceMember = client.workspaces.get("workspace_id").members.all()[0]
-    member_issues: OffsetLazyCollection[IssueSummary] = member.issues
+    member_issues: OffsetLazyCollection[Issue] = member.issues
 
-    relation_summaries: tuple[tuple[IssueSummary, ...], ...] = (
+    relation_issues: tuple[tuple[Issue, ...], ...] = (
         workspace_issues.all(),
         project_issues.all(),
         agent_issues.all(),
         squad_issues.all(),
         member_issues.all(),
     )
-    for summaries in relation_summaries:
-        relation_summary: IssueSummary = summaries[0]
-        assert isinstance(client.issues.get(relation_summary.id), Issue)
+    for issues in relation_issues:
+        relation_issue: Issue = issues[0]
+        assert isinstance(relation_issue, Issue)
 
     member_user_id: str | None = member.user_id
     member_email: str | None = member.email
-    for summary in page.issues:
-        if member_user_id is not None and summary.creator_id == member_user_id:
+    for issue in page.issues:
+        if member_user_id is not None and issue.creator_id == member_user_id:
             assert member_email is None or isinstance(member_email, str)
 
 
@@ -174,19 +167,10 @@ PUBLIC_EXPORT_CASES = (
     PublicExportCase(multica_py, "Workspace", Workspace),
     PublicExportCase(multica_py, "WorkspaceMember", WorkspaceMember),
     PublicExportCase(multica_py, "Label", Label),
-    PublicExportCase(multica_py, "IssueChildrenResult", IssueChildrenResult),
-    PublicExportCase(multica_py, "CursorLazyCollection", CursorLazyCollection),
-    PublicExportCase(multica_py, "CursorPage", CursorPage),
-    PublicExportCase(multica_py, "LazyCollection", LazyCollection),
-    PublicExportCase(multica_py, "LazyMapping", cast("type[object]", LazyMapping)),
-    PublicExportCase(
-        multica_py, "OffsetLazyCollection", cast("type[object]", OffsetLazyCollection)
-    ),
-    PublicExportCase(multica_py, "OffsetPage", cast("type[object]", OffsetPage)),
-    PublicExportCase(multica_py, "RelationMetadata", cast("type[object]", RelationMetadata)),
     PublicExportCase(multica_py, "RelationError", RelationError),
     PublicExportCase(multica_py, "DetachedEntityError", DetachedEntityError),
     PublicExportCase(multica_py, "MissingRelationContextError", MissingRelationContextError),
+    PublicExportCase(multica_py, "MissingPermalinkContextError", MissingPermalinkContextError),
     PublicExportCase(multica_py, "RelationPaginationError", RelationPaginationError),
 )
 
@@ -279,10 +263,7 @@ REMOVED_PUBLIC_NAMES = (
     RemovedPublicNameCase("multica_py.models.issue_activity", "TaskRun"),
     RemovedPublicNameCase("multica_py.models.issues", "IssueData"),
     RemovedPublicNameCase("multica_py.models.issues", "Issue"),
-    RemovedPublicNameCase("multica_py.models.labels", "LabelData"),
     RemovedPublicNameCase("multica_py.models.project_resources", "ProjectResourceData"),
-    RemovedPublicNameCase("multica_py.models.projects", "ProjectData"),
-    RemovedPublicNameCase("multica_py.models.projects", "Project"),
     RemovedPublicNameCase("multica_py.models.skills", "SkillData"),
     RemovedPublicNameCase("multica_py.models.skills", "Skill"),
     RemovedPublicNameCase("multica_py.models.system", "SquadData"),

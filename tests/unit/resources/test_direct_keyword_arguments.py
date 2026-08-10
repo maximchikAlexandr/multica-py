@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import shlex
 import typing
 from dataclasses import dataclass
 from unittest.mock import MagicMock
@@ -10,177 +11,18 @@ import pytest
 
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
-from multica_py.models.agents import AgentCreateRequest, AgentUpdateRequest
-from multica_py.models.autopilots import AutopilotUpdateRequest
-from multica_py.models.issue_activity import (
-    CommentListFlatRequest,
-    CommentListRecentRequest,
-    CommentListThreadRequest,
-)
 from multica_py.models.issues import (
-    InlineDescription,
-    IssueAssignmentRequest,
-    IssueCreateRequest,
     IssueListFilter,
-    IssueReorderRequest,
-    IssueUpdateRequest,
-    NoDescription,
 )
-from multica_py.models.labels import LabelUpdateRequest
-from multica_py.models.project_resources import (
-    ProjectResourceAddLocalDirectoryRequest,
-    ProjectResourceUpdateLocalDirectoryRequest,
-)
-from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
-from multica_py.models.skills import SkillCreateRequest, SkillUpdateRequest
-from multica_py.models.system import RuntimeUpdate, UserProfileUpdate
-from multica_py.resources._base import _resolve_request
 from multica_py.resources.agents import AgentResource
-from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.resources.projects import ProjectResource
-from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.skills import SkillResource
-from multica_py.resources.users import UserResource
-from multica_py.sentinels import Unset
-
-
-@dataclass(frozen=True)
-class DirectKeywordCase:
-    sdk_method: str
-    resource_cls: type
-    request_cls: type
-
-
-_IN_SCOPE = (
-    DirectKeywordCase("projects.create", ProjectResource, ProjectCreateRequest),
-    DirectKeywordCase("projects.update", ProjectResource, ProjectUpdateRequest),
-    DirectKeywordCase("agents.create", AgentResource, AgentCreateRequest),
-    DirectKeywordCase("agents.update", AgentResource, AgentUpdateRequest),
-    DirectKeywordCase("skills.create", SkillResource, SkillCreateRequest),
-    DirectKeywordCase("skills.update", SkillResource, SkillUpdateRequest),
-    DirectKeywordCase("issues.create", IssueResource, IssueCreateRequest),
-    DirectKeywordCase("issues.update", IssueResource, IssueUpdateRequest),
-    DirectKeywordCase("issues.assign", IssueResource, IssueAssignmentRequest),
-    DirectKeywordCase("issues.reorder", IssueResource, IssueReorderRequest),
-    DirectKeywordCase("runtimes.update", RuntimeResource, RuntimeUpdate),
-    DirectKeywordCase(
-        "project_resources.add_local_directory",
-        ProjectResourceCollection,
-        ProjectResourceAddLocalDirectoryRequest,
-    ),
-    DirectKeywordCase(
-        "project_resources.update_local_directory",
-        ProjectResourceCollection,
-        ProjectResourceUpdateLocalDirectoryRequest,
-    ),
-    DirectKeywordCase("users.profile_update", UserResource, UserProfileUpdate),
-)
-
-_NODEFAULT = object()
-
-
-class _DummyRequest(msgspec.Struct, frozen=True, kw_only=True):
-    name: str
-    value: int = 0
-
-
-class _OptionalDummyRequest(msgspec.Struct, frozen=True, kw_only=True):
-    name: str = ""
-    value: int = 0
-
-
-class TestResolveRequest:
-    def test_request_only_returns_it(self) -> None:
-        req = _DummyRequest(name="x")
-        assert _resolve_request(req, {}, _DummyRequest) is req
-
-    def test_kwargs_only_constructs(self) -> None:
-        result = _resolve_request(None, {"name": "x", "value": 42}, _DummyRequest)
-        assert result.name == "x"
-        assert result.value == 42
-
-    def test_allow_empty_constructs_default_model(self) -> None:
-        result = _resolve_request(None, {}, _OptionalDummyRequest, allow_empty=True)
-        assert result.name == ""
-        assert result.value == 0
-
-    def test_mixed_raises_type_error(self) -> None:
-        req = _DummyRequest(name="x")
-        with pytest.raises(
-            TypeError, match=r"Pass either a request object or keyword arguments, not both."
-        ):
-            _resolve_request(req, {"name": "y"}, _DummyRequest)
-
-    def test_neither_raises_type_error(self) -> None:
-        with pytest.raises(
-            TypeError, match=r"Pass a _DummyRequest or its keyword arguments; got neither."
-        ):
-            _resolve_request(None, {}, _DummyRequest)
-
-    def test_unknown_kwarg_re_raises_type_error(self) -> None:
-        with pytest.raises(TypeError):
-            _resolve_request(None, {"unknown": "x"}, _DummyRequest)
-
-
-def test_all_optional_update_models_default_to_unset() -> None:
-    requests = (
-        ProjectUpdateRequest(),
-        AgentUpdateRequest(),
-        SkillUpdateRequest(),
-        IssueUpdateRequest(),
-        AutopilotUpdateRequest(),
-        LabelUpdateRequest(),
-        UserProfileUpdate(),
-    )
-    for request in requests:
-        assert all(
-            getattr(request, field.name) is Unset
-            for field in msgspec.structs.fields(request.__class__)
-        )
-
-
-@pytest.mark.parametrize(
-    ("factory", "field"),
-    (
-        (lambda: ProjectUpdateRequest(name=typing.cast("str", None)), "name"),
-        (lambda: AgentUpdateRequest(name=typing.cast("str", None)), "name"),
-        (lambda: SkillUpdateRequest(name=typing.cast("str", None)), "name"),
-        (lambda: IssueUpdateRequest(title=typing.cast("str", None)), "title"),
-        (lambda: IssueUpdateRequest(priority=typing.cast("str", None)), "priority"),
-        (lambda: AutopilotUpdateRequest(title=typing.cast("str", None)), "title"),
-        (lambda: AutopilotUpdateRequest(agent=typing.cast("str", None)), "agent"),
-        (lambda: AutopilotUpdateRequest(priority=typing.cast("str", None)), "priority"),
-        (lambda: AutopilotUpdateRequest(status=typing.cast("str", None)), "status"),
-        (
-            lambda: AutopilotUpdateRequest(
-                execution_mode=typing.cast("object", None)  # type: ignore[arg-type]
-            ),
-            "execution_mode",
-        ),
-        (
-            lambda: AutopilotUpdateRequest(subscribers=typing.cast("tuple[str, ...]", None)),
-            "subscribers",
-        ),
-        (lambda: LabelUpdateRequest(name=typing.cast("str", None)), "name"),
-        (lambda: LabelUpdateRequest(color=typing.cast("str", None)), "color"),
-    ),
-)
-def test_non_nullable_update_fields_reject_none(factory: object, field: str) -> None:
-    with pytest.raises(TypeError, match=f"{field} must be non-null"):
-        factory()  # type: ignore[operator]
-
 
 _OPTIONAL_DIRECT_CASES = (
     (IssueResource, "list", IssueListFilter),
     (IssueResource, "list_command", IssueListFilter),
-    (IssueCommentResource, "list_flat", CommentListFlatRequest),
-    (IssueCommentResource, "list_flat_command", CommentListFlatRequest),
-    (IssueCommentResource, "list_thread", CommentListThreadRequest),
-    (IssueCommentResource, "list_thread_command", CommentListThreadRequest),
-    (IssueCommentResource, "list_recent", CommentListRecentRequest),
-    (IssueCommentResource, "list_recent_command", CommentListRecentRequest),
 )
 
 
@@ -194,7 +36,7 @@ def test_optional_direct_overloads_match_request_fields(
     params = [
         parameter
         for parameter in signature.parameters.values()
-        if parameter.kind == inspect.Parameter.KEYWORD_ONLY
+        if parameter.kind == inspect.Parameter.KEYWORD_ONLY and parameter.name != "options"
     ]
     assert {parameter.name for parameter in params} == {
         field.name for field in msgspec.structs.fields(request_cls)
@@ -221,30 +63,102 @@ def test_issue_list_object_and_direct_forms_have_identical_empty_and_filtered_pl
     mock_transport.run_text.assert_not_called()
 
 
-def test_comment_list_object_and_direct_forms_have_identical_plans(
-    mock_transport: MagicMock,
+@pytest.mark.parametrize(
+    ("resource_cls", "method_name", "expected_names"),
+    (
+        (
+            AgentResource,
+            "create_command",
+            ("self", "name", "description", "runtime_id", "model", "options"),
+        ),
+        (
+            AgentResource,
+            "update_command",
+            ("self", "agent_id", "name", "description", "options"),
+        ),
+        (ProjectResource, "create_command", ("self", "name", "description", "options")),
+        (
+            ProjectResource,
+            "update_command",
+            ("self", "project_id", "name", "description", "options"),
+        ),
+        (SkillResource, "create_command", ("self", "name", "description", "options")),
+        (
+            SkillResource,
+            "update_command",
+            ("self", "skill_id", "name", "description", "options"),
+        ),
+    ),
+)
+def test_migrated_operations_have_one_explicit_signature(
+    resource_cls: type, method_name: str, expected_names: tuple[str, ...]
 ) -> None:
-    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    resource = IssueCommentResource(mock_transport, ClientConfig())
-    cursor = CommentListThreadRequest(issue_id="iss", thread_id="th", limit=5)
-    cases = (
-        (
-            resource.list_flat_command(CommentListFlatRequest(issue_id="iss", since=None)),
-            resource.list_flat_command(issue_id="iss", since=None),
-        ),
-        (
-            resource.list_thread_command(cursor),
-            resource.list_thread_command(issue_id="iss", thread_id="th", limit=5),
-        ),
-        (
-            resource.list_recent_command(CommentListRecentRequest(issue_id="iss", limit=3)),
-            resource.list_recent_command(issue_id="iss", limit=3),
+    signature = inspect.signature(getattr(resource_cls, method_name))
+    assert tuple(signature.parameters) == expected_names
+    assert all(
+        parameter.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        for parameter in signature.parameters.values()
+    )
+    assert all(
+        parameter.name not in {"request", "kwargs"} for parameter in signature.parameters.values()
+    )
+
+
+@pytest.mark.parametrize(
+    ("resource_cls", "method_name", "target"),
+    (
+        (AgentResource, "create_command", ()),
+        (AgentResource, "update_command", ("a1",)),
+        (ProjectResource, "create_command", ()),
+        (ProjectResource, "update_command", ("p1",)),
+        (SkillResource, "create_command", ()),
+        (SkillResource, "update_command", ("s1",)),
+    ),
+)
+def test_migrated_invalid_values_fail_before_io(
+    resource_cls: type, method_name: str, target: tuple[str, ...]
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = resource_cls(transport, ClientConfig())
+    method = getattr(resource, method_name)
+    with pytest.raises((TypeError, ValueError)):
+        if method_name.endswith("create_command"):
+            method(name=" ")
+        else:
+            method(*target, name=None)
+    transport.run_bytes.assert_not_called()
+    transport.run_text.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("resource_cls", "command_name", "target", "name_flag"),
+    (
+        (AgentResource, "agent", "a1", "--name"),
+        (ProjectResource, "project", "p1", "--title"),
+        (SkillResource, "skill", "s1", "--name"),
+    ),
+)
+def test_migrated_updates_preserve_unset_empty_and_nullable_presence(
+    resource_cls: type, command_name: str, target: str, name_flag: str
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = resource_cls(transport, ClientConfig())
+
+    assert resource.update_command(target).commands == (
+        shlex.join(("multica", command_name, "get", target, "--output", "json")),
+    )
+    assert resource.update_command(target, name="").commands == (
+        shlex.join(("multica", command_name, "update", target, name_flag, "", "--output", "json")),
+    )
+    assert resource.update_command(target, description=None).commands == (
+        shlex.join(
+            ("multica", command_name, "update", target, "--description", "", "--output", "json")
         ),
     )
-    for object_command, direct_command in cases:
-        assert object_command.commands == direct_command.commands
-    mock_transport.run_bytes.assert_not_called()
-    mock_transport.run_text.assert_not_called()
+    transport.run_bytes.assert_not_called()
+    transport.run_text.assert_not_called()
 
 
 def _get_direct_overload(resource_cls: type, method_name: str) -> object | None:
@@ -255,150 +169,9 @@ def _get_direct_overload(resource_cls: type, method_name: str) -> object | None:
         params = list(sig.parameters.values())
         if params and params[0].name == "self":
             params = params[1:]
-        if any(p.kind == inspect.Parameter.KEYWORD_ONLY for p in params):
+        if any(p.kind == inspect.Parameter.KEYWORD_ONLY and p.name != "options" for p in params):
             return overload
     return None
-
-
-def test_structural_parity_guard() -> None:
-    for case in _IN_SCOPE:
-        method_name = case.sdk_method.rsplit(".", 1)[-1]
-        overload = _get_direct_overload(case.resource_cls, method_name)
-        assert overload is not None, f"no direct overload for {case.sdk_method}"
-        sig = inspect.signature(overload)  # type: ignore[arg-type]
-        params = [p for p in sig.parameters.values() if p.kind == inspect.Parameter.KEYWORD_ONLY]
-        field_names = {p.name for p in params}
-        request_fields = {f.name for f in msgspec.structs.fields(case.request_cls)}
-        assert field_names == request_fields, (
-            f"{case.sdk_method}: direct overload fields {field_names} != request fields {request_fields}"
-        )
-        overload_hints = typing.get_type_hints(overload)
-        overload_types = {name: overload_hints[name] for name in field_names}
-        request_types = {f.name: f.type for f in msgspec.structs.fields(case.request_cls)}
-        assert overload_types == request_types, (
-            f"{case.sdk_method}: direct overload types {overload_types} != request types {request_types}"
-        )
-        overload_defaults = {
-            p.name: _NODEFAULT if p.default is inspect.Parameter.empty else p.default
-            for p in params
-        }
-        request_defaults = {
-            f.name: _NODEFAULT if f.default is msgspec.NODEFAULT else f.default
-            for f in msgspec.structs.fields(case.request_cls)
-        }
-        assert overload_defaults == request_defaults, (
-            f"{case.sdk_method}: overload defaults {overload_defaults} != request defaults {request_defaults}"
-        )
-
-
-_SENTINEL_REQUEST: object = object()
-
-
-def _required_positional_args(resource_cls: type, method_name: str) -> tuple[str, ...]:
-    sig = inspect.signature(getattr(resource_cls, method_name))
-    params = list(sig.parameters.values())
-    if params and params[0].name == "self":
-        params = params[1:]
-    return tuple(
-        p.name
-        for p in params
-        if p.kind == inspect.Parameter.POSITIONAL_ONLY
-        and p.default is inspect.Parameter.empty
-        and p.name != "request"
-    )
-
-
-@dataclass(frozen=True)
-class MixedNeitherCase:
-    sdk_method: str
-    resource_cls: type
-    method_name: str
-    args: tuple[object, ...]
-    kwargs: tuple[tuple[str, object], ...]
-
-
-_MIXED_NEITHER_CASES = tuple(
-    MixedNeitherCase(
-        case.sdk_method,
-        case.resource_cls,
-        method_name,
-        tuple("test" for _ in _required_positional_args(case.resource_cls, method_name))
-        + (_SENTINEL_REQUEST,),
-        (("name", "extra"),),
-    )
-    for case in _IN_SCOPE
-    for method_name in (case.sdk_method.rsplit(".", 1)[-1],)
-)
-
-
-@pytest.mark.parametrize(
-    "case",
-    _MIXED_NEITHER_CASES,
-    ids=lambda case: case.sdk_method,
-)
-def test_mixed_input_type_error(
-    case: MixedNeitherCase,
-    mock_transport: MagicMock,
-) -> None:
-    transport: CliTransport = mock_transport
-    config = ClientConfig()
-    resource = case.resource_cls(transport, config)
-    method = getattr(resource, case.method_name)
-    with pytest.raises(
-        TypeError, match=r"Pass either a request object or keyword arguments, not both."
-    ):
-        method(*case.args, **dict(case.kwargs))
-    mock_transport.run_bytes.assert_not_called()
-    mock_transport.run_text.assert_not_called()
-    mock_transport.spawn.assert_not_called()
-
-
-@dataclass(frozen=True)
-class NeitherCase:
-    sdk_method: str
-    resource_cls: type
-    method_name: str
-    positional_args: tuple[object, ...]
-
-
-_NEITHER_CASES = tuple(
-    NeitherCase(
-        case.sdk_method,
-        case.resource_cls,
-        method_name,
-        _required_positional_args(case.resource_cls, method_name),
-    )
-    for case in _IN_SCOPE
-    for method_name in (case.sdk_method.rsplit(".", 1)[-1],)
-    if case.sdk_method
-    not in {
-        "projects.update",
-        "agents.update",
-        "skills.update",
-        "issues.update",
-        "users.profile_update",
-    }
-)
-
-
-@pytest.mark.parametrize(
-    "case",
-    _NEITHER_CASES,
-    ids=lambda case: case.sdk_method,
-)
-def test_neither_input_type_error(
-    case: NeitherCase,
-    mock_transport: MagicMock,
-) -> None:
-    transport: CliTransport = mock_transport
-    config = ClientConfig()
-    resource = case.resource_cls(transport, config)
-    method = getattr(resource, case.method_name)
-    with pytest.raises(TypeError, match=r"Pass a .* or its keyword arguments; got neither."):
-        method(*case.positional_args)
-    mock_transport.run_bytes.assert_not_called()
-    mock_transport.run_text.assert_not_called()
-    mock_transport.spawn.assert_not_called()
 
 
 @dataclass(frozen=True)
@@ -455,8 +228,8 @@ _POST_INIT_CASES = (
         IssueResource,
         "assign",
         (),
-        (("issue_id", "iss_1"),),
-        "Exactly one assignment target must be set",
+        (("issue_id", "iss_1"), ("assignee", "")),
+        "assignee must be non-empty",
     ),
     PostInitCase(
         "issues.assign:multiple-targets",
@@ -464,8 +237,8 @@ _POST_INIT_CASES = (
         IssueResource,
         "assign",
         (),
-        (("issue_id", "iss_1"), ("member_id", "u1"), ("agent_id", "a1")),
-        "Exactly one assignment target must be set",
+        (("issue_id", "iss_1"), ("assignee", " ")),
+        "assignee must be non-empty",
     ),
     PostInitCase(
         "issues.reorder:missing-target",

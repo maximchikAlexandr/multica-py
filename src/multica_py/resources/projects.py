@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pathlib
-from typing import cast, overload
+from typing import TYPE_CHECKING, cast
 
 import msgspec
 
@@ -9,33 +9,116 @@ from multica_py._generated.approved_sdk import (
     validate_nonblank,
 )
 from multica_py._internal.commands import Command
+from multica_py._internal.permalinks import build_permalink
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _project_from_wire,
     _ProjectWire,
 )
-from multica_py.config import ClientConfig
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.enums import ProjectStatus
 from multica_py.models._bound import _BoundEntity
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.issues import IssueListFilter, IssueSummary
-from multica_py.models.project_resources import (
-    ProjectResourceAddLocalDirectoryRequest,
-    ProjectResourceRecord,
+from multica_py.models.issues import (
+    IssueDescriptionInput,
+    IssueListFilter,
+    NoDescription,
 )
-from multica_py.models.projects import (
-    ProjectCreateRequest,
-    ProjectUpdateRequest,
-)
+from multica_py.models.project_resources import ProjectResourceRecord
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
-from multica_py.resources._base import BaseResource, _page_items, _resolve_request
+from multica_py.resources._base import (
+    BaseResource,
+    _page_items,
+    _validate_optional_string,
+)
 from multica_py.resources.issues import (
+    Issue,
     IssueResource,
-    _issue_summary_offset_page,
-    _issue_summary_offset_page_command,
+    _issue_offset_page,
+    _issue_offset_page_command,
 )
 from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.sentinels import Unset, UnsetType
+
+if TYPE_CHECKING:
+    from multica_py.client import MulticaClient
+
+
+class ProjectIssueCollection(OffsetLazyCollection[Issue]):
+    """Issue relation scoped to one bound project.
+
+    The relation delegates creation to the root issue resource so it keeps the
+    root validation, command plan and result binding.  Only a successful
+    result invalidates this collection's cached read snapshot.
+    """
+
+    def __init__(self, project: Project, issues: IssueResource) -> None:
+        project_id = project.id
+
+        def page_loader(*, limit: int | None, offset: int) -> OffsetPage[Issue]:
+            return _issue_offset_page(
+                issues,
+                IssueListFilter(project_id=project_id, limit=limit, offset=offset),
+            )
+
+        super().__init__(
+            page_loader,
+            page_command_loader=lambda limit, offset: _issue_offset_page_command(
+                issues,
+                IssueListFilter(project_id=project_id, limit=limit, offset=offset),
+            ),
+        )
+        self._project_id = project_id
+        self._issues = issues
+
+    def create_command(
+        self,
+        *,
+        title: str,
+        description_input: IssueDescriptionInput = NoDescription(),
+        priority: str | None = None,
+        assignee_id: str | None = None,
+        label_ids: tuple[str, ...] = (),
+        parent_id: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[Issue]:
+        command = self._issues.create_command(
+            title=title,
+            description_input=description_input,
+            priority=priority,
+            assignee_id=assignee_id,
+            label_ids=label_ids,
+            project_id=self._project_id,
+            parent_id=parent_id,
+            options=options,
+        )
+
+        def invalidate(result: Issue) -> Issue:
+            self.invalidate()
+            return result
+
+        return command._map(invalidate)
+
+    def create(
+        self,
+        *,
+        title: str,
+        description_input: IssueDescriptionInput = NoDescription(),
+        priority: str | None = None,
+        assignee_id: str | None = None,
+        label_ids: tuple[str, ...] = (),
+        parent_id: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Issue:
+        return self.create_command(
+            title=title,
+            description_input=description_input,
+            priority=priority,
+            assignee_id=assignee_id,
+            label_ids=label_ids,
+            parent_id=parent_id,
+            options=options,
+        ).run()
 
 
 class Project(_BoundEntity):  # type: ignore[misc]
@@ -47,9 +130,19 @@ class Project(_BoundEntity):  # type: ignore[misc]
     _resources: LazyCollection[ProjectResourceRecord] | None = msgspec.field(
         default=None, name="_resources"
     )
-    _issues: OffsetLazyCollection[IssueSummary] | None = msgspec.field(default=None, name="_issues")
+    _issues: ProjectIssueCollection | None = msgspec.field(default=None, name="_issues")
 
     _PUBLIC_FIELDS = ("id", "name", "description", "status")
+
+    def permalink(self) -> str:
+        client = cast("MulticaClient | None", self._client)
+        return build_permalink(
+            entity_type="Project",
+            entity_id=self.id,
+            collection="projects",
+            app_url=client.config.app_url if client is not None else None,
+            workspace_slug=client.config.workspace_slug if client is not None else None,
+        )
 
     @property
     def resources(self) -> LazyCollection[ProjectResourceRecord]:
@@ -68,89 +161,86 @@ class Project(_BoundEntity):  # type: ignore[misc]
         return self._resources  # type: ignore[return-value]
 
     @property
-    def issues(self) -> OffsetLazyCollection[IssueSummary]:
+    def issues(self) -> ProjectIssueCollection:
         if self._issues is None:
             issues = self._require_client(
                 entity_type="Project", entity_id=self.id, relation_name="issues"
             ).issues
-            pid = self.id
-
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[IssueSummary]:
-                return self._page_issues(issues, pid, limit, offset)
-
-            self._set_runtime(
-                "_issues",
-                OffsetLazyCollection(
-                    page_loader,
-                    page_command_loader=lambda limit, offset: _issue_summary_offset_page_command(
-                        issues,
-                        IssueListFilter(project_id=pid, limit=limit, offset=offset),
-                    ),
-                ),
-            )
+            self._set_runtime("_issues", ProjectIssueCollection(self, issues))
         return self._issues  # type: ignore[return-value]
 
-    def _page_issues(
-        self, issues: IssueResource, pid: str, limit: int | None, offset: int
-    ) -> OffsetPage[IssueSummary]:
-        flt = IssueListFilter(project_id=pid, limit=limit, offset=offset)
-        return _issue_summary_offset_page(issues, flt)
+    def refresh_command(self, *, options: OperationOptions | None = None) -> Command[Project]:
+        client = self._require_client(
+            entity_type="Project", entity_id=self.id, relation_name="refresh"
+        )
+        return client.projects.get_command(self.id, options=options)
+
+    def refresh(self, *, options: OperationOptions | None = None) -> Project:
+        return self.refresh_command(options=options).run()
+
+    def update_command(
+        self,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+        options: OperationOptions | None = None,
+    ) -> Command[Project]:
+        client = self._require_client(
+            entity_type="Project", entity_id=self.id, relation_name="update"
+        )
+        return client.projects.update_command(
+            self.id,
+            name=name,
+            description=description,
+            options=options,
+        )
+
+    def update(
+        self,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+        options: OperationOptions | None = None,
+    ) -> Project:
+        return self.update_command(
+            name=name,
+            description=description,
+            options=options,
+        ).run()
 
     def _invalidate_resources(self) -> None:
         if self._resources is not None:
             self._resources.invalidate()
 
-    @overload
-    def add_local_directory(
-        self, request: ProjectResourceAddLocalDirectoryRequest, /
-    ) -> ProjectResourceRecord: ...
-
-    @overload
     def add_local_directory(
         self,
         *,
         local_path: str | pathlib.Path,
         daemon_id: str,
         label: str | None = None,
-    ) -> ProjectResourceRecord: ...
-
-    def add_local_directory(  # type: ignore[misc]
-        self,
-        request: ProjectResourceAddLocalDirectoryRequest | None = None,
-        /,
-        **kwargs: object,
+        options: OperationOptions | None = None,
     ) -> ProjectResourceRecord:
         return self.add_local_directory_command(
-            cast("ProjectResourceAddLocalDirectoryRequest", request), **kwargs
+            local_path=local_path, daemon_id=daemon_id, label=label, options=options
         ).run()
 
-    @overload
-    def add_local_directory_command(
-        self, request: ProjectResourceAddLocalDirectoryRequest, /
-    ) -> Command[ProjectResourceRecord]: ...
-
-    @overload
     def add_local_directory_command(
         self,
         *,
         local_path: str | pathlib.Path,
         daemon_id: str,
         label: str | None = None,
-    ) -> Command[ProjectResourceRecord]: ...
-
-    def add_local_directory_command(  # type: ignore[misc]
-        self,
-        request: ProjectResourceAddLocalDirectoryRequest | None = None,
-        /,
-        **kwargs: object,
+        options: OperationOptions | None = None,
     ) -> Command[ProjectResourceRecord]:
         client = self._require_client(
             entity_type="Project", entity_id=self.id, relation_name="add_local_directory"
         )
         command = client.projects.resources.add_local_directory_command(
             self.id,
-            cast("ProjectResourceAddLocalDirectoryRequest", request),
-            **kwargs,
+            local_path=local_path,
+            daemon_id=daemon_id,
+            label=label,
+            options=options,
         )
 
         def invalidate(result: ProjectResourceRecord) -> ProjectResourceRecord:
@@ -159,10 +249,14 @@ class Project(_BoundEntity):  # type: ignore[misc]
 
         return command._map(invalidate)
 
-    def remove_resource(self, resource_id: str) -> ActionResult[None]:
-        return self.remove_resource_command(resource_id).run()
+    def remove_resource(
+        self, resource_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.remove_resource_command(resource_id, options=options).run()
 
-    def remove_resource_command(self, resource_id: str) -> Command[ActionResult[None]]:
+    def remove_resource_command(
+        self, resource_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
         validate_nonblank(self.id)
         validate_nonblank(resource_id)
         client = self._require_client(
@@ -174,7 +268,8 @@ class Project(_BoundEntity):  # type: ignore[misc]
                 self._invalidate_resources()
             return result
 
-        return client.projects.resources.remove_command(self.id, resource_id)._map(invalidate)
+        command = client.projects.resources.remove_command(self.id, resource_id, options=options)
+        return command._map(invalidate)
 
 
 class ProjectResource(BaseResource):
@@ -185,8 +280,8 @@ class ProjectResource(BaseResource):
     def _bind(self, project: _ProjectWire) -> Project:
         return _project_from_wire(project)._with_client(self._client)
 
-    def list_command(self) -> Command[Page[Project]]:
-        return self._decoded_page_command(("project", "list"), _ProjectWire)._map(
+    def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Project]]:
+        return self._decoded_page_command(("project", "list"), _ProjectWire, options=options)._map(
             lambda page: Page(
                 items=tuple(map(self._bind, page.items)),
                 limit=page.limit,
@@ -197,98 +292,102 @@ class ProjectResource(BaseResource):
             )
         )
 
-    def list(self) -> Page[Project]:
-        return self.list_command().run()
+    def list(self, *, options: OperationOptions | None = None) -> Page[Project]:
+        return self.list_command(options=options).run()
 
-    def get_command(self, project_id: str) -> Command[Project]:
-        return self._decoded_command(("project", "get", project_id), _ProjectWire)._map(self._bind)
-
-    def get(self, project_id: str) -> Project:
-        return self.get_command(project_id).run()
-
-    @overload
-    def create_command(self, request: ProjectCreateRequest, /) -> Command[Project]: ...
-    @overload
-    def create_command(self, *, name: str, description: str | None = None) -> Command[Project]: ...
-
-    def create_command(  # type: ignore[misc]
-        self, request: ProjectCreateRequest | None = None, /, **kwargs: object
+    def get_command(
+        self, project_id: str, *, options: OperationOptions | None = None
     ) -> Command[Project]:
-        req = _resolve_request(request, kwargs, ProjectCreateRequest)
-        validate_nonblank(req.name)
-        args = ["project", "create", "--title", req.name]
-        if req.description is not None:
-            args.extend(["--description", req.description])
-        return self._decoded_command(tuple(args), _ProjectWire)._map(self._bind)
+        return self._decoded_command(
+            ("project", "get", project_id), _ProjectWire, options=options
+        )._map(self._bind)
 
-    @overload
-    def create(self, request: ProjectCreateRequest, /) -> Project: ...
-    @overload
-    def create(self, *, name: str, description: str | None = None) -> Project: ...
+    def get(self, project_id: str, *, options: OperationOptions | None = None) -> Project:
+        return self.get_command(project_id, options=options).run()
 
-    def create(  # type: ignore[misc]
-        self, request: ProjectCreateRequest | None = None, /, **kwargs: object
+    def create_command(
+        self,
+        *,
+        name: str,
+        description: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[Project]:
+        validate_nonblank(name)
+        _validate_optional_string(description, "description")
+        args = ["project", "create", "--title", name]
+        if description is not None:
+            args.extend(["--description", description])
+        return self._decoded_command(tuple(args), _ProjectWire, options=options)._map(self._bind)
+
+    def create(
+        self,
+        *,
+        name: str,
+        description: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Project:
-        return self.create_command(cast("ProjectCreateRequest", request), **kwargs).run()
+        return self.create_command(name=name, description=description, options=options).run()
 
-    @overload
-    def update_command(
-        self, project_id: str, request: ProjectUpdateRequest, /
-    ) -> Command[Project]: ...
-    @overload
     def update_command(
         self,
         project_id: str,
         *,
         name: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
-    ) -> Command[Project]: ...
-
-    def update_command(  # type: ignore[misc]
-        self, project_id: str, request: ProjectUpdateRequest | None = None, /, **kwargs: object
+        options: OperationOptions | None = None,
     ) -> Command[Project]:
-        req = _resolve_request(request, kwargs, ProjectUpdateRequest, allow_empty=True)
-        if req.name is Unset and req.description is Unset:
-            return self.get_command(project_id)
+        validate_nonblank(project_id)
+        if name is None:
+            raise TypeError("name must be non-null")
+        _validate_optional_string(name, "name")
+        _validate_optional_string(description, "description")
+        if name is Unset and description is Unset:
+            return self.get_command(project_id, options=options)
         args = ["project", "update", project_id]
-        if req.name is not Unset:
-            args.extend(["--title", req.name])
-        if req.description is Unset:
+        if name is not Unset:
+            args.extend(["--title", name])
+        if description is Unset:
             pass
-        elif req.description is None:
+        elif description is None:
             args.extend(["--description", ""])
         else:
-            args.extend(["--description", req.description])
-        return self._decoded_command(tuple(args), _ProjectWire)._map(self._bind)
+            args.extend(["--description", description])
+        return self._decoded_command(tuple(args), _ProjectWire, options=options)._map(self._bind)
 
-    @overload
-    def update(self, project_id: str, request: ProjectUpdateRequest, /) -> Project: ...
-    @overload
     def update(
         self,
         project_id: str,
         *,
         name: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
-    ) -> Project: ...
-
-    def update(  # type: ignore[misc]
-        self, project_id: str, request: ProjectUpdateRequest | None = None, /, **kwargs: object
+        options: OperationOptions | None = None,
     ) -> Project:
         return self.update_command(
-            project_id, cast("ProjectUpdateRequest", request), **kwargs
+            project_id, name=name, description=description, options=options
         ).run()
 
-    def delete_command(self, project_id: str) -> Command[ActionResult[None]]:
-        return self._action_command(("project", "delete", project_id))
+    def delete_command(
+        self, project_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
+        return self._action_command(("project", "delete", project_id), options=options)
 
-    def delete(self, project_id: str) -> ActionResult[None]:
-        return self.delete_command(project_id).run()
+    def delete(
+        self, project_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.delete_command(project_id, options=options).run()
 
-    def set_status_command(self, project_id: str, status: ProjectStatus) -> Command[Project]:
+    def set_status_command(
+        self,
+        project_id: str,
+        status: ProjectStatus,
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[Project]:
         return self._decoded_command(
-            ("project", "status", project_id, status.value), _ProjectWire
+            ("project", "status", project_id, status.value), _ProjectWire, options=options
         )._map(self._bind)
 
-    def set_status(self, project_id: str, status: ProjectStatus) -> Project:
-        return self.set_status_command(project_id, status).run()
+    def set_status(
+        self, project_id: str, status: ProjectStatus, *, options: OperationOptions | None = None
+    ) -> Project:
+        return self.set_status_command(project_id, status, options=options).run()

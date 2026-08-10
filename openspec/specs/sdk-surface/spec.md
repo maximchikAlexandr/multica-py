@@ -132,156 +132,6 @@ and `Autopilot.runs/triggers/subscribers` provide the relation surface.
 - **WHEN** the approved contract is inspected
 - **THEN** every supported autopilot operation has its governed binding and response contract
 
-### Requirement: Issue list pagination and summary identity decoding
-The SDK SHALL accept `offset`, `project_id`, and ordered typed `metadata`
-predicates on `IssueListFilter`. It SHALL forward `offset` and `project_id` as
-the upstream `--offset` and `--project` flags only when non-`None` (and `offset`
-nonnegative). It SHALL forward each metadata predicate as a repeatable
-`--metadata key=<json-scalar>` pair in caller order, using the existing
-`IssueMetadataItem` and `MetadataValue` public types. The handwritten adapter
-SHALL encode values with `json.dumps(value, ensure_ascii=False,
-separators=(",", ":"), allow_nan=False)`. Predicate keys SHALL be nonblank,
-unique within the filter, and SHALL NOT contain `=`. Invalid keys, duplicate
-keys, and non-finite floats SHALL raise `ValueError` before transport.
-`IssueSummaryWire` SHALL decode
-`labels: tuple[LabelData, ...] | msgspec.UnsetType = msgspec.UNSET` and
-`metadata: dict[str, MetadataValue] | msgspec.UnsetType = msgspec.UNSET`, mapping
-them to `IssueSummary.label_names` and `IssueSummary.metadata_snapshot` with
-omitted values normalized to `()`. The SDK SHALL return a typed `IssueListPage` from `IssueResource.list`, carrying
-immutable `IssueSummary` values and the upstream pagination metadata
-(`has_more`, `limit`, `offset`, `total`). Each summary SHALL expose identity and
-hierarchy scalar fields (`created_at`, `parent_id` renamed from
-`parent_issue_id`, `project_id`, `creator_id`, `creator_type`) plus authoritative
-`label_names` and `metadata_snapshot` from the list response. The list path
-SHALL NOT fabricate a full bound `IssueEntity`; callers SHALL use
-`issues.get(summary.id)` when full state or bound behavior is required.
-
-#### Scenario: List with offset emits --offset
-- **WHEN** `IssueResource.list` is called with `IssueListFilter(offset=20)`
-- **THEN** the CLI argv includes `--offset 20`.
-
-#### Scenario: List without offset omits --offset
-- **WHEN** `IssueResource.list` is called with `IssueListFilter()` (offset is `None`)
-- **THEN** the CLI argv does not include `--offset`.
-
-#### Scenario: List with project emits --project
-- **WHEN** `IssueResource.list` is called with `IssueListFilter(project_id="pr_001")`
-- **THEN** the CLI argv includes `--project pr_001`.
-
-#### Scenario: List without project omits --project
-- **WHEN** `IssueResource.list` is called with `IssueListFilter()` (project_id is `None`)
-- **THEN** the CLI argv does not include `--project`.
-
-#### Scenario: Negative offset is rejected before invocation
-- **WHEN** `IssueResource.list` is called with `IssueListFilter(offset=-1)`
-- **THEN** a `ValueError` is raised before any CLI invocation, naming `offset`.
-
-#### Scenario: Pagination metadata round-trips into IssueListPage
-- **WHEN** the upstream `issue list --output json` response contains `{"issues":[...],"has_more":true,"limit":50,"offset":20,"total":137}`
-- **THEN** the decoded `IssueListPage` exposes `has_more == True`, `limit == 50`, `offset == 20`, `total == 137`, and `issues` is the decoded `tuple[IssueSummary, ...]`.
-
-#### Scenario: Omitted pagination metadata decodes backward-compatibly
-- **WHEN** an older CLI response omits `has_more`, `limit`, `offset`, and `total` (only `issues` present)
-- **THEN** the decoded `IssueListPage` exposes `has_more == False`, `limit is None`, `offset is None`, `total is None`, and `issues` is decoded from the present array.
-
-#### Scenario: Empty page decodes
-- **WHEN** the upstream response is `{"issues":[],"has_more":false,"limit":50,"offset":0,"total":0}`
-- **THEN** the decoded `IssueListPage.issues` is `()` and `has_more == False`.
-
-#### Scenario: Summary scalar fields round-trip
-- **WHEN** an issue in the `issues` array contains `created_at`, `parent_issue_id`, `project_id`, `creator_id`, `creator_type`
-- **THEN** the decoded `IssueSummary` exposes `created_at` as `datetime.datetime | None`, `parent_id` (renamed from `parent_issue_id`), `project_id`, `creator_id`, and `creator_type`, each defaulting to `None` when absent.
-
-#### Scenario: Summary without scalar fields decodes backward-compatibly
-- **WHEN** an issue in the `issues` array omits `created_at`, `parent_issue_id`, `project_id`, `creator_id`, `creator_type`
-- **THEN** the decoded `IssueSummary` exposes `created_at is None`, `parent_id is None`, `project_id is None`, `creator_id is None`, `creator_type is None`.
-
-#### Scenario: IssueListPage is the public return type
-- **WHEN** `IssueResource.list` is called
-- **THEN** the returned object is an instance of `multica_py.models.issues.IssueListPage` and not a `BoundIssueListPage`.
-
-#### Scenario: Metadata predicates emit exact repeated flags
-- **WHEN** `IssueResource.list` receives metadata predicates `external_key="42"`, `ready=true`, `attempt=2`, and `finished_at=null`
-- **THEN** argv contains ordered pairs `--metadata external_key="42"`, `--metadata ready=true`, `--metadata attempt=2`, and `--metadata finished_at=null`
-
-#### Scenario: Metadata predicate order is preserved
-- **WHEN** two valid metadata predicates are supplied in a defined tuple order
-- **THEN** their repeatable `--metadata` pairs occur in that same order
-
-#### Scenario: Metadata predicate keys are validated before transport
-- **WHEN** a metadata predicate has a blank key or a key containing `=`
-- **THEN** a `ValueError` names the invalid metadata key and no CLI invocation occurs
-
-#### Scenario: Duplicate metadata predicate keys are rejected before transport
-- **WHEN** two metadata predicates have the same key
-- **THEN** a `ValueError` names the duplicate key and no CLI invocation occurs
-
-#### Scenario: Non-finite metadata floats are rejected before transport
-- **WHEN** a metadata predicate value is `nan`, `inf`, or `-inf`
-- **THEN** `json.dumps(..., allow_nan=False)` causes a `ValueError` before any CLI invocation
-
-#### Scenario: List summary preserves labels and metadata
-- **WHEN** an issue-list row contains labels and metadata
-- **THEN** its `IssueSummary.label_names` and `IssueSummary.metadata_snapshot` preserve those decoded values
-
-#### Scenario: Omitted summary collections decode as empty tuples
-- **WHEN** an issue-list row omits labels and metadata
-- **THEN** its `IssueSummary.label_names == ()` and `IssueSummary.metadata_snapshot == ()`
-
-#### Scenario: List never fabricates a full issue entity
-- **WHEN** an issue-list row is decoded
-- **THEN** no placeholder full-issue fields or bound relation state are constructed from the summary
-
-### Requirement: Attachment byte-oriented upload and download
-The SDK SHALL expose
-`upload(path: Path, *, task_id: str | None = None) -> AttachmentResult`,
-`download(attachment_id: str, *, output_dir: Path) -> Path`,
-`upload_bytes(filename: str, payload: bytes, *, task_id: str | None = None) -> AttachmentResult`,
-and `download_bytes(attachment_id: str) -> bytes`. `attachments.list` and the
-legacy issue-id upload signature SHALL be absent. Byte helpers MUST delegate to
-file methods, preserve filename/binary/empty content, clean temporary files on
-success/failure, and propagate the underlying SDK exception.
-
-#### Scenario: File upload emits pinned argv
-- **WHEN** upload is called with a path and optional task ID
-- **THEN** argv is `attachment upload <path> [--task <id>] --output json` and no issue ID or `--file` flag is emitted
-
-#### Scenario: File download emits pinned argv
-- **WHEN** download is called with attachment ID and output directory
-- **THEN** argv is `attachment download <id> --output-dir <dir> --output json` and the returned path is the decoded downloaded path
-
-#### Scenario: upload_bytes preserves the supplied filename
-- **WHEN** upload_bytes receives empty or binary bytes and a safe filename
-- **THEN** it delegates through a temporary file with the exact filename/task ID and returns the file upload result
-
-#### Scenario: download_bytes returns the file content as bytes
-- **WHEN** download_bytes delegates to a temporary output directory
-- **THEN** it reads and returns the exact downloaded bytes, including empty content
-
-#### Scenario: Empty payload uploads and returns the decoded result
-- **WHEN** `upload_bytes` receives empty bytes
-- **THEN** it preserves the empty payload and returns the decoded upload result
-
-#### Scenario: Empty attachment downloads as empty bytes
-- **WHEN** the downloaded attachment is empty
-- **THEN** `download_bytes` returns `b""`
-
-#### Scenario: Temporary files are removed after success
-- **WHEN** either byte helper succeeds
-- **THEN** its temporary directory is removed
-
-#### Scenario: Temporary files are removed when the underlying CLI operation fails
-- **WHEN** the underlying operation raises
-- **THEN** the temporary directory is removed and the original exception type propagates
-
-#### Scenario: Path separators and empty values are rejected
-- **WHEN** filename or attachment ID is empty, contains a separator, or contains `..`
-- **THEN** `ValueError` identifies the parameter before filesystem or transport access
-
-#### Scenario: Existing upload and download behavior is unchanged
-- **WHEN** callers use the supported path-based upload and download methods
-- **THEN** their governed argv, results, and error behavior remain unchanged
-
 ### Requirement: Corrected profile, repository, and runtime surfaces
 The SDK MUST expose only source-governed D15–D17 surfaces. `users.profile_get`
 returns immutable `UserProfile`; `users.profile_update(UserProfileUpdate)`
@@ -309,19 +159,6 @@ cascade deletion as destroying or archiving those agents.
 #### Scenario: Runtime delete without cascade preserves the refusal
 - **WHEN** dependent active agents exist and `runtimes.delete(runtime_id)` omits cascade
 - **THEN** the operation raises the classified upstream conflict and does not imply that retrying will delete or archive the agents
-
-### Requirement: Unsupported surface migration
-The SDK MUST publish an alpha migration mapping for every unsupported, renamed,
-or intentionally narrowed public surface changed by this roadmap and the
-consumer read-path change.
-
-#### Scenario: Migration table is complete
-- **WHEN** release documentation is reviewed
-- **THEN** it maps legacy attachment, user, repository, runtime, autopilot, agent skill, skill file, issue label/children/metadata, rerun/cancel, run-message, avatar, direct issue-list, and issue-list relation surfaces to the supported replacement or explicitly states that no CLI-backed replacement exists
-
-#### Scenario: Unsupported service replacements are exact
-- **WHEN** migration documentation is inspected
-- **THEN** it specifies `attachments.list` remains removed; issue-result discovery uses a fresh `issues.get(issue_id).attachments` snapshot and `download_bytes`; `users.list/get` remains replaced by profile operations while workspace registry reconciliation uses `workspace.members` with `user_id`; `repositories.get` is removed in favor of URL/ref list/add/remove/checkout; `runtimes.get` is removed; `autopilots.run` is renamed `trigger`; `autopilots.get_run` is replaced by history-page selection; and list callers use `IssueSummary` plus explicit `issues.get(summary.id)` when a full issue is needed
 
 ### Requirement: Workspace member identity is explicit
 The SDK SHALL decode workspace membership identity and user identity as separate
@@ -381,141 +218,6 @@ explicit empty array SHALL both normalize to `()`.
 #### Scenario: Missing attachments are not an atomic completion signal
 - **WHEN** a polling consumer observes `IssueEntity.attachments == ()` after `issues.get`
 - **THEN** documentation explains that pinned upstream may omit the field after a best-effort attachment-read failure and the consumer can retry `issues.get`
-
-### Requirement: Dual input convention for request-bearing resource methods
-
-The SDK SHALL support two equivalent public calling conventions on every
-in-scope request-bearing resource method: (1) a single positional request
-object argument, and (2) the request object's fields passed directly as
-keyword-only arguments. The two conventions SHALL be mutually exclusive within a
-single call.
-
-The direct keyword form SHALL be the primary form presented in documentation.
-The request-object form SHALL remain available for reuse, validation, storage,
-and cross-layer assembly. No public method SHALL be renamed, split, or added to
-distinguish the two forms — both SHALL use the same domain method.
-
-In-scope methods are exactly:
-`projects.create`, `projects.update`, `agents.create`, `agents.update`,
-`skills.create`, `skills.update`, `issues.create`, `issues.update`,
-`issues.assign`, `issues.reorder`, `runtimes.update`,
-`project_resources.add_local_directory`,
-`project_resources.update_local_directory`, and `users.profile_update`.
-
-Request-bearing methods not listed above are intentionally out of scope and
-SHALL retain their existing request-object-only signature unchanged.
-
-#### Scenario: Direct keyword arguments build the request and invoke the CLI
-
-- **WHEN** an in-scope method is called with keyword-only fields matching the
-  request model's field names, types, defaults, and optional-ness
-- **THEN** the SDK constructs the equivalent request object internally and
-  emits the exact same argv, transport method, stdin, and timeout as the
-  equivalent request-object call.
-
-#### Scenario: Request object call remains supported and unchanged
-
-- **WHEN** an in-scope method is called with a single positional request
-  object
-- **THEN** the SDK emits the exact same argv, transport method, stdin, and
-  timeout it emits today, with no behavioral change.
-
-#### Scenario: Both forms return the same type
-
-- **WHEN** the same in-scope operation is invoked via the direct keyword form
-  and via the request-object form with equivalent inputs
-- **THEN** both calls return values of the same public type (e.g. `Project`,
-  `IssueEntity`, `AgentEntity`, `SkillEntity`, `RuntimeUpdateResult`,
-  `ProjectResourceRecord`, `UserProfile`).
-
-#### Scenario: Direct fields are keyword-only
-
-- **WHEN** an in-scope method is called with positional arguments beyond the
-  accepted single request-object positional slot
-- **THEN** the call raises `TypeError` at call time, before any CLI
-  invocation, because the direct fields are keyword-only.
-
-#### Scenario: Mixed input is rejected before invocation
-
-- **WHEN** an in-scope method is called with both a positional request object
-  and one or more keyword fields
-- **THEN** the SDK raises `TypeError` with the message
-  `Pass either a request object or keyword arguments, not both.` before any
-  CLI invocation.
-
-#### Scenario: Neither request object nor direct fields raises TypeError
-
-- **WHEN** an in-scope method is called with no positional request object and
-  no keyword fields (beyond any required positional identifiers the method
-  already takes, such as `project_id` on `projects.update`)
-- **THEN** the SDK raises `TypeError` indicating the missing required
-  request input, before any CLI invocation.
-
-#### Scenario: Direct keyword form preserves request validation
-
-- **WHEN** the direct keyword form supplies values that would violate the
-  request model's `__post_init__` validation (e.g. blank `project_id` on
-  `IssueCreateRequest`, non-exactly-one target on `IssueAssignmentRequest` or
-  `IssueReorderRequest`, blank `daemon_id` on
-  `ProjectResourceAddLocalDirectoryRequest`, blank `local_path` on
-  `ProjectResourceUpdateLocalDirectoryRequest`)
-- **THEN** the same `ValueError` the request object raises is raised from the
-  direct form too, before any CLI invocation. A relative `local_path` on
-  `ProjectResourceAddLocalDirectoryRequest` is NOT such a case: that
-  request's `__post_init__` only validates `daemon_id`, and the call site
-  normalizes `local_path` via `os.path.abspath` in both forms identically.
-
-#### Scenario: Update-style presence semantics are identical in both forms
-
-- **WHEN** an update-style in-scope method (`projects.update`,
-  `users.profile_update`) is called via the direct keyword form with an
-  omitted field, an explicit `None`, or an explicit `Unset` where the request
-  model distinguishes them
-- **THEN** the resulting argv matches the equivalent request-object call bit
-  for bit, including the omission-vs-null-vs-unset distinction.
-
-#### Scenario: Static type checkers understand both forms
-
-- **WHEN** `uv run mypy src` and `uv run mypy tests` are run against the
-  dual-input method signatures
-- **THEN** both pass and a direct keyword call type-checks with the field
-  names and types advertised by the request model.
-
-#### Scenario: IDE autocomplete surfaces direct fields
-
-- **WHEN** a caller starts a direct keyword call on an in-scope method
-- **THEN** the `@overload` signatures expose the request model's field names
-  as keyword-only parameters with their declared types and defaults.
-
-#### Scenario: Request-object methods out of scope are unchanged
-
-- **WHEN** an out-of-scope request-bearing method
-  (`issue_comments` list overloads, `issue_metadata.query`,
-  `issue_metadata.set_typed`) is inspected
-- **THEN** its signature, argv, and behavior are unchanged and no direct
-  keyword overload is added.
-
-### Requirement: Dual input convention documentation default
-
-The SDK documentation SHALL present the direct keyword form as the default
-example for every in-scope method and SHALL document the request-object form as
-the advanced/reusable alternative, explaining when request objects are useful
-(reuse, validation, cross-layer assembly, complex/mutually-exclusive inputs).
-
-#### Scenario: Docs show direct keyword form first
-
-- **WHEN** the resource method documentation for an in-scope method is
-  reviewed
-- **THEN** the primary example uses the direct keyword form and a secondary
-  example shows the request-object form labeled as the reusable/advanced
-  alternative.
-
-#### Scenario: Docs explain when request objects remain valuable
-
-- **WHEN** the documentation is reviewed
-- **THEN** it states that request objects are useful for reuse, validation,
-  storage, and cross-layer assembly, and that out-of-scope request objects
-  remain the only form for their methods.
 
 ### Requirement: Agent copy exposes portable upstream semantics
 
@@ -577,38 +279,6 @@ through this copy operation.
 - **WHEN** `copy_command()` is constructed with valid overrides
 - **THEN** no subprocess I/O occurs, `commands` shows the exact shell-rendered `agent copy` invocation, and `run()` executes that same plan and returns the bound copied `Agent`
 
-### Requirement: Issue search preserves its API and decodes v0.4.20 results
-
-`IssueResource.search(query) -> tuple[IssueSummary, ...]` and
-`search_command(query) -> Command[tuple[IssueSummary, ...]]` SHALL retain their
-existing public signatures and exact `issue search <query> --output json`
-mapping. The decoder SHALL accept the `v0.4.20` object envelope containing an
-`issues` array and SHALL continue accepting the legacy top-level issue array.
-`IssueSummary` SHALL expose `match_source: str | None = None`; the field SHALL
-remain an open string, SHALL preserve values returned by upstream, and SHALL
-default to `None` when omitted. Envelope pagination/count metadata is not a new
-public return type in this change.
-
-#### Scenario: v0.4.20 search envelope returns the existing tuple
-- **WHEN** `issue search --output json` returns `{"issues":[...],"total":1}`
-- **THEN** `issues.search()` returns a one-item immutable tuple of `IssueSummary` rather than exposing a new result wrapper
-
-#### Scenario: Search match source is preserved
-- **WHEN** search rows report `match_source` values `title`, `description`, or `comment`
-- **THEN** each corresponding `IssueSummary.match_source` preserves the returned string
-
-#### Scenario: Number-shaped query remains a normal query
-- **WHEN** `issues.search("412")` returns a number-only match whose upstream fallback source is `comment`
-- **THEN** argv contains the exact query `412` and the returned summary exposes `match_source == "comment"`
-
-#### Scenario: Missing match source is backward-compatible
-- **WHEN** an envelope or legacy array row omits `match_source`
-- **THEN** the row decodes successfully with `IssueSummary.match_source is None`
-
-#### Scenario: Unknown future match source is readable
-- **WHEN** a future CLI returns an unrecognized nonempty `match_source` string
-- **THEN** decoding succeeds and preserves that string without an SDK enum update
-
 ### Requirement: Upstream-owned runtime and model values remain open
 
 Public fields and inputs whose vocabulary is controlled by Multica runtimes or
@@ -624,4 +294,134 @@ unchanged.
 #### Scenario: Future runtime-specific copy values pass through
 - **WHEN** agent copy receives previously unknown model, thinking-level, or service-tier strings
 - **THEN** command construction accepts and emits them verbatim for upstream validation
+
+### Requirement: Default and layered client options
+`MulticaClient` SHALL accept no argument and use `ClientConfig()` defaults, while continuing to accept one explicit `ClientConfig`. The SDK SHALL expose `with_options(...)` for immutable client views and `OperationOptions` for one-call overrides. The supported override fields SHALL be `profile`, `workspace_id`, `timeout`, `cwd`, and `environment`; omission SHALL inherit the lower layer, explicit `None` SHALL clear nullable scalar/path settings, and an explicit empty environment SHALL clear inherited SDK environment entries. Effective precedence SHALL be operation options over scoped-client options over base configuration. Numeric timeouts SHALL represent nonnegative finite seconds and normalize to `datetime.timedelta`; cwd SHALL accept `str` or `os.PathLike` and normalize to `pathlib.Path`.
+
+#### Scenario: Default client is usable
+- **WHEN** a caller constructs `MulticaClient()`
+- **THEN** it behaves as `MulticaClient(ClientConfig())` and exposes the complete resource tree
+
+#### Scenario: Explicit configuration remains available
+- **WHEN** a caller passes a `ClientConfig` to `MulticaClient`
+- **THEN** that exact immutable configuration remains the base layer
+
+#### Scenario: Scoped options do not mutate their source
+- **WHEN** `scoped = client.with_options(profile="automation", workspace_id="ws_1", timeout=30, cwd="./repo")` is created
+- **THEN** `scoped` uses the normalized overrides, `client.config` is unchanged, and both clients share only the existing process semaphore
+
+#### Scenario: Per-operation options win
+- **WHEN** a command is constructed with `OperationOptions(timeout=5, workspace_id="ws_2")` from a client scoped to timeout 30 and workspace `ws_1`
+- **THEN** its preview and execution use timeout 5 and workspace `ws_2` while inheriting every non-overridden setting
+
+#### Scenario: Invalid execution values fail before I/O
+- **WHEN** a timeout is negative, non-finite, or not a supported duration/number, or a non-`None` profile/workspace is blank
+- **THEN** construction raises `TypeError` or `ValueError` before command or transport I/O
+
+### Requirement: Direct typed parameters are the sole operation input
+Affected eager and `*_command()` operations SHALL expose matching explicit typed parameters and SHALL NOT accept a one-operation request DTO, a generic `request | None` positional slot, or public `**kwargs: object`. The SDK SHALL remove exactly `AgentCreateRequest`, `AgentUpdateRequest`, `ProjectCreateRequest`, `ProjectUpdateRequest`, `SkillCreateRequest`, `SkillUpdateRequest`, `LabelUpdateRequest`, `IssueCreateRequest`, `IssueUpdateRequest`, `IssueAssignmentRequest`, `IssueReorderRequest`, `ProjectResourceAddLocalDirectoryRequest`, `ProjectResourceUpdateLocalDirectoryRequest`, `CommentListFlatRequest`, `CommentListThreadRequest`, `CommentListRecentRequest`, `MetadataListRequest`, `MetadataSetRequest`, `AutopilotUpdateRequest`, `AutopilotTriggerCreate`, `AutopilotTriggerUpdate`, `RuntimeUpdate`, and `UserProfileUpdate`. Validation formerly owned by those DTOs SHALL run in the public method or command-building layer before I/O.
+
+#### Scenario: Runtime signatures describe real inputs
+- **WHEN** `inspect.signature` examines any affected eager or command method
+- **THEN** it exposes the real typed operation fields plus the shared optional `options` keyword and contains no request slot or catch-all kwargs
+
+#### Scenario: Eager and command signatures match
+- **WHEN** an affected eager method and its `*_command()` sibling are normalized for their return annotation
+- **THEN** their operation parameters, defaults, keyword-only boundaries, and `OperationOptions` parameter are identical
+
+#### Scenario: Removed DTO imports fail
+- **WHEN** a consumer imports any of the 23 removed names from `multica_py`, `multica_py.models`, or its former model module
+- **THEN** the name is absent, while modules containing retained semantic/output models remain importable
+
+#### Scenario: Empty request-only modules are deleted
+- **WHEN** `models.projects` and `models.labels` contain no retained public model after migration
+- **THEN** those files and all references to them are removed
+
+#### Scenario: Validation survives DTO removal
+- **WHEN** callers provide null non-nullable updates, blank identifiers/names, invalid pagination, multiple assignment modes, or zero/multiple reorder targets through retained low-level methods
+- **THEN** equivalent typed errors occur before I/O and no invariant is weakened
+
+#### Scenario: Semantic value objects remain
+- **WHEN** public models are inspected after the cleanup
+- **THEN** `IssueListFilter`, issue description variants, `MetadataPredicate`/`IssueMetadataItem`, `CommentCursor`, `LocalDirectoryResourceRef`, `ProjectResourceRecord`, `Unset`, enums, pages, entities, and output/result models remain available from their dedicated modules
+
+### Requirement: Canonical bound Issue collections
+`issues.list(...)` SHALL return `IssueListPage` whose `items`/compatibility `issues` alias contains bound `Issue` entities, and `issues.search(...)` SHALL return `Page[Issue]`. Workspace, workspace-member, project, agent, and squad issue relations SHALL yield bound `Issue` entities. Each decoder SHALL construct the canonical `Issue` from fields already present in the collection row, default unavailable fields safely, preserve optional open-string `match_source` on search-originated issues, and bind the originating client without issuing an automatic `issues.get`.
+
+#### Scenario: List returns actionable issues
+- **WHEN** a caller iterates `client.issues.list().items`
+- **THEN** each value is a bound `Issue` that can immediately call entity actions and relations
+
+#### Scenario: Search preserves match metadata
+- **WHEN** search rows include a known or unknown future `match_source`
+- **THEN** the returned bound `Issue.match_source` preserves that string and defaults to `None` when omitted
+
+#### Scenario: Partial rows remain honest
+- **WHEN** list, search, or relation rows omit fields only supplied by `issue get`
+- **THEN** the corresponding optional/snapshot fields on `Issue` use documented defaults until explicit `refresh()`/`get()` and are not fabricated
+
+#### Scenario: Collections avoid N plus one reads
+- **WHEN** N issue rows are decoded from list, search, or a relation
+- **THEN** exactly the collection command runs and zero per-row `issue get` commands run
+
+#### Scenario: IssueSummary leaves the primary API
+- **WHEN** public types, return annotations, contracts, docs, and examples are inspected
+- **THEN** normal issue workflows use `Issue`; `IssueSummary` is absent or confined to a private compatibility decoder with no public export
+
+### Requirement: Explicit issue domain actions
+The canonical resource actions SHALL be `assign(issue_id, assignee)`, `unassign(issue_id)`, `move_to_top(issue_id)`, `move_to_bottom(issue_id)`, `move_before(issue_id, other_issue)`, and `move_after(issue_id, other_issue)`, each with an argument-identical `*_command()` sibling. Bound `Issue` SHALL expose the corresponding context-bound forms plus `refresh`, `update`, and `set_status`. Assignment and issue references SHALL accept a nonblank identifier or an appropriate bound entity and normalize to its ID. The low-level direct `reorder(...)` operation MAY remain for compatibility but SHALL retain its exactly-one-target validation and SHALL not be the documented default.
+
+#### Scenario: Resource assignment reads as intent
+- **WHEN** `client.issues.assign("MUL-123", agent)` is called with an agent entity or identifier
+- **THEN** it emits the governed assignment argv and returns a bound `Issue`
+
+#### Scenario: Unassignment has its own verb
+- **WHEN** resource or bound-entity `unassign()` is called
+- **THEN** the governed `--unassign` action runs without an `unassign=True` public mode flag
+
+#### Scenario: Move methods encode one target
+- **WHEN** any explicit top, bottom, before, or after method is called
+- **THEN** it emits exactly one corresponding reorder target and cannot express an invalid mutually exclusive combination
+
+#### Scenario: Bound issue continues a workflow
+- **WHEN** an issue comes from get, list, search, or a relation
+- **THEN** `refresh`, `update`, `assign`, `unassign`, `set_status`, and move methods delegate through the same root resource command plans and return newly bound immutable `Issue` values
+
+### Requirement: Unified Python attachment upload
+`attachments.upload(source, *, filename=None, task_id=None, options=None)` and `upload_command(...)` SHALL accept a filesystem path/path-like object, bytes-like content, or a binary file-like object. Path input SHALL use the existing file directly. In-memory input SHALL require a safe supplied filename unless a safe basename can be derived from the stream's `.name`; it SHALL be materialized only for command execution, cleaned after success/failure, and preserve exact bytes. `upload_bytes(...)` and `upload_bytes_command(...)` MAY remain as compatibility aliases that delegate to the unified API; documentation SHALL prefer `upload`.
+
+#### Scenario: Path upload preserves governed behavior
+- **WHEN** source is a path-like value
+- **THEN** the existing `attachment upload <absolute-path> [--task <id>] --output json` plan and result contract are preserved without copying the file
+
+#### Scenario: Bytes upload uses a safe filename
+- **WHEN** source is bytes and `filename="report.txt"`
+- **THEN** execution materializes those exact bytes under that basename, uploads it, and removes the temporary directory
+
+#### Scenario: Stream upload is lazy and non-owning
+- **WHEN** `upload_command` is constructed for an open binary stream
+- **THEN** command construction performs no read, execution consumes the stream without closing it, and a closed/unreadable/text stream fails clearly
+
+#### Scenario: Unsafe or missing filename fails before filesystem access
+- **WHEN** in-memory input has no derivable filename or the filename is blank, absolute, contains path separators (including traversal forms such as `../report.txt`), or is exactly the dot-segment `.` or `..`
+- **THEN** `ValueError` is raised before temporary filesystem or transport access
+
+#### Scenario: Safe basename containing double dots remains valid
+- **WHEN** in-memory input is uploaded with the safe basename `filename="report..txt"`
+- **THEN** filename validation accepts it as a leaf name, and command construction preserves the filename without temporary filesystem or transport access
+
+#### Scenario: Compatibility aliases are exact
+- **WHEN** `upload_bytes(filename, payload, ...)` is used during the migration window
+- **THEN** it delegates to `upload(payload, filename=filename, ...)` with identical preview, result, cleanup, and error behavior
+
+### Requirement: Deliberately small package root
+The `multica_py` root SHALL export only the default/configuration and operation option types, `Command`, common page/action/process contracts, primary bound entities, common workflow enums and `Unset`, and the public exception hierarchy. Relation implementations, JSON/metadata aliases, reusable filters and semantic value objects, compatibility page names, raw CLI result details, and resource-specific output models SHALL be imported from dedicated modules.
+
+#### Scenario: Common imports remain obvious
+- **WHEN** a normal user imports `MulticaClient`, `ClientConfig`, `OperationOptions`, `Issue`, `Project`, `Agent`, `IssueStatus`, or `MulticaError` from `multica_py`
+- **THEN** each import succeeds
+
+#### Scenario: Advanced names leave root autocomplete
+- **WHEN** `multica_py.__all__` is inspected
+- **THEN** request DTOs and advanced relation/wire/value/compatibility types are absent and documentation gives their dedicated-module locations when retained
 

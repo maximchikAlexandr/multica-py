@@ -15,48 +15,13 @@ from multica_py import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
-from multica_py.enums import AutopilotExecutionMode, MetadataValueType, ProjectStatus
-from multica_py.models.agents import AgentCreateRequest, AgentUpdateRequest
-from multica_py.models.autopilots import (
-    AutopilotTriggerCreate,
-    AutopilotTriggerUpdate,
-    AutopilotUpdateRequest,
-)
-from multica_py.models.issue_activity import (
-    CommentListFlatRequest,
-    CommentListRecentRequest,
-    CommentListThreadRequest,
-    MetadataListRequest,
-    MetadataPredicate,
-    MetadataSetRequest,
-)
-from multica_py.models.issues import (
-    InlineDescription,
-    IssueAssignmentRequest,
-    IssueCreateRequest,
-    IssueListFilter,
-    IssueReorderRequest,
-    IssueUpdateRequest,
-)
-from multica_py.models.labels import LabelUpdateRequest
-from multica_py.models.project_resources import (
-    ProjectResourceAddLocalDirectoryRequest,
-    ProjectResourceUpdateLocalDirectoryRequest,
-)
-from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
-from multica_py.models.skills import SkillCreateRequest, SkillUpdateRequest
-from multica_py.models.system import RuntimeUpdate, UserProfileUpdate
+from multica_py.enums import ProjectStatus
+from multica_py.models.issues import IssueListFilter
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.autopilots import Autopilot, AutopilotResource
-from multica_py.resources.issue_comments import IssueCommentResource
-from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issues import IssueResource
-from multica_py.resources.labels import LabelResource
-from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.resources.projects import Project, ProjectResource
-from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.skills import SkillResource
-from multica_py.resources.users import UserResource
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,130 +97,6 @@ def _case(
 
 TYPED_INPUT_CASES: tuple[TypedInputCase, ...] = (
     _case(
-        "agents.create",
-        AgentResource,
-        "create",
-        AgentCreateRequest(name="agent"),
-        (("name", "agent"),),
-    ),
-    _case(
-        "agents.update",
-        AgentResource,
-        "update",
-        AgentUpdateRequest(name="agent-new"),
-        (("name", "agent-new"),),
-        target_args=("a1",),
-        requires_request=False,
-        allows_empty=True,
-    ),
-    _case(
-        "autopilots.update",
-        AutopilotResource,
-        "update",
-        AutopilotUpdateRequest(
-            title="Autopilot-new",
-            execution_mode=AutopilotExecutionMode.create_issue,
-            subscribers=("u1",),
-        ),
-        (
-            ("title", "Autopilot-new"),
-            ("execution_mode", AutopilotExecutionMode.create_issue),
-            ("subscribers", ("u1",)),
-        ),
-        target_args=("a1",),
-        requires_request=False,
-        allows_empty=True,
-    ),
-    _case(
-        "autopilots.trigger_add",
-        AutopilotResource,
-        "trigger_add",
-        AutopilotTriggerCreate(title="Webhook", kind="webhook"),
-        (("title", "Webhook"), ("kind", "webhook")),
-        target_args=("a1",),
-    ),
-    _case(
-        "autopilots.trigger_update",
-        AutopilotResource,
-        "trigger_update",
-        AutopilotTriggerUpdate(title="Webhook-new"),
-        (("title", "Webhook-new"),),
-        target_args=("a1", "t1"),
-        requires_request=False,
-        allows_empty=True,
-    ),
-    _case(
-        "autopilots.bound.trigger_add",
-        Autopilot,
-        "trigger_add",
-        AutopilotTriggerCreate(title="Webhook", kind="webhook"),
-        (("title", "Webhook"), ("kind", "webhook")),
-        owner_factory=_bound_autopilot,
-    ),
-    _case(
-        "autopilots.bound.trigger_update",
-        Autopilot,
-        "trigger_update",
-        AutopilotTriggerUpdate(title="Webhook-new"),
-        (("title", "Webhook-new"),),
-        target_args=("t1",),
-        owner_factory=_bound_autopilot,
-        requires_request=False,
-        allows_empty=True,
-    ),
-    _case(
-        "issues.comments.list_flat",
-        IssueCommentResource,
-        "list_flat",
-        CommentListFlatRequest(issue_id="i1"),
-        (("issue_id", "i1"),),
-    ),
-    _case(
-        "issues.comments.list_thread",
-        IssueCommentResource,
-        "list_thread",
-        CommentListThreadRequest(issue_id="i1", thread_id="t1", limit=5),
-        (("issue_id", "i1"), ("thread_id", "t1"), ("limit", 5)),
-    ),
-    _case(
-        "issues.comments.list_recent",
-        IssueCommentResource,
-        "list_recent",
-        CommentListRecentRequest(issue_id="i1", limit=3),
-        (("issue_id", "i1"), ("limit", 3)),
-    ),
-    _case(
-        "issues.metadata.query",
-        IssueMetadataResource,
-        "query",
-        MetadataListRequest(
-            issue_id="i1",
-            predicates=(MetadataPredicate(key="priority", value=3),),
-            cursor="next",
-            limit=5,
-        ),
-        (
-            ("issue_id", "i1"),
-            ("predicates", (MetadataPredicate(key="priority", value=3),)),
-            ("cursor", "next"),
-            ("limit", 5),
-        ),
-    ),
-    _case(
-        "issues.metadata.set_typed",
-        IssueMetadataResource,
-        "set_typed",
-        MetadataSetRequest(
-            issue_id="i1", key="enabled", value=True, value_type=MetadataValueType.boolean
-        ),
-        (
-            ("issue_id", "i1"),
-            ("key", "enabled"),
-            ("value", True),
-            ("value_type", MetadataValueType.boolean),
-        ),
-    ),
-    _case(
         "issues.list",
         IssueResource,
         "list",
@@ -264,152 +105,10 @@ TYPED_INPUT_CASES: tuple[TypedInputCase, ...] = (
         requires_request=False,
         allows_empty=True,
     ),
-    _case(
-        "issues.create",
-        IssueResource,
-        "create",
-        IssueCreateRequest(title="Issue", description_input=InlineDescription(text="body")),
-        (("title", "Issue"), ("description_input", InlineDescription(text="body"))),
-    ),
-    _case(
-        "issues.update",
-        IssueResource,
-        "update",
-        IssueUpdateRequest(title="Issue-new"),
-        (("title", "Issue-new"),),
-        target_args=("i1",),
-        requires_request=False,
-        allows_empty=True,
-    ),
-    _case(
-        "issues.assign",
-        IssueResource,
-        "assign",
-        IssueAssignmentRequest(issue_id="i1", member_id="u1"),
-        (("issue_id", "i1"), ("member_id", "u1")),
-    ),
-    _case(
-        "issues.reorder",
-        IssueResource,
-        "reorder",
-        IssueReorderRequest(issue_id="i1", top=True),
-        (("issue_id", "i1"), ("top", True)),
-    ),
-    _case(
-        "labels.update",
-        LabelResource,
-        "update",
-        LabelUpdateRequest(name="feature", color="blue"),
-        (("name", "feature"), ("color", "blue")),
-        target_args=("label1",),
-        requires_request=False,
-        allows_empty=True,
-    ),
-    _case(
-        "projects.bound.resources.add_local_directory",
-        Project,
-        "add_local_directory",
-        ProjectResourceAddLocalDirectoryRequest(local_path="/tmp", daemon_id="d1"),
-        (("local_path", "/tmp"), ("daemon_id", "d1")),
-        owner_factory=_bound_project,
-    ),
-    _case(
-        "projects.resources.add_local_directory",
-        ProjectResourceCollection,
-        "add_local_directory",
-        ProjectResourceAddLocalDirectoryRequest(local_path="/tmp", daemon_id="d1"),
-        (("local_path", "/tmp"), ("daemon_id", "d1")),
-        target_args=("p1",),
-    ),
-    _case(
-        "projects.resources.update_local_directory",
-        ProjectResourceCollection,
-        "update_local_directory",
-        ProjectResourceUpdateLocalDirectoryRequest(local_path="/tmp/new"),
-        (("local_path", "/tmp/new"),),
-        target_args=("p1", "r1"),
-    ),
-    _case(
-        "projects.create",
-        ProjectResource,
-        "create",
-        ProjectCreateRequest(name="Project"),
-        (("name", "Project"),),
-    ),
-    _case(
-        "projects.update",
-        ProjectResource,
-        "update",
-        ProjectUpdateRequest(name="Project-new"),
-        (("name", "Project-new"),),
-        target_args=("p1",),
-        requires_request=False,
-        allows_empty=True,
-    ),
-    _case(
-        "runtimes.update",
-        RuntimeResource,
-        "update",
-        RuntimeUpdate(target_version="v1"),
-        (("target_version", "v1"),),
-        target_args=("r1",),
-    ),
-    _case(
-        "skills.create",
-        SkillResource,
-        "create",
-        SkillCreateRequest(name="skill"),
-        (("name", "skill"),),
-    ),
-    _case(
-        "skills.update",
-        SkillResource,
-        "update",
-        SkillUpdateRequest(name="skill-new"),
-        (("name", "skill-new"),),
-        target_args=("s1",),
-        requires_request=False,
-        allows_empty=True,
-    ),
-    _case(
-        "users.profile_update",
-        UserResource,
-        "profile_update",
-        UserProfileUpdate(description="about"),
-        (("description", "about"),),
-        requires_request=False,
-    ),
 )
 
 
-_GOVERNED_REQUEST_TYPES = frozenset(
-    {
-        AgentCreateRequest,
-        AgentUpdateRequest,
-        AutopilotTriggerCreate,
-        AutopilotTriggerUpdate,
-        AutopilotUpdateRequest,
-        CommentListFlatRequest,
-        CommentListRecentRequest,
-        CommentListThreadRequest,
-        IssueAssignmentRequest,
-        IssueCreateRequest,
-        IssueListFilter,
-        IssueReorderRequest,
-        IssueUpdateRequest,
-        LabelUpdateRequest,
-        MetadataListRequest,
-        MetadataSetRequest,
-        ProjectCreateRequest,
-        ProjectResourceAddLocalDirectoryRequest,
-        ProjectResourceUpdateLocalDirectoryRequest,
-        ProjectUpdateRequest,
-        RuntimeUpdate,
-        SkillCreateRequest,
-        SkillUpdateRequest,
-        UserProfileUpdate,
-    }
-)
+_GOVERNED_REQUEST_TYPES = frozenset({IssueListFilter})
 
 
 def _iter_resource_classes() -> Iterator[type[object]]:
@@ -477,7 +176,7 @@ def _direct_overload(method: Callable[..., object], request_type: type[msgspec.S
         keyword_names = {
             parameter.name
             for parameter in signature.parameters.values()
-            if parameter.kind == inspect.Parameter.KEYWORD_ONLY
+            if parameter.kind == inspect.Parameter.KEYWORD_ONLY and parameter.name != "options"
         }
         if keyword_names == fields:
             return overload
@@ -527,7 +226,7 @@ def _assert_overload_contract(case: TypedInputCase) -> None:
         direct_parameters = {
             parameter.name: parameter
             for parameter in direct_signature.parameters.values()
-            if parameter.kind == inspect.Parameter.KEYWORD_ONLY
+            if parameter.kind == inspect.Parameter.KEYWORD_ONLY and parameter.name != "options"
         }
         fields = msgspec.structs.fields(request_type)
         assert set(direct_parameters) == {field.name for field in fields}, case.case_id
@@ -557,7 +256,7 @@ def _transport() -> MagicMock:
 def test_governed_request_inventory_matches_frozen_case_table() -> None:
     assert {type(case.request) for case in TYPED_INPUT_CASES} == _GOVERNED_REQUEST_TYPES
     assert _governed_annotations() == _table_annotations()
-    assert len(TYPED_INPUT_CASES) == 27
+    assert len(TYPED_INPUT_CASES) == 1
 
 
 @pytest.mark.parametrize("case", TYPED_INPUT_CASES, ids=lambda case: case.case_id)
@@ -609,7 +308,7 @@ def test_mixed_input_unknown_keyword_and_required_missing_fail_before_transport(
     first_name, first_value = next(iter(direct_kwargs.items()))
 
     with pytest.raises(
-        TypeError, match=r"Pass either a request object or keyword arguments, not both\."
+        TypeError, match=r"Pass either an IssueListFilter or direct filter fields, not both\."
     ):
         method(*case.target_args, case.request, **{first_name: first_value})
     with pytest.raises(TypeError):
@@ -642,32 +341,6 @@ def test_optional_empty_object_and_direct_forms_have_same_plan(case: TypedInputC
     assert _step_shapes(object_command) == _step_shapes(direct_command)
     transport.run_bytes.assert_not_called()
     transport.run_text.assert_not_called()
-
-
-@pytest.mark.parametrize(
-    ("case_id", "field"),
-    (
-        ("agents.update", "name"),
-        ("autopilots.update", "title"),
-        ("autopilots.trigger_update", "title"),
-        ("issues.update", "title"),
-        ("labels.update", "name"),
-        ("projects.update", "name"),
-        ("skills.update", "name"),
-        ("projects.resources.update_local_directory", "local_path"),
-        ("runtimes.update", "target_version"),
-    ),
-)
-def test_request_post_init_failures_are_zero_io(
-    case_id: str, field: str, mock_transport: MagicMock
-) -> None:
-    case = next(case for case in TYPED_INPUT_CASES if case.case_id == case_id)
-    owner = case.owner_factory(mock_transport)
-    with pytest.raises((TypeError, ValueError)):
-        getattr(owner, case.command_name)(*case.target_args, **{field: None})
-    mock_transport.run_bytes.assert_not_called()
-    mock_transport.run_text.assert_not_called()
-    mock_transport.spawn.assert_not_called()
 
 
 def test_direct_request_fields_are_not_positional(mock_transport: MagicMock) -> None:

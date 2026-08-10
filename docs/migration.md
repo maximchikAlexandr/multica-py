@@ -5,6 +5,88 @@ bound wrappers; scalar data is available through `to_json()` / `to_dict()`,
 and relations load only at explicit load points such as `all()`, `page()`,
 `refresh()`, or `MulticaClient.prefetch()`.
 
+## Breaking alpha migration table
+
+This release intentionally removes one-operation input containers and public
+summary rows. The **After** snippets below are the compiling public forms;
+stable reusable filters and semantic values remain where they carry domain
+meaning. The removed names are retained only in this historical **Before**
+column so a migration can be completed mechanically.
+
+### Removed one-operation DTOs: direct typed calls
+
+| Removed **Before** | Compiling **After** |
+|---|---|
+| `AgentCreateRequest(name="build")` | `client.agents.create(name="build")` |
+| `AgentUpdateRequest(name="build")` | `client.agents.update(agent_id, name="build")` |
+| `ProjectCreateRequest(name="alpha")` | `client.projects.create(name="alpha")` |
+| `ProjectUpdateRequest(name="alpha")` | `client.projects.update(project_id, name="alpha")` |
+| `SkillCreateRequest(name="lint")` | `client.skills.create(name="lint")` |
+| `SkillUpdateRequest(name="lint")` | `client.skills.update(skill_id, name="lint")` |
+| `LabelUpdateRequest(name="ready")` | `client.labels.update(label_id, name="ready")` |
+| `IssueCreateRequest(title="Deploy")` | `client.issues.create(title="Deploy")` |
+| `IssueUpdateRequest(description="Ready")` | `client.issues.update(issue_id, description="Ready")` |
+| `IssueAssignmentRequest(issue_id=issue_id, member_id=member_id)` | `client.issues.assign(issue_id, member_id)` |
+| `IssueAssignmentRequest(issue_id=issue_id, agent_id=agent_id)` | `client.issues.assign(issue_id, agent_id)` |
+| `IssueReorderRequest(issue_id=issue_id, before_id=target_id)` | `client.issues.reorder(issue_id, before_id=target_id)` |
+| `CommentListFlatRequest(issue_id=issue_id, since=since)` | `client.issues.comments.list_flat(issue_id=issue_id, since=since)` |
+| `CommentListRecentRequest(issue_id=issue_id, limit=20)` | `client.issues.comments.list_recent(issue_id=issue_id, limit=20)` |
+| `CommentListThreadRequest(issue_id=issue_id, thread_id=thread_id, cursor=cursor, limit=50)` | `client.issues.comments.list_thread(issue_id=issue_id, thread_id=thread_id, cursor=cursor, limit=50)` |
+| `MetadataListRequest(issue_id=issue_id, predicates=predicates, cursor=cursor, limit=limit)` | `client.issues.metadata.query(issue_id=issue_id, predicates=predicates, cursor=cursor, limit=limit)` |
+| `MetadataSetRequest(issue_id=issue_id, key="build.id", value="42")` | `issue.set_metadata("build.id", "42")` |
+| `ProjectResourceAddLocalDirectoryRequest(local_path=path, daemon_id=daemon_id)` | `project.add_local_directory(local_path=path, daemon_id=daemon_id)` |
+| `ProjectResourceUpdateLocalDirectoryRequest(local_path=path)` | `client.projects.resources.update_local_directory(project_id, resource_id, local_path=path)` |
+| `AutopilotUpdateRequest(title="Nightly")` | `client.autopilots.update(autopilot_id, title="Nightly")` |
+| `AutopilotTriggerCreate(title="Daily", kind="schedule")` | `client.autopilots.trigger_add(autopilot_id, title="Daily", kind="schedule")` |
+| `AutopilotTriggerUpdate(kind="schedule")` | `client.autopilots.trigger_update(autopilot_id, trigger_id, kind="schedule")` |
+| `RuntimeUpdate(target_version="stable")` | `client.runtimes.update(runtime_id, target_version="stable")` |
+| `UserProfileUpdate(description="On call")` | `client.users.profile_update(description="On call")` |
+
+Each `After` call also has a matching `*_command()` form with the same
+explicit inputs and a final keyword-only `options: OperationOptions | None`.
+`Unset` omits a field, approved nullable `None` clears it, and validation runs
+before transport access.
+
+### Read paths, domain verbs, uploads, and execution options
+
+| Former surface | Compiling **After** |
+|---|---|
+| `IssueSummary` rows from list/search/relations | `for issue in client.issues.list().items: issue.set_status_command(IssueStatus.todo)` |
+| `Page[IssueSummary]` or tuple relation rows | `Page[Issue]`; `project.issues.all()` returns bound `Issue` values |
+| `issues.assign(issue_id, to_id=...)` mode flags | `issues.assign(issue_id, member_id)` or `issues.unassign(issue_id)` |
+| `issues.reorder(issue_id, top=True, bottom=True, before_id=..., after_id=...)` | `issues.move_to_top(issue_id)`, `move_to_bottom`, `move_before(issue_id, target_id)`, or `move_after(issue_id, target_id)`; advanced `reorder` accepts exactly one target |
+| `attachments.upload_bytes(filename, payload)` as the primary API | `attachments.upload(payload, filename=filename)`; `upload_bytes(filename, payload)` remains an exact compatibility alias |
+| `client.issues.create(..., project_id=project_id)` for a project relation | `client.projects.get(project_id).issues.create(title="Deploy")` |
+| operation-specific timeout/profile kwargs | `client.issues.list(limit=50, options=OperationOptions(timeout=30))` |
+| shell-string escape hatch | `client.cli.command("issue", "get", issue_id, options=options)` → `Command[CliResult]` |
+| API URL used as a frontend permalink origin | `ClientConfig(app_url=app_url, workspace_slug=slug)` then `issue.permalink()` or `project.permalink()` |
+
+`Issue.permalink()` and `Project.permalink()` are local-only, URL-encode path
+segments, require a bound client and both routing values, and perform no I/O.
+
+### Curated root imports
+
+The root keeps common workflow types and primary entities. Advanced models and
+resource outputs move to their dedicated modules:
+
+| Former import | Compiling **After** |
+|---|---|
+| `from multica_py import IssueListFilter` | `from multica_py.models.issues import IssueListFilter` |
+| `from multica_py import IssueListPage, IssueChildrenResult` | `from multica_py.models.issues import IssueListPage, IssueChildrenResult` |
+| `from multica_py import IssueDescriptionInput, NoDescription, InlineDescription, FileDescription` | `from multica_py.models.issues import IssueDescriptionInput, NoDescription, InlineDescription, FileDescription` |
+| `from multica_py import AutopilotListPage, AutopilotRunListPage` | `from multica_py.models.autopilots import AutopilotListPage, AutopilotRunListPage` |
+| `from multica_py import CommentCursor` | `from multica_py.models.common import CommentCursor` |
+| `from multica_py import MetadataPage` | `from multica_py.models.issue_activity import MetadataPage` |
+| `from multica_py import ProjectResourceRecord, LocalDirectoryResourceRef` | `from multica_py.models.project_resources import ProjectResourceRecord, LocalDirectoryResourceRef` |
+| `from multica_py import CursorPage, OffsetPage, RelationMetadata` | `from multica_py.models.relations import CursorPage, OffsetPage, RelationMetadata` |
+| `from multica_py import RuntimeUpdateResult` | `from multica_py.models.system import RuntimeUpdateResult` |
+| `from multica_py import JsonValue` | `from multica_py.types import JsonValue` |
+| `from multica_py import LazyCollection, OffsetLazyCollection, CursorLazyCollection, LazyMapping` | `from multica_py.models.relations import LazyCollection, OffsetLazyCollection, CursorLazyCollection, LazyMapping` |
+| `from multica_py import CliResult` | `from multica_py.resources.cli import CliResult` |
+
+The bound `Issue`, `Project`, and other primary entities remain available from
+`multica_py`. The root export table is intentionally small and exact.
+
 ## Command preview (additive)
 
 The eager API and command-plan behavior remain unified, while the operation
@@ -20,9 +102,10 @@ removed, or split.
 
 The unified operation contract applies the same rules across resources:
 
-- Direct keyword arguments are the preferred short form, with a reusable typed
-  request object as the positional alternative. Passing both is invalid;
-  direct request fields are keyword-only and stable target IDs stay positional.
+- Direct keyword arguments are the public form for the removed one-operation
+  DTOs. `IssueListFilter` is the retained reusable filter value object; stable
+  target IDs stay positional and operation fields are explicit keyword-only
+  parameters.
 - `Unset` means omitted. An approved nullable `None` means clear; accepted
   `""`, `()`, `False`, and `0` remain present values. All-optional updates
   delegate an all-`Unset` call to a read command. Required project-resource
@@ -77,14 +160,23 @@ than serializing an internal snapshot node directly.
 
 ### Agent copy
 
-`agents.copy(source_agent_id, **overrides)` is the eager form and returns a
-bound `Agent`; `agents.copy_command(source_agent_id, **overrides)` returns
+`agents.copy(source_agent_id, *, name=..., runtime_id=..., description=...,
+instructions=..., model=..., thinking_level=..., service_tier=..., custom_args=...,
+max_concurrent_tasks=..., permission_mode=..., public_to_workspace=...,
+public_to_member_ids=..., copy_skills=..., options=...)` is the eager form and
+returns a bound `Agent`; `agents.copy_command(source_agent_id, *, name=...,
+runtime_id=..., description=..., instructions=..., model=..., thinking_level=...,
+service_tier=..., custom_args=..., max_concurrent_tasks=..., permission_mode=...,
+public_to_workspace=..., public_to_member_ids=..., copy_skills=..., options=...)` returns
 `Command[Agent]`. Both share the same keyword-only presence-aware overrides:
 `name`, `runtime_id`, `description`, `instructions`, `model`,
 `thinking_level`, `service_tier`, `custom_args`, `max_concurrent_tasks`,
 `permission_mode`, `public_to_workspace`, `public_to_member_ids`, and
 `copy_skills`. Omitted values use `Unset`, so present empty strings remain
 present and `copy_skills=False` emits `--no-skills`.
+
+For example, `client.agents.copy(source_agent_id, runtime_id=runtime_id)` is a
+signature-valid direct call; its command form accepts the same explicit names.
 
 When copying across runtimes, `runtime_id` plus an omitted `model` emits
 `--model ""`; this is the sole automatic runtime-specific default. Omitted
@@ -95,11 +187,11 @@ secret or machine-local configuration: `custom_env`, `mcp_config`, and
 
 ### Issue search
 
-`issues.search(query)` now returns an eager `Page[IssueSummary]`, and
-`issues.search_command(query)` returns `Command[Page[IssueSummary]]`.
+`issues.search(query)` now returns an eager `Page[Issue]`, and
+`issues.search_command(query)` returns `Command[Page[Issue]]`.
 The exact command remains `issue search <query> --output json`. The decoder
 accepts the v0.4.20 `issues` envelope and the legacy top-level array without
-introducing a result wrapper. `IssueSummary.match_source` is an optional open
+introducing a result wrapper. `Issue.match_source` is an optional open
 string, preserved when returned by upstream and `None` when absent.
 
 ### Typed failures and runtime deletion
@@ -123,8 +215,8 @@ persistence should go through `to_json()` / `to_dict()`.
 
 The canonical public import path for the bound agent domain class is
 `multica_py.resources.agents.Agent` (also re-exported as `multica_py.Agent`).
-`multica_py.models.agents` contains only wire/request types and does not export
-the bound `Agent` class.
+`multica_py.models.agents` contains only the retained output models
+`AgentSkill` and `AgentTask`; it does not export the bound `Agent` class.
 
 | Removed name | Unified class |
 |---|---|
@@ -195,41 +287,38 @@ every unified class. It is not exported; treat it as implementation detail.
 
 ## Issue list projections
 
-Direct issue lists and the five list-backed relations now expose immutable
-`IssueSummary` values. They are list projections, not compact bound issues.
-Use the explicit `issues.get(summary.id)` call only when bound behavior or
-complete issue state is needed.
+Direct issue lists, the five list-backed relations, and child collections now
+expose immutable partial, bound `Issue` values. Missing get-only fields use
+documented defaults, and no implicit `issues.get` hydration occurs.
 
 | Caller | Before | After |
 |---|---|---|
-| Direct list | `for issue in client.issues.list(filter).issues` | `for summary in client.issues.list(filter).issues` |
-| `Workspace.issues` | `for issue in client.workspaces.get(workspace_id).issues.all()` | `for summary in client.workspaces.get(workspace_id).issues.all()` |
-| `Project.issues` | `for issue in client.projects.get(project_id).issues.all()` | `for summary in client.projects.get(project_id).issues.all()` |
-| `Agent.issues` | `for issue in client.agents.get(agent_id).issues.all()` | `for summary in client.agents.get(agent_id).issues.all()` |
-| `Squad.issues` | `for issue in client.squads.get(squad_id).issues.all()` | `for summary in client.squads.get(squad_id).issues.all()` |
-| `WorkspaceMember.issues` | `for issue in member.issues.all()` | `for summary in member.issues.all()` |
+| Direct list | `for issue in client.issues.list(filter).issues` | `for issue in client.issues.list(filter).issues` |
+| `Workspace.issues` | `for issue in client.workspaces.get(workspace_id).issues.all()` | `for issue in client.workspaces.get(workspace_id).issues.all()` |
+| `Project.issues` | `for issue in client.projects.get(project_id).issues.all()` | `for issue in client.projects.get(project_id).issues.all()` |
+| `Agent.issues` | `for issue in client.agents.get(agent_id).issues.all()` | `for issue in client.agents.get(agent_id).issues.all()` |
+| `Squad.issues` | `for issue in client.squads.get(squad_id).issues.all()` | `for issue in client.squads.get(squad_id).issues.all()` |
+| `WorkspaceMember.issues` | `for issue in member.issues.all()` | `for issue in member.issues.all()` |
 
 ```python
 from multica_py import IssueStatus
-from multica_py.models.issues import IssueSummary
+from multica_py.resources.issues import Issue
 
-for summary in client.issues.list(filter).issues:
-    summary: IssueSummary
-    if summary.status is IssueStatus.backlog:
-        bound_issue = client.issues.get(summary.id)
-        bound_issue.add_comment("ready")
+for issue in client.issues.list(filter).issues:
+    issue: Issue
+    if issue.status is IssueStatus.backlog:
+        issue.add_comment_command("ready")
 ```
 
-The summary path is the default for queue discovery. The explicit get is the
-intentional boundary when a caller needs comments, mutation helpers, or other
-bound relations.
+The same bound `Issue` value supports queue discovery and immediate command
+construction; execution remains explicit through the returned command plan.
 
 ## Workspace-member identity
 
 `WorkspaceMember.id` is the workspace membership identity and remains the
 value used by `WorkspaceMember.issues` as `assignee_id`. It is not an alias for
 the related user. `WorkspaceMember.user_id` is the optional user identity for
-reconciling `IssueSummary.creator_id`, and `WorkspaceMember.email` is the
+reconciling `Issue.creator_id`, and `WorkspaceMember.email` is the
 optional member email.
 
 Older or minimal member payloads may omit both user fields. In that case

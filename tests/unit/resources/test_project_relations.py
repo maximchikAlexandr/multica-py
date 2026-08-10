@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import inspect
 import os
 import shlex
 from collections.abc import Callable
@@ -17,17 +18,16 @@ from multica_py.config import ClientConfig
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.issues import IssueListFilter, IssueListPage, IssueSummary
-from multica_py.models.project_resources import (
-    ProjectResourceAddLocalDirectoryRequest,
-    ProjectResourceRecord,
+from multica_py.models.issues import (
+    IssueListFilter,
+    IssueListPage,
 )
-from multica_py.models.projects import ProjectCreateRequest, ProjectUpdateRequest
+from multica_py.models.project_resources import ProjectResourceRecord
 from multica_py.models.relations import LazyCollection, OffsetPage
 from multica_py.resources._base import BaseResource
-from multica_py.resources.issues import IssueResource
+from multica_py.resources.issues import Issue, IssueResource
 from multica_py.resources.project_resources import ProjectResourceCollection
-from multica_py.resources.projects import Project, ProjectResource
+from multica_py.resources.projects import Project, ProjectIssueCollection, ProjectResource
 
 _TODO = IssueStatus("todo")
 _DONE = IssueStatus("done")
@@ -42,6 +42,7 @@ class ProjectBindingCase:
     args: tuple[object, ...]
     stdout: bytes
     expected_argv: tuple[str, ...]
+    kwargs: tuple[tuple[str, object], ...] = ()
 
 
 PROJECT_BINDING_CASES = (
@@ -62,16 +63,18 @@ PROJECT_BINDING_CASES = (
     ProjectBindingCase(
         "create",
         "create",
-        (ProjectCreateRequest(name="Project"),),
+        (),
         b'{"id":"p1","title":"Project","status":"planned"}',
         ("project", "create", "--title", "Project", "--output", "json"),
+        (("name", "Project"),),
     ),
     ProjectBindingCase(
         "update",
         "update",
-        ("p1", ProjectUpdateRequest(name="Renamed")),
+        ("p1",),
         b'{"id":"p1","title":"Renamed","status":"planned"}',
         ("project", "update", "p1", "--title", "Renamed", "--output", "json"),
+        (("name", "Renamed"),),
     ),
     ProjectBindingCase(
         "set status",
@@ -87,7 +90,7 @@ PROJECT_BINDING_CASES = (
 class ProjectParentMutationCase:
     name: str
     method: str
-    args: tuple[object, ...]
+    kwargs: tuple[tuple[str, object], ...]
     child_method: str
     succeeds: bool
 
@@ -104,20 +107,22 @@ PROJECT_PARENT_MUTATION_CASES = (
     ProjectParentMutationCase(
         "add succeeds",
         "add_local_directory",
-        (ProjectResourceAddLocalDirectoryRequest(local_path="/tmp", daemon_id="d1"),),
+        (("local_path", "/tmp"), ("daemon_id", "d1")),
         "add_local_directory",
         True,
     ),
-    ProjectParentMutationCase("remove succeeds", "remove_resource", ("r1",), "remove", True),
+    ProjectParentMutationCase(
+        "remove succeeds", "remove_resource", (("resource_id", "r1"),), "remove", True
+    ),
     ProjectParentMutationCase(
         "add transport failure",
         "add_local_directory",
-        (ProjectResourceAddLocalDirectoryRequest(local_path="/tmp", daemon_id="d1"),),
+        (("local_path", "/tmp"), ("daemon_id", "d1")),
         "add_local_directory",
         False,
     ),
     ProjectParentMutationCase(
-        "remove transport failure", "remove_resource", ("r1",), "remove", False
+        "remove transport failure", "remove_resource", (("resource_id", "r1"),), "remove", False
     ),
 )
 
@@ -221,11 +226,13 @@ def _make_mock_resources(
         lambda: client.projects.resources.list(project_id),
         ("project", "resource", "list", project_id),
     )
-    client.projects.resources.add_local_directory_command = lambda project_id, request: (
-        mutation_command(lambda: client.projects.resources.add_local_directory(project_id, request))
+    client.projects.resources.add_local_directory_command = lambda project_id, **kwargs: (
+        mutation_command(
+            lambda: client.projects.resources.add_local_directory(project_id, **kwargs)
+        )
     )
-    client.projects.resources.remove_command = lambda project_id, resource_id: mutation_command(
-        lambda: client.projects.resources.remove(project_id, resource_id)
+    client.projects.resources.remove_command = lambda project_id, resource_id, **_kwargs: (
+        mutation_command(lambda: client.projects.resources.remove(project_id, resource_id))
     )
     if issue_page_results is not None:
         client.issues.list.side_effect = issue_page_results
@@ -292,7 +299,7 @@ def test_project_resource_returns_bound_immutable_projects(case: ProjectBindingC
     client = MagicMock()
     resource._set_client(client)
 
-    command = getattr(resource, f"{case.method}_command")(*case.args)
+    command = getattr(resource, f"{case.method}_command")(*case.args, **dict(case.kwargs))
     assert command.commands == (f"multica {shlex.join(case.expected_argv)}",)
     assert transport.run_bytes.call_count == 0
     result = command.run()
@@ -391,9 +398,7 @@ def test_project_add_local_directory_command_freezes_path_and_invalidates_after_
     entity._set_runtime("_resources", LazyCollection(lambda: ()))
     entity.resources.all()
 
-    command = entity.add_local_directory_command(
-        ProjectResourceAddLocalDirectoryRequest(local_path="relative/sandbox", daemon_id="d1")
-    )
+    command = entity.add_local_directory_command(local_path="relative/sandbox", daemon_id="d1")
 
     assert command.commands == (
         "multica project resource add p1 --type local_directory --local-path "
@@ -420,9 +425,7 @@ def test_project_resource_mutation_command_failure_preserves_cache_and_remove_in
     entity.resources.all()
 
     transport.run_bytes.side_effect = RuntimeError("transport failed")
-    command = entity.add_local_directory_command(
-        ProjectResourceAddLocalDirectoryRequest(local_path="/tmp/sandbox", daemon_id="d1")
-    )
+    command = entity.add_local_directory_command(local_path="/tmp/sandbox", daemon_id="d1")
     with pytest.raises(RuntimeError, match="transport failed"):
         command.run()
     assert entity.resources.loaded
@@ -454,11 +457,7 @@ def test_project_mutation_commands_validate_before_transport(
 
     with pytest.raises(ValueError):
         if method == "add_local_directory_command":
-            entity.add_local_directory_command(
-                ProjectResourceAddLocalDirectoryRequest(
-                    local_path="/tmp/sandbox", daemon_id=daemon_id
-                )
-            )
+            entity.add_local_directory_command(local_path="/tmp/sandbox", daemon_id=daemon_id)
         else:
             entity.remove_resource_command(resource_id)
 
@@ -487,7 +486,7 @@ def test_project_parent_mutations_invalidate_only_resources(
     cached_resources = entity.resources.all()
     entity.issues.all()
     if case.succeeds:
-        result = getattr(entity, case.method)(*case.args)
+        result = getattr(entity, case.method)(**dict(case.kwargs))
         if case.method == "add_local_directory":
             assert isinstance(result, ProjectResourceRecord)
         else:
@@ -497,10 +496,15 @@ def test_project_parent_mutations_invalidate_only_resources(
         assert client.projects.resources.list.call_count == 2
     else:
         with pytest.raises(RuntimeError, match="transport failed"):
-            getattr(entity, case.method)(*case.args)
+            getattr(entity, case.method)(**dict(case.kwargs))
         assert entity.resources.all() == cached_resources
         assert client.projects.resources.list.call_count == 1
-    assert child.call_args.args == ("p1", *case.args)
+    if case.method == "add_local_directory":
+        assert child.call_args.args == ("p1",)
+        assert child.call_args.kwargs == {**dict(case.kwargs), "label": None, "options": None}
+    else:
+        assert child.call_args.args == ("p1", "r1")
+        assert child.call_args.kwargs == {}
     assert client.issues.list.call_count == 1
 
 
@@ -536,9 +540,12 @@ def test_project_parent_validation_preserves_loaded_resources(
 
 def test_project_issues_two_pages() -> None:
     page1 = IssueListPage(
-        items=(
-            IssueSummary(id="i1", title="Task 1", status=_TODO),
-            IssueSummary(id="i2", title="Task 2", status=_TODO),
+        items=cast(
+            "tuple[Issue, ...]",
+            (
+                Issue(id="i1", title="Task 1", status=_TODO),
+                Issue(id="i2", title="Task 2", status=_TODO),
+            ),
         ),
         has_more=True,
         limit=2,
@@ -546,7 +553,7 @@ def test_project_issues_two_pages() -> None:
         total=3,
     )
     page2 = IssueListPage(
-        items=(IssueSummary(id="i3", title="Task 3", status=_DONE),),
+        items=(Issue(id="i3", title="Task 3", status=_DONE),),
         has_more=False,
         limit=2,
         offset=2,
@@ -563,7 +570,7 @@ def test_project_issues_two_pages() -> None:
     result = entity.issues.all()
     assert len(result) == 3
     assert client.issues.list.call_count == 2
-    assert all(isinstance(item, IssueSummary) for item in result)
+    assert all(isinstance(item, Issue) for item in result)
 
     call1_flt = client.issues.list.call_args_list[0][0][0]
     assert call1_flt.limit == 50
@@ -578,7 +585,7 @@ def test_project_issues_two_pages() -> None:
 
 def test_project_issues_single_page() -> None:
     page = IssueListPage(
-        items=(IssueSummary(id="i1", title="One", status=_TODO),),
+        items=(Issue(id="i1", title="One", status=_TODO),),
         has_more=False,
         limit=50,
         offset=0,
@@ -594,7 +601,7 @@ def test_project_issues_single_page() -> None:
     result = entity.issues.all()
     assert len(result) == 1
     assert client.issues.list.call_count == 1
-    assert isinstance(result[0], IssueSummary)
+    assert isinstance(result[0], Issue)
     client.issues.get.assert_not_called()
     entity.issues.refresh()
     assert client.issues.list.call_count == 2
@@ -632,6 +639,103 @@ def test_project_issues_invalidate_triggers_new_load() -> None:
     entity.issues.all()
     assert client.issues.list.call_count == 2
     client.issues.get.assert_not_called()
+
+
+def test_bound_project_continuations_match_root_plans_and_remain_detached_safe() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    projects = ProjectResource(transport, ClientConfig())
+    client = MagicMock()
+    client.projects = projects
+    projects._set_client(client)
+    entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
+
+    refresh = entity.refresh_command()
+    assert refresh.commands == projects.get_command("p1").commands
+    assert refresh.commands == ("multica project get p1 --output json",)
+    update = entity.update_command(name="Renamed", description=None)
+    assert (
+        update.commands == projects.update_command("p1", name="Renamed", description=None).commands
+    )
+    assert update.commands == (
+        "multica project update p1 --title Renamed --description '' --output json",
+    )
+    assert transport.run_bytes.call_count == 0
+
+    detached = Project(id="p1", name="Test", status=_PLANNED)
+    with pytest.raises(DetachedEntityError):
+        detached.refresh_command()
+    with pytest.raises(DetachedEntityError):
+        detached.update_command(name="Renamed")
+
+
+def _wire_result(stdout: bytes) -> RawCommandResult:
+    return RawCommandResult(
+        argv=(),
+        exit_code=0,
+        stdout=stdout,
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+
+
+def test_project_issue_collection_scopes_create_and_invalidates_only_itself() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    projects = ProjectResource(transport, ClientConfig())
+    issues = IssueResource(transport, ClientConfig())
+    client = MagicMock()
+    client.projects = projects
+    client.issues = issues
+    projects._set_client(client)
+    issues._set_client(client)
+    first = Project(id="p1", name="First", status=_PLANNED, _client=client)
+    second = Project(id="p2", name="Second", status=_PLANNED, _client=client)
+    list_payload = b'{"issues":[],"has_more":false,"limit":50,"offset":0,"total":0}'
+    create_payload = b'{"id":"i1","title":"New","status":"todo","project_id":"p1"}'
+    transport.run_bytes.side_effect = [_wire_result(list_payload), _wire_result(list_payload)]
+
+    first.issues.all()
+    second.issues.all()
+    assert second.issues.loaded
+    assert first.issues.loaded and second.issues.loaded
+
+    create = first.issues.create_command(title="New", priority="high", parent_id="parent")
+    assert "project_id" not in inspect.signature(first.issues.create).parameters
+    assert create.commands == (
+        "multica issue create --title New --priority high --project p1 --parent parent --output json",
+    )
+    assert transport.run_bytes.call_count == 2
+
+    transport.run_bytes.side_effect = [_wire_result(create_payload)]
+    result = create.run()
+    assert result.id == "i1"
+    assert result._client is client
+    if first.issues.loaded:
+        pytest.fail("successful scoped create did not invalidate its relation")
+
+
+def test_project_issue_create_failure_preserves_loaded_relation() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    projects = ProjectResource(transport, ClientConfig())
+    issues = IssueResource(transport, ClientConfig())
+    client = MagicMock()
+    client.projects = projects
+    client.issues = issues
+    projects._set_client(client)
+    issues._set_client(client)
+    entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
+    transport.run_bytes.side_effect = [_wire_result(b'{"issues":[],"has_more":false}')]
+    entity.issues.all()
+    command = entity.issues.create_command(title="Broken")
+    transport.run_bytes.side_effect = RuntimeError("create failed")
+
+    with pytest.raises(RuntimeError, match="create failed"):
+        command.run()
+    assert entity.issues.loaded
+    entity.issues.all()
+    assert transport.run_bytes.call_count == 2
 
 
 def test_detached_entity_error_on_resource_access() -> None:

@@ -34,8 +34,31 @@ Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`
 ## Usage
 
 ```python
-from multica_py import ClientConfig, CompatibilityPolicy, IssueStatus, MulticaClient
-from multica_py.models.issues import IssueListFilter
+from multica_py import IssueStatus, MulticaClient
+
+client = MulticaClient()
+page = client.issues.list(limit=50)
+for issue in page:
+    print(issue.title)
+
+# Read results are bound Issue values, so an entity action is available
+# immediately without a second get call.
+if page.items:
+    preview = page.items[0].set_status_command(IssueStatus.in_progress)
+    updated = preview.run()
+```
+
+The default client is suitable for a first local workflow. For an integration,
+configure one immutable `ClientConfig` at the composition boundary and pass a
+small adapter to application code. Derived views created by `with_options`
+(or its `with_profile`, `with_workspace`, `with_timeout`, `with_cwd`, and
+`with_environment` delegators) retain independent routing/execution settings
+while sharing the same process limit.
+
+```python
+from datetime import timedelta
+
+from multica_py import ClientConfig, CompatibilityPolicy, MulticaClient
 
 client = MulticaClient(
     ClientConfig(
@@ -45,20 +68,9 @@ client = MulticaClient(
         max_processes=4,
     )
 )
-page = client.issues.list(status=IssueStatus.backlog, limit=50)
-for issue in page.items:
-    print(issue.title)
-
-# A reusable typed request is equivalent to the direct-keyword form.
-request = IssueListFilter(status=IssueStatus.backlog, limit=50)
-assert client.issues.list(request).items == page.items
+scoped = client.with_options(profile="worker", timeout=timedelta(seconds=30))
+page = scoped.issues.list(status=IssueStatus.backlog, limit=50)
 ```
-
-`ClientConfig` is immutable. Keep one configured client at an integration
-boundary and pass application code a small adapter instead of constructing a
-client in every request or workflow. Derived views created by `with_profile`,
-`with_workspace`, `with_timeout`, `with_cwd`, and `with_environment`
-retain independent configuration while sharing the same process limit.
 
 ### Traverse related resources
 
@@ -102,6 +114,7 @@ See the runnable examples:
 - [idempotent metadata, comments, and guarded status changes](examples/issue_workflow.py);
 - [bound resource graph](examples/resource_relations.py);
 - [local self-hosted setup](examples/self_hosted_local.py).
+- [direct inputs, scoped options, raw CLI, uploads, and permalinks](examples/public_workflow.py).
 
 The full pattern catalog is in [docs/service-usage.md](docs/service-usage.md).
 See also the [API surface](docs/api.md), [migration guide](docs/migration.md),

@@ -8,7 +8,6 @@ import pytest
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.exceptions import OutputShapeError
-from multica_py.models.autopilots import AutopilotTriggerUpdate
 from multica_py.resources.autopilots import Autopilot, AutopilotResource
 from multica_py.resources.users import UserResource
 
@@ -22,8 +21,7 @@ def _transport() -> MagicMock:
 def test_trigger_update_empty_request_reads_autopilot_and_extracts_trigger() -> None:
     transport = _transport()
     resource = AutopilotResource(transport, ClientConfig())
-    request = AutopilotTriggerUpdate()
-    object_command = resource.trigger_update_command("a1", "tr1", request)
+    object_command = resource.trigger_update_command("a1", "tr1")
     direct_command = resource.trigger_update_command("a1", "tr1")
 
     assert (

@@ -17,7 +17,7 @@ def build_client() -> MulticaClient:
     )
 
 
-def workspace_summary(client: MulticaClient, workspace_id: str) -> None:
+def inspect_workspace(client: MulticaClient, workspace_id: str) -> None:
     workspace_client = client.with_workspace(workspace_id)
     workspace = workspace_client.workspaces.get(workspace_id)
 
@@ -29,4 +29,4 @@ def workspace_summary(client: MulticaClient, workspace_id: str) -> None:
 
 
 if __name__ == "__main__":
-    workspace_summary(build_client(), "ws_123")
+    inspect_workspace(build_client(), "ws_123")

@@ -19,7 +19,6 @@ from multica_py.models.common import ActionResult
 from multica_py.models.system import (
     RepositoryMutationResult,
     RepositoryRecord,
-    RuntimeUpdate,
     RuntimeUpdateResult,
 )
 from multica_py.resources._base import BaseResource
@@ -134,9 +133,7 @@ def test_payload_adapters_preserve_decoded_value(
         payload = RuntimeUpdateResult(id="r1", status="updated")
         command = cast(
             "Command[object]",
-            RuntimeResource(transport, ClientConfig()).update_command(
-                "r1", RuntimeUpdate(target_version="1.2.3")
-            ),
+            RuntimeResource(transport, ClientConfig()).update_command("r1", target_version="1.2.3"),
         )
     transport.run_bytes.return_value = RawCommandResult(
         argv=tuple(command.commands[0].split()[1:]),

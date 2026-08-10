@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import msgspec
 
-from multica_py.sentinels import Unset, UnsetType
-
 
 class RepositoryRecord(msgspec.Struct, frozen=True, kw_only=True):
     url: str
@@ -37,15 +35,6 @@ class RuntimeUsage(msgspec.Struct, frozen=True, kw_only=True):
 class RuntimeActivity(msgspec.Struct, frozen=True, kw_only=True):
     hour: int
     count: int
-
-
-class RuntimeUpdate(msgspec.Struct, frozen=True, kw_only=True):
-    target_version: str
-    wait: bool = False
-
-    def __post_init__(self) -> None:
-        if self.target_version is None:
-            raise TypeError("target_version must be non-null")
 
 
 class RuntimeUpdateResult(msgspec.Struct, frozen=True, kw_only=True):
@@ -89,10 +78,6 @@ class UserProfile(msgspec.Struct, frozen=True, kw_only=True):
     name: str
     email: str | None = None
     profile_description: str = ""
-
-
-class UserProfileUpdate(msgspec.Struct, frozen=True, kw_only=True):
-    description: str | None | UnsetType = Unset
 
 
 class SquadMember(msgspec.Struct, frozen=True, kw_only=True):

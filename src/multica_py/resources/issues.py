@@ -14,6 +14,7 @@ from multica_py._generated.approved_sdk import (
 )
 from multica_py._internal.commands import Command, _replace_plan, _Step, _StepRef
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.permalinks import build_permalink
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _issue_children_result_from_wire,
@@ -24,40 +25,33 @@ from multica_py._internal.wire_models import (
     _IssueListPageWire,
     _IssuePullRequestsResultWire,
     _IssueSearchResultWire,
-    _IssueSummaryWire,
     _IssueWire,
     _LabelWire,
-    issue_summary_from_wire,
 )
-from multica_py.config import ClientConfig
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.enums import IssueSort, IssueStatus, SortDirection
 from multica_py.exceptions import JsonOutputError, OutputShapeError
-from multica_py.models._bound import _BoundEntity
+from multica_py.models._bound import _BoundEntity, _normalize_entity_id
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import (
     CommentCursor,
-    CommentListFlatRequest,
-    CommentListRecentRequest,
     IssueUsage,
     MetadataEntry,
     RunMessage,
     Subscriber,
 )
 from multica_py.models.issues import (
+    AssignmentTarget,
     FileDescription,
     InlineDescription,
     IssueAssignee,
-    IssueAssignmentRequest,
     IssueChildrenResult,
     IssueChildStageGroup,
-    IssueCreateRequest,
     IssueDescriptionInput,
     IssueListFilter,
     IssueListPage,
     IssueMetadataItem,
-    IssueReorderRequest,
-    IssueSummary,
-    IssueUpdateRequest,
+    IssueReference,
     LinkedPullRequest,
     NoDescription,
 )
@@ -71,7 +65,7 @@ from multica_py.models.relations import (
     _RelationLoad,
 )
 from multica_py.models.system import AttachmentResult
-from multica_py.resources._base import BaseResource, _page_items, _resolve_request
+from multica_py.resources._base import BaseResource, _page_items
 from multica_py.resources.issue_comments import (
     Comment,
     CommentThread,
@@ -91,8 +85,65 @@ if TYPE_CHECKING:
     from multica_py.client import MulticaClient
 
 
-def _field_value(obj: object, name: str) -> object:
-    return cast("object", getattr(obj, name))
+def _normalize_assignment_target(value: AssignmentTarget) -> str:
+    # Local imports keep the resource dependency graph acyclic: those modules
+    # themselves use Issue for their relation annotations.
+    from multica_py.resources.agents import Agent
+    from multica_py.resources.squads import Squad
+    from multica_py.resources.workspaces import WorkspaceMember
+
+    return _normalize_entity_id(
+        value,
+        field_name="assignee",
+        allowed_types=(Agent, Squad, WorkspaceMember),
+    )
+
+
+def _normalize_issue_reference(value: IssueReference, *, field_name: str = "other_issue") -> str:
+    return _normalize_entity_id(value, field_name=field_name, allowed_types=(Issue,))
+
+
+def _normalize_issue_filter(
+    filter: IssueListFilter | None,
+    *,
+    status: IssueStatus | None,
+    priority: str | None,
+    assignee_id: str | None,
+    limit: int | None,
+    offset: int | None,
+    project_id: str | None,
+    sort: IssueSort | None,
+    direction: SortDirection | None,
+    metadata: tuple[IssueMetadataItem, ...],
+) -> IssueListFilter:
+    direct_values = (
+        status,
+        priority,
+        assignee_id,
+        limit,
+        offset,
+        project_id,
+        sort,
+        direction,
+        metadata,
+    )
+    if filter is not None:
+        if any(value is not None and value != () for value in direct_values):
+            raise TypeError("Pass either an IssueListFilter or direct filter fields, not both.")
+        if not isinstance(filter, IssueListFilter):
+            raise TypeError(f"Expected IssueListFilter, got {type(filter).__name__}.")
+        return filter
+    return IssueListFilter(
+        status=status,
+        priority=priority,
+        assignee_id=assignee_id,
+        limit=limit,
+        offset=offset,
+        project_id=project_id,
+        sort=sort,
+        direction=direction,
+        metadata=metadata,
+    )
 
 
 def _issue_labels_command(client: MulticaClient, issue_id: str) -> Command[tuple[Label, ...]]:
@@ -105,12 +156,10 @@ def _issue_labels_command(client: MulticaClient, issue_id: str) -> Command[tuple
     return client.issues.labels.list_command(issue_id)._map(convert)
 
 
-def _issue_summary_offset_page(
-    issues: IssueResource, issue_filter: IssueListFilter
-) -> OffsetPage[IssueSummary]:
+def _issue_offset_page(issues: IssueResource, issue_filter: IssueListFilter) -> OffsetPage[Issue]:
     page = issues.list(issue_filter)
     return OffsetPage(
-        items=page.issues,
+        items=page.items,
         total=page.total or 0,
         limit=page.limit or 50,
         offset=page.offset or 0,
@@ -118,9 +167,9 @@ def _issue_summary_offset_page(
     )
 
 
-def _issue_summary_offset_page_command(
+def _issue_offset_page_command(
     issues: IssueResource, issue_filter: IssueListFilter
-) -> Command[OffsetPage[IssueSummary]]:
+) -> Command[OffsetPage[Issue]]:
     command = issues.list_command(issue_filter)
     plan = command._plan
     source_step = plan.steps[0]
@@ -130,9 +179,17 @@ def _issue_summary_offset_page_command(
     def decode_page(stdout: bytes, command_text: str) -> object:
         if source_step.decode is None:
             raise RuntimeError("issue list command has no decoder")
-        page = cast("IssueListPage", source_step.decode(stdout, command_text))
+        decoded = source_step.decode(stdout, command_text)
+        if isinstance(decoded, _IssueListPageWire):
+            page = _issue_list_page_from_wire(decoded)
+        elif isinstance(decoded, IssueListPage):
+            page = decoded
+        else:
+            raise TypeError("issue list command decoder returned an unexpected page")
+        if isinstance(issues, IssueResource):
+            page = issues._bind_issue_list_page(page)
         return OffsetPage(
-            items=page.issues,
+            items=page.items,
             total=page.total or 0,
             limit=page.limit or default_limit,
             offset=page.offset if page.offset is not None else default_offset,
@@ -143,22 +200,22 @@ def _issue_summary_offset_page_command(
         _replace_plan(
             plan,
             steps=(replace(source_step, decode=decode_page),),
-            finalize=lambda results: cast("OffsetPage[IssueSummary]", results[0]),
+            finalize=lambda results: cast("OffsetPage[Issue]", results[0]),
         )
     )
 
 
-def _decode_issue_search(stdout: bytes, command: str) -> Page[IssueSummary]:
+def _decode_issue_search(stdout: bytes, command: str) -> Page[Issue]:
     try:
         envelope = decode_json(stdout, _IssueSearchResultWire, command=command)
     except OutputShapeError as envelope_error:
         try:
-            rows = decode_json(stdout, list[_IssueSummaryWire], command=command)
+            rows = decode_json(stdout, list[_IssueWire], command=command)
         except (OutputShapeError, JsonOutputError):
             raise envelope_error
-        items = tuple(issue_summary_from_wire(row) for row in rows)
+        items = tuple(_issue_from_wire(row) for row in rows)
         return Page(items=items, total=len(items))
-    items = tuple(issue_summary_from_wire(row) for row in envelope.issues)
+    items = tuple(_issue_from_wire(row) for row in envelope.issues)
     return Page(items=items, total=envelope.total if envelope.total is not None else len(items))
 
 
@@ -197,13 +254,15 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             )
         return self._messages  # type: ignore[return-value]
 
-    def messages_command(self) -> Command[tuple[RunMessage, ...]]:
+    def messages_command(
+        self, *, options: OperationOptions | None = None
+    ) -> Command[tuple[RunMessage, ...]]:
         client = self._require_client(
             entity_type="TaskRun", entity_id=self.id, relation_name="messages"
         )
-        return client.issues.run_messages_command(self.id, issue_id=self._issue_id)._map(
-            _page_items
-        )
+        return client.issues.run_messages_command(
+            self.id, issue_id=self._issue_id, options=options
+        )._map(_page_items)
 
 
 class Issue(_BoundEntity):  # type: ignore[misc]
@@ -224,6 +283,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     project_id: str | None = None
     creator_id: str | None = None
     creator_type: str | None = None
+    match_source: str | None = None
 
     _comments: LazyCollection[Comment] | None = msgspec.field(default=None, name="_comments")
     _recent_threads: dict[
@@ -260,7 +320,18 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         "project_id",
         "creator_id",
         "creator_type",
+        "match_source",
     )
+
+    def permalink(self) -> str:
+        client = cast("MulticaClient | None", self._client)
+        return build_permalink(
+            entity_type="Issue",
+            entity_id=self.id,
+            collection="issues",
+            app_url=client.config.app_url if client is not None else None,
+            workspace_slug=client.config.workspace_slug if client is not None else None,
+        )
 
     @property
     def comments(self) -> LazyCollection[Comment]:
@@ -271,16 +342,16 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             issue_id = self.id
 
             def loader() -> tuple[Comment, ...]:
-                page = client.issues.comments.list_flat(CommentListFlatRequest(issue_id=issue_id))
+                page = client.issues.comments.list_flat(issue_id=issue_id)
                 return tuple(_bind_comment(item, client) for item in page.items)
 
             def command_loader() -> Command[tuple[Comment, ...]]:
-                request = CommentListFlatRequest(issue_id=issue_id)
-
                 def convert_page(page: Page[Comment]) -> tuple[Comment, ...]:
                     return tuple(page.items)
 
-                return client.issues.comments.list_flat_command(request)._map(convert_page)
+                return client.issues.comments.list_flat_command(issue_id=issue_id)._map(
+                    convert_page
+                )
 
             self._set_runtime("_comments", LazyCollection(loader, command_loader=command_loader))
         return self._comments  # type: ignore[return-value]
@@ -301,12 +372,9 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             issue_id = self.id
 
             def page_loader(*, cursor: CommentCursor | None) -> CursorPage[CommentThread]:
-                request = CommentListRecentRequest(
-                    issue_id=issue_id,
-                    limit=limit,
-                    cursor=cursor,
+                page = client.issues.comments.list_recent(
+                    issue_id=issue_id, limit=limit, cursor=cursor
                 )
-                page = client.issues.comments.list_recent(request)
                 return CursorPage(
                     items=tuple(_bind_thread(item, client, issue_id) for item in page.items),
                     next_cursor=cast("CommentCursor | None", page.next_cursor),
@@ -315,13 +383,10 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             def page_command_loader(
                 next_cursor: CommentCursor | None,
             ) -> Command[CursorPage[CommentThread]]:
-                request = CommentListRecentRequest(
-                    issue_id=issue_id,
-                    limit=limit,
-                    cursor=next_cursor,
-                )
                 return _adapt_cursor_page_command(
-                    client.issues.comments.list_recent_command(request),
+                    client.issues.comments.list_recent_command(
+                        issue_id=issue_id, limit=limit, cursor=next_cursor
+                    ),
                     lambda page: CursorPage(
                         items=tuple(
                             _bind_thread(item, client, issue_id)
@@ -489,7 +554,141 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             )
         return self._runs  # type: ignore[return-value]
 
-    def add_comment_command(self, body: str) -> Command[Comment]:
+    def refresh_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="refresh"
+        )
+        return client.issues.get_command(self.id, options=options)
+
+    def refresh(self, *, options: OperationOptions | None = None) -> Issue:
+        return self.refresh_command(options=options).run()
+
+    def update_command(
+        self,
+        *,
+        title: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+        priority: str | UnsetType = Unset,
+        assignee_id: str | None | UnsetType = Unset,
+        project_id: str | None | UnsetType = Unset,
+        parent_id: str | None | UnsetType = Unset,
+        options: OperationOptions | None = None,
+    ) -> Command[Issue]:
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="update"
+        )
+        return client.issues.update_command(
+            self.id,
+            title=title,
+            description=description,
+            priority=priority,
+            assignee_id=assignee_id,
+            project_id=project_id,
+            parent_id=parent_id,
+            options=options,
+        )
+
+    def update(
+        self,
+        *,
+        title: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+        priority: str | UnsetType = Unset,
+        assignee_id: str | None | UnsetType = Unset,
+        project_id: str | None | UnsetType = Unset,
+        parent_id: str | None | UnsetType = Unset,
+        options: OperationOptions | None = None,
+    ) -> Issue:
+        return self.update_command(
+            title=title,
+            description=description,
+            priority=priority,
+            assignee_id=assignee_id,
+            project_id=project_id,
+            parent_id=parent_id,
+            options=options,
+        ).run()
+
+    def assign_command(
+        self, assignee: AssignmentTarget, *, options: OperationOptions | None = None
+    ) -> Command[Issue]:
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="assign"
+        )
+        return client.issues.assign_command(self.id, assignee, options=options)
+
+    def assign(
+        self, assignee: AssignmentTarget, *, options: OperationOptions | None = None
+    ) -> Issue:
+        return self.assign_command(assignee, options=options).run()
+
+    def unassign_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="unassign"
+        )
+        return client.issues.unassign_command(self.id, options=options)
+
+    def unassign(self, *, options: OperationOptions | None = None) -> Issue:
+        return self.unassign_command(options=options).run()
+
+    def set_status_command(
+        self, status: IssueStatus, *, options: OperationOptions | None = None
+    ) -> Command[Issue]:
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="set_status"
+        )
+        return client.issues.set_status_command(self.id, status, options=options)
+
+    def set_status(self, status: IssueStatus, *, options: OperationOptions | None = None) -> Issue:
+        return self.set_status_command(status, options=options).run()
+
+    def move_to_top_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="move_to_top"
+        )
+        return client.issues.move_to_top_command(self.id, options=options)
+
+    def move_to_top(self, *, options: OperationOptions | None = None) -> Issue:
+        return self.move_to_top_command(options=options).run()
+
+    def move_to_bottom_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="move_to_bottom"
+        )
+        return client.issues.move_to_bottom_command(self.id, options=options)
+
+    def move_to_bottom(self, *, options: OperationOptions | None = None) -> Issue:
+        return self.move_to_bottom_command(options=options).run()
+
+    def move_before_command(
+        self, other_issue: IssueReference, *, options: OperationOptions | None = None
+    ) -> Command[Issue]:
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="move_before"
+        )
+        return client.issues.move_before_command(self.id, other_issue, options=options)
+
+    def move_before(
+        self, other_issue: IssueReference, *, options: OperationOptions | None = None
+    ) -> Issue:
+        return self.move_before_command(other_issue, options=options).run()
+
+    def move_after_command(
+        self, other_issue: IssueReference, *, options: OperationOptions | None = None
+    ) -> Command[Issue]:
+        client = self._require_client(
+            entity_type="Issue", entity_id=self.id, relation_name="move_after"
+        )
+        return client.issues.move_after_command(self.id, other_issue, options=options)
+
+    def move_after(
+        self, other_issue: IssueReference, *, options: OperationOptions | None = None
+    ) -> Issue:
+        return self.move_after_command(other_issue, options=options).run()
+
+    def add_comment_command(
+        self, body: str, *, options: OperationOptions | None = None
+    ) -> Command[Comment]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="comments"
         )
@@ -498,12 +697,14 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             self._invalidate_comments()
             return result
 
-        return client.issues.comments.add_command(self.id, body)._map(finalize)
+        return client.issues.comments.add_command(self.id, body, options=options)._map(finalize)
 
-    def add_comment(self, body: str) -> Comment:
-        return self.add_comment_command(body).run()
+    def add_comment(self, body: str, *, options: OperationOptions | None = None) -> Comment:
+        return self.add_comment_command(body, options=options).run()
 
-    def reply_command(self, thread_id: str, body: str) -> Command[Comment]:
+    def reply_command(
+        self, thread_id: str, body: str, *, options: OperationOptions | None = None
+    ) -> Command[Comment]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="comments"
         )
@@ -512,12 +713,18 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             self._invalidate_comments()
             return result
 
-        return client.issues.comments.reply_command(self.id, thread_id, body)._map(finalize)
+        return client.issues.comments.reply_command(self.id, thread_id, body, options=options)._map(
+            finalize
+        )
 
-    def reply(self, thread_id: str, body: str) -> Comment:
-        return self.reply_command(thread_id, body).run()
+    def reply(
+        self, thread_id: str, body: str, *, options: OperationOptions | None = None
+    ) -> Comment:
+        return self.reply_command(thread_id, body, options=options).run()
 
-    def add_label_command(self, label_id: str) -> Command[Page[Label]]:
+    def add_label_command(
+        self, label_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[Label]]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="labels"
         )
@@ -537,12 +744,14 @@ class Issue(_BoundEntity):  # type: ignore[misc]
                 next_cursor=result.next_cursor if isinstance(result, Page) else None,
             )
 
-        return client.issues.labels.add_command(self.id, label_id)._map(finalize)
+        return client.issues.labels.add_command(self.id, label_id, options=options)._map(finalize)
 
-    def add_label(self, label_id: str) -> Page[Label]:
-        return self.add_label_command(label_id).run()
+    def add_label(self, label_id: str, *, options: OperationOptions | None = None) -> Page[Label]:
+        return self.add_label_command(label_id, options=options).run()
 
-    def remove_label_command(self, label_id: str) -> Command[Page[Label]]:
+    def remove_label_command(
+        self, label_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[Label]]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="labels"
         )
@@ -562,12 +771,18 @@ class Issue(_BoundEntity):  # type: ignore[misc]
                 next_cursor=result.next_cursor if isinstance(result, Page) else None,
             )
 
-        return client.issues.labels.remove_command(self.id, label_id)._map(finalize)
+        return client.issues.labels.remove_command(self.id, label_id, options=options)._map(
+            finalize
+        )
 
-    def remove_label(self, label_id: str) -> Page[Label]:
-        return self.remove_label_command(label_id).run()
+    def remove_label(
+        self, label_id: str, *, options: OperationOptions | None = None
+    ) -> Page[Label]:
+        return self.remove_label_command(label_id, options=options).run()
 
-    def add_subscriber_command(self, user_id: str) -> Command[ActionResult[None]]:
+    def add_subscriber_command(
+        self, user_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="subscribers"
         )
@@ -577,12 +792,18 @@ class Issue(_BoundEntity):  # type: ignore[misc]
                 self._invalidate_subscribers()
             return result
 
-        return client.issues.subscribers.add_command(self.id, user_id)._map(invalidate)
+        return client.issues.subscribers.add_command(self.id, user_id, options=options)._map(
+            invalidate
+        )
 
-    def add_subscriber(self, user_id: str) -> ActionResult[None]:
-        return self.add_subscriber_command(user_id).run()
+    def add_subscriber(
+        self, user_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.add_subscriber_command(user_id, options=options).run()
 
-    def remove_subscriber_command(self, user_id: str) -> Command[ActionResult[None]]:
+    def remove_subscriber_command(
+        self, user_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="subscribers"
         )
@@ -592,12 +813,18 @@ class Issue(_BoundEntity):  # type: ignore[misc]
                 self._invalidate_subscribers()
             return result
 
-        return client.issues.subscribers.remove_command(self.id, user_id)._map(invalidate)
+        return client.issues.subscribers.remove_command(self.id, user_id, options=options)._map(
+            invalidate
+        )
 
-    def remove_subscriber(self, user_id: str) -> ActionResult[None]:
-        return self.remove_subscriber_command(user_id).run()
+    def remove_subscriber(
+        self, user_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.remove_subscriber_command(user_id, options=options).run()
 
-    def set_metadata_command(self, key: str, value: MetadataValue) -> Command[MetadataEntry]:
+    def set_metadata_command(
+        self, key: str, value: MetadataValue, *, options: OperationOptions | None = None
+    ) -> Command[MetadataEntry]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="metadata"
         )
@@ -606,12 +833,18 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             self._invalidate_metadata()
             return result
 
-        return client.issues.metadata.set_command(self.id, key, value)._map(finalize)
+        return client.issues.metadata.set_command(self.id, key, value, options=options)._map(
+            finalize
+        )
 
-    def set_metadata(self, key: str, value: MetadataValue) -> MetadataEntry:
-        return self.set_metadata_command(key, value).run()
+    def set_metadata(
+        self, key: str, value: MetadataValue, *, options: OperationOptions | None = None
+    ) -> MetadataEntry:
+        return self.set_metadata_command(key, value, options=options).run()
 
-    def delete_metadata_command(self, key: str) -> Command[ActionResult[None]]:
+    def delete_metadata_command(
+        self, key: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="metadata"
         )
@@ -621,10 +854,12 @@ class Issue(_BoundEntity):  # type: ignore[misc]
                 self._invalidate_metadata()
             return result
 
-        return client.issues.metadata.delete_command(self.id, key)._map(invalidate)
+        return client.issues.metadata.delete_command(self.id, key, options=options)._map(invalidate)
 
-    def delete_metadata(self, key: str) -> ActionResult[None]:
-        return self.delete_metadata_command(key).run()
+    def delete_metadata(
+        self, key: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.delete_metadata_command(key, options=options).run()
 
     def _invalidate_comments(self) -> None:
         if self._comments is not None:
@@ -661,7 +896,9 @@ class IssueResource(BaseResource):
         self.labels._set_client(client)
 
     @overload
-    def list_command(self, filter: IssueListFilter, /) -> Command[IssueListPage]: ...
+    def list_command(
+        self, filter: IssueListFilter, /, *, options: OperationOptions | None = None
+    ) -> Command[IssueListPage]: ...
 
     @overload
     def list_command(
@@ -676,27 +913,47 @@ class IssueResource(BaseResource):
         sort: IssueSort | None = None,
         direction: SortDirection | None = None,
         metadata: tuple[IssueMetadataItem, ...] = (),
+        options: OperationOptions | None = None,
     ) -> Command[IssueListPage]: ...
 
     def list_command(  # type: ignore[misc]
-        self, filter: IssueListFilter | None = None, /, **kwargs: object
+        self,
+        filter: IssueListFilter | None = None,
+        /,
+        *,
+        status: IssueStatus | None = None,
+        priority: str | None = None,
+        assignee_id: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        project_id: str | None = None,
+        sort: IssueSort | None = None,
+        direction: SortDirection | None = None,
+        metadata: tuple[IssueMetadataItem, ...] = (),
+        options: OperationOptions | None = None,
     ) -> Command[IssueListPage]:
-        filter = _resolve_request(
+        filter = _normalize_issue_filter(
             filter,
-            kwargs,
-            IssueListFilter,
-            allow_empty=True,
+            status=status,
+            priority=priority,
+            assignee_id=assignee_id,
+            limit=limit,
+            offset=offset,
+            project_id=project_id,
+            sort=sort,
+            direction=direction,
+            metadata=metadata,
         )
         args = ["issue", "list"]
-        status = cast("IssueStatus | None", _field_value(filter, "status"))
-        priority = cast("str | None", _field_value(filter, "priority"))
-        assignee_id = cast("str | None", _field_value(filter, "assignee_id"))
-        limit = cast("int | None", _field_value(filter, "limit"))
-        offset = cast("int | None", _field_value(filter, "offset"))
-        project_id = cast("str | None", _field_value(filter, "project_id"))
-        metadata = cast("tuple[IssueMetadataItem, ...]", _field_value(filter, "metadata"))
-        sort = cast("str | None", _field_value(filter, "sort"))
-        direction = cast("str | None", _field_value(filter, "direction"))
+        status = filter.status
+        priority = filter.priority
+        assignee_id = filter.assignee_id
+        limit = filter.limit
+        offset = filter.offset
+        project_id = filter.project_id
+        metadata = filter.metadata
+        sort = filter.sort
+        direction = filter.direction
         if offset is not None and offset < 0:
             raise ValueError("IssueResource.list: offset must be nonnegative (offset_nonnegative)")
         if direction is not None and sort is None:
@@ -733,12 +990,16 @@ class IssueResource(BaseResource):
             args.extend(["--sort", sort])
         if direction is not None:
             args.extend(["--direction", direction])
-        return self._decoded_command(tuple(args), _IssueListPageWire)._map(
-            _issue_list_page_from_wire
+        return (
+            self._decoded_command(tuple(args), _IssueListPageWire, options=options)
+            ._map(_issue_list_page_from_wire)
+            ._map(self._bind_issue_list_page)
         )
 
     @overload
-    def list(self, filter: IssueListFilter, /) -> IssueListPage: ...
+    def list(
+        self, filter: IssueListFilter, /, *, options: OperationOptions | None = None
+    ) -> IssueListPage: ...
 
     @overload
     def list(
@@ -753,43 +1014,78 @@ class IssueResource(BaseResource):
         sort: IssueSort | None = None,
         direction: SortDirection | None = None,
         metadata: tuple[IssueMetadataItem, ...] = (),
+        options: OperationOptions | None = None,
     ) -> IssueListPage: ...
 
     def list(  # type: ignore[misc]
-        self, filter: IssueListFilter | None = None, /, **kwargs: object
+        self,
+        filter: IssueListFilter | None = None,
+        /,
+        *,
+        status: IssueStatus | None = None,
+        priority: str | None = None,
+        assignee_id: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        project_id: str | None = None,
+        sort: IssueSort | None = None,
+        direction: SortDirection | None = None,
+        metadata: tuple[IssueMetadataItem, ...] = (),
+        options: OperationOptions | None = None,
     ) -> IssueListPage:
-        return self.list_command(cast("IssueListFilter", filter), **kwargs).run()
+        normalized = _normalize_issue_filter(
+            filter,
+            status=status,
+            priority=priority,
+            assignee_id=assignee_id,
+            limit=limit,
+            offset=offset,
+            project_id=project_id,
+            sort=sort,
+            direction=direction,
+            metadata=metadata,
+        )
+        return self.list_command(normalized, options=options).run()
 
-    def get_command(self, issue_id: str) -> Command[Issue]:
+    def get_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Issue]:
         validate_nonblank(issue_id)
-        return self._decoded_command(("issue", "get", issue_id), _IssueWire)._map(self._bind_issue)
+        return self._decoded_command(("issue", "get", issue_id), _IssueWire, options=options)._map(
+            self._bind_issue
+        )
 
-    def get(self, issue_id: str) -> Issue:
-        return self.get_command(issue_id).run()
+    def get(self, issue_id: str, *, options: OperationOptions | None = None) -> Issue:
+        return self.get_command(issue_id, options=options).run()
 
-    def pull_requests_command(self, issue_id: str) -> Command[Page[LinkedPullRequest]]:
+    def pull_requests_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[LinkedPullRequest]]:
         return self._decoded_command(
-            ("issue", "pull-requests", issue_id), _IssuePullRequestsResultWire
+            ("issue", "pull-requests", issue_id), _IssuePullRequestsResultWire, options=options
         )._map(
             lambda result: Page(
                 items=_issue_pull_requests_from_wire(result), total=len(result.pull_requests)
             )
         )
 
-    def pull_requests(self, issue_id: str) -> Page[LinkedPullRequest]:
-        return self.pull_requests_command(issue_id).run()
+    def pull_requests(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Page[LinkedPullRequest]:
+        return self.pull_requests_command(issue_id, options=options).run()
 
-    def children_command(self, issue_id: str) -> Command[IssueChildrenResult]:
+    def children_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[IssueChildrenResult]:
         return self._decoded_command(
-            ("issue", "children", issue_id), _IssueChildrenResultWire
+            ("issue", "children", issue_id), _IssueChildrenResultWire, options=options
         )._map(_issue_children_result_from_wire)
 
-    def children(self, issue_id: str) -> IssueChildrenResult:
-        return self.children_command(issue_id).run()
+    def children(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> IssueChildrenResult:
+        return self.children_command(issue_id, options=options).run()
 
-    @overload
-    def create_command(self, request: IssueCreateRequest, /) -> Command[Issue]: ...
-    @overload
     def create_command(
         self,
         *,
@@ -800,10 +1096,7 @@ class IssueResource(BaseResource):
         label_ids: tuple[str, ...] = (),
         project_id: str | None = None,
         parent_id: str | None = None,
-    ) -> Command[Issue]: ...
-
-    def create_command(  # type: ignore[misc]
-        self, request: IssueCreateRequest | None = None, /, **kwargs: object
+        options: OperationOptions | None = None,
     ) -> Command[Issue]:
         """Create an issue and optionally attach labels.
 
@@ -811,27 +1104,36 @@ class IssueResource(BaseResource):
         separate ``issue label add`` calls. A failure mid-loop can leave a
         partially labeled issue.
         """
-        req = _resolve_request(request, kwargs, IssueCreateRequest)
-        validate_nonblank(req.title)
-        args = ["issue", "create", "--title", req.title]
-        desc = req.description_input
+        validate_nonblank(title)
+        if (
+            not isinstance(description_input, InlineDescription)
+            and not isinstance(description_input, FileDescription)
+            and description_input.__class__.__name__ not in {"StdinDescription", "NoDescription"}
+        ):
+            raise TypeError("description_input must be a supported issue description")
+        if project_id is not None and not project_id.strip():
+            raise ValueError("project_id must be non-empty when set")
+        if parent_id is not None and not parent_id.strip():
+            raise ValueError("parent_id must be non-empty when set")
+        args = ["issue", "create", "--title", title]
+        desc = description_input
         if isinstance(desc, InlineDescription):
             args.extend(["--description", desc.text])
         elif isinstance(desc, FileDescription):
             args.extend(["--description-file", str(pathlib.Path(desc.path).resolve())])
         elif desc.__class__.__name__ == "StdinDescription":
             args.append("--description-stdin")
-        if req.priority is not None:
-            args.extend(["--priority", req.priority])
-        if req.assignee_id is not None:
-            args.extend(["--assignee-id", req.assignee_id])
-        if req.project_id is not None:
-            args.extend(["--project", req.project_id])
-        if req.parent_id is not None:
-            args.extend(["--parent", req.parent_id])
+        if priority is not None:
+            args.extend(["--priority", priority])
+        if assignee_id is not None:
+            args.extend(["--assignee-id", assignee_id])
+        if project_id is not None:
+            args.extend(["--project", project_id])
+        if parent_id is not None:
+            args.extend(["--parent", parent_id])
         create_args, create_decode = self._plan_decode(tuple(args), _IssueWire)
         steps = [_Step(create_args, "run_bytes", decode=create_decode, result_alias="create")]
-        for label_id in req.label_ids:
+        for label_id in label_ids:
             label_args, label_decode = self._plan_decode_list(
                 ("issue", "label", "add", "", label_id), _LabelWire
             )
@@ -843,7 +1145,7 @@ class IssueResource(BaseResource):
                     decode=label_decode,
                 )
             )
-        if req.label_ids:
+        if label_ids:
             get_args, get_decode = self._plan_decode(("issue", "get", ""), _IssueWire)
             steps.append(
                 _Step(
@@ -855,14 +1157,11 @@ class IssueResource(BaseResource):
             )
 
         def finalize(results: tuple[object, ...]) -> Issue:
-            wire = cast("_IssueWire", results[-1] if req.label_ids else results[0])
+            wire = cast("_IssueWire", results[-1] if label_ids else results[0])
             return self._bind_issue(wire)
 
-        return self._plan(steps=tuple(steps), finalize=finalize)
+        return self._plan(steps=tuple(steps), finalize=finalize, options=options)
 
-    @overload
-    def create(self, request: IssueCreateRequest, /) -> Issue: ...
-    @overload
     def create(
         self,
         *,
@@ -873,14 +1172,19 @@ class IssueResource(BaseResource):
         label_ids: tuple[str, ...] = (),
         project_id: str | None = None,
         parent_id: str | None = None,
-    ) -> Issue: ...
+        options: OperationOptions | None = None,
+    ) -> Issue:
+        return self.create_command(
+            title=title,
+            description_input=description_input,
+            priority=priority,
+            assignee_id=assignee_id,
+            label_ids=label_ids,
+            project_id=project_id,
+            parent_id=parent_id,
+            options=options,
+        ).run()
 
-    def create(self, request: IssueCreateRequest | None = None, /, **kwargs: object) -> Issue:  # type: ignore[misc]
-        return self.create_command(cast("IssueCreateRequest", request), **kwargs).run()
-
-    @overload
-    def update_command(self, issue_id: str, request: IssueUpdateRequest, /) -> Command[Issue]: ...
-    @overload
     def update_command(
         self,
         issue_id: str,
@@ -891,35 +1195,38 @@ class IssueResource(BaseResource):
         assignee_id: str | None | UnsetType = Unset,
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
-    ) -> Command[Issue]: ...
-
-    def update_command(  # type: ignore[misc]
-        self, issue_id: str, request: IssueUpdateRequest | None = None, /, **kwargs: object
+        options: OperationOptions | None = None,
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
-        req = _resolve_request(request, kwargs, IssueUpdateRequest, allow_empty=True)
+        if title is None:
+            raise TypeError("title must be non-null")
+        if priority is None:
+            raise TypeError("priority must be non-null")
+        for field_name, value in (("project_id", project_id), ("parent_id", parent_id)):
+            if value is not Unset and value is not None and not value.strip():
+                raise ValueError(f"{field_name} must be non-empty when set")
         if (
-            req.title is Unset
-            and req.description is Unset
-            and req.priority is Unset
-            and req.assignee_id is Unset
-            and req.project_id is Unset
-            and req.parent_id is Unset
+            title is Unset
+            and description is Unset
+            and priority is Unset
+            and assignee_id is Unset
+            and project_id is Unset
+            and parent_id is Unset
         ):
-            return self.get_command(issue_id)
+            return self.get_command(issue_id, options=options)
         args = ["issue", "update", issue_id]
-        if req.title is not Unset:
-            args.extend(["--title", req.title])
-        if req.description is not Unset:
-            args.extend(["--description", "" if req.description is None else req.description])
-        if req.priority is not Unset:
-            args.extend(["--priority", req.priority])
-        if req.assignee_id is not Unset and req.assignee_id is not None:
-            args.extend(["--assignee-id", req.assignee_id])
-        if req.project_id is not Unset:
-            args.extend(["--project", "" if req.project_id is None else req.project_id])
-        if req.parent_id is not Unset:
-            args.extend(["--parent", "" if req.parent_id is None else req.parent_id])
+        if title is not Unset:
+            args.extend(["--title", title])
+        if description is not Unset:
+            args.extend(["--description", "" if description is None else description])
+        if priority is not Unset:
+            args.extend(["--priority", priority])
+        if assignee_id is not Unset and assignee_id is not None:
+            args.extend(["--assignee-id", assignee_id])
+        if project_id is not Unset:
+            args.extend(["--project", "" if project_id is None else project_id])
+        if parent_id is not Unset:
+            args.extend(["--parent", "" if parent_id is None else parent_id])
 
         steps: list[_Step] = []
         if len(args) > 3:
@@ -928,7 +1235,7 @@ class IssueResource(BaseResource):
                 _Step(update_args, "run_bytes", decode=update_decode, result_alias="update")
             )
 
-        if req.assignee_id is None:
+        if assignee_id is None:
             assign_args, assign_decode = self._plan_decode(
                 ("issue", "assign", issue_id, "--unassign"), _IssueWire
             )
@@ -943,11 +1250,8 @@ class IssueResource(BaseResource):
         def finalize(results: tuple[object, ...]) -> Issue:
             return self._bind_issue(cast("_IssueWire", results[-1]))
 
-        return self._plan(steps=tuple(steps), finalize=finalize)
+        return self._plan(steps=tuple(steps), finalize=finalize, options=options)
 
-    @overload
-    def update(self, issue_id: str, request: IssueUpdateRequest, /) -> Issue: ...
-    @overload
     def update(
         self,
         issue_id: str,
@@ -958,131 +1262,204 @@ class IssueResource(BaseResource):
         assignee_id: str | None | UnsetType = Unset,
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
-    ) -> Issue: ...
-
-    def update(  # type: ignore[misc]
-        self, issue_id: str, request: IssueUpdateRequest | None = None, /, **kwargs: object
+        options: OperationOptions | None = None,
     ) -> Issue:
-        return self.update_command(issue_id, cast("IssueUpdateRequest", request), **kwargs).run()
+        return self.update_command(
+            issue_id,
+            title=title,
+            description=description,
+            priority=priority,
+            assignee_id=assignee_id,
+            project_id=project_id,
+            parent_id=parent_id,
+            options=options,
+        ).run()
 
-    @overload
-    def assign_command(self, request: IssueAssignmentRequest, /) -> Command[Issue]: ...
-    @overload
     def assign_command(
         self,
-        *,
         issue_id: str,
-        member_id: str | None = None,
-        agent_id: str | None = None,
-        squad_id: str | None = None,
-        unassign: bool = False,
-    ) -> Command[Issue]: ...
-
-    def assign_command(  # type: ignore[misc]
-        self, request: IssueAssignmentRequest | None = None, /, **kwargs: object
+        assignee: AssignmentTarget,
+        *,
+        options: OperationOptions | None = None,
     ) -> Command[Issue]:
-        req = _resolve_request(request, kwargs, IssueAssignmentRequest)
-        args = ["issue", "assign", req.issue_id]
-        if req.member_id is not None:
-            args.extend(["--to-id", req.member_id])
-        elif req.agent_id is not None:
-            args.extend(["--to-id", req.agent_id])
-        elif req.squad_id is not None:
-            args.extend(["--to-id", req.squad_id])
-        elif req.unassign:
-            args.append("--unassign")
-        return self._decoded_command(tuple(args), _IssueWire)._map(self._bind_issue)
-
-    @overload
-    def assign(self, request: IssueAssignmentRequest, /) -> Issue: ...
-    @overload
-    def assign(
-        self,
-        *,
-        issue_id: str,
-        member_id: str | None = None,
-        agent_id: str | None = None,
-        squad_id: str | None = None,
-        unassign: bool = False,
-    ) -> Issue: ...
-
-    def assign(  # type: ignore[misc]
-        self, request: IssueAssignmentRequest | None = None, /, **kwargs: object
-    ) -> Issue:
-        return self.assign_command(cast("IssueAssignmentRequest", request), **kwargs).run()
-
-    def set_status_command(self, issue_id: str, status: IssueStatus) -> Command[Issue]:
-        return self._decoded_command(("issue", "status", issue_id, status.value), _IssueWire)._map(
+        validate_nonblank(issue_id)
+        target = _normalize_assignment_target(assignee)
+        args = ["issue", "assign", issue_id]
+        args.extend(["--to-id", target])
+        return self._decoded_command(tuple(args), _IssueWire, options=options)._map(
             self._bind_issue
         )
 
-    def set_status(self, issue_id: str, status: IssueStatus) -> Issue:
-        return self.set_status_command(issue_id, status).run()
+    def assign(
+        self,
+        issue_id: str,
+        assignee: AssignmentTarget,
+        *,
+        options: OperationOptions | None = None,
+    ) -> Issue:
+        return self.assign_command(issue_id, assignee, options=options).run()
 
-    def deprioritize_command(self, issue_id: str) -> Command[ActionResult[str]]:
-        return self._action_text_command(("issue", "deprioritize", issue_id))
+    def unassign_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Issue]:
+        validate_nonblank(issue_id)
+        return self._decoded_command(
+            ("issue", "assign", issue_id, "--unassign"), _IssueWire, options=options
+        )._map(self._bind_issue)
 
-    def deprioritize(self, issue_id: str) -> ActionResult[str]:
-        return self.deprioritize_command(issue_id).run()
+    def unassign(self, issue_id: str, *, options: OperationOptions | None = None) -> Issue:
+        return self.unassign_command(issue_id, options=options).run()
 
-    @overload
-    def reorder_command(self, request: IssueReorderRequest, /) -> Command[Issue]: ...
-    @overload
+    def set_status_command(
+        self, issue_id: str, status: IssueStatus, *, options: OperationOptions | None = None
+    ) -> Command[Issue]:
+        validate_nonblank(issue_id)
+        return self._decoded_command(
+            ("issue", "status", issue_id, status.value), _IssueWire, options=options
+        )._map(self._bind_issue)
+
+    def set_status(
+        self, issue_id: str, status: IssueStatus, *, options: OperationOptions | None = None
+    ) -> Issue:
+        return self.set_status_command(issue_id, status, options=options).run()
+
+    def deprioritize_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[str]]:
+        return self._action_text_command(("issue", "deprioritize", issue_id), options=options)
+
+    def deprioritize(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[str]:
+        return self.deprioritize_command(issue_id, options=options).run()
+
     def reorder_command(
         self,
-        *,
         issue_id: str,
+        *,
         before_id: str | None = None,
         after_id: str | None = None,
         top: bool = False,
         bottom: bool = False,
-    ) -> Command[Issue]: ...
-
-    def reorder_command(  # type: ignore[misc]
-        self, request: IssueReorderRequest | None = None, /, **kwargs: object
+        options: OperationOptions | None = None,
     ) -> Command[Issue]:
-        req = _resolve_request(request, kwargs, IssueReorderRequest)
-        args = ["issue", "reorder", req.issue_id]
-        if req.before_id is not None:
-            args.extend(["--before", req.before_id])
-        elif req.after_id is not None:
-            args.extend(["--after", req.after_id])
-        elif req.top:
+        validate_nonblank(issue_id)
+        selected = sum(value is not None for value in (before_id, after_id)) + top + bottom
+        if selected != 1:
+            raise ValueError("Exactly one reorder target must be set")
+        if before_id is not None:
+            validate_nonblank(before_id)
+        if after_id is not None:
+            validate_nonblank(after_id)
+        args = ["issue", "reorder", issue_id]
+        if before_id is not None:
+            args.extend(["--before", before_id])
+        elif after_id is not None:
+            args.extend(["--after", after_id])
+        elif top:
             args.append("--top")
-        elif req.bottom:
+        elif bottom:
             args.append("--bottom")
-        return self._decoded_command(tuple(args), _IssueWire)._map(self._bind_issue)
+        return self._decoded_command(tuple(args), _IssueWire, options=options)._map(
+            self._bind_issue
+        )
 
-    @overload
-    def reorder(self, request: IssueReorderRequest, /) -> Issue: ...
-    @overload
     def reorder(
         self,
-        *,
         issue_id: str,
+        *,
         before_id: str | None = None,
         after_id: str | None = None,
         top: bool = False,
         bottom: bool = False,
-    ) -> Issue: ...
-
-    def reorder(  # type: ignore[misc]
-        self, request: IssueReorderRequest | None = None, /, **kwargs: object
+        options: OperationOptions | None = None,
     ) -> Issue:
-        return self.reorder_command(cast("IssueReorderRequest", request), **kwargs).run()
+        return self.reorder_command(
+            issue_id=issue_id,
+            before_id=before_id,
+            after_id=after_id,
+            top=top,
+            bottom=bottom,
+            options=options,
+        ).run()
 
-    def search_command(self, query: str) -> Command[Page[IssueSummary]]:
+    def move_to_top_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Issue]:
+        return self.reorder_command(issue_id, top=True, options=options)
+
+    def move_to_top(self, issue_id: str, *, options: OperationOptions | None = None) -> Issue:
+        return self.move_to_top_command(issue_id, options=options).run()
+
+    def move_to_bottom_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Issue]:
+        return self.reorder_command(issue_id, bottom=True, options=options)
+
+    def move_to_bottom(self, issue_id: str, *, options: OperationOptions | None = None) -> Issue:
+        return self.move_to_bottom_command(issue_id, options=options).run()
+
+    def move_before_command(
+        self,
+        issue_id: str,
+        other_issue: IssueReference,
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[Issue]:
+        return self.reorder_command(
+            issue_id,
+            before_id=_normalize_issue_reference(other_issue),
+            options=options,
+        )
+
+    def move_before(
+        self,
+        issue_id: str,
+        other_issue: IssueReference,
+        *,
+        options: OperationOptions | None = None,
+    ) -> Issue:
+        return self.move_before_command(issue_id, other_issue, options=options).run()
+
+    def move_after_command(
+        self,
+        issue_id: str,
+        other_issue: IssueReference,
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[Issue]:
+        return self.reorder_command(
+            issue_id,
+            after_id=_normalize_issue_reference(other_issue),
+            options=options,
+        )
+
+    def move_after(
+        self,
+        issue_id: str,
+        other_issue: IssueReference,
+        *,
+        options: OperationOptions | None = None,
+    ) -> Issue:
+        return self.move_after_command(issue_id, other_issue, options=options).run()
+
+    def search_command(
+        self, query: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[Issue]]:
         validate_nonblank(query)
         args = ("issue", "search", query, "--output", "json")
         return self._plan(
             steps=(_Step(args, "run_bytes", decode=_decode_issue_search),),
-            finalize=lambda results: cast("Page[IssueSummary]", results[0]),
-        )
+            finalize=lambda results: cast("Page[Issue]", results[0]),
+            options=options,
+        )._map(self._bind_issue_search_page)
 
-    def search(self, query: str) -> Page[IssueSummary]:
-        return self.search_command(query).run()
+    def search(self, query: str, *, options: OperationOptions | None = None) -> Page[Issue]:
+        return self.search_command(query, options=options).run()
 
-    def runs_command(self, issue_id: str) -> Command[Page[TaskRun]]:
+    def runs_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[TaskRun]]:
         def finalize(page: Page[TaskRun]) -> Page[TaskRun]:
             return Page(
                 items=tuple(
@@ -1104,39 +1481,61 @@ class IssueResource(BaseResource):
                 next_cursor=page.next_cursor,
             )
 
-        return self._decoded_page_command(("issue", "runs", issue_id), TaskRun)._map(finalize)
+        return self._decoded_page_command(
+            ("issue", "runs", issue_id), TaskRun, options=options
+        )._map(finalize)
 
-    def runs(self, issue_id: str) -> Page[TaskRun]:
-        return self.runs_command(issue_id).run()
+    def runs(self, issue_id: str, *, options: OperationOptions | None = None) -> Page[TaskRun]:
+        return self.runs_command(issue_id, options=options).run()
 
     def run_messages_command(
-        self, task_run_id: str, *, issue_id: str | None = None
+        self,
+        task_run_id: str,
+        *,
+        issue_id: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[Page[RunMessage]]:
         validate_nonblank(task_run_id)
         args = ["issue", "run-messages", task_run_id]
         if issue_id is not None:
             validate_nonblank(issue_id)
             args.extend(["--issue", issue_id])
-        return self._decoded_page_command(tuple(args), RunMessage)
+        return self._decoded_page_command(tuple(args), RunMessage, options=options)
 
-    def run_messages(self, task_run_id: str, *, issue_id: str | None = None) -> Page[RunMessage]:
-        return self.run_messages_command(task_run_id, issue_id=issue_id).run()
+    def run_messages(
+        self,
+        task_run_id: str,
+        *,
+        issue_id: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Page[RunMessage]:
+        return self.run_messages_command(task_run_id, issue_id=issue_id, options=options).run()
 
-    def usage_command(self, issue_id: str) -> Command[IssueUsage]:
-        return self._decoded_command(("issue", "usage", issue_id), IssueUsage)
+    def usage_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[IssueUsage]:
+        return self._decoded_command(("issue", "usage", issue_id), IssueUsage, options=options)
 
-    def usage(self, issue_id: str) -> IssueUsage:
-        return self.usage_command(issue_id).run()
+    def usage(self, issue_id: str, *, options: OperationOptions | None = None) -> IssueUsage:
+        return self.usage_command(issue_id, options=options).run()
 
-    def rerun_command(self, issue_id: str) -> Command[ActionResult[None]]:
+    def rerun_command(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
         validate_nonblank(issue_id)
-        return self._action_command(("issue", "rerun", issue_id))
+        return self._action_command(("issue", "rerun", issue_id), options=options)
 
-    def rerun(self, issue_id: str) -> ActionResult[None]:
-        return self.rerun_command(issue_id).run()
+    def rerun(
+        self, issue_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.rerun_command(issue_id, options=options).run()
 
     def cancel_task_command(
-        self, task_id: str, *, issue_id: str | None = None
+        self,
+        task_id: str,
+        *,
+        issue_id: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[ActionResult[None]]:
         validate_nonblank(task_id)
         args = ["issue", "cancel-task", task_id]
@@ -1144,10 +1543,34 @@ class IssueResource(BaseResource):
             validate_nonblank(issue_id)
             args.extend(["--issue", issue_id])
 
-        return self._action_command(tuple(args))
+        return self._action_command(tuple(args), options=options)
 
-    def cancel_task(self, task_id: str, *, issue_id: str | None = None) -> ActionResult[None]:
-        return self.cancel_task_command(task_id, issue_id=issue_id).run()
+    def cancel_task(
+        self, task_id: str, *, issue_id: str | None = None, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.cancel_task_command(task_id, issue_id=issue_id, options=options).run()
 
     def _bind_issue(self, wire: _IssueWire) -> Issue:
         return _issue_from_wire(wire)._with_client(self._client)
+
+    def _bind_issue_list_page(self, page: IssueListPage) -> IssueListPage:
+        items = tuple(item._with_client(self._client) for item in page.items)
+        return IssueListPage(
+            items=items,
+            limit=page.limit,
+            offset=page.offset,
+            total=page.total,
+            has_more=page.has_more,
+            next_cursor=page.next_cursor,
+        )
+
+    def _bind_issue_search_page(self, page: Page[Issue]) -> Page[Issue]:
+        items = tuple(item._with_client(self._client) for item in page.items)
+        return Page(
+            items=items,
+            limit=page.limit,
+            offset=page.offset,
+            total=page.total,
+            has_more=page.has_more,
+            next_cursor=page.next_cursor,
+        )

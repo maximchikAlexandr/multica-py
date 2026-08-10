@@ -43,32 +43,16 @@ _TAG_KINDS = frozenset(
         "stdin_description",
         "comment_cursor",
         "list",
-        "request",
     }
 )
 _ENUM_TYPES = frozenset(
     {"IssueStatus", "ProjectStatus", "IssueSort", "SortDirection", "AutopilotExecutionMode"}
 )
-_REQUEST_TYPES = frozenset(
-    {
-        "CommentListFlatRequest",
-        "CommentListThreadRequest",
-        "CommentListRecentRequest",
-        "IssueCreateRequest",
-        "IssueListFilter",
-        "ProjectCreateRequest",
-        "ProjectUpdateRequest",
-        "ProjectResourceAddLocalDirectoryRequest",
-        "ProjectResourceUpdateLocalDirectoryRequest",
-    }
-)
 _DECODED_TYPES = frozenset(
     {
-        "builtins.tuple",
         "multica_py.models.common.Page",
-        "multica_py.models.issue_activity.Comment",
-        "multica_py.models.issues.Issue",
-        "multica_py.models.projects.Project",
+        "builtins.dict",
+        "multica_py.models.issues.IssueChildrenResult",
         "multica_py.models.project_resources.ProjectResourceRecord",
         "multica_py.models.autopilots.Autopilot",
         "multica_py.models.autopilots.AutopilotListPage",
@@ -99,6 +83,11 @@ _DECODED_TYPES = frozenset(
         "multica_py.models.users.UserProfile",
         "multica_py.models.workspaces.Workspace",
         "multica_py.models.workspaces.WorkspaceMember",
+        "multica_py.resources.autopilots.Autopilot",
+        "multica_py.resources.autopilots.AutopilotRun",
+        "multica_py.resources.issues.Issue",
+        "multica_py.resources.issue_comments.Comment",
+        "multica_py.resources.projects.Project",
     }
 )
 _OPERATION_CATEGORIES = frozenset(
@@ -116,30 +105,7 @@ _OPERATION_CATEGORIES = frozenset(
 _INPUT_MODES = frozenset({"direct", "dual_required", "dual_optional"})
 _TYPED_INPUT_IDS = frozenset(
     {
-        "AgentCreateRequest",
-        "AgentUpdateRequest",
-        "AutopilotTriggerCreate",
-        "AutopilotTriggerUpdate",
-        "AutopilotUpdateRequest",
-        "CommentListFlatRequest",
-        "CommentListRecentRequest",
-        "CommentListThreadRequest",
-        "IssueAssignmentRequest",
-        "IssueCreateRequest",
         "IssueListFilter",
-        "IssueReorderRequest",
-        "IssueUpdateRequest",
-        "LabelUpdateRequest",
-        "MetadataListRequest",
-        "MetadataSetRequest",
-        "ProjectCreateRequest",
-        "ProjectResourceAddLocalDirectoryRequest",
-        "ProjectResourceUpdateLocalDirectoryRequest",
-        "ProjectUpdateRequest",
-        "RuntimeUpdate",
-        "SkillCreateRequest",
-        "SkillUpdateRequest",
-        "UserProfileUpdate",
     }
 )
 _PRESENCE_POLICY_IDS = frozenset(
@@ -156,13 +122,13 @@ _PRESENCE_POLICY_IDS = frozenset(
 _UPDATE_PRESENCE_VALUES = frozenset({"omit", "reject", "emit", "not_applicable"})
 _UPDATE_CLEAR_KINDS = frozenset({"none", "flag", "dedicated_flag", "composite", "empty_collection"})
 _UPDATE_POLICY_FIELDS = {
-    "ProjectUpdateRequest": frozenset({"name", "description"}),
-    "AgentUpdateRequest": frozenset({"name", "description"}),
-    "SkillUpdateRequest": frozenset({"name", "description"}),
-    "IssueUpdateRequest": frozenset(
+    "projects.update": frozenset({"name", "description"}),
+    "agents.update": frozenset({"name", "description"}),
+    "skills.update": frozenset({"name", "description"}),
+    "issues.update": frozenset(
         {"title", "description", "priority", "assignee_id", "project_id", "parent_id"}
     ),
-    "AutopilotUpdateRequest": frozenset(
+    "autopilots.update": frozenset(
         {
             "title",
             "description",
@@ -175,11 +141,11 @@ _UPDATE_POLICY_FIELDS = {
             "subscribers",
         }
     ),
-    "AutopilotTriggerUpdate": frozenset({"title", "kind"}),
-    "LabelUpdateRequest": frozenset({"name", "color"}),
-    "ProjectResourceUpdateLocalDirectoryRequest": frozenset({"local_path"}),
-    "RuntimeUpdate": frozenset({"target_version", "wait"}),
-    "UserProfileUpdate": frozenset({"description"}),
+    "autopilots.trigger_update": frozenset({"title", "kind"}),
+    "labels.update": frozenset({"name", "color"}),
+    "projects.resources.update_local_directory": frozenset({"local_path"}),
+    "runtimes.update": frozenset({"target_version", "wait"}),
+    "users.profile_update": frozenset({"description"}),
 }
 _RESPONSE_CATALOG_IDS = frozenset(
     {
@@ -187,6 +153,7 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "action_result_repository_mutation_result",
         "action_result_runtime_update_result",
         "action_result_str",
+        "cli_result",
         "bytes",
         "agent",
         "agent_skills",
@@ -197,7 +164,6 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "autopilot_run",
         "autopilot_run_list_page",
         "autopilot_trigger",
-        "autopilot_triggers",
         "comment",
         "comment_page",
         "comment_thread_page",
@@ -205,8 +171,6 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "issue",
         "issue_children_result",
         "issue_list_page",
-        "issue_search",
-        "issue_summaries",
         "labels",
         "linked_pull_requests",
         "metadata_entries",
@@ -217,7 +181,7 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "page_agent_tasks",
         "page_comments",
         "page_daemon_disk_usage",
-        "page_issue_summaries",
+        "page_issues",
         "page_issue_usage",
         "page_labels",
         "page_linked_pull_requests",
@@ -262,21 +226,11 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "workspace_members",
     }
 )
+_RESPONSE_ALIASES = frozenset({"issue_search"})
 _BODY_KINDS = frozenset(
     {"nonblank", "nonnegative_int", "positive_int", "project_update", "resource_update"}
 )
 _VALIDATOR_ENUM_IDS = frozenset({"IssueStatus", "ProjectStatus", "AutopilotExecutionMode"})
-_REQUEST_FIELD_ORDER = {
-    "CommentListFlatRequest": ("issue_id", "since"),
-    "CommentListThreadRequest": ("issue_id", "thread_id", "cursor", "limit"),
-    "CommentListRecentRequest": ("issue_id", "limit"),
-    "IssueCreateRequest": ("title", "description_input", "project_id", "label_ids"),
-    "IssueListFilter": (),
-    "ProjectCreateRequest": ("name", "description"),
-    "ProjectUpdateRequest": ("name", "description"),
-    "ProjectResourceAddLocalDirectoryRequest": ("local_path", "daemon_id", "label"),
-    "ProjectResourceUpdateLocalDirectoryRequest": ("local_path",),
-}
 _AUXILIARY_CATALOG_KEYS = {
     "types": frozenset(
         {
@@ -299,8 +253,6 @@ _AUXILIARY_CATALOG_KEYS = {
             "autopilot_trigger_create",
             "autopilot_trigger_update",
             "autopilot_trigger_wire",
-            "autopilot_triggers",
-            "autopilot_triggers_wire",
             "autopilot_wire",
             "comment",
             "comment_page",
@@ -313,8 +265,9 @@ _AUXILIARY_CATALOG_KEYS = {
             "issue_children_result_wire",
             "issue_list_page",
             "issue_list_page_wire",
+            "issue_search_result_wire",
+            "page_issues",
             "issue_pull_requests_result_wire",
-            "issue_summaries",
             "issue_wire",
             "labels",
             "labels_wire",
@@ -372,6 +325,8 @@ _AUXILIARY_CATALOG_KEYS = {
             "workspace_members",
             "workspace_members_wire",
             "workspace_wire",
+            "cli_result",
+            "operation_options",
         }
     ),
     "signatures": frozenset(
@@ -458,6 +413,24 @@ _AUXILIARY_CATALOG_KEYS = {
             "workspace_get",
             "workspace_list",
             "workspace_members_list",
+            "cli_command",
+            "issues_unassign",
+            "issues_move_to_top",
+            "issues_move_to_bottom",
+            "issues_move_before",
+            "issues_move_after",
+            "project_issue_create",
+            "issues_refresh",
+            "issues_update_bound",
+            "issues_assign_bound",
+            "issues_unassign_bound",
+            "issues_set_status_bound",
+            "issues_move_to_top_bound",
+            "issues_move_to_bottom_bound",
+            "issues_move_before_bound",
+            "issues_move_after_bound",
+            "projects_refresh",
+            "projects_update_bound",
         }
     ),
     "decoders": frozenset(
@@ -471,7 +444,6 @@ _AUXILIARY_CATALOG_KEYS = {
             "decode_autopilot_run",
             "decode_autopilot_run_list_page",
             "decode_autopilot_trigger",
-            "decode_autopilot_triggers",
             "decode_comment",
             "decode_comment_page",
             "decode_comment_thread_page",
@@ -479,7 +451,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "decode_issue",
             "decode_issue_children",
             "decode_issue_list_page",
-            "decode_issue_summaries",
+            "decode_issue_search",
             "decode_labels",
             "decode_linked_pull_requests",
             "decode_metadata_entries",
@@ -506,6 +478,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "decode_user_profile",
             "decode_workspace",
             "decode_workspace_members",
+            "decode_cli_result",
         }
     ),
     "validators": frozenset(
@@ -536,10 +509,8 @@ _AUXILIARY_CATALOG_KEYS = {
             "nonblank:path",
             "nonblank:project_id",
             "nonblank:query",
-            "nonblank:request.daemon_id",
-            "nonblank:request.local_path",
-            "nonblank:request.name",
-            "nonblank:request.title",
+            "nonblank:daemon_id",
+            "nonblank:local_path",
             "nonblank:resource_id",
             "nonblank:runtime",
             "nonblank:skill_id",
@@ -768,6 +739,7 @@ class ResponseCatalogEntry:
     decoder_id: str
     success_exit_codes: tuple[int, ...]
     malformed_output: str
+    aliases: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -939,31 +911,8 @@ def _tag(value: object, label: str) -> dict[str, object]:
         _exact_keys(item, frozenset({"kind", "items"}), label)
         for index, child in enumerate(_list(item["items"], f"{label}.items")):
             _tag(child, f"{label}.items[{index}]")
-    else:
-        _exact_keys(item, frozenset({"kind", "type", "fields"}), label)
-        request_type = _str(item["type"], f"{label}.type")
-        if request_type not in _REQUEST_TYPES:
-            raise ContractError(f"{label}.type is not a closed request")
-        fields = _list(item["fields"], f"{label}.fields")
-        seen: set[str] = set()
-        for index, pair in enumerate(fields):
-            pair_values = _list(pair, f"{label}.fields[{index}]")
-            if len(pair_values) != 2:
-                raise ContractError(f"{label}.fields[{index}] must have two values")
-            field_name = _str(pair_values[0], f"{label}.fields[{index}][0]")
-            if field_name in seen:
-                raise ContractError(f"{label} repeats field {field_name!r}")
-            seen.add(field_name)
-            _tag(pair_values[1], f"{label}.fields[{index}][1]")
-        expected_order = _REQUEST_FIELD_ORDER[request_type]
-        actual_order = tuple(
-            _str(_list(pair, f"{label}.fields[{index}]")[0], f"{label}.fields[{index}][0]")
-            for index, pair in enumerate(fields)
-        )
-        if any(name not in expected_order for name in actual_order) or actual_order != tuple(
-            name for name in expected_order if name in seen
-        ):
-            raise ContractError(f"{label}.fields must use the approved field set and order")
+    else:  # pragma: no cover - guarded by the closed kind check above
+        raise ContractError(f"{label}.kind has no materialization path")
     return item
 
 
@@ -1414,6 +1363,7 @@ def _response_catalog(value: object) -> tuple[ResponseCatalogEntry, ...]:
     if set(responses) != _RESPONSE_CATALOG_IDS:
         raise ContractError("catalogs.responses must contain exactly the approved response IDs")
     entries: list[ResponseCatalogEntry] = []
+    aliases_seen: set[str] = set()
     for key, value in responses.items():
         item = _dict(value, f"catalogs.responses[{key!r}]")
         _exact_keys(
@@ -1426,6 +1376,7 @@ def _response_catalog(value: object) -> tuple[ResponseCatalogEntry, ...]:
                     "success_exit_codes",
                     "malformed_output",
                 }
+                | ({"aliases"} if "aliases" in item else set())
             ),
             f"catalogs.responses[{key!r}]",
         )
@@ -1434,6 +1385,7 @@ def _response_catalog(value: object) -> tuple[ResponseCatalogEntry, ...]:
         if (
             not public_type_id
             or "any" in public_type_id.lower()
+            or "issuesummary" in public_type_id.lower()
             or public_type_id
             in {
                 "object",
@@ -1459,6 +1411,27 @@ def _response_catalog(value: object) -> tuple[ResponseCatalogEntry, ...]:
         malformed_output = _str(
             item["malformed_output"], f"catalogs.responses[{key!r}].malformed_output"
         )
+        aliases_value = item.get("aliases", [])
+        aliases = tuple(
+            _contract_identifier(alias, f"catalogs.responses[{key!r}].aliases[{index}]")
+            for index, alias in enumerate(
+                _list(aliases_value, f"catalogs.responses[{key!r}].aliases")
+            )
+        )
+        if len(set(aliases)) != len(aliases):
+            raise ContractError(f"catalogs.responses[{key!r}].aliases must not contain duplicates")
+        unapproved = set(aliases) - _RESPONSE_ALIASES
+        if unapproved:
+            raise ContractError(
+                f"catalogs.responses[{key!r}].aliases contains unapproved aliases: "
+                f"{', '.join(sorted(unapproved))}"
+            )
+        duplicate_aliases = aliases_seen.intersection(aliases)
+        if duplicate_aliases:
+            raise ContractError(
+                "response aliases must be unique: " + ", ".join(sorted(duplicate_aliases))
+            )
+        aliases_seen.update(aliases)
         entries.append(
             ResponseCatalogEntry(
                 response_id,
@@ -1467,6 +1440,7 @@ def _response_catalog(value: object) -> tuple[ResponseCatalogEntry, ...]:
                 decoder_id,
                 success_exit_codes,
                 malformed_output,
+                aliases,
             )
         )
     return tuple(entries)
@@ -1672,6 +1646,82 @@ def _closed_auxiliary_catalogs(catalogs: dict[str, object]) -> tuple[ResponseCat
     return _response_catalog(catalogs["responses"])
 
 
+def _validate_direct_bindings(catalog: ContractCatalog) -> None:
+    """Reject request-object plumbing from direct-only public entry points.
+
+    Direct signatures are the approved public schema after the SDK migration.
+    Keeping this check at the approved-contract boundary prevents an old
+    ``request.*`` mapping from silently surviving while runtime code is being
+    migrated in later stages.
+    """
+
+    descriptors = {item.descriptor_id: item for item in catalog.binding_descriptors}
+    signatures = _dict(
+        _dict(catalog.raw["catalogs"], "catalogs")["signatures"], "catalogs.signatures"
+    )
+    raw_bindings = _dict(
+        _dict(catalog.raw["catalogs"], "catalogs")["bindings"], "catalogs.bindings"
+    )
+    for operation in catalog.operations:
+        for entrypoint in operation.entrypoints:
+            signature = _str(
+                signatures[entrypoint.signature_id],
+                f"catalogs.signatures[{entrypoint.signature_id!r}]",
+            )
+            if "options: OperationOptions | None = None" not in signature:
+                raise ContractError(
+                    f"{operation.operation_id}.{entrypoint.entrypoint_id} signature must carry "
+                    "the final optional OperationOptions parameter"
+                )
+            if entrypoint.input_mode != "direct":
+                continue
+            if re.search(r"\brequest(?:[._\s]|$)", signature):
+                raise ContractError(
+                    f"{operation.operation_id}.{entrypoint.entrypoint_id} direct signature "
+                    "must not mention a request object"
+                )
+            descriptor = descriptors[entrypoint.binding_id]
+            stale = [
+                source
+                for source, _binding, _destination in descriptor.mappings
+                if source == "request" or source.startswith("request.")
+            ]
+            binding = _dict(
+                raw_bindings[entrypoint.binding_id],
+                f"catalogs.bindings[{entrypoint.binding_id!r}]",
+            )
+            for index, raw_mapping in enumerate(
+                _list(binding["mappings"], f"catalogs.bindings[{entrypoint.binding_id!r}].mappings")
+            ):
+                mapping = _list(
+                    raw_mapping,
+                    f"catalogs.bindings[{entrypoint.binding_id!r}].mappings[{index}]",
+                )
+                if mapping and (
+                    _str(mapping[0], "binding mapping source") == "request"
+                    or _str(mapping[0], "binding mapping source").startswith("request.")
+                ):
+                    stale.append(_str(mapping[0], "binding mapping source"))
+            stale.extend(
+                constraint
+                for constraint in _list(
+                    binding["constraints"],
+                    f"catalogs.bindings[{entrypoint.binding_id!r}].constraints",
+                )
+                if _str(constraint, "binding constraint").startswith("request.")
+            )
+            if stale:
+                raise ContractError(
+                    f"{operation.operation_id}.{entrypoint.entrypoint_id} contains stale "
+                    f"request mappings: {', '.join(stale)}"
+                )
+            if operation.operation_id == "cli.command":
+                if entrypoint.category != "action" or entrypoint.response_id != "cli_result":
+                    raise ContractError("cli.command must remain an action returning cli_result")
+                if descriptor.command or descriptor.mappings:
+                    raise ContractError("cli.command must use dynamic argv without fixed mappings")
+
+
 def load_contract(path: pathlib.Path) -> ContractCatalog:
     try:
         raw_value = cast("object", json.loads(path.read_text(encoding="utf-8")))
@@ -1750,6 +1800,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 "source_authority_ref",
                 "family_disposition_ref",
                 "family_dispositions",
+                "local_only_symbols",
             }
         ),
         "scope",
@@ -1773,6 +1824,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         for field in ("required_operation_ids", "source_ref_ids"):
             for value in _list(item[field], f"scope.family_dispositions[{index}].{field}"):
                 _str(value, f"scope.family_dispositions[{index}].{field}")
+    for index, symbol in enumerate(_list(scope["local_only_symbols"], "scope.local_only_symbols")):
+        _str(symbol, f"scope.local_only_symbols[{index}]")
     traceability = _list(raw["traceability"], "traceability")
     for index, raw_item in enumerate(traceability):
         item = _dict(raw_item, f"traceability[{index}]")
@@ -1829,6 +1882,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
 
 def validate_contract(path: pathlib.Path) -> ContractCatalog:
     contract = load_contract(path)
+    _validate_direct_bindings(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
         "issue_sort",
         "sort_direction",
@@ -1898,6 +1952,11 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
     responses = _dict(
         _dict(contract.raw["catalogs"], "catalogs")["responses"], "catalogs.responses"
     )
+    response_aliases = {
+        alias: response.response_id for response in contract.responses for alias in response.aliases
+    }
+    if response_aliases.get("issue_search") != "page_issues":
+        raise ContractError("issue_search must be the approved alias of page_issues")
     for operation in contract.operations:
         if operation.compatibility not in {"compatible", "intentionally_changed"}:
             raise ContractError(

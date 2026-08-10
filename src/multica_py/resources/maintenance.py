@@ -2,20 +2,21 @@ from __future__ import annotations
 
 from typing import cast
 
-import msgspec
-
 from multica_py._internal.commands import Command, _Step
 from multica_py._internal.compat import check_version_from_config, parse_cli_version
 from multica_py._internal.decoders import decode_json, decode_text
 from multica_py._internal.specs import RawCommandResult
+from multica_py.config import OperationOptions
 from multica_py.models.system import MaintenanceVersion
 from multica_py.process import ManagedProcess
 from multica_py.resources._base import BaseResource
 
 
 class MaintenanceResource(BaseResource):
-    def version_command(self) -> Command[MaintenanceVersion]:
-        config_snapshot = msgspec.structs.replace(self._config)
+    def version_command(
+        self, *, options: OperationOptions | None = None
+    ) -> Command[MaintenanceVersion]:
+        config_snapshot = self._effective_config(options)
 
         def finalize(results: tuple[object, ...]) -> MaintenanceVersion:
             result = cast("RawCommandResult", results[0])
@@ -28,13 +29,14 @@ class MaintenanceResource(BaseResource):
         return self._plan(
             steps=(_Step(("version", "--output", "json"), "run_bytes"),),
             finalize=finalize,
+            options=options,
         )
 
-    def version(self) -> MaintenanceVersion:
-        return self.version_command().run()
+    def version(self, *, options: OperationOptions | None = None) -> MaintenanceVersion:
+        return self.version_command(options=options).run()
 
-    def update_command(self) -> Command[ManagedProcess]:
-        return self._spawn_command(("update",))
+    def update_command(self, *, options: OperationOptions | None = None) -> Command[ManagedProcess]:
+        return self._spawn_command(("update",), options=options)
 
-    def update(self) -> ManagedProcess:
-        return self.update_command().run()
+    def update(self, *, options: OperationOptions | None = None) -> ManagedProcess:
+        return self.update_command(options=options).run()

@@ -45,7 +45,7 @@ INVALID_CONTRACT_CASES = (
     InvalidContractCase("generated-keyword", "generated_keyword"),
     InvalidContractCase("source-ref-parent", "source_ref_parent"),
     InvalidContractCase("source-ref-commit", "source_ref_commit"),
-    InvalidContractCase("request-field-order", "request_field_order"),
+    InvalidContractCase("request-tag", "request_tag"),
     InvalidContractCase("auxiliary-catalog-key", "auxiliary_catalog_key"),
     InvalidContractCase("validator-enum", "validator_enum"),
     InvalidContractCase("duplicate-descriptor", "duplicate_descriptor"),
@@ -59,8 +59,15 @@ INVALID_CONTRACT_CASES = (
     InvalidContractCase("convention-category", "convention_category"),
     InvalidContractCase("convention-input-mode", "convention_input_mode"),
     InvalidContractCase("convention-typed-input", "convention_typed_input"),
+    InvalidContractCase("stale-request-dto", "stale_request_dto"),
     InvalidContractCase("convention-presence", "convention_presence"),
     InvalidContractCase("convention-presence-empty", "convention_presence_empty"),
+    InvalidContractCase("direct-request-mapping", "direct_request_mapping"),
+    InvalidContractCase("missing-options", "missing_options"),
+    InvalidContractCase("summary-response", "summary_response"),
+    InvalidContractCase("duplicate-response-alias", "duplicate_response_alias"),
+    InvalidContractCase("unapproved-response-alias", "unapproved_response_alias"),
+    InvalidContractCase("raw-command-category", "raw_command_category"),
     InvalidContractCase("convention-command", "convention_command"),
     InvalidContractCase("response-extra", "response_extra"),
     InvalidContractCase("response-any", "response_any"),
@@ -89,7 +96,9 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
         vector = document["catalogs"]["test_vectors"][
             "generated:issues.comments.list:flat:canonical"
         ]
-        vector["args"][0]["fields"][1][1]["value"] = "2026-07-12T10:00:00"
+        next(item for item in vector["kwargs"] if item[0] == "since")[1]["value"] = (
+            "2026-07-12T10:00:00"
+        )
     elif mutation == "decoded_type":
         vector = document["catalogs"]["test_vectors"][
             "generated:issues.comments.add:default:canonical"
@@ -109,11 +118,11 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
         document["source_refs"][0]["path"] = "../outside.go"
     elif mutation == "source_ref_commit":
         document["source_refs"][0]["commit"] = "0" * 40
-    elif mutation == "request_field_order":
+    elif mutation == "request_tag":
         vector = document["catalogs"]["test_vectors"][
             "generated:issues.comments.list:flat:canonical"
         ]
-        vector["args"][0]["fields"] = list(reversed(vector["args"][0]["fields"]))
+        vector["kwargs"][0][1]["kind"] = "request"
     elif mutation == "auxiliary_catalog_key":
         document["catalogs"]["types"]["extra"] = "extra"
     elif mutation == "validator_enum":
@@ -151,10 +160,18 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
         elif mutation == "convention_presence":
             entrypoint["presence_policy_ids"] = ["unknown_policy"]
         elif mutation == "convention_presence_empty":
-            entrypoint = document["operations"][3]["entrypoints"][0]
+            operation = next(
+                item for item in document["operations"] if item["operation_id"] == "issues.list"
+            )
+            entrypoint = operation["entrypoints"][0]
             entrypoint["presence_policy_ids"] = []
         elif mutation == "convention_command":
             entrypoint["command_symbol"] = "not_a_command"
+    elif mutation == "stale_request_dto":
+        operation = next(
+            item for item in document["operations"] if item["operation_id"] == "agents.create"
+        )
+        operation["entrypoints"][0]["typed_input_id"] = "AgentCreateRequest"
     elif mutation == "response_extra":
         document["catalogs"]["responses"]["unexpected"] = {
             "public_type_id": "Unexpected",
@@ -169,15 +186,44 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
         entrypoint = document["operations"][0]["entrypoints"][0]
         entrypoint["response_id"] = "page_comments"
         entrypoint["category"] = "retrieve"
+    elif mutation == "direct_request_mapping":
+        operation = next(
+            item for item in document["operations"] if item["operation_id"] == "agents.create"
+        )
+        entrypoint = operation["entrypoints"][0]
+        descriptor = next(
+            item
+            for item in document["catalogs"]["binding_descriptors"]
+            if item["descriptor_id"] == entrypoint["binding_id"]
+        )
+        descriptor["mappings"] = [
+            {"source": "request.name", "binding": "pos:0", "destination": "path:name"}
+        ]
+    elif mutation == "missing_options":
+        document["catalogs"]["signatures"]["agent_get"] = "(agent_id: str) -> Agent"
+    elif mutation == "summary_response":
+        document["catalogs"]["responses"]["page_issues"]["public_type_id"] = "Page[IssueSummary]"
+    elif mutation == "duplicate_response_alias":
+        document["catalogs"]["responses"]["page_issues"]["aliases"].append("issue_search")
+    elif mutation == "unapproved_response_alias":
+        document["catalogs"]["responses"]["page_issues"]["aliases"].append("issue_lookup")
+    elif mutation == "raw_command_category":
+        entrypoint = next(
+            entrypoint
+            for operation in document["operations"]
+            if operation["operation_id"] == "cli.command"
+            for entrypoint in operation["entrypoints"]
+        )
+        entrypoint["category"] = "collection"
     elif mutation == "operation_evidence":
         document["operations"][0]["source_ref_ids"] = []
     elif mutation == "nullable_clear_evidence":
-        field = document["catalogs"]["update_field_policies"]["IssueUpdateRequest"]["fields"][
+        field = document["catalogs"]["update_field_policies"]["issues.update"]["fields"][
             "description"
         ]
         field["clear"]["source_ref_ids"] = []
     elif mutation == "update_source_ref":
-        document["catalogs"]["update_field_policies"]["ProjectUpdateRequest"]["fields"]["name"][
+        document["catalogs"]["update_field_policies"]["projects.update"]["fields"]["name"][
             "source_ref_ids"
         ] = ["missing-source-ref"]
     elif mutation == "mapping_presence_length":
@@ -250,6 +296,7 @@ def test_public_conventions_and_response_catalog_are_typed_and_closed() -> None:
         "action_result_runtime_update_result",
     } <= contract.response_by_id.keys()
     assert all("any" not in response.public_type_id.lower() for response in contract.responses)
+    assert all("IssueSummary" not in response.public_type_id for response in contract.responses)
     catalogs = cast("dict[str, object]", contract.raw["catalogs"])
     presence = cast("dict[str, object]", catalogs["presence"])
     assert set(presence) == {
@@ -270,22 +317,126 @@ def test_public_conventions_and_response_catalog_are_typed_and_closed() -> None:
     )
 
 
+def test_simplified_direct_surface_and_bound_response_aliases() -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    catalogs = document["catalogs"]
+    removed_dtos = {
+        "AgentCreateRequest",
+        "AgentUpdateRequest",
+        "AutopilotTriggerCreate",
+        "AutopilotTriggerUpdate",
+        "AutopilotUpdateRequest",
+        "CommentListFlatRequest",
+        "CommentListRecentRequest",
+        "CommentListThreadRequest",
+        "IssueAssignmentRequest",
+        "IssueCreateRequest",
+        "IssueReorderRequest",
+        "IssueUpdateRequest",
+        "LabelUpdateRequest",
+        "MetadataListRequest",
+        "MetadataSetRequest",
+        "ProjectCreateRequest",
+        "ProjectResourceAddLocalDirectoryRequest",
+        "ProjectResourceUpdateLocalDirectoryRequest",
+        "ProjectUpdateRequest",
+        "RuntimeUpdate",
+        "SkillCreateRequest",
+        "SkillUpdateRequest",
+        "UserProfileUpdate",
+    }
+    entrypoints = tuple(
+        entrypoint
+        for operation in document["operations"]
+        for entrypoint in operation["entrypoints"]
+    )
+    migrated = tuple(
+        entrypoint
+        for entrypoint in entrypoints
+        if entrypoint["public_symbol"]
+        in {
+            "multica_py.resources.agents.AgentResource.create",
+            "multica_py.resources.agents.AgentResource.update",
+            "multica_py.resources.autopilots.AutopilotResource.trigger_add",
+            "multica_py.resources.autopilots.AutopilotResource.trigger_update",
+            "multica_py.resources.autopilots.AutopilotResource.update",
+            "multica_py.resources.issue_comments.IssueCommentResource.list_flat",
+            "multica_py.resources.issue_comments.IssueCommentResource.list_thread",
+            "multica_py.resources.issue_comments.IssueCommentResource.list_recent",
+            "multica_py.resources.issues.IssueResource.assign",
+            "multica_py.resources.issues.IssueResource.create",
+            "multica_py.resources.issues.IssueResource.reorder",
+            "multica_py.resources.issues.IssueResource.update",
+            "multica_py.resources.issue_metadata.IssueMetadataResource.query",
+            "multica_py.resources.issue_metadata.IssueMetadataResource.set_typed",
+            "multica_py.resources.labels.LabelResource.update",
+            "multica_py.resources.projects.ProjectResource.create",
+            "multica_py.resources.projects.ProjectResource.update",
+            "multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory",
+            "multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory",
+            "multica_py.resources.runtimes.RuntimeResource.update",
+            "multica_py.resources.skills.SkillResource.create",
+            "multica_py.resources.skills.SkillResource.update",
+            "multica_py.resources.users.UserResource.profile_update",
+        }
+    )
+    assert len(migrated) == 23
+    assert all(item["typed_input_id"] is None for item in migrated)
+    assert all(item["input_mode"] == "direct" for item in migrated)
+    assert all(not item["presence_policy_ids"] for item in migrated)
+    assert all(
+        "OperationOptions" in catalogs["signatures"][item["signature_id"]] for item in migrated
+    )
+    assert not any(item.get("typed_input_id") in removed_dtos for item in entrypoints)
+    assert not removed_dtos & set(catalogs["update_field_policies"])
+    assert not any(
+        source == "request" or source.startswith("request.")
+        for binding in catalogs["bindings"].values()
+        for source, _binding, _destination in binding["mappings"]
+    )
+
+    operation_ids = {item["operation_id"] for item in document["operations"]}
+    assert {
+        "issues.unassign",
+        "issues.move_to_top",
+        "issues.move_to_bottom",
+        "issues.move_before",
+        "issues.move_after",
+        "projects.issues.create",
+        "cli.command",
+        "issues.refresh",
+        "projects.refresh",
+    } <= operation_ids
+    assert document["scope"]["local_only_symbols"] == [
+        "multica_py.resources.issues.Issue.permalink",
+        "multica_py.resources.projects.Project.permalink",
+    ]
+    assert catalogs["responses"]["page_issues"]["public_type_id"] == "Page[Issue]"
+    assert catalogs["responses"]["page_issues"]["aliases"] == ["issue_search"]
+    assert validate_contract(APPROVED).response_by_id["page_issues"].aliases == ("issue_search",)
+    assert all(
+        "options: OperationOptions | None = None" in signature
+        for signature in catalogs["signatures"].values()
+    )
+    assert "IssueSummary" not in catalogs["types"]
+
+
 def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     contract = validate_contract(APPROVED)
     policies = {model.model_id: model for model in contract.update_field_policies}
     assert set(policies) == {
-        "ProjectUpdateRequest",
-        "AgentUpdateRequest",
-        "SkillUpdateRequest",
-        "IssueUpdateRequest",
-        "AutopilotUpdateRequest",
-        "AutopilotTriggerUpdate",
-        "LabelUpdateRequest",
-        "ProjectResourceUpdateLocalDirectoryRequest",
-        "RuntimeUpdate",
-        "UserProfileUpdate",
+        "projects.update",
+        "agents.update",
+        "skills.update",
+        "issues.update",
+        "autopilots.update",
+        "autopilots.trigger_update",
+        "labels.update",
+        "projects.resources.update_local_directory",
+        "runtimes.update",
+        "users.profile_update",
     }
-    issue = {field.field_name: field for field in policies["IssueUpdateRequest"].fields}
+    issue = {field.field_name: field for field in policies["issues.update"].fields}
     assert issue["assignee_id"].clear_kind == "composite"
     assert len(issue["assignee_id"].clear_mapping) >= 2
     assert issue["parent_id"].clear_mapping == ("--parent", "empty-string")
@@ -354,7 +505,7 @@ def test_v0420_governs_copy_search_and_rejects_external_tag_commands(
         "trigger",
     ]
     assert len(document["catalogs"]["mapping_presence"]["agent_copy"]) == 14
-    assert document["catalogs"]["responses"]["issue_search"]["malformed_output"] == (
+    assert document["catalogs"]["responses"]["page_issues"]["malformed_output"] == (
         "accept_issues_envelope_or_legacy_array_via_handwritten_adapter"
     )
     errors = next(item for item in document["source_refs"] if item["source_ref_id"] == "S-ERRORS")
@@ -379,12 +530,12 @@ def test_v0420_governs_copy_search_and_rejects_external_tag_commands(
 def test_tagged_values_preserve_datetime_offset_and_unset() -> None:
     contract = load_contract(APPROVED)
     flat = contract.vector_by_id["generated:issues.comments.list:flat:canonical"]
-    assert flat.args[0]["kind"] == "request"
-    fields = cast("list[list[object]]", flat.args[0]["fields"])
-    since = fields[1][1]
+    assert flat.args == ()
+    since = dict(flat.kwargs)["since"]
     assert since == {"kind": "datetime", "value": "2026-07-12T10:00:00+00:00"}
     update = contract.vector_by_id["generated:projects.update:default:canonical"]
-    assert update.args[1]["fields"] == []
+    assert update.args == ({"kind": "primitive", "value": "pr_1"},)
+    assert update.kwargs == ()
 
 
 def test_result_assertion_algorithms() -> None:

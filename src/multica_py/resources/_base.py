@@ -11,15 +11,16 @@ from multica_py._internal.decoders import decode_json
 from multica_py._internal.redaction import collect_secret_values, redact_text
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
-from multica_py.config import ClientConfig
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.models.common import ActionResult, Page
 from multica_py.process import ManagedProcess
+from multica_py.sentinels import Unset
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
+    from multica_py.resources.cli import CliResult
 
 S = TypeVar("S", bound=msgspec.Struct)
-R = TypeVar("R", bound=msgspec.Struct)
 T = TypeVar("T")
 
 
@@ -32,28 +33,13 @@ def _page_items(value: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
     return value.items if isinstance(value, Page) else value
 
 
+def _validate_optional_string(value: object, field_name: str) -> None:
+    if value is not None and value is not Unset and not isinstance(value, str):
+        raise TypeError(f"{field_name} must be a string or None")
+
+
 def _is_transport(value: object) -> bool:
     return isinstance(value, CliTransport)
-
-
-def _resolve_request(
-    request: R | None,
-    kwargs: dict[str, object],
-    cls: type[R],
-    *,
-    allow_empty: bool = False,
-) -> R:
-    if request is not None and kwargs:
-        raise TypeError("Pass either a request object or keyword arguments, not both.")
-    if request is not None:
-        if not isinstance(request, cls):
-            raise TypeError(f"Expected {cls.__name__}, got {type(request).__name__}.")
-        return request
-    if not kwargs:
-        if allow_empty:
-            return cls()
-        raise TypeError(f"Pass a {cls.__name__} or its keyword arguments; got neither.")
-    return cls(**kwargs)
 
 
 class BaseResource:
@@ -65,17 +51,38 @@ class BaseResource:
     def _set_client(self, client: MulticaClient) -> None:
         self._client = client
 
+    def _effective_config(self, options: OperationOptions | None = None) -> ClientConfig:
+        if options is None:
+            return msgspec.structs.replace(self._config)
+        changes = {
+            field_name: value
+            for field_name, value in (
+                ("profile", options.profile),
+                ("workspace_id", options.workspace_id),
+                ("timeout", options.timeout),
+                ("cwd", options.cwd),
+                ("environment", options.environment),
+            )
+            if value is not msgspec.UNSET
+        }
+        return msgspec.structs.replace(self._config, **changes)
+
+    def _transport_snapshot(self, config: ClientConfig) -> CliTransport:
+        transport_snapshot = self._transport._snapshot(config)
+        if not _is_transport(transport_snapshot):
+            return self._transport
+        return transport_snapshot
+
     def _plan(
         self,
         *,
         steps: tuple[_Step, ...],
         finalize: Callable[[tuple[object, ...]], T],
         temp_provider: _TempProvider | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[T]:
-        config_snapshot = msgspec.structs.replace(self._config)
-        transport_snapshot = self._transport._snapshot(config_snapshot)
-        if not _is_transport(transport_snapshot):
-            transport_snapshot = self._transport
+        config_snapshot = self._effective_config(options)
+        transport_snapshot = self._transport_snapshot(config_snapshot)
         return Command(
             _CommandPlan(
                 config_snapshot=config_snapshot,
@@ -107,24 +114,42 @@ class BaseResource:
 
         return (*args, "--output", "json"), decode
 
-    def _decoded_command(self, args: tuple[str, ...], model_type: type[S]) -> Command[S]:
+    def _decoded_command(
+        self,
+        args: tuple[str, ...],
+        model_type: type[S],
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[S]:
         plan_args, decode = self._plan_decode(args, model_type)
         return self._plan(
             steps=(_Step(plan_args, "run_bytes", decode=decode),),
             finalize=lambda results: cast("S", results[0]),
+            options=options,
         )
 
     def _decoded_list_command(
-        self, args: tuple[str, ...], item_type: type[S]
+        self,
+        args: tuple[str, ...],
+        item_type: type[S],
+        *,
+        options: OperationOptions | None = None,
     ) -> Command[tuple[S, ...]]:
         plan_args, decode = self._plan_decode_list(args, item_type)
         return self._plan(
             steps=(_Step(plan_args, "run_bytes", decode=decode),),
             finalize=lambda results: cast("tuple[S, ...]", results[0]),
+            options=options,
         )
 
-    def _decoded_page_command(self, args: tuple[str, ...], item_type: type[S]) -> Command[Page[S]]:
-        return self._decoded_list_command(args, item_type)._map(
+    def _decoded_page_command(
+        self,
+        args: tuple[str, ...],
+        item_type: type[S],
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[Page[S]]:
+        return self._decoded_list_command(args, item_type, options=options)._map(
             lambda items: Page(items=items, total=len(items))
         )
 
@@ -134,13 +159,20 @@ class BaseResource:
         *,
         stdin: bytes | None = None,
         timeout: datetime.timedelta | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[str]:
         return self._plan(
             steps=(_Step(args, "run_text", stdin=stdin, timeout=timeout),),
             finalize=lambda results: cast("TextResult", results[0]).text,
+            options=options,
         )
 
-    def _action_command(self, args: tuple[str, ...]) -> Command[ActionResult[None]]:
+    def _action_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[ActionResult[None]]:
         secret_values = collect_secret_values(args)
 
         def finalize(results: tuple[object, ...]) -> ActionResult[None]:
@@ -152,9 +184,15 @@ class BaseResource:
         return self._plan(
             steps=(_Step(args, "run_text"),),
             finalize=finalize,
+            options=options,
         )
 
-    def _action_text_command(self, args: tuple[str, ...]) -> Command[ActionResult[str]]:
+    def _action_text_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[ActionResult[str]]:
         secret_values = collect_secret_values(args)
 
         def finalize(results: tuple[object, ...]) -> ActionResult[str]:
@@ -163,12 +201,19 @@ class BaseResource:
         return self._plan(
             steps=(_Step(args, "run_text"),),
             finalize=finalize,
+            options=options,
         )
 
     def _action_decoded_command(
-        self, args: tuple[str, ...], model_type: type[S]
+        self,
+        args: tuple[str, ...],
+        model_type: type[S],
+        *,
+        options: OperationOptions | None = None,
     ) -> Command[ActionResult[S]]:
-        return self._decoded_command(args, model_type)._map(lambda value: ActionResult(value=value))
+        return self._decoded_command(args, model_type, options=options)._map(
+            lambda value: ActionResult(value=value)
+        )
 
     def _raw_command(
         self,
@@ -176,45 +221,24 @@ class BaseResource:
         *,
         stdin: bytes | None = None,
         timeout: datetime.timedelta | None = None,
-    ) -> Command[RawCommandResult]:
+        options: OperationOptions | None = None,
+    ) -> Command[CliResult]:
+        from multica_py.resources.cli import decode_cli_result
+
         return self._plan(
             steps=(_Step(args, "run_bytes", stdin=stdin, timeout=timeout),),
-            finalize=lambda results: cast("RawCommandResult", results[0]),
+            finalize=lambda results: decode_cli_result(cast("RawCommandResult", results[0])),
+            options=options,
         )
 
-    def _spawn_command(self, args: tuple[str, ...]) -> Command[ManagedProcess]:
+    def _spawn_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[ManagedProcess]:
         return self._plan(
             steps=(_Step(args, "spawn"),),
             finalize=lambda results: cast("ManagedProcess", results[0]),
+            options=options,
         )
-
-    def _run_json_decode(
-        self,
-        args: tuple[str, ...],
-        model_type: type[S],
-        *,
-        stdin: bytes | None = None,
-        timeout: datetime.timedelta | None = None,
-    ) -> S:
-        result = self._transport.run_bytes(
-            (*args, "--output", "json"),
-            stdin=stdin,
-            timeout=timeout,
-        )
-        return decode_json(result.stdout, model_type, command=" ".join(result.argv))
-
-    def _run_json_decode_list(
-        self,
-        args: tuple[str, ...],
-        item_type: type[S],
-        *,
-        stdin: bytes | None = None,
-        timeout: datetime.timedelta | None = None,
-    ) -> tuple[S, ...]:
-        result = self._transport.run_bytes(
-            (*args, "--output", "json"),
-            stdin=stdin,
-            timeout=timeout,
-        )
-        items = decode_json(result.stdout, list[item_type], command=" ".join(result.argv))  # type: ignore[valid-type]
-        return tuple(items)

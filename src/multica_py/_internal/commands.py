@@ -73,7 +73,10 @@ class _CommandPlan(Generic[T_co]):
 
     def run(self) -> T_co:
         if self._run_override is not None:
-            return self._run_override()
+            try:
+                return self._run_override()
+            finally:
+                _cleanup_temp_provider(self._temp_provider)
         if not self.steps:
             return self.finalize(())
 

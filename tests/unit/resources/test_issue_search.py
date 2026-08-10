@@ -10,7 +10,7 @@ from multica_py._internal.specs import RawCommandResult
 from multica_py.config import ClientConfig
 from multica_py.exceptions import JsonOutputError, OutputShapeError
 from multica_py.models.common import Page
-from multica_py.resources.issues import IssueResource
+from multica_py.resources.issues import Issue, IssueResource
 
 
 @dataclass(frozen=True)
@@ -121,6 +121,8 @@ def test_issue_search_accepts_envelope_and_legacy_shapes(
     result = command.run()
     assert type(result) is Page
     assert tuple((item.id, item.match_source) for item in result.items) == case.expected
+    assert all(isinstance(item, Issue) and item._client is client for item in result.items)
+    assert all(item.description is None for item in result.items)
     assert mock_transport.run_bytes.call_args.args[0] == (
         "issue",
         "search",

@@ -17,7 +17,7 @@ from multica_py._internal.commands import Command
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
-from multica_py.config import ClientConfig
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.enums import AutopilotExecutionMode
 from multica_py.exceptions import MissingRelationContextError
 from multica_py.models.autopilots import (
@@ -25,28 +25,27 @@ from multica_py.models.autopilots import (
     AutopilotRunListPage,
     AutopilotSubscriber,
     AutopilotTrigger,
-    AutopilotTriggerCreate,
-    AutopilotTriggerUpdate,
 )
 from multica_py.models.common import ActionResult
 from multica_py.models.issue_activity import RunMessage
 from multica_py.models.relations import LazyCollection, LazyMapping
 from multica_py.resources.autopilots import Autopilot, AutopilotResource, AutopilotRun
 from multica_py.resources.issues import IssueResource
-from multica_py.sentinels import Unset
+from multica_py.sentinels import UnsetType
 
 
 @dataclasses.dataclass(frozen=True)
 class TriggerValidationCase:
     method: str
     args: tuple[object, ...]
+    kwargs: tuple[tuple[str, object], ...] = ()
 
 
 TRIGGER_VALIDATION_CASES = (
-    TriggerValidationCase("trigger_add", ("", AutopilotTriggerCreate(title="Webhook", kind="k"))),
-    TriggerValidationCase("trigger_add", ("ap_1", AutopilotTriggerCreate(title="", kind="k"))),
-    TriggerValidationCase("trigger_update", ("", "tr_1", AutopilotTriggerUpdate(title="x"))),
-    TriggerValidationCase("trigger_update", ("ap_1", "", AutopilotTriggerUpdate(title="x"))),
+    TriggerValidationCase("trigger_add", ("",), (("title", "Webhook"), ("kind", "k"))),
+    TriggerValidationCase("trigger_add", ("ap_1",), (("title", ""), ("kind", "k"))),
+    TriggerValidationCase("trigger_update", ("", "tr_1"), (("title", "x"),)),
+    TriggerValidationCase("trigger_update", ("ap_1", ""), (("title", "x"),)),
     TriggerValidationCase("trigger_delete", ("", "tr_1")),
     TriggerValidationCase("trigger_delete", ("ap_1", "")),
 )
@@ -387,9 +386,9 @@ def test_trigger_mutations_invalidate_relation() -> None:
     entity._set_runtime("_triggers", relation)
     relation.all()
 
-    entity.trigger_add(AutopilotTriggerCreate(title="new", kind="webhook"))
+    entity.trigger_add(title="new", kind="webhook")
     assert not relation.loaded
-    entity.trigger_update("tr1", AutopilotTriggerUpdate(title="changed"))
+    entity.trigger_update("tr1", title="changed")
     entity.trigger_delete("tr1")
     transport.run_text.assert_called_once_with(("autopilot", "trigger-delete", "a1", "tr1"))
 
@@ -432,7 +431,7 @@ def test_autopilot_trigger_command_invalidates_only_after_success() -> None:
     entity._set_runtime("_triggers", relation)
     relation.all()
 
-    command = entity.trigger_add_command(AutopilotTriggerCreate(title="Webhook", kind="webhook"))
+    command = entity.trigger_add_command(title="Webhook", kind="webhook")
     assert command.commands == (
         "multica autopilot trigger-add a1 --title Webhook --kind webhook --output json",
     )
@@ -442,7 +441,7 @@ def test_autopilot_trigger_command_invalidates_only_after_success() -> None:
 
     relation.all()
     transport.run_bytes.side_effect = RuntimeError("transport failure")
-    failed = entity.trigger_update_command("tr0", AutopilotTriggerUpdate(title="Changed"))
+    failed = entity.trigger_update_command("tr0", title="Changed")
     with pytest.raises(RuntimeError, match="transport failure"):
         failed.run()
     assert relation.loaded
@@ -707,19 +706,10 @@ def test_trigger_operations_reject_invalid_context_before_transport(
     resource = AutopilotResource(transport, ClientConfig())
 
     with pytest.raises(ValueError):
-        getattr(resource, f"{case.method}_command")(*case.args)
+        getattr(resource, f"{case.method}_command")(*case.args, **dict(case.kwargs))
 
     transport.run_bytes.assert_not_called()
     transport.run_text.assert_not_called()
-
-
-def test_trigger_requests_are_frozen_and_default_to_unset() -> None:
-    request = AutopilotTriggerUpdate()
-
-    assert request.title is Unset
-    assert request.kind is Unset
-    with pytest.raises(AttributeError):
-        setattr(request, "title", "changed")
 
 
 @pytest.mark.parametrize(
@@ -728,27 +718,37 @@ def test_trigger_requests_are_frozen_and_default_to_unset() -> None:
         (
             "trigger_add",
             (
-                ("autopilot_id", inspect.Parameter.POSITIONAL_ONLY, str),
+                ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
                 (
-                    "request",
-                    inspect.Parameter.POSITIONAL_ONLY,
-                    AutopilotTriggerCreate | None,
+                    "title",
+                    inspect.Parameter.KEYWORD_ONLY,
+                    str,
                 ),
-                ("kwargs", inspect.Parameter.VAR_KEYWORD, object),
+                ("kind", inspect.Parameter.KEYWORD_ONLY, str),
+                (
+                    "options",
+                    inspect.Parameter.KEYWORD_ONLY,
+                    OperationOptions | None,
+                ),
             ),
             AutopilotTrigger,
         ),
         (
             "trigger_update",
             (
-                ("autopilot_id", inspect.Parameter.POSITIONAL_ONLY, str),
-                ("trigger_id", inspect.Parameter.POSITIONAL_ONLY, str),
+                ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
+                ("trigger_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
                 (
-                    "request",
-                    inspect.Parameter.POSITIONAL_ONLY,
-                    AutopilotTriggerUpdate | None,
+                    "title",
+                    inspect.Parameter.KEYWORD_ONLY,
+                    str | UnsetType,
                 ),
-                ("kwargs", inspect.Parameter.VAR_KEYWORD, object),
+                ("kind", inspect.Parameter.KEYWORD_ONLY, str | UnsetType),
+                (
+                    "options",
+                    inspect.Parameter.KEYWORD_ONLY,
+                    OperationOptions | None,
+                ),
             ),
             AutopilotTrigger,
         ),
@@ -757,6 +757,11 @@ def test_trigger_requests_are_frozen_and_default_to_unset() -> None:
             (
                 ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
                 ("trigger_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
+                (
+                    "options",
+                    inspect.Parameter.KEYWORD_ONLY,
+                    OperationOptions | None,
+                ),
             ),
             ActionResult[None],
         ),
