@@ -238,17 +238,19 @@ def test_legacy_payload_bijection() -> None:
     assert len(LEGACY_PAYLOAD_FINGERPRINTS) == 148
     removed = {
         "legacy:014": "removed:attachments.list",
+        "legacy:016": "removed:attachments.download-v0420",
         "legacy:069": "removed:repositories.get",
         "legacy:070": "removed:repositories.checkout",
         "legacy:072": "removed:runtimes.get",
         "legacy:083": "removed:users.list",
         "legacy:084": "removed:users.get",
+        "legacy:148": "removed:attachments.download_bytes-v0420",
     }
     assert {key: LEGACY_ARGV_MIGRATION[key] for key in removed} == removed
     final_migration = {
         key: value for key, value in LEGACY_ARGV_MIGRATION.items() if key not in removed
     }
-    assert len(final_migration.values()) == len(set(final_migration.values())) == 142
+    assert len(final_migration.values()) == len(set(final_migration.values())) == 140
     assert set(final_migration.values()).issubset(final_by_id)
 
     legacy_by_id = {

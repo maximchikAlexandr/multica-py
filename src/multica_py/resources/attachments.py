@@ -6,6 +6,8 @@ import stat
 import tempfile
 from typing import cast
 
+import msgspec
+
 from multica_py._generated.approved_sdk import (
     ATTACHMENT_DOWNLOAD_BINDING,
     ATTACHMENT_UPLOAD_BINDING,
@@ -26,8 +28,13 @@ def _safe_leaf(name: str, param: str) -> str:
     return name
 
 
+class _AttachmentDownloadResult(msgspec.Struct, frozen=True, kw_only=True):
+    path: str
+
+
 def _decode_download_path(data: bytes, *, command: str) -> pathlib.Path:
-    return pathlib.Path(decode_json(data, str, command=command))
+    result = decode_json(data, _AttachmentDownloadResult, command=command)
+    return pathlib.Path(result.path)
 
 
 def _read_downloaded_bytes(output_dir: pathlib.Path, returned_path: pathlib.Path) -> bytes:
@@ -138,7 +145,7 @@ class AttachmentResource(BaseResource):
             return _decode_download_path(result.stdout, command=" ".join(result.argv))
 
         return self._plan(
-            steps=(_Step((*args, "--output", "json"), "run_bytes"),),
+            steps=(_Step(args, "run_bytes"),),
             finalize=finalize,
         )
 
@@ -148,7 +155,7 @@ class AttachmentResource(BaseResource):
     def download_bytes_command(self, attachment_id: str) -> Command[bytes]:
         _safe_leaf(attachment_id, "attachment_id")
         temp_provider = _TempPathProvider()
-        args = ("attachment", "download", attachment_id, "--output-dir", "", "--output", "json")
+        args = ("attachment", "download", attachment_id, "--output-dir", "")
 
         def finalize(results: tuple[object, ...]) -> bytes:
             result = cast("RawCommandResult", results[0])

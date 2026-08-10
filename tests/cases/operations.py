@@ -360,7 +360,7 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:013": "manual:agents.avatar:canonical",
     "legacy:014": "removed:attachments.list",
     "legacy:015": "manual:attachments.upload:canonical",
-    "legacy:016": "manual:attachments.download:canonical",
+    "legacy:016": "removed:attachments.download-v0420",
     "legacy:017": "generated:autopilots.list:default:canonical",
     "legacy:018": "generated:autopilots.get:default:canonical",
     "legacy:019": "generated:autopilots.create:default:canonical",
@@ -492,7 +492,7 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:145": "manual:issues.list:variant:02",
     "legacy:146": "manual:issues.list:variant:03",
     "legacy:147": "manual:attachments.upload_bytes:canonical",
-    "legacy:148": "manual:attachments.download_bytes:canonical",
+    "legacy:148": "removed:attachments.download_bytes-v0420",
 }
 
 
@@ -717,7 +717,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         return RawCommandResult(
             argv=_argv,
             exit_code=0,
-            stdout=msgspec.json.encode(str(path)),
+            stdout=msgspec.json.encode({"path": str(path)}),
             stderr=b"",
             duration=datetime.timedelta(),
         )
@@ -1096,11 +1096,13 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "attachments.download",
-            ("attachment", "download", "a1", "--output-dir", "/out", "--output", "json"),
+            ("attachment", "download", "a1", "--output-dir", "/out"),
             args=("a1",),
             kwargs=(("output_dir", pathlib.Path("/out")),),
-            stdout=b'"/out/a1"',
+            stdout=b'{"path":"/out/a1"}',
+            transport="run_bytes",
             id="manual:attachments.download:canonical",
+            source_ref="multica-cli-v0.4.20:attachment-download",
         ),
         _c(
             "attachments.upload_bytes",
@@ -1114,12 +1116,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "attachments.download_bytes",
-            ("attachment", "download", "a1", "--output-dir", "<dynamic>", "--output", "json"),
+            ("attachment", "download", "a1", "--output-dir", "<dynamic>"),
             args=("a1",),
+            transport="run_bytes",
             id="manual:attachments.download_bytes:canonical",
-            expected_commands=(
-                "multica attachment download a1 --output-dir '${temp.path}' --output json",
-            ),
+            source_ref="multica-cli-v0.4.20:attachment-download",
+            expected_commands=("multica attachment download a1 --output-dir '${temp.path}'",),
             dynamic_argv_positions=(4,),
             transport_side_effect=_write_download,
             assert_result=_assert_download_bytes,
