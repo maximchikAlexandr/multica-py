@@ -51,7 +51,7 @@ before transport access.
 
 | Former surface | Compiling **After** |
 |---|---|
-| `IssueSummary` rows from list/search/relations | `for issue in client.issues.list().items: issue.set_status_command(IssueStatus.todo)` |
+| `IssueSummary` rows from list/search/relations | `for issue in client.issues.list().items: issue.set_status_command("todo")` |
 | `Page[IssueSummary]` or tuple relation rows | `Page[Issue]`; `project.issues.all()` returns bound `Issue` values |
 | `issues.assign(issue_id, to_id=...)` mode flags | `issues.assign(issue_id, member_id)` or `issues.unassign(issue_id)` |
 | `issues.reorder(issue_id, top=True, bottom=True, before_id=..., after_id=...)` | `issues.move_to_top(issue_id)`, `move_to_bottom`, `move_before(issue_id, target_id)`, or `move_after(issue_id, target_id)`; advanced `reorder` accepts exactly one target |
@@ -181,7 +181,7 @@ signature-valid direct call; its command form accepts the same explicit names.
 When copying across runtimes, `runtime_id` plus an omitted `model` emits
 `--model ""`; this is the sole automatic runtime-specific default. Omitted
 `thinking_level` and `service_tier` flags remain absent, and present values
-are forwarded as open upstream strings. The SDK intentionally excludes
+are forwarded as unrestricted upstream strings. The SDK intentionally excludes
 secret or machine-local configuration: `custom_env`, `mcp_config`, and
 `runtime_config` are not part of either signature or argv.
 
@@ -191,7 +191,7 @@ secret or machine-local configuration: `custom_env`, `mcp_config`, and
 `issues.search_command(query)` returns `Command[Page[Issue]]`.
 The exact command remains `issue search <query> --output json`. The decoder
 accepts the v0.4.20 `issues` envelope and the legacy top-level array without
-introducing a result wrapper. `Issue.match_source` is an optional open
+introducing a result wrapper. `Issue.match_source` is an optional
 string, preserved when returned by upstream and `None` when absent.
 
 ### Typed failures and runtime deletion
@@ -301,12 +301,11 @@ documented defaults, and no implicit `issues.get` hydration occurs.
 | `WorkspaceMember.issues` | `for issue in member.issues.all()` | `for issue in member.issues.all()` |
 
 ```python
-from multica_py import IssueStatus
 from multica_py.resources.issues import Issue
 
 for issue in client.issues.list(filter).issues:
     issue: Issue
-    if issue.status is IssueStatus.backlog:
+    if issue.status == "todo":
         issue.add_comment_command("ready")
 ```
 

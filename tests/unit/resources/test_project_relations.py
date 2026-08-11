@@ -6,6 +6,7 @@ import os
 import shlex
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -14,7 +15,7 @@ import pytest
 from multica_py._internal.commands import Command, _Step
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
-from multica_py.config import ClientConfig
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.common import ActionResult, Page
@@ -362,6 +363,69 @@ def test_project_relation_commands_preserve_project_scope(
     assert command.commands[0] == f"multica {shlex.join(case.expected_argv)}"
     transport.run_bytes.assert_not_called()
     transport.run_text.assert_not_called()
+
+
+def test_project_issue_create_forwards_natural_inputs_without_project_lookup() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(
+            "issue",
+            "create",
+            "--title",
+            "Deploy",
+            "--description-file",
+            "/workspace/docs/description.md",
+            "--project",
+            "p1",
+            "--output",
+            "json",
+        ),
+        exit_code=0,
+        stdout=b'{"id":"i1","title":"Deploy","status":"todo"}',
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    projects = ProjectResource(transport, ClientConfig())
+    issues = IssueResource(transport, ClientConfig())
+    client = MagicMock()
+    client.projects = projects
+    client.issues = issues
+    projects._set_client(client)
+    issues._set_client(client)
+    project = Project(id="p1", name="Test", status=_PLANNED, _client=client)
+
+    command = project.issues.create_command(
+        title="Deploy",
+        description_file=Path("docs/description.md"),
+        options=OperationOptions(cwd="/workspace"),
+    )
+
+    assert command.commands == (
+        "multica issue create --title Deploy --description-file "
+        "/workspace/docs/description.md --project p1 --output json",
+    )
+    transport.run_bytes.assert_not_called()
+    result = command.run()
+
+    assert result.id == "i1"
+    assert result._client is client
+    transport.run_bytes.assert_called_once_with(
+        (
+            "issue",
+            "create",
+            "--title",
+            "Deploy",
+            "--description-file",
+            "/workspace/docs/description.md",
+            "--project",
+            "p1",
+            "--output",
+            "json",
+        ),
+        stdin=None,
+        timeout=None,
+    )
 
 
 def test_project_add_local_directory_command_freezes_path_and_invalidates_after_success() -> None:

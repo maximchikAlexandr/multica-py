@@ -2,7 +2,7 @@
 
 from collections.abc import Iterator
 
-from multica_py import ClientConfig, Issue, IssueStatus, MulticaClient
+from multica_py import ClientConfig, Issue, MulticaClient
 from multica_py.models.issues import IssueMetadataItem
 
 _PRIORITY_RANK = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
@@ -13,7 +13,7 @@ def iter_queue(client: MulticaClient, project_id: str, external_key: str) -> Ite
     while True:
         page = client.issues.list(
             project_id=project_id,
-            status=IssueStatus.backlog,
+            status="todo",
             limit=100,
             offset=offset,
             metadata=(IssueMetadataItem(key="external_key", value=external_key),),

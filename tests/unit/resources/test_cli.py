@@ -5,17 +5,21 @@ import inspect
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from itertools import takewhile
 from unittest.mock import MagicMock
 
 import msgspec
 import pytest
 
+from multica_py._internal.argv import build_global_args, normalize_global_args
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.exceptions import CommandExecutionError, CommandTimeoutError, ValidationError
-from multica_py.resources.cli import CliResource
+from multica_py.resources import cli as cli_module
+from multica_py.resources.cli import CliResource, CliResult
+from tests.cases.operations import OPERATION_CASES
 
 
 @dataclass(frozen=True)
@@ -30,6 +34,151 @@ class RawCliSecretCase:
 class EnvironmentCliSecretCase:
     name: str
     env_key: str
+
+
+@dataclass(frozen=True)
+class RawExecutionModeCase:
+    name: str
+    argv: tuple[str, ...]
+    allowed: bool
+    hint: str = ""
+    secret: str = ""
+
+
+@dataclass(frozen=True)
+class RawGlobalOptionCase:
+    name: str
+    argv: tuple[str, ...]
+    secret: str
+
+
+@dataclass(frozen=True)
+class RawDeniedPathCase:
+    name: str
+    argv: tuple[str, ...]
+    hint: str
+
+
+RAW_EXECUTION_MODE_CASES: tuple[RawExecutionModeCase, ...] = (
+    RawExecutionModeCase("bounded token login", ("auth", "login", "--token", "raw-token"), True),
+    RawExecutionModeCase(
+        "bounded token login with trailing options",
+        ("auth", "login", "--token", "raw-token", "--profile", "safe"),
+        True,
+    ),
+    RawExecutionModeCase("bare auth login", ("auth", "login"), False, "ManagedProcess"),
+    RawExecutionModeCase(
+        "auth login trailing without token",
+        ("auth", "login", "--profile", "safe"),
+        False,
+        "--token",
+    ),
+    RawExecutionModeCase(
+        "auth login missing token", ("auth", "login", "--token"), False, "--token"
+    ),
+    RawExecutionModeCase(
+        "auth login option-like token", ("auth", "login", "--token", "--profile"), False, "--token"
+    ),
+    RawExecutionModeCase(
+        "auth login equals token form", ("auth", "login", "--token=raw-token"), False, "--token"
+    ),
+    RawExecutionModeCase("setup cloud", ("setup", "cloud"), False, "client.setup.cloud"),
+    RawExecutionModeCase(
+        "setup cloud suffix",
+        ("setup", "cloud", "--region", "test"),
+        False,
+        "client.setup.cloud",
+    ),
+    RawExecutionModeCase(
+        "setup self-host suffix",
+        ("setup", "self-host", "--url", "https://example.test"),
+        False,
+        "client.setup.self_host",
+    ),
+    RawExecutionModeCase("daemon start", ("daemon", "start"), False, "client.daemon.start"),
+    RawExecutionModeCase(
+        "daemon start suffix",
+        ("daemon", "start", "--foreground"),
+        False,
+        "client.daemon.start",
+    ),
+    RawExecutionModeCase(
+        "daemon logs suffix", ("daemon", "logs", "--follow"), False, "client.daemon.logs"
+    ),
+    RawExecutionModeCase(
+        "maintenance update suffix", ("update", "--yes"), False, "client.maintenance.update"
+    ),
+)
+
+
+RAW_GLOBAL_OPTION_CASES: tuple[RawGlobalOptionCase, ...] = (
+    RawGlobalOptionCase(
+        "profile split", ("--profile", "global-profile-secret"), "global-profile-secret"
+    ),
+    RawGlobalOptionCase(
+        "profile equals",
+        ("--profile=global-profile-secret",),
+        "global-profile-secret",
+    ),
+    RawGlobalOptionCase(
+        "workspace id split",
+        ("--workspace-id", "global-workspace-secret"),
+        "global-workspace-secret",
+    ),
+    RawGlobalOptionCase(
+        "workspace id equals",
+        ("--workspace-id=global-workspace-secret",),
+        "global-workspace-secret",
+    ),
+    RawGlobalOptionCase(
+        "server url split",
+        ("--server-url", "https://global-server-secret.example"),
+        "https://global-server-secret.example",
+    ),
+    RawGlobalOptionCase(
+        "server url equals",
+        ("--server-url=https://global-server-secret.example",),
+        "https://global-server-secret.example",
+    ),
+    RawGlobalOptionCase("debug", ("--debug",), ""),
+    RawGlobalOptionCase("debug equals", ("--debug=true",), ""),
+)
+
+RAW_DENIED_PATH_CASES: tuple[RawDeniedPathCase, ...] = (
+    RawDeniedPathCase("auth login", ("auth", "login"), "--token"),
+    RawDeniedPathCase(
+        "setup cloud suffix",
+        ("setup", "cloud", "--region", "test"),
+        "client.setup.cloud",
+    ),
+    RawDeniedPathCase("setup self-host", ("setup", "self-host"), "client.setup.self_host"),
+    RawDeniedPathCase(
+        "daemon start suffix",
+        ("daemon", "start", "--foreground"),
+        "client.daemon.start",
+    ),
+    RawDeniedPathCase("daemon logs", ("daemon", "logs"), "client.daemon.logs"),
+    RawDeniedPathCase("maintenance update", ("update",), "client.maintenance.update"),
+)
+
+RAW_GLOBAL_EXECUTION_MODE_CASES = tuple(
+    RawExecutionModeCase(
+        f"{placement} {option_case.name} {path_case.name}",
+        (
+            (*option_case.argv, *path_case.argv)
+            if placement == "before"
+            else (*path_case.argv[:1], *option_case.argv, *path_case.argv[1:])
+        ),
+        False,
+        path_case.hint,
+        option_case.secret,
+    )
+    for option_case in RAW_GLOBAL_OPTION_CASES
+    for path_case in RAW_DENIED_PATH_CASES
+    for placement in ("before", "between")
+)
+
+RAW_EXECUTION_MODE_CASES += RAW_GLOBAL_EXECUTION_MODE_CASES
 
 
 RAW_CLI_SECRET_CASES = (
@@ -215,6 +364,37 @@ RAW_CLI_SECRET_CASES = (
         "compact private key 7Qz",
     ),
 )
+
+
+def test_raw_global_normalizer_covers_transport_builder_options() -> None:
+    config = ClientConfig(
+        server_url="https://server.example",
+        workspace_id="workspace-1",
+        profile="profile-1",
+        debug=True,
+    )
+
+    assert build_global_args(config) == (
+        "--server-url",
+        "https://server.example",
+        "--workspace-id",
+        "workspace-1",
+        "--profile",
+        "profile-1",
+        "--debug",
+    )
+    assert normalize_global_args(build_global_args(config)) == ()
+    assert (
+        normalize_global_args(
+            (
+                "--server-url=https://server.example",
+                "--workspace-id=workspace-1",
+                "--profile=profile-1",
+                "--debug=true",
+            )
+        )
+        == ()
+    )
 
 
 ENVIRONMENT_CLI_SECRET_CASES = (
@@ -474,3 +654,126 @@ def test_cli_transport_raw_nonzero_failure_remains_typed_and_redacted(
 
     assert "secret" not in str(raised.value)
     assert raised.value.argv == ("multica", "issue", "validate", "--token", "***")
+
+
+@pytest.mark.parametrize("case", RAW_EXECUTION_MODE_CASES, ids=lambda case: case.name)
+def test_raw_execution_mode_matrix_is_shared_by_command_and_command_command(
+    case: RawExecutionModeCase,
+    cli_resource_factory: Callable[..., tuple[CliResource, MagicMock]],
+) -> None:
+    resource, transport = cli_resource_factory()
+
+    for builder in (resource.command, resource.command_command):
+        if case.allowed:
+            command = builder(*case.argv)
+            rendered = " ".join((command.commands[0], repr(command)))
+            assert "raw-token" not in rendered
+            assert "***" in rendered
+        else:
+            with pytest.raises(ValueError, match=case.hint) as raised:
+                builder(*case.argv)
+            assert "raw-token" not in str(raised.value)
+            if case.secret:
+                assert case.secret not in str(raised.value)
+            assert "auth login" not in str(raised.value) or "--token" in str(raised.value)
+
+    if not case.allowed:
+        transport.build_full_argv.assert_not_called()
+    transport.run_bytes.assert_not_called()
+    transport.spawn.assert_not_called()
+
+
+def test_bounded_token_login_returns_redacted_cli_result_and_preserves_options(
+    cli_resource_factory: Callable[..., tuple[CliResource, MagicMock]],
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    resource, transport = cli_resource_factory()
+    token = "bounded-login-token"
+    transport.run_bytes.return_value = raw_result(
+        ("multica", "auth", "login", "--token", token, "--profile", "safe"),
+        stdout=token.encode(),
+        stderr=("stderr " + token).encode(),
+        secret_values=(token,),
+    )
+
+    command = resource.command(
+        "auth",
+        "login",
+        "--token",
+        token,
+        "--profile",
+        "safe",
+        options=OperationOptions(profile="operation", timeout=5),
+    )
+    assert token not in command.commands[0]
+    assert command._plan.config_snapshot.profile == "operation"
+    assert command._plan.config_snapshot.timeout == datetime.timedelta(seconds=5)
+    result = command.run()
+
+    assert isinstance(result, CliResult)
+    assert token.encode() not in result.stdout
+    assert token.encode() not in result.stderr
+    transport.run_bytes.assert_called_once_with(
+        ("auth", "login", "--token", token, "--profile", "safe"), stdin=None, timeout=None
+    )
+
+
+@pytest.mark.parametrize(
+    "argv",
+    (
+        ("workspace", "watch", "ws1"),
+        ("plugin", "future", "--token", "future-token"),
+    ),
+)
+def test_reviewed_and_unknown_bounded_raw_paths_remain_supported(
+    argv: tuple[str, ...],
+    cli_resource_factory: Callable[..., tuple[CliResource, MagicMock]],
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    resource, transport = cli_resource_factory(ClientConfig(profile="base"))
+    transport.run_bytes.return_value = raw_result(("multica", *argv), stdout=b"ok")
+
+    command = resource.command(
+        *argv,
+        options=OperationOptions(profile="operation", timeout=5),
+    )
+    if "--token" in argv:
+        assert "future-token" not in command.commands[0]
+        assert "***" in command.commands[0]
+    else:
+        assert command.commands == ("multica " + " ".join(argv),)
+    result = command.run()
+
+    assert result.stdout == b"ok"
+    assert command._plan.config_snapshot.profile == "operation"
+    assert command._plan.config_snapshot.timeout == datetime.timedelta(seconds=5)
+    transport.run_bytes.assert_called_once_with(argv, stdin=None, timeout=None)
+
+
+def test_bounded_raw_timeout_remains_typed_and_does_not_leak_token(
+    cli_resource_factory: Callable[..., tuple[CliResource, MagicMock]],
+) -> None:
+    resource, transport = cli_resource_factory()
+    token = "timeout-login-token"
+    transport.run_bytes.side_effect = CommandTimeoutError("timed out")
+
+    with pytest.raises(CommandTimeoutError, match="timed out") as raised:
+        resource.command("auth", "login", "--token", token).run()
+
+    assert token not in str(raised.value)
+    transport.run_bytes.assert_called_once_with(
+        ("auth", "login", "--token", token), stdin=None, timeout=None
+    )
+
+
+def test_raw_execution_registry_covers_managed_process_operations_without_heuristics() -> None:
+    registry_paths = {rule.path for rule in cli_module._RAW_EXECUTION_MODE_REGISTRY}
+    reviewed_exceptions = cli_module._RAW_EXECUTION_MODE_REVIEWED_EXCEPTIONS
+    managed_process_paths = {
+        tuple(takewhile(lambda argument: not argument.startswith("-"), case.expected_argv))
+        for case in OPERATION_CASES
+        if case.is_canonical and case.expected_response_id == "process"
+    }
+    assert isinstance(cli_module._RAW_EXECUTION_MODE_REGISTRY, tuple)
+    assert managed_process_paths <= registry_paths | reviewed_exceptions
+    assert ("workspace", "watch") in reviewed_exceptions

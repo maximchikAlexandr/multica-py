@@ -88,6 +88,24 @@ unbounded interactive/spawn modes. The result exposes only `stdout`, `stderr`,
 and `duration`, so diagnostic argv and secret values cannot leak through the
 public result.
 
+The raw boundary is path-specific. These forms are rejected locally with a
+typed replacement and no transport or spawn call:
+
+- `auth login` without the bounded `--token <token>` operand (including suffixes)
+  → `client.auth.login()` for the `ManagedProcess` interactive flow;
+- `auth login --token` or an option-like operand → `client.auth.login(token)`;
+- `setup cloud` → `client.setup.cloud()`;
+- `setup self-host` → `client.setup.self_host(url)`;
+- `daemon start` → `client.daemon.start()`;
+- `daemon logs` → `client.daemon.logs()`;
+- top-level `update` with any suffix → `client.maintenance.update()`.
+
+The bounded `auth login --token <token>` form remains allowed with trailing
+options, as does `workspace watch`. Unknown bounded non-interactive argv also
+remains available when it passes structured-argument validation. Rejection
+errors never include the token or raw argv; allowed previews and diagnostics
+use the redaction marker `***`.
+
 Copy an agent with the inspectable command path when the operation needs an
 audit preview. The eager method and command method have the same keyword-only
 arguments and the same bound `Agent` result:
@@ -110,7 +128,7 @@ copied = copy_command.run()
 For a cross-runtime copy, an omitted model is deliberately emitted as
 `--model ""` so the target runtime selects its default. Omitted
 `thinking_level` and `service_tier` remain omitted, while present values pass
-through as open upstream strings. `copy_skills=False` emits `--no-skills`.
+through as unrestricted upstream strings. `copy_skills=False` emits `--no-skills`.
 Secret and machine-local configuration is excluded from this surface:
 `custom_env`, `mcp_config`, and `runtime_config` are not accepted or emitted.
 
@@ -124,7 +142,7 @@ for issue in matches.items:
 
 The command remains `issue search <query> --output json`; the SDK adapts both
 the v0.4.20 `{"issues": [...], "total": ...}` envelope and the legacy array
-to `Page[Issue]`. `match_source` is an optional open string and
+to `Page[Issue]`. `match_source` is an optional string and
 can be absent or a future upstream value.
 
 Composite operations expose their ordered steps and result references. For
@@ -152,14 +170,14 @@ object for callers that assemble a list filter dynamically:
 ```python
 from datetime import timedelta
 
-from multica_py import IssueStatus, OperationOptions
+from multica_py import OperationOptions
 from multica_py.models.issues import IssueListFilter
 
 options = OperationOptions(profile="automation", timeout=timedelta(seconds=30))
 direct_page = client.issues.list(
-    status=IssueStatus.backlog, limit=50, options=options
+    status="todo", limit=50, options=options
 )
-filter_value = IssueListFilter(status=IssueStatus.backlog, limit=50)
+filter_value = IssueListFilter(status="todo", limit=50)
 filtered_page = client.issues.list(filter_value, options=options)
 assert direct_page.items == filtered_page.items
 ```
@@ -168,6 +186,20 @@ Removed one-operation input DTOs do not have an object overload. Stable IDs
 remain positional and every explicit field is validated before transport.
 Every `*_command()` sibling has the same parameters and returns `Command[T]`
 for the eager method's exact `T`.
+
+Use ordinary descriptions and the canonical project reference for new issue
+calls. `description_file` accepts text paths without preview-time filesystem
+access; `description_input` is retained only for the semantically distinct
+inline, file, stdin, and explicit-no-description variants:
+
+```python
+project = client.projects.get("project_123")
+issue = client.issues.create(
+    title="Investigate login",
+    description="Investigate the login failure",
+    project=project,
+)
+```
 
 Update presence is explicit: `Unset` omits a field, approved nullable `None`
 values clear it, and accepted empty strings, empty tuples, `False`, and `0`
@@ -205,7 +237,9 @@ public method has no duplicate `project_id` parameter:
 
 ```python
 project = client.projects.get("project_123")
-issue = project.issues.create(title="Deploy", label_ids=("release",))
+issue = project.issues.create(
+    title="Deploy", description="Deploy the reviewed release", label_ids=("release",)
+)
 ```
 
 Attachments use one typed source API. Paths are passed through unchanged;
@@ -231,7 +265,7 @@ first page:
 ```python
 from collections.abc import Iterator
 
-from multica_py import IssueStatus, MulticaClient
+from multica_py import MulticaClient
 from multica_py.models.issues import IssueListFilter
 from multica_py.resources.issues import Issue
 
@@ -241,7 +275,7 @@ def iter_backlog(client: MulticaClient, project_id: str) -> Iterator[Issue]:
     while True:
         page = client.issues.list(
             project_id=project_id,
-            status=IssueStatus.backlog,
+            status="todo",
             limit=100,
             offset=offset,
         )
@@ -293,7 +327,7 @@ the remote operation transactional, but it prevents an integration from
 blindly overwriting a state it did not expect:
 
 ```python
-from multica_py import IssueStatus, MulticaClient
+from multica_py import MulticaClient
 
 
 class UnexpectedIssueStateError(RuntimeError):
@@ -303,13 +337,13 @@ class UnexpectedIssueStateError(RuntimeError):
 def move_if_current(
     client: MulticaClient,
     issue_id: str,
-    expected: IssueStatus,
-    target: IssueStatus,
+    expected: str,
+    target: str,
 ) -> None:
     issue = client.issues.get(issue_id)
-    if issue.status is not expected:
+    if issue.status.value != expected:
         raise UnexpectedIssueStateError(
-            f"issue {issue_id} changed: expected {expected.value}, "
+            f"issue {issue_id} changed: expected {expected}, "
             f"got {issue.status.value}"
         )
     client.issues.set_status(issue_id, target)

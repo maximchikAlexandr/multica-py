@@ -34,18 +34,18 @@ Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`
 ## Usage
 
 ```python
-from multica_py import IssueStatus, MulticaClient
+from multica_py import MulticaClient
 
 client = MulticaClient()
-page = client.issues.list(limit=50)
-for issue in page:
-    print(issue.title)
+issue = client.issues.get("issue_123")
+issue.set_status("done")
+page = client.issues.list(status="todo", limit=50)
+for item in page:
+    print(item.title)
 
-# Read results are bound Issue values, so an entity action is available
-# immediately without a second get call.
-if page.items:
-    preview = page.items[0].set_status_command(IssueStatus.in_progress)
-    updated = preview.run()
+command = client.issues.get_command("issue_123")
+print(command.commands)
+issue = command.run()
 ```
 
 The default client is suitable for a first local workflow. For an integration,
@@ -69,7 +69,7 @@ client = MulticaClient(
     )
 )
 scoped = client.with_options(profile="worker", timeout=timedelta(seconds=30))
-page = scoped.issues.list(status=IssueStatus.backlog, limit=50)
+page = scoped.issues.list(status="todo", limit=50)
 ```
 
 ### Traverse related resources
@@ -119,6 +119,13 @@ See the runnable examples:
 The full pattern catalog is in [docs/service-usage.md](docs/service-usage.md).
 See also the [API surface](docs/api.md), [migration guide](docs/migration.md),
 and [CLI coverage](docs/cli-coverage.md).
+
+Raw CLI commands are deliberately bounded. `auth login --token <token>` and
+`workspace watch` remain supported raw forms; interactive auth, setup, daemon,
+and maintenance process forms must use their typed SDK methods. Unknown
+non-interactive bounded argv remains forward-compatible when it passes the
+structured-argument checks. See the [raw CLI boundary](docs/api.md#raw-cli-execution-boundary)
+for the complete rejected-form table and replacements.
 
 ## Security notes
 

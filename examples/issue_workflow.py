@@ -1,6 +1,6 @@
 """Idempotent issue metadata/comments and a guarded status transition."""
 
-from multica_py import ClientConfig, IssueStatus, MulticaClient
+from multica_py import ClientConfig, MulticaClient
 
 
 class UnexpectedIssueStateError(RuntimeError):
@@ -26,13 +26,13 @@ def record_result_once(
 def move_if_current(
     client: MulticaClient,
     issue_id: str,
-    expected: IssueStatus,
-    target: IssueStatus,
+    expected: str,
+    target: str,
 ) -> None:
     issue = client.issues.get(issue_id)
-    if issue.status is not expected:
+    if issue.status.value != expected:
         raise UnexpectedIssueStateError(
-            f"issue {issue_id} changed: expected {expected.value}, got {issue.status.value}"
+            f"issue {issue_id} changed: expected {expected}, got {issue.status.value}"
         )
     client.issues.set_status(issue_id, target)
 
@@ -40,4 +40,4 @@ def move_if_current(
 if __name__ == "__main__":
     sdk = MulticaClient(ClientConfig())
     record_result_once(sdk, "issue_456", "run_789", "processing completed")
-    move_if_current(sdk, "issue_456", IssueStatus.in_progress, IssueStatus.in_review)
+    move_if_current(sdk, "issue_456", "in_progress", "in_review")
