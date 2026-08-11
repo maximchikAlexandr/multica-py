@@ -150,7 +150,7 @@
       "daemon_stop_manual": "multica_py.resources.daemon.DaemonResource.stop(*, options: OperationOptions | None = None): DaemonStatus",
       "issue_cancel_task": "(task_id: str, *, issue_id: str | None, options: OperationOptions | None = None) -> ActionResult[None]",
       "issue_children": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[IssueChildStageGroup, ...]",
-      "issue_create": "(*, title: str, description_input: IssueDescriptionInput = NoDescription(), priority: str | None = None, assignee_id: str | None = None, label_ids: tuple[str, ...] = (), project_id: str | None = None, parent_id: str | None = None, options: OperationOptions | None = None) -> Issue",
+      "issue_create": "(*, title: str, description: str | None = None, description_file: str | os.PathLike[str] | None = None, description_input: IssueDescriptionInput | None = None, priority: str | None = None, assignee_id: str | None = None, label_ids: tuple[str, ...] = (), project: str | Project | None = None, project_id: str | None = None, parent_id: str | None = None, options: OperationOptions | None = None) -> Issue",
       "issue_get": "(issue_id: str, *, options: OperationOptions | None = None) -> Issue",
       "issue_labels_add": "(issue_id: str, label_id: str, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
       "issue_labels_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
@@ -165,7 +165,7 @@
       "issue_run_messages": "(task_run_id: str, *, issue_id: str | None, options: OperationOptions | None = None) -> tuple[RunMessage, ...]",
       "issue_runs": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[TaskRun, ...]",
       "issue_search": "(query: str, *, options: OperationOptions | None = None) -> Page[Issue]",
-      "issue_status": "(issue_id: str, status: IssueStatus, *, options: OperationOptions | None = None) -> Issue",
+      "issue_status": "(issue_id: str, status: IssueStatus | str, *, options: OperationOptions | None = None) -> Issue",
       "issue_subscribers_add": "(issue_id: str, user_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
       "issue_subscribers_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[Subscriber, ...]",
       "issue_subscribers_remove": "(issue_id: str, user_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
@@ -186,14 +186,14 @@
       "labels_update_manual": "(label_id: str, *, name: str | UnsetType = Unset, color: str | UnsetType = Unset, options: OperationOptions | None = None) -> Label",
       "maintenance_update_manual": "multica_py.resources.maintenance.MaintenanceResource.update(*, options: OperationOptions | None = None): process",
       "maintenance_version_manual": "multica_py.resources.maintenance.MaintenanceResource.version(*, options: OperationOptions | None = None): scalar_str",
-      "project_create": "(*, name: str, description: str | None = None, options: OperationOptions | None = None) -> Project",
+      "project_create": "(*, name: str, description: str | None = None, description_file: str | os.PathLike[str] | None = None, options: OperationOptions | None = None) -> Project",
       "project_get": "(project_id: str, *, options: OperationOptions | None = None) -> Project",
       "project_list": "(, *, options: OperationOptions | None = None) -> tuple[Project, ...]",
       "project_resource_add": "(project_id: str, *, local_path: str | pathlib.Path, daemon_id: str, label: str | None = None, options: OperationOptions | None = None) -> ProjectResourceRecord",
       "project_resource_list": "(project_id: str, *, options: OperationOptions | None = None) -> tuple[ProjectResourceRecord, ...]",
       "project_resource_remove": "(project_id: str, resource_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
       "project_resource_update": "(project_id: str, resource_id: str, *, local_path: str | pathlib.Path, options: OperationOptions | None = None) -> ProjectResourceRecord",
-      "project_status": "(project_id: str, status: ProjectStatus, *, options: OperationOptions | None = None) -> Project",
+      "project_status": "(project_id: str, status: ProjectStatus | str, *, options: OperationOptions | None = None) -> Project",
       "project_update": "(project_id: str, *, name: str | UnsetType = Unset, description: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> Project",
       "projects_delete_manual": "multica_py.resources.projects.ProjectResource.delete(*, options: OperationOptions | None = None): action_result_none",
       "repositories_add": "(urls: tuple[str, ...], *, description: str | None = None, options: OperationOptions | None = None) -> ActionResult[RepositoryMutationResult]",
@@ -234,13 +234,13 @@
       "issues_move_to_bottom": "(*, options: OperationOptions | None = None) -> issue",
       "issues_move_before": "(*, options: OperationOptions | None = None) -> issue",
       "issues_move_after": "(*, options: OperationOptions | None = None) -> issue",
-      "project_issue_create": "(*, options: OperationOptions | None = None) -> issue",
+      "project_issue_create": "(*, title: str, description: str | None = None, description_file: str | os.PathLike[str] | None = None, description_input: IssueDescriptionInput | None = None, priority: str | None = None, assignee_id: str | None = None, label_ids: tuple[str, ...] = (), parent_id: str | None = None, options: OperationOptions | None = None) -> Issue",
       "cli_command": "(*argv: str, options: OperationOptions | None = None) -> Command[CliResult]",
       "issues_refresh": "(*, options: OperationOptions | None = None) -> issue",
       "issues_update_bound": "(*, options: OperationOptions | None = None) -> issue",
       "issues_assign_bound": "(*, options: OperationOptions | None = None) -> issue",
       "issues_unassign_bound": "(*, options: OperationOptions | None = None) -> issue",
-      "issues_set_status_bound": "(*, options: OperationOptions | None = None) -> issue",
+      "issues_set_status_bound": "(status: IssueStatus | str, *, options: OperationOptions | None = None) -> Issue",
       "projects_refresh": "(*, options: OperationOptions | None = None) -> project",
       "projects_update_bound": "(*, options: OperationOptions | None = None) -> project",
       "issues_move_to_top_bound": "(*, options: OperationOptions | None = None) -> Issue",
@@ -1165,6 +1165,16 @@
             "json_body:title"
           ],
           [
+            "description",
+            "--description",
+            "local_control:description"
+          ],
+          [
+            "description_file",
+            "--description-file",
+            "local_control:description"
+          ],
+          [
             "description_input",
             "description-selector",
             "local_control:description"
@@ -1178,6 +1188,11 @@
             "assignee_id",
             "--assignee-id",
             "json_body:assignee_id"
+          ],
+          [
+            "project",
+            "--project",
+            "json_body:project_id"
           ],
           [
             "project_id",
@@ -1812,6 +1827,11 @@
             "description",
             "--description",
             "json_body:description"
+          ],
+          [
+            "description_file",
+            "--description-file",
+            "local_control:description"
           ]
         ],
         "constraints": [
@@ -2666,6 +2686,41 @@
             "title",
             "--title",
             "json_body:title"
+          ],
+          [
+            "description",
+            "--description",
+            "local_control:description"
+          ],
+          [
+            "description_file",
+            "--description-file",
+            "local_control:description"
+          ],
+          [
+            "description_input",
+            "description-selector",
+            "local_control:description"
+          ],
+          [
+            "priority",
+            "--priority",
+            "json_body:priority"
+          ],
+          [
+            "assignee_id",
+            "--assignee-id",
+            "json_body:assignee_id"
+          ],
+          [
+            "parent_id",
+            "--parent",
+            "json_body:parent_issue_id"
+          ],
+          [
+            "label_ids",
+            "repeat:issue label add",
+            "json_body:label_id"
           ]
         ],
         "constraints": [
@@ -3451,7 +3506,10 @@
       ],
       "issue_create": [
         "required_nonnull",
-        "nullable_clear",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
         "omit",
         "omit",
         "omit",
@@ -3554,7 +3612,8 @@
       "maintenance_version_manual": [],
       "project_create": [
         "required_nonnull",
-        "nullable_clear"
+        "nullable_clear",
+        "omit"
       ],
       "project_get": [
         "required_nonnull"
@@ -3692,7 +3751,14 @@
       ],
       "project_issue_create": [
         "required_nonnull",
-        "required_nonnull"
+        "required_nonnull",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
       ],
       "cli_command": [],
       "issues_refresh": [],
@@ -6058,6 +6124,16 @@
             "destination": "json_body:title"
           },
           {
+            "source": "description",
+            "binding": "--description",
+            "destination": "local_control:description"
+          },
+          {
+            "source": "description_file",
+            "binding": "--description-file",
+            "destination": "local_control:description"
+          },
+          {
             "source": "description_input",
             "binding": "description-selector",
             "destination": "local_control:description"
@@ -6071,6 +6147,11 @@
             "source": "assignee_id",
             "binding": "--assignee-id",
             "destination": "json_body:assignee_id"
+          },
+          {
+            "source": "project",
+            "binding": "--project",
+            "destination": "json_body:project_id"
           },
           {
             "source": "project_id",
@@ -6713,6 +6794,11 @@
             "source": "description",
             "binding": "--description",
             "destination": "json_body:description"
+          },
+          {
+            "source": "description_file",
+            "binding": "--description-file",
+            "destination": "local_control:description"
           }
         ],
         "validator_ids": [
@@ -7641,6 +7727,41 @@
             "source": "title",
             "binding": "--title",
             "destination": "json_body:title"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "local_control:description"
+          },
+          {
+            "source": "description_file",
+            "binding": "--description-file",
+            "destination": "local_control:description"
+          },
+          {
+            "source": "description_input",
+            "binding": "description-selector",
+            "destination": "local_control:description"
+          },
+          {
+            "source": "priority",
+            "binding": "--priority",
+            "destination": "json_body:priority"
+          },
+          {
+            "source": "assignee_id",
+            "binding": "--assignee-id",
+            "destination": "json_body:assignee_id"
+          },
+          {
+            "source": "parent_id",
+            "binding": "--parent",
+            "destination": "json_body:parent_issue_id"
+          },
+          {
+            "source": "label_ids",
+            "binding": "repeat:issue label add",
+            "destination": "json_body:label_id"
           }
         ],
         "validator_ids": []
@@ -8322,10 +8443,10 @@
             }
           ],
           [
-            "description_input",
+            "description",
             {
-              "kind": "inline_description",
-              "text": "hello"
+              "kind": "primitive",
+              "value": "hello"
             }
           ],
           [
@@ -8376,10 +8497,10 @@
             }
           ],
           [
-            "description_input",
+            "description_file",
             {
-              "kind": "file_description",
-              "path": "/nonexistent/desc.txt"
+              "kind": "path",
+              "value": "/nonexistent/desc.txt"
             }
           ],
           [
@@ -8482,7 +8603,7 @@
             }
           ],
           [
-            "project_id",
+            "project",
             {
               "kind": "primitive",
               "value": "pr_001"
@@ -13075,7 +13196,7 @@
     {
       "operation_id": "issues.create",
       "compatibility": "compatible",
-      "rationale": "Existing create plus ordered label attachment is preserved.",
+      "rationale": "Ordinary inline/file descriptions and project references normalize to the existing flags while retained semantic variants, ordered label attachment, and the compatibility project_id spelling remain explicit.",
       "source_ref_ids": [
         "S-ISSUE"
       ],
@@ -13601,7 +13722,7 @@
     {
       "operation_id": "issues.set_status",
       "compatibility": "compatible",
-      "rationale": "Only target issue status command is emitted.",
+      "rationale": "Exact IssueStatus members or values are normalized before emitting the unchanged target issue status command.",
       "source_ref_ids": [
         "S-ISSUE"
       ],
@@ -13941,7 +14062,7 @@
     {
       "operation_id": "projects.create",
       "compatibility": "compatible",
-      "rationale": "Public name maps to target title.",
+      "rationale": "The public name maps to target title, while inline and file descriptions select the existing description flags without changing upstream evidence.",
       "source_ref_ids": [
         "S-PROJECT"
       ],
@@ -14151,7 +14272,7 @@
     {
       "operation_id": "projects.set_status",
       "compatibility": "compatible",
-      "rationale": "Only target project status command is emitted.",
+      "rationale": "Exact ProjectStatus members or values are normalized before emitting the unchanged target project status command.",
       "source_ref_ids": [
         "S-PROJECT"
       ],
@@ -15204,7 +15325,7 @@
     {
       "operation_id": "projects.issues.create",
       "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "rationale": "Project-scoped issue creation mirrors the root natural description inputs and preserves the bound project mapping, ordered labels, and result binding.",
       "source_ref_ids": [
         "S-ISSUE"
       ],
@@ -15360,7 +15481,7 @@
     {
       "operation_id": "issues.set_status_bound",
       "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "rationale": "Bound issue status accepts an exact IssueStatus member or value and preserves the existing root action mapping; no bound Project status operation is added.",
       "source_ref_ids": [
         "S-ISSUE"
       ],

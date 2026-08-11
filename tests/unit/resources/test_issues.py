@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import math
 from dataclasses import dataclass
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -37,6 +38,12 @@ from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.resources.issues import Issue, IssueResource, TaskRun
+
+_DESCRIPTION_INPUT_IMPOSTORS = (
+    type("NoDescription", (), {})(),
+    type("StdinDescription", (), {})(),
+)
+_ISSUE_LIST_FILTER_IMPOSTOR = type("IssueListFilter", (), {})()
 
 
 @dataclass(frozen=True)
@@ -218,6 +225,18 @@ def test_issue_children_wire_finalizer_returns_page_with_neutral_metadata() -> N
     assert page.total == 0
     assert page.has_more is False
     assert page.next_cursor is None
+
+
+def test_issue_children_wire_decoder_does_not_bind_a_client() -> None:
+    page = _issue_children_result_from_wire(
+        _IssueChildrenResultWire(
+            children=(_IssueWire(id="child", title="Child", status=IssueStatus.todo),),
+            unstaged=(_IssueWire(id="unstaged", title="Unstaged", status=IssueStatus.done),),
+        )
+    )
+
+    assert page.items[0]._client is None
+    assert page.unstaged[0]._client is None
 
 
 def test_issue_resource_list_returns_issue_list_page(mock_transport: MagicMock) -> None:
@@ -472,6 +491,24 @@ def test_invalid_value_rejected():
         IssueResource(MagicMock(), ClientConfig()).create_command(
             title="Test",
             description_input="some random string",  # type: ignore[arg-type]
+        )
+
+
+@pytest.mark.parametrize(
+    "description_input", _DESCRIPTION_INPUT_IMPOSTORS, ids=lambda value: type(value).__name__
+)
+def test_description_input_rejects_same_name_impostors(description_input: object) -> None:
+    with pytest.raises(TypeError, match="supported issue description"):
+        IssueResource(MagicMock(), ClientConfig()).create_command(
+            title="Test",
+            description_input=cast("IssueDescriptionInput", description_input),
+        )
+
+
+def test_issue_list_rejects_same_name_filter_impostor() -> None:
+    with pytest.raises(TypeError, match="Expected IssueListFilter"):
+        IssueResource(MagicMock(), ClientConfig()).list_command(
+            _ISSUE_LIST_FILTER_IMPOSTOR,
         )
 
 

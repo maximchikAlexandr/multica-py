@@ -105,7 +105,7 @@ CONVENTION_DOCUMENTATION_CASES = (
     DocumentationCase(ROOT / "docs/api.md", "Bound relation `.all()` snapshots"),
     DocumentationCase(ROOT / "docs/service-usage.md", "## Direct inputs, options, and presence"),
     DocumentationCase(ROOT / "docs/service-usage.md", "mutation.value.added"),
-    DocumentationCase(ROOT / "README.md", "scoped.issues.list(status=IssueStatus.backlog"),
+    DocumentationCase(ROOT / "README.md", 'scoped.issues.list(status="todo"'),
     DocumentationCase(ROOT / "README.md", "ActionResult[T]"),
     DocumentationCase(ROOT / "docs/migration.md", "### Breaking return matrix"),
     DocumentationCase(
@@ -116,6 +116,21 @@ CONVENTION_DOCUMENTATION_CASES = (
     DocumentationCase(ROOT / "examples/issue_queue.py", "yield from page.items"),
     DocumentationCase(ROOT / "examples/self_hosted_local.py", "client.projects.list().items"),
     DocumentationCase(ROOT / "examples/public_workflow.py", "scoped.cli.command"),
+)
+
+
+RAW_BOUNDARY_DOCUMENTATION_CASES = (
+    DocumentationCase(ROOT / "docs/api.md", "## Raw CLI execution boundary"),
+    DocumentationCase(ROOT / "docs/api.md", "auth login --token <token>"),
+    DocumentationCase(ROOT / "docs/api.md", "setup cloud"),
+    DocumentationCase(ROOT / "docs/api.md", "setup self-host"),
+    DocumentationCase(ROOT / "docs/api.md", "daemon start"),
+    DocumentationCase(ROOT / "docs/api.md", "daemon logs"),
+    DocumentationCase(ROOT / "docs/api.md", "top-level `update`"),
+    DocumentationCase(ROOT / "docs/api.md", "workspace watch"),
+    DocumentationCase(ROOT / "docs/api.md", "Unknown non-interactive bounded argv"),
+    DocumentationCase(ROOT / "docs/service-usage.md", "no transport or spawn call"),
+    DocumentationCase(ROOT / "docs/service-usage.md", "redaction marker `***`"),
 )
 
 
@@ -142,6 +157,44 @@ def test_command_preview_documentation_is_pinned(case: DocumentationCase) -> Non
 )
 def test_operation_conventions_are_documented(case: DocumentationCase) -> None:
     assert case.required_text in case.path.read_text()
+
+
+@pytest.mark.parametrize(
+    "case",
+    RAW_BOUNDARY_DOCUMENTATION_CASES,
+    ids=tuple(case.required_text for case in RAW_BOUNDARY_DOCUMENTATION_CASES),
+)
+def test_raw_boundary_documentation_is_complete(case: DocumentationCase) -> None:
+    assert case.required_text in case.path.read_text()
+
+
+def test_readme_teaches_the_canonical_workflow_in_order() -> None:
+    readme = (ROOT / "README.md").read_text()
+    markers = (
+        "client = MulticaClient()",
+        'client.issues.get("issue_123")',
+        'issue.set_status("done")',
+        'client.issues.list(status="todo"',
+        'client.issues.get_command("issue_123")',
+    )
+    positions = tuple(readme.index(marker) for marker in markers)
+    assert positions == tuple(sorted(positions))
+
+
+def test_active_docs_use_exact_statuses_and_no_secret_or_stale_claims() -> None:
+    paths = [ROOT / "README.md", ROOT / "docs/api.md", ROOT / "docs/service-usage.md"]
+    paths.extend((ROOT / "examples").glob("*.py"))
+    documents = "\n".join(path.read_text() for path in paths)
+
+    assert not re.search(r"\bopen\b", documents, flags=re.IGNORECASE)
+    assert "secret-token" not in documents
+    assert "raw-token" not in documents
+    assert "request-object" not in documents
+    assert "IssueCreateRequest" not in documents
+    assert "ProjectCreateRequest" not in documents
+    assert "description_input" in documents
+    assert "description_file" in documents
+    assert "project=project" in documents
 
 
 def test_documented_result_examples_follow_current_signatures() -> None:

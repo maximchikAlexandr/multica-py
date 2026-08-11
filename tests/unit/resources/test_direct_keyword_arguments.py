@@ -17,7 +17,7 @@ from multica_py.models.issues import (
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.project_resources import ProjectResourceCollection
-from multica_py.resources.projects import ProjectResource
+from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
 from multica_py.resources.skills import SkillResource
 
 _OPTIONAL_DIRECT_CASES = (
@@ -76,7 +76,45 @@ def test_issue_list_object_and_direct_forms_have_identical_empty_and_filtered_pl
             "update_command",
             ("self", "agent_id", "name", "description", "options"),
         ),
-        (ProjectResource, "create_command", ("self", "name", "description", "options")),
+        (
+            IssueResource,
+            "create_command",
+            (
+                "self",
+                "title",
+                "description",
+                "description_file",
+                "description_input",
+                "priority",
+                "assignee_id",
+                "label_ids",
+                "project",
+                "project_id",
+                "parent_id",
+                "options",
+            ),
+        ),
+        (
+            ProjectResource,
+            "create_command",
+            ("self", "name", "description", "description_file", "options"),
+        ),
+        (
+            ProjectIssueCollection,
+            "create_command",
+            (
+                "self",
+                "title",
+                "description",
+                "description_file",
+                "description_input",
+                "priority",
+                "assignee_id",
+                "label_ids",
+                "parent_id",
+                "options",
+            ),
+        ),
         (
             ProjectResource,
             "update_command",

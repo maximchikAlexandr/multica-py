@@ -305,7 +305,7 @@ ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING = GeneratedBinding(
 
 ISSUE_CREATE_BINDING = GeneratedBinding(
     'issues.create', 'default', ('issue', 'create'),
-    (GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description_input', 'description-selector', 'local_control:description'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('parent_id', '--parent', 'json_body:parent_issue_id'), GeneratedMapping('label_ids', 'repeat:issue label add', 'json_body:label_id'),), ('nonblank:title', 'description_exactly_one'),
+    (GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'local_control:description'), GeneratedMapping('description_file', '--description-file', 'local_control:description'), GeneratedMapping('description_input', 'description-selector', 'local_control:description'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('project', '--project', 'json_body:project_id'), GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('parent_id', '--parent', 'json_body:parent_issue_id'), GeneratedMapping('label_ids', 'repeat:issue label add', 'json_body:label_id'),), ('nonblank:title', 'description_exactly_one'),
 )
 
 ISSUES_DEPRIORITIZE_MANUAL_BINDING = GeneratedBinding(
@@ -530,7 +530,7 @@ MAINTENANCE_VERSION_MANUAL_BINDING = GeneratedBinding(
 
 PROJECT_CREATE_BINDING = GeneratedBinding(
     'projects.create', 'default', ('project', 'create'),
-    (GeneratedMapping('name', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'json_body:description'),), ('nonblank:name',),
+    (GeneratedMapping('name', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'json_body:description'), GeneratedMapping('description_file', '--description-file', 'local_control:description'),), ('nonblank:name',),
 )
 
 PROJECTS_DELETE_MANUAL_BINDING = GeneratedBinding(
@@ -545,7 +545,7 @@ PROJECT_GET_BINDING = GeneratedBinding(
 
 PROJECT_ISSUE_CREATE_BINDING = GeneratedBinding(
     'projects.issues.create', 'default', ('issue', 'create'),
-    (GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('title', '--title', 'json_body:title'),), (),
+    (GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'local_control:description'), GeneratedMapping('description_file', '--description-file', 'local_control:description'), GeneratedMapping('description_input', 'description-selector', 'local_control:description'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('parent_id', '--parent', 'json_body:parent_issue_id'), GeneratedMapping('label_ids', 'repeat:issue label add', 'json_body:label_id'),), (),
 )
 
 PROJECT_LIST_BINDING = GeneratedBinding(

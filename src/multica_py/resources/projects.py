@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import pathlib
 from typing import TYPE_CHECKING, cast
 
@@ -22,12 +23,12 @@ from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import (
     IssueDescriptionInput,
     IssueListFilter,
-    NoDescription,
 )
 from multica_py.models.project_resources import ProjectResourceRecord
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
 from multica_py.resources._base import (
     BaseResource,
+    _normalize_description_file,
     _page_items,
     _validate_optional_string,
 )
@@ -42,6 +43,14 @@ from multica_py.sentinels import Unset, UnsetType
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
+
+
+def _normalize_project_status(value: ProjectStatus | str) -> ProjectStatus:
+    if isinstance(value, ProjectStatus):
+        return value
+    if type(value) is str:
+        return ProjectStatus(value)
+    raise TypeError("status must be a ProjectStatus or exact status string")
 
 
 class ProjectIssueCollection(OffsetLazyCollection[Issue]):
@@ -75,7 +84,9 @@ class ProjectIssueCollection(OffsetLazyCollection[Issue]):
         self,
         *,
         title: str,
-        description_input: IssueDescriptionInput = NoDescription(),
+        description: str | None = None,
+        description_file: str | os.PathLike[str] | None = None,
+        description_input: IssueDescriptionInput | None = None,
         priority: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
@@ -84,6 +95,8 @@ class ProjectIssueCollection(OffsetLazyCollection[Issue]):
     ) -> Command[Issue]:
         command = self._issues.create_command(
             title=title,
+            description=description,
+            description_file=description_file,
             description_input=description_input,
             priority=priority,
             assignee_id=assignee_id,
@@ -103,7 +116,9 @@ class ProjectIssueCollection(OffsetLazyCollection[Issue]):
         self,
         *,
         title: str,
-        description_input: IssueDescriptionInput = NoDescription(),
+        description: str | None = None,
+        description_file: str | os.PathLike[str] | None = None,
+        description_input: IssueDescriptionInput | None = None,
         priority: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
@@ -112,6 +127,8 @@ class ProjectIssueCollection(OffsetLazyCollection[Issue]):
     ) -> Issue:
         return self.create_command(
             title=title,
+            description=description,
+            description_file=description_file,
             description_input=description_input,
             priority=priority,
             assignee_id=assignee_id,
@@ -310,13 +327,26 @@ class ProjectResource(BaseResource):
         *,
         name: str,
         description: str | None = None,
+        description_file: str | os.PathLike[str] | None = None,
         options: OperationOptions | None = None,
     ) -> Command[Project]:
         validate_nonblank(name)
         _validate_optional_string(description, "description")
+        if description is not None and description_file is not None:
+            raise TypeError("description and description_file are mutually exclusive")
+        normalized_description_file = (
+            _normalize_description_file(
+                description_file,
+                cwd=self._effective_config(options).cwd,
+            )
+            if description_file is not None
+            else None
+        )
         args = ["project", "create", "--title", name]
         if description is not None:
             args.extend(["--description", description])
+        elif normalized_description_file is not None:
+            args.extend(["--description-file", normalized_description_file])
         return self._decoded_command(tuple(args), _ProjectWire, options=options)._map(self._bind)
 
     def create(
@@ -324,9 +354,15 @@ class ProjectResource(BaseResource):
         *,
         name: str,
         description: str | None = None,
+        description_file: str | os.PathLike[str] | None = None,
         options: OperationOptions | None = None,
     ) -> Project:
-        return self.create_command(name=name, description=description, options=options).run()
+        return self.create_command(
+            name=name,
+            description=description,
+            description_file=description_file,
+            options=options,
+        ).run()
 
     def update_command(
         self,
@@ -379,15 +415,22 @@ class ProjectResource(BaseResource):
     def set_status_command(
         self,
         project_id: str,
-        status: ProjectStatus,
+        status: ProjectStatus | str,
         *,
         options: OperationOptions | None = None,
     ) -> Command[Project]:
+        normalized_status = _normalize_project_status(status)
         return self._decoded_command(
-            ("project", "status", project_id, status.value), _ProjectWire, options=options
+            ("project", "status", project_id, normalized_status.value),
+            _ProjectWire,
+            options=options,
         )._map(self._bind)
 
     def set_status(
-        self, project_id: str, status: ProjectStatus, *, options: OperationOptions | None = None
+        self,
+        project_id: str,
+        status: ProjectStatus | str,
+        *,
+        options: OperationOptions | None = None,
     ) -> Project:
         return self.set_status_command(project_id, status, options=options).run()

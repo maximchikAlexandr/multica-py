@@ -11,11 +11,13 @@ from multica_py.types import MetadataValue
 if TYPE_CHECKING:
     from multica_py.resources.agents import Agent
     from multica_py.resources.issues import Issue
+    from multica_py.resources.projects import Project
     from multica_py.resources.squads import Squad
     from multica_py.resources.workspaces import WorkspaceMember
 
     type AssignmentTarget = str | Agent | Squad | WorkspaceMember
     type IssueReference = str | Issue
+    type ProjectReference = str | Project
 else:
     # The runtime validator uses an explicit allow-list; this fallback keeps
     # the aliases importable without importing resource modules cyclically.
@@ -23,6 +25,7 @@ else:
 
     type AssignmentTarget = str | _BoundEntity
     type IssueReference = str | _BoundEntity
+    type ProjectReference = str | _BoundEntity
 
 
 class IssueMetadataItem(msgspec.Struct, frozen=True, kw_only=True):
@@ -95,7 +98,7 @@ else:
     class IssueChildrenResult(Page["Issue"], frozen=True, kw_only=True):
         total: int = 0
         child_stages: tuple[IssueChildStageGroup, ...] = ()
-        unstaged: tuple[object, ...] = ()
+        unstaged: tuple[Issue, ...] = ()
 
         @property
         def children(self) -> tuple[Issue, ...]:
@@ -103,7 +106,7 @@ else:
 
 
 class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
-    status: IssueStatus | None = None
+    status: IssueStatus | str | None = None
     priority: str | None = None
     assignee_id: str | None = None
     limit: int | None = None

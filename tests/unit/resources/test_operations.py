@@ -19,15 +19,23 @@ from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.models.common import ActionResult, Page
+from multica_py.models.issues import IssueListFilter
 from multica_py.process import ManagedProcess
 from multica_py.resources.agents import Agent
+from multica_py.resources.issues import Issue, IssueResource
+from multica_py.resources.projects import Project, ProjectIssueCollection, ProjectResource
 from tests.cases.operations import (
     _BOUND_RESOURCE_SPECS,
     GENERATED_OPERATION_CASES,
+    ISSUE_INVALID_STATUS_CASES,
+    ISSUE_STATUS_CASES,
     LEGACY_ARGV_MIGRATION,
     OPERATION_CASES,
+    PROJECT_INVALID_STATUS_CASES,
+    PROJECT_STATUS_CASES,
     RESOURCE_SPECS,
     OperationCase,
+    StatusInputCase,
     _resource_attr,
     discover_public_methods,
 )
@@ -303,6 +311,177 @@ def test_operation(case: OperationCase, mock_transport: MagicMock) -> None:
     _assert_transport_call(mock_transport, case)
 
 
+@pytest.mark.parametrize("case", ISSUE_STATUS_CASES, ids=lambda case: case.name)
+def test_issue_list_status_strings_and_enums_have_exact_argv(
+    case: StatusInputCase,
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = IssueResource(mock_transport, ClientConfig())
+    expected = ("issue", "list", "--status", case.expected, "--output", "json")
+    for request in (case.value, IssueListFilter(status=case.value)):
+        command = (
+            resource.list_command(request)
+            if isinstance(request, IssueListFilter)
+            else resource.list_command(status=request)
+        )
+        assert command.commands == ("multica " + " ".join(expected),)
+        mock_transport.run_bytes.return_value = raw_result(stdout=b'{"issues":[]}')
+        if isinstance(request, IssueListFilter):
+            resource.list(request)
+        else:
+            resource.list(status=request)
+        mock_transport.run_bytes.assert_called_once_with(expected, stdin=None, timeout=None)
+        mock_transport.run_text.assert_not_called()
+        mock_transport.spawn.assert_not_called()
+        mock_transport.reset_mock()
+
+
+@pytest.mark.parametrize("case", ISSUE_STATUS_CASES, ids=lambda case: case.name)
+def test_root_and_bound_issue_status_actions_have_identical_argv(
+    case: StatusInputCase,
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = IssueResource(mock_transport, ClientConfig())
+    client = MagicMock()
+    resource._set_client(client)
+    client.issues = resource
+    issue = Issue(id="i1", title="Issue", status=IssueStatus.todo, _client=client)
+    expected = ("issue", "status", "i1", case.expected, "--output", "json")
+    for command in (
+        resource.set_status_command("i1", case.value),
+        issue.set_status_command(case.value),
+    ):
+        assert command.commands == ("multica " + " ".join(expected),)
+    for action, args in (
+        (resource.set_status, ("i1", case.value)),
+        (issue.set_status, (case.value,)),
+    ):
+        mock_transport.run_bytes.return_value = raw_result(
+            stdout=(f'{{"id":"i1","title":"Issue","status":"{case.expected}"}}').encode()
+        )
+        action(*args)
+        mock_transport.run_bytes.assert_called_once_with(expected, stdin=None, timeout=None)
+        mock_transport.run_text.assert_not_called()
+        mock_transport.spawn.assert_not_called()
+        mock_transport.reset_mock()
+
+
+@pytest.mark.parametrize("case", PROJECT_STATUS_CASES, ids=lambda case: case.name)
+def test_project_status_eager_and_command_have_identical_argv(
+    case: StatusInputCase,
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = ProjectResource(mock_transport, ClientConfig())
+    expected = ("project", "status", "p1", case.expected, "--output", "json")
+    command = resource.set_status_command("p1", case.value)
+    assert command.commands == ("multica " + " ".join(expected),)
+    mock_transport.run_bytes.return_value = raw_result(
+        stdout=(f'{{"id":"p1","title":"Project","status":"{case.expected}"}}').encode()
+    )
+    project = resource.set_status("p1", case.value)
+    assert isinstance(project, Project)
+    mock_transport.run_bytes.assert_called_once_with(expected, stdin=None, timeout=None)
+    mock_transport.run_text.assert_not_called()
+    mock_transport.spawn.assert_not_called()
+
+
+@pytest.mark.parametrize("value", ISSUE_INVALID_STATUS_CASES, ids=repr)
+def test_invalid_issue_status_inputs_fail_locally(value: object, mock_transport: MagicMock) -> None:
+    resource = IssueResource(mock_transport, ClientConfig())
+    for request in (value, IssueListFilter(status=cast("IssueStatus | str", value))):
+        with pytest.raises((ValueError, TypeError)):
+            if isinstance(request, IssueListFilter):
+                resource.list_command(request)
+            else:
+                resource.list_command(status=cast("IssueStatus | str", request))
+    mock_transport.build_full_argv.assert_not_called()
+    mock_transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize("value", ISSUE_INVALID_STATUS_CASES, ids=repr)
+def test_invalid_root_and_bound_issue_status_inputs_fail_before_transport(
+    value: object, mock_transport: MagicMock
+) -> None:
+    status = cast("IssueStatus | str", value)
+    resource = IssueResource(mock_transport, ClientConfig())
+    client = MagicMock()
+    resource._set_client(client)
+    client.issues = resource
+    issue = Issue(id="i1", title="Issue", status=IssueStatus.todo, _client=client)
+    for action, args in (
+        (resource.set_status_command, ("i1", status)),
+        (resource.set_status, ("i1", status)),
+        (issue.set_status_command, (status,)),
+        (issue.set_status, (status,)),
+    ):
+        with pytest.raises((ValueError, TypeError)):
+            action(*args)
+    mock_transport.build_full_argv.assert_not_called()
+    mock_transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize("value", PROJECT_INVALID_STATUS_CASES, ids=repr)
+def test_invalid_project_status_inputs_fail_before_transport(
+    value: object, mock_transport: MagicMock
+) -> None:
+    status = cast("ProjectStatus | str", value)
+    resource = ProjectResource(mock_transport, ClientConfig())
+    for action in (resource.set_status_command, resource.set_status):
+        with pytest.raises((ValueError, TypeError)):
+            action("p1", status)
+    mock_transport.build_full_argv.assert_not_called()
+    mock_transport.run_bytes.assert_not_called()
+
+
+def test_status_models_remain_decoded_enums_and_project_has_no_bound_status_action() -> None:
+    assert Issue(id="i1", title="Issue", status=IssueStatus.todo).status is IssueStatus.todo
+    assert (
+        Project(id="p1", name="Project", status=ProjectStatus.planned).status
+        is ProjectStatus.planned
+    )
+    assert not hasattr(Project, "set_status")
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        case
+        for case in OPERATION_CASES
+        if (
+            case.id.startswith("manual:projects.create:description-file:")
+            or case.id.startswith("manual:issues.create:description-")
+            or case.id.startswith("manual:issues.create:project-")
+            or case.id.startswith("manual:projects.issues.create:description-")
+        )
+        and case.expected_exception is not None
+    ],
+    ids=lambda case: case.id,
+)
+def test_issue_natural_input_invalid_cases_do_not_touch_filesystem_or_transport(
+    case: OperationCase,
+    mock_transport: MagicMock,
+) -> None:
+    with (
+        patch("builtins.open") as open_mock,
+        patch.object(pathlib.Path, "exists") as exists_mock,
+        patch.object(pathlib.Path, "stat") as stat_mock,
+    ):
+        _configure_mock(mock_transport, case)
+        _assert_transport_call(mock_transport, case)
+    open_mock.assert_not_called()
+    exists_mock.assert_not_called()
+    stat_mock.assert_not_called()
+    mock_transport.run_bytes.assert_not_called()
+    mock_transport.run_text.assert_not_called()
+    mock_transport.spawn.assert_not_called()
+
+
 def test_discovered_public_methods() -> None:
     discovered = discover_public_methods()
     contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
@@ -320,9 +499,9 @@ def test_discovered_public_methods() -> None:
     }
     assert len(governed) == len(implemented_entrypoints)
     assert len(contract.operation_ids) == len(contract.operations)
-    assert len(OPERATION_CASES) == 263
-    assert len({c.id for c in OPERATION_CASES}) == 263
-    assert sum(not c.is_canonical for c in OPERATION_CASES) == 100
+    assert len(OPERATION_CASES) == 289
+    assert len({c.id for c in OPERATION_CASES}) == 289
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == 126
     presence_catalog = cast(
         "dict[str, object]",
         cast("dict[str, object]", contract.raw["catalogs"])["presence"],
@@ -356,7 +535,7 @@ def test_discovered_public_methods() -> None:
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
     assert len(generated) == 58
-    assert len(manual) == 205
+    assert len(manual) == 231
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
@@ -450,6 +629,97 @@ def test_discovered_cli_surface_has_normalized_options_parity() -> None:
                 assert option.kind is inspect.Parameter.KEYWORD_ONLY, case.sdk_method
                 assert typing.get_type_hints(function)["options"] == OperationOptions | None
     assert missing_options == _LAZY_OPTIONS_PARITY_EXCEPTIONS
+
+
+_CHANGED_PUBLIC_SURFACE_SIGNATURES: tuple[tuple[type[object], str, tuple[str, ...]], ...] = (
+    (
+        IssueResource,
+        "create",
+        (
+            "title",
+            "description",
+            "description_file",
+            "description_input",
+            "priority",
+            "assignee_id",
+            "label_ids",
+            "project",
+            "project_id",
+            "parent_id",
+            "options",
+        ),
+    ),
+    (IssueResource, "set_status", ("issue_id", "status", "options")),
+    (
+        ProjectResource,
+        "create",
+        ("name", "description", "description_file", "options"),
+    ),
+    (ProjectResource, "set_status", ("project_id", "status", "options")),
+    (
+        ProjectIssueCollection,
+        "create",
+        (
+            "title",
+            "description",
+            "description_file",
+            "description_input",
+            "priority",
+            "assignee_id",
+            "label_ids",
+            "parent_id",
+            "options",
+        ),
+    ),
+    (Issue, "set_status", ("status", "options")),
+)
+
+
+def _signature_parameters(function: object) -> tuple[inspect.Parameter, ...]:
+    assert inspect.isfunction(function)
+    parameters = tuple(inspect.signature(function).parameters.values())
+    if parameters and parameters[0].name in {"self", "cls"}:
+        return parameters[1:]
+    return parameters
+
+
+@pytest.mark.parametrize(
+    ("owner", "method_name", "expected_names"),
+    _CHANGED_PUBLIC_SURFACE_SIGNATURES,
+    ids=lambda case: case if isinstance(case, str) else None,
+)
+def test_changed_public_surface_is_explicit_and_command_parity(
+    owner: type[object],
+    method_name: str,
+    expected_names: tuple[str, ...],
+) -> None:
+    eager = getattr(owner, method_name)
+    command = getattr(owner, f"{method_name}_command")
+    eager_overloads = typing.get_overloads(eager) or (eager,)
+    command_overloads = typing.get_overloads(command) or (command,)
+    assert len(eager_overloads) == len(command_overloads)
+    for eager_fn, command_fn in zip(eager_overloads, command_overloads, strict=True):
+        eager_parameters = _signature_parameters(eager_fn)
+        command_parameters = _signature_parameters(command_fn)
+        assert tuple(parameter.name for parameter in eager_parameters) == expected_names
+        assert tuple(parameter.name for parameter in command_parameters) == expected_names
+        assert tuple(parameter.kind for parameter in eager_parameters) == tuple(
+            parameter.kind for parameter in command_parameters
+        )
+        assert all(
+            parameter.kind is not inspect.Parameter.VAR_KEYWORD for parameter in eager_parameters
+        )
+        assert all(
+            parameter.kind is not inspect.Parameter.VAR_KEYWORD for parameter in command_parameters
+        )
+        for function in (eager_fn, command_fn):
+            hints = typing.get_type_hints(function)
+            assert "request" not in hints
+            assert all("Request" not in str(annotation) for annotation in hints.values())
+            assert hints["options"] == OperationOptions | None
+            assert _signature_parameters(function)[-1].name == "options"
+
+    assert not hasattr(Project, "set_status")
 
 
 def test_approved_result_categories_are_closed() -> None:

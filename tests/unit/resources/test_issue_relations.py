@@ -87,6 +87,75 @@ class IssueOriginCase:
     ]
 
 
+@dataclass(frozen=True)
+class IssueChildrenEnvelopeCase:
+    name: str
+    stdout: bytes
+    expected_children: tuple[str, ...]
+    expected_unstaged: tuple[str, ...]
+    total: int
+    child_stages: tuple[IssueChildStageGroup, ...]
+    limit: int | None
+    offset: int | None
+    has_more: bool
+    next_cursor: str | None
+
+
+ISSUE_CHILDREN_ENVELOPE_CASES = (
+    IssueChildrenEnvelopeCase(
+        "empty",
+        b"{}",
+        (),
+        (),
+        0,
+        (),
+        None,
+        None,
+        False,
+        None,
+    ),
+    IssueChildrenEnvelopeCase(
+        "children only",
+        b'{"children":[{"id":"child-1","title":"Child","status":"todo"}],"total":1}',
+        ("child-1",),
+        (),
+        1,
+        (),
+        None,
+        None,
+        False,
+        None,
+    ),
+    IssueChildrenEnvelopeCase(
+        "unstaged only",
+        b'{"unstaged":[{"id":"unstaged-1","title":"Unstaged","status":"done"}],"total":1}',
+        (),
+        ("unstaged-1",),
+        1,
+        (),
+        None,
+        None,
+        False,
+        None,
+    ),
+    IssueChildrenEnvelopeCase(
+        "mixed and paginated",
+        b'{"children":[{"id":"child-1","title":"Child","status":"todo"}],'
+        b'"unstaged":[{"id":"unstaged-1","title":"Unstaged","status":"done"}],'
+        b'"total":3,"child_stages":[{"name":"todo","count":2}],'
+        b'"limit":25,"offset":10,"has_more":true,"next_cursor":"cursor-2"}',
+        ("child-1",),
+        ("unstaged-1",),
+        3,
+        (IssueChildStageGroup(name="todo", count=2),),
+        25,
+        10,
+        True,
+        "cursor-2",
+    ),
+)
+
+
 ISSUE_ORIGIN_CASES = (
     IssueOriginCase("issue get", "get"),
     IssueOriginCase("issue list", "list"),
@@ -628,6 +697,102 @@ def test_issue_offset_page_command_binds_rows_to_origin_client() -> None:
     assert isinstance(result.items[0], Issue)
     assert result.items[0]._client is client
     client.issues.get.assert_not_called()
+
+
+@pytest.mark.parametrize("case", ISSUE_CHILDREN_ENVELOPE_CASES, ids=lambda case: case.name)
+def test_issue_children_finalizer_binds_every_envelope_item_without_extra_get(
+    case: IssueChildrenEnvelopeCase,
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.run_bytes.return_value = _raw(case.stdout)
+    resource = IssueResource(transport, ClientConfig())
+    client = MagicMock()
+    resource._set_client(client)
+
+    result = resource.children_command("iss_1").run()
+
+    assert tuple(item.id for item in result.items) == case.expected_children
+    assert tuple(item.id for item in result.children) == case.expected_children
+    assert tuple(item.id for item in result.unstaged) == case.expected_unstaged
+    assert all(item._client is client for item in (*result.items, *result.unstaged))
+    assert result.total == case.total
+    assert result.child_stages == case.child_stages
+    assert result.limit == case.limit
+    assert result.offset == case.offset
+    assert result.has_more is case.has_more
+    assert result.next_cursor == case.next_cursor
+    transport.run_bytes.assert_called_once_with(
+        ("issue", "children", "iss_1", "--output", "json"),
+        stdin=None,
+        timeout=None,
+    )
+    client.issues.get.assert_not_called()
+
+
+def test_issue_children_eager_uses_bound_envelope_without_hydration() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.return_value = _raw(
+        b'{"children":[{"id":"child-1","title":"Child","status":"todo"}],'
+        b'"unstaged":[{"id":"unstaged-1","title":"Unstaged","status":"done"}],'
+        b'"total":2}'
+    )
+    resource = IssueResource(transport, ClientConfig())
+    client = MulticaClient()
+    client._transport = transport
+    client.issues._transport = transport
+    resource._set_client(client)
+
+    result = resource.children("iss_1")
+
+    assert result.children[0]._client is client
+    assert result.unstaged[0]._client is client
+    assert result.children[0].refresh_command().commands == (
+        "multica issue get child-1 --output json",
+    )
+    transport.run_bytes.assert_called_once_with(
+        ("issue", "children", "iss_1", "--output", "json"),
+        stdin=None,
+        timeout=None,
+    )
+
+
+def test_issue_children_relation_command_preserves_scope_cache_and_refresh() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.return_value = _raw(
+        b'{"children":[{"id":"child-1","title":"Child","status":"todo"}],'
+        b'"unstaged":[{"id":"unstaged-1","title":"Unstaged","status":"done"}],'
+        b'"total":2,"child_stages":[{"name":"todo","count":1}],'
+        b'"limit":10,"offset":0,"has_more":false}'
+    )
+    client = MulticaClient()
+    client._transport = transport
+    client.issues._transport = transport
+    entity = _issue(client)
+
+    relation = entity.children
+    command = relation.all_command()
+    assert command.commands == ("multica issue children iss_1 --output json",)
+    assert transport.run_bytes.call_count == 0
+
+    loaded = relation.all()
+    assert tuple(item.id for item in loaded) == ("child-1",)
+    assert relation.metadata.total == 2
+    assert relation.metadata.child_stages == (IssueChildStageGroup(name="todo", count=1),)
+    assert tuple(item.id for item in relation.metadata.unstaged) == ("unstaged-1",)
+    assert loaded[0]._client is client
+    assert relation.metadata.unstaged[0]._client is client
+    assert loaded[0].refresh_command().commands == ("multica issue get child-1 --output json",)
+    assert transport.run_bytes.call_count == 1
+
+    assert relation.all() == loaded
+    assert transport.run_bytes.call_count == 1
+    relation.refresh_command().run()
+    assert transport.run_bytes.call_count == 2
+    assert all(
+        call.args[0][:2] == ("issue", "children") for call in transport.run_bytes.call_args_list
+    )
 
 
 def _direct_result(

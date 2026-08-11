@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import datetime
+import os
+import pathlib
 from collections.abc import Callable
 from typing import TYPE_CHECKING, TypeVar, cast
 
@@ -36,6 +38,20 @@ def _page_items(value: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
 def _validate_optional_string(value: object, field_name: str) -> None:
     if value is not None and value is not Unset and not isinstance(value, str):
         raise TypeError(f"{field_name} must be a string or None")
+
+
+def _normalize_description_file(value: str | os.PathLike[str], *, cwd: pathlib.Path | None) -> str:
+    try:
+        raw_value = cast("str | bytes", os.fspath(value))
+    except TypeError as error:
+        raise TypeError("description_file must be a string or path-like value") from error
+    if isinstance(raw_value, bytes):
+        raise TypeError("description_file must be a text path, not bytes")
+    if not raw_value.strip():
+        raise ValueError("description_file must be nonblank when provided")
+    if cwd is None:
+        return os.path.abspath(raw_value)
+    return os.path.abspath(os.path.join(os.fspath(cwd), raw_value))
 
 
 def _is_transport(value: object) -> bool:

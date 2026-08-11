@@ -9,7 +9,9 @@ from pathlib import Path as _Path
 from typing import cast
 from unittest.mock import MagicMock
 
+from multica_py.config import OperationOptions
 from multica_py.enums import IssueStatus as IssueStatusValue
+from multica_py.enums import ProjectStatus as ProjectStatusValue
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.resources.agents import Agent, AgentResource
 from multica_py.resources.attachments import AttachmentResource
@@ -72,6 +74,42 @@ class OperationCase:
     public_route: bool = False
     snapshot_profiles: tuple[str, str] | None = None
     bound_target: str | None = None
+
+
+@dataclass(frozen=True)
+class StatusInputCase:
+    name: str
+    value: str
+    expected: str
+
+
+ISSUE_STATUS_CASES: tuple[StatusInputCase, ...] = (
+    StatusInputCase("issue enum", IssueStatusValue.todo, "todo"),
+    StatusInputCase("issue exact string", "in_review", "in_review"),
+)
+
+PROJECT_STATUS_CASES: tuple[StatusInputCase, ...] = (
+    StatusInputCase("project enum", ProjectStatusValue.planned, "planned"),
+    StatusInputCase("project exact string", "completed", "completed"),
+)
+
+ISSUE_INVALID_STATUS_CASES: tuple[object, ...] = (
+    "open",
+    "TODO",
+    "",
+    b"todo",
+    7,
+    ProjectStatusValue.in_progress,
+)
+
+PROJECT_INVALID_STATUS_CASES: tuple[object, ...] = (
+    "open",
+    "PLANNED",
+    "",
+    b"planned",
+    7,
+    IssueStatusValue.todo,
+)
 
 
 RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
@@ -421,10 +459,10 @@ LEGACY_ARGV_MIGRATION: dict[str, str] = {
     "legacy:047": "generated:issues.list:default:canonical",
     "legacy:048": "manual:issues.get:canonical",
     "legacy:049": "generated:issues.create:default:canonical",
-    "legacy:050": "generated:issues.create:default:variant:01",
-    "legacy:051": "generated:issues.create:default:variant:02",
+    "legacy:050": "manual:issues.create:direct:variant:08",
+    "legacy:051": "manual:issues.create:legacy:description-file",
     "legacy:052": "generated:issues.create:default:variant:03",
-    "legacy:053": "generated:issues.create:default:variant:04",
+    "legacy:053": "manual:issues.create:direct:variant:09",
     "legacy:054": "manual:projects.list:canonical",
     "legacy:055": "manual:projects.get:canonical",
     "legacy:056": "generated:projects.create:default:canonical",
@@ -561,6 +599,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         IssueListFilter,
         IssueMetadataItem,
         LinkedPullRequest,
+        NoDescription,
         StdinDescription,
     )
     from multica_py.models.relations import OffsetPage
@@ -2745,6 +2784,75 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             source_ref="direct-keyword-arguments",
         ),
         _c(
+            "projects.create",
+            (
+                "project",
+                "create",
+                "--title",
+                "Backend",
+                "--description-file",
+                "/workspace/docs/description.md",
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("name", "Backend"),
+                ("description_file", "/workspace/docs/description.md"),
+            ),
+            stdout=b'{"id":"pr_1","title":"Backend","status":"planned"}',
+            id="manual:projects.create:description-file:string",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:2.1",
+        ),
+        _c(
+            "projects.create",
+            (
+                "project",
+                "create",
+                "--title",
+                "Backend",
+                "--description-file",
+                "/workspace/docs/description.md",
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("name", "Backend"),
+                ("description_file", _Path("docs/description.md")),
+                ("options", OperationOptions(cwd="/workspace")),
+            ),
+            stdout=b'{"id":"pr_1","title":"Backend","status":"planned"}',
+            id="manual:projects.create:description-file:pathlike",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:2.1",
+        ),
+        _c(
+            "projects.create",
+            (),
+            kwargs=(
+                ("name", "Backend"),
+                ("description", "inline"),
+                ("description_file", "/workspace/docs/description.md"),
+            ),
+            expected_exception=TypeError,
+            id="manual:projects.create:description-file:conflict",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:2.1",
+        ),
+        _c(
+            "projects.create",
+            (),
+            kwargs=(("name", "Backend"), ("description_file", "   ")),
+            expected_exception=ValueError,
+            id="manual:projects.create:description-file:blank",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:2.1",
+        ),
+        _c(
+            "projects.create",
+            (),
+            kwargs=(("name", "Backend"), ("description_file", b"docs/description.md")),
+            expected_exception=TypeError,
+            id="manual:projects.create:description-file:bytes",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:2.1",
+        ),
+        _c(
             "projects.update",
             ("project", "update", "pr_1", "--title", "only-title", "--output", "json"),
             args=("pr_1",),
@@ -2859,18 +2967,209 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "issues.create",
             ("issue", "create", "--title", "Test", "--description", "hello", "--output", "json"),
-            kwargs=(("title", "Test"), ("description_input", InlineDescription(text="hello"))),
+            kwargs=(
+                ("title", "Test"),
+                ("description_input", InlineDescription(text="hello")),
+                ("label_ids", ()),
+            ),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.create:direct:variant:08",
             source_ref="direct-keyword-arguments",
         ),
         _c(
             "issues.create",
+            (
+                "issue",
+                "create",
+                "--title",
+                "Test",
+                "--description-file",
+                "/nonexistent/desc.txt",
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("title", "Test"),
+                ("description_input", FileDescription(path="/nonexistent/desc.txt")),
+                ("label_ids", ()),
+            ),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.create:legacy:description-file",
+            source_ref="legacy-payload-compatibility",
+        ),
+        _c(
+            "issues.create",
             ("issue", "create", "--title", "Test", "--project", "pr_001", "--output", "json"),
-            kwargs=(("title", "Test"), ("project_id", "pr_001")),
+            kwargs=(("title", "Test"), ("project_id", "pr_001"), ("label_ids", ())),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.create:direct:variant:09",
             source_ref="direct-keyword-arguments",
+        ),
+        _c(
+            "issues.create",
+            (
+                "issue",
+                "create",
+                "--title",
+                "Test",
+                "--description-file",
+                "/workspace/docs/description.md",
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("title", "Test"),
+                ("description_file", _Path("docs/description.md")),
+                ("options", OperationOptions(cwd="/workspace")),
+            ),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.create:description-file:pathlike",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            ("issue", "create", "--title", "Test", "--project", "pr_001", "--output", "json"),
+            kwargs=(
+                ("title", "Test"),
+                ("project", Project(id="pr_001", name="Project", status=ProjectStatus.planned)),
+            ),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
+            id="manual:issues.create:project-entity",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.3",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(
+                ("title", "Test"),
+                ("description", "inline"),
+                ("description_file", "/workspace/docs/description.md"),
+            ),
+            expected_exception=TypeError,
+            id="manual:issues.create:description-conflict:file",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(
+                ("title", "Test"),
+                ("description", "inline"),
+                ("description_input", InlineDescription(text="semantic")),
+            ),
+            expected_exception=TypeError,
+            id="manual:issues.create:description-conflict:semantic",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(
+                ("title", "Test"),
+                ("description_file", "/workspace/docs/description.md"),
+                ("description_input", FileDescription(path="/workspace/docs/other.md")),
+            ),
+            expected_exception=TypeError,
+            id="manual:issues.create:description-conflict:input",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(
+                ("title", "Test"),
+                ("description", "inline"),
+                ("description_input", NoDescription()),
+            ),
+            expected_exception=TypeError,
+            id="manual:issues.create:description-conflict:no-description",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(
+                ("title", "Test"),
+                ("description_file", "/workspace/docs/description.md"),
+                ("description_input", NoDescription()),
+            ),
+            expected_exception=TypeError,
+            id="manual:issues.create:description-conflict:file-no-description",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(("title", "Test"), ("description_file", b"docs/description.md")),
+            expected_exception=TypeError,
+            id="manual:issues.create:description-invalid:bytes",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(("title", "Test"), ("description_file", "   ")),
+            expected_exception=ValueError,
+            id="manual:issues.create:description-invalid:blank",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(("title", "Test"), ("description", 42)),
+            expected_exception=TypeError,
+            id="manual:issues.create:description-invalid:type",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(("title", "Test"), ("description_input", object())),
+            expected_exception=TypeError,
+            id="manual:issues.create:description-invalid:input-type",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(
+                ("title", "Test"),
+                ("project", " "),
+            ),
+            expected_exception=ValueError,
+            id="manual:issues.create:project-invalid:blank",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.3",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(
+                ("title", "Test"),
+                ("project", Project(id="pr_001", name="Project", status=ProjectStatus.planned)),
+                ("project_id", "pr_001"),
+            ),
+            expected_exception=TypeError,
+            id="manual:issues.create:project-conflict",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.3",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(
+                ("title", "Test"),
+                ("project", Issue(id="iss_1", title="Issue", status=IssueStatusValue.todo)),
+            ),
+            expected_exception=TypeError,
+            id="manual:issues.create:project-invalid:entity",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.3",
+        ),
+        _c(
+            "issues.create",
+            (),
+            kwargs=(("title", "Test"), ("project_id", 42)),
+            expected_exception=TypeError,
+            id="manual:issues.create:project-invalid:type",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.3",
         ),
         _c(
             "issues.update",
@@ -3046,6 +3345,114 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             contract_operation_id="projects.issues.create",
             bound_target="project_issues",
             assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "projects.issues.create",
+            (
+                "issue",
+                "create",
+                "--title",
+                "Deploy",
+                "--description",
+                "inline",
+                "--project",
+                "p1",
+                "--output",
+                "json",
+            ),
+            kwargs=(("title", "Deploy"), ("description", "inline")),
+            stdout=b'{"id":"i1","title":"Deploy","status":"todo"}',
+            id="manual:projects.issues.create:description-inline",
+            contract_operation_id="projects.issues.create",
+            bound_target="project_issues",
+            assert_result=_assert_bound_issue,
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "projects.issues.create",
+            (
+                "issue",
+                "create",
+                "--title",
+                "Deploy",
+                "--description-file",
+                "/workspace/docs/description.md",
+                "--project",
+                "p1",
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("title", "Deploy"),
+                ("description_file", _Path("docs/description.md")),
+                ("options", OperationOptions(cwd="/workspace")),
+            ),
+            stdout=b'{"id":"i1","title":"Deploy","status":"todo"}',
+            id="manual:projects.issues.create:description-file",
+            contract_operation_id="projects.issues.create",
+            bound_target="project_issues",
+            assert_result=_assert_bound_issue,
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "projects.issues.create",
+            (),
+            kwargs=(
+                ("title", "Deploy"),
+                ("description", "inline"),
+                ("description_input", InlineDescription(text="semantic")),
+            ),
+            expected_exception=TypeError,
+            id="manual:projects.issues.create:description-conflict",
+            contract_operation_id="projects.issues.create",
+            bound_target="project_issues",
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "projects.issues.create",
+            (
+                "issue",
+                "create",
+                "--title",
+                "Deploy",
+                "--description-file",
+                "/workspace/docs/description.md",
+                "--project",
+                "p1",
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("title", "Deploy"),
+                ("description_input", FileDescription(path="/workspace/docs/description.md")),
+            ),
+            stdout=b'{"id":"i1","title":"Deploy","status":"todo"}',
+            id="manual:projects.issues.create:description-semantic-file",
+            contract_operation_id="projects.issues.create",
+            bound_target="project_issues",
+            assert_result=_assert_bound_issue,
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
+        ),
+        _c(
+            "projects.issues.create",
+            (
+                "issue",
+                "create",
+                "--title",
+                "Deploy",
+                "--description-stdin",
+                "--project",
+                "p1",
+                "--output",
+                "json",
+            ),
+            kwargs=(("title", "Deploy"), ("description_input", StdinDescription())),
+            stdout=b'{"id":"i1","title":"Deploy","status":"todo"}',
+            id="manual:projects.issues.create:description-semantic-stdin",
+            contract_operation_id="projects.issues.create",
+            bound_target="project_issues",
+            assert_result=_assert_bound_issue,
+            source_ref="complete-public-sdk-ergonomics-bound-issues:3.1",
         ),
         _c(
             "issues.Issue.refresh",

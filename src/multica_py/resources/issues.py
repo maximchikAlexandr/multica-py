@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import pathlib
 from collections.abc import Mapping
 from dataclasses import replace
@@ -9,9 +10,7 @@ from typing import TYPE_CHECKING, cast, overload
 
 import msgspec
 
-from multica_py._generated.approved_sdk import (
-    validate_nonblank,
-)
+from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command, _replace_plan, _Step, _StepRef
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.permalinks import build_permalink
@@ -54,6 +53,8 @@ from multica_py.models.issues import (
     IssueReference,
     LinkedPullRequest,
     NoDescription,
+    ProjectReference,
+    StdinDescription,
 )
 from multica_py.models.relations import (
     CursorLazyCollection,
@@ -65,7 +66,7 @@ from multica_py.models.relations import (
     _RelationLoad,
 )
 from multica_py.models.system import AttachmentResult
-from multica_py.resources._base import BaseResource, _page_items
+from multica_py.resources._base import BaseResource, _normalize_description_file, _page_items
 from multica_py.resources.issue_comments import (
     Comment,
     CommentThread,
@@ -83,6 +84,18 @@ from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
+
+
+_NO_DESCRIPTION_TYPE: type[object] = type(NoDescription())
+_STDIN_DESCRIPTION_TYPE: type[object] = type(StdinDescription())
+
+
+def _normalize_issue_status(value: IssueStatus | str) -> IssueStatus:
+    if isinstance(value, IssueStatus):
+        return value
+    if type(value) is str:
+        return IssueStatus(value)
+    raise TypeError("status must be an IssueStatus or exact status string")
 
 
 def _normalize_assignment_target(value: AssignmentTarget) -> str:
@@ -103,10 +116,61 @@ def _normalize_issue_reference(value: IssueReference, *, field_name: str = "othe
     return _normalize_entity_id(value, field_name=field_name, allowed_types=(Issue,))
 
 
+def _normalize_project_reference(value: ProjectReference) -> str:
+    from multica_py.resources.projects import Project
+
+    return _normalize_entity_id(value, field_name="project", allowed_types=(Project,))
+
+
+def _normalize_project_id(value: object) -> str:
+    if not isinstance(value, str):
+        raise TypeError("project_id must be a non-empty string")
+    if not value.strip():
+        raise ValueError("project_id must be non-empty")
+    return value
+
+
+def _normalize_issue_description(
+    description: str | None,
+    description_file: str | os.PathLike[str] | None,
+    description_input: IssueDescriptionInput | None,
+    *,
+    cwd: pathlib.Path | None,
+) -> tuple[str, ...]:
+    sources = sum(value is not None for value in (description, description_file, description_input))
+    if sources > 1:
+        raise TypeError(
+            "description, description_file, and description_input are mutually exclusive"
+        )
+    if description is not None:
+        if not isinstance(description, str):
+            raise TypeError("description must be a string or None")
+        return ("--description", description)
+    if description_file is not None:
+        return (
+            "--description-file",
+            _normalize_description_file(description_file, cwd=cwd),
+        )
+    if description_input is None or isinstance(description_input, _NO_DESCRIPTION_TYPE):
+        return ()
+    if isinstance(description_input, InlineDescription):
+        if not isinstance(description_input.text, str):
+            raise TypeError("description_input.text must be a string")
+        return ("--description", description_input.text)
+    if isinstance(description_input, FileDescription):
+        return (
+            "--description-file",
+            _normalize_description_file(description_input.path, cwd=cwd),
+        )
+    if isinstance(description_input, _STDIN_DESCRIPTION_TYPE):
+        return ("--description-stdin",)
+    raise TypeError("description_input must be a supported issue description")
+
+
 def _normalize_issue_filter(
     filter: IssueListFilter | None,
     *,
-    status: IssueStatus | None,
+    status: IssueStatus | str | None,
     priority: str | None,
     assignee_id: str | None,
     limit: int | None,
@@ -632,14 +696,16 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         return self.unassign_command(options=options).run()
 
     def set_status_command(
-        self, status: IssueStatus, *, options: OperationOptions | None = None
+        self, status: IssueStatus | str, *, options: OperationOptions | None = None
     ) -> Command[Issue]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="set_status"
         )
         return client.issues.set_status_command(self.id, status, options=options)
 
-    def set_status(self, status: IssueStatus, *, options: OperationOptions | None = None) -> Issue:
+    def set_status(
+        self, status: IssueStatus | str, *, options: OperationOptions | None = None
+    ) -> Issue:
         return self.set_status_command(status, options=options).run()
 
     def move_to_top_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
@@ -904,7 +970,7 @@ class IssueResource(BaseResource):
     def list_command(
         self,
         *,
-        status: IssueStatus | None = None,
+        status: IssueStatus | str | None = None,
         priority: str | None = None,
         assignee_id: str | None = None,
         limit: int | None = None,
@@ -921,7 +987,7 @@ class IssueResource(BaseResource):
         filter: IssueListFilter | None = None,
         /,
         *,
-        status: IssueStatus | None = None,
+        status: IssueStatus | str | None = None,
         priority: str | None = None,
         assignee_id: str | None = None,
         limit: int | None = None,
@@ -945,18 +1011,18 @@ class IssueResource(BaseResource):
             metadata=metadata,
         )
         args = ["issue", "list"]
-        status = filter.status
+        status = _normalize_issue_status(filter.status) if filter.status is not None else None
         priority = filter.priority
         assignee_id = filter.assignee_id
         limit = filter.limit
         offset = filter.offset
         project_id = filter.project_id
         metadata = filter.metadata
-        sort = filter.sort
-        direction = filter.direction
+        resolved_sort = filter.sort
+        resolved_direction = filter.direction
         if offset is not None and offset < 0:
             raise ValueError("IssueResource.list: offset must be nonnegative (offset_nonnegative)")
-        if direction is not None and sort is None:
+        if resolved_direction is not None and resolved_sort is None:
             raise ValueError(
                 "IssueResource.list: direction requires sort (direction_requires_sort)"
             )
@@ -986,10 +1052,10 @@ class IssueResource(BaseResource):
                 allow_nan=False,
             )
             args.extend(["--metadata", f"{item.key}={encoded}"])
-        if sort is not None:
-            args.extend(["--sort", sort])
-        if direction is not None:
-            args.extend(["--direction", direction])
+        if resolved_sort is not None:
+            args.extend(["--sort", resolved_sort])
+        if resolved_direction is not None:
+            args.extend(["--direction", resolved_direction])
         return (
             self._decoded_command(tuple(args), _IssueListPageWire, options=options)
             ._map(_issue_list_page_from_wire)
@@ -1005,7 +1071,7 @@ class IssueResource(BaseResource):
     def list(
         self,
         *,
-        status: IssueStatus | None = None,
+        status: IssueStatus | str | None = None,
         priority: str | None = None,
         assignee_id: str | None = None,
         limit: int | None = None,
@@ -1022,7 +1088,7 @@ class IssueResource(BaseResource):
         filter: IssueListFilter | None = None,
         /,
         *,
-        status: IssueStatus | None = None,
+        status: IssueStatus | str | None = None,
         priority: str | None = None,
         assignee_id: str | None = None,
         limit: int | None = None,
@@ -1077,9 +1143,13 @@ class IssueResource(BaseResource):
     def children_command(
         self, issue_id: str, *, options: OperationOptions | None = None
     ) -> Command[IssueChildrenResult]:
-        return self._decoded_command(
-            ("issue", "children", issue_id), _IssueChildrenResultWire, options=options
-        )._map(_issue_children_result_from_wire)
+        return (
+            self._decoded_command(
+                ("issue", "children", issue_id), _IssueChildrenResultWire, options=options
+            )
+            ._map(_issue_children_result_from_wire)
+            ._map(self._bind_issue_children_result)
+        )
 
     def children(
         self, issue_id: str, *, options: OperationOptions | None = None
@@ -1090,10 +1160,13 @@ class IssueResource(BaseResource):
         self,
         *,
         title: str,
-        description_input: IssueDescriptionInput = NoDescription(),
+        description: str | None = None,
+        description_file: str | os.PathLike[str] | None = None,
+        description_input: IssueDescriptionInput | None = None,
         priority: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
+        project: ProjectReference | None = None,
         project_id: str | None = None,
         parent_id: str | None = None,
         options: OperationOptions | None = None,
@@ -1105,30 +1178,31 @@ class IssueResource(BaseResource):
         partially labeled issue.
         """
         validate_nonblank(title)
-        if (
-            not isinstance(description_input, InlineDescription)
-            and not isinstance(description_input, FileDescription)
-            and description_input.__class__.__name__ not in {"StdinDescription", "NoDescription"}
-        ):
-            raise TypeError("description_input must be a supported issue description")
-        if project_id is not None and not project_id.strip():
-            raise ValueError("project_id must be non-empty when set")
         if parent_id is not None and not parent_id.strip():
             raise ValueError("parent_id must be non-empty when set")
+        description_args = _normalize_issue_description(
+            description,
+            description_file,
+            description_input,
+            cwd=self._effective_config(options).cwd,
+        )
+        if project is not None and project_id is not None:
+            raise TypeError("project and project_id are mutually exclusive")
+        normalized_project = (
+            _normalize_project_reference(project)
+            if project is not None
+            else _normalize_project_id(project_id)
+            if project_id is not None
+            else None
+        )
         args = ["issue", "create", "--title", title]
-        desc = description_input
-        if isinstance(desc, InlineDescription):
-            args.extend(["--description", desc.text])
-        elif isinstance(desc, FileDescription):
-            args.extend(["--description-file", str(pathlib.Path(desc.path).resolve())])
-        elif desc.__class__.__name__ == "StdinDescription":
-            args.append("--description-stdin")
+        args.extend(description_args)
         if priority is not None:
             args.extend(["--priority", priority])
         if assignee_id is not None:
             args.extend(["--assignee-id", assignee_id])
-        if project_id is not None:
-            args.extend(["--project", project_id])
+        if normalized_project is not None:
+            args.extend(["--project", normalized_project])
         if parent_id is not None:
             args.extend(["--parent", parent_id])
         create_args, create_decode = self._plan_decode(tuple(args), _IssueWire)
@@ -1166,20 +1240,26 @@ class IssueResource(BaseResource):
         self,
         *,
         title: str,
-        description_input: IssueDescriptionInput = NoDescription(),
+        description: str | None = None,
+        description_file: str | os.PathLike[str] | None = None,
+        description_input: IssueDescriptionInput | None = None,
         priority: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
+        project: ProjectReference | None = None,
         project_id: str | None = None,
         parent_id: str | None = None,
         options: OperationOptions | None = None,
     ) -> Issue:
         return self.create_command(
             title=title,
+            description=description,
+            description_file=description_file,
             description_input=description_input,
             priority=priority,
             assignee_id=assignee_id,
             label_ids=label_ids,
+            project=project,
             project_id=project_id,
             parent_id=parent_id,
             options=options,
@@ -1311,15 +1391,16 @@ class IssueResource(BaseResource):
         return self.unassign_command(issue_id, options=options).run()
 
     def set_status_command(
-        self, issue_id: str, status: IssueStatus, *, options: OperationOptions | None = None
+        self, issue_id: str, status: IssueStatus | str, *, options: OperationOptions | None = None
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
+        normalized_status = _normalize_issue_status(status)
         return self._decoded_command(
-            ("issue", "status", issue_id, status.value), _IssueWire, options=options
+            ("issue", "status", issue_id, normalized_status.value), _IssueWire, options=options
         )._map(self._bind_issue)
 
     def set_status(
-        self, issue_id: str, status: IssueStatus, *, options: OperationOptions | None = None
+        self, issue_id: str, status: IssueStatus | str, *, options: OperationOptions | None = None
     ) -> Issue:
         return self.set_status_command(issue_id, status, options=options).run()
 
@@ -1552,6 +1633,18 @@ class IssueResource(BaseResource):
 
     def _bind_issue(self, wire: _IssueWire) -> Issue:
         return _issue_from_wire(wire)._with_client(self._client)
+
+    def _bind_issue_children_result(self, result: IssueChildrenResult) -> IssueChildrenResult:
+        return IssueChildrenResult(
+            items=tuple(item._with_client(self._client) for item in result.items),
+            total=result.total,
+            child_stages=result.child_stages,
+            unstaged=tuple(item._with_client(self._client) for item in result.unstaged),
+            limit=result.limit,
+            offset=result.offset,
+            has_more=result.has_more,
+            next_cursor=result.next_cursor,
+        )
 
     def _bind_issue_list_page(self, page: IssueListPage) -> IssueListPage:
         items = tuple(item._with_client(self._client) for item in page.items)

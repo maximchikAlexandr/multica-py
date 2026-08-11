@@ -18,7 +18,9 @@ def run_workflow(client: MulticaClient, project_id: str, issue_id: str) -> None:
     scoped = client.with_options(profile="automation", timeout=timedelta(seconds=30))
 
     project = scoped.projects.get(project_id)
-    issue = project.issues.create(title="Deploy", options=options)
+    issue = project.issues.create(
+        title="Deploy", description="Deploy the reviewed release", options=options
+    )
     issue = issue.move_to_top(options=options)
     print(issue.permalink())
 

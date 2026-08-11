@@ -48,6 +48,29 @@ assert command.commands == ("multica issue get issue_123 '$(literal)'",)
 result: CliResult = command.run()
 ```
 
+### Raw CLI execution boundary
+
+The raw escape hatch is for bounded, non-interactive argv. The following
+reviewed process-oriented forms are rejected locally before transport:
+
+| Raw form | Typed replacement |
+|---|---|
+| `auth login` (with or without suffixes) | `client.auth.login()` → `ManagedProcess` |
+| `auth login --token` or an option-like token operand | `client.auth.login(token)` → `ActionResult[str]` |
+| `setup cloud` | `client.setup.cloud()` → `ManagedProcess` |
+| `setup self-host` | `client.setup.self_host(url)` → `ManagedProcess` |
+| `daemon start` | `client.daemon.start()` → `ManagedProcess` |
+| `daemon logs` | `client.daemon.logs()` → `ManagedProcess` |
+| top-level `update` (with or without suffixes) | `client.maintenance.update()` → `ManagedProcess` |
+
+The bounded `auth login --token <token>` form remains allowed, including
+trailing options, and `workspace watch` remains available as a bounded raw
+form. Unknown non-interactive bounded argv remains forward-compatible when it
+passes structured-argv validation. Rejected forms produce a typed local
+`ValueError`; the token placeholder and raw argv are never copied into the
+error, preview, or diagnostics. Allowed token execution is redacted with the
+standard `***` marker.
+
 ## Entity permalinks
 
 Configure web routing independently from CLI/API execution:
@@ -83,14 +106,14 @@ configuration, never the operation-specific argv. Use a frozen
 ```python
 from datetime import timedelta
 
-from multica_py import IssueStatus, MulticaClient, OperationOptions
+from multica_py import MulticaClient, OperationOptions
 from multica_py.models.issues import IssueListFilter
 
 client = MulticaClient()
 options = OperationOptions(profile="automation", timeout=timedelta(seconds=30))
-direct = client.issues.list(status=IssueStatus.backlog, limit=50, options=options)
+direct = client.issues.list(status="todo", limit=50, options=options)
 scoped = client.with_options(profile="automation", timeout=timedelta(seconds=30))
-page = scoped.issues.list(status=IssueStatus.backlog, limit=50)
+page = scoped.issues.list(status="todo", limit=50)
 ```
 
 `with_environment(environment)` replaces the complete environment tuple; it
@@ -103,6 +126,23 @@ the same typed fields exposed by the direct form. Removed one-operation DTOs
 have no object overload. Stable target IDs remain positional, direct
 operation fields are explicit, and invalid values are rejected before
 transport access.
+
+Creation uses ordinary values at the resource boundary:
+
+```python
+project = client.projects.get("project_123")
+issue = client.issues.create(
+    title="Investigate login",
+    description="Investigate the login failure",
+    project=project,
+)
+```
+
+`description_file` accepts a string or path-like value and is previewed
+without filesystem access. The retained `description_input` variants are
+reserved for distinct inline, file, stdin, and explicit-no-description
+semantics; they are not request DTOs. Use `project`, not the compatibility
+spelling `project_id`, in new issue examples.
 
 Direct updates use `Unset` to mean omission. The all-optional updates use a
 read-only get plan when every mutable field is `Unset`. `None` means an approved nullable
@@ -131,7 +171,7 @@ All resources accessed as attributes of `MulticaClient`:
 - **setup**: `cloud()`, `self_host(url)` → both return `ManagedProcess`
 - **daemon**: `start/logs()` → `ManagedProcess`, `status/stop/restart()` → `DaemonStatus`, `disk_usage()` → `Page[DaemonDiskUsageEntry]`
 - **workspaces**: `list/members` → `Page[T]`, `get()` → object, `watch/unwatch` → `ActionResult[None]`
-- **issues**: full CRUD + `comments`, `recent_comment_threads`, `labels`, `subscribers`, `metadata`, `pull_requests`, `children`, `runs`, `run_messages`, `usage`, `rerun(issue_id)`, `cancel_task(task_id)`, `assign`, `unassign`, `move_to_top`, `move_to_bottom`, `move_before`, and `move_after`; root create accepts optional `project_id`, while project-scoped create supplies it from the bound project
+- **issues**: full CRUD + `comments`, `recent_comment_threads`, `labels`, `subscribers`, `metadata`, `pull_requests`, `children`, `runs`, `run_messages`, `usage`, `rerun(issue_id)`, `cancel_task(task_id)`, `assign`, `unassign`, `move_to_top`, `move_to_bottom`, `move_before`, and `move_after`; root create accepts ordinary descriptions and an optional canonical `project`, while project-scoped create supplies its project from the bound relation
 - **issues.comments**: `list` for flat comments, `list_flat`, `list_thread`, `list_recent`, `add`, `reply`, `delete`, `resolve`, `unresolve`
 - **issues.metadata**: `list`, `query`, `get`, `set`, `set_typed`, `delete`
 - **issues.subscribers**: `list/add/remove`
@@ -196,7 +236,7 @@ emitted; skills can be omitted only with `copy_skills=False`.
 `issues.search(query)` returns a `Page[Issue]`; `search_command(query)`
 returns `Command[Page[Issue]]`. The exact invocation is
 `issue search <query> --output json`. Results accept the v0.4.20 envelope or
-the legacy top-level array; iterate the page or use `.items`, and each issue may expose the open optional
+the legacy top-level array; iterate the page or use `.items`, and each issue may expose the optional
 string `match_source` (`"title"`, `"description"`, `"comment"`, or a future
 upstream value). It defaults to `None` when omitted; the envelope's `total`
 is preserved as page metadata.
