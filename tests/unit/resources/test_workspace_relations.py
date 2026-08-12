@@ -12,6 +12,11 @@ from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
+from multica_py.entities.agents import Agent
+from multica_py.entities.issues import Issue
+from multica_py.entities.projects import Project
+from multica_py.entities.squads import Squad
+from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.issues import (
@@ -20,15 +25,8 @@ from multica_py.models.issues import (
 )
 from multica_py.models.relations import OffsetLazyCollection
 from multica_py.resources._base import BaseResource
-from multica_py.resources.agents import Agent
-from multica_py.resources.issues import Issue
-from multica_py.resources.projects import Project, ProjectIssueCollection
-from multica_py.resources.squads import Squad
-from multica_py.resources.workspaces import (
-    Workspace,
-    WorkspaceMember,
-    WorkspaceResource,
-)
+from multica_py.resources.projects import ProjectIssueCollection
+from multica_py.resources.workspaces import WorkspaceResource
 from tests.unit.resources.workspace_cases import (
     make_workspace_clients,
     workspace_relation_method,
@@ -164,6 +162,8 @@ def test_workspace_members_preserve_user_identity() -> None:
             str(issue_filter.limit),
             "--offset",
             str(issue_filter.offset),
+            "--output",
+            "json",
         )
         return command_resource._plan(
             steps=(_Step(args, "run_bytes", decode=decode),),
@@ -171,8 +171,12 @@ def test_workspace_members_preserve_user_identity() -> None:
         )
 
     client.issues.list_command = list_command
+    client.issues._offset_page_command = list_command
+    client.issues._offset_page = lambda issue_filter: list_command(issue_filter).run()
     resource = WorkspaceResource(transport, ClientConfig())
     resource._set_client(client)
+    client.workspaces._issues_page = resource._issues_page
+    client.workspaces._issues_page_command = resource._issues_page_command
 
     members = resource.members_command("ws_1").run()
     member = members[0]

@@ -15,6 +15,8 @@ from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
+from multica_py.entities.projects import Project
+from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import RelationPaginationError
 from multica_py.models.issue_activity import CommentCursor
@@ -27,8 +29,6 @@ from multica_py.models.relations import (
     OffsetPage,
 )
 from multica_py.resources._base import BaseResource
-from multica_py.resources.projects import Project
-from multica_py.resources.workspaces import Workspace, WorkspaceMember
 from tests.unit.resources.workspace_cases import (
     make_workspace_clients,
     workspace_relation_method,

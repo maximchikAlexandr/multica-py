@@ -15,12 +15,14 @@ from multica_py import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
+from multica_py.entities.autopilots import Autopilot
+from multica_py.entities.projects import Project
 from multica_py.enums import ProjectStatus
 from multica_py.models.issues import IssueListFilter
 from multica_py.resources.agents import AgentResource
-from multica_py.resources.autopilots import Autopilot, AutopilotResource
+from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.issues import IssueResource
-from multica_py.resources.projects import Project, ProjectResource
+from multica_py.resources.projects import ProjectResource
 from multica_py.resources.skills import SkillResource
 
 

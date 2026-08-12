@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import datetime
 import pathlib
+from collections.abc import Callable
 
 import msgspec
 
@@ -9,130 +9,36 @@ from multica_py._generated.approved_sdk import AGENT_AVATAR_BINDING, validate_no
 from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
-from multica_py.models._bound import _BoundEntity
+from multica_py.entities.agents import Agent
 from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
-from multica_py.resources._base import BaseResource, _page_items, _validate_optional_string
+from multica_py.resources._base import BaseResource, _validate_optional_string
 from multica_py.resources.agent_skills import AgentSkillResource
-from multica_py.resources.issues import Issue, _issue_offset_page, _issue_offset_page_command
 from multica_py.sentinels import Unset, UnsetType
 
 __all__ = ["Agent", "AgentResource"]
-
-
-class Agent(_BoundEntity):  # type: ignore[misc]
-    id: str
-    name: str
-    description: str | None = None
-    skill_refs: tuple[AgentSkill, ...] = msgspec.field(default_factory=tuple, name="skills")
-    archived_at: datetime.datetime | None = None
-
-    _skills: LazyCollection[AgentSkill] | None = msgspec.field(default=None, name="_skills")
-    _tasks: LazyCollection[AgentTask] | None = msgspec.field(default=None, name="_tasks")
-    _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
-
-    _PUBLIC_FIELDS = ("id", "name", "description", "skill_refs", "archived_at")
-
-    @property
-    def skills(self) -> LazyCollection[AgentSkill]:
-        if self._skills is None:
-            client = self._require_client(
-                entity_type="Agent", entity_id=self.id, relation_name="skills"
-            )
-            aid = self.id
-            skills = client.agents.skills
-            self._set_runtime(
-                "_skills",
-                LazyCollection(
-                    lambda: _page_items(skills.list(aid)),
-                    command_loader=lambda: skills.list_command(aid)._map(_page_items),
-                ),
-            )
-        return self._skills  # type: ignore[return-value]
-
-    @property
-    def tasks(self) -> LazyCollection[AgentTask]:
-        if self._tasks is None:
-            client = self._require_client(
-                entity_type="Agent", entity_id=self.id, relation_name="tasks"
-            )
-            aid = self.id
-            agents = client.agents
-            self._set_runtime(
-                "_tasks",
-                LazyCollection(
-                    lambda: agents.tasks(aid),
-                    command_loader=lambda: agents.tasks_command(aid)._map(_page_items),
-                ),
-            )
-        return self._tasks  # type: ignore[return-value]
-
-    @property
-    def issues(self) -> OffsetLazyCollection[Issue]:
-        if self._issues is None:
-            client = self._require_client(
-                entity_type="Agent", entity_id=self.id, relation_name="issues"
-            )
-            aid = self.id
-
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[Issue]:
-                from multica_py.models.issues import IssueListFilter
-
-                return _issue_offset_page(
-                    client.issues,
-                    IssueListFilter(assignee_id=aid, limit=limit, offset=offset),
-                )
-
-            def page_command_loader(limit: int | None, offset: int) -> Command[OffsetPage[Issue]]:
-                from multica_py.models.issues import IssueListFilter
-
-                return _issue_offset_page_command(
-                    client.issues,
-                    IssueListFilter(assignee_id=aid, limit=limit, offset=offset),
-                )
-
-            self._set_runtime(
-                "_issues",
-                OffsetLazyCollection(
-                    page_loader,
-                    default_limit=50,
-                    page_command_loader=page_command_loader,
-                ),
-            )
-        return self._issues  # type: ignore[return-value]
-
-    def _invalidate_skills(self) -> None:
-        if self._skills is not None:
-            self._skills.invalidate()
-
-    def set_skills(
-        self, skill_ids: tuple[str, ...], *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        """Set the agent's assigned skills and invalidate cached skills cache."""
-        return self.set_skills_command(skill_ids, options=options).run()
-
-    def set_skills_command(
-        self, skill_ids: tuple[str, ...], *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
-        """Build a lazy command to set skills and invalidate the cache on success."""
-        client = self._require_client(
-            entity_type="Agent", entity_id=self.id, relation_name="set_skills"
-        )
-
-        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            if result.success:
-                self._invalidate_skills()
-            return result
-
-        command = client.agents.skills.set_command(self.id, skill_ids, options=options)
-        return command._map(invalidate)
 
 
 class AgentResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
         self.skills = AgentSkillResource(transport, config)
+
+    def _skills_relation_command(self, agent_id: str) -> Command[tuple[AgentSkill, ...]]:
+        return self.skills.list_command(agent_id)._map(lambda page: tuple(page.items))
+
+    def _tasks_relation_command(self, agent_id: str) -> Command[tuple[AgentTask, ...]]:
+        return self.tasks_command(agent_id)._map(lambda page: tuple(page.items))
+
+    def _set_skills_command(
+        self,
+        agent_id: str,
+        skill_ids: tuple[str, ...],
+        *,
+        invalidate: Callable[[ActionResult[None]], ActionResult[None]],
+        options: OperationOptions | None,
+    ) -> Command[ActionResult[None]]:
+        return self.skills.set_command(agent_id, skill_ids, options=options)._map(invalidate)
 
     def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Agent]]:
         return self._decoded_page_command(("agent", "list"), Agent, options=options)._map(

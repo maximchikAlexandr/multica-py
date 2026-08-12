@@ -20,6 +20,8 @@ from multica_py._internal.wire_models import (
     _IssueWire,
 )
 from multica_py.config import ClientConfig
+from multica_py.entities.agents import Agent
+from multica_py.entities.issues import Issue, TaskRun
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.issues import (
@@ -32,12 +34,11 @@ from multica_py.models.issues import (
     NoDescription,
 )
 from multica_py.models.system import AttachmentResult
-from multica_py.resources.agents import Agent
 from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
-from multica_py.resources.issues import Issue, IssueResource, TaskRun
+from multica_py.resources.issues import IssueResource
 
 _DESCRIPTION_INPUT_IMPOSTORS = (
     type("NoDescription", (), {})(),

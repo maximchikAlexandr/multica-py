@@ -14,6 +14,7 @@ from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities.issues import Issue
 from multica_py.enums import AutopilotExecutionMode, IssueStatus, MetadataValueType
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
 from multica_py.resources._base import BaseResource
@@ -28,7 +29,7 @@ from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
-from multica_py.resources.issues import Issue, IssueResource
+from multica_py.resources.issues import IssueResource
 from multica_py.resources.labels import LabelResource
 from multica_py.resources.maintenance import MaintenanceResource
 from multica_py.resources.project_resources import ProjectResourceCollection

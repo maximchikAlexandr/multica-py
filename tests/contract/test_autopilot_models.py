@@ -9,6 +9,7 @@ import pytest
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.entities.autopilots import Autopilot, AutopilotRun
 from multica_py.enums import AutopilotExecutionMode
 from multica_py.exceptions import JsonOutputError, OutputShapeError
 from multica_py.models.autopilots import (
@@ -16,7 +17,7 @@ from multica_py.models.autopilots import (
     AutopilotRunListPage,
     AutopilotSubscriber,
 )
-from multica_py.resources.autopilots import Autopilot, AutopilotResource, AutopilotRun
+from multica_py.resources.autopilots import AutopilotResource
 
 
 def test_autopilot_list_rejects_legacy_fields() -> None:

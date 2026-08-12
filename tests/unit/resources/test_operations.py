@@ -17,13 +17,18 @@ from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities.agents import Agent
+from multica_py.entities.autopilots import Autopilot
+from multica_py.entities.issues import Issue
+from multica_py.entities.projects import Project
+from multica_py.entities.skills import Skill
+from multica_py.entities.squads import Squad
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter
 from multica_py.process import ManagedProcess
-from multica_py.resources.agents import Agent
-from multica_py.resources.issues import Issue, IssueResource
-from multica_py.resources.projects import Project, ProjectIssueCollection, ProjectResource
+from multica_py.resources.issues import IssueResource
+from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
 from tests.cases.operations import (
     _BOUND_RESOURCE_SPECS,
     GENERATED_OPERATION_CASES,
@@ -63,19 +68,19 @@ def _contract_entrypoint_is_implemented(entrypoint: Entrypoint) -> bool:
 
 def _case_class(case: OperationCase) -> type:
     if case.bound_target == "agent":
-        from multica_py.resources.agents import Agent
+        from multica_py.entities.agents import Agent
 
         return Agent
     if case.bound_target == "autopilot":
-        from multica_py.resources.autopilots import Autopilot
+        from multica_py.entities.autopilots import Autopilot
 
         return Autopilot
     if case.bound_target == "issue":
-        from multica_py.resources.issues import Issue
+        from multica_py.entities.issues import Issue
 
         return Issue
     if case.bound_target == "project":
-        from multica_py.resources.projects import Project
+        from multica_py.entities.projects import Project
 
         return Project
     if case.bound_target == "project_issues":
@@ -83,11 +88,11 @@ def _case_class(case: OperationCase) -> type:
 
         return ProjectIssueCollection
     if case.bound_target == "skill":
-        from multica_py.resources.skills import Skill
+        from multica_py.entities.skills import Skill
 
         return Skill
     if case.bound_target == "squad":
-        from multica_py.resources.squads import Squad
+        from multica_py.entities.squads import Squad
 
         return Squad
     return _RESOURCE_MAP[case.resource_attr]
@@ -184,11 +189,11 @@ def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
 
 def _bound_target(case: OperationCase, client: MulticaClient) -> object:
     if case.bound_target == "agent":
-        from multica_py.resources.agents import Agent
+        from multica_py.entities.agents import Agent
 
         return Agent(id="a1", name="Agent", _client=client)
     if case.bound_target == "autopilot":
-        from multica_py.resources.autopilots import Autopilot
+        from multica_py.entities.autopilots import Autopilot
 
         return Autopilot(
             id="ap1",
@@ -203,20 +208,20 @@ def _bound_target(case: OperationCase, client: MulticaClient) -> object:
             _client=client,
         )
     if case.bound_target == "issue":
-        from multica_py.resources.issues import Issue
+        from multica_py.entities.issues import Issue
 
         return Issue(id="i1", title="Issue", status=IssueStatus.todo, _client=client)
     if case.bound_target in {"project", "project_issues"}:
-        from multica_py.resources.projects import Project
+        from multica_py.entities.projects import Project
 
         project = Project(id="p1", name="Project", status=ProjectStatus.planned, _client=client)
         return project.issues if case.bound_target == "project_issues" else project
     if case.bound_target == "skill":
-        from multica_py.resources.skills import Skill
+        from multica_py.entities.skills import Skill
 
         return Skill(id="s1", name="Skill", _client=client)
     if case.bound_target == "squad":
-        from multica_py.resources.squads import Squad
+        from multica_py.entities.squads import Squad
 
         return Squad(id="sq1", name="Squad", _client=client)
     raise AssertionError(f"unknown bound target: {case.bound_target}")
@@ -555,7 +560,7 @@ def test_discovered_public_methods() -> None:
 def test_bound_discovery_rejects_unregistered_eager_command_pair(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from multica_py.models._bound import _BoundEntity
+    from multica_py.entities._base import _BoundEntity
     from multica_py.models.relations import OffsetLazyCollection
 
     def ungoverned(_self: object) -> object:

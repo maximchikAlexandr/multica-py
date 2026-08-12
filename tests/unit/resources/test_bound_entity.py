@@ -11,10 +11,21 @@ from unittest.mock import MagicMock
 import msgspec
 import pytest
 
+from multica_py._internal.commands import _Step
+from multica_py._internal.specs import TextResult
 from multica_py.config import ClientConfig
+from multica_py.entities._base import _BoundEntity
+from multica_py.entities.agents import Agent
+from multica_py.entities.autopilots import Autopilot, AutopilotRun, _coerce_json_value
+from multica_py.entities.comments import Comment, CommentThread
+from multica_py.entities.issues import Issue, TaskRun
+from multica_py.entities.labels import Label
+from multica_py.entities.projects import Project
+from multica_py.entities.skills import Skill
+from multica_py.entities.squads import Squad
+from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import DetachedEntityError
-from multica_py.models._bound import _BoundEntity
 from multica_py.models.agents import AgentSkill
 from multica_py.models.autopilots import AutopilotSubscriber, AutopilotTrigger
 from multica_py.models.common import Page
@@ -27,15 +38,6 @@ from multica_py.models.issues import (
 from multica_py.models.relations import CursorPage
 from multica_py.models.system import AttachmentResult
 from multica_py.resources._base import BaseResource
-from multica_py.resources.agents import Agent
-from multica_py.resources.autopilots import Autopilot, AutopilotRun, _coerce_json_value
-from multica_py.resources.issue_comments import Comment, CommentThread
-from multica_py.resources.issues import Issue, TaskRun
-from multica_py.resources.labels import Label
-from multica_py.resources.projects import Project
-from multica_py.resources.skills import Skill
-from multica_py.resources.squads import Squad
-from multica_py.resources.workspaces import Workspace, WorkspaceMember
 from multica_py.types import JsonValue
 
 _BOUND_ENTITY_CASES: tuple[_BoundEntity, ...] = (
@@ -471,7 +473,9 @@ class TestBoundEntitySerialization:
 
     def test_bound_comment_thread_uses_init_issue_context(self) -> None:
         client = MagicMock()
-        command_resource = BaseResource(MagicMock(), ClientConfig())
+        transport = MagicMock()
+        transport.run_text.return_value = TextResult(text="", stderr="", exit_code=0)
+        command_resource = BaseResource(transport, ClientConfig())
         client.issues.comments.list_thread.return_value = Page(
             items=(Comment(id="comment-1", body="body"),),
             next_cursor=None,
@@ -482,6 +486,30 @@ class TestBoundEntitySerialization:
                 items=client.issues.comments.list_thread(**request).items,
                 next_cursor=None,
             ),
+        )
+        client.issues.comments._thread_page_command = lambda **request: command_resource._plan(
+            steps=(
+                _Step(
+                    (
+                        "issue",
+                        "comment",
+                        "list",
+                        "thread",
+                        request["issue_id"],
+                        request["thread_id"],
+                        "--limit",
+                        str(request["limit"]),
+                        "--output",
+                        "json",
+                    ),
+                    "run_text",
+                    decode=lambda _stdout, _command: CursorPage(
+                        items=client.issues.comments.list_thread(**request).items,
+                        next_cursor=None,
+                    ),
+                ),
+            ),
+            finalize=lambda results: results[0],
         )
         thread = CommentThread(id="thread-1", issue_id="issue-1", _client=client)
 

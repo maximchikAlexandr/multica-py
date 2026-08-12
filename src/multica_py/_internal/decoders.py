@@ -26,8 +26,8 @@ def _decode_with_private_autopilot_wire(
         _AutopilotRunListPageWire,
         _AutopilotRunWire,
     )
+    from multica_py.entities.autopilots import Autopilot, AutopilotRun
     from multica_py.models.autopilots import AutopilotListPage, AutopilotRunListPage
-    from multica_py.resources.autopilots import Autopilot, AutopilotRun
 
     if model_type == AutopilotListPage[Autopilot]:
         wire_page = decode_json(data, _AutopilotListWire, command=command)

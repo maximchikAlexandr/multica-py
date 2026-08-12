@@ -1,99 +1,49 @@
 from __future__ import annotations
 
-import msgspec
+from collections.abc import Callable
 
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
-from multica_py.models._bound import _BoundEntity
+from multica_py.entities.skills import Skill
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.relations import LazyCollection
 from multica_py.models.skills import SkillFile
 from multica_py.resources._base import BaseResource, _page_items, _validate_optional_string
 from multica_py.resources.skill_files import SkillFileResource
 from multica_py.sentinels import Unset, UnsetType
 
-
-class Skill(_BoundEntity):  # type: ignore[misc]
-    id: str
-    name: str
-    description: str | None = None
-    file_count: int = 0
-
-    _files: LazyCollection[SkillFile] | None = msgspec.field(default=None, name="_files")
-
-    _PUBLIC_FIELDS = ("id", "name", "description", "file_count")
-
-    @property
-    def files(self) -> LazyCollection[SkillFile]:
-        if self._files is None:
-            client = self._require_client(
-                entity_type="Skill", entity_id=self.id, relation_name="files"
-            )
-            sid = self.id
-            files = client.skills.files
-
-            def loader() -> tuple[SkillFile, ...]:
-                return _page_items(files.list(sid))
-
-            self._set_runtime(
-                "_files",
-                LazyCollection[SkillFile](
-                    loader,
-                    command_loader=lambda: files.list_command(sid)._map(_page_items),
-                ),
-            )
-        return self._files  # type: ignore[return-value]
-
-    def _invalidate_files(self) -> None:
-        if self._files is not None:
-            self._files.invalidate()
-
-    def upsert_file(
-        self, path: str, content: str, *, options: OperationOptions | None = None
-    ) -> SkillFile:
-        return self.upsert_file_command(path, content, options=options).run()
-
-    def upsert_file_command(
-        self, path: str, content: str, *, options: OperationOptions | None = None
-    ) -> Command[SkillFile]:
-        client = self._require_client(
-            entity_type="Skill", entity_id=self.id, relation_name="upsert_file"
-        )
-
-        def invalidate(result: SkillFile) -> SkillFile:
-            self._invalidate_files()
-            return result
-
-        command = client.skills.files.upsert_command(self.id, path, content, options=options)
-        return command._map(invalidate)
-
-    def delete_file(
-        self, file_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.delete_file_command(file_id, options=options).run()
-
-    def delete_file_command(
-        self, file_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
-        client = self._require_client(
-            entity_type="Skill", entity_id=self.id, relation_name="delete_file"
-        )
-
-        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            if result.success:
-                self._invalidate_files()
-            return result
-
-        command = client.skills.files.delete_command(self.id, file_id, options=options)
-        return command._map(invalidate)
+__all__ = ["Skill", "SkillResource"]
 
 
 class SkillResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
         self.files = SkillFileResource(transport, config)
+
+    def _files_relation_command(self, skill_id: str) -> Command[tuple[SkillFile, ...]]:
+        return self.files.list_command(skill_id)._map(_page_items)
+
+    def _upsert_file_command(
+        self,
+        skill_id: str,
+        path: str,
+        content: str,
+        *,
+        invalidate: Callable[[SkillFile], SkillFile],
+        options: OperationOptions | None,
+    ) -> Command[SkillFile]:
+        return self.files.upsert_command(skill_id, path, content, options=options)._map(invalidate)
+
+    def _delete_file_command(
+        self,
+        skill_id: str,
+        file_id: str,
+        *,
+        invalidate: Callable[[ActionResult[None]], ActionResult[None]],
+        options: OperationOptions | None,
+    ) -> Command[ActionResult[None]]:
+        return self.files.delete_command(skill_id, file_id, options=options)._map(invalidate)
 
     def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Skill]]:
         return self._decoded_page_command(("skill", "list"), Skill, options=options)._map(

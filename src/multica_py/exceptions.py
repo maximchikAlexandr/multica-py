@@ -5,6 +5,15 @@ class MulticaError(Exception):
     pass
 
 
+class ProcessOutputModeError(MulticaError):
+    def __init__(self, current_mode: str, requested_consumer: str) -> None:
+        self.current_mode = current_mode
+        self.requested_consumer = requested_consumer
+        super().__init__(
+            f"Cannot use {requested_consumer}: process output is already claimed by {current_mode}."
+        )
+
+
 class MissingPermalinkContextError(MulticaError):
     def __init__(
         self,

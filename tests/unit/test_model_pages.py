@@ -6,6 +6,7 @@ import msgspec
 import pytest
 
 from multica_py import ActionResult, Page
+from multica_py.entities.issues import Issue
 from multica_py.models.autopilots import AutopilotListPage, AutopilotRunListPage
 from multica_py.models.common import CommentCursor
 from multica_py.models.issue_activity import MetadataEntry, MetadataPage
@@ -13,7 +14,6 @@ from multica_py.models.issues import (
     IssueChildrenResult,
     IssueListPage,
 )
-from multica_py.resources.issues import Issue
 
 
 def test_page_is_frozen_typed_sequence_with_closed_cursor() -> None:

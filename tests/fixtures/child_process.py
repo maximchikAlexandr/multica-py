@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import BinaryIO, cast
 
 
 def _write_text(path: str, content: str) -> None:
@@ -18,6 +19,25 @@ def _write_text(path: str, content: str) -> None:
 def _wait_for_release(release_file: str) -> None:
     while not Path(release_file).exists():
         time.sleep(0.05)
+
+
+def _emit_configured_output(
+    stdout_name: str = "MULTICA_CHILD_STDOUT",
+    stderr_name: str = "MULTICA_CHILD_STDERR",
+) -> None:
+    stdout_text = os.environ.get(stdout_name, "")
+    if stdout_text:
+        sys.stdout.write(stdout_text)
+        sys.stdout.flush()
+
+    stderr_text = os.environ.get(stderr_name, "")
+    if stderr_text:
+        sys.stderr.write(stderr_text)
+        sys.stderr.flush()
+
+
+def _exit_code() -> int:
+    return int(os.environ.get("MULTICA_CHILD_EXIT_CODE", "0"))
 
 
 def _run_sleep_mode() -> int:
@@ -64,13 +84,41 @@ def _run_sigterm_ignore_mode() -> int:
     ready_file = os.environ.get("MULTICA_CHILD_READY_FILE", "")
     if ready_file:
         _write_text(ready_file, "ready")
+    _emit_configured_output()
     release_file = os.environ.get("MULTICA_CHILD_RELEASE_FILE", "")
     if release_file:
         _wait_for_release(release_file)
     else:
         while True:
             time.sleep(3600)
-    return int(os.environ.get("MULTICA_CHILD_EXIT_CODE", "0"))
+    return _exit_code()
+
+
+def _run_delayed_output_mode() -> int:
+    ready_file = os.environ.get("MULTICA_CHILD_READY_FILE", "")
+    if ready_file:
+        _write_text(ready_file, "ready")
+    _emit_configured_output("MULTICA_CHILD_INITIAL_STDOUT", "MULTICA_CHILD_INITIAL_STDERR")
+    release_file = os.environ.get("MULTICA_CHILD_RELEASE_FILE", "")
+    if release_file:
+        _wait_for_release(release_file)
+    _emit_configured_output("MULTICA_CHILD_TRAILING_STDOUT", "MULTICA_CHILD_TRAILING_STDERR")
+    return _exit_code()
+
+
+def _run_interleaved_mode() -> int:
+    chunk_size = int(os.environ.get("MULTICA_CHILD_CHUNK_SIZE", "4096"))
+    chunks = int(os.environ.get("MULTICA_CHILD_CHUNKS", "64"))
+    stdout_chunk = ("o" * chunk_size).encode("ascii")
+    stderr_chunk = ("e" * chunk_size).encode("ascii")
+    stdout = cast("BinaryIO", sys.stdout.buffer)
+    stderr = cast("BinaryIO", sys.stderr.buffer)
+    for _ in range(chunks):
+        stdout.write(stdout_chunk)
+        stdout.flush()
+        stderr.write(stderr_chunk)
+        stderr.flush()
+    return _exit_code()
 
 
 def _run_descendant_mode() -> int:
@@ -126,6 +174,10 @@ def main() -> int:
         return _run_child_mode()
     if mode == "sigterm-ignore":
         return _run_sigterm_ignore_mode()
+    if mode == "delayed-output":
+        return _run_delayed_output_mode()
+    if mode == "interleaved":
+        return _run_interleaved_mode()
     if mode == "descendant":
         return _run_descendant_mode()
     if mode == "stdin-echo":
@@ -143,22 +195,14 @@ def main() -> int:
     if release_file:
         _wait_for_release(release_file)
 
-    stdout_text = os.environ.get("MULTICA_CHILD_STDOUT", "")
-    if stdout_text:
-        sys.stdout.write(stdout_text)
-        sys.stdout.flush()
-
-    stderr_text = os.environ.get("MULTICA_CHILD_STDERR", "")
-    if stderr_text:
-        sys.stderr.write(stderr_text)
-        sys.stderr.flush()
+    _emit_configured_output()
 
     probe_file = os.environ.get("MULTICA_CHILD_PROBE_FILE", "")
     if probe_file:
         allowed = sorted(key for key in os.environ if key.startswith("MULTICA_"))
         _write_text(probe_file, "\n".join((*sys.argv[1:], "--", *allowed)))
 
-    return int(os.environ.get("MULTICA_CHILD_EXIT_CODE", "0"))
+    return _exit_code()
 
 
 if __name__ == "__main__":

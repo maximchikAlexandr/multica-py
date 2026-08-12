@@ -7,7 +7,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from multica_py.config import ClientConfig
-from multica_py.resources.agents import Agent, AgentResource
+from multica_py.entities.agents import Agent
+from multica_py.resources.agents import AgentResource
 
 
 @dataclass(frozen=True)

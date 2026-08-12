@@ -22,6 +22,7 @@ from multica_py import (
     Workspace,
     WorkspaceMember,
 )
+from multica_py.entities import Comment, CommentThread, Issue, Label, Project, TaskRun
 from multica_py.exceptions import (
     DetachedEntityError,
     MissingPermalinkContextError,
@@ -43,10 +44,7 @@ from multica_py.models.system import (
     RepositoryRecord,
     RuntimeDefinition,
 )
-from multica_py.resources.issue_comments import Comment, CommentThread
-from multica_py.resources.issues import Issue, TaskRun
-from multica_py.resources.labels import Label
-from multica_py.resources.projects import Project, ProjectIssueCollection
+from multica_py.resources.projects import ProjectIssueCollection
 from tests.contract.test_public_invariants import assert_public_annotations_precise
 
 
@@ -89,7 +87,7 @@ def _consumer_type_examples(client: MulticaClient) -> None:
         assert attachment_id
 
     workspace_issues: OffsetLazyCollection[Issue] = client.workspaces.get("workspace_id").issues
-    project_issues: ProjectIssueCollection = client.projects.get("project_id").issues
+    project_issues = cast("ProjectIssueCollection", client.projects.get("project_id").issues)
     agent_issues: OffsetLazyCollection[Issue] = client.agents.get("agent_id").issues
     squad_issues: OffsetLazyCollection[Issue] = client.squads.get("squad_id").issues
     member: WorkspaceMember = client.workspaces.get("workspace_id").members.all()[0]
@@ -325,3 +323,32 @@ def test_models_package_exports_only_non_runtime_relation_types() -> None:
     exports = cast("list[str]", getattr(models_pkg, "__all__"))
     assert "_RelationLoad" not in exports
     assert all(not name.startswith("_") for name in exports)
+
+
+def test_canonical_entities_preserve_resource_compatibility_identity() -> None:
+    from multica_py.resources.issue_comments import (
+        Comment as ResourceComment,
+    )
+    from multica_py.resources.issue_comments import (
+        CommentThread as ResourceCommentThread,
+    )
+    from multica_py.resources.issues import Issue as ResourceIssue
+    from multica_py.resources.issues import TaskRun as ResourceTaskRun
+    from multica_py.resources.labels import Label as ResourceLabel
+    from multica_py.resources.projects import Project as ResourceProject
+
+    assert Comment is ResourceComment
+    assert CommentThread is ResourceCommentThread
+    assert Issue is ResourceIssue
+    assert Label is ResourceLabel
+    assert Project is ResourceProject
+    assert TaskRun is ResourceTaskRun
+
+
+def test_process_root_exports_remain_curated() -> None:
+    assert multica_py.ProcessResult.__module__ == "multica_py.process"
+    assert multica_py.ProcessOutputModeError.__module__ == "multica_py.exceptions"
+    assert "ManagedProcess" in multica_py.__all__
+    assert "ProcessResult" in multica_py.__all__
+    assert "ProcessOutputModeError" in multica_py.__all__
+    assert "ProcessOutputMode" not in multica_py.__all__

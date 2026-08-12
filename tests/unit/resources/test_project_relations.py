@@ -16,6 +16,8 @@ from multica_py._internal.commands import Command, _Step
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities.issues import Issue
+from multica_py.entities.projects import Project
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.common import ActionResult, Page
@@ -26,9 +28,9 @@ from multica_py.models.issues import (
 from multica_py.models.project_resources import ProjectResourceRecord
 from multica_py.models.relations import LazyCollection, OffsetPage
 from multica_py.resources._base import BaseResource
-from multica_py.resources.issues import Issue, IssueResource
+from multica_py.resources.issues import IssueResource
 from multica_py.resources.project_resources import ProjectResourceCollection
-from multica_py.resources.projects import Project, ProjectIssueCollection, ProjectResource
+from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
 
 _TODO = IssueStatus("todo")
 _DONE = IssueStatus("done")
@@ -204,6 +206,11 @@ def _make_mock_resources(
     issue_page_results: list[IssueListPage] | None = None,
 ) -> MagicMock:
     client = MagicMock()
+    issues = IssueResource(MagicMock(spec=CliTransport), ClientConfig())
+    issues.list = MagicMock()  # type: ignore[method-assign]
+    issues.get = MagicMock()  # type: ignore[method-assign]
+    client.issues = issues
+    issues._set_client(client)
 
     def mutation_command(
         loader: Callable[[], object], argv: tuple[str, ...] = ("project", "resource", "mutation")
@@ -282,6 +289,40 @@ def _make_mock_resources(
         )
 
     client.issues.list_command = issue_list_command
+
+    def offset_page(issue_filter: IssueListFilter) -> OffsetPage[Issue]:
+        page = client.issues.list(issue_filter)
+        return OffsetPage(
+            items=page.items,
+            total=page.total or 0,
+            limit=page.limit or 50,
+            offset=page.offset or 0,
+            has_more=page.has_more,
+        )
+
+    client.issues._offset_page = offset_page
+    client.projects._resources_relation_command = client.projects.resources.list_command
+    client.projects._issues_relation = lambda project: ProjectIssueCollection(
+        project, client.issues
+    )
+    client.projects._add_local_directory_command = (
+        lambda project_id, *, local_path, daemon_id, label, invalidate, options: (
+            client.projects.resources.add_local_directory_command(
+                project_id,
+                local_path=local_path,
+                daemon_id=daemon_id,
+                label=label,
+                options=options,
+            )._map(invalidate)
+        )
+    )
+    client.projects._remove_resource_command = (
+        lambda project_id, resource_id, *, invalidate, options: (
+            client.projects.resources.remove_command(project_id, resource_id, options=options)._map(
+                invalidate
+            )
+        )
+    )
     return client
 
 
@@ -395,7 +436,8 @@ def test_project_issue_create_forwards_natural_inputs_without_project_lookup() -
     issues._set_client(client)
     project = Project(id="p1", name="Test", status=_PLANNED, _client=client)
 
-    command = project.issues.create_command(
+    project_issues = cast("ProjectIssueCollection", project.issues)
+    command = project_issues.create_command(
         title="Deploy",
         description_file=Path("docs/description.md"),
         options=OperationOptions(cwd="/workspace"),
@@ -764,8 +806,9 @@ def test_project_issue_collection_scopes_create_and_invalidates_only_itself() ->
     assert second.issues.loaded
     assert first.issues.loaded and second.issues.loaded
 
-    create = first.issues.create_command(title="New", priority="high", parent_id="parent")
-    assert "project_id" not in inspect.signature(first.issues.create).parameters
+    first_issues = cast("ProjectIssueCollection", first.issues)
+    create = first_issues.create_command(title="New", priority="high", parent_id="parent")
+    assert "project_id" not in inspect.signature(first_issues.create).parameters
     assert create.commands == (
         "multica issue create --title New --priority high --project p1 --parent parent --output json",
     )
@@ -792,7 +835,8 @@ def test_project_issue_create_failure_preserves_loaded_relation() -> None:
     entity = Project(id="p1", name="Test", status=_PLANNED, _client=client)
     transport.run_bytes.side_effect = [_wire_result(b'{"issues":[],"has_more":false}')]
     entity.issues.all()
-    command = entity.issues.create_command(title="Broken")
+    entity_issues = cast("ProjectIssueCollection", entity.issues)
+    command = entity_issues.create_command(title="Broken")
     transport.run_bytes.side_effect = RuntimeError("create failed")
 
     with pytest.raises(RuntimeError, match="create failed"):

@@ -30,26 +30,30 @@ from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities.agents import Agent
+from multica_py.entities.issues import Issue
+from multica_py.entities.skills import Skill
+from multica_py.entities.squads import Squad
+from multica_py.entities.workspaces import WorkspaceMember
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.agents import AgentSkill, AgentTask
-from multica_py.models.common import ActionResult
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import (
     IssueListFilter,
     IssueListPage,
 )
-from multica_py.models.relations import LazyCollection, OffsetLazyCollection
+from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
 from multica_py.models.skills import SkillFile
 from multica_py.models.system import SquadMember
 from multica_py.resources._base import BaseResource
 from multica_py.resources.agent_skills import AgentSkillResource
-from multica_py.resources.agents import Agent, AgentResource
-from multica_py.resources.issues import Issue, IssueResource
+from multica_py.resources.agents import AgentResource
+from multica_py.resources.issues import IssueResource
 from multica_py.resources.skill_files import SkillFileResource
-from multica_py.resources.skills import Skill, SkillResource
+from multica_py.resources.skills import SkillResource
 from multica_py.resources.squad_members import SquadMemberResource
-from multica_py.resources.squads import Squad, SquadResource
-from multica_py.resources.workspaces import WorkspaceMember
+from multica_py.resources.squads import SquadResource
 
 _TODO = IssueStatus("todo")
 
@@ -132,6 +136,17 @@ def _make_client(
     client.agents.tasks_command = lambda agent_id: empty_command(
         lambda: client.agents.tasks(agent_id)
     )
+    client.skills._files_relation_command = lambda skill_id: client.skills.files.list_command(
+        skill_id
+    )._map(lambda page: page.items if isinstance(page, Page) else page)
+    client.skills._upsert_file_command = lambda skill_id, path, content, *, invalidate, options: (
+        client.skills.files.upsert_command(skill_id, path, content, options=options)._map(
+            invalidate
+        )
+    )
+    client.skills._delete_file_command = lambda skill_id, file_id, *, invalidate, options: (
+        client.skills.files.delete_command(skill_id, file_id, options=options)._map(invalidate)
+    )
 
     def issues_command(issue_filter: IssueListFilter) -> Command[object]:
         def decode(_stdout: bytes, command_text: str) -> object:
@@ -143,7 +158,14 @@ def _make_client(
                 limit=limit,
                 offset=offset,
             )
-            return client.issues.list(request)
+            page = client.issues.list(request)
+            return OffsetPage(
+                items=page.items,
+                total=page.total or len(page.items),
+                limit=page.limit or issue_filter.limit or 50,
+                offset=page.offset or issue_filter.offset or 0,
+                has_more=page.has_more,
+            )
 
         def run_bytes(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
             return RawCommandResult(
@@ -172,6 +194,8 @@ def _make_client(
         )
 
     client.issues.list_command = issues_command
+    client.issues._offset_page = lambda issue_filter: issues_command(issue_filter).run()
+    client.issues._offset_page_command = issues_command
     client.skills.files.list_command = lambda skill_id: empty_command(
         lambda: client.skills.files.list(skill_id)
     )
@@ -189,6 +213,40 @@ def _make_client(
     )
     client.squads.members.list_command = lambda squad_id: empty_command(
         lambda: client.squads.members.list(squad_id)
+    )
+    client.agents._skills_relation_command = lambda agent_id: empty_command(
+        lambda: client.agents.skills.list(agent_id)
+    )
+    client.agents._tasks_relation_command = lambda agent_id: empty_command(
+        lambda: client.agents.tasks(agent_id)
+    )
+    client.agents._set_skills_command = lambda agent_id, skill_ids, *, invalidate, options: (
+        client.agents.skills.set_command(agent_id, skill_ids, options=options)._map(invalidate)
+    )
+    client.squads._members_relation_command = lambda squad_id: empty_command(
+        lambda: client.squads.members.list(squad_id)
+    )
+    client.squads._issues_page = lambda squad_id, limit, offset: client.issues._offset_page(
+        IssueListFilter(assignee_id=squad_id, limit=limit, offset=offset)
+    )
+    client.squads._issues_page_command = lambda squad_id, limit, offset: (
+        client.issues._offset_page_command(
+            IssueListFilter(assignee_id=squad_id, limit=limit, offset=offset)
+        )
+    )
+    client.workspaces._issues_page = lambda assignee_id, limit, offset: client.issues._offset_page(
+        IssueListFilter(assignee_id=assignee_id, limit=limit, offset=offset)
+    )
+    client.workspaces._issues_page_command = lambda assignee_id, limit, offset: (
+        client.issues._offset_page_command(
+            IssueListFilter(assignee_id=assignee_id, limit=limit, offset=offset)
+        )
+    )
+    client.squads._add_member_command = lambda squad_id, member_id, *, invalidate, options: (
+        client.squads.members.add_command(squad_id, member_id, options=options)._map(invalidate)
+    )
+    client.squads._remove_member_command = lambda squad_id, member_id, *, invalidate, options: (
+        client.squads.members.remove_command(squad_id, member_id, options=options)._map(invalidate)
     )
     return client
 
@@ -426,6 +484,9 @@ def test_skill_files_relation_command_delegates_to_skill_file_resource() -> None
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     client = MagicMock()
     client.skills.files = SkillFileResource(transport, ClientConfig())
+    client.skills._files_relation_command = lambda skill_id: client.skills.files.list_command(
+        skill_id
+    )._map(lambda page: page.items if isinstance(page, Page) else page)
     entity = _skill(client=client)
 
     command = entity.files.all_command()

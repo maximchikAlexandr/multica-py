@@ -10,13 +10,19 @@ from typing import cast
 from unittest.mock import MagicMock
 
 from multica_py.config import OperationOptions
+from multica_py.entities.agents import Agent
+from multica_py.entities.autopilots import Autopilot
+from multica_py.entities.issues import Issue
+from multica_py.entities.projects import Project
+from multica_py.entities.skills import Skill
+from multica_py.entities.squads import Squad
 from multica_py.enums import IssueStatus as IssueStatusValue
 from multica_py.enums import ProjectStatus as ProjectStatusValue
 from multica_py.resources.agent_skills import AgentSkillResource
-from multica_py.resources.agents import Agent, AgentResource
+from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
-from multica_py.resources.autopilots import Autopilot, AutopilotResource
+from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.cli import CliResource
 from multica_py.resources.configuration import ConfigurationResource
 from multica_py.resources.daemon import DaemonResource
@@ -24,22 +30,31 @@ from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
-from multica_py.resources.issues import Issue, IssueResource
+from multica_py.resources.issues import IssueResource
 from multica_py.resources.labels import LabelResource
 from multica_py.resources.maintenance import MaintenanceResource
 from multica_py.resources.project_resources import ProjectResourceCollection
-from multica_py.resources.projects import Project, ProjectIssueCollection, ProjectResource
+from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
 from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.setup import SetupResource
 from multica_py.resources.skill_files import SkillFileResource
-from multica_py.resources.skills import Skill, SkillResource
+from multica_py.resources.skills import SkillResource
 from multica_py.resources.squad_members import SquadMemberResource
-from multica_py.resources.squads import Squad, SquadResource
+from multica_py.resources.squads import SquadResource
 from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
 from multica_py.sentinels import Unset
 from tools.upstream_contract.contract import validate_contract as _validate_contract
+
+_CANONICAL_BOUND_RESULT_TYPES = {
+    "multica_py.resources.agents.Agent": "multica_py.entities.agents.Agent",
+    "multica_py.resources.autopilots.Autopilot": "multica_py.entities.autopilots.Autopilot",
+    "multica_py.resources.autopilots.AutopilotRun": "multica_py.entities.autopilots.AutopilotRun",
+    "multica_py.resources.issues.Issue": "multica_py.entities.issues.Issue",
+    "multica_py.resources.issue_comments.Comment": "multica_py.entities.comments.Comment",
+    "multica_py.resources.projects.Project": "multica_py.entities.projects.Project",
+}
 
 
 @dataclass(frozen=True)
@@ -312,7 +327,9 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 return assert_action_none
             return _assert_none
         if assertion.kind == "decoded_type":
-            expected = str(assertion.expected["value"])
+            expected = _CANONICAL_BOUND_RESULT_TYPES.get(
+                str(assertion.expected["value"]), str(assertion.expected["value"])
+            )
 
             def assert_sequence_contract(result: object) -> None:
                 if not isinstance(result, Page) and not hasattr(result, "items"):
@@ -569,6 +586,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
 
     from multica_py._internal.specs import RawCommandResult, TextResult
     from multica_py._internal.wire_models import _LabelWire
+    from multica_py.entities.agents import Agent
+    from multica_py.entities.autopilots import Autopilot, AutopilotRun
+    from multica_py.entities.issues import TaskRun
+    from multica_py.entities.skills import Skill
+    from multica_py.entities.squads import Squad
+    from multica_py.entities.workspaces import Workspace, WorkspaceMember
     from multica_py.enums import (
         AutopilotExecutionMode,
         IssueStatus,
@@ -619,12 +642,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         SquadMember,
         UserProfile,
     )
-    from multica_py.resources.agents import Agent
-    from multica_py.resources.autopilots import Autopilot, AutopilotRun
-    from multica_py.resources.issues import TaskRun
-    from multica_py.resources.skills import Skill
-    from multica_py.resources.squads import Squad
-    from multica_py.resources.workspaces import Workspace, WorkspaceMember
 
     # ponytail: all 135 cases built from argv_data source data inline
     _LOCAL_DIR = pathlib.Path("/tmp/sandbox").resolve()
@@ -762,13 +779,13 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         assert getattr(result, "_client", None) is not None
 
     def _assert_bound_issue(result: object, _mt: MagicMock) -> None:
-        from multica_py.resources.issues import Issue
+        from multica_py.entities.issues import Issue
 
         assert type(result) is Issue
         assert getattr(result, "_client", None) is not None
 
     def _assert_bound_project(result: object, _mt: MagicMock) -> None:
-        from multica_py.resources.projects import Project
+        from multica_py.entities.projects import Project
 
         assert type(result) is Project
         assert getattr(result, "_client", None) is not None

@@ -17,13 +17,14 @@ from multica_py._internal.wire_models import (
     _IssueWire,
 )
 from multica_py.config import ClientConfig
+from multica_py.entities.issues import Issue
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.issues import (
     IssueListFilter,
     IssueListPage,
     LinkedPullRequest,
 )
-from multica_py.resources.issues import Issue, IssueResource
+from multica_py.resources.issues import IssueResource
 
 
 def test_issue_summary_is_not_a_public_model() -> None:

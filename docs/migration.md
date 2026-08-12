@@ -84,8 +84,57 @@ resource outputs move to their dedicated modules:
 | `from multica_py import LazyCollection, OffsetLazyCollection, CursorLazyCollection, LazyMapping` | `from multica_py.models.relations import LazyCollection, OffsetLazyCollection, CursorLazyCollection, LazyMapping` |
 | `from multica_py import CliResult` | `from multica_py.resources.cli import CliResult` |
 
-The bound `Issue`, `Project`, and other primary entities remain available from
-`multica_py`. The root export table is intentionally small and exact.
+The canonical `Issue`, `Project`, and other primary entities are available from
+`multica_py.entities`; the root exports remain available for compatibility. The
+historical `multica_py.resources.<domain>` paths are direct re-exports with the
+same class identity:
+
+```python
+from multica_py import Issue as RootIssue
+from multica_py.entities import Issue
+from multica_py.resources.issues import Issue as ResourceIssue
+
+assert Issue is RootIssue is ResourceIssue
+```
+
+Entity modules contain immutable domain state and pure relation helpers.
+Resource modules own service commands, wire conversion, transport, and cache
+invalidation. Code that needs a domain type should import from `entities`; code
+that needs a service should use the bound client resources.
+
+## Managed process results
+
+`ManagedProcess.result(timeout=...)` is the buffered API. It collects both pipes,
+strictly decodes UTF-8, and returns one immutable `ProcessResult` with exactly
+`argv`, `exit_code`, `stdout`, and `stderr`, plus `ok` and `failed` properties.
+The finalized object is cached, so repeated `result()` calls preserve object
+identity and `wait()` preserves the same output:
+
+```python
+from multica_py import ProcessResult, ProcessOutputModeError
+
+process = client.auth.login()
+result = process.result(timeout=30)
+assert isinstance(result, ProcessResult)
+assert result is process.result()
+assert process.wait() == result.exit_code
+```
+
+Timeouts remain retryable without cleanup or cache publication. `terminate()`
+and `kill()` leave the result collectible. `close()` discards the process and
+forbids late access until finalization is explicitly repeated. A process can be
+buffered or streaming, but not both; `ProcessOutputModeError` reports the
+current mode and requested consumer. Streaming starts on first iteration:
+
+```python
+with client.daemon.logs() as process:
+    for line in process.stdout_lines():
+        consume(line)
+```
+
+Buffered mode, including `wait()`, retains all output in memory, so use
+context-managed streaming for unbounded output. Do not call `result()`/`wait()`
+after streaming has been selected.
 
 ## Command preview (additive)
 
@@ -214,49 +263,51 @@ unified class carries private runtime state (client, lazy caches), so
 persistence should go through `to_json()` / `to_dict()`.
 
 The canonical public import path for the bound agent domain class is
-`multica_py.resources.agents.Agent` (also re-exported as `multica_py.Agent`).
+`multica_py.entities.Agent`. The historical
+`multica_py.resources.agents.Agent` path is a direct compatibility re-export,
+also re-exported as `multica_py.Agent`, and all three names preserve identity.
 `multica_py.models.agents` contains only the retained output models
 `AgentSkill` and `AgentTask`; it does not export the bound `Agent` class.
 
 | Removed name | Unified class |
 |---|---|
-| `multica_py.resources.issues.IssueEntity` | `multica_py.resources.issues.Issue` |
-| `multica_py.resources.agents.AgentEntity` | `multica_py.resources.agents.Agent` |
-| `multica_py.resources.skills.SkillEntity` | `multica_py.resources.skills.Skill` |
-| `multica_py.resources.squads.SquadEntity` | `multica_py.resources.squads.Squad` |
-| `multica_py.resources.workspaces.WorkspaceEntity` | `multica_py.resources.workspaces.Workspace` |
-| `multica_py.resources.workspaces.WorkspaceMemberEntity` | `multica_py.resources.workspaces.WorkspaceMember` |
-| `multica_py.resources.autopilots.AutopilotEntity` | `multica_py.resources.autopilots.Autopilot` |
-| `multica_py.resources.autopilots.AutopilotRunEntity` | `multica_py.resources.autopilots.AutopilotRun` |
-| `multica_py.models.issues.IssueData` | `multica_py.resources.issues.Issue` |
-| `multica_py.models.issues.Issue` passive DTO | `multica_py.resources.issues.Issue` |
-| `multica_py.models.projects.ProjectData` | `multica_py.resources.projects.Project` |
-| `multica_py.models.projects.Project` passive DTO | `multica_py.resources.projects.Project` |
-| `multica_py.models.agents.AgentData` | `multica_py.resources.agents.Agent` |
-| `multica_py.models.agents.Agent` passive DTO | `multica_py.resources.agents.Agent` |
-| `multica_py.models.skills.SkillData` | `multica_py.resources.skills.Skill` |
-| `multica_py.models.skills.Skill` passive DTO | `multica_py.resources.skills.Skill` |
-| `multica_py.models.system.SquadData` | `multica_py.resources.squads.Squad` |
-| `multica_py.models.system.Squad` passive DTO | `multica_py.resources.squads.Squad` |
-| `multica_py.models.workspaces.WorkspaceData` | `multica_py.resources.workspaces.Workspace` |
-| `multica_py.models.workspaces.Workspace` passive DTO | `multica_py.resources.workspaces.Workspace` |
-| `multica_py.models.workspaces.WorkspaceMemberData` | `multica_py.resources.workspaces.WorkspaceMember` |
-| `multica_py.models.workspaces.WorkspaceMember` passive DTO | `multica_py.resources.workspaces.WorkspaceMember` |
-| `multica_py.models.autopilots.AutopilotData` | `multica_py.resources.autopilots.Autopilot` |
-| `multica_py.models.autopilots.Autopilot` passive DTO | `multica_py.resources.autopilots.Autopilot` |
-| `multica_py.models.autopilots.AutopilotRunData` | `multica_py.resources.autopilots.AutopilotRun` |
-| `multica_py.models.autopilots.AutopilotRun` passive DTO | `multica_py.resources.autopilots.AutopilotRun` |
-| `multica_py.models.issue_activity.CommentData` | `multica_py.resources.issue_comments.Comment` |
-| `multica_py.models.issue_activity.Comment` passive DTO | `multica_py.resources.issue_comments.Comment` |
-| `multica_py.models.issue_activity.CommentThreadData` | `multica_py.resources.issue_comments.CommentThread` |
-| `multica_py.models.issue_activity.CommentThread` passive DTO | `multica_py.resources.issue_comments.CommentThread` |
-| `multica_py.models.issue_activity.TaskRunData` | `multica_py.resources.issues.TaskRun` |
-| `multica_py.models.issue_activity.TaskRun` passive DTO | `multica_py.resources.issues.TaskRun` |
-| `multica_py.models.labels.LabelData` | `multica_py.resources.labels.Label` |
+| `multica_py.resources.issues.IssueEntity` | `multica_py.entities.Issue` (compat: `multica_py.resources.issues.Issue`) |
+| `multica_py.resources.agents.AgentEntity` | `multica_py.entities.Agent` (compat: `multica_py.resources.agents.Agent`) |
+| `multica_py.resources.skills.SkillEntity` | `multica_py.entities.Skill` (compat: `multica_py.resources.skills.Skill`) |
+| `multica_py.resources.squads.SquadEntity` | `multica_py.entities.Squad` (compat: `multica_py.resources.squads.Squad`) |
+| `multica_py.resources.workspaces.WorkspaceEntity` | `multica_py.entities.Workspace` (compat: `multica_py.resources.workspaces.Workspace`) |
+| `multica_py.resources.workspaces.WorkspaceMemberEntity` | `multica_py.entities.WorkspaceMember` (compat: `multica_py.resources.workspaces.WorkspaceMember`) |
+| `multica_py.resources.autopilots.AutopilotEntity` | `multica_py.entities.Autopilot` (compat: `multica_py.resources.autopilots.Autopilot`) |
+| `multica_py.resources.autopilots.AutopilotRunEntity` | `multica_py.entities.AutopilotRun` (compat: `multica_py.resources.autopilots.AutopilotRun`) |
+| `multica_py.models.issues.IssueData` | `multica_py.entities.Issue` (compat: `multica_py.resources.issues.Issue`) |
+| `multica_py.models.issues.Issue` passive DTO | `multica_py.entities.Issue` (compat: `multica_py.resources.issues.Issue`) |
+| `multica_py.models.projects.ProjectData` | `multica_py.entities.Project` (compat: `multica_py.resources.projects.Project`) |
+| `multica_py.models.projects.Project` passive DTO | `multica_py.entities.Project` (compat: `multica_py.resources.projects.Project`) |
+| `multica_py.models.agents.AgentData` | `multica_py.entities.Agent` (compat: `multica_py.resources.agents.Agent`) |
+| `multica_py.models.agents.Agent` passive DTO | `multica_py.entities.Agent` (compat: `multica_py.resources.agents.Agent`) |
+| `multica_py.models.skills.SkillData` | `multica_py.entities.Skill` (compat: `multica_py.resources.skills.Skill`) |
+| `multica_py.models.skills.Skill` passive DTO | `multica_py.entities.Skill` (compat: `multica_py.resources.skills.Skill`) |
+| `multica_py.models.system.SquadData` | `multica_py.entities.Squad` (compat: `multica_py.resources.squads.Squad`) |
+| `multica_py.models.system.Squad` passive DTO | `multica_py.entities.Squad` (compat: `multica_py.resources.squads.Squad`) |
+| `multica_py.models.workspaces.WorkspaceData` | `multica_py.entities.Workspace` (compat: `multica_py.resources.workspaces.Workspace`) |
+| `multica_py.models.workspaces.Workspace` passive DTO | `multica_py.entities.Workspace` (compat: `multica_py.resources.workspaces.Workspace`) |
+| `multica_py.models.workspaces.WorkspaceMemberData` | `multica_py.entities.WorkspaceMember` (compat: `multica_py.resources.workspaces.WorkspaceMember`) |
+| `multica_py.models.workspaces.WorkspaceMember` passive DTO | `multica_py.entities.WorkspaceMember` (compat: `multica_py.resources.workspaces.WorkspaceMember`) |
+| `multica_py.models.autopilots.AutopilotData` | `multica_py.entities.Autopilot` (compat: `multica_py.resources.autopilots.Autopilot`) |
+| `multica_py.models.autopilots.Autopilot` passive DTO | `multica_py.entities.Autopilot` (compat: `multica_py.resources.autopilots.Autopilot`) |
+| `multica_py.models.autopilots.AutopilotRunData` | `multica_py.entities.AutopilotRun` (compat: `multica_py.resources.autopilots.AutopilotRun`) |
+| `multica_py.models.autopilots.AutopilotRun` passive DTO | `multica_py.entities.AutopilotRun` (compat: `multica_py.resources.autopilots.AutopilotRun`) |
+| `multica_py.models.issue_activity.CommentData` | `multica_py.entities.Comment` (compat: `multica_py.resources.issue_comments.Comment`) |
+| `multica_py.models.issue_activity.Comment` passive DTO | `multica_py.entities.Comment` (compat: `multica_py.resources.issue_comments.Comment`) |
+| `multica_py.models.issue_activity.CommentThreadData` | `multica_py.entities.CommentThread` (compat: `multica_py.resources.issue_comments.CommentThread`) |
+| `multica_py.models.issue_activity.CommentThread` passive DTO | `multica_py.entities.CommentThread` (compat: `multica_py.resources.issue_comments.CommentThread`) |
+| `multica_py.models.issue_activity.TaskRunData` | `multica_py.entities.TaskRun` (compat: `multica_py.resources.issues.TaskRun`) |
+| `multica_py.models.issue_activity.TaskRun` passive DTO | `multica_py.entities.TaskRun` (compat: `multica_py.resources.issues.TaskRun`) |
+| `multica_py.models.labels.LabelData` | `multica_py.entities.Label` (compat: `multica_py.resources.labels.Label`) |
 | `multica_py.models.project_resources.ProjectResourceData` | `multica_py.models.project_resources.ProjectResourceRecord` |
 | `multica_py.models.ResourceEntity[TData]`, `to_data()`, `from_data()` | direct class fields + `to_json()` / `to_dict()` / `from_dict()` on the unified class |
 
-The private helper `_BoundEntity` (in `multica_py.models._bound`) backs
+The private helper `_BoundEntity` (in `multica_py.entities._base`) backs
 every unified class. It is not exported; treat it as implementation detail.
 
 ## Public surface migrations
@@ -301,7 +352,7 @@ documented defaults, and no implicit `issues.get` hydration occurs.
 | `WorkspaceMember.issues` | `for issue in member.issues.all()` | `for issue in member.issues.all()` |
 
 ```python
-from multica_py.resources.issues import Issue
+from multica_py.entities import Issue
 
 for issue in client.issues.list(filter).issues:
     issue: Issue
