@@ -3,18 +3,12 @@ from __future__ import annotations
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
 from multica_py.config import OperationOptions
-from multica_py.models._bound import _BoundEntity
+from multica_py.entities.labels import Label
 from multica_py.models.common import ActionResult, Page
 from multica_py.resources._base import BaseResource, _validate_optional_string
 from multica_py.sentinels import Unset, UnsetType
 
-
-class Label(_BoundEntity):  # type: ignore[misc]
-    id: str
-    name: str
-    color: str | None = None
-
-    _PUBLIC_FIELDS = ("id", "name", "color")
+__all__ = ["Label", "LabelResource"]
 
 
 class LabelResource(BaseResource):

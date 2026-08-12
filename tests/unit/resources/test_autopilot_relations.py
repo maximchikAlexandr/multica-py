@@ -18,6 +18,7 @@ from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities.autopilots import Autopilot, AutopilotRun
 from multica_py.enums import AutopilotExecutionMode
 from multica_py.exceptions import MissingRelationContextError
 from multica_py.models.autopilots import (
@@ -29,7 +30,7 @@ from multica_py.models.autopilots import (
 from multica_py.models.common import ActionResult
 from multica_py.models.issue_activity import RunMessage
 from multica_py.models.relations import LazyCollection, LazyMapping
-from multica_py.resources.autopilots import Autopilot, AutopilotResource, AutopilotRun
+from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.issues import IssueResource
 from multica_py.sentinels import UnsetType
 
@@ -189,6 +190,19 @@ def test_direct_pages_have_exact_bound_item_annotations(case: BoundPageCase) -> 
                 RunMessage(id="m1", run_id="task_1", role="assistant", content="done"),
             ),
         )
+
+        def run_messages_adapter(
+            task_run_id: str, *, issue_id: str | None, options: object = None
+        ) -> Command[tuple[RunMessage, ...]]:
+            kwargs: dict[str, object] = {"issue_id": issue_id}
+            if options is not None:
+                kwargs["options"] = options
+            command = client.issues.run_messages_command(task_run_id, **kwargs)
+            return command._map(
+                lambda page: tuple(page.items) if hasattr(page, "items") else tuple(page)
+            )
+
+        client.issues._run_messages_relation_command.side_effect = run_messages_adapter
         run = cast("AutopilotRun", items[0])
         assert [message.id for message in run.messages.all()] == ["m1"]
         client.issues.run_messages_command.assert_called_once_with("task_1", issue_id="iss_1")

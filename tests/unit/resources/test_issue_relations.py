@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Literal, cast
 from unittest.mock import MagicMock
 
+import msgspec
 import pytest
 
 from multica_py._internal.commands import Command, _Step
@@ -15,6 +16,12 @@ from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import _issue_from_wire, _IssueWire
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
+from multica_py.entities.agents import Agent
+from multica_py.entities.comments import Comment, CommentThread
+from multica_py.entities.issues import Issue, TaskRun
+from multica_py.entities.projects import Project
+from multica_py.entities.squads import Squad
+from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import OutputShapeError, RelationPaginationError
 from multica_py.models.common import Page
@@ -36,14 +43,11 @@ from multica_py.models.relations import (
     LazyMapping,
     OffsetLazyCollection,
     OffsetPage,
+    RelationMetadata,
+    _RelationLoad,
 )
 from multica_py.resources._base import BaseResource
-from multica_py.resources.agents import Agent
-from multica_py.resources.issue_comments import Comment, CommentThread
-from multica_py.resources.issues import Issue, IssueResource, TaskRun, _issue_offset_page_command
-from multica_py.resources.projects import Project
-from multica_py.resources.squads import Squad
-from multica_py.resources.workspaces import Workspace, WorkspaceMember
+from multica_py.resources.issues import IssueResource
 
 
 @dataclass(frozen=True)
@@ -416,6 +420,57 @@ def _client() -> MagicMock:
         lambda: client.issues.children(issue_id)
     )
 
+    def cursor_command(loader: Callable[[], object], kind: str) -> Command[object]:
+        return command_resource._plan(
+            steps=(
+                _Step(
+                    ("issue", "comment", "list", kind, "--output", "json"),
+                    "run_text",
+                    decode=lambda _stdout, _command: loader(),
+                ),
+            ),
+            finalize=lambda results: results[0],
+        )
+
+    client.issues._comments_relation_command = lambda issue_id: empty_command(
+        lambda: tuple(client.issues.comments.list_flat(issue_id=issue_id).items)
+    )
+    client.issues.comments._thread_page_command = lambda **request: cursor_command(
+        lambda: CursorPage(
+            items=client.issues.comments.list_thread(**request).items,
+            next_cursor=None,
+        ),
+        "thread",
+    )
+    client.issues._recent_comment_threads_relation_command = lambda issue_id, *, limit, cursor: (
+        cursor_command(
+            lambda: CursorPage(
+                items=tuple(
+                    msgspec.structs.replace(item, issue_id=issue_id, _client=client)
+                    for item in client.issues.comments.list_recent(
+                        issue_id=issue_id, limit=limit, cursor=cursor
+                    ).items
+                ),
+                next_cursor=None,
+            ),
+            "recent",
+        )
+    )
+    client.issues._children_relation_command = lambda issue_id: empty_command(
+        lambda: _RelationLoad(
+            items=tuple(
+                item._with_client(client) for item in client.issues.children(issue_id).children
+            ),
+            metadata=RelationMetadata(
+                total=client.issues.children(issue_id).total,
+                child_stages=client.issues.children(issue_id).child_stages,
+                unstaged=tuple(
+                    item._with_client(client) for item in client.issues.children(issue_id).unstaged
+                ),
+            ),
+        )
+    )
+
     def runs_command(issue_id):
         def loader():
             return tuple(
@@ -434,8 +489,17 @@ def _client() -> MagicMock:
         return empty_command(loader)
 
     client.issues.runs_command = runs_command
+    client.issues._runs_relation_command = runs_command
     client.issues.run_messages_command = lambda run_id, *, issue_id=None: empty_command(
         lambda: client.issues.run_messages(run_id, issue_id=issue_id)
+    )
+    client.issues._run_messages_relation_command = lambda run_id, *, issue_id=None, options=None: (
+        empty_command(lambda: client.issues.run_messages(run_id, issue_id=issue_id))
+    )
+    client.issues._add_comment_command = lambda issue_id, body, *, invalidate, options: (
+        client.issues.comments.add_command(issue_id, body, options=options)._map(
+            lambda result: (invalidate(), result)[1]
+        )
     )
     client.issues.comments.add_command = lambda issue_id, body, *, options=None: empty_command(
         lambda: client.issues.comments.add(issue_id, body)
@@ -688,10 +752,7 @@ def test_issue_offset_page_command_binds_rows_to_origin_client() -> None:
     client = MagicMock()
     resource._set_client(client)
 
-    result = _issue_offset_page_command(
-        resource,
-        IssueListFilter(limit=50, offset=0),
-    ).run()
+    result = resource._offset_page_command(IssueListFilter(limit=50, offset=0)).run()
 
     assert len(result.items) == 1
     assert isinstance(result.items[0], Issue)

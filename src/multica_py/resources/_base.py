@@ -67,6 +67,12 @@ class BaseResource:
     def _set_client(self, client: MulticaClient) -> None:
         self._client = client
 
+    def _bound_client(self) -> MulticaClient:
+        client = self._client
+        if client is None:
+            raise RuntimeError("resource is not attached to a client")
+        return client
+
     def _effective_config(self, options: OperationOptions | None = None) -> ClientConfig:
         if options is None:
             return msgspec.structs.replace(self._config)

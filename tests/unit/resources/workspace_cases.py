@@ -10,16 +10,17 @@ from multica_py._internal.commands import Command, _Step
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.entities.agents import Agent
+from multica_py.entities.autopilots import Autopilot
+from multica_py.entities.labels import Label
+from multica_py.entities.skills import Skill
+from multica_py.entities.squads import Squad
+from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.models.autopilots import AutopilotListPage
 from multica_py.models.issues import IssueListFilter, IssueListPage
+from multica_py.models.relations import OffsetPage, RelationMetadata, _RelationLoad
 from multica_py.models.system import RepositoryRecord, RuntimeDefinition
 from multica_py.resources._base import BaseResource
-from multica_py.resources.agents import Agent
-from multica_py.resources.autopilots import Autopilot
-from multica_py.resources.labels import Label
-from multica_py.resources.skills import Skill
-from multica_py.resources.squads import Squad
-from multica_py.resources.workspaces import Workspace, WorkspaceMember
 
 
 @dataclass(frozen=True)
@@ -73,8 +74,19 @@ def make_workspace_clients(
             words = command_text.split()
             offset = int(words[words.index("--offset") + 1])
             limit = int(words[words.index("--limit") + 1])
-            request = IssueListFilter(limit=limit, offset=offset)
-            return scoped.issues.list(request)
+            request = IssueListFilter(
+                assignee_id=issue_filter.assignee_id,
+                limit=limit,
+                offset=offset,
+            )
+            page = scoped.issues.list(request)
+            return OffsetPage(
+                items=page.items,
+                total=page.total,
+                limit=page.limit,
+                offset=page.offset,
+                has_more=page.has_more,
+            )
 
         def run_bytes(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
             return RawCommandResult(
@@ -114,6 +126,33 @@ def make_workspace_clients(
     scoped.runtimes.list_command = direct_list_command(scoped.runtimes.list)
     scoped.squads.list_command = direct_list_command(scoped.squads.list)
     scoped.autopilots.list_command = direct_list_command(scoped.autopilots.list)
+
+    scoped.workspaces._members_relation_command = scoped.workspaces.members_command
+    scoped.workspaces._agents_relation_command = scoped.agents.list_command
+    scoped.workspaces._skills_relation_command = scoped.skills.list_command
+    scoped.workspaces._projects_relation_command = scoped.projects.list_command
+    scoped.workspaces._labels_relation_command = scoped.labels.list_command
+    scoped.workspaces._repositories_relation_command = scoped.repositories.list_command
+    scoped.workspaces._runtimes_relation_command = scoped.runtimes.list_command
+    scoped.workspaces._squads_relation_command = scoped.squads.list_command
+    scoped.workspaces._issues_page_command = lambda assignee_id, limit, offset: issues_command(
+        IssueListFilter(assignee_id=assignee_id, limit=limit, offset=offset)
+    )
+    scoped.workspaces._issues_page = lambda assignee_id, limit, offset: issues_command(
+        IssueListFilter(assignee_id=assignee_id, limit=limit, offset=offset)
+    ).run()
+
+    def autopilots_relation() -> Command[object]:
+        def load() -> _RelationLoad[Autopilot]:
+            page = scoped.autopilots.list()
+            return _RelationLoad(
+                tuple(page.autopilots),
+                RelationMetadata(total=page.total),
+            )
+
+        return empty_command(load)
+
+    scoped.workspaces._autopilots_relation_command = autopilots_relation
 
     return WorkspaceClients(origin=origin, scoped=scoped)
 

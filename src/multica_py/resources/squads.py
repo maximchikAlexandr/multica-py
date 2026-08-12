@@ -1,166 +1,65 @@
 from __future__ import annotations
 
-import datetime
-from typing import TYPE_CHECKING
-
-import msgspec
+from collections.abc import Callable
 
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
-from multica_py.models._bound import _BoundEntity
+from multica_py.entities.issues import Issue
+from multica_py.entities.squads import Squad
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter
 from multica_py.models.relations import (
-    LazyCollection,
-    OffsetLazyCollection,
     OffsetPage,
 )
 from multica_py.models.system import SquadMember
-from multica_py.resources._base import BaseResource, _page_items
-from multica_py.resources.issues import (
-    Issue,
-    _issue_offset_page,
-    _issue_offset_page_command,
-)
+from multica_py.resources._base import BaseResource
 from multica_py.resources.squad_members import SquadMemberResource
 
-if TYPE_CHECKING:
-    from multica_py.client import MulticaClient
-
-
-def _page_squad_issues(
-    client: MulticaClient, squad_id: str, limit: int | None, offset: int
-) -> OffsetPage[Issue]:
-
-    flt = IssueListFilter(
-        assignee_id=squad_id,
-        limit=limit,
-        offset=offset,
-    )
-    return _issue_offset_page(client.issues, flt)
-
-
-def _squad_members_command(
-    client: MulticaClient, squad_id: str
-) -> Command[tuple[SquadMember, ...]]:
-    validate_nonblank(squad_id)
-    return client.squads.members.list_command(squad_id)._map(_page_items)
-
-
-def _squad_issues_page_command(
-    client: MulticaClient, squad_id: str, limit: int | None, offset: int
-) -> Command[OffsetPage[Issue]]:
-    return _issue_offset_page_command(
-        client.issues,
-        IssueListFilter(assignee_id=squad_id, limit=limit, offset=offset),
-    )
-
-
-class Squad(_BoundEntity):  # type: ignore[misc]
-    id: str
-    name: str
-    member_count: int = 0
-    leader_id: str | None = None
-    archived_at: datetime.datetime | None = None
-
-    _members: LazyCollection[SquadMember] | None = msgspec.field(default=None, name="_members")
-    _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
-
-    _PUBLIC_FIELDS = ("id", "name", "member_count", "leader_id", "archived_at")
-
-    @property
-    def members(self) -> LazyCollection[SquadMember]:
-        if self._members is None:
-            client = self._require_client(
-                entity_type="Squad", entity_id=self.id, relation_name="members"
-            )
-            sid = self.id
-            members = client.squads.members
-            self._set_runtime(
-                "_members",
-                LazyCollection(
-                    lambda: _page_items(members.list(sid)),
-                    command_loader=lambda: _squad_members_command(client, sid),
-                ),
-            )
-        return self._members  # type: ignore[return-value]
-
-    @property
-    def issues(self) -> OffsetLazyCollection[Issue]:
-        if self._issues is None:
-            client = self._require_client(
-                entity_type="Squad", entity_id=self.id, relation_name="issues"
-            )
-            sid = self.id
-
-            def page_loader(*, limit: int | None, offset: int) -> OffsetPage[Issue]:
-                return _page_squad_issues(client, sid, limit, offset)
-
-            self._set_runtime(
-                "_issues",
-                OffsetLazyCollection(
-                    page_loader,
-                    default_limit=50,
-                    page_command_loader=lambda limit, offset: _squad_issues_page_command(
-                        client, sid, limit, offset
-                    ),
-                ),
-            )
-        return self._issues  # type: ignore[return-value]
-
-    def _invalidate_members(self) -> None:
-        if self._members is not None:
-            self._members.invalidate()
-
-    def add_member(
-        self, member_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.add_member_command(member_id, options=options).run()
-
-    def add_member_command(
-        self, member_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
-        validate_nonblank(member_id)
-        client = self._require_client(
-            entity_type="Squad", entity_id=self.id, relation_name="add_member"
-        )
-
-        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            if result.success:
-                self._invalidate_members()
-            return result
-
-        command = client.squads.members.add_command(self.id, member_id, options=options)
-        return command._map(invalidate)
-
-    def remove_member(
-        self, member_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.remove_member_command(member_id, options=options).run()
-
-    def remove_member_command(
-        self, member_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
-        validate_nonblank(member_id)
-        client = self._require_client(
-            entity_type="Squad", entity_id=self.id, relation_name="remove_member"
-        )
-
-        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            if result.success:
-                self._invalidate_members()
-            return result
-
-        command = client.squads.members.remove_command(self.id, member_id, options=options)
-        return command._map(invalidate)
+__all__ = ["Squad", "SquadResource"]
 
 
 class SquadResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
         self.members = SquadMemberResource(transport, config)
+
+    def _members_relation_command(self, squad_id: str) -> Command[tuple[SquadMember, ...]]:
+        validate_nonblank(squad_id)
+        return self.members.list_command(squad_id)._map(lambda page: tuple(page.items))
+
+    def _issues_page(self, squad_id: str, limit: int | None, offset: int) -> OffsetPage[Issue]:
+        return self._bound_client().issues._offset_page(
+            IssueListFilter(assignee_id=squad_id, limit=limit, offset=offset),
+        )
+
+    def _issues_page_command(
+        self, squad_id: str, limit: int | None, offset: int
+    ) -> Command[OffsetPage[Issue]]:
+        return self._bound_client().issues._offset_page_command(
+            IssueListFilter(assignee_id=squad_id, limit=limit, offset=offset),
+        )
+
+    def _add_member_command(
+        self,
+        squad_id: str,
+        member_id: str,
+        *,
+        invalidate: Callable[[ActionResult[None]], ActionResult[None]],
+        options: OperationOptions | None,
+    ) -> Command[ActionResult[None]]:
+        return self.members.add_command(squad_id, member_id, options=options)._map(invalidate)
+
+    def _remove_member_command(
+        self,
+        squad_id: str,
+        member_id: str,
+        *,
+        invalidate: Callable[[ActionResult[None]], ActionResult[None]],
+        options: OperationOptions | None,
+    ) -> Command[ActionResult[None]]:
+        return self.members.remove_command(squad_id, member_id, options=options)._map(invalidate)
 
     def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Squad]]:
         return self._decoded_list_command(("squad", "list"), Squad, options=options)._map(

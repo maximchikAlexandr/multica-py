@@ -7,8 +7,9 @@ import pytest
 
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.entities.autopilots import Autopilot
 from multica_py.exceptions import OutputShapeError
-from multica_py.resources.autopilots import Autopilot, AutopilotResource
+from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.users import UserResource
 
 

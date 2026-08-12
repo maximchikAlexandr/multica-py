@@ -3,10 +3,31 @@ from __future__ import annotations
 import datetime
 import subprocess
 from collections.abc import Iterator
-from typing import BinaryIO, cast
+from typing import BinaryIO, Literal, cast
+
+import msgspec
 
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.processes import close_process_pipes, kill_process, terminate_process
+from multica_py.exceptions import ProcessOutputModeError
+
+
+class ProcessResult(msgspec.Struct, frozen=True, forbid_unknown_fields=True):
+    argv: tuple[str, ...]
+    exit_code: int
+    stdout: str
+    stderr: str
+
+    @property
+    def ok(self) -> bool:
+        return self.exit_code == 0
+
+    @property
+    def failed(self) -> bool:
+        return not self.ok
+
+
+_OutputMode = Literal["unclaimed", "buffered", "streaming", "discarded"]
 
 
 def _stdin_pipe(process: subprocess.Popen[bytes]) -> BinaryIO | None:
@@ -33,6 +54,41 @@ class ManagedProcess:
         self._argv = argv
         self._semaphore = semaphore
         self._closed = False
+        self._output_mode: _OutputMode = "unclaimed"
+        self._result: ProcessResult | None = None
+
+    def _claim_mode(self, mode: Literal["buffered", "streaming"], consumer: str) -> None:
+        if self._output_mode == "unclaimed":
+            self._output_mode = mode
+            return
+        if self._output_mode == mode:
+            return
+        raise ProcessOutputModeError(self._output_mode, consumer)
+
+    def _claim_buffered(self, consumer: str = "buffered result") -> None:
+        self._claim_mode("buffered", consumer)
+
+    def _claim_streaming(self, consumer: str) -> None:
+        self._claim_mode("streaming", consumer)
+
+    def _make_result(
+        self,
+        stdout_data: bytes | None,
+        stderr_data: bytes | None,
+    ) -> ProcessResult:
+        exit_code = self._process.returncode
+        if exit_code is None:
+            exit_code = self._process.poll()
+        if exit_code is None:
+            raise RuntimeError("Process completed without an exit code")
+        if stdout_data is None or stderr_data is None:
+            raise RuntimeError("Process output pipes were not captured")
+        return ProcessResult(
+            self._argv,
+            exit_code,
+            stdout_data.decode("utf-8"),
+            stderr_data.decode("utf-8"),
+        )
 
     def _finalize(self) -> None:
         if self._closed:
@@ -54,13 +110,29 @@ class ManagedProcess:
         return self._process.poll()
 
     def wait(self, timeout: datetime.timedelta | None = None) -> int:
+        return self.result(timeout).exit_code
+
+    def result(self, timeout: datetime.timedelta | None = None) -> ProcessResult:
+        self._claim_buffered()
+        if self._result is not None:
+            return self._result
+
+        timeout_sec = timeout.total_seconds() if timeout is not None else None
         try:
-            timeout_sec = timeout.total_seconds() if timeout else None
-            rc = self._process.wait(timeout=timeout_sec)
+            stdout_data, stderr_data = self._process.communicate(timeout=timeout_sec)
         except subprocess.TimeoutExpired:
             raise TimeoutError("Process wait timed out")
+
+        try:
+            result = self._make_result(stdout_data, stderr_data)
+        except BaseException:
+            self._output_mode = "discarded"
+            self._finalize()
+            raise
+
+        self._result = result
         self._finalize()
-        return rc
+        return result
 
     def terminate(self) -> None:
         terminate_process(self._process)
@@ -69,6 +141,7 @@ class ManagedProcess:
         kill_process(self._process)
 
     def stdout_lines(self) -> Iterator[str]:
+        self._claim_streaming("stdout stream")
         stdout_pipe = _stdout_pipe(self._process)
         assert stdout_pipe is not None
         try:
@@ -79,6 +152,7 @@ class ManagedProcess:
                 self._finalize()
 
     def stderr_lines(self) -> Iterator[str]:
+        self._claim_streaming("stderr stream")
         stderr_pipe = _stderr_pipe(self._process)
         assert stderr_pipe is not None
         try:
@@ -94,6 +168,7 @@ class ManagedProcess:
     def close(self) -> None:
         if self._closed:
             return
+        self._output_mode = "discarded"
         if self._process.poll() is None:
             self.terminate()
             try:

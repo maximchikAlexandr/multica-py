@@ -247,6 +247,7 @@ is preserved as page metadata.
 - `ExecutableNotFoundError`, `ExecutableNotRunnableError` — executable
 - `UnsupportedCliVersionError` — version check
 - `CommandTimeoutError`, `CommandCancelledError` — lifecycle
+- `ProcessOutputModeError` — buffered/streaming output mode conflict
 - `CommandExecutionError` (+ subclasses: `AuthenticationError`, `AuthorizationError`, `NotFoundError`, `ConflictError`, `ValidationError`, `NetworkError`, `UnknownCommandError`)
 - `ProtocolError` (+ `JsonOutputError`, `OutputShapeError`, `EncodingError`)
 
@@ -267,9 +268,48 @@ except ValidationError as exc:
     print(exc.exit_code, str(exc))  # fix the reported upstream input
 ```
 
+## Canonical entities and managed process results
+
+The immutable domain classes have canonical imports under `multica_py.entities`:
+
+```python
+from multica_py.entities import Agent, Issue, Project, Workspace
+
+issue = client.issues.get("issue_123")
+assert isinstance(issue, Issue)
+```
+
+The historical `multica_py.resources.<domain>` imports remain direct compatibility
+re-exports of those same classes, so identity is preserved. Entity modules hold
+immutable fields and pure relation helpers; resources own transport, command
+plans, wire conversion, and cache invalidation. Import resources when you need a
+service, and entities when you need a domain type.
+
+`ManagedProcess` exposes a finite, buffered result through `result(timeout=...)`:
+
+```python
+from multica_py import ProcessResult
+
+process = client.auth.login()
+result = process.result(timeout=30)
+assert isinstance(result, ProcessResult)
+assert result is process.result()
+```
+
+`ProcessResult` is immutable and contains exactly `argv`, `exit_code`, `stdout`,
+and `stderr`, with `ok` and `failed` convenience properties. `result()`
+collects both pipes with one finalization and caches that object; `wait()`
+delegates to it and retains the same output.
+Timeouts are retryable and do not discard the process. `terminate()` and `kill()`
+still permit result collection, while `close()` discards the process and later
+access requires a new finalization. A process is either buffered or streaming:
+attempting the other mode raises `ProcessOutputModeError`, which reports the
+current mode and requested consumer. Buffered collection retains all output in
+memory; use streaming for unbounded output and do not mix the two modes.
+
 ## Shared Models
 
-- `_BoundEntity` (private mixin in `multica_py.models._bound`) — frozen
+- `_BoundEntity` (private mixin in `multica_py.entities._base`) — frozen
   `msgspec.Struct(kw_only=True)` base that backs every unified domain class.
   Carries the `_client` field, `_require_client`, `detach`,
   `__eq__`/`__hash__`/`__repr__` over `_PUBLIC_FIELDS`, and `to_dict()` /

@@ -14,6 +14,7 @@ import msgspec
 import multica_py.models as models_pkg
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
+from multica_py.entities.issues import Issue
 from multica_py.models.autopilots import AutopilotListPage, AutopilotRunListPage
 from multica_py.models.common import ActionResult, CommentCursor, Page
 from multica_py.models.issue_activity import MetadataPage
@@ -33,7 +34,6 @@ from multica_py.models.relations import (
 )
 from multica_py.models.system import RuntimeUpdateResult
 from multica_py.resources.cli import CliResult
-from multica_py.resources.issues import Issue
 from multica_py.resources.project_resources import ProjectResourceCollection
 
 _DIRECT_KEYWORD_METHODS = frozenset(
@@ -240,6 +240,8 @@ EXPECTED_ROOT_EXPORTS = (
     "OperationOptions",
     "OutputShapeError",
     "Page",
+    "ProcessOutputModeError",
+    "ProcessResult",
     "Project",
     "ProjectStatus",
     "ProtocolError",
@@ -292,6 +294,29 @@ def test_root_exports_match_curated_expected_table() -> None:
         assert removed_name not in models_pkg.__all__
         assert not hasattr(multica_py, removed_name)
         assert not hasattr(models_pkg, removed_name)
+
+
+def test_canonical_entity_root_and_resource_identity() -> None:
+    import multica_py
+    from multica_py.entities import Agent, Issue, Project, Workspace
+    from multica_py.resources.agents import Agent as ResourceAgent
+    from multica_py.resources.issues import Issue as ResourceIssue
+    from multica_py.resources.projects import Project as ResourceProject
+    from multica_py.resources.workspaces import Workspace as ResourceWorkspace
+
+    assert Agent is multica_py.Agent is ResourceAgent
+    assert Issue is multica_py.Issue is ResourceIssue
+    assert Project is multica_py.Project is ResourceProject
+    assert Workspace is multica_py.Workspace is ResourceWorkspace
+
+
+def test_process_exports_are_exactly_the_new_process_root_surface() -> None:
+    import multica_py
+
+    process_exports = {name for name in multica_py.__all__ if name.startswith("Process")}
+    assert process_exports == {"ProcessOutputModeError", "ProcessResult"}
+    assert multica_py.ProcessResult.__module__ == "multica_py.process"
+    assert multica_py.ProcessOutputModeError.__module__ == "multica_py.exceptions"
 
 
 def test_removed_request_flow_is_absent_from_package_sources() -> None:

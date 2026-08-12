@@ -5,10 +5,10 @@ import datetime
 import pytest
 
 from multica_py._internal.decoders import decode_json
+from multica_py.entities.agents import Agent
+from multica_py.entities.squads import Squad
 from multica_py.models.agents import AgentSkill
 from multica_py.models.system import SquadMember
-from multica_py.resources.agents import Agent
-from multica_py.resources.squads import Squad
 
 
 @pytest.mark.parametrize(

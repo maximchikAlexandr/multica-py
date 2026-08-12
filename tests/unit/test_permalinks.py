@@ -6,9 +6,9 @@ import pytest
 
 from multica_py import MissingPermalinkContextError, MulticaClient
 from multica_py.config import ClientConfig
+from multica_py.entities.issues import Issue
+from multica_py.entities.projects import Project
 from multica_py.enums import IssueStatus, ProjectStatus
-from multica_py.resources.issues import Issue
-from multica_py.resources.projects import Project
 
 
 def _issue(client: MulticaClient | None = None, *, entity_id: str = "issue_123") -> Issue:

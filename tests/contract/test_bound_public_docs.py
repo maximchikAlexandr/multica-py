@@ -14,6 +14,8 @@ import pytest
 
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities.issues import Issue
+from multica_py.entities.projects import Project
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.models.common import CommentCursor
 from multica_py.models.issue_activity import MetadataPredicate
@@ -23,10 +25,10 @@ from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.cli import CliResource
 from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
-from multica_py.resources.issues import Issue, IssueResource
+from multica_py.resources.issues import IssueResource
 from multica_py.resources.labels import LabelResource
 from multica_py.resources.project_resources import ProjectResourceCollection
-from multica_py.resources.projects import Project, ProjectIssueCollection, ProjectResource
+from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
 from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.skills import SkillResource
 from multica_py.resources.users import UserResource
@@ -134,6 +136,23 @@ RAW_BOUNDARY_DOCUMENTATION_CASES = (
 )
 
 
+ENTITY_PROCESS_DOCUMENTATION_CASES = (
+    DocumentationCase(
+        ROOT / "docs/api.md", "from multica_py.entities import Agent, Issue, Project, Workspace"
+    ),
+    DocumentationCase(ROOT / "docs/api.md", "ProcessResult` is immutable"),
+    DocumentationCase(ROOT / "docs/api.md", "result(timeout=...)"),
+    DocumentationCase(ROOT / "docs/api.md", "ProcessOutputModeError"),
+    DocumentationCase(ROOT / "docs/service-usage.md", "cached identity"),
+    DocumentationCase(ROOT / "docs/service-usage.md", "cannot be switched to"),
+    DocumentationCase(ROOT / "docs/service-usage.md", "unbounded output"),
+    DocumentationCase(ROOT / "docs/migration.md", "multica_py.entities.Agent"),
+    DocumentationCase(ROOT / "docs/migration.md", "same class identity"),
+    DocumentationCase(ROOT / "docs/migration.md", "ProcessResult"),
+    DocumentationCase(ROOT / "docs/migration.md", "ProcessOutputModeError"),
+)
+
+
 @pytest.mark.parametrize(
     "case", MIGRATION_CASES, ids=tuple(case.required_text for case in MIGRATION_CASES)
 )
@@ -165,6 +184,15 @@ def test_operation_conventions_are_documented(case: DocumentationCase) -> None:
     ids=tuple(case.required_text for case in RAW_BOUNDARY_DOCUMENTATION_CASES),
 )
 def test_raw_boundary_documentation_is_complete(case: DocumentationCase) -> None:
+    assert case.required_text in case.path.read_text()
+
+
+@pytest.mark.parametrize(
+    "case",
+    ENTITY_PROCESS_DOCUMENTATION_CASES,
+    ids=tuple(case.required_text for case in ENTITY_PROCESS_DOCUMENTATION_CASES),
+)
+def test_entity_and_process_documentation_is_complete(case: DocumentationCase) -> None:
     assert case.required_text in case.path.read_text()
 
 
@@ -561,7 +589,7 @@ def _project(client: MulticaClient) -> Project:
 
 
 def _project_issues(client: MulticaClient) -> ProjectIssueCollection:
-    return _project(client).issues
+    return cast("ProjectIssueCollection", _project(client).issues)
 
 
 _MIGRATION = ROOT / "docs/migration.md"

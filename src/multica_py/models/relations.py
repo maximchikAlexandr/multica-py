@@ -11,7 +11,7 @@ from multica_py.models.issue_activity import CommentCursor
 from multica_py.models.issues import IssueChildStageGroup
 
 if TYPE_CHECKING:
-    from multica_py.resources.issues import Issue
+    from multica_py.entities.issues import Issue
 
 T_co = TypeVar("T_co", covariant=True)
 T = TypeVar("T")

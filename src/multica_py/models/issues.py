@@ -9,11 +9,11 @@ from multica_py.models.common import CommentCursor, Page
 from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
-    from multica_py.resources.agents import Agent
-    from multica_py.resources.issues import Issue
-    from multica_py.resources.projects import Project
-    from multica_py.resources.squads import Squad
-    from multica_py.resources.workspaces import WorkspaceMember
+    from multica_py.entities.agents import Agent
+    from multica_py.entities.issues import Issue
+    from multica_py.entities.projects import Project
+    from multica_py.entities.squads import Squad
+    from multica_py.entities.workspaces import WorkspaceMember
 
     type AssignmentTarget = str | Agent | Squad | WorkspaceMember
     type IssueReference = str | Issue
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 else:
     # The runtime validator uses an explicit allow-list; this fallback keeps
     # the aliases importable without importing resource modules cyclically.
-    from multica_py.models._bound import _BoundEntity
+    from multica_py.entities._base import _BoundEntity
 
     type AssignmentTarget = str | _BoundEntity
     type IssueReference = str | _BoundEntity

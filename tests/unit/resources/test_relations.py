@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 
+from multica_py.entities.projects import Project
 from multica_py.enums import ProjectStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.relations import LazyCollection
-from multica_py.resources.projects import Project
 
 _PLANNED = ProjectStatus("planned")
 

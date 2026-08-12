@@ -8,9 +8,10 @@ import pytest
 
 from multica_py._internal.specs import RawCommandResult
 from multica_py.config import ClientConfig
+from multica_py.entities.issues import Issue
 from multica_py.exceptions import JsonOutputError, OutputShapeError
 from multica_py.models.common import Page
-from multica_py.resources.issues import Issue, IssueResource
+from multica_py.resources.issues import IssueResource
 
 
 @dataclass(frozen=True)

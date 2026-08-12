@@ -1,7 +1,7 @@
 from multica_py import Page
+from multica_py.entities.issues import Issue
 from multica_py.models.autopilots import AutopilotListPage, AutopilotRunListPage
 from multica_py.models.issues import IssueChildrenResult, IssueListPage
-from multica_py.resources.issues import Issue
 
 issue_page: IssueListPage = IssueListPage(issues=())
 children_page: IssueChildrenResult = IssueChildrenResult(children=())

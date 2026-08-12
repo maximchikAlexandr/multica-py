@@ -13,6 +13,7 @@ from multica_py._internal.commands import Command
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.entities.projects import Project as BoundProject
 from multica_py.enums import ProjectStatus
 from multica_py.exceptions import JsonOutputError, NetworkError
 from multica_py.models.common import ActionResult
@@ -24,7 +25,6 @@ from multica_py.models.system import (
 from multica_py.resources._base import BaseResource
 from multica_py.resources.auth import AuthResource
 from multica_py.resources.configuration import ConfigurationResource
-from multica_py.resources.projects import Project as BoundProject
 from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
 from tests.cases.operations import OPERATION_CASES, RESOURCE_SPECS
@@ -220,7 +220,9 @@ def test_bound_action_mapper_preserves_identity_and_gates_invalidation(success: 
         steps=(), finalize=lambda _results: expected
     )
     client = MagicMock()
-    client.projects.resources.remove_command.return_value = child
+    client.projects._remove_resource_command.side_effect = lambda *_args, invalidate, **_kwargs: (
+        child._map(invalidate)
+    )
     entity = BoundProject(
         id="p1",
         name="Project",

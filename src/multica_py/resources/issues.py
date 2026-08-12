@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-import datetime
 import json
 import os
 import pathlib
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast, overload
-
-import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command, _replace_plan, _Step, _StepRef
 from multica_py._internal.decoders import decode_json
-from multica_py._internal.permalinks import build_permalink
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _issue_children_result_from_wire,
@@ -28,9 +24,12 @@ from multica_py._internal.wire_models import (
     _LabelWire,
 )
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities._base import _normalize_entity_id
+from multica_py.entities.comments import Comment, CommentThread
+from multica_py.entities.issues import Issue, TaskRun
+from multica_py.entities.labels import Label
 from multica_py.enums import IssueSort, IssueStatus, SortDirection
 from multica_py.exceptions import JsonOutputError, OutputShapeError
-from multica_py.models._bound import _BoundEntity, _normalize_entity_id
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import (
     CommentCursor,
@@ -43,9 +42,7 @@ from multica_py.models.issues import (
     AssignmentTarget,
     FileDescription,
     InlineDescription,
-    IssueAssignee,
     IssueChildrenResult,
-    IssueChildStageGroup,
     IssueDescriptionInput,
     IssueListFilter,
     IssueListPage,
@@ -57,33 +54,23 @@ from multica_py.models.issues import (
     StdinDescription,
 )
 from multica_py.models.relations import (
-    CursorLazyCollection,
     CursorPage,
-    LazyCollection,
-    LazyMapping,
     OffsetPage,
     RelationMetadata,
     _RelationLoad,
 )
-from multica_py.models.system import AttachmentResult
 from multica_py.resources._base import BaseResource, _normalize_description_file, _page_items
-from multica_py.resources.issue_comments import (
-    Comment,
-    CommentThread,
-    IssueCommentResource,
-    _adapt_cursor_page_command,
-    _bind_comment,
-    _bind_thread,
-)
+from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
-from multica_py.resources.labels import Label
 from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
+
+__all__ = ["Issue", "IssueResource", "TaskRun"]
 
 
 _NO_DESCRIPTION_TYPE: type[object] = type(NoDescription())
@@ -99,11 +86,9 @@ def _normalize_issue_status(value: IssueStatus | str) -> IssueStatus:
 
 
 def _normalize_assignment_target(value: AssignmentTarget) -> str:
-    # Local imports keep the resource dependency graph acyclic: those modules
-    # themselves use Issue for their relation annotations.
-    from multica_py.resources.agents import Agent
-    from multica_py.resources.squads import Squad
-    from multica_py.resources.workspaces import WorkspaceMember
+    from multica_py.entities.agents import Agent
+    from multica_py.entities.squads import Squad
+    from multica_py.entities.workspaces import WorkspaceMember
 
     return _normalize_entity_id(
         value,
@@ -117,7 +102,7 @@ def _normalize_issue_reference(value: IssueReference, *, field_name: str = "othe
 
 
 def _normalize_project_reference(value: ProjectReference) -> str:
-    from multica_py.resources.projects import Project
+    from multica_py.entities.projects import Project
 
     return _normalize_entity_id(value, field_name="project", allowed_types=(Project,))
 
@@ -210,65 +195,6 @@ def _normalize_issue_filter(
     )
 
 
-def _issue_labels_command(client: MulticaClient, issue_id: str) -> Command[tuple[Label, ...]]:
-    def convert(page: Page[_LabelWire] | tuple[_LabelWire, ...]) -> tuple[Label, ...]:
-        return tuple(
-            Label(id=item.id, name=item.name, color=item.color, _client=client)
-            for item in _page_items(page)
-        )
-
-    return client.issues.labels.list_command(issue_id)._map(convert)
-
-
-def _issue_offset_page(issues: IssueResource, issue_filter: IssueListFilter) -> OffsetPage[Issue]:
-    page = issues.list(issue_filter)
-    return OffsetPage(
-        items=page.items,
-        total=page.total or 0,
-        limit=page.limit or 50,
-        offset=page.offset or 0,
-        has_more=page.has_more,
-    )
-
-
-def _issue_offset_page_command(
-    issues: IssueResource, issue_filter: IssueListFilter
-) -> Command[OffsetPage[Issue]]:
-    command = issues.list_command(issue_filter)
-    plan = command._plan
-    source_step = plan.steps[0]
-    default_limit = 50 if issue_filter.limit is None else issue_filter.limit
-    default_offset = 0 if issue_filter.offset is None else issue_filter.offset
-
-    def decode_page(stdout: bytes, command_text: str) -> object:
-        if source_step.decode is None:
-            raise RuntimeError("issue list command has no decoder")
-        decoded = source_step.decode(stdout, command_text)
-        if isinstance(decoded, _IssueListPageWire):
-            page = _issue_list_page_from_wire(decoded)
-        elif isinstance(decoded, IssueListPage):
-            page = decoded
-        else:
-            raise TypeError("issue list command decoder returned an unexpected page")
-        if isinstance(issues, IssueResource):
-            page = issues._bind_issue_list_page(page)
-        return OffsetPage(
-            items=page.items,
-            total=page.total or 0,
-            limit=page.limit or default_limit,
-            offset=page.offset if page.offset is not None else default_offset,
-            has_more=page.has_more,
-        )
-
-    return Command(
-        _replace_plan(
-            plan,
-            steps=(replace(source_step, decode=decode_page),),
-            finalize=lambda results: cast("OffsetPage[Issue]", results[0]),
-        )
-    )
-
-
 def _decode_issue_search(stdout: bytes, command: str) -> Page[Issue]:
     try:
         envelope = decode_json(stdout, _IssueSearchResultWire, command=command)
@@ -281,669 +207,6 @@ def _decode_issue_search(stdout: bytes, command: str) -> Page[Issue]:
         return Page(items=items, total=len(items))
     items = tuple(_issue_from_wire(row) for row in envelope.issues)
     return Page(items=items, total=envelope.total if envelope.total is not None else len(items))
-
-
-class TaskRun(_BoundEntity):  # type: ignore[misc]
-    id: str
-    status: str
-    agent_id: str | None = None
-    started_at: datetime.datetime | None = None
-    completed_at: datetime.datetime | None = None
-    _issue_id: str | None = msgspec.field(default=None, name="_issue_id")
-    _messages: LazyCollection[RunMessage] | None = msgspec.field(default=None, name="_messages")
-
-    _PUBLIC_FIELDS = ("id", "status", "agent_id", "started_at", "completed_at")
-
-    @property
-    def messages(self) -> LazyCollection[RunMessage]:
-        if self._messages is None:
-            client = self._require_client(
-                entity_type="TaskRun", entity_id=self.id, relation_name="messages"
-            )
-            task_run_id = self.id
-            issue_id = self._issue_id
-            issues = client.issues
-
-            def loader() -> tuple[RunMessage, ...]:
-                return _page_items(issues.run_messages(task_run_id, issue_id=issue_id))
-
-            self._set_runtime(
-                "_messages",
-                LazyCollection[RunMessage](
-                    loader,
-                    command_loader=lambda: issues.run_messages_command(
-                        task_run_id, issue_id=issue_id
-                    )._map(_page_items),
-                ),
-            )
-        return self._messages  # type: ignore[return-value]
-
-    def messages_command(
-        self, *, options: OperationOptions | None = None
-    ) -> Command[tuple[RunMessage, ...]]:
-        client = self._require_client(
-            entity_type="TaskRun", entity_id=self.id, relation_name="messages"
-        )
-        return client.issues.run_messages_command(
-            self.id, issue_id=self._issue_id, options=options
-        )._map(_page_items)
-
-
-class Issue(_BoundEntity):  # type: ignore[misc]
-    id: str
-    title: str
-    status: IssueStatus
-    description: str | None = None
-    priority: str | None = None
-    assignee: IssueAssignee | None = None
-    child_stages: tuple[IssueChildStageGroup, ...] = ()
-    label_names: tuple[str, ...] = ()
-    metadata_snapshot: tuple[IssueMetadataItem, ...] = ()
-    attachments: tuple[AttachmentResult, ...] = ()
-    pull_request_snapshot: tuple[LinkedPullRequest, ...] = ()
-    created_at: datetime.datetime | None = None
-    updated_at: datetime.datetime | None = None
-    parent_id: str | None = None
-    project_id: str | None = None
-    creator_id: str | None = None
-    creator_type: str | None = None
-    match_source: str | None = None
-
-    _comments: LazyCollection[Comment] | None = msgspec.field(default=None, name="_comments")
-    _recent_threads: dict[
-        tuple[int, tuple[str, str] | None], CursorLazyCollection[CommentThread]
-    ] = msgspec.field(default_factory=dict, name="_recent_threads")
-    _labels: LazyCollection[Label] | None = msgspec.field(default=None, name="_labels")
-    _subscribers: LazyCollection[Subscriber] | None = msgspec.field(
-        default=None, name="_subscribers"
-    )
-    _metadata: LazyMapping[str, MetadataValue] | None = msgspec.field(
-        default=None, name="_metadata"
-    )
-    _pull_requests: LazyCollection[LinkedPullRequest] | None = msgspec.field(
-        default=None, name="_pull_requests"
-    )
-    _children: LazyCollection[Issue] | None = msgspec.field(default=None, name="_children")
-    _runs: LazyCollection[TaskRun] | None = msgspec.field(default=None, name="_runs")
-
-    _PUBLIC_FIELDS = (
-        "id",
-        "title",
-        "description",
-        "status",
-        "priority",
-        "assignee",
-        "child_stages",
-        "label_names",
-        "metadata_snapshot",
-        "attachments",
-        "pull_request_snapshot",
-        "created_at",
-        "updated_at",
-        "parent_id",
-        "project_id",
-        "creator_id",
-        "creator_type",
-        "match_source",
-    )
-
-    def permalink(self) -> str:
-        client = cast("MulticaClient | None", self._client)
-        return build_permalink(
-            entity_type="Issue",
-            entity_id=self.id,
-            collection="issues",
-            app_url=client.config.app_url if client is not None else None,
-            workspace_slug=client.config.workspace_slug if client is not None else None,
-        )
-
-    @property
-    def comments(self) -> LazyCollection[Comment]:
-        if self._comments is None:
-            client = self._require_client(
-                entity_type="Issue", entity_id=self.id, relation_name="comments"
-            )
-            issue_id = self.id
-
-            def loader() -> tuple[Comment, ...]:
-                page = client.issues.comments.list_flat(issue_id=issue_id)
-                return tuple(_bind_comment(item, client) for item in page.items)
-
-            def command_loader() -> Command[tuple[Comment, ...]]:
-                def convert_page(page: Page[Comment]) -> tuple[Comment, ...]:
-                    return tuple(page.items)
-
-                return client.issues.comments.list_flat_command(issue_id=issue_id)._map(
-                    convert_page
-                )
-
-            self._set_runtime("_comments", LazyCollection(loader, command_loader=command_loader))
-        return self._comments  # type: ignore[return-value]
-
-    def recent_comment_threads(
-        self,
-        limit: int = 10,
-        *,
-        cursor: CommentCursor | None = None,
-    ) -> CursorLazyCollection[CommentThread]:
-        if limit < 1:
-            raise ValueError("limit must be positive")
-        key = (limit, None if cursor is None else (cursor.before, cursor.before_id))
-        if key not in self._recent_threads:
-            client = self._require_client(
-                entity_type="Issue", entity_id=self.id, relation_name="recent_comment_threads"
-            )
-            issue_id = self.id
-
-            def page_loader(*, cursor: CommentCursor | None) -> CursorPage[CommentThread]:
-                page = client.issues.comments.list_recent(
-                    issue_id=issue_id, limit=limit, cursor=cursor
-                )
-                return CursorPage(
-                    items=tuple(_bind_thread(item, client, issue_id) for item in page.items),
-                    next_cursor=cast("CommentCursor | None", page.next_cursor),
-                )
-
-            def page_command_loader(
-                next_cursor: CommentCursor | None,
-            ) -> Command[CursorPage[CommentThread]]:
-                return _adapt_cursor_page_command(
-                    client.issues.comments.list_recent_command(
-                        issue_id=issue_id, limit=limit, cursor=next_cursor
-                    ),
-                    lambda page: CursorPage(
-                        items=tuple(
-                            _bind_thread(item, client, issue_id)
-                            for item in cast("tuple[CommentThread, ...]", getattr(page, "items"))
-                        ),
-                        next_cursor=cast("CommentCursor | None", getattr(page, "next_cursor")),
-                    ),
-                )
-
-            self._recent_threads[key] = CursorLazyCollection(
-                page_loader,
-                initial_cursor=cursor,
-                page_command_loader=page_command_loader,
-            )
-        return self._recent_threads[key]
-
-    @property
-    def labels(self) -> LazyCollection[Label]:
-        if self._labels is None:
-            client = self._require_client(
-                entity_type="Issue", entity_id=self.id, relation_name="labels"
-            )
-            issue_id = self.id
-
-            def _load_labels() -> tuple[Label, ...]:
-                return tuple(
-                    Label(id=item.id, name=item.name, color=item.color, _client=client)
-                    for item in _page_items(client.issues.labels.list(issue_id))
-                )
-
-            self._set_runtime(
-                "_labels",
-                LazyCollection[Label](
-                    _load_labels,
-                    command_loader=lambda: _issue_labels_command(client, issue_id),
-                ),
-            )
-        return self._labels  # type: ignore[return-value]
-
-    @property
-    def subscribers(self) -> LazyCollection[Subscriber]:
-        if self._subscribers is None:
-            client = self._require_client(
-                entity_type="Issue", entity_id=self.id, relation_name="subscribers"
-            )
-            issue_id = self.id
-            subscribers = client.issues.subscribers
-            self._set_runtime(
-                "_subscribers",
-                LazyCollection(
-                    lambda: _page_items(subscribers.list(issue_id)),
-                    command_loader=lambda: subscribers.list_command(issue_id)._map(_page_items),
-                ),
-            )
-        return self._subscribers  # type: ignore[return-value]
-
-    @property
-    def metadata(self) -> LazyMapping[str, MetadataValue]:
-        if self._metadata is None:
-            client = self._require_client(
-                entity_type="Issue", entity_id=self.id, relation_name="metadata"
-            )
-            issue_id = self.id
-            metadata_resource = client.issues.metadata
-
-            def loader() -> Mapping[str, MetadataValue]:
-                return metadata_resource.list(issue_id)
-
-            self._set_runtime(
-                "_metadata",
-                LazyMapping[str, MetadataValue](
-                    loader,
-                    command_loader=lambda: cast(
-                        "Command[Mapping[str, MetadataValue]]",
-                        metadata_resource.list_command(issue_id),
-                    ),
-                ),
-            )
-        return self._metadata  # type: ignore[return-value]
-
-    @property
-    def pull_requests(self) -> LazyCollection[LinkedPullRequest]:
-        if self._pull_requests is None:
-            client = self._require_client(
-                entity_type="Issue", entity_id=self.id, relation_name="pull_requests"
-            )
-            issue_id = self.id
-            issues = client.issues
-            self._set_runtime(
-                "_pull_requests",
-                LazyCollection(
-                    lambda: _page_items(issues.pull_requests(issue_id)),
-                    command_loader=lambda: issues.pull_requests_command(issue_id)._map(_page_items),
-                ),
-            )
-        return self._pull_requests  # type: ignore[return-value]
-
-    @property
-    def children(self) -> LazyCollection[Issue]:
-        if self._children is None:
-            client = self._require_client(
-                entity_type="Issue", entity_id=self.id, relation_name="children"
-            )
-            issue_id = self.id
-
-            def loader() -> _RelationLoad[Issue]:
-                result: IssueChildrenResult = client.issues.children(issue_id)
-                return _RelationLoad(
-                    tuple(item._with_client(client) for item in result.children),
-                    RelationMetadata(
-                        total=result.total,
-                        child_stages=result.child_stages,
-                        unstaged=tuple(item._with_client(client) for item in result.unstaged),
-                    ),
-                )
-
-            def command_loader() -> Command[_RelationLoad[Issue]]:
-                def convert(result: IssueChildrenResult) -> _RelationLoad[Issue]:
-                    return _RelationLoad(
-                        tuple(item._with_client(client) for item in result.children),
-                        RelationMetadata(
-                            total=result.total,
-                            child_stages=result.child_stages,
-                            unstaged=tuple(item._with_client(client) for item in result.unstaged),
-                        ),
-                    )
-
-                return client.issues.children_command(issue_id)._map(convert)
-
-            self._set_runtime("_children", LazyCollection(loader, command_loader=command_loader))
-        return self._children  # type: ignore[return-value]
-
-    @property
-    def runs(self) -> LazyCollection[TaskRun]:
-        if self._runs is None:
-            client = self._require_client(
-                entity_type="Issue", entity_id=self.id, relation_name="runs"
-            )
-            issue_id = self.id
-
-            def loader() -> tuple[TaskRun, ...]:
-                runs = _page_items(client.issues.runs(issue_id))
-                return tuple(
-                    TaskRun(
-                        id=run.id,
-                        status=run.status,
-                        agent_id=run.agent_id,
-                        started_at=run.started_at,
-                        completed_at=run.completed_at,
-                        _client=client,
-                        _issue_id=issue_id,
-                    )
-                    for run in runs
-                )
-
-            def command_loader() -> Command[tuple[TaskRun, ...]]:
-                return client.issues.runs_command(issue_id)._map(_page_items)
-
-            self._set_runtime(
-                "_runs",
-                LazyCollection[TaskRun](
-                    loader,
-                    command_loader=command_loader,
-                ),
-            )
-        return self._runs  # type: ignore[return-value]
-
-    def refresh_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="refresh"
-        )
-        return client.issues.get_command(self.id, options=options)
-
-    def refresh(self, *, options: OperationOptions | None = None) -> Issue:
-        return self.refresh_command(options=options).run()
-
-    def update_command(
-        self,
-        *,
-        title: str | UnsetType = Unset,
-        description: str | None | UnsetType = Unset,
-        priority: str | UnsetType = Unset,
-        assignee_id: str | None | UnsetType = Unset,
-        project_id: str | None | UnsetType = Unset,
-        parent_id: str | None | UnsetType = Unset,
-        options: OperationOptions | None = None,
-    ) -> Command[Issue]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="update"
-        )
-        return client.issues.update_command(
-            self.id,
-            title=title,
-            description=description,
-            priority=priority,
-            assignee_id=assignee_id,
-            project_id=project_id,
-            parent_id=parent_id,
-            options=options,
-        )
-
-    def update(
-        self,
-        *,
-        title: str | UnsetType = Unset,
-        description: str | None | UnsetType = Unset,
-        priority: str | UnsetType = Unset,
-        assignee_id: str | None | UnsetType = Unset,
-        project_id: str | None | UnsetType = Unset,
-        parent_id: str | None | UnsetType = Unset,
-        options: OperationOptions | None = None,
-    ) -> Issue:
-        return self.update_command(
-            title=title,
-            description=description,
-            priority=priority,
-            assignee_id=assignee_id,
-            project_id=project_id,
-            parent_id=parent_id,
-            options=options,
-        ).run()
-
-    def assign_command(
-        self, assignee: AssignmentTarget, *, options: OperationOptions | None = None
-    ) -> Command[Issue]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="assign"
-        )
-        return client.issues.assign_command(self.id, assignee, options=options)
-
-    def assign(
-        self, assignee: AssignmentTarget, *, options: OperationOptions | None = None
-    ) -> Issue:
-        return self.assign_command(assignee, options=options).run()
-
-    def unassign_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="unassign"
-        )
-        return client.issues.unassign_command(self.id, options=options)
-
-    def unassign(self, *, options: OperationOptions | None = None) -> Issue:
-        return self.unassign_command(options=options).run()
-
-    def set_status_command(
-        self, status: IssueStatus | str, *, options: OperationOptions | None = None
-    ) -> Command[Issue]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="set_status"
-        )
-        return client.issues.set_status_command(self.id, status, options=options)
-
-    def set_status(
-        self, status: IssueStatus | str, *, options: OperationOptions | None = None
-    ) -> Issue:
-        return self.set_status_command(status, options=options).run()
-
-    def move_to_top_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="move_to_top"
-        )
-        return client.issues.move_to_top_command(self.id, options=options)
-
-    def move_to_top(self, *, options: OperationOptions | None = None) -> Issue:
-        return self.move_to_top_command(options=options).run()
-
-    def move_to_bottom_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="move_to_bottom"
-        )
-        return client.issues.move_to_bottom_command(self.id, options=options)
-
-    def move_to_bottom(self, *, options: OperationOptions | None = None) -> Issue:
-        return self.move_to_bottom_command(options=options).run()
-
-    def move_before_command(
-        self, other_issue: IssueReference, *, options: OperationOptions | None = None
-    ) -> Command[Issue]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="move_before"
-        )
-        return client.issues.move_before_command(self.id, other_issue, options=options)
-
-    def move_before(
-        self, other_issue: IssueReference, *, options: OperationOptions | None = None
-    ) -> Issue:
-        return self.move_before_command(other_issue, options=options).run()
-
-    def move_after_command(
-        self, other_issue: IssueReference, *, options: OperationOptions | None = None
-    ) -> Command[Issue]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="move_after"
-        )
-        return client.issues.move_after_command(self.id, other_issue, options=options)
-
-    def move_after(
-        self, other_issue: IssueReference, *, options: OperationOptions | None = None
-    ) -> Issue:
-        return self.move_after_command(other_issue, options=options).run()
-
-    def add_comment_command(
-        self, body: str, *, options: OperationOptions | None = None
-    ) -> Command[Comment]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="comments"
-        )
-
-        def finalize(result: Comment) -> Comment:
-            self._invalidate_comments()
-            return result
-
-        return client.issues.comments.add_command(self.id, body, options=options)._map(finalize)
-
-    def add_comment(self, body: str, *, options: OperationOptions | None = None) -> Comment:
-        return self.add_comment_command(body, options=options).run()
-
-    def reply_command(
-        self, thread_id: str, body: str, *, options: OperationOptions | None = None
-    ) -> Command[Comment]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="comments"
-        )
-
-        def finalize(result: Comment) -> Comment:
-            self._invalidate_comments()
-            return result
-
-        return client.issues.comments.reply_command(self.id, thread_id, body, options=options)._map(
-            finalize
-        )
-
-    def reply(
-        self, thread_id: str, body: str, *, options: OperationOptions | None = None
-    ) -> Comment:
-        return self.reply_command(thread_id, body, options=options).run()
-
-    def add_label_command(
-        self, label_id: str, *, options: OperationOptions | None = None
-    ) -> Command[Page[Label]]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="labels"
-        )
-
-        def finalize(result: Page[_LabelWire] | tuple[_LabelWire, ...]) -> Page[Label]:
-            self._invalidate_labels()
-            items = _page_items(result)
-            return Page(
-                items=tuple(
-                    Label(id=item.id, name=item.name, color=item.color, _client=client)
-                    for item in items
-                ),
-                limit=result.limit if isinstance(result, Page) else None,
-                offset=result.offset if isinstance(result, Page) else None,
-                total=result.total if isinstance(result, Page) else len(items),
-                has_more=result.has_more if isinstance(result, Page) else False,
-                next_cursor=result.next_cursor if isinstance(result, Page) else None,
-            )
-
-        return client.issues.labels.add_command(self.id, label_id, options=options)._map(finalize)
-
-    def add_label(self, label_id: str, *, options: OperationOptions | None = None) -> Page[Label]:
-        return self.add_label_command(label_id, options=options).run()
-
-    def remove_label_command(
-        self, label_id: str, *, options: OperationOptions | None = None
-    ) -> Command[Page[Label]]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="labels"
-        )
-
-        def finalize(result: Page[_LabelWire] | tuple[_LabelWire, ...]) -> Page[Label]:
-            self._invalidate_labels()
-            items = _page_items(result)
-            return Page(
-                items=tuple(
-                    Label(id=item.id, name=item.name, color=item.color, _client=client)
-                    for item in items
-                ),
-                limit=result.limit if isinstance(result, Page) else None,
-                offset=result.offset if isinstance(result, Page) else None,
-                total=result.total if isinstance(result, Page) else len(items),
-                has_more=result.has_more if isinstance(result, Page) else False,
-                next_cursor=result.next_cursor if isinstance(result, Page) else None,
-            )
-
-        return client.issues.labels.remove_command(self.id, label_id, options=options)._map(
-            finalize
-        )
-
-    def remove_label(
-        self, label_id: str, *, options: OperationOptions | None = None
-    ) -> Page[Label]:
-        return self.remove_label_command(label_id, options=options).run()
-
-    def add_subscriber_command(
-        self, user_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="subscribers"
-        )
-
-        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            if result.success:
-                self._invalidate_subscribers()
-            return result
-
-        return client.issues.subscribers.add_command(self.id, user_id, options=options)._map(
-            invalidate
-        )
-
-    def add_subscriber(
-        self, user_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.add_subscriber_command(user_id, options=options).run()
-
-    def remove_subscriber_command(
-        self, user_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="subscribers"
-        )
-
-        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            if result.success:
-                self._invalidate_subscribers()
-            return result
-
-        return client.issues.subscribers.remove_command(self.id, user_id, options=options)._map(
-            invalidate
-        )
-
-    def remove_subscriber(
-        self, user_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.remove_subscriber_command(user_id, options=options).run()
-
-    def set_metadata_command(
-        self, key: str, value: MetadataValue, *, options: OperationOptions | None = None
-    ) -> Command[MetadataEntry]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="metadata"
-        )
-
-        def finalize(result: MetadataEntry) -> MetadataEntry:
-            self._invalidate_metadata()
-            return result
-
-        return client.issues.metadata.set_command(self.id, key, value, options=options)._map(
-            finalize
-        )
-
-    def set_metadata(
-        self, key: str, value: MetadataValue, *, options: OperationOptions | None = None
-    ) -> MetadataEntry:
-        return self.set_metadata_command(key, value, options=options).run()
-
-    def delete_metadata_command(
-        self, key: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
-        client = self._require_client(
-            entity_type="Issue", entity_id=self.id, relation_name="metadata"
-        )
-
-        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            if result.success:
-                self._invalidate_metadata()
-            return result
-
-        return client.issues.metadata.delete_command(self.id, key, options=options)._map(invalidate)
-
-    def delete_metadata(
-        self, key: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.delete_metadata_command(key, options=options).run()
-
-    def _invalidate_comments(self) -> None:
-        if self._comments is not None:
-            self._comments.invalidate()
-        for relation in self._recent_threads.values():
-            relation.invalidate()
-
-    def _invalidate_labels(self) -> None:
-        if self._labels is not None:
-            self._labels.invalidate()
-
-    def _invalidate_subscribers(self) -> None:
-        if self._subscribers is not None:
-            self._subscribers.invalidate()
-
-    def _invalidate_metadata(self) -> None:
-        if self._metadata is not None:
-            self._metadata.invalidate()
 
 
 class IssueResource(BaseResource):
@@ -960,6 +223,232 @@ class IssueResource(BaseResource):
         self.metadata._set_client(client)
         self.subscribers._set_client(client)
         self.labels._set_client(client)
+
+    def _labels_relation(self, issue_id: str) -> tuple[Label, ...]:
+        return tuple(
+            Label(id=item.id, name=item.name, color=item.color, _client=self._client)
+            for item in _page_items(self.labels.list(issue_id))
+        )
+
+    def _labels_relation_command(self, issue_id: str) -> Command[tuple[Label, ...]]:
+        return self.labels.list_command(issue_id)._map(
+            lambda page: tuple(
+                Label(id=item.id, name=item.name, color=item.color, _client=self._client)
+                for item in page.items
+            )
+        )
+
+    def _comments_relation_command(self, issue_id: str) -> Command[tuple[Comment, ...]]:
+        return self.comments.list_flat_command(issue_id=issue_id)._map(
+            lambda page: tuple(page.items)
+        )
+
+    def _recent_comment_threads_relation_command(
+        self, issue_id: str, *, limit: int, cursor: CommentCursor | None
+    ) -> Command[CursorPage[CommentThread]]:
+        return self.comments._recent_threads_page_command(
+            issue_id=issue_id, limit=limit, cursor=cursor
+        )
+
+    def _subscribers_relation_command(self, issue_id: str) -> Command[tuple[Subscriber, ...]]:
+        return self.subscribers.list_command(issue_id)._map(_page_items)
+
+    def _metadata_relation_command(self, issue_id: str) -> Command[Mapping[str, MetadataValue]]:
+        return self.metadata.list_command(issue_id)
+
+    def _pull_requests_relation_command(
+        self, issue_id: str
+    ) -> Command[tuple[LinkedPullRequest, ...]]:
+        return self.pull_requests_command(issue_id)._map(_page_items)
+
+    def _children_relation_command(self, issue_id: str) -> Command[_RelationLoad[Issue]]:
+        return self.children_command(issue_id)._map(
+            lambda result: _RelationLoad(
+                tuple(result.children),
+                RelationMetadata(
+                    total=result.total,
+                    child_stages=result.child_stages,
+                    unstaged=tuple(result.unstaged),
+                ),
+            )
+        )
+
+    def _runs_relation_command(self, issue_id: str) -> Command[tuple[TaskRun, ...]]:
+        return self.runs_command(issue_id)._map(_page_items)
+
+    def _run_messages_relation_command(
+        self,
+        task_run_id: str,
+        *,
+        issue_id: str | None,
+        options: OperationOptions | None = None,
+    ) -> Command[tuple[RunMessage, ...]]:
+        return self.run_messages_command(task_run_id, issue_id=issue_id, options=options)._map(
+            _page_items
+        )
+
+    def _add_comment_command(
+        self,
+        issue_id: str,
+        body: str,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[Comment]:
+        def finalize(result: Comment) -> Comment:
+            invalidate()
+            return result
+
+        return self.comments.add_command(issue_id, body, options=options)._map(finalize)
+
+    def _reply_command(
+        self,
+        issue_id: str,
+        thread_id: str,
+        body: str,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[Comment]:
+        def finalize(result: Comment) -> Comment:
+            invalidate()
+            return result
+
+        return self.comments.reply_command(issue_id, thread_id, body, options=options)._map(
+            finalize
+        )
+
+    def _add_label_command(
+        self,
+        issue_id: str,
+        label_id: str,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[Page[Label]]:
+        def finalize(result: Page[Label]) -> Page[Label]:
+            invalidate()
+            return result
+
+        return self.labels._add_bound_command(issue_id, label_id, options=options)._map(finalize)
+
+    def _remove_label_command(
+        self,
+        issue_id: str,
+        label_id: str,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[Page[Label]]:
+        def finalize(result: Page[Label]) -> Page[Label]:
+            invalidate()
+            return result
+
+        return self.labels._remove_bound_command(issue_id, label_id, options=options)._map(finalize)
+
+    def _add_subscriber_command(
+        self,
+        issue_id: str,
+        user_id: str,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[ActionResult[None]]:
+        def finalize(result: ActionResult[None]) -> ActionResult[None]:
+            if result.success:
+                invalidate()
+            return result
+
+        return self.subscribers.add_command(issue_id, user_id, options=options)._map(finalize)
+
+    def _remove_subscriber_command(
+        self,
+        issue_id: str,
+        user_id: str,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[ActionResult[None]]:
+        def finalize(result: ActionResult[None]) -> ActionResult[None]:
+            if result.success:
+                invalidate()
+            return result
+
+        return self.subscribers.remove_command(issue_id, user_id, options=options)._map(finalize)
+
+    def _set_metadata_command(
+        self,
+        issue_id: str,
+        key: str,
+        value: MetadataValue,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[MetadataEntry]:
+        def finalize(result: MetadataEntry) -> MetadataEntry:
+            invalidate()
+            return result
+
+        return self.metadata.set_command(issue_id, key, value, options=options)._map(finalize)
+
+    def _delete_metadata_command(
+        self,
+        issue_id: str,
+        key: str,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[ActionResult[None]]:
+        def finalize(result: ActionResult[None]) -> ActionResult[None]:
+            if result.success:
+                invalidate()
+            return result
+
+        return self.metadata.delete_command(issue_id, key, options=options)._map(finalize)
+
+    def _offset_page(self, issue_filter: IssueListFilter) -> OffsetPage[Issue]:
+        page = self.list(issue_filter)
+        return OffsetPage(
+            items=page.items,
+            total=page.total or 0,
+            limit=page.limit or 50,
+            offset=page.offset or 0,
+            has_more=page.has_more,
+        )
+
+    def _offset_page_command(self, issue_filter: IssueListFilter) -> Command[OffsetPage[Issue]]:
+        command = self.list_command(issue_filter)
+        plan = command._plan
+        source_step = plan.steps[0]
+        default_limit = 50 if issue_filter.limit is None else issue_filter.limit
+        default_offset = 0 if issue_filter.offset is None else issue_filter.offset
+
+        def decode_page(stdout: bytes, command_text: str) -> object:
+            if source_step.decode is None:
+                raise RuntimeError("issue list command has no decoder")
+            decoded = source_step.decode(stdout, command_text)
+            if isinstance(decoded, _IssueListPageWire):
+                page = _issue_list_page_from_wire(decoded)
+            elif isinstance(decoded, IssueListPage):
+                page = decoded
+            else:
+                raise TypeError("issue list command decoder returned an unexpected page")
+            page = self._bind_issue_list_page(page)
+            return OffsetPage(
+                items=page.items,
+                total=page.total or 0,
+                limit=page.limit or default_limit,
+                offset=page.offset if page.offset is not None else default_offset,
+                has_more=page.has_more,
+            )
+
+        return Command(
+            _replace_plan(
+                plan,
+                steps=(replace(source_step, decode=decode_page),),
+                finalize=lambda results: cast("OffsetPage[Issue]", results[0]),
+            )
+        )
 
     @overload
     def list_command(

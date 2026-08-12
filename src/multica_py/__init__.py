@@ -1,6 +1,21 @@
 from multica_py._internal.commands import Command
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities import (
+    Agent,
+    Autopilot,
+    AutopilotRun,
+    Comment,
+    CommentThread,
+    Issue,
+    Label,
+    Project,
+    Skill,
+    Squad,
+    TaskRun,
+    Workspace,
+    WorkspaceMember,
+)
 from multica_py.enums import (
     CompatibilityPolicy,
     IssueStatus,
@@ -24,6 +39,7 @@ from multica_py.exceptions import (
     NetworkError,
     NotFoundError,
     OutputShapeError,
+    ProcessOutputModeError,
     ProtocolError,
     RelationError,
     RelationPaginationError,
@@ -32,16 +48,7 @@ from multica_py.exceptions import (
     ValidationError,
 )
 from multica_py.models.common import ActionResult, Page
-from multica_py.process import ManagedProcess
-from multica_py.resources.agents import Agent
-from multica_py.resources.autopilots import Autopilot, AutopilotRun
-from multica_py.resources.issue_comments import Comment, CommentThread
-from multica_py.resources.issues import Issue, TaskRun
-from multica_py.resources.labels import Label
-from multica_py.resources.projects import Project
-from multica_py.resources.skills import Skill
-from multica_py.resources.squads import Squad
-from multica_py.resources.workspaces import Workspace, WorkspaceMember
+from multica_py.process import ManagedProcess, ProcessResult
 from multica_py.sentinels import Unset
 
 __all__ = [
@@ -78,6 +85,8 @@ __all__ = [
     "OperationOptions",
     "OutputShapeError",
     "Page",
+    "ProcessOutputModeError",
+    "ProcessResult",
     "Project",
     "ProjectStatus",
     "ProtocolError",

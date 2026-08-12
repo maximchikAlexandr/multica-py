@@ -29,10 +29,10 @@ from multica_py.models.system import AttachmentResult
 from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
-    from multica_py.resources.autopilots import Autopilot, AutopilotRun
-    from multica_py.resources.issue_comments import Comment, CommentThread
-    from multica_py.resources.issues import Issue
-    from multica_py.resources.projects import Project
+    from multica_py.entities.autopilots import Autopilot, AutopilotRun
+    from multica_py.entities.comments import Comment, CommentThread
+    from multica_py.entities.issues import Issue
+    from multica_py.entities.projects import Project
 
 
 class _LabelWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -94,7 +94,7 @@ def _attachments_from_wire(wire: _IssueWire) -> tuple[AttachmentResult, ...]:
 
 
 def _issue_from_wire(wire: _IssueWire) -> Issue:
-    from multica_py.resources.issues import Issue
+    from multica_py.entities.issues import Issue
 
     pull_requests = () if wire.pull_requests is msgspec.UNSET else wire.pull_requests
     children = () if wire.children is msgspec.UNSET else wire.children
@@ -181,7 +181,7 @@ class _ProjectWire(msgspec.Struct, frozen=True, kw_only=True):
 
 
 def _project_from_wire(wire: _ProjectWire) -> Project:
-    from multica_py.resources.projects import Project
+    from multica_py.entities.projects import Project
 
     return Project(
         id=wire.id,
@@ -201,7 +201,7 @@ class _CommentWire(msgspec.Struct, frozen=True, kw_only=True):
 
 
 def comment_from_wire(wire: _CommentWire) -> Comment:
-    from multica_py.resources.issue_comments import Comment
+    from multica_py.entities.comments import Comment
 
     return Comment(
         id=wire.id,
@@ -221,7 +221,7 @@ class _CommentThreadWire(msgspec.Struct, frozen=True, kw_only=True):
 
 
 def comment_thread_from_wire(wire: _CommentThreadWire) -> CommentThread:
-    from multica_py.resources.issue_comments import CommentThread
+    from multica_py.entities.comments import CommentThread
 
     return CommentThread(
         id=wire.id,
@@ -274,7 +274,7 @@ class _AutopilotWire(msgspec.Struct, frozen=True, kw_only=True):
 
 
 def _autopilot_from_wire(wire: _AutopilotWire) -> Autopilot:
-    from multica_py.resources.autopilots import Autopilot
+    from multica_py.entities.autopilots import Autopilot
 
     return Autopilot(
         id=wire.id,
@@ -375,7 +375,7 @@ class _AutopilotRunWire(msgspec.Struct, frozen=True, kw_only=True):
 
 
 def _autopilot_run_from_wire(wire: _AutopilotRunWire) -> AutopilotRun:
-    from multica_py.resources.autopilots import AutopilotRun, _coerce_json_value
+    from multica_py.entities.autopilots import AutopilotRun, _coerce_json_value
 
     trigger_payload = (
         None

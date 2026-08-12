@@ -39,6 +39,42 @@ issue = workspace_client.issues.get("issue_456")
 Derived views keep independent immutable configuration and share the original
 process semaphore. Closing one view does not close another.
 
+## Collect or stream a managed process
+
+Buffered process APIs provide one immutable `ProcessResult` for the complete
+stdout/stderr capture:
+
+```python
+from multica_py import ProcessResult
+
+process = client.auth.login()
+result = process.result(timeout=30)
+assert isinstance(result, ProcessResult)
+assert result is process.result()  # cached identity
+assert process.wait() == result.exit_code
+```
+
+`result()` uses `communicate()` to collect both pipes and decodes them as strict
+UTF-8. A timeout is retryable and keeps the output available; `terminate()` and
+`kill()` also leave the result collectible. `close()` discards the process and
+prevents late access until a new process is finalized. `ProcessOutputModeError`
+identifies the current mode and requested consumer when buffered and streaming
+access are mixed.
+
+For unbounded output, select streaming by iterating the process output before
+any buffered access. The context manager releases the process when iteration
+ends:
+
+```python
+with client.daemon.logs() as process:
+    for line in process.stdout_lines():
+        consume(line)
+```
+
+Streaming is captured on the first iteration and cannot be switched to
+`result()`/`wait()` afterward. `wait()` is buffered and retains stdout and stderr
+in memory, so prefer streaming for large output; the two modes must not be mixed.
+
 Web routing is configured independently when an application needs entity
 links. The API server URL is never used as a frontend fallback:
 
@@ -267,7 +303,7 @@ from collections.abc import Iterator
 
 from multica_py import MulticaClient
 from multica_py.models.issues import IssueListFilter
-from multica_py.resources.issues import Issue
+from multica_py.entities import Issue
 
 
 def iter_backlog(client: MulticaClient, project_id: str) -> Iterator[Issue]:
