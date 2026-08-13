@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,7 +10,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from multica_py._internal.commands import _Step
+from multica_py._internal.commands import (
+    _cached_result_command,
+    _coalesced_command,
+    _result_field_argument,
+    _sequential_command,
+    _Step,
+)
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
@@ -181,6 +188,151 @@ def test_mapped_and_cached_commands_retain_one_effective_snapshot() -> None:
         assert derived._plan.transport._semaphore is transport._semaphore
     assert cached._plan.steps == ()
     transport.close()
+
+
+def test_private_cached_and_coalesced_transformations_are_zero_io_and_snapshot_stable() -> None:
+    config = ClientConfig(profile="base")
+    transport = CliTransport(config)
+    transport.run_bytes = MagicMock()  # type: ignore[method-assign]
+    resource = BaseResource(transport, config)
+    command = resource._plan(
+        steps=(_Step(("items",), "run_bytes"),),
+        finalize=lambda results: cast("str", results[0]),
+        options=OperationOptions(profile="scoped"),
+    )
+
+    cached = _cached_result_command(command, lambda: "cached")
+    coalesced = _coalesced_command(
+        command,
+        lambda: "coalesced",
+        finalize=lambda value: f"mapped:{value}",
+    )
+
+    assert cached.commands == ()
+    assert cached.run() == "cached"
+    assert coalesced.run() == "coalesced"
+    assert cached._plan.config_snapshot is coalesced._plan.config_snapshot
+    assert cached._plan.transport._semaphore is transport._semaphore
+    transport.run_bytes.assert_not_called()
+    transport.close()
+
+
+def test_private_command_transformations_alias_result_refs_and_build_sequential_template() -> None:
+    config = ClientConfig(profile="base")
+    transport = CliTransport(config)
+    resource = BaseResource(transport, config)
+    command = resource._plan(
+        steps=(_Step(("items", "--output", "json"), "run_bytes"),),
+        finalize=lambda results: results[0],
+    )
+
+    inserted = _result_field_argument(
+        command,
+        flag="--offset",
+        field="next_offset",
+        alias="page",
+    )
+    template = _result_field_argument(
+        command,
+        flag="--offset",
+        field="next_offset",
+        alias="page",
+    )
+    sequential = _sequential_command(
+        command,
+        template,
+        continuation=lambda _index, _results: False,
+        finalize=lambda results: results,
+    )
+
+    assert inserted.commands == (
+        "multica --profile base items --offset '${page.next_offset}' --output json",
+    )
+    assert sequential.commands == (
+        "multica --profile base items --output json",
+        "multica --profile base items --offset '${page.next_offset}' --output json",
+    )
+    transport.close()
+
+
+def test_private_single_step_transformations_reject_unsupported_plan_shapes() -> None:
+    resource = BaseResource(CliTransport(ClientConfig()), ClientConfig())
+    command = resource._plan(
+        steps=(_Step(("first",), "run_bytes"), _Step(("second",), "run_bytes")),
+        finalize=lambda results: results,
+    )
+
+    with pytest.raises(ValueError, match="exactly one step"):
+        _result_field_argument(command, flag="--value", field="value")
+    with pytest.raises(ValueError, match="exactly one step"):
+        _sequential_command(
+            command,
+            resource._plan(
+                steps=(_Step(("next",), "run_bytes", result_alias="result"),),
+                finalize=lambda results: results,
+            ),
+            finalize=lambda results: results,
+        )
+
+
+@dataclass(frozen=True)
+class ResultFieldArgumentFailureCase:
+    case_id: str
+    argv: tuple[str, ...]
+    flag: str
+    require_existing: bool
+    message: str
+
+
+RESULT_FIELD_ARGUMENT_FAILURE_CASES = (
+    ResultFieldArgumentFailureCase(
+        "existing-flag-without-value",
+        ("items", "--value"),
+        "--value",
+        False,
+        "flag '--value' has no value",
+    ),
+    ResultFieldArgumentFailureCase(
+        "required-flag-is-absent",
+        ("items", "--output", "json"),
+        "--value",
+        True,
+        "command has no --value argument",
+    ),
+    ResultFieldArgumentFailureCase(
+        "insertion-has-no-output",
+        ("items",),
+        "--value",
+        False,
+        "cannot insert result field '--value' without --output",
+    ),
+)
+
+
+@pytest.mark.parametrize("case", RESULT_FIELD_ARGUMENT_FAILURE_CASES, ids=lambda case: case.case_id)
+def test_result_field_argument_single_step_guards_fail_closed_without_io(
+    case: ResultFieldArgumentFailureCase,
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    config = ClientConfig()
+    resource = BaseResource(transport, config)
+    command = resource._plan(
+        steps=(_Step(case.argv, "run_bytes"),),
+        finalize=lambda results: results[0],
+    )
+
+    with pytest.raises(ValueError, match=f"^{re.escape(case.message)}$") as raised:
+        _result_field_argument(
+            command,
+            flag=case.flag,
+            field="value",
+            require_existing=case.require_existing,
+        )
+
+    assert str(raised.value) == case.message
+    transport.run_bytes.assert_not_called()
+    transport.run_text.assert_not_called()
+    transport.spawn.assert_not_called()
 
 
 def test_paginated_continuations_retain_one_effective_snapshot() -> None:

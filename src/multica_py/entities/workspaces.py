@@ -44,8 +44,6 @@ class WorkspaceMember(_BoundEntity):  # type: ignore[misc]
 
     _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
 
-    _PUBLIC_FIELDS = ("id", "name", "role", "user_id", "email")
-
     @property
     def issues(self) -> OffsetLazyCollection[Issue]:
         if self._issues is None:
@@ -90,8 +88,6 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
     _squads: LazyCollection[Squad] | None = msgspec.field(default=None, name="_squads")
     _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
     _autopilots: LazyCollection[Autopilot] | None = msgspec.field(default=None, name="_autopilots")
-
-    _PUBLIC_FIELDS = ("id", "name", "description")
 
     def _check_client(self, relation_name: str) -> MulticaClient:
         return self._require_client(

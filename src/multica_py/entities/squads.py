@@ -24,8 +24,6 @@ class Squad(_BoundEntity):  # type: ignore[misc]
     _members: LazyCollection[SquadMember] | None = msgspec.field(default=None, name="_members")
     _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
 
-    _PUBLIC_FIELDS = ("id", "name", "member_count", "leader_id", "archived_at")
-
     @property
     def members(self) -> LazyCollection[SquadMember]:
         if self._members is None:

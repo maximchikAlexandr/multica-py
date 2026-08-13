@@ -147,23 +147,6 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
         wire = msgspec.convert(data, type=_AutopilotRunWire, strict=True)
         return _autopilot_run_from_wire(wire)
 
-    _PUBLIC_FIELDS = (
-        "id",
-        "autopilot_id",
-        "trigger_id",
-        "source",
-        "status",
-        "issue_id",
-        "task_id",
-        "triggered_at",
-        "completed_at",
-        "failure_reason",
-        "reason_code",
-        "trigger_payload",
-        "result",
-        "created_at",
-    )
-
     @property
     def messages(self) -> LazyCollection[RunMessage]:
         if self._messages is None:
@@ -271,32 +254,6 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
         subscribers: tuple[AutopilotSubscriber, ...] | msgspec.UnsetType = msgspec.field(
             default=msgspec.UNSET, name="_subscribers_seed"
         )
-
-    _RUNTIME_INIT_FIELDS = ("triggers", "subscribers")
-
-    _PUBLIC_FIELDS = (
-        "id",
-        "workspace_id",
-        "title",
-        "description",
-        "project_id",
-        "assignee_type",
-        "assignee_id",
-        "status",
-        "execution_mode",
-        "issue_title_template",
-        "created_by_type",
-        "created_by_id",
-        "last_run_at",
-        "created_at",
-        "updated_at",
-        "trigger_kinds",
-        "next_run_at",
-        "last_run_status",
-        "subscriber_snapshot",
-        "can_write",
-        "can_manage_access",
-    )
 
     def __post_init__(self) -> None:
         client = cast("MulticaClient | None", object.__getattribute__(self, "_client"))

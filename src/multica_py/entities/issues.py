@@ -58,10 +58,8 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     agent_id: str | None = None
     started_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
-    _issue_id: str | None = msgspec.field(default=None, name="_issue_id")
+    issue_id: str | None = msgspec.field(default=None, name="_issue_id")
     _messages: LazyCollection[RunMessage] | None = msgspec.field(default=None, name="_messages")
-
-    _PUBLIC_FIELDS = ("id", "status", "agent_id", "started_at", "completed_at")
 
     @property
     def messages(self) -> LazyCollection[RunMessage]:
@@ -70,7 +68,7 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
                 entity_type="TaskRun", entity_id=self.id, relation_name="messages"
             )
             task_run_id = self.id
-            issue_id = self._issue_id
+            issue_id = self.issue_id
             issues = client.issues
 
             def loader() -> tuple[RunMessage, ...]:
@@ -94,7 +92,7 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             entity_type="TaskRun", entity_id=self.id, relation_name="messages"
         )
         return client.issues._run_messages_relation_command(
-            self.id, issue_id=self._issue_id, options=options
+            self.id, issue_id=self.issue_id, options=options
         )
 
 
@@ -134,27 +132,6 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     )
     _children: LazyCollection[Issue] | None = msgspec.field(default=None, name="_children")
     _runs: LazyCollection[TaskRun] | None = msgspec.field(default=None, name="_runs")
-
-    _PUBLIC_FIELDS = (
-        "id",
-        "title",
-        "description",
-        "status",
-        "priority",
-        "assignee",
-        "child_stages",
-        "label_names",
-        "metadata_snapshot",
-        "attachments",
-        "pull_request_snapshot",
-        "created_at",
-        "updated_at",
-        "parent_id",
-        "project_id",
-        "creator_id",
-        "creator_type",
-        "match_source",
-    )
 
     def permalink(self) -> str:
         client = cast("MulticaClient | None", self._client)
@@ -343,7 +320,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
                         started_at=run.started_at,
                         completed_at=run.completed_at,
                         _client=client,
-                        _issue_id=issue_id,
+                        issue_id=issue_id,
                     )
                     for run in runs
                 )

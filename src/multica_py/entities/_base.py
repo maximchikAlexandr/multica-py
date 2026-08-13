@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, ClassVar, Self, TypeGuard, cast
+from dataclasses import dataclass
+from functools import cache
+from typing import TYPE_CHECKING, Self, TypeGuard, cast
 
 import msgspec
 
@@ -9,35 +11,6 @@ from multica_py.exceptions import DetachedEntityError
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
-
-
-_RUNTIME_FIELDS = frozenset(
-    {
-        "_agents",
-        "_autopilots",
-        "_children",
-        "_comments",
-        "_files",
-        "_issues",
-        "_labels",
-        "_members",
-        "_messages",
-        "_metadata",
-        "_projects",
-        "_pull_requests",
-        "_repositories",
-        "_resources",
-        "_runtimes",
-        "_runs",
-        "_skills",
-        "_squads",
-        "_subscribers",
-        "_tasks",
-        "_triggers",
-        "trigger_payload",
-        "result",
-    }
-)
 
 
 class _RuntimeHolder:
@@ -86,11 +59,39 @@ def _materialize_mappings(value: object) -> object:
     return value
 
 
+@dataclass(frozen=True)
+class _EntityPolicy:
+    """Schema-derived names used by all bound-entity value operations."""
+
+    public_fields: tuple[str, ...]
+    private_fields: frozenset[str]
+    constructor_seeds: tuple[str, ...]
+    encoded_names: tuple[tuple[str, str], ...]
+    runtime_overlays: frozenset[str]
+
+    @property
+    def runtime_fields(self) -> frozenset[str]:
+        return self.private_fields | self.runtime_overlays
+
+    def encoded_name(self, field_name: str) -> str:
+        for python_name, encoded_name in self.encoded_names:
+            if python_name == field_name:
+                return encoded_name
+        raise KeyError(field_name)
+
+
+_AUTOPILOT_RUN_RUNTIME_OVERLAYS = frozenset(("trigger_payload", "result"))
+
+
+def _overlay_names(entity_type: type[object]) -> frozenset[str]:
+    """Return overlays for the one concrete entity with runtime JSON fields."""
+    from multica_py.entities.autopilots import AutopilotRun
+
+    return _AUTOPILOT_RUN_RUNTIME_OVERLAYS if entity_type is AutopilotRun else frozenset()
+
+
 class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, weakref=True):
     _client: object | None = msgspec.field(default=None, name="_client")
-
-    _PUBLIC_FIELDS: ClassVar[tuple[str, ...]] = ()
-    _RUNTIME_INIT_FIELDS: ClassVar[tuple[str, ...]] = ()
 
     def _require_client(
         self, *, entity_type: str, entity_id: str, relation_name: str
@@ -128,13 +129,13 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
         The slot-only private holder is used only for fixed runtime state;
         public model fields remain frozen and hashable.
         """
-        if name not in _RUNTIME_FIELDS:
+        if name not in _entity_policy(type(self)).runtime_fields:
             raise AttributeError(f"unsupported runtime field: {name}")
         runtime = _runtime_state(self)
         runtime[name] = value
 
     def __getattribute__(self, name: str) -> object:
-        if name in _RUNTIME_FIELDS:
+        if name in _entity_policy(type(self)).runtime_fields:
             runtime = _runtime_state(self)
             sentinel = object()
             value = runtime.get(name, sentinel)
@@ -145,30 +146,34 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
-        return all(_get(self, field) == _get(other, field) for field in self._PUBLIC_FIELDS)
+        policy = _entity_policy(type(self))
+        return all(_get(self, field) == _get(other, field) for field in policy.public_fields)
 
     def __hash__(self) -> int:
-        return hash(tuple(_hashable(_get(self, f)) for f in self._PUBLIC_FIELDS))
+        policy = _entity_policy(type(self))
+        return hash(tuple(_hashable(_get(self, field)) for field in policy.public_fields))
 
     def __repr__(self) -> str:
-        fields = ", ".join(f"{f}={_get(self, f)!r}" for f in self._PUBLIC_FIELDS)
+        policy = _entity_policy(type(self))
+        fields = ", ".join(f"{field}={_get(self, field)!r}" for field in policy.public_fields)
         return f"{type(self).__name__}({fields})"
 
     def to_dict(self) -> dict[str, object]:
-        data = {f: _get(self, f) for f in self._PUBLIC_FIELDS}
+        policy = _entity_policy(type(self))
+        data = {field: _get(self, field) for field in policy.public_fields}
         materialized = _materialize_mappings(data)
         return cast("dict[str, object]", msgspec.to_builtins(materialized))
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> Self:
-        unknown = set(data).difference(cls._PUBLIC_FIELDS)
+        policy = _entity_policy(cls)
+        unknown = set(data).difference(policy.public_fields)
         if unknown:
             names = ", ".join(sorted(str(name) for name in unknown))
             raise ValueError(f"unknown bound-entity field(s): {names}")
 
-        field_names = {field.name: field.encode_name for field in msgspec.structs.fields(cls)}
         normalized = cls._normalize_from_dict(data)
-        encoded_data = {field_names[name]: value for name, value in normalized.items()}
+        encoded_data = {policy.encoded_name(name): value for name, value in normalized.items()}
         return cls._from_encoded_dict(encoded_data)
 
     def to_json(self) -> str:
@@ -178,6 +183,31 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
     def from_json(cls, payload: str | bytes) -> Self:
         data = msgspec.json.decode(payload, type=dict[str, object])
         return cls.from_dict(data)
+
+
+@cache  # type: ignore[misc]
+def _entity_policy(entity_type: type[_BoundEntity]) -> _EntityPolicy:
+    fields = msgspec.structs.fields(entity_type)
+    encoded_names = tuple((field.name, field.encode_name) for field in fields)
+    runtime_overlays = _overlay_names(entity_type)
+    public_fields = tuple(
+        field.name
+        for field in fields
+        if not field.name.startswith("_") and not field.encode_name.startswith("_")
+    )
+    private_fields = frozenset(field.name for field in fields if field.name.startswith("_"))
+    constructor_seeds = tuple(
+        field.name
+        for field in fields
+        if not field.name.startswith("_") and field.encode_name.startswith("_")
+    )
+    return _EntityPolicy(
+        public_fields=public_fields,
+        private_fields=private_fields,
+        constructor_seeds=constructor_seeds,
+        encoded_names=encoded_names,
+        runtime_overlays=runtime_overlays,
+    )
 
 
 def _normalize_entity_id(

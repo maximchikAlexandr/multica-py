@@ -31,8 +31,6 @@ class Agent(_BoundEntity):  # type: ignore[misc]
     _tasks: LazyCollection[AgentTask] | None = msgspec.field(default=None, name="_tasks")
     _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
 
-    _PUBLIC_FIELDS = ("id", "name", "description", "skill_refs", "archived_at")
-
     @property
     def skills(self) -> LazyCollection[AgentSkill]:
         if self._skills is None:

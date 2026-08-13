@@ -7,6 +7,7 @@ import inspect
 import pathlib
 import typing
 from collections.abc import Callable
+from dataclasses import replace
 from typing import cast
 from unittest.mock import MagicMock, patch
 
@@ -34,7 +35,6 @@ from tests.cases.operations import (
     GENERATED_OPERATION_CASES,
     ISSUE_INVALID_STATUS_CASES,
     ISSUE_STATUS_CASES,
-    LEGACY_ARGV_MIGRATION,
     OPERATION_CASES,
     PROJECT_INVALID_STATUS_CASES,
     PROJECT_STATUS_CASES,
@@ -894,52 +894,45 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
             assert case.method == method_name
 
 
-def test_legacy_payload_bijection() -> None:
-    from tests.cases.legacy_payloads import LEGACY_PAYLOAD_FINGERPRINTS
+def _operation_payload(case: OperationCase) -> tuple[object, ...]:
+    return (
+        case.resource_attr,
+        case.method,
+        case.args,
+        tuple(sorted(dict(case.kwargs).items())),
+        case.transport_method,
+        case.expected_argv,
+        case.stdin,
+        case.timeout,
+        case.stdout,
+    )
 
-    final_by_id: dict[str, OperationCase] = {c.id: c for c in OPERATION_CASES}
 
-    def payload(case: OperationCase) -> tuple[object, ...]:
-        return (
-            case.resource_attr,
-            case.method,
-            case.args,
-            tuple(sorted(dict(case.kwargs).items())),
-            case.transport_method,
-            case.expected_argv,
-            case.stdin,
-            case.timeout,
-            case.stdout,
-        )
+def _assert_current_payload_fingerprint(case: OperationCase, fingerprints: dict[str, str]) -> None:
+    actual = hashlib.sha256(repr(_operation_payload(case)).encode()).hexdigest()
+    assert actual == fingerprints[case.id], case.id
 
-    expected_legacy_ids = {f"legacy:{index:03d}" for index in range(1, 149)}
-    assert set(LEGACY_ARGV_MIGRATION) == expected_legacy_ids
-    assert len(LEGACY_ARGV_MIGRATION) == 148
-    assert len(LEGACY_PAYLOAD_FINGERPRINTS) == 148
-    removed = {
-        "legacy:014": "removed:attachments.list",
-        "legacy:069": "removed:repositories.get",
-        "legacy:070": "removed:repositories.checkout",
-        "legacy:072": "removed:runtimes.get",
-        "legacy:083": "removed:users.list",
-        "legacy:084": "removed:users.get",
-    }
-    assert {key: LEGACY_ARGV_MIGRATION[key] for key in removed} == removed
-    final_migration = {
-        key: value for key, value in LEGACY_ARGV_MIGRATION.items() if key not in removed
-    }
-    assert len(final_migration.values()) == len(set(final_migration.values())) == 142
-    assert set(final_migration.values()).issubset(final_by_id)
 
-    legacy_by_id = {
-        f"legacy:{index:03d}": fingerprint
-        for index, fingerprint in enumerate(LEGACY_PAYLOAD_FINGERPRINTS, start=1)
-    }
-    for legacy_id, final_id in LEGACY_ARGV_MIGRATION.items():
-        if legacy_id in removed:
-            continue
-        actual = hashlib.sha256(repr(payload(final_by_id[final_id])).encode()).hexdigest()
-        assert legacy_by_id[legacy_id] == actual
+def test_current_payload_fingerprint_guard() -> None:
+    from tests.cases.legacy_payloads import CURRENT_PAYLOAD_FINGERPRINTS
+
+    resolved = [case for case in OPERATION_CASES if case.id in CURRENT_PAYLOAD_FINGERPRINTS]
+    assert len(CURRENT_PAYLOAD_FINGERPRINTS) == 142
+    assert len(resolved) == len(CURRENT_PAYLOAD_FINGERPRINTS)
+    assert len({case.id for case in resolved}) == len(resolved)
+    assert {case.id for case in resolved} == set(CURRENT_PAYLOAD_FINGERPRINTS)
+    assert all(case.id and not case.id.startswith("legacy:") for case in resolved)
+    for case in resolved:
+        _assert_current_payload_fingerprint(case, CURRENT_PAYLOAD_FINGERPRINTS)
+
+
+def test_current_payload_fingerprint_detects_mutation() -> None:
+    from tests.cases.legacy_payloads import CURRENT_PAYLOAD_FINGERPRINTS
+
+    case = next(case for case in OPERATION_CASES if case.id == "manual:agents.list:canonical")
+    mutated = replace(case, expected_argv=(*case.expected_argv, "--mutated"))
+    with pytest.raises(AssertionError, match=case.id):
+        _assert_current_payload_fingerprint(mutated, CURRENT_PAYLOAD_FINGERPRINTS)
 
 
 @pytest.mark.parametrize(

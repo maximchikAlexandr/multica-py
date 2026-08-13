@@ -17,6 +17,7 @@ from multica_py._internal.wire_models import (
     _IssueWire,
 )
 from multica_py.config import ClientConfig
+from multica_py.entities._base import _entity_policy
 from multica_py.entities.issues import Issue
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.issues import (
@@ -72,8 +73,8 @@ def test_issue_pull_request_snapshot_preserves_r26_relation_name() -> None:
     issue = _issue_from_wire(wire)
 
     assert issue.pull_request_snapshot == (LinkedPullRequest(url="https://example.test/pr/1"),)
-    assert "pull_request_snapshot" in issue._PUBLIC_FIELDS
-    assert "pull_requests" not in issue._PUBLIC_FIELDS
+    assert "pull_request_snapshot" in _entity_policy(type(issue)).public_fields
+    assert "pull_requests" not in _entity_policy(type(issue)).public_fields
 
 
 def test_issue_additive_fields_ignored() -> None:

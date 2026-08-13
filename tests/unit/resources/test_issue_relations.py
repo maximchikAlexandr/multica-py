@@ -481,7 +481,7 @@ def _client() -> MagicMock:
                     started_at=run.started_at,
                     completed_at=run.completed_at,
                     _client=client,
-                    _issue_id=issue_id,
+                    issue_id=issue_id,
                 )
                 for run in client.issues.runs(issue_id)
             )

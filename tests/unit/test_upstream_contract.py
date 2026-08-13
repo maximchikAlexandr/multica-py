@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import os
 import pathlib
@@ -11,8 +12,10 @@ from typing import cast
 
 import pytest
 
+from multica_py._generated import approved_sdk
 from multica_py.entities.comments import Comment
 from multica_py.models.common import Page
+from multica_py.resources.squad_members import SquadMemberResource
 from tools.upstream_contract.contract import (
     ContractError,
     ResultAssertion,
@@ -24,6 +27,22 @@ from tools.upstream_contract.evidence import ReleaseIdentity, collect
 from tools.upstream_contract.generation import _validate_transient_projection, render_files
 
 APPROVED = pathlib.Path("contracts/sdk-contract.json")
+
+_SQUAD_MEMBER_OPERATION_IDS = (
+    "squads.members.add",
+    "squads.members.list",
+    "squads.members.remove",
+)
+_SQUAD_MEMBER_DESCRIPTOR_NAMES = (
+    "SQUAD_MEMBERS_ADD_BINDING",
+    "SQUAD_MEMBERS_LIST_BINDING",
+    "SQUAD_MEMBERS_REMOVE_BINDING",
+)
+_SQUAD_MEMBER_BUILDER_NAMES = (
+    "_build_squad_members_add_argv",
+    "_build_squad_members_list_argv",
+    "_build_squad_members_remove_argv",
+)
 
 
 @dataclass(frozen=True)
@@ -38,7 +57,6 @@ INVALID_CONTRACT_CASES = (
     InvalidContractCase("vector-id-mismatch", "vector_id_mismatch"),
     InvalidContractCase("naive-datetime", "naive_datetime"),
     InvalidContractCase("decoded-type", "decoded_type"),
-    InvalidContractCase("migration-key", "migration_key"),
     InvalidContractCase("generated-newline", "generated_newline"),
     InvalidContractCase("generated-parentheses", "generated_parentheses"),
     InvalidContractCase("generated-unicode", "generated_unicode"),
@@ -104,8 +122,6 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
             "generated:issues.comments.add:default:canonical"
         ]
         vector["assertion"]["expected"]["value"] = "not.approved.Type"
-    elif mutation == "migration_key":
-        del document["legacy_argv_migration"]["legacy:001"]
     elif mutation == "generated_newline":
         document["catalogs"]["enum_definitions"][0]["public_name"] = "Safe\nName"
     elif mutation == "generated_parentheses":
@@ -248,20 +264,41 @@ def test_closed_contract_rejects_invalid_rows(
         validate_contract(_mutated_contract(tmp_path, case.mutate))
 
 
-def test_v3_catalogs_and_legacy_mapping_are_closed() -> None:
+def test_v3_catalogs_are_closed() -> None:
     contract = validate_contract(APPROVED)
     assert len(contract.test_vectors) == 58
     assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 46
     assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 12
-    assert tuple(contract.legacy_argv_migration) == tuple(
-        f"legacy:{index:03d}" for index in range(1, 144)
-    )
     assert {item.public_name for item in contract.enum_definitions} == {
         "IssueSort",
         "SortDirection",
         "AutopilotExecutionMode",
     }
     assert all(item.parameter_name.isidentifier() for item in contract.validator_definitions)
+
+
+def test_failed_pilot_rollback_binds_descriptors_to_manual_resource() -> None:
+    spec = pathlib.Path("openspec/specs/upstream-contract/spec.md").read_text(encoding="utf-8")
+    assert "only when the pilot's stop/go decision succeeds" in spec
+    assert "the rollback SHALL be the normative terminal state" in spec
+    assert "generation SHALL remain descriptor-only" in spec
+
+    rendered_runtime = render_files(APPROVED)[0].content.decode("utf-8")
+    generated_operation_ids = {binding.operation_id for binding in approved_sdk.OPERATION_BINDINGS}
+    assert set(_SQUAD_MEMBER_OPERATION_IDS) <= generated_operation_ids
+    for descriptor_name in _SQUAD_MEMBER_DESCRIPTOR_NAMES:
+        assert descriptor_name in rendered_runtime
+        assert hasattr(approved_sdk, descriptor_name)
+    for builder_name in _SQUAD_MEMBER_BUILDER_NAMES:
+        assert builder_name not in rendered_runtime
+        assert not hasattr(approved_sdk, builder_name)
+
+    resource_source = inspect.getsource(SquadMemberResource)
+    assert all(builder_name not in resource_source for builder_name in _SQUAD_MEMBER_BUILDER_NAMES)
+    assert '("squad", "member", "list", squad_id)' in resource_source
+    assert '("squad", "member", "add", squad_id, member_id)' in resource_source
+    assert '("squad", "member", "remove", squad_id, member_id)' in resource_source
+    assert resource_source.count("validate_nonblank(squad_id)") == 3
 
 
 def test_public_conventions_and_response_catalog_are_typed_and_closed() -> None:

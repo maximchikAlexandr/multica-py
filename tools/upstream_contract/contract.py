@@ -838,7 +838,6 @@ class ContractCatalog:
     responses: tuple[ResponseCatalogEntry, ...]
     update_field_policies: tuple[UpdateModelPolicy, ...]
     test_vectors: tuple[TestVector, ...]
-    legacy_argv_migration: dict[str, str]
     raw: dict[str, object]
 
     @property
@@ -1738,7 +1737,6 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "scope",
             "operations",
             "traceability",
-            "legacy_argv_migration",
         }
     )
     _exact_keys(raw, required, "contract")
@@ -1850,16 +1848,6 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     for vector in vectors:
         if vector.operation_id not in operation_ids:
             raise ContractError(f"{vector.vector_id} references unknown operation")
-    migration_raw = _dict(raw["legacy_argv_migration"], "legacy_argv_migration")
-    migration: dict[str, str] = {}
-    for index in range(1, 144):
-        key = f"legacy:{index:03d}"
-        value = migration_raw.get(key)
-        if not isinstance(value, str):
-            raise ContractError(f"legacy_argv_migration is missing {key}")
-        migration[key] = value
-    if set(migration_raw) != set(migration):
-        raise ContractError("legacy_argv_migration must contain exactly legacy:001..legacy:143")
     source_refs = _source_refs(raw["source_refs"])
     if any(item.commit != target.commit for item in source_refs):
         raise ContractError("every source_refs commit must match target.commit")
@@ -1875,7 +1863,6 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         responses=responses,
         update_field_policies=update_field_policies,
         test_vectors=vectors,
-        legacy_argv_migration=migration,
         raw=raw,
     )
 

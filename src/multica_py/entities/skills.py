@@ -26,8 +26,6 @@ class Skill(_BoundEntity):  # type: ignore[misc]
 
     _files: LazyCollection[SkillFile] | None = msgspec.field(default=None, name="_files")
 
-    _PUBLIC_FIELDS = ("id", "name", "description", "file_count")
-
     @property
     def files(self) -> LazyCollection[SkillFile]:
         if self._files is None:
