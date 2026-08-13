@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from tests.cases.operations import (
-    LEGACY_ARGV_MIGRATION,
     MANUAL_OPERATION_CASES,
     OPERATION_CASES,
     OperationCase,
@@ -10,7 +9,6 @@ from tests.cases.operations import (
 )
 
 __all__ = [
-    "LEGACY_ARGV_MIGRATION",
     "MANUAL_OPERATION_CASES",
     "OPERATION_CASES",
     "OperationCase",

@@ -77,6 +77,16 @@ def test_private_bound_base_has_no_legacy_module_or_public_export() -> None:
     assert not (Path(__file__).parents[2] / "src/multica_py/models/_bound.py").exists()
 
 
+def test_entity_policy_has_no_legacy_declarations_or_replacement_registry() -> None:
+    root = Path(__file__).parents[2] / "src" / "multica_py" / "entities"
+    source = "\n".join(path.read_text(encoding="utf-8") for path in root.glob("*.py"))
+
+    for legacy_name in ("_PUBLIC_FIELDS", "_RUNTIME_FIELDS", "_RUNTIME_INIT_FIELDS"):
+        assert legacy_name not in source
+    assert "metaclass=" not in source
+    assert "__init_subclass__" not in source
+
+
 def test_entity_modules_do_not_import_resources_or_build_command_plans() -> None:
     root = Path(__file__).parents[2] / "src" / "multica_py" / "entities"
     for filename in (path.name for path in root.glob("*.py")):
@@ -91,6 +101,20 @@ def test_entity_modules_do_not_import_resources_or_build_command_plans() -> None
             and node.func.attr in {"_map", "_plan", "_replace_plan"}
             for node in ast.walk(tree)
         )
+
+
+def test_relation_module_does_not_own_command_plan_internals() -> None:
+    relation_path = Path(__file__).parents[2] / "src" / "multica_py" / "models" / "relations.py"
+    tree = ast.parse(relation_path.read_text(encoding="utf-8"))
+    forbidden = {"_CommandPlan", "_Step", "_StepRef", "_replace_plan"}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "multica_py._internal.commands":
+            assert not forbidden.intersection(alias.name for alias in node.names)
+        if isinstance(node, ast.Attribute):
+            assert node.attr not in forbidden | {"_plan"}
+        if isinstance(node, ast.Name):
+            assert node.id not in forbidden
 
 
 def _package_modules(package_name: str) -> tuple[str, ...]:

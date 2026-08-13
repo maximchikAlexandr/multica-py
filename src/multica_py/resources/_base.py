@@ -13,7 +13,7 @@ from multica_py._internal.decoders import decode_json
 from multica_py._internal.redaction import collect_secret_values, redact_text
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
-from multica_py.config import ClientConfig, OperationOptions
+from multica_py.config import ClientConfig, OperationOptions, _apply_operation_options
 from multica_py.models.common import ActionResult, Page
 from multica_py.process import ManagedProcess
 from multica_py.sentinels import Unset
@@ -74,20 +74,7 @@ class BaseResource:
         return client
 
     def _effective_config(self, options: OperationOptions | None = None) -> ClientConfig:
-        if options is None:
-            return msgspec.structs.replace(self._config)
-        changes = {
-            field_name: value
-            for field_name, value in (
-                ("profile", options.profile),
-                ("workspace_id", options.workspace_id),
-                ("timeout", options.timeout),
-                ("cwd", options.cwd),
-                ("environment", options.environment),
-            )
-            if value is not msgspec.UNSET
-        }
-        return msgspec.structs.replace(self._config, **changes)
+        return _apply_operation_options(self._config, options)
 
     def _transport_snapshot(self, config: ClientConfig) -> CliTransport:
         transport_snapshot = self._transport._snapshot(config)

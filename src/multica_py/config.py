@@ -5,6 +5,7 @@ import math
 import os
 import pathlib
 from collections.abc import Mapping
+from typing import cast
 from urllib.parse import urlparse
 
 import msgspec
@@ -172,3 +173,19 @@ class ClientConfig(msgspec.Struct, frozen=True, kw_only=True):
         msgspec.structs.force_setattr(
             self, "workspace_slug", _validate_workspace_slug(self.workspace_slug)
         )
+
+
+def _apply_operation_options(
+    config: ClientConfig,
+    options: OperationOptions | None,
+) -> ClientConfig:
+    """Return an immutable config snapshot with present operation overrides."""
+    if options is None:
+        return msgspec.structs.replace(config)
+    changes: dict[str, object] = {}
+    for field in msgspec.structs.fields(OperationOptions):
+        field_name = field.name
+        value = cast("object", getattr(options, field_name))
+        if value is not Unset:
+            changes[field_name] = value
+    return msgspec.structs.replace(config, **changes)

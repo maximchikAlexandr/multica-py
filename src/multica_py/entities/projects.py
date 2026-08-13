@@ -37,8 +37,6 @@ class Project(_BoundEntity):  # type: ignore[misc]
     )
     _issues: ProjectIssueCollection | None = msgspec.field(default=None, name="_issues")
 
-    _PUBLIC_FIELDS = ("id", "name", "description", "status")
-
     def permalink(self) -> str:
         client = cast("MulticaClient | None", self._client)
         return build_permalink(

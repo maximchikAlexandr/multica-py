@@ -88,7 +88,7 @@ generic command-failed message SHALL remain the fallback.
 - **THEN** `str(exc)` uses the existing redacted command-failed fallback and no detail is fabricated
 
 ### Requirement: Effective operation configuration is snapshotted once
-Every public CLI-backed command method that accepts `OperationOptions` SHALL resolve the effective `ClientConfig` before constructing its private plan. Resolution SHALL copy the base/scoped config, apply each present operation field, normalize timeout/cwd/environment through the same helpers as `with_options`, create the transport snapshot from that effective config, and store that effective config in `_CommandPlan.config_snapshot`. Preview and execution SHALL derive global argv, cwd, environment, timeout, compatibility, and redaction context from that one snapshot. Existing resources and clients SHALL not be mutated.
+Every public CLI-backed command method that accepts `OperationOptions` SHALL resolve the effective `ClientConfig` before constructing its private plan. One private config-level overlay function SHALL copy the base/scoped config, apply each present operation field, and preserve the normalization already performed by `OperationOptions`; both `MulticaClient.with_options` and `BaseResource._effective_config` SHALL use that function rather than enumerate overlay fields independently. The function SHALL preserve omitted `Unset`, explicit `None`, and an explicitly empty environment. Command construction SHALL create the transport snapshot from the effective config and store that effective config in `_CommandPlan.config_snapshot`. Preview and execution SHALL derive global argv, cwd, environment, timeout, compatibility, and redaction context from that one snapshot. Existing resources and clients SHALL not be mutated.
 
 #### Scenario: Preview and execution agree on precedence
 - **WHEN** a command has base, scoped, and operation-level values for the same setting
@@ -105,6 +105,14 @@ Every public CLI-backed command method that accepts `OperationOptions` SHALL res
 #### Scenario: Omitted options preserve behavior
 - **WHEN** `options` is omitted or all `OperationOptions` fields are omitted
 - **THEN** preview, executed argv, cwd, environment, timeout, result, and errors are byte-for-byte/semantically identical to the pre-change client scope
+
+#### Scenario: Explicit clears survive shared overlay application
+- **WHEN** a scoped or operation overlay sets a nullable scalar/path field to `None` or sets environment to an empty mapping/tuple
+- **THEN** the resulting immutable config contains the explicit clear rather than inheriting the lower-layer value
+
+#### Scenario: Derived clients share only the existing semaphore
+- **WHEN** `with_options` applies the shared overlay function
+- **THEN** the source config is unchanged, the derived client has a distinct config and transport/resources, and both clients retain the same existing `ProcessSemaphore`
 
 ### Requirement: Runtime materialization belongs to the command plan
 Unified attachment uploads from bytes or binary streams SHALL use the existing private runtime temp-provider/reference mechanism. Command construction and preview SHALL validate metadata but SHALL not create/read temporary content. Execution SHALL create one private temporary directory, write the exact content under the validated basename, resolve `${temp.path}` into the governed upload argv, and remove the directory in the plan's `finally` cleanup on success, decoder failure, transport failure, timeout, or cancellation.
@@ -135,4 +143,15 @@ The raw CLI escape hatch SHALL build one ordinary `run_bytes` step through `Base
 #### Scenario: Raw output cannot leak command secrets
 - **WHEN** command arguments or environment contain collected secrets
 - **THEN** preview/exceptions are redacted and the public raw result omits unredacted argv while actual execution receives the original values
+
+### Requirement: Executable failures are classified at the transport boundary
+The SDK SHALL use `ClientConfig.executable` directly when building command argv and SHALL map `FileNotFoundError` and `PermissionError` raised by execution or spawn to the existing typed SDK exceptions. It SHALL NOT pre-resolve executables with a separate `find_executable` helper or emit a writable-directory warning before transport execution.
+
+#### Scenario: Missing executable retains typed failure
+- **WHEN** the configured executable cannot be found during command execution
+- **THEN** transport raises `ExecutableNotFoundError` with the existing diagnostic contract
+
+#### Scenario: Non-runnable executable retains typed failure
+- **WHEN** the configured executable cannot be executed due to permissions
+- **THEN** transport raises the existing non-runnable executable SDK error without a separate path-directory policy
 

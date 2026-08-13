@@ -636,7 +636,7 @@ def test_autopilot_relation_command_runs_coalesce_one_loader_sequence() -> None:
     assert started.wait(timeout=2)
     second_thread.start()
     for _ in range(200):
-        if relation._waiters:
+        if relation._generation_state.waiters:
             break
         threading.Event().wait(0.005)
     release.set()

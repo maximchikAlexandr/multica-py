@@ -1040,7 +1040,7 @@ class IssueResource(BaseResource):
                         started_at=run.started_at,
                         completed_at=run.completed_at,
                         _client=self._client,
-                        _issue_id=issue_id,
+                        issue_id=issue_id,
                     )
                     for run in page.items
                 ),

@@ -1,13 +1,139 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from multica_py import ClientConfig, MulticaClient, OperationOptions
+from multica_py.config import _apply_operation_options
 from multica_py.sentinels import Unset
+
+
+@dataclass(frozen=True)
+class OperationOptionOverlayCase:
+    case_id: str
+    field_name: str
+    options: OperationOptions
+    expected: object
+
+
+@dataclass(frozen=True)
+class InvalidOptionCase:
+    case_id: str
+    factory: Callable[[], OperationOptions]
+    error: type[Exception]
+    message: str
+
+
+_OPTION_OVERLAY_CASES = (
+    OperationOptionOverlayCase("profile", "profile", OperationOptions(profile="scoped"), "scoped"),
+    OperationOptionOverlayCase(
+        "workspace_id", "workspace_id", OperationOptions(workspace_id="scoped-ws"), "scoped-ws"
+    ),
+    OperationOptionOverlayCase(
+        "timeout", "timeout", OperationOptions(timeout=2), datetime.timedelta(seconds=2)
+    ),
+    OperationOptionOverlayCase("cwd", "cwd", OperationOptions(cwd=Path("scoped")), Path("scoped")),
+    OperationOptionOverlayCase(
+        "environment",
+        "environment",
+        OperationOptions(environment={"SCOPED": "1"}),
+        (("SCOPED", "1"),),
+    ),
+)
+
+_INVALID_OPTION_CASES = (
+    InvalidOptionCase(
+        "blank_profile", lambda: OperationOptions(profile=" "), ValueError, "profile"
+    ),
+    InvalidOptionCase(
+        "blank_workspace_id", lambda: OperationOptions(workspace_id=" "), ValueError, "workspace_id"
+    ),
+    InvalidOptionCase(
+        "negative_timeout", lambda: OperationOptions(timeout=-1), ValueError, "timeout"
+    ),
+    InvalidOptionCase(
+        "invalid_cwd",
+        lambda: OperationOptions(cwd=1),  # type: ignore[arg-type]
+        TypeError,
+        "cwd",
+    ),
+    InvalidOptionCase(
+        "invalid_environment",
+        lambda: OperationOptions(environment=(("A", 1),)),  # type: ignore[arg-type]
+        TypeError,
+        "environment",
+    ),
+)
+
+
+def _base_option_config() -> ClientConfig:
+    return ClientConfig(
+        executable="custom-multica",
+        server_url="https://api.example.test",
+        profile="base",
+        workspace_id="base-ws",
+        cwd=Path("base"),
+        environment=(("BASE", "1"),),
+        timeout=datetime.timedelta(seconds=10),
+        debug=True,
+    )
+
+
+@pytest.mark.parametrize("case", _OPTION_OVERLAY_CASES, ids=lambda case: case.case_id)
+def test_operation_options_overlay_covers_metadata_fields(
+    case: OperationOptionOverlayCase,
+) -> None:
+    base = _base_option_config()
+    snapshot = _apply_operation_options(base, case.options)
+
+    assert snapshot is not base
+    assert getattr(snapshot, case.field_name) == case.expected
+    for other_case in _OPTION_OVERLAY_CASES:
+        if other_case.field_name != case.field_name:
+            assert getattr(snapshot, other_case.field_name) == getattr(base, other_case.field_name)
+
+
+def test_operation_options_unset_is_inheritance_and_always_snapshots() -> None:
+    base = _base_option_config()
+
+    snapshot = _apply_operation_options(base, OperationOptions())
+
+    assert snapshot == base
+    assert snapshot is not base
+
+
+def test_operation_options_none_and_empty_environment_clear_values() -> None:
+    base = _base_option_config()
+
+    snapshot = _apply_operation_options(
+        base,
+        OperationOptions(
+            profile=None,
+            workspace_id=None,
+            timeout=None,
+            cwd=None,
+            environment=(),
+        ),
+    )
+
+    assert snapshot.profile is None
+    assert snapshot.workspace_id is None
+    assert snapshot.timeout is None
+    assert snapshot.cwd is None
+    assert snapshot.environment == ()
+    assert snapshot.executable == base.executable
+    assert snapshot.debug is base.debug
+
+
+@pytest.mark.parametrize("case", _INVALID_OPTION_CASES, ids=lambda case: case.case_id)
+def test_operation_options_reject_invalid_values(case: InvalidOptionCase) -> None:
+    with pytest.raises(case.error, match=case.message):
+        case.factory()
 
 
 def test_operation_options_are_frozen_and_normalize_values() -> None:

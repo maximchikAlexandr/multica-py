@@ -6,7 +6,13 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
 
-from multica_py._internal.commands import Command, _replace_plan, _Step, _StepRef
+from multica_py._internal.commands import (
+    Command,
+    _cached_result_command,
+    _coalesced_command,
+    _result_field_argument,
+    _sequential_command,
+)
 from multica_py.models.issue_activity import CommentCursor
 from multica_py.models.issues import IssueChildStageGroup
 
@@ -18,8 +24,6 @@ T = TypeVar("T")
 K = TypeVar("K")
 V = TypeVar("V")
 R = TypeVar("R")
-U = TypeVar("U")
-W = TypeVar("W")
 
 _MAX_RELATION_PAGES = 1_000
 _MAX_RELATION_ITEMS = 100_000
@@ -88,6 +92,100 @@ class _GenerationFailure:
     waiters: int
 
 
+class _GenerationState(Generic[R]):
+    """Private synchronization state shared by lazy relation containers."""
+
+    _UNLOADED = 0
+    _LOADING = 1
+    _LOADED = 2
+
+    def __init__(self, empty: R, *, initial: R | None = None) -> None:
+        self._condition = threading.Condition()
+        self._state = self._LOADED if initial is not None else self._UNLOADED
+        self._value = empty if initial is None else initial
+        self._empty = empty
+        self._generation = 0
+        self._outcomes: dict[int, _GenerationSuccess[R] | _GenerationFailure] = {}
+        self._waiters: dict[int, int] = {}
+
+    @property
+    def loaded(self) -> bool:
+        with self._condition:
+            return self._state == self._LOADED
+
+    @property
+    def value(self) -> R:
+        with self._condition:
+            return self._value
+
+    @property
+    def condition(self) -> threading.Condition:
+        return self._condition
+
+    @property
+    def waiters(self) -> Mapping[int, int]:
+        return self._waiters
+
+    @property
+    def outcomes(self) -> Mapping[int, object]:
+        return self._outcomes
+
+    def run(self, *, force: bool, load: Callable[[], R]) -> R:
+        with self._condition:
+            if not force and self._state == self._LOADED:
+                return self._value
+            if self._state == self._LOADING:
+                waited_generation = self._generation
+                self._waiters[waited_generation] = self._waiters.get(waited_generation, 0) + 1
+                while self._state == self._LOADING and self._generation == waited_generation:
+                    self._condition.wait()
+                return self._consume_outcome(waited_generation)
+
+            previous_value = self._value
+            self._state = self._LOADING
+            self._generation += 1
+            generation = self._generation
+            self._waiters[generation] = 0
+
+        try:
+            loaded = load()
+        except Exception as error:
+            with self._condition:
+                waiters = self._waiters.pop(generation)
+                if waiters:
+                    self._outcomes[generation] = _GenerationFailure(error=error, waiters=waiters)
+                self._value = previous_value
+                self._state = self._LOADED if previous_value is not self._empty else self._UNLOADED
+                self._condition.notify_all()
+            raise
+
+        with self._condition:
+            self._value = loaded
+            self._state = self._LOADED
+            waiters = self._waiters.pop(generation)
+            if waiters:
+                self._outcomes[generation] = _GenerationSuccess(value=loaded, waiters=waiters)
+            self._condition.notify_all()
+            return loaded
+
+    def _consume_outcome(self, generation: int) -> R:
+        outcome = self._outcomes[generation]
+        outcome.waiters -= 1
+        if outcome.waiters == 0:
+            del self._outcomes[generation]
+        if isinstance(outcome, _GenerationFailure):
+            raise outcome.error
+        return outcome.value
+
+    def invalidate(self) -> None:
+        with self._condition:
+            while self._state == self._LOADING:
+                self._condition.wait()
+            self._state = self._UNLOADED
+            self._value = self._empty
+            self._condition.notify_all()
+
+
 class _OffsetLoader(Protocol[T]):
     def __call__(self, *, limit: int | None, offset: int) -> OffsetPage[T]: ...
 
@@ -96,55 +194,14 @@ class _CursorLoader(Protocol[T]):
     def __call__(self, *, cursor: CommentCursor | None) -> CursorPage[T]: ...
 
 
-def _coalesced_command(
-    relation: LazyCollection[T],
-    command: Command[tuple[T, ...] | _RelationLoad[T]],
-    *,
-    force: bool,
-) -> Command[tuple[T, ...]]:
-    plan = command._plan
-    return Command(
-        _replace_plan(
-            plan,
-            finalize=lambda results: cast("tuple[T, ...]", plan.finalize(results)),
-            run_override=lambda: relation._run_command(command, force=force),
-        )
-    )
-
-
-def _empty_command(command: Command[U], finalize_value: Callable[[], W]) -> Command[W]:
-    plan = command._plan
-    return Command(_replace_plan(plan, steps=(), finalize=lambda results: finalize_value()))
-
-
 def _pagination_error(relation_name: str, reason: str) -> Exception:
     from multica_py.exceptions import RelationPaginationError
 
     return RelationPaginationError(relation_name, reason)
 
 
-def _mapping_coalesced_command(
-    relation: LazyMapping[K, V],
-    command: Command[Mapping[K, V]],
-    *,
-    force: bool,
-) -> Command[Mapping[K, V]]:
-    plan = command._plan
-    return Command(
-        _replace_plan(
-            plan,
-            finalize=plan.finalize,
-            run_override=lambda: relation._run_command(command, force=force),
-        )
-    )
-
-
 class LazyCollection(Collection[T], Generic[T]):
     """A per-entity lazy relation with a retryable, coalesced load attempt."""
-
-    _UNLOADED = 0
-    _LOADING = 1
-    _LOADED = 2
 
     def __init__(
         self,
@@ -156,32 +213,31 @@ class LazyCollection(Collection[T], Generic[T]):
     ) -> None:
         self._loader = loader
         self._command_loader = command_loader
-        self._condition = threading.Condition()
-        self._state = self._LOADED if initial is not None else self._UNLOADED
-        self._value = tuple(initial) if initial is not None else ()
-        self._metadata = metadata or RelationMetadata()
-        self._generation = 0
-        self._outcomes: dict[int, _GenerationSuccess[tuple[T, ...]] | _GenerationFailure] = {}
-        self._waiters: dict[int, int] = {}
+        relation_metadata = metadata if metadata is not None else RelationMetadata()
+        empty: _RelationLoad[T] = _RelationLoad((), relation_metadata)
+        snapshot: _RelationLoad[T] | None = (
+            None if initial is None else _RelationLoad(tuple(initial), relation_metadata)
+        )
+        self._generation_state: _GenerationState[_RelationLoad[T]] = _GenerationState(
+            empty, initial=snapshot
+        )
 
     @property
     def loaded(self) -> bool:
-        with self._condition:
-            return self._state == self._LOADED
+        return self._generation_state.loaded
 
     @property
     def metadata(self) -> RelationMetadata:
-        with self._condition:
-            return self._metadata
+        return self._generation_state.value.metadata
 
     def _load_complete(self) -> _RelationLoad[T]:
         loaded = self._loader()
         if isinstance(loaded, _RelationLoad):
             return loaded
-        return _RelationLoad(tuple(loaded), self._metadata)
+        return _RelationLoad(tuple(loaded), self.metadata)
 
     def _run_load(self, *, force: bool) -> tuple[T, ...]:
-        return self._run_generation(force=force, load=self._load_complete)
+        return self._generation_state.run(force=force, load=self._load_complete).items
 
     def _run_command(
         self,
@@ -193,71 +249,9 @@ class LazyCollection(Collection[T], Generic[T]):
             result = command.run()
             if isinstance(result, _RelationLoad):
                 return result
-            return _RelationLoad(result, self._metadata)
+            return _RelationLoad(result, self.metadata)
 
-        return self._run_generation(
-            force=force,
-            load=load,
-        )
-
-    def _run_generation(
-        self,
-        *,
-        force: bool,
-        load: Callable[[], _RelationLoad[T]],
-    ) -> tuple[T, ...]:
-        with self._condition:
-            if not force and self._state == self._LOADED:
-                return self._value
-            if self._state == self._LOADING:
-                waited_generation = self._generation
-                # Register before releasing the condition.  This lets an older
-                # waiter retrieve its exact generation outcome after a later
-                # caller has already started another generation.
-                self._waiters[waited_generation] = self._waiters.get(waited_generation, 0) + 1
-                while self._state == self._LOADING and self._generation == waited_generation:
-                    self._condition.wait()
-                return self._consume_outcome(waited_generation)
-            previous_state = self._state
-            previous_value = self._value
-            previous_metadata = self._metadata
-            self._state = self._LOADING
-            self._generation += 1
-            generation = self._generation
-            self._waiters[generation] = 0
-        try:
-            loaded = load()
-        except Exception as error:
-            with self._condition:
-                waiters = self._waiters.pop(generation)
-                if waiters:
-                    self._outcomes[generation] = _GenerationFailure(error=error, waiters=waiters)
-                if previous_state == self._LOADED:
-                    self._state = self._LOADED
-                    self._value = previous_value
-                    self._metadata = previous_metadata
-                else:
-                    self._state = self._UNLOADED
-                self._condition.notify_all()
-            raise
-        with self._condition:
-            self._value = loaded.items
-            self._metadata = loaded.metadata
-            self._state = self._LOADED
-            waiters = self._waiters.pop(generation)
-            if waiters:
-                self._outcomes[generation] = _GenerationSuccess(value=self._value, waiters=waiters)
-            self._condition.notify_all()
-            return self._value
-
-    def _consume_outcome(self, generation: int) -> tuple[T, ...]:
-        outcome = self._outcomes[generation]
-        outcome.waiters -= 1
-        if outcome.waiters == 0:
-            del self._outcomes[generation]
-        if isinstance(outcome, _GenerationFailure):
-            raise outcome.error
-        return outcome.value
+        return self._generation_state.run(force=force, load=load).items
 
     def all(self) -> tuple[T, ...]:
         if self._command_loader is not None:
@@ -274,25 +268,28 @@ class LazyCollection(Collection[T], Generic[T]):
             raise RuntimeError("relation has no command loader")
         command = self._command_loader()
         if self.loaded:
-            return _empty_command(command, self._cached_value)
-        return _coalesced_command(self, command, force=False)
+            return _cached_result_command(command, self._cached_value)
+        return _coalesced_command(
+            command,
+            lambda: self._run_command(command, force=False),
+            finalize=lambda value: value.items if isinstance(value, _RelationLoad) else value,
+        )
 
     def refresh_command(self) -> Command[tuple[T, ...]]:
         if self._command_loader is None:
             raise RuntimeError("relation has no command loader")
-        return _coalesced_command(self, self._command_loader(), force=True)
+        command = self._command_loader()
+        return _coalesced_command(
+            command,
+            lambda: self._run_command(command, force=True),
+            finalize=lambda value: value.items if isinstance(value, _RelationLoad) else value,
+        )
 
     def _cached_value(self) -> tuple[T, ...]:
-        with self._condition:
-            return self._value
+        return self._generation_state.value.items
 
     def invalidate(self) -> None:
-        with self._condition:
-            while self._state == self._LOADING:
-                self._condition.wait()
-            self._state = self._UNLOADED
-            self._value = ()
-            self._metadata = RelationMetadata()
+        self._generation_state.invalidate()
 
     def __iter__(self) -> Iterator[T]:
         return iter(self.all())
@@ -351,37 +348,22 @@ class OffsetLazyCollection(LazyCollection[T], Generic[T]):
             raise RuntimeError("relation has no page command loader")
         first_command = self.page_command(limit=self._default_limit, offset=0)
         if self.loaded and not force:
-            return _empty_command(first_command, self._cached_value)
-        plan = first_command._plan
-        if not plan.steps:
-            return Command(
-                _replace_plan(plan, steps=(), finalize=lambda results: self._run_load(force=force))
+            return _cached_result_command(first_command, self._cached_value)
+        if not first_command.commands:
+            return _coalesced_command(
+                first_command,
+                lambda: self._run_load(force=force),
             )
-        first_step = plan.steps[0]
         try:
-            offset_position = first_step.argv.index("--offset") + 1
+            template = _result_field_argument(
+                first_command,
+                flag="--offset",
+                field="next_offset",
+                alias="page",
+                require_existing=True,
+            )
         except ValueError as error:
             raise RuntimeError("offset page command has no --offset argument") from error
-        template_args = list(first_step.argv)
-        template_args[offset_position] = "${page.next_offset}"
-        template_step = _Step(
-            tuple(template_args),
-            first_step.mode,
-            stdin=first_step.stdin,
-            timeout=first_step.timeout,
-            refs=((offset_position, _StepRef("result", field="next_offset", alias="page")),),
-            decode=first_step.decode,
-            result_alias="page",
-        )
-        first_page_step = _Step(
-            first_step.argv,
-            first_step.mode,
-            stdin=first_step.stdin,
-            timeout=first_step.timeout,
-            refs=first_step.refs,
-            decode=first_step.decode,
-            result_alias="page",
-        )
 
         def gate(index: int, results: tuple[object, ...]) -> bool:
             if index == 0 or not results:
@@ -398,10 +380,10 @@ class OffsetLazyCollection(LazyCollection[T], Generic[T]):
                 raise _pagination_error("OffsetLazyCollection", "empty_page")
             return page.has_more
 
-        def continuation(index: int, results: tuple[object, ...]) -> _Step | None:
+        def continuation(index: int, results: tuple[object, ...]) -> bool:
             if index == 0 or not results:
-                return None
-            return template_step if cast("OffsetPage[T]", results[-1]).has_more else None
+                return False
+            return cast("OffsetPage[T]", results[-1]).has_more
 
         def finalize(results: tuple[object, ...]) -> _RelationLoad[T]:
             pages = tuple(cast("OffsetPage[T]", result) for result in results)
@@ -410,16 +392,18 @@ class OffsetLazyCollection(LazyCollection[T], Generic[T]):
                 RelationMetadata(total=pages[-1].total if pages else None),
             )
 
-        composite = Command(
-            _replace_plan(
-                plan,
-                steps=(first_page_step, template_step),
-                finalize=finalize,
-                step_gate=gate,
-                step_continuation=continuation,
-            )
+        composite = _sequential_command(
+            first_command,
+            template,
+            gate=gate,
+            continuation=continuation,
+            finalize=finalize,
         )
-        return _coalesced_command(self, composite, force=force)
+        return _coalesced_command(
+            composite,
+            lambda: self._run_command(composite, force=force),
+            finalize=lambda value: value.items if isinstance(value, _RelationLoad) else value,
+        )
 
     def _load_pages(self) -> _RelationLoad[T]:
         from multica_py.exceptions import RelationPaginationError
@@ -490,54 +474,23 @@ class CursorLazyCollection(LazyCollection[T], Generic[T]):
             raise RuntimeError("relation has no page command loader")
         first_command = self.page_command(cursor=self._initial_cursor)
         if self.loaded and not force:
-            return _empty_command(first_command, self._cached_value)
-        plan = first_command._plan
-        if not plan.steps:
-            return Command(
-                _replace_plan(plan, steps=(), finalize=lambda results: self._run_load(force=force))
+            return _cached_result_command(first_command, self._cached_value)
+        if not first_command.commands:
+            return _coalesced_command(
+                first_command,
+                lambda: self._run_load(force=force),
             )
-        first_step = plan.steps[0]
-        template_args = list(first_step.argv)
-        before_position: int | None = None
-        before_id_position: int | None = None
-        if "--before" in template_args:
-            before_position = template_args.index("--before") + 1
-        if "--before-id" in template_args:
-            before_id_position = template_args.index("--before-id") + 1
-        if before_position is None or before_id_position is None:
-            output_position = template_args.index("--output")
-            template_args[output_position:output_position] = [
-                "--before",
-                "${page.next_cursor.before}",
-                "--before-id",
-                "${page.next_cursor.before_id}",
-            ]
-            before_position = output_position + 1
-            before_id_position = output_position + 3
-        else:
-            template_args[before_position] = "${page.next_cursor.before}"
-            template_args[before_id_position] = "${page.next_cursor.before_id}"
-        refs = (
-            (before_position, _StepRef("result", field="next_cursor.before", alias="page")),
-            (before_id_position, _StepRef("result", field="next_cursor.before_id", alias="page")),
+        template = _result_field_argument(
+            first_command,
+            flag="--before",
+            field="next_cursor.before",
+            alias="page",
         )
-        template_step = _Step(
-            tuple(template_args),
-            first_step.mode,
-            stdin=first_step.stdin,
-            timeout=first_step.timeout,
-            refs=refs,
-            decode=first_step.decode,
-            result_alias="page",
-        )
-        first_page_step = _Step(
-            first_step.argv,
-            first_step.mode,
-            stdin=first_step.stdin,
-            timeout=first_step.timeout,
-            refs=first_step.refs,
-            decode=first_step.decode,
-            result_alias="page",
+        template = _result_field_argument(
+            template,
+            flag="--before-id",
+            field="next_cursor.before_id",
+            alias="page",
         )
 
         def gate(index: int, results: tuple[object, ...]) -> bool:
@@ -561,14 +514,10 @@ class CursorLazyCollection(LazyCollection[T], Generic[T]):
                 raise _pagination_error("CursorLazyCollection", "repeated_cursor")
             return True
 
-        def continuation(index: int, results: tuple[object, ...]) -> _Step | None:
+        def continuation(index: int, results: tuple[object, ...]) -> bool:
             if index == 0 or not results:
-                return None
-            return (
-                template_step
-                if cast("CursorPage[T]", results[-1]).next_cursor is not None
-                else None
-            )
+                return False
+            return cast("CursorPage[T]", results[-1]).next_cursor is not None
 
         def finalize(results: tuple[object, ...]) -> _RelationLoad[T]:
             pages = tuple(cast("CursorPage[T]", result) for result in results)
@@ -576,16 +525,18 @@ class CursorLazyCollection(LazyCollection[T], Generic[T]):
                 tuple(item for page in pages for item in page.items), RelationMetadata()
             )
 
-        composite = Command(
-            _replace_plan(
-                plan,
-                steps=(first_page_step, template_step),
-                finalize=finalize,
-                step_gate=gate,
-                step_continuation=continuation,
-            )
+        composite = _sequential_command(
+            first_command,
+            template,
+            gate=gate,
+            continuation=continuation,
+            finalize=finalize,
         )
-        return _coalesced_command(self, composite, force=force)
+        return _coalesced_command(
+            composite,
+            lambda: self._run_command(composite, force=force),
+            finalize=lambda value: value.items if isinstance(value, _RelationLoad) else value,
+        )
 
     def _load_pages(self) -> tuple[T, ...]:
         from multica_py.exceptions import RelationPaginationError
@@ -612,10 +563,6 @@ class CursorLazyCollection(LazyCollection[T], Generic[T]):
 
 
 class LazyMapping(Mapping[K, V], Generic[K, V]):
-    _UNLOADED = 0
-    _LOADING = 1
-    _LOADED = 2
-
     def __init__(
         self,
         loader: Callable[[], Mapping[K, V]],
@@ -624,66 +571,23 @@ class LazyMapping(Mapping[K, V], Generic[K, V]):
     ) -> None:
         self._loader = loader
         self._command_loader = command_loader
-        self._condition = threading.Condition()
-        self._state = self._UNLOADED
-        self._value: Mapping[K, V] = MappingProxyType({})
-        self._generation = 0
-        self._outcomes: dict[int, _GenerationSuccess[Mapping[K, V]] | _GenerationFailure] = {}
-        self._waiters: dict[int, int] = {}
+        empty_values: dict[K, V] = {}
+        empty: Mapping[K, V] = MappingProxyType(empty_values)
+        self._generation_state: _GenerationState[Mapping[K, V]] = _GenerationState(empty)
 
     @property
     def loaded(self) -> bool:
-        with self._condition:
-            return self._state == self._LOADED
+        return self._generation_state.loaded
 
     def _run_load(self, *, force: bool) -> Mapping[K, V]:
-        return self._run_generation(force=force, load=self._loader)
+        def load() -> Mapping[K, V]:
+            values: dict[K, V] = dict(self._loader())
+            return MappingProxyType(values)
 
-    def _run_generation(self, *, force: bool, load: Callable[[], Mapping[K, V]]) -> Mapping[K, V]:
-        with self._condition:
-            if not force and self._state == self._LOADED:
-                return self._value
-            if self._state == self._LOADING:
-                waited_generation = self._generation
-                self._waiters[waited_generation] = self._waiters.get(waited_generation, 0) + 1
-                while self._state == self._LOADING and self._generation == waited_generation:
-                    self._condition.wait()
-                return self._consume_outcome(waited_generation)
-            previous_state = self._state
-            previous_value = self._value
-            self._state = self._LOADING
-            self._generation += 1
-            generation = self._generation
-            self._waiters[generation] = 0
-        try:
-            loaded = MappingProxyType(dict(load()))
-        except Exception as error:
-            with self._condition:
-                waiters = self._waiters.pop(generation)
-                if waiters:
-                    self._outcomes[generation] = _GenerationFailure(error=error, waiters=waiters)
-                self._state = self._LOADED if previous_state == self._LOADED else self._UNLOADED
-                if previous_state == self._LOADED:
-                    self._value = previous_value
-                self._condition.notify_all()
-            raise
-        with self._condition:
-            self._value = loaded
-            self._state = self._LOADED
-            waiters = self._waiters.pop(generation)
-            if waiters:
-                self._outcomes[generation] = _GenerationSuccess(value=self._value, waiters=waiters)
-            self._condition.notify_all()
-            return self._value
-
-    def _consume_outcome(self, generation: int) -> Mapping[K, V]:
-        outcome = self._outcomes[generation]
-        outcome.waiters -= 1
-        if outcome.waiters == 0:
-            del self._outcomes[generation]
-        if isinstance(outcome, _GenerationFailure):
-            raise outcome.error
-        return outcome.value
+        return self._generation_state.run(
+            force=force,
+            load=load,
+        )
 
     def all(self) -> Mapping[K, V]:
         if self._command_loader is not None:
@@ -696,31 +600,37 @@ class LazyMapping(Mapping[K, V], Generic[K, V]):
         return self._run_load(force=True)
 
     def _run_command(self, command: Command[Mapping[K, V]], *, force: bool) -> Mapping[K, V]:
-        return self._run_generation(force=force, load=command.run)
+        def load() -> Mapping[K, V]:
+            values: dict[K, V] = dict(command.run())
+            return MappingProxyType(values)
+
+        return self._generation_state.run(
+            force=force,
+            load=load,
+        )
 
     def all_command(self) -> Command[Mapping[K, V]]:
         if self._command_loader is None:
             raise RuntimeError("mapping has no command loader")
         command = self._command_loader()
         if self.loaded:
-            return _empty_command(command, self._cached_value)
-        return _mapping_coalesced_command(self, command, force=False)
+            return _cached_result_command(command, self._cached_value)
+        return _coalesced_command(
+            command,
+            lambda: self._run_command(command, force=False),
+        )
 
     def refresh_command(self) -> Command[Mapping[K, V]]:
         if self._command_loader is None:
             raise RuntimeError("mapping has no command loader")
-        return _mapping_coalesced_command(self, self._command_loader(), force=True)
+        command = self._command_loader()
+        return _coalesced_command(command, lambda: self._run_command(command, force=True))
 
     def _cached_value(self) -> Mapping[K, V]:
-        with self._condition:
-            return self._value
+        return self._generation_state.value
 
     def invalidate(self) -> None:
-        with self._condition:
-            while self._state == self._LOADING:
-                self._condition.wait()
-            self._state = self._UNLOADED
-            self._value = MappingProxyType({})
+        self._generation_state.invalidate()
 
     def __getitem__(self, key: K) -> V:
         return self.all()[key]

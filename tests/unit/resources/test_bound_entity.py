@@ -14,7 +14,7 @@ import pytest
 from multica_py._internal.commands import _Step
 from multica_py._internal.specs import TextResult
 from multica_py.config import ClientConfig
-from multica_py.entities._base import _BoundEntity
+from multica_py.entities._base import _BoundEntity, _entity_policy
 from multica_py.entities.agents import Agent
 from multica_py.entities.autopilots import Autopilot, AutopilotRun, _coerce_json_value
 from multica_py.entities.comments import Comment, CommentThread
@@ -149,6 +149,208 @@ _BOUND_ENTITY_IDS = tuple(type(entity).__name__ for entity in _BOUND_ENTITY_CASE
 
 
 @dataclass(frozen=True)
+class EntityPolicyCase:
+    entity_type: type[_BoundEntity]
+    public_fields: tuple[str, ...]
+    private_fields: tuple[str, ...]
+    constructor_seeds: tuple[str, ...]
+    encoded_aliases: tuple[tuple[str, str], ...]
+    runtime_overlays: tuple[str, ...]
+
+
+_ENTITY_POLICY_CASES: tuple[EntityPolicyCase, ...] = (
+    EntityPolicyCase(
+        Issue,
+        (
+            "id",
+            "title",
+            "status",
+            "description",
+            "priority",
+            "assignee",
+            "child_stages",
+            "label_names",
+            "metadata_snapshot",
+            "attachments",
+            "pull_request_snapshot",
+            "created_at",
+            "updated_at",
+            "parent_id",
+            "project_id",
+            "creator_id",
+            "creator_type",
+            "match_source",
+        ),
+        (
+            "_children",
+            "_client",
+            "_comments",
+            "_labels",
+            "_metadata",
+            "_pull_requests",
+            "_recent_threads",
+            "_runs",
+            "_subscribers",
+        ),
+        (),
+        (),
+        (),
+    ),
+    EntityPolicyCase(
+        Project,
+        ("id", "name", "status", "description"),
+        ("_client", "_issues", "_resources"),
+        (),
+        (),
+        (),
+    ),
+    EntityPolicyCase(
+        Agent,
+        ("id", "name", "description", "skill_refs", "archived_at"),
+        ("_client", "_issues", "_skills", "_tasks"),
+        (),
+        (("skill_refs", "skills"),),
+        (),
+    ),
+    EntityPolicyCase(
+        Skill,
+        ("id", "name", "description", "file_count"),
+        ("_client", "_files"),
+        (),
+        (),
+        (),
+    ),
+    EntityPolicyCase(
+        Autopilot,
+        (
+            "id",
+            "workspace_id",
+            "title",
+            "assignee_type",
+            "assignee_id",
+            "status",
+            "execution_mode",
+            "created_by_type",
+            "created_by_id",
+            "description",
+            "project_id",
+            "issue_title_template",
+            "last_run_at",
+            "created_at",
+            "updated_at",
+            "trigger_kinds",
+            "next_run_at",
+            "last_run_status",
+            "subscriber_snapshot",
+            "can_write",
+            "can_manage_access",
+        ),
+        ("_client", "_runs", "_subscribers", "_triggers"),
+        ("triggers", "subscribers"),
+        (
+            ("subscriber_snapshot", "subscribers"),
+            ("triggers", "_triggers_seed"),
+            ("subscribers", "_subscribers_seed"),
+        ),
+        (),
+    ),
+    EntityPolicyCase(
+        AutopilotRun,
+        (
+            "id",
+            "autopilot_id",
+            "source",
+            "status",
+            "trigger_id",
+            "issue_id",
+            "task_id",
+            "triggered_at",
+            "completed_at",
+            "failure_reason",
+            "reason_code",
+            "trigger_payload",
+            "result",
+            "created_at",
+        ),
+        ("_client", "_messages"),
+        (),
+        (),
+        ("result", "trigger_payload"),
+    ),
+    EntityPolicyCase(
+        Squad,
+        ("id", "name", "member_count", "leader_id", "archived_at"),
+        ("_client", "_issues", "_members"),
+        (),
+        (),
+        (),
+    ),
+    EntityPolicyCase(
+        WorkspaceMember,
+        ("id", "name", "role", "user_id", "email"),
+        ("_client", "_issues"),
+        (),
+        (),
+        (),
+    ),
+    EntityPolicyCase(
+        Workspace,
+        ("id", "name", "description"),
+        (
+            "_agents",
+            "_autopilots",
+            "_client",
+            "_issues",
+            "_labels",
+            "_members",
+            "_projects",
+            "_repositories",
+            "_runtimes",
+            "_skills",
+            "_squads",
+        ),
+        (),
+        (),
+        (),
+    ),
+    EntityPolicyCase(
+        Comment,
+        ("id", "body", "thread_id", "author_id", "created_at", "updated_at"),
+        ("_client",),
+        (),
+        (),
+        (),
+    ),
+    EntityPolicyCase(
+        CommentThread,
+        ("id", "resolved", "updated_at"),
+        ("_client", "_comments"),
+        ("issue_id",),
+        (("issue_id", "_issue_id"),),
+        (),
+    ),
+    EntityPolicyCase(
+        TaskRun,
+        ("id", "status", "agent_id", "started_at", "completed_at"),
+        ("_client", "_messages"),
+        ("issue_id",),
+        (("issue_id", "_issue_id"),),
+        (),
+    ),
+    EntityPolicyCase(
+        Label,
+        ("id", "name", "color"),
+        ("_client",),
+        (),
+        (),
+        (),
+    ),
+)
+
+_ENTITY_POLICY_IDS = tuple(case.entity_type.__name__ for case in _ENTITY_POLICY_CASES)
+
+
+@dataclass(frozen=True)
 class BoundComparisonCase:
     name: str
     first: _BoundEntity
@@ -216,15 +418,30 @@ _BOUND_COMPARISON_CASES: tuple[BoundComparisonCase, ...] = (
 )
 
 
+@pytest.mark.parametrize("case", _ENTITY_POLICY_CASES, ids=_ENTITY_POLICY_IDS)
+def test_entity_policy_is_a_closed_schema_characterization(case: EntityPolicyCase) -> None:
+    policy = _entity_policy(case.entity_type)
+
+    assert policy is _entity_policy(case.entity_type)
+    assert policy.public_fields == case.public_fields
+    assert tuple(sorted(policy.private_fields)) == case.private_fields
+    assert policy.constructor_seeds == case.constructor_seeds
+    assert (
+        tuple((name, encoded) for name, encoded in policy.encoded_names if name != encoded)
+        == case.encoded_aliases
+    )
+    assert tuple(sorted(policy.runtime_overlays)) == case.runtime_overlays
+
+
 @pytest.mark.parametrize("entity", _BOUND_ENTITY_CASES, ids=_BOUND_ENTITY_IDS)
 def test_public_fields_match_declared_msgspec_fields(entity: _BoundEntity) -> None:
+    policy = _entity_policy(type(entity))
     declared = tuple(
         field.name
         for field in msgspec.structs.fields(type(entity))
-        if not field.name.startswith("_") and field.name not in entity._RUNTIME_INIT_FIELDS
+        if field.name in policy.public_fields
     )
-    assert len(declared) == len(entity._PUBLIC_FIELDS)
-    assert set(declared) == set(entity._PUBLIC_FIELDS)
+    assert declared == policy.public_fields
 
 
 @pytest.mark.parametrize("entity", _BOUND_ENTITY_CASES, ids=_BOUND_ENTITY_IDS)
@@ -233,7 +450,7 @@ def test_every_bound_entity_round_trips_all_public_fields(entity: _BoundEntity) 
 
     assert restored == entity.detach()
     snapshot = restored.to_dict()
-    assert tuple(snapshot) == entity._PUBLIC_FIELDS
+    assert tuple(snapshot) == _entity_policy(type(entity)).public_fields
     assert all(not field.startswith("_") for field in snapshot)
 
 
@@ -253,11 +470,10 @@ def test_runtime_state_cannot_shadow_public_surface() -> None:
     assert not hasattr(issue, "__dict__")
     with pytest.raises(AttributeError):
         object.__getattribute__(issue, "__dict__")
-    with pytest.raises((TypeError, AttributeError)):
-        object.__setattr__(issue, "_PUBLIC_FIELDS", ("forged",))
+    assert not hasattr(type(issue), "_PUBLIC_FIELDS")
 
     rebound = issue._with_client(MagicMock())
-    assert rebound._PUBLIC_FIELDS == issue._PUBLIC_FIELDS
+    assert _entity_policy(type(rebound)) is _entity_policy(type(issue))
     assert rebound.comments is relation
 
 
@@ -350,6 +566,66 @@ def test_autopilot_run_mapping_proxy_input_is_recursively_snapshotted() -> None:
     assert hash(run) == before_hash
     assert run in seen
     assert run.trigger_payload is not proxy
+
+
+@pytest.mark.parametrize("field_name", ("trigger_payload", "result"))
+def test_autopilot_run_overlays_roundtrip_nested_mutables_and_value_operations(
+    field_name: str,
+) -> None:
+    payload: dict[str, object] = {"nested": [{"values": [1, 2]}]}
+    if field_name == "trigger_payload":
+        run = AutopilotRun(
+            id="run-1",
+            autopilot_id="auto-1",
+            source="manual",
+            status="completed",
+            trigger_payload=cast("JsonValue", payload),
+        )
+    else:
+        run = AutopilotRun(
+            id="run-1",
+            autopilot_id="auto-1",
+            source="manual",
+            status="completed",
+            result=cast("JsonValue", payload),
+        )
+
+    payload["nested"] = [{"values": [99]}]
+    restored = AutopilotRun.from_json(run.to_json())
+
+    assert getattr(run, field_name) == {"nested": ({"values": (1, 2)},)}
+    assert getattr(restored, field_name) == getattr(run, field_name)
+    assert hash(restored) == hash(run)
+    assert repr(restored) == repr(run)
+
+
+def test_set_runtime_accepts_only_schema_private_fields_and_overlays() -> None:
+    issue = Issue(id="i1", title="A", status=IssueStatus.todo)
+    marker = object()
+
+    issue._set_runtime("_comments", marker)
+    assert issue._comments is marker
+    with pytest.raises(AttributeError, match="unsupported runtime field"):
+        issue._set_runtime("not_declared", marker)
+
+    run = AutopilotRun(id="run-1", autopilot_id="auto-1", source="manual", status="completed")
+    run._set_runtime("result", {"ok": True})
+    assert run.result == {"ok": True}
+
+
+def test_runtime_overlay_policy_rejects_adversarial_subclass_extensions() -> None:
+    class AdversarialRun(AutopilotRun):  # type: ignore[misc]
+        _PUBLIC_RUNTIME_OVERLAYS = ("unapproved",)
+
+    assert _entity_policy(AdversarialRun).runtime_overlays == frozenset()
+    run = AdversarialRun(
+        id="run-1",
+        autopilot_id="auto-1",
+        source="manual",
+        status="completed",
+    )
+    with pytest.raises(AttributeError, match="unsupported runtime field: unapproved"):
+        run._set_runtime("unapproved", object())
 
 
 @pytest.mark.parametrize(

@@ -6,11 +6,9 @@ from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, as_completed
 from typing import Protocol, TypeVar
 
-import msgspec
-
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
-from multica_py.config import ClientConfig, OperationOptions
+from multica_py.config import ClientConfig, OperationOptions, _apply_operation_options
 from multica_py.models.relations import LazyLoadable
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
@@ -109,9 +107,6 @@ class MulticaClient:
     def config(self) -> ClientConfig:
         return self._config
 
-    def _replace_config(self, **changes: object) -> ClientConfig:
-        return msgspec.structs.replace(self._config, **changes)
-
     def with_options(
         self,
         *,
@@ -128,19 +123,8 @@ class MulticaClient:
             cwd=cwd,
             environment=environment,
         )
-        changes = {
-            field_name: value
-            for field_name, value in (
-                ("profile", options.profile),
-                ("workspace_id", options.workspace_id),
-                ("timeout", options.timeout),
-                ("cwd", options.cwd),
-                ("environment", options.environment),
-            )
-            if value is not Unset
-        }
         return MulticaClient(
-            self._replace_config(**changes),
+            _apply_operation_options(self._config, options),
             _semaphore=self._semaphore,
         )
 

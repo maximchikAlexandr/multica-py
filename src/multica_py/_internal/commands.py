@@ -18,6 +18,8 @@ __all__ = ["Command"]
 T_co = TypeVar("T_co", covariant=True)
 T_plan = TypeVar("T_plan")
 T_mapped = TypeVar("T_mapped")
+T_source = TypeVar("T_source")
+T_result = TypeVar("T_result")
 
 _StepMode = Literal["run_bytes", "run_text", "spawn"]
 
@@ -199,6 +201,115 @@ class Command(Generic[T_co]):
 
     def __repr__(self) -> str:
         return f"Command(commands={self.commands!r})"
+
+
+def _cached_result_command(
+    command: Command[T_source], result: Callable[[], T_result]
+) -> Command[T_result]:
+    """Return a no-step command retaining the source snapshot and diagnostics."""
+    plan = command._plan
+    return Command(
+        _replace_plan(
+            plan,
+            steps=(),
+            finalize=lambda _results: result(),
+            run_override=None,
+        )
+    )
+
+
+def _coalesced_command(
+    command: Command[T_source],
+    run: Callable[[], T_result],
+    *,
+    finalize: Callable[[T_source], T_result] | None = None,
+) -> Command[T_result]:
+    """Replace execution while retaining the source command's plan snapshot."""
+    plan = command._plan
+    map_result = finalize or cast("Callable[[T_source], T_result]", lambda value: value)
+    return Command(
+        _replace_plan(
+            plan,
+            finalize=lambda results: map_result(plan.finalize(results)),
+            run_override=run,
+        )
+    )
+
+
+def _require_single_step(plan: _CommandPlan[object]) -> _Step:
+    if len(plan.steps) != 1:
+        raise ValueError("command transformation requires exactly one step")
+    return plan.steps[0]
+
+
+def _result_field_argument(
+    command: Command[T_co],
+    *,
+    flag: str,
+    field: str,
+    alias: str = "result",
+    require_existing: bool = False,
+) -> Command[T_co]:
+    """Bind an existing or inserted flag to a single-step result field."""
+    plan = command._plan
+    step = _require_single_step(plan)
+    argv = list(step.argv)
+    if flag in argv:
+        position = argv.index(flag) + 1
+        if position >= len(argv):
+            raise ValueError(f"flag {flag!r} has no value")
+        argv[position] = f"${{{alias}.{field}}}"
+    else:
+        if require_existing:
+            raise ValueError(f"command has no {flag} argument")
+        try:
+            output_position = argv.index("--output")
+        except ValueError as error:
+            raise ValueError(f"cannot insert result field {flag!r} without --output") from error
+        position = output_position
+        argv[position:position] = [flag, f"${{{alias}.{field}}}"]
+    refs = tuple(
+        (*step.refs, (position + 1, _StepRef("result", field=field, alias=alias)))
+        if flag not in step.argv
+        else (*step.refs, (position, _StepRef("result", field=field, alias=alias)))
+    )
+    return Command(
+        _replace_plan(
+            plan,
+            steps=(replace(step, argv=tuple(argv), refs=refs, result_alias=alias),),
+            finalize=plan.finalize,
+        )
+    )
+
+
+def _sequential_command(
+    command: Command[T_source],
+    template: Command[object],
+    *,
+    gate: Callable[[int, tuple[object, ...]], bool] | None = None,
+    continuation: Callable[[int, tuple[object, ...]], bool] | None = None,
+    finalize: Callable[[tuple[object, ...]], T_result],
+) -> Command[T_result]:
+    """Build a two-step sequential command from an aliased single-step source."""
+    plan = command._plan
+    first = _require_single_step(plan)
+    template_step = _require_single_step(template._plan)
+    alias = template_step.result_alias or "result"
+
+    def next_step(index: int, results: tuple[object, ...]) -> _Step | None:
+        if continuation is None or not continuation(index, results):
+            return None
+        return template_step
+
+    return Command(
+        _replace_plan(
+            plan,
+            steps=(replace(first, result_alias=alias), template_step),
+            finalize=finalize,
+            step_gate=gate,
+            step_continuation=next_step,
+        )
+    )
 
 
 def _display_ref(ref: _StepRef) -> str:

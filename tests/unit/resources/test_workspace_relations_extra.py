@@ -411,6 +411,57 @@ def test_cursor_command_preview_and_refresh_cover_cursor_bindings(
     assert relation.all_command().commands == ()
 
 
+def test_cursor_command_preserves_mixed_cursor_pair_insertion_and_replacement() -> None:
+    transport = MagicMock(spec=CliTransport)
+    resource = BaseResource(transport, ClientConfig())
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    pages = iter(
+        (
+            CursorPage(("one",), CommentCursor(before="next", before_id="next-id")),
+            CursorPage(("two",), None),
+        )
+    )
+
+    def page_command(_cursor: CommentCursor | None) -> Command[CursorPage[str]]:
+        return resource._plan(
+            steps=(
+                _Step(
+                    ("comments", "--before", "old", "--output", "json"),
+                    "run_bytes",
+                    decode=lambda _stdout, _command: next(pages),
+                ),
+            ),
+            finalize=lambda results: cast("CursorPage[str]", results[0]),
+        )
+
+    transport.run_bytes.side_effect = lambda request, **_kwargs: RawCommandResult(
+        argv=request,
+        exit_code=0,
+        stdout=b"{}",
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    relation = CursorLazyCollection(
+        lambda *, cursor: CursorPage((), None), page_command_loader=page_command
+    )
+    command = relation.all_command()
+
+    assert command.commands == (
+        "multica comments --before old --output json",
+        "multica comments --before '${page.next_cursor.before}' --before-id '${page.next_cursor.before_id}' --output json",
+    )
+    assert command.run() == ("one", "two")
+    assert transport.run_bytes.call_args_list[1].args[0] == (
+        "comments",
+        "--before",
+        "next",
+        "--before-id",
+        "next-id",
+        "--output",
+        "json",
+    )
+
+
 @pytest.mark.parametrize("case", ("page-budget", "item-budget", "empty-page", "repeated-cursor"))
 def test_cursor_command_guards_are_behavioral(
     monkeypatch: pytest.MonkeyPatch,
@@ -915,13 +966,8 @@ class _GenerationCase:
 
 
 class _Loadable(Protocol):
-    _condition: threading.Condition
-
     @property
-    def _waiters(self) -> Mapping[int, int]: ...
-
-    @property
-    def _outcomes(self) -> Mapping[int, object]: ...
+    def _generation_state(self) -> _GenerationStateView: ...
 
     def all(self) -> object: ...
 
@@ -930,14 +976,26 @@ class _Loadable(Protocol):
     def invalidate(self) -> None: ...
 
 
+class _GenerationStateView(Protocol):
+    @property
+    def condition(self) -> threading.Condition: ...
+
+    @property
+    def waiters(self) -> Mapping[int, int]: ...
+
+    @property
+    def outcomes(self) -> Mapping[int, object]: ...
+
+
 def _collection(load: Callable[[], tuple[str, ...]]) -> LazyCollection[str]:
     return LazyCollection(load)
 
 
 def _wait_for_generation_waiter(relation: _Loadable, *, generation: int) -> None:
-    with relation._condition:
-        assert relation._condition.wait_for(
-            lambda: relation._waiters.get(generation, 0) > 0,
+    state = relation._generation_state
+    with state.condition:
+        assert state.condition.wait_for(
+            lambda: state.waiters.get(generation, 0) > 0,
             timeout=2,
         )
 
@@ -1104,7 +1162,7 @@ def test_generation_outcomes_survive_a_three_party_later_generation(
     assert waiter_errors == [first_error]
     assert retry_values
     assert calls == 2
-    assert not relation._outcomes
+    assert not relation._generation_state.outcomes
 
 
 @pytest.mark.parametrize("case", _GENERATION_CASES, ids=lambda case: case.name)
@@ -1152,4 +1210,4 @@ def test_successful_generation_value_survives_invalidate_and_reload(
 
     assert waiter_values == [owner_values[0]]
     assert calls == 2
-    assert not relation._outcomes
+    assert not relation._generation_state.outcomes

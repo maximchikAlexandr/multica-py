@@ -7,5 +7,3 @@ class Label(_BoundEntity):  # type: ignore[misc]
     id: str
     name: str
     color: str | None = None
-
-    _PUBLIC_FIELDS = ("id", "name", "color")

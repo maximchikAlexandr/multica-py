@@ -372,7 +372,7 @@ def test_task_run_messages_command_delegates_to_issue_resource(
     resource = IssueResource(mock_transport, ClientConfig())
     resource._set_client(client)
     client.issues = resource
-    task_run = TaskRun(id="run1", status="completed", _client=client, _issue_id="i1")
+    task_run = TaskRun(id="run1", status="completed", _client=client, issue_id="i1")
 
     command = task_run.messages_command()
 
@@ -388,7 +388,7 @@ def test_task_run_messages_relation_command_delegates_to_issue_resource(
     resource = IssueResource(mock_transport, ClientConfig())
     resource._set_client(client)
     client.issues = resource
-    task_run = TaskRun(id="run1", status="completed", _client=client, _issue_id="i1")
+    task_run = TaskRun(id="run1", status="completed", _client=client, issue_id="i1")
 
     command = task_run.messages.all_command()
 

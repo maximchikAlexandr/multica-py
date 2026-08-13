@@ -8,15 +8,11 @@ import msgspec
 from multica_py._generated.approved_sdk import (
     MAX_CLI_VERSION,
     MIN_CLI_VERSION,
-    TARGET_VERSION,
 )
-from multica_py._internal.compatibility_models import CliCompatMatrix
 from multica_py.compatibility import CliVersion
 from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import UnsupportedCliVersionError
-
-COMPATIBILITY_SCHEMA_VERSION = 1
 
 _SEMVER_PATTERN = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$")
 _WARNED_NEWER = False
@@ -60,20 +56,6 @@ def _parse_semver(version: str) -> tuple[int, int, int] | None:
 
 def _load_supported_bounds() -> tuple[str, str]:
     return MIN_CLI_VERSION, MAX_CLI_VERSION
-
-
-def default_policy(sdk_version: str) -> CliCompatMatrix:
-    min_version, max_version = _load_supported_bounds()
-    return CliCompatMatrix(
-        schema_version=COMPATIBILITY_SCHEMA_VERSION,
-        sdk_version=sdk_version or TARGET_VERSION,
-        min_cli_version=min_version,
-        max_cli_version=max_version,
-    )
-
-
-def supported_range_text(policy: CliCompatMatrix) -> str:
-    return f"{policy.min_cli_version} <= cli < {policy.max_cli_version}"
 
 
 def _check_supported_version_text(

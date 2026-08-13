@@ -17,6 +17,8 @@ from multica_py.exceptions import (
     CommandExecutionError,
     CommandTimeoutError,
     ConflictError,
+    ExecutableNotFoundError,
+    ExecutableNotRunnableError,
     NetworkError,
     NotFoundError,
     UnsupportedCliVersionError,
@@ -769,3 +771,53 @@ def test_transport_command_timeout_propagates() -> None:
     transport._execute = _raise_timeout  # type: ignore[assignment,method-assign]
     with pytest.raises(CommandTimeoutError):
         transport.run_text(("issue", "list"))
+
+
+@pytest.mark.parametrize(
+    ("process_error", "expected_error"),
+    (
+        (FileNotFoundError(), ExecutableNotFoundError),
+        (PermissionError(), ExecutableNotRunnableError),
+    ),
+    ids=("not-found", "not-runnable"),
+)
+def test_transport_execution_maps_process_start_errors(
+    monkeypatch: pytest.MonkeyPatch,
+    process_error: OSError,
+    expected_error: type[Exception],
+) -> None:
+    def fail_start(*args: object, **kwargs: object) -> CompletedProcess[bytes]:
+        del args, kwargs
+        raise process_error
+
+    monkeypatch.setattr("multica_py._internal.transport.run_with_timeout", fail_start)
+    transport = CliTransport(ClientConfig(executable="missing-multica"))
+
+    with pytest.raises(expected_error, match="missing-multica"):
+        transport._execute(("issue", "list"), check_compat=False)
+
+
+@pytest.mark.parametrize(
+    ("process_error", "expected_error"),
+    (
+        (FileNotFoundError(), ExecutableNotFoundError),
+        (PermissionError(), ExecutableNotRunnableError),
+    ),
+    ids=("not-found", "not-runnable"),
+)
+def test_transport_spawn_maps_process_start_errors(
+    monkeypatch: pytest.MonkeyPatch,
+    process_error: OSError,
+    expected_error: type[Exception],
+) -> None:
+    def fail_start(*args: object, **kwargs: object) -> object:
+        del args, kwargs
+        raise process_error
+
+    monkeypatch.setattr("multica_py._internal.transport.create_process", fail_start)
+    transport = CliTransport(
+        ClientConfig(executable="missing-multica", compatibility=CompatibilityPolicy.ignore)
+    )
+
+    with pytest.raises(expected_error, match="missing-multica"):
+        transport.spawn(("issue", "list"))

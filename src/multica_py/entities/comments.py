@@ -23,8 +23,6 @@ class Comment(_BoundEntity):  # type: ignore[misc]
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
 
-    _PUBLIC_FIELDS = ("id", "body", "thread_id", "author_id", "created_at", "updated_at")
-
 
 class CommentThread(_BoundEntity):  # type: ignore[misc]
     id: str
@@ -33,9 +31,6 @@ class CommentThread(_BoundEntity):  # type: ignore[misc]
 
     issue_id: str | None = msgspec.field(default=None, name="_issue_id")
     _comments: CursorLazyCollection[Comment] | None = msgspec.field(default=None, name="_comments")
-
-    _RUNTIME_INIT_FIELDS = ("issue_id",)
-    _PUBLIC_FIELDS = ("id", "resolved", "updated_at")
 
     @property
     def comments(self) -> CursorLazyCollection[Comment]:
