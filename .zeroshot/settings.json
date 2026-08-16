@@ -1,0 +1,17 @@
+{
+  "github": {
+    "prBase": "main"
+  },
+  "worktree": {
+    "baseRef": "HEAD"
+  },
+  "commandProofs": [
+    {
+      "id": "project-pr",
+      "profile": "pr",
+      "scope": "repo",
+      "description": "Full repository pull-request verification",
+      "command": "make pr"
+    }
+  ]
+}
