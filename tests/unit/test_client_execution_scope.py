@@ -13,7 +13,13 @@ import pytest
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
-from multica_py.execution import CommandExecutor, ExecutionRequest, ExecutionResult, ProcessHandle
+from multica_py.execution import (
+    CommandExecutor,
+    ExecutionRequest,
+    ExecutionResult,
+    OutputArtifact,
+    ProcessHandle,
+)
 from multica_py.models.system import AttachmentResult
 
 
@@ -45,6 +51,25 @@ class _Executor:
             yield str(path)
         finally:
             path.unlink()
+            directory.rmdir()
+
+    @contextlib.contextmanager
+    def capture_output(self, label: str) -> Iterator[OutputArtifact]:
+        directory = Path.cwd() / f".test-output-{label}"
+        directory.mkdir()
+
+        @dataclass
+        class Artifact:
+            path: str
+
+            def read(self, returned_path: str) -> bytes:
+                return (directory / returned_path).read_bytes()
+
+        try:
+            yield Artifact(str(directory))
+        finally:
+            for output in directory.iterdir():
+                output.unlink()
             directory.rmdir()
 
     def close(self) -> None:

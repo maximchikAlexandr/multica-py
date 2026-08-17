@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import math
 import os
-import pathlib
 from collections.abc import Mapping
 from typing import cast
 from urllib.parse import urlparse
@@ -91,12 +90,12 @@ def _normalize_timeout(
 
 def _normalize_cwd(
     value: str | os.PathLike[str] | None | UnsetType,
-) -> pathlib.Path | None | UnsetType:
+) -> str | None | UnsetType:
     if value is Unset or value is None:
         return value
     if not isinstance(value, (str, os.PathLike)):
         raise TypeError("cwd must be a string, path-like value, or None")
-    return pathlib.Path(value)
+    return os.fspath(value)
 
 
 def _normalize_executable(value: str | os.PathLike[str]) -> str:

@@ -105,7 +105,10 @@ as each provider lands, and run the complete offline gate once before delivery.
   the yielded string is a target-local path, and leaving the context removes
   the staged content. Path-like uploads use this path for every executor; no
   `is_local` capability or provider branch is added to `_CommandPlan`. This is
-  not a general remote-filesystem SDK.
+  not a general remote-filesystem SDK. SDK-owned command outputs use the bounded
+  `capture_output(label) -> ContextManager[OutputArtifact]`: it provides one
+  target output directory, reads only a path returned beneath that directory,
+  and removes it on exit; it is not arbitrary remote filesystem access.
 - `Command[T]` previews continue to render the logical Multica CLI command
   only (e.g. `multica --profile automation issue get MUL-123 --output json`);
   they MUST NOT render `ssh` or any provider wrapper. Direct

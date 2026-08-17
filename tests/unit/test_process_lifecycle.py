@@ -392,7 +392,7 @@ def test_managed_process_result_zero_timeout_is_forwarded_and_retryable() -> Non
         managed.result(datetime.timedelta(0))
 
     assert managed._result is None
-    assert managed._output_mode == "buffered"
+    assert managed._output.mode == "buffered"
     assert not managed._closed
     semaphore.release.assert_not_called()
     process.stdout.close.assert_not_called()
@@ -425,7 +425,7 @@ def test_managed_process_communicate_exception_preserves_live_process_ownership(
         managed.result()
 
     assert managed._result is None
-    assert managed._output_mode == "buffered"
+    assert managed._output.mode == "buffered"
     assert not managed._closed
     semaphore.release.assert_not_called()
     process.stdin.close.assert_not_called()
@@ -511,6 +511,6 @@ def test_managed_process_signals_without_finalizing_before_result() -> None:
         managed.kill()
         assert managed.result().stdout == "out"
 
-    terminate.assert_called_once_with(process)
-    kill.assert_called_once_with(process)
+    assert terminate.call_args_list.count(call(process)) == 1
+    assert kill.call_args_list.count(call(process)) == 1
     semaphore.release.assert_called_once_with()

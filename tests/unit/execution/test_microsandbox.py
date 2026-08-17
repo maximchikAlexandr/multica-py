@@ -19,7 +19,12 @@ from multica_py.execution import (
     ExecutionTargetNotFoundError,
     ExecutionUnavailableError,
 )
-from multica_py.execution.microsandbox import MicrosandboxExecutor, _SandboxFactory
+from multica_py.execution.microsandbox import (
+    MicrosandboxExecutor,
+    _MicrosandboxBindings,
+    _MicrosandboxErrorTypes,
+    _SandboxFactory,
+)
 
 
 @dataclass(frozen=True)
@@ -76,13 +81,34 @@ class _Exec:
 class _Fs:
     files: dict[str, bytes] = field(default_factory=dict)
     removed: list[str] = field(default_factory=list)
+    mkdir_error: Exception | None = None
 
     async def write(self, path: str, data: bytes) -> None:
         self.files[path] = data
 
     async def remove(self, path: str) -> None:
         self.removed.append(path)
-        del self.files[path]
+        self.files.pop(path, None)
+
+    async def read(self, path: str) -> bytes:
+        return self.files[path]
+
+    async def mkdir(self, path: str) -> None:
+        if self.mkdir_error is not None:
+            raise self.mkdir_error
+
+    async def remove_dir(self, path: str) -> None:
+        return None
+
+    async def stat(self, path: str) -> object:
+        return type("Metadata", (), {"kind": "file"})()
+
+    async def list(self, path: str) -> list[object]:
+        return [
+            type("Entry", (), {"path": file_path})()
+            for file_path in self.files
+            if file_path.startswith(path)
+        ]
 
 
 @dataclass
@@ -173,6 +199,16 @@ def _factory_type(factory: _Factory) -> type[_SandboxFactory]:
     return cast("type[_SandboxFactory]", Factory)
 
 
+def _bindings(
+    factory: _Factory | type[_SandboxFactory], provider_module: object | None = None
+) -> _MicrosandboxBindings:
+    sandbox_factory = factory if isinstance(factory, type) else _factory_type(factory)
+    return _MicrosandboxBindings(
+        sandbox_factory,
+        _MicrosandboxErrorTypes(provider_module if provider_module is not None else object()),
+    )
+
+
 def _request() -> ExecutionRequest:
     return ExecutionRequest(
         argv=("multica", "issue", "get", "MYL-42"),
@@ -185,7 +221,7 @@ def _request() -> ExecutionRequest:
 
 def test_connects_existing_sandbox_and_maps_run_on_private_loop() -> None:
     factory = _Factory()
-    executor = MicrosandboxExecutor("existing", _sandbox_factory=_factory_type(factory))
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
 
     result = executor.run(_request())
 
@@ -210,9 +246,30 @@ def test_connects_existing_sandbox_and_maps_run_on_private_loop() -> None:
     executor.close()
 
 
+def test_capture_output_rejects_path_traversal() -> None:
+    factory = _Factory()
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
+    with executor.capture_output("download") as artifact, pytest.raises(ValueError):
+        artifact.read("../outside")
+    executor.close()
+
+
+def test_capture_output_mkdir_failure_preserves_original_error_without_cleanup() -> None:
+    factory = _Factory()
+    factory.sandbox.fs.mkdir_error = RuntimeError("mkdir failed")
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
+    with (
+        pytest.raises(ExecutionUnavailableError, match="mkdir failed"),
+        executor.capture_output("download"),
+    ):
+        pass
+    assert factory.sandbox.fs.removed == []
+    executor.close()
+
+
 def test_spawn_uses_native_collect_streaming_and_per_command_signals() -> None:
     factory = _Factory()
-    executor = MicrosandboxExecutor("existing", _sandbox_factory=_factory_type(factory))
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
 
     buffered = executor.spawn(_request())
     assert buffered.id == "exec-42"
@@ -231,6 +288,14 @@ def test_spawn_uses_native_collect_streaming_and_per_command_signals() -> None:
     executor.close()
 
 
+class _Errors:
+    class SandboxNotFoundError(Exception): ...
+
+    class SandboxNotRunningError(Exception): ...
+
+    class CloudHttpError(Exception): ...
+
+
 @pytest.mark.parametrize(
     ("exit_code", "expected"),
     [(127, ExecutableNotFoundError), (126, ExecutableNotRunnableError)],
@@ -241,7 +306,7 @@ def test_posix_executable_exit_statuses_are_mapped_for_run_and_collect(
     factory = _Factory()
     factory.sandbox.output = _Output(exit_code, b"provider stdout", b"provider stderr")
     factory.sandbox.exec_handle.output = _Output(exit_code, b"provider stdout", b"provider stderr")
-    executor = MicrosandboxExecutor("existing", _sandbox_factory=_factory_type(factory))
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
 
     with pytest.raises(expected, match="multica"):
         executor.run(_request())
@@ -252,7 +317,7 @@ def test_posix_executable_exit_statuses_are_mapped_for_run_and_collect(
 
 def test_staging_is_target_local_exact_and_cleaned() -> None:
     factory = _Factory()
-    executor = MicrosandboxExecutor("existing", _sandbox_factory=_factory_type(factory))
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
 
     with executor.stage("payload.bin", b"exact\x00bytes") as path:
         assert path.startswith("/tmp/multica-py-")
@@ -267,7 +332,7 @@ def test_staging_preserves_write_or_body_failure_when_cleanup_also_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     factory = _Factory()
-    executor = MicrosandboxExecutor("existing", _sandbox_factory=_factory_type(factory))
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
 
     async def write_failure(path: str, data: bytes) -> None:
         raise RuntimeError("write failed")
@@ -289,12 +354,17 @@ def test_staging_preserves_write_or_body_failure_when_cleanup_also_fails(
     monkeypatch.setattr(factory.sandbox.fs, "remove", remove_failure)
     with pytest.raises(ValueError, match="body failed"), executor.stage("payload.bin", b"bytes"):
         raise ValueError("body failed")
+    with (
+        pytest.raises(ExecutionUnavailableError, match="remove failed"),
+        executor.stage("payload.bin", b"bytes"),
+    ):
+        pass
     executor.close()
 
 
 def test_close_detaches_only_without_destroying_sandbox() -> None:
     factory = _Factory()
-    executor = MicrosandboxExecutor("existing", _sandbox_factory=_factory_type(factory))
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
 
     executor.close()
     executor.close()
@@ -305,9 +375,9 @@ def test_close_detaches_only_without_destroying_sandbox() -> None:
 @pytest.mark.parametrize(
     ("error", "expected"),
     [
-        (type("SandboxNotFoundError", (Exception,), {})("missing"), ExecutionTargetNotFoundError),
-        (type("SandboxNotRunningError", (Exception,), {})("stopped"), ExecutionUnavailableError),
-        (type("CloudHttpError", (Exception,), {})("unreachable"), ExecutionConnectionError),
+        (_Errors.SandboxNotFoundError("missing"), ExecutionTargetNotFoundError),
+        (_Errors.SandboxNotRunningError("stopped"), ExecutionUnavailableError),
+        (_Errors.CloudHttpError("unreachable"), ExecutionConnectionError),
         (FileNotFoundError("multica"), ExecutableNotFoundError),
         (PermissionError("multica"), ExecutableNotRunnableError),
     ],
@@ -321,7 +391,10 @@ def test_provider_errors_use_execution_or_existing_executable_errors(
             raise error
 
     with pytest.raises(expected):
-        MicrosandboxExecutor("existing", _sandbox_factory=BrokenFactory)
+        MicrosandboxExecutor(
+            "existing",
+            _bindings=_bindings(cast("type[_SandboxFactory]", BrokenFactory), _Errors),
+        )
 
 
 def test_missing_extra_guidance_is_exact(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -345,7 +418,7 @@ def test_executor_never_calls_asyncio_run_on_caller_thread(monkeypatch: pytest.M
 
     monkeypatch.setattr(asyncio, "run", fail)
     factory = _Factory()
-    executor = MicrosandboxExecutor("existing", _sandbox_factory=_factory_type(factory))
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
 
     assert executor.run(_request()).exit_code == 0
     executor.close()

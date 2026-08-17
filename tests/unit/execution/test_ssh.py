@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import importlib
+import stat
 from collections import deque
 from dataclasses import dataclass, field
 
@@ -77,14 +78,19 @@ class _RemoteFile:
     path: str
     contents: bytes = b""
     closed: bool = False
+    read_only: bool = False
 
     def write(self, data: bytes) -> int:
         self.contents += data
         return len(data)
 
+    def read(self) -> bytes:
+        return self.files[self.path]
+
     def close(self) -> None:
         self.closed = True
-        self.files[self.path] = self.contents
+        if not self.read_only:
+            self.files[self.path] = self.contents
 
 
 @dataclass
@@ -94,12 +100,26 @@ class _Sftp:
     closed: bool = False
 
     def open(self, path: str, mode: str) -> _RemoteFile:
-        assert mode == "wb"
-        return _RemoteFile(self.files, path)
+        assert mode in {"wb", "rb"}
+        return _RemoteFile(self.files, path, read_only=mode == "rb")
 
     def remove(self, path: str) -> None:
         self.removed.append(path)
         del self.files[path]
+
+    def rmdir(self, path: str) -> None:
+        self.removed.append(path)
+
+    def lstat(self, path: str) -> object:
+        return type("Stat", (), {"st_mode": stat.S_IFREG})()
+
+    def listdir(self, path: str) -> list[str]:
+        prefix = f"{path}/"
+        return [
+            file_path.removeprefix(prefix)
+            for file_path in self.files
+            if file_path.startswith(prefix)
+        ]
 
     def close(self) -> None:
         self.closed = True
@@ -117,6 +137,7 @@ class _Client:
     sftp: _Sftp = field(default_factory=_Sftp)
     error: Exception | None = None
     exec_error: Exception | None = None
+    sftp_error: Exception | None = None
 
     def load_system_host_keys(self) -> None:
         self.host_keys_loaded = True
@@ -135,7 +156,10 @@ class _Client:
         self.calls.append((command, timeout, get_pty))
         if self.exec_error is not None:
             raise self.exec_error
-        if command == "mktemp /tmp/multica-py.XXXXXXXX":
+        if command in {
+            "mktemp /tmp/multica-py.XXXXXXXX",
+            "mktemp -d /tmp/multica-py-output.XXXXXXXX",
+        }:
             return self.stdin, _Output(b"/tmp/staged\n", self.channel), _Output(b"", self.channel)
         return (
             self.stdin,
@@ -144,6 +168,8 @@ class _Client:
         )
 
     def open_sftp(self) -> _Sftp:
+        if self.sftp_error is not None:
+            raise self.sftp_error
         return self.sftp
 
     def close(self) -> None:
@@ -157,6 +183,16 @@ class _Paramiko:
     class RejectPolicy: ...
 
     class AutoAddPolicy: ...
+
+    class BadHostKeyException(Exception): ...
+
+    class NoValidConnectionsError(Exception): ...
+
+    class AuthenticationException(Exception): ...
+
+    class SSHException(Exception): ...
+
+    class ChannelException(Exception): ...
 
     def SSHClient(self) -> _Client:
         return self.client
@@ -202,6 +238,7 @@ def test_connects_with_safe_host_key_verification_and_maps_run() -> None:
         "allow_agent": True,
         "look_for_keys": True,
         "timeout": None,
+        "disabled_algorithms": {"keys": ["ssh-rsa"], "pubkeys": ["ssh-rsa"]},
     }
     assert client.calls == [
         (
@@ -230,6 +267,15 @@ def test_connect_failure_closes_the_created_ssh_session() -> None:
         _executor(client)
 
     assert client.closed is True
+
+
+@pytest.mark.parametrize("error", [FileNotFoundError("key"), PermissionError("key")])
+def test_controller_connection_filesystem_errors_are_not_executable_errors(
+    error: Exception,
+) -> None:
+    client = _Client(error=error)
+    with pytest.raises(ExecutionConnectionError):
+        _executor(client)
 
 
 def test_controller_environment_is_not_serialized(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -315,6 +361,30 @@ def test_sftp_stage_writes_exact_bytes_and_cleans_up() -> None:
     executor.close()
 
 
+def test_capture_output_rejects_traversal_and_symlink(monkeypatch: pytest.MonkeyPatch) -> None:
+    executor, client = _executor()
+    with executor.capture_output("download") as artifact:
+        with pytest.raises(ValueError):
+            artifact.read("../outside")
+        monkeypatch.setattr(
+            client.sftp,
+            "lstat",
+            lambda _path: type("Stat", (), {"st_mode": stat.S_IFLNK})(),
+        )
+        with pytest.raises(ValueError):
+            artifact.read("result.bin")
+    executor.close()
+
+
+def test_capture_output_sftp_failure_happens_before_directory_creation() -> None:
+    client = _Client(sftp_error=RuntimeError("sftp failed"))
+    executor, _ = _executor(client)
+    with pytest.raises(RuntimeError, match="sftp failed"), executor.capture_output("download"):
+        pass
+    assert client.calls == []
+    executor.close()
+
+
 def test_stage_preserves_body_exception_when_cleanup_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     executor, client = _executor()
 
@@ -368,13 +438,11 @@ def test_serialize_ssh_command_rejects_empty_argv_and_cwd() -> None:
 @pytest.mark.parametrize(
     ("error", "expected"),
     [
-        (type("BadHostKeyException", (Exception,), {})("changed"), ExecutionConnectionError),
-        (type("NoValidConnectionsError", (Exception,), {})("refused"), ExecutionConnectionError),
-        (type("AuthenticationException", (Exception,), {})("denied"), ExecutionConnectionError),
-        (FileNotFoundError("multica"), ExecutableNotFoundError),
-        (PermissionError("multica"), ExecutableNotRunnableError),
-        (type("SSHException", (Exception,), {})("lost"), ExecutionUnavailableError),
-        (type("HostNotFoundError", (Exception,), {})("missing"), ExecutionTargetNotFoundError),
+        (_Paramiko.BadHostKeyException("changed"), ExecutionConnectionError),
+        (_Paramiko.NoValidConnectionsError("refused"), ExecutionConnectionError),
+        (_Paramiko.AuthenticationException("denied"), ExecutionConnectionError),
+        (_Paramiko.SSHException("lost"), ExecutionUnavailableError),
+        (_Paramiko.ChannelException("missing"), ExecutionTargetNotFoundError),
     ],
 )
 def test_provider_errors_are_mapped(error: Exception, expected: type[Exception]) -> None:

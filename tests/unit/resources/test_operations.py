@@ -161,8 +161,16 @@ def _approved_entrypoint(case: OperationCase, contract: ContractCatalog) -> Entr
 
 
 def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
-    if case.sdk_method in {"attachments.upload", "attachments.upload_bytes"}:
+    if case.sdk_method in {
+        "attachments.upload",
+        "attachments.upload_bytes",
+        "attachments.download_bytes",
+    }:
         mock_transport.executor = LocalExecutor()
+
+        if case.sdk_method == "attachments.download_bytes":
+            mock_transport.run_bytes.side_effect = case.transport_side_effect
+            return
 
         def staged_upload(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
             staged_path = pathlib.Path(argv[2])

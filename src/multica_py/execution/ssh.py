@@ -5,9 +5,11 @@ import datetime
 import importlib
 import re
 import shlex
+import stat
 import time
 from collections.abc import Iterator, Sequence
-from typing import Protocol, cast
+from pathlib import PurePosixPath
+from typing import Protocol, TypeGuard, cast
 
 from multica_py.exceptions import ExecutableNotFoundError, ExecutableNotRunnableError
 from multica_py.execution.base import (
@@ -17,10 +19,15 @@ from multica_py.execution.base import (
     ExecutionResult,
     ExecutionTargetNotFoundError,
     ExecutionUnavailableError,
+    OutputOwnership,
+    _cleanup_after,
+    executable_result,
 )
 
 _ENVIRONMENT_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 _STAGING_COMMAND = "mktemp /tmp/multica-py.XXXXXXXX"
+_OUTPUT_DIRECTORY_COMMAND = "mktemp -d /tmp/multica-py-output.XXXXXXXX"
+_DISABLED_ALGORITHMS: dict[str, list[str]] = {"keys": ["ssh-rsa"], "pubkeys": ["ssh-rsa"]}
 _monotonic = time.monotonic
 _sleep = time.sleep
 
@@ -55,6 +62,8 @@ class _Output(Protocol):
 class _RemoteFile(Protocol):
     def write(self, data: bytes) -> int: ...
 
+    def read(self) -> bytes: ...
+
     def close(self) -> None: ...
 
 
@@ -62,6 +71,12 @@ class _Sftp(Protocol):
     def open(self, path: str, mode: str = "r") -> _RemoteFile: ...
 
     def remove(self, path: str) -> None: ...
+
+    def rmdir(self, path: str) -> None: ...
+
+    def lstat(self, path: str) -> object: ...
+
+    def listdir(self, path: str) -> Sequence[str]: ...
 
     def close(self) -> None: ...
 
@@ -83,6 +98,7 @@ class _SshClient(Protocol):
         allow_agent: bool = True,
         look_for_keys: bool = True,
         passphrase: str | None = None,
+        disabled_algorithms: dict[str, list[str]] | None = None,
     ) -> None: ...
 
     def exec_command(
@@ -147,6 +163,7 @@ class _SshProcessHandle:
         stdin: _Input,
         stdout: _Output,
         stderr: _Output,
+        default_timeout: datetime.timedelta | None,
     ) -> None:
         self._executor = executor
         self._argv = argv
@@ -154,8 +171,9 @@ class _SshProcessHandle:
         self._stdout = stdout
         self._stderr = stderr
         self._channel = stdout.channel
+        self._default_timeout = default_timeout
         self._exit_code: int | None = None
-        self._output_mode: str | None = None
+        self._output = OutputOwnership()
 
     @property
     def id(self) -> None:
@@ -167,6 +185,7 @@ class _SshProcessHandle:
         return self._exit_code
 
     def wait(self, timeout: datetime.timedelta | None = None) -> int:
+        timeout = timeout if timeout is not None else self._default_timeout
         if timeout is not None:
             deadline = _monotonic() + timeout.total_seconds()
             while not self._channel.exit_status_ready():
@@ -186,15 +205,14 @@ class _SshProcessHandle:
             return self._exit_code
 
     def collect(self, timeout: datetime.timedelta | None = None) -> ExecutionResult:
-        self._claim_output("buffered")
+        self._output.claim("buffered")
         try:
+            timeout = timeout if timeout is not None else self._default_timeout
             self._channel.settimeout(_seconds(timeout))
             stdout = self._stdout.read()
             stderr = self._stderr.read()
             self._exit_code = self._channel.recv_exit_status()
-            return self._executor._result_or_executable_error(
-                ExecutionResult(self._exit_code, stdout, stderr), self._argv
-            )
+            return executable_result(ExecutionResult(self._exit_code, stdout, stderr), self._argv)
         except TimeoutError as error:
             self.close()
             raise TimeoutError("SSH process collection timed out; channel was closed") from error
@@ -210,22 +228,16 @@ class _SshProcessHandle:
         self.close()
 
     def stdout_lines(self) -> Iterator[str]:
-        self._claim_output("streaming")
+        self._output.claim("streaming")
         yield from (line.decode("utf-8") for line in self._stdout)
 
     def stderr_lines(self) -> Iterator[str]:
-        self._claim_output("streaming")
+        self._output.claim("streaming")
         yield from (line.decode("utf-8") for line in self._stderr)
 
     def close(self) -> None:
         self._stdin.close()
         self._channel.close()
-
-    def _claim_output(self, mode: str) -> None:
-        if self._output_mode is None:
-            self._output_mode = mode
-        elif self._output_mode != mode:
-            raise RuntimeError("Process output is already owned by another consumer")
 
 
 class SshExecutor:
@@ -255,6 +267,7 @@ class SshExecutor:
                 if _paramiko_module is not None
                 else _load_paramiko()
             )
+            self._provider_errors = _ProviderErrorTypes(paramiko)
             client = paramiko.SSHClient()
             client.load_system_host_keys()
             policy = paramiko.AutoAddPolicy() if allow_unknown_host_key else paramiko.RejectPolicy()
@@ -270,6 +283,7 @@ class SshExecutor:
                 allow_agent=allow_agent,
                 look_for_keys=look_for_keys,
                 timeout=_seconds(connection_timeout),
+                disabled_algorithms=_DISABLED_ALGORITHMS,
             )
         except Exception as error:
             if client is not None:
@@ -295,37 +309,42 @@ class SshExecutor:
                 stdin.write(request.stdin)
                 stdin.flush()
             stdin.close()
-            return _SshProcessHandle(self, request.argv, stdin, stdout, stderr)
+            return _SshProcessHandle(self, request.argv, stdin, stdout, stderr, request.timeout)
+        except FileNotFoundError as error:
+            # This path is reached only after a connected target accepts an exec request.
+            raise ExecutableNotFoundError(f"Executable not found: {request.argv[0]}") from error
+        except PermissionError as error:
+            raise ExecutableNotRunnableError(
+                f"Executable not runnable: {request.argv[0]}"
+            ) from error
         except Exception as error:
             raise self._map_error(error) from error
 
     @contextlib.contextmanager
     def stage(self, label: str, content: bytes) -> Iterator[str]:
-        sftp: _Sftp | None = None
-        path: str | None = None
-        body_error: BaseException | None = None
+        sftp = self._client.open_sftp()
         try:
-            path = self._new_staging_path()
-            sftp = self._client.open_sftp()
+            path = self._new_target_path(_STAGING_COMMAND)
             remote = sftp.open(path, "wb")
             try:
                 remote.write(content)
             finally:
                 remote.close()
-            yield path
-        except BaseException as error:
-            body_error = error
-            raise
+            with _cleanup_after(lambda: sftp.remove(path)):
+                yield path
         finally:
-            if sftp is not None:
-                try:
-                    if path is not None:
-                        sftp.remove(path)
-                except Exception:
-                    if body_error is None:
-                        raise
-                finally:
-                    sftp.close()
+            sftp.close()
+
+    @contextlib.contextmanager
+    def capture_output(self, label: str) -> Iterator[_SshOutputArtifact]:
+        sftp = self._client.open_sftp()
+        try:
+            path = self._new_target_path(_OUTPUT_DIRECTORY_COMMAND)
+            artifact = _SshOutputArtifact(sftp, path)
+            with _cleanup_after(artifact.cleanup):
+                yield artifact
+        finally:
+            sftp.close()
 
     def close(self) -> None:
         if self._closed:
@@ -339,11 +358,9 @@ class SshExecutor:
     def __exit__(self, *args: object) -> None:
         self.close()
 
-    def _new_staging_path(self) -> str:
+    def _new_target_path(self, command: str) -> str:
         try:
-            stdin, stdout, stderr = self._client.exec_command(
-                _STAGING_COMMAND, timeout=None, get_pty=False
-            )
+            stdin, stdout, stderr = self._client.exec_command(command, timeout=None, get_pty=False)
             stdin.close()
             path = stdout.read().decode("utf-8").strip()
             error = stderr.read().decode("utf-8")
@@ -353,18 +370,7 @@ class SshExecutor:
             raise ExecutionUnavailableError(error or "SSH target could not create a staging path")
         return path
 
-    @staticmethod
-    def _result_or_executable_error(
-        result: ExecutionResult, argv: tuple[str, ...]
-    ) -> ExecutionResult:
-        if result.exit_code == 127:
-            raise ExecutableNotFoundError(f"Executable not found: {argv[0]}")
-        if result.exit_code == 126:
-            raise ExecutableNotRunnableError(f"Executable not runnable: {argv[0]}")
-        return result
-
-    @staticmethod
-    def _map_error(error: Exception) -> Exception:
+    def _map_error(self, error: Exception) -> Exception:
         if isinstance(
             error,
             (
@@ -376,17 +382,67 @@ class SshExecutor:
             ),
         ):
             return error
-        if isinstance(error, FileNotFoundError):
-            return ExecutableNotFoundError(str(error))
-        if isinstance(error, PermissionError):
-            return ExecutableNotRunnableError(str(error))
-        if type(error).__name__ == "gaierror":
-            return ExecutionTargetNotFoundError(str(error))
-        name = type(error).__name__
-        if name in {"BadHostKeyException", "NoValidConnectionsError", "AuthenticationException"}:
+        if isinstance(error, (FileNotFoundError, PermissionError)):
             return ExecutionConnectionError(str(error))
-        if name in {"HostNotFoundError", "ChannelException"}:
+        if isinstance(error, OSError) and error.errno is not None:
             return ExecutionTargetNotFoundError(str(error))
-        if name in {"SSHException", "EOFError"}:
+        if isinstance(error, self._provider_errors.connection):
+            return ExecutionConnectionError(str(error))
+        if isinstance(error, self._provider_errors.target):
+            return ExecutionTargetNotFoundError(str(error))
+        if isinstance(error, self._provider_errors.unavailable):
             return ExecutionUnavailableError(str(error))
         return ExecutionConnectionError(str(error))
+
+
+class _ProviderErrorTypes:
+    def __init__(self, module: object) -> None:
+        self.connection = _types(
+            module, "BadHostKeyException", "NoValidConnectionsError", "AuthenticationException"
+        )
+        self.target = _types(module, "ChannelException")
+        self.unavailable = (*_types(module, "SSHException"), EOFError)
+
+
+def _types(module: object, *names: str) -> tuple[type[Exception], ...]:
+    result: list[type[Exception]] = []
+    for name in names:
+        value = cast("object", getattr(module, name, None))
+        if _is_exception_type(value):
+            result.append(value)
+    return tuple(result)
+
+
+def _is_exception_type(value: object) -> TypeGuard[type[Exception]]:
+    return type(value) is type and issubclass(cast("type[object]", value), Exception)  # type: ignore[misc]
+
+
+class _SshOutputArtifact:
+    def __init__(self, sftp: _Sftp, path: str) -> None:
+        self._sftp = sftp
+        self.path = path
+
+    def read(self, returned_path: str) -> bytes:
+        path = _direct_child(self.path, returned_path)
+        mode = cast("int", getattr(self._sftp.lstat(path), "st_mode"))
+        if not stat.S_ISREG(mode):
+            raise ValueError("downloaded path must be in the SDK-owned target output directory")
+        remote = self._sftp.open(path, "rb")
+        try:
+            return remote.read()
+        finally:
+            remote.close()
+
+    def cleanup(self) -> None:
+        for name in self._sftp.listdir(self.path):
+            self._sftp.remove(f"{self.path}/{name}")
+        self._sftp.rmdir(self.path)
+
+
+def _direct_child(root: str, returned_path: str) -> str:
+    candidate = PurePosixPath(returned_path)
+    root_path = PurePosixPath(root)
+    path = candidate if candidate.is_absolute() else root_path / candidate
+    if path.parent != root_path or path.name in {"", ".", ".."}:
+        raise ValueError("downloaded path must be in the SDK-owned target output directory")
+    return str(path)

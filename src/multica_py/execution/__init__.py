@@ -6,6 +6,7 @@ from multica_py.execution.base import (
     ExecutionResult,
     ExecutionTargetNotFoundError,
     ExecutionUnavailableError,
+    OutputArtifact,
     ProcessHandle,
 )
 from multica_py.execution.local import LocalExecutor
@@ -19,5 +20,6 @@ __all__ = [
     "ExecutionTargetNotFoundError",
     "ExecutionUnavailableError",
     "LocalExecutor",
+    "OutputArtifact",
     "ProcessHandle",
 ]

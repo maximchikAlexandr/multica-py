@@ -23,11 +23,12 @@ from multica_py.execution import (
     ExecutionTargetNotFoundError,
     ExecutionUnavailableError,
     LocalExecutor,
+    OutputArtifact,
     ProcessHandle,
 )
 from multica_py.execution.microsandbox import MicrosandboxExecutor
 from multica_py.execution.ssh import SshExecutor
-from tests.unit.execution.test_microsandbox import _Event, _Factory, _factory_type, _Output
+from tests.unit.execution.test_microsandbox import _bindings, _Event, _Factory, _Output
 from tests.unit.execution.test_ssh import _Client as _SshClient
 from tests.unit.execution.test_ssh import _Paramiko
 
@@ -51,11 +52,39 @@ class _ConformanceRuntime:
     staged_cleaned: Callable[[str], bool]
     closed: Callable[[], bool]
     missing_executable: Callable[[], object]
+    write_output: Callable[[str, bytes], object]
+    assert_spawn_request: Callable[[CommandExecutor], None]
+
+
+def _assert_local_spawn_request(executor: CommandExecutor) -> None:
+    timed = executor.spawn(
+        ExecutionRequest(
+            argv=(
+                sys.executable,
+                "-c",
+                "import sys,time; sys.stdout.buffer.write(sys.stdin.buffer.read()); time.sleep(1)",
+            ),
+            stdin=b"exact\x00stdin",
+            timeout=datetime.timedelta(milliseconds=1),
+        )
+    )
+    with pytest.raises(TimeoutError):
+        timed.collect()
+    timed.kill()
+    assert timed.wait(datetime.timedelta(seconds=3)) != 0
+    timed.close()
 
 
 def _local_runtime() -> _ConformanceRuntime:
     cwd = os.fspath(Path.cwd())
-    executor = LocalExecutor()
+
+    class TrackingLocalExecutor(LocalExecutor):
+        closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    executor = TrackingLocalExecutor()
     return _ConformanceRuntime(
         executor=executor,
         run_request=ExecutionRequest(
@@ -78,10 +107,12 @@ def _local_runtime() -> _ConformanceRuntime:
         streaming_stdout=["out\n"],
         staged_contains=lambda path, content: Path(path).read_bytes() == content,
         staged_cleaned=lambda path: not Path(path).exists(),
-        closed=lambda: True,
+        closed=lambda: executor.closed,
         missing_executable=lambda: LocalExecutor().run(
             ExecutionRequest(argv=("multica-py-conformance-not-found",))
         ),
+        write_output=lambda path, content: Path(path).write_bytes(content),
+        assert_spawn_request=_assert_local_spawn_request,
     )
 
 
@@ -92,19 +123,33 @@ def _microsandbox_runtime() -> _ConformanceRuntime:
     factory.sandbox.exec_handle.events = deque(
         [_Event("stdout", b"out\n"), _Event("stderr", b"err\n"), _Event("exited")]
     )
-    executor = MicrosandboxExecutor("existing", _sandbox_factory=_factory_type(factory))
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
 
     missing_factory = _Factory()
     missing_factory.sandbox.run_error = FileNotFoundError("multica")
 
     def missing_executable() -> None:
-        missing_executor = MicrosandboxExecutor(
-            "existing", _sandbox_factory=_factory_type(missing_factory)
-        )
+        missing_executor = MicrosandboxExecutor("existing", _bindings=_bindings(missing_factory))
         try:
             missing_executor.run(ExecutionRequest(argv=("multica",)))
         finally:
             missing_executor.close()
+
+    def write_output(path: str, content: bytes) -> None:
+        factory.sandbox.fs.files[path] = content
+
+    def assert_spawn_request(executor: CommandExecutor) -> None:
+        executor.spawn(
+            ExecutionRequest(
+                argv=("multica", "logs"),
+                stdin=b"exact\x00stdin",
+                timeout=datetime.timedelta(seconds=7),
+            )
+        )
+        assert factory.sandbox.calls[-1] == (
+            "exec_stream",
+            ("multica", ["logs"], None, {}, 7.0, b"exact\x00stdin", False),
+        )
 
     return _ConformanceRuntime(
         executor=executor,
@@ -124,6 +169,8 @@ def _microsandbox_runtime() -> _ConformanceRuntime:
         staged_cleaned=lambda path: path not in factory.sandbox.fs.files,
         closed=lambda: factory.sandbox.detached,
         missing_executable=missing_executable,
+        write_output=write_output,
+        assert_spawn_request=assert_spawn_request,
     )
 
 
@@ -140,6 +187,20 @@ def _ssh_runtime() -> _ConformanceRuntime:
             missing_executor.run(ExecutionRequest(argv=("multica",)))
         finally:
             missing_executor.close()
+
+    def write_output(path: str, content: bytes) -> None:
+        client.sftp.files[path] = content
+
+    def assert_spawn_request(executor: CommandExecutor) -> None:
+        executor.spawn(
+            ExecutionRequest(
+                argv=("multica", "logs"),
+                stdin=b"exact\x00stdin",
+                timeout=datetime.timedelta(seconds=7),
+            )
+        )
+        assert client.calls[-1] == ("multica logs", 7.0, False)
+        assert client.stdin.written == b"exact\x00stdin"
 
     return _ConformanceRuntime(
         executor=executor,
@@ -159,6 +220,8 @@ def _ssh_runtime() -> _ConformanceRuntime:
         staged_cleaned=lambda path: path not in client.sftp.files,
         closed=lambda: client.closed,
         missing_executable=missing_executable,
+        write_output=write_output,
+        assert_spawn_request=assert_spawn_request,
     )
 
 
@@ -206,6 +269,7 @@ def test_executor_conformance_spawn_owns_output_once_and_has_opaque_identity(
             streaming.collect()
         assert streaming.wait() == 0
         streaming.close()
+        runtime.assert_spawn_request(runtime.executor)
     finally:
         runtime.executor.close()
 
@@ -222,6 +286,20 @@ def test_executor_conformance_staging_is_exact_and_cleaned(case: ExecutorFactory
     finally:
         runtime.executor.close()
     assert runtime.closed()
+
+
+@pytest.mark.parametrize("case", _EXECUTORS, ids=lambda case: case.id)
+def test_executor_conformance_captures_sdk_owned_output(case: ExecutorFactoryCase) -> None:
+    runtime = case.factory()
+    try:
+        with runtime.executor.capture_output("download") as artifact:
+            output_path = f"{artifact.path}/result.bin"
+            runtime.write_output(output_path, b"exact\x00bytes")
+            assert artifact.read(output_path) == b"exact\x00bytes"
+            with pytest.raises(ValueError):
+                artifact.read("/outside/result.bin")
+    finally:
+        runtime.executor.close()
 
 
 @pytest.mark.parametrize("case", _EXECUTORS, ids=lambda case: case.id)
@@ -256,6 +334,9 @@ def test_target_paths_use_fspath_without_controller_normalization(
 
         def stage(self, label: str, content: bytes) -> AbstractContextManager[str]:
             return nullcontext(f"/target/{label}")
+
+        def capture_output(self, label: str) -> AbstractContextManager[OutputArtifact]:
+            raise AssertionError(f"unexpected output capture: {label}")
 
         def close(self) -> None:
             return None

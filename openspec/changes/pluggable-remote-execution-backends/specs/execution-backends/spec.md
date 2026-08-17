@@ -4,7 +4,7 @@
 The SDK SHALL expose a provider-independent execution layer under
 `multica_py.execution` with a `CommandExecutor` protocol
 (`run(request) -> ExecutionResult`, `spawn(request) -> ProcessHandle`,
-`stage(label, content) -> ContextManager[str]`, `close()`), an immutable
+`stage(label, content) -> ContextManager[str]`, bounded `capture_output(label) -> ContextManager[OutputArtifact]`, `close()`), an immutable
 `ExecutionRequest` (argv, target-local cwd string, explicit environment
 overrides, optional stdin, optional timeout), and an immutable
 `ExecutionResult` (exit_code, stdout bytes, stderr bytes).

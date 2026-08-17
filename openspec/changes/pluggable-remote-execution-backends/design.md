@@ -310,6 +310,7 @@ class CommandExecutor(Protocol):
     def run(self, request: ExecutionRequest) -> ExecutionResult: ...
     def spawn(self, request: ExecutionRequest) -> ProcessHandle: ...
     def stage(self, label: str, content: bytes) -> ContextManager[str]: ...
+    def capture_output(self, label: str) -> ContextManager[OutputArtifact]: ...
     def close(self) -> None: ...
 ```
 
@@ -337,6 +338,12 @@ unconditional in the target" scenario and the `execution-backends` spec's
 "Local staging is a local temp dir" scenario. The SDK uses `stage` only for
 `${temp.path}` resolution in composite plans; it is not a general
 remote-filesystem SDK.
+
+**Bounded command output retrieval.** `capture_output(label)` creates one
+SDK-owned target output directory. Its artifact yields that directory path and
+may read only a direct child path reported by the CLI before context exit;
+cleanup removes the file and directory. It exists for `download_bytes`, not as
+a general filesystem facade.
 
 ### Exception hierarchy (`execution/base.py`)
 

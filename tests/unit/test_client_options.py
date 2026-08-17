@@ -37,7 +37,7 @@ _OPTION_OVERLAY_CASES = (
     OperationOptionOverlayCase(
         "timeout", "timeout", OperationOptions(timeout=2), datetime.timedelta(seconds=2)
     ),
-    OperationOptionOverlayCase("cwd", "cwd", OperationOptions(cwd=Path("scoped")), Path("scoped")),
+    OperationOptionOverlayCase("cwd", "cwd", OperationOptions(cwd=Path("scoped")), "scoped"),
     OperationOptionOverlayCase(
         "environment",
         "environment",
@@ -148,7 +148,7 @@ def test_operation_options_are_frozen_and_normalize_values() -> None:
     assert options.profile == "automation"
     assert options.workspace_id == "ws_1"
     assert options.timeout == datetime.timedelta(seconds=30)
-    assert options.cwd == Path("repo")
+    assert options.cwd == "./repo"
     assert options.environment == (("A", "1"), ("B", "2"))
     assert OperationOptions().profile is Unset
     with pytest.raises(AttributeError):
@@ -222,7 +222,7 @@ def test_with_options_is_isolated_and_shares_only_semaphore() -> None:
                 profile="automation",
                 workspace_id="ws_1",
                 timeout=datetime.timedelta(seconds=30),
-                cwd=Path("repo"),
+                cwd="./repo",
                 environment=(("A", "1"),),
             )
             assert scoped._semaphore is base._semaphore

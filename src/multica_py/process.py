@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Iterator
-from typing import Literal
 
 import msgspec
 
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py.exceptions import ProcessOutputModeError
 from multica_py.execution import ExecutionResult, ProcessHandle
+from multica_py.execution.base import OutputOwnership
 
 
 class ProcessResult(msgspec.Struct, frozen=True, forbid_unknown_fields=True):
@@ -26,9 +26,6 @@ class ProcessResult(msgspec.Struct, frozen=True, forbid_unknown_fields=True):
         return not self.ok
 
 
-_OutputMode = Literal["unclaimed", "buffered", "streaming", "discarded"]
-
-
 # ponytail: MUST be closed (use `with`) to release the process semaphore; __del__ is a backstop, not a primary path
 class ManagedProcess:
     def __init__(
@@ -41,16 +38,16 @@ class ManagedProcess:
         self._argv = argv
         self._semaphore = semaphore
         self._closed = False
-        self._output_mode: _OutputMode = "unclaimed"
+        self._output = OutputOwnership()
         self._result: ProcessResult | None = None
 
-    def _claim_mode(self, mode: Literal["buffered", "streaming"], consumer: str) -> None:
-        if self._output_mode == "unclaimed":
-            self._output_mode = mode
+    def _claim_mode(self, mode: str, consumer: str) -> None:
+        if self._output.mode is None:
+            self._output.claim(mode, lambda owner: ProcessOutputModeError(owner, consumer))
             return
-        if self._output_mode == mode:
+        if self._output.mode == mode:
             return
-        raise ProcessOutputModeError(self._output_mode, consumer)
+        raise ProcessOutputModeError(self._output.mode or "discarded", consumer)
 
     def _claim_buffered(self, consumer: str = "buffered result") -> None:
         self._claim_mode("buffered", consumer)
@@ -106,7 +103,7 @@ class ManagedProcess:
         try:
             result = self._make_result(execution_result)
         except BaseException:
-            self._output_mode = "discarded"
+            self._output.discard()
             self._finalize()
             raise
 
@@ -144,7 +141,7 @@ class ManagedProcess:
     def close(self) -> None:
         if self._closed:
             return
-        self._output_mode = "discarded"
+        self._output.discard()
         if self._handle.poll() is None:
             self.terminate()
             try:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import datetime
 import os
+import stat
 import subprocess
 import tempfile
 from collections.abc import Iterator
@@ -16,25 +17,16 @@ from multica_py._internal.processes import (
     terminate_process,
 )
 from multica_py.exceptions import ExecutableNotFoundError, ExecutableNotRunnableError
-from multica_py.execution.base import ExecutionRequest, ExecutionResult
-
-
-def _stdin_pipe(process: subprocess.Popen[bytes]) -> BinaryIO | None:
-    return cast("BinaryIO | None", process.stdin)
-
-
-def _stdout_pipe(process: subprocess.Popen[bytes]) -> BinaryIO | None:
-    return cast("BinaryIO | None", process.stdout)
-
-
-def _stderr_pipe(process: subprocess.Popen[bytes]) -> BinaryIO | None:
-    return cast("BinaryIO | None", process.stderr)
+from multica_py.execution.base import ExecutionRequest, ExecutionResult, OutputOwnership
 
 
 class LocalProcessHandle:
-    def __init__(self, process: subprocess.Popen[bytes]) -> None:
+    def __init__(
+        self, process: subprocess.Popen[bytes], *, default_timeout: datetime.timedelta | None = None
+    ) -> None:
         self._process = process
-        self._output_mode: str | None = None
+        self._default_timeout = default_timeout
+        self._output = OutputOwnership()
 
     @property
     def id(self) -> int:
@@ -45,15 +37,19 @@ class LocalProcessHandle:
 
     def wait(self, timeout: datetime.timedelta | None = None) -> int:
         try:
-            return self._process.wait(None if timeout is None else timeout.total_seconds())
+            effective_timeout = timeout if timeout is not None else self._default_timeout
+            return self._process.wait(
+                None if effective_timeout is None else effective_timeout.total_seconds()
+            )
         except subprocess.TimeoutExpired as error:
             raise TimeoutError("Process wait timed out") from error
 
     def collect(self, timeout: datetime.timedelta | None = None) -> ExecutionResult:
-        self._claim_output("buffered")
+        self._output.claim("buffered")
+        effective_timeout = timeout if timeout is not None else self._default_timeout
         try:
             stdout, stderr = self._process.communicate(
-                timeout=None if timeout is None else timeout.total_seconds()
+                timeout=None if effective_timeout is None else effective_timeout.total_seconds()
             )
         except subprocess.TimeoutExpired as error:
             raise TimeoutError("Process wait timed out") from error
@@ -73,16 +69,16 @@ class LocalProcessHandle:
         kill_process(self._process)
 
     def stdout_lines(self) -> Iterator[str]:
-        self._claim_output("streaming")
-        stdout = _stdout_pipe(self._process)
+        self._output.claim("streaming")
+        stdout = cast("BinaryIO | None", cast("object", self._process.stdout))
         if stdout is None:
             raise RuntimeError("Process stdout was not captured")
         for line in stdout:
             yield line.decode("utf-8")
 
     def stderr_lines(self) -> Iterator[str]:
-        self._claim_output("streaming")
-        stderr = _stderr_pipe(self._process)
+        self._output.claim("streaming")
+        stderr = cast("BinaryIO | None", cast("object", self._process.stderr))
         if stderr is None:
             raise RuntimeError("Process stderr was not captured")
         for line in stderr:
@@ -90,12 +86,6 @@ class LocalProcessHandle:
 
     def close(self) -> None:
         close_process_pipes(self._process)
-
-    def _claim_output(self, mode: str) -> None:
-        if self._output_mode is None:
-            self._output_mode = mode
-        elif self._output_mode != mode:
-            raise RuntimeError("Process output is already owned by another consumer")
 
 
 class LocalExecutor:
@@ -120,9 +110,15 @@ class LocalExecutor:
 
     def spawn(self, request: ExecutionRequest) -> LocalProcessHandle:
         try:
-            return LocalProcessHandle(
-                create_process(request.argv, cwd=request.cwd, env=self._environment(request))
-            )
+            process = create_process(request.argv, cwd=request.cwd, env=self._environment(request))
+            if request.stdin is not None:
+                stdin = cast("BinaryIO | None", cast("object", process.stdin))
+                if stdin is None:
+                    raise RuntimeError("Process stdin was not captured")
+                stdin.write(request.stdin)
+                stdin.close()
+                process.stdin = None
+            return LocalProcessHandle(process, default_timeout=request.timeout)
         except FileNotFoundError as error:
             raise ExecutableNotFoundError(f"Executable not found: {request.argv[0]}") from error
         except PermissionError as error:
@@ -138,6 +134,11 @@ class LocalExecutor:
                 staged.write(content)
             yield path
 
+    @contextlib.contextmanager
+    def capture_output(self, label: str) -> Iterator[_LocalOutputArtifact]:
+        with tempfile.TemporaryDirectory(prefix=f"multica-py-output-{label}-") as directory:
+            yield _LocalOutputArtifact(directory)
+
     def close(self) -> None:
         return None
 
@@ -151,3 +152,41 @@ class LocalExecutor:
         environment = dict(os.environ)
         environment.update(dict(request.environment))
         return environment
+
+
+class _LocalOutputArtifact:
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+    def read(self, returned_path: str) -> bytes:
+        output_path = _output_path(self.path, returned_path)
+        flags = os.O_RDONLY | os.O_NONBLOCK
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            descriptor = os.open(output_path, flags)
+        except OSError as error:
+            raise ValueError(
+                "downloaded path must be a regular file in the temporary output directory"
+            ) from error
+        try:
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                raise ValueError(
+                    "downloaded path must be a regular file in the temporary output directory"
+                )
+            with os.fdopen(descriptor, "rb", closefd=False) as output:
+                return output.read()
+        finally:
+            os.close(descriptor)
+
+
+def _output_path(root: str, returned_path: str) -> str:
+    candidate = returned_path if os.path.isabs(returned_path) else os.path.join(root, returned_path)
+    if (
+        os.path.dirname(candidate) != root
+        or os.path.basename(candidate) in {"", ".", ".."}
+        or os.path.islink(candidate)
+        or os.path.dirname(os.path.realpath(candidate)) != os.path.realpath(root)
+    ):
+        raise ValueError("downloaded path must stay in the temporary output directory")
+    return candidate

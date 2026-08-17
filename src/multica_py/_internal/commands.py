@@ -13,6 +13,7 @@ from multica_py._internal.redaction import (
 )
 from multica_py._internal.transport import CliTransport, _effective_environment
 from multica_py.config import ClientConfig
+from multica_py.execution import OutputArtifact
 
 __all__ = ["Command"]
 
@@ -27,7 +28,7 @@ _StepMode = Literal["run_bytes", "run_text", "spawn"]
 
 @dataclass(frozen=True, slots=True)
 class _StepRef:
-    kind: Literal["result", "temp"]
+    kind: Literal["result", "temp", "output"]
     field: str | None = None
     alias: str | None = None
 
@@ -61,6 +62,7 @@ class _CommandPlan(Generic[T_co]):
     finalize: Callable[[tuple[object, ...]], T_co]
     _temp_provider: _TempProvider | None = None
     _stage_provider: _StageProvider | None = None
+    _capture_output_label: str | None = None
     _run_override: Callable[[], T_co] | None = None
     _step_gate: Callable[[int, tuple[object, ...]], bool] | None = None
     _step_continuation: Callable[[int, tuple[object, ...]], _Step | None] | None = None
@@ -92,6 +94,7 @@ class _CommandPlan(Generic[T_co]):
             results: list[object] = []
             steps = list(self.steps)
             staged_path: str | None = None
+            output_artifact: OutputArtifact | None = None
             index = 0
             try:
                 while index < len(steps):
@@ -100,8 +103,8 @@ class _CommandPlan(Generic[T_co]):
                     step = steps[index]
                     argv = list(step.argv)
                     for position, ref in step.refs:
-                        resolved, staged_path = self._resolve_ref(
-                            ref, results, steps, staged_paths, staged_path
+                        resolved, staged_path, output_artifact = self._resolve_ref(
+                            ref, results, steps, staged_paths, staged_path, output_artifact
                         )
                         argv[position] = resolved
                     results.append(self._run_step(step, tuple(argv)))
@@ -110,6 +113,8 @@ class _CommandPlan(Generic[T_co]):
                         if next_step is not None:
                             steps.append(next_step)
                     index += 1
+                if output_artifact is not None:
+                    results.append(output_artifact)
                 return self.finalize(tuple(results))
             finally:
                 _cleanup_temp_provider(self._temp_provider)
@@ -139,7 +144,16 @@ class _CommandPlan(Generic[T_co]):
         steps: list[_Step],
         staged_paths: ExitStack,
         staged_path: str | None,
-    ) -> tuple[str, str | None]:
+        output_artifact: OutputArtifact | None,
+    ) -> tuple[str, str | None, OutputArtifact | None]:
+        if ref.kind == "output":
+            if self._capture_output_label is not None:
+                if output_artifact is None:
+                    output_artifact = staged_paths.enter_context(
+                        self.transport.executor.capture_output(self._capture_output_label)
+                    )
+                return output_artifact.path, staged_path, output_artifact
+            raise RuntimeError("command plan has an output reference without a provider")
         if ref.kind == "temp":
             if self._stage_provider is not None:
                 if staged_path is None:
@@ -147,10 +161,10 @@ class _CommandPlan(Generic[T_co]):
                     staged_path = staged_paths.enter_context(
                         self.transport.executor.stage(label, content)
                     )
-                return staged_path, staged_path
+                return staged_path, staged_path, output_artifact
             if self._temp_provider is None:
                 raise RuntimeError("command plan has a temp reference without a provider")
-            return self._temp_provider(), staged_path
+            return self._temp_provider(), staged_path, output_artifact
 
         if ref.alias is None:
             raise RuntimeError("result reference has no result alias")
@@ -158,7 +172,7 @@ class _CommandPlan(Generic[T_co]):
             if steps[index].result_alias == ref.alias:
                 if index >= len(results):
                     continue
-                return _result_field(results[index], ref.field), staged_path
+                return _result_field(results[index], ref.field), staged_path, output_artifact
         raise RuntimeError(f"unknown result reference {ref.alias!r}")
 
 
@@ -338,7 +352,7 @@ def _sequential_command(
 
 
 def _display_ref(ref: _StepRef) -> str:
-    if ref.kind == "temp":
+    if ref.kind in {"temp", "output"}:
         return "${temp.path}"
     alias = ref.alias or "result"
     field = ref.field or "value"

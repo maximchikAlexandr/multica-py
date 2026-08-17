@@ -3,8 +3,6 @@ from __future__ import annotations
 import io
 import os
 import pathlib
-import stat
-import tempfile
 from collections.abc import Buffer, Callable
 from typing import BinaryIO, cast, overload
 
@@ -17,6 +15,7 @@ from multica_py._internal.commands import Command, _Step, _StepRef
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
 from multica_py.config import OperationOptions
+from multica_py.execution import OutputArtifact
 from multica_py.models.system import AttachmentResult
 from multica_py.resources._base import BaseResource
 
@@ -61,50 +60,6 @@ def _stream_filename(stream: BinaryIO, filename: str | None) -> str:
 
 def _decode_download_path(data: bytes, *, command: str) -> pathlib.Path:
     return pathlib.Path(decode_json(data, str, command=command))
-
-
-def _read_downloaded_bytes(output_dir: pathlib.Path, returned_path: pathlib.Path) -> bytes:
-    if os.name == "nt":
-        raise OSError("download_bytes is not supported securely on Windows")
-    root = output_dir.resolve(strict=True)
-    if any(part == ".." for part in returned_path.parts):
-        raise ValueError("downloaded path must stay in the temporary output directory")
-    candidate = returned_path if returned_path.is_absolute() else root / returned_path
-    try:
-        relative_path = candidate.resolve(strict=True).relative_to(root)
-    except (OSError, ValueError) as error:
-        raise ValueError("downloaded path must stay in the temporary output directory") from error
-    if len(relative_path.parts) != 1:
-        raise ValueError("downloaded path must be a file in the temporary output directory")
-
-    try:
-        root_descriptor = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
-    except OSError as error:
-        raise ValueError(
-            "downloaded path must be a regular file in the temporary output directory"
-        ) from error
-    try:
-        try:
-            descriptor = os.open(
-                relative_path,
-                os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW,
-                dir_fd=root_descriptor,
-            )
-        except OSError as error:
-            raise ValueError(
-                "downloaded path must be a regular file in the temporary output directory"
-            ) from error
-        try:
-            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
-                raise ValueError(
-                    "downloaded path must be a regular file in the temporary output directory"
-                )
-            with os.fdopen(descriptor, "rb", closefd=False) as file:
-                return file.read()
-        finally:
-            os.close(descriptor)
-    finally:
-        os.close(root_descriptor)
 
 
 class AttachmentResource(BaseResource):
@@ -281,18 +236,18 @@ class AttachmentResource(BaseResource):
         self, attachment_id: str, *, options: OperationOptions | None = None
     ) -> Command[bytes]:
         _safe_leaf(attachment_id, "attachment_id")
-        temp_provider = _TempPathProvider()
         args = ("attachment", "download", attachment_id, "--output-dir", "", "--output", "json")
 
         def finalize(results: tuple[object, ...]) -> bytes:
             result = cast("RawCommandResult", results[0])
             returned_path = _decode_download_path(result.stdout, command=" ".join(result.argv))
-            return _read_downloaded_bytes(temp_provider.path, returned_path)
+            artifact = cast("OutputArtifact", results[1])
+            return artifact.read(str(returned_path))
 
         return self._plan(
-            steps=(_Step(args, "run_bytes", refs=((4, _StepRef(kind="temp")),)),),
+            steps=(_Step(args, "run_bytes", refs=((4, _StepRef(kind="output")),)),),
             finalize=finalize,
-            temp_provider=temp_provider,
+            capture_output_label="download",
             options=options,
         )
 
@@ -331,39 +286,3 @@ class _UploadSourceProvider:
             else:
                 raise RuntimeError("upload source has no content")
         return self._filename, self._content
-
-
-class _TempPathProvider:
-    def __init__(
-        self,
-        filename: str | None = None,
-        payload: Buffer | None = None,
-        stream: BinaryIO | None = None,
-    ) -> None:
-        self._filename = filename
-        self._payload = payload
-        self._stream = stream
-        self._directory: tempfile.TemporaryDirectory[str] | None = None
-
-    @property
-    def path(self) -> pathlib.Path:
-        if self._directory is None:
-            raise RuntimeError("temporary attachment directory has not been created")
-        return pathlib.Path(self._directory.name)
-
-    def __call__(self) -> str:
-        if self._directory is None:
-            self._directory = tempfile.TemporaryDirectory()
-            if self._filename is not None:
-                payload = self._stream.read() if self._stream is not None else self._payload
-                if not isinstance(payload, Buffer):
-                    raise TypeError("stream must yield bytes")
-                (self.path / self._filename).write_bytes(bytes(payload))
-        if self._filename is None:
-            return str(self.path)
-        return str(self.path / self._filename)
-
-    def cleanup(self) -> None:
-        if self._directory is not None:
-            self._directory.cleanup()
-            self._directory = None

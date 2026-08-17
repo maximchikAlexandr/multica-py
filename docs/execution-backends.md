@@ -89,6 +89,8 @@ Process control is provider-specific:
 
 `SshExecutor` rejects unknown host keys by default. Enable unknown keys only
 when the trust decision is explicit (`allow_unknown_host_key=True`).
+It also disables the legacy SHA-1 `ssh-rsa` host-key and public-key algorithms;
+this secure default is not configurable by callers.
 
 ## Adding a provider adapter
 

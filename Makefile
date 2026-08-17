@@ -49,7 +49,7 @@ package:
 	uv run pytest tests/packaging/ -v -o addopts="" -m packaging
 
 live:
-	uv run pytest -o addopts="" -q -m live_smoke tests/live/test_smoke.py
+	uv run pytest -o addopts="" -q -m live_smoke tests/live
 
 pr: lint types test mutation compat contract package
 

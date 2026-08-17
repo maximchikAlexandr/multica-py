@@ -8,7 +8,9 @@ import os
 import signal
 import threading
 import uuid
-from collections.abc import Coroutine, Iterator, Mapping
+from collections.abc import Coroutine, Iterator, Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import PurePosixPath
 from typing import Protocol, TypeVar, cast
 
 from multica_py.exceptions import ExecutableNotFoundError, ExecutableNotRunnableError
@@ -19,6 +21,9 @@ from multica_py.execution.base import (
     ExecutionResult,
     ExecutionTargetNotFoundError,
     ExecutionUnavailableError,
+    OutputOwnership,
+    _cleanup_after,
+    executable_result,
 )
 
 
@@ -62,6 +67,26 @@ class _SandboxFs(Protocol):
     async def write(self, path: str, data: bytes) -> None: ...
 
     async def remove(self, path: str) -> None: ...
+
+    async def read(self, path: str) -> bytes: ...
+
+    async def mkdir(self, path: str) -> None: ...
+
+    async def remove_dir(self, path: str) -> None: ...
+
+    async def stat(self, path: str) -> _FsMetadata: ...
+
+    async def list(self, path: str) -> Sequence[_FsEntry]: ...
+
+
+class _FsMetadata(Protocol):
+    @property
+    def kind(self) -> object: ...
+
+
+class _FsEntry(Protocol):
+    @property
+    def path(self) -> str: ...
 
 
 class _Sandbox(Protocol):
@@ -107,7 +132,13 @@ class _SandboxFactory(Protocol):
 _T = TypeVar("_T")
 
 
-def _load_sandbox_factory() -> type[_SandboxFactory]:
+@dataclass(frozen=True, slots=True)
+class _MicrosandboxBindings:
+    factory: type[_SandboxFactory]
+    errors: _MicrosandboxErrorTypes
+
+
+def _load_microsandbox() -> _MicrosandboxBindings:
     try:
         module = importlib.import_module("microsandbox")
     except ImportError as error:
@@ -115,20 +146,29 @@ def _load_sandbox_factory() -> type[_SandboxFactory]:
             "Microsandbox execution requires the optional 'microsandbox' dependency. "
             'Install it with: pip install "multica-py[microsandbox]"'
         ) from error
-    return cast("type[_SandboxFactory]", getattr(module, "Sandbox"))
+    try:
+        factory = cast("type[_SandboxFactory]", getattr(module, "Sandbox"))
+    except AttributeError as error:
+        raise ImportError("Installed microsandbox package does not expose Sandbox") from error
+    return _MicrosandboxBindings(factory, _MicrosandboxErrorTypes(module))
 
 
 class _MicrosandboxProcessHandle:
     """Per-command controls do not guarantee cleanup of command descendants."""
 
     def __init__(
-        self, executor: MicrosandboxExecutor, argv: tuple[str, ...], handle: _ExecHandle
+        self,
+        executor: MicrosandboxExecutor,
+        argv: tuple[str, ...],
+        handle: _ExecHandle,
+        default_timeout: datetime.timedelta | None,
     ) -> None:
         self._executor = executor
         self._argv = argv
         self._handle = handle
+        self._default_timeout = default_timeout
         self._exit_code: int | None = None
-        self._output_mode: str | None = None
+        self._output = OutputOwnership()
         self._stdout: list[bytes] = []
         self._stderr: list[bytes] = []
 
@@ -142,7 +182,8 @@ class _MicrosandboxProcessHandle:
     def wait(self, timeout: datetime.timedelta | None = None) -> int:
         try:
             exit_code, _success = self._executor._provider_call(
-                self._handle.wait(), timeout=self._seconds(timeout)
+                self._handle.wait(),
+                timeout=_seconds(timeout if timeout is not None else self._default_timeout),
             )
         except TimeoutError:
             self.kill()
@@ -151,17 +192,18 @@ class _MicrosandboxProcessHandle:
         return exit_code
 
     def collect(self, timeout: datetime.timedelta | None = None) -> ExecutionResult:
-        self._claim_output("buffered")
+        self._output.claim("buffered")
         try:
             output = self._executor._provider_call(
-                self._handle.collect(), timeout=self._seconds(timeout)
+                self._handle.collect(),
+                timeout=_seconds(timeout if timeout is not None else self._default_timeout),
             )
         except TimeoutError:
             self.kill()
             raise
         result = _result(output)
         self._exit_code = result.exit_code
-        return self._executor._result_or_executable_error(result, self._argv)
+        return executable_result(result, self._argv)
 
     def terminate(self) -> None:
         """Send SIGTERM to this command only; descendant cleanup is not guaranteed."""
@@ -172,11 +214,11 @@ class _MicrosandboxProcessHandle:
         self._executor._provider_call(self._handle.kill())
 
     def stdout_lines(self) -> Iterator[str]:
-        self._claim_output("streaming")
+        self._output.claim("streaming")
         yield from self._lines("stdout")
 
     def stderr_lines(self) -> Iterator[str]:
-        self._claim_output("streaming")
+        self._output.claim("streaming")
         yield from self._lines("stderr")
 
     def close(self) -> None:
@@ -198,16 +240,6 @@ class _MicrosandboxProcessHandle:
                 self._stderr.append(event.data)
             while queued:
                 yield queued.pop(0).decode("utf-8")
-
-    def _claim_output(self, mode: str) -> None:
-        if self._output_mode is None:
-            self._output_mode = mode
-        elif self._output_mode != mode:
-            raise RuntimeError("Process output is already owned by another consumer")
-
-    @staticmethod
-    def _seconds(timeout: datetime.timedelta | None) -> float | None:
-        return None if timeout is None else timeout.total_seconds()
 
 
 def _event_exit_code(event: _ExecEvent) -> int:
@@ -233,7 +265,7 @@ class MicrosandboxExecutor:
         sandbox: str,
         *,
         connection_timeout: datetime.timedelta | None = None,
-        _sandbox_factory: type[_SandboxFactory] | None = None,
+        _bindings: _MicrosandboxBindings | None = None,
     ) -> None:
         self._loop = asyncio.new_event_loop()
         self._ready = threading.Event()
@@ -242,8 +274,9 @@ class MicrosandboxExecutor:
         self._thread.start()
         self._ready.wait()
         try:
-            factory = _sandbox_factory if _sandbox_factory is not None else _load_sandbox_factory()
-            handle = self._call(factory.get(sandbox), timeout=_seconds(connection_timeout))
+            bindings = _bindings if _bindings is not None else _load_microsandbox()
+            self._provider_errors = bindings.errors
+            handle = self._call(bindings.factory.get(sandbox), timeout=_seconds(connection_timeout))
             self._sandbox = self._call(
                 handle.connect(timeout=_seconds(connection_timeout)),
                 timeout=_seconds(connection_timeout),
@@ -253,60 +286,49 @@ class MicrosandboxExecutor:
             raise self._map_error(error) from error
 
     def run(self, request: ExecutionRequest) -> ExecutionResult:
-        try:
-            output = self._call(
-                self._sandbox.exec(
-                    request.argv[0],
-                    list(request.argv[1:]),
-                    cwd=request.cwd,
-                    env=dict(request.environment),
-                    timeout=_seconds(request.timeout),
-                    stdin=request.stdin,
-                    tty=False,
-                ),
+        output = self._provider_call(
+            self._sandbox.exec(
+                request.argv[0],
+                list(request.argv[1:]),
+                cwd=request.cwd,
+                env=dict(request.environment),
                 timeout=_seconds(request.timeout),
-            )
-        except Exception as error:
-            raise self._map_error(error) from error
-        return self._result_or_executable_error(_result(output), request.argv)
+                stdin=request.stdin,
+                tty=False,
+            ),
+            timeout=_seconds(request.timeout),
+        )
+        return executable_result(_result(output), request.argv)
 
     def spawn(self, request: ExecutionRequest) -> _MicrosandboxProcessHandle:
-        try:
-            handle = self._call(
-                self._sandbox.exec_stream(
-                    request.argv[0],
-                    list(request.argv[1:]),
-                    cwd=request.cwd,
-                    env=dict(request.environment),
-                    timeout=_seconds(request.timeout),
-                    stdin=request.stdin,
-                    tty=False,
-                ),
+        handle = self._provider_call(
+            self._sandbox.exec_stream(
+                request.argv[0],
+                list(request.argv[1:]),
+                cwd=request.cwd,
+                env=dict(request.environment),
                 timeout=_seconds(request.timeout),
-            )
-        except Exception as error:
-            raise self._map_error(error) from error
-        return _MicrosandboxProcessHandle(self, request.argv, handle)
+                stdin=request.stdin,
+                tty=False,
+            ),
+            timeout=_seconds(request.timeout),
+        )
+        return _MicrosandboxProcessHandle(self, request.argv, handle, request.timeout)
 
     @contextlib.contextmanager
     def stage(self, label: str, content: bytes) -> Iterator[str]:
         path = f"/tmp/multica-py-{uuid.uuid4().hex}-{os.path.basename(label)}"
-        staged = False
-        body_error: BaseException | None = None
-        try:
-            self._provider_call(self._sandbox.fs.write(path, content))
-            staged = True
+        self._provider_call(self._sandbox.fs.write(path, content))
+        with _cleanup_after(lambda: self._provider_call(self._sandbox.fs.remove(path))):
             yield path
-        except BaseException as error:
-            body_error = error
-            raise
-        finally:
-            if staged:
-                try:
-                    self._provider_call(self._sandbox.fs.remove(path))
-                except Exception:
-                    if body_error is None:
-                        raise
+
+    @contextlib.contextmanager
+    def capture_output(self, label: str) -> Iterator[_MicrosandboxOutputArtifact]:
+        path = f"/tmp/multica-py-output-{uuid.uuid4().hex}"
+        self._provider_call(self._sandbox.fs.mkdir(path))
+        artifact = _MicrosandboxOutputArtifact(self, path)
+        with _cleanup_after(artifact.cleanup):
+            yield artifact
 
     def close(self) -> None:
         if self._closed:
@@ -351,8 +373,7 @@ class MicrosandboxExecutor:
         self._thread.join()
         self._loop.close()
 
-    @staticmethod
-    def _map_error(error: Exception) -> Exception:
+    def _map_error(self, error: Exception) -> Exception:
         if isinstance(
             error,
             (
@@ -368,25 +389,55 @@ class MicrosandboxExecutor:
             return ExecutableNotFoundError(str(error))
         if isinstance(error, PermissionError):
             return ExecutableNotRunnableError(str(error))
-        name = type(error).__name__
-        if name == "SandboxNotFoundError":
+        if isinstance(error, self._provider_errors.target):
             return ExecutionTargetNotFoundError(str(error))
-        if name in {"SandboxNotRunningError", "ExecFailedError"}:
+        if isinstance(error, self._provider_errors.unavailable):
             return ExecutionUnavailableError(str(error))
-        if name in {"CloudHttpError", "IoError"}:
+        if isinstance(error, self._provider_errors.connection):
             return ExecutionConnectionError(str(error))
         return ExecutionUnavailableError(str(error))
 
-    @staticmethod
-    def _result_or_executable_error(
-        result: ExecutionResult, argv: tuple[str, ...]
-    ) -> ExecutionResult:
-        if result.exit_code == 127:
-            raise ExecutableNotFoundError(f"Executable not found: {argv[0]}")
-        if result.exit_code == 126:
-            raise ExecutableNotRunnableError(f"Executable not runnable: {argv[0]}")
-        return result
+
+class _MicrosandboxErrorTypes:
+    def __init__(self, module: object) -> None:
+        self.target = _provider_types(module, "SandboxNotFoundError", "PathNotFoundError")
+        self.unavailable = _provider_types(module, "SandboxNotRunningError", "ExecFailedError")
+        self.connection = _provider_types(module, "CloudHttpError", "IoError")
+
+
+def _provider_types(module: object, *names: str) -> tuple[type[Exception], ...]:
+    types: list[type[Exception]] = []
+    for name in names:
+        value = cast("object", getattr(module, name, None))
+        if type(value) is type and issubclass(cast("type[object]", value), Exception):  # type: ignore[misc]
+            types.append(cast("type[Exception]", value))
+    return tuple(types)
 
 
 def _seconds(timeout: datetime.timedelta | None) -> float | None:
     return None if timeout is None else timeout.total_seconds()
+
+
+class _MicrosandboxOutputArtifact:
+    def __init__(self, executor: MicrosandboxExecutor, path: str) -> None:
+        self._executor = executor
+        self.path = path
+
+    def read(self, returned_path: str) -> bytes:
+        candidate = PurePosixPath(returned_path)
+        root = PurePosixPath(self.path)
+        path = candidate if candidate.is_absolute() else root / candidate
+        if path.parent != root or path.name in {"", ".", ".."}:
+            raise ValueError("downloaded path must be in the SDK-owned target output directory")
+        read_path = str(path)
+        metadata = self._executor._provider_call(self._executor._sandbox.fs.stat(read_path))
+        if getattr(metadata.kind, "value", metadata.kind) != "file":
+            raise ValueError(
+                "downloaded path must be a regular file in the SDK-owned target output directory"
+            )
+        return self._executor._provider_call(self._executor._sandbox.fs.read(read_path))
+
+    def cleanup(self) -> None:
+        for entry in self._executor._provider_call(self._executor._sandbox.fs.list(self.path)):
+            self._executor._provider_call(self._executor._sandbox.fs.remove(entry.path))
+        self._executor._provider_call(self._executor._sandbox.fs.remove_dir(self.path))

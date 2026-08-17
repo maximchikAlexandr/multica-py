@@ -293,7 +293,12 @@ class CliTransport:
 
         try:
             handle = self._executor.spawn(
-                ExecutionRequest(argv=argv, cwd=cwd, environment=environment)
+                ExecutionRequest(
+                    argv=argv,
+                    cwd=cwd,
+                    environment=environment,
+                    timeout=self._config.timeout,
+                )
             )
         except BaseException:
             if self._semaphore is not None:

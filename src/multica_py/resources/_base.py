@@ -96,6 +96,7 @@ class BaseResource:
         finalize: Callable[[tuple[object, ...]], T],
         temp_provider: _TempProvider | None = None,
         stage_provider: _StageProvider | None = None,
+        capture_output_label: str | None = None,
         options: OperationOptions | None = None,
     ) -> Command[T]:
         config_snapshot = self._effective_config(options)
@@ -108,6 +109,7 @@ class BaseResource:
                 finalize=finalize,
                 _temp_provider=temp_provider,
                 _stage_provider=stage_provider,
+                _capture_output_label=capture_output_label,
             )
         )
 
