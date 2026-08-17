@@ -9,6 +9,7 @@ from typing import Protocol, TypeVar
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions, _apply_operation_options
+from multica_py.execution import CommandExecutor, LocalExecutor
 from multica_py.models.relations import LazyLoadable
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
@@ -55,13 +56,18 @@ class MulticaClient:
     def __init__(
         self,
         config: ClientConfig | None = None,
+        *,
+        executor: CommandExecutor | None = None,
         _semaphore: ProcessSemaphore | None = None,
     ) -> None:
         if config is None:
             config = ClientConfig()
         self._config = config
         self._semaphore = _semaphore or ProcessSemaphore(config.max_processes)
-        self._transport = CliTransport(config, semaphore=self._semaphore)
+        self._executor = LocalExecutor() if executor is None else executor
+        self._owns_executor = executor is None
+        self._closed = False
+        self._transport = CliTransport(config, semaphore=self._semaphore, executor=self._executor)
 
         self.auth = AuthResource(self._transport, config)
         self.setup = SetupResource(self._transport, config)
@@ -125,6 +131,7 @@ class MulticaClient:
         )
         return MulticaClient(
             _apply_operation_options(self._config, options),
+            executor=self._executor,
             _semaphore=self._semaphore,
         )
 
@@ -201,5 +208,13 @@ class MulticaClient:
     def __enter__(self) -> MulticaClient:
         return self
 
-    def __exit__(self, *args: object) -> None:
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
         self._transport.close()
+        if self._owns_executor:
+            self._executor.close()
+
+    def __exit__(self, *args: object) -> None:
+        self.close()

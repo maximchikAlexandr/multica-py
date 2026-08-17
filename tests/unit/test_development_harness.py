@@ -47,7 +47,7 @@ def test_run_change_dry_run_validates_with_pinned_cli(tmp_path: Path) -> None:
     env["ZEROSHOT_BIN"] = str(zeroshot)
 
     result = subprocess.run(
-        [RUN_CHANGE, "--dry-run", "2026-08-13-pluggable-remote-execution-backends"],
+        [RUN_CHANGE, "--dry-run", "pluggable-remote-execution-backends"],
         cwd=ROOT,
         env=env,
         capture_output=True,

@@ -25,6 +25,7 @@ from multica_py.entities.projects import Project
 from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
 from multica_py.enums import IssueStatus, ProjectStatus
+from multica_py.execution import LocalExecutor
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter
 from multica_py.process import ManagedProcess
@@ -160,6 +161,29 @@ def _approved_entrypoint(case: OperationCase, contract: ContractCatalog) -> Entr
 
 
 def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
+    if case.sdk_method in {"attachments.upload", "attachments.upload_bytes"}:
+        mock_transport.executor = LocalExecutor()
+
+        def staged_upload(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
+            staged_path = pathlib.Path(argv[2])
+            assert staged_path.is_file()
+            expected_name, expected_content = (
+                ("manifest.json", b'{"x":1}')
+                if case.sdk_method == "attachments.upload_bytes"
+                else ("operations.py", pathlib.Path("tests/cases/operations.py").read_bytes())
+            )
+            assert staged_path.name == expected_name
+            assert staged_path.read_bytes() == expected_content
+            return RawCommandResult(
+                argv=tuple(case.expected_argv),
+                exit_code=case.exit_code,
+                stdout=case.stdout or b"{}",
+                stderr=case.stderr,
+                duration=datetime.timedelta(),
+            )
+
+        mock_transport.run_bytes.side_effect = staged_upload
+        return
     if case.transport_side_effect is not None:
         if case.transport_method == "run_bytes":
             mock_transport.run_bytes.side_effect = case.transport_side_effect

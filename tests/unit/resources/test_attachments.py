@@ -15,6 +15,7 @@ import pytest
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.execution import LocalExecutor
 from multica_py.models.system import AttachmentResult
 from multica_py.resources import attachments
 from multica_py.resources.attachments import AttachmentResource, UploadSource
@@ -126,9 +127,17 @@ ATTACHMENT_UNSAFE_CASES = tuple(
 )
 
 
+def _transport() -> MagicMock:
+    transport = MagicMock(spec=CliTransport)
+    transport.executor = LocalExecutor()
+    return transport
+
+
 @pytest.mark.parametrize("case", ATTACHMENT_CASES)
 def test_attachment_surface_uses_governed_argv(case: AttachmentCase) -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
+    if case.method == "upload":
+        _UPLOAD_PATH.write_bytes(b"path-payload")
     transport.run_bytes.return_value = RawCommandResult(
         argv=case.expected_argv,
         exit_code=0,
@@ -144,7 +153,13 @@ def test_attachment_surface_uses_governed_argv(case: AttachmentCase) -> None:
         assert isinstance(result, AttachmentResult)
     else:
         assert result == _OUTPUT_DIR / "file.txt"
-    transport.run_bytes.assert_called_once_with(case.expected_argv, stdin=None, timeout=None)
+    actual_argv = transport.run_bytes.call_args.args[0]
+    if case.method == "upload":
+        assert actual_argv[:2] == case.expected_argv[:2]
+        assert actual_argv[2].endswith(_UPLOAD_PATH.name)
+        assert actual_argv[3:] == case.expected_argv[3:]
+    else:
+        assert actual_argv == case.expected_argv
     transport.run_text.assert_not_called()
 
 
@@ -152,7 +167,7 @@ def test_attachment_surface_uses_governed_argv(case: AttachmentCase) -> None:
 def test_attachment_surface_rejects_invalid_context_before_transport(
     case: AttachmentValidationCase,
 ) -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     resource = AttachmentResource(transport, ClientConfig())
 
     with pytest.raises(ValueError):
@@ -195,7 +210,7 @@ class _UnreadableBytesIO(io.BytesIO):
 
 
 def test_unified_upload_accepts_bytes_and_binary_streams_lazily() -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     stream = _CountingBytesIO(b"stream-payload")
     seen: list[pathlib.Path] = []
@@ -228,7 +243,7 @@ def test_unified_upload_accepts_bytes_and_binary_streams_lazily() -> None:
 
 
 def test_unified_upload_derives_safe_stream_name_and_preserves_path_sources() -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     transport.run_bytes.return_value = RawCommandResult(
         argv=(), exit_code=0, stdout=_PAYLOAD, stderr=b"", duration=datetime.timedelta()
@@ -240,15 +255,13 @@ def test_unified_upload_derives_safe_stream_name_and_preserves_path_sources() ->
 
     assert stream_command.commands == ("multica attachment upload '${temp.path}' --output json",)
     assert stream.tell() == 0
-    assert path_command.commands == (
-        f"multica attachment upload {pathlib.Path('relative/file.txt').resolve()} --output json",
-    )
-    assert path_command._plan._temp_provider is None
+    assert path_command.commands == ("multica attachment upload '${temp.path}' --output json",)
+    assert path_command._plan._stage_provider is not None
     assert transport.run_bytes.call_count == 0
 
 
 def test_upload_bytes_alias_matches_unified_upload_preview_and_result() -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     payload = b"alias-payload"
     transport.run_bytes.return_value = RawCommandResult(
@@ -276,7 +289,7 @@ def test_upload_bytes_alias_matches_unified_upload_preview_and_result() -> None:
 def test_in_memory_upload_requires_filename_before_filesystem_or_transport(
     source: object,
 ) -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     resource = AttachmentResource(transport, ClientConfig())
 
     with pytest.raises(ValueError, match="filename"):
@@ -296,7 +309,7 @@ def test_in_memory_upload_requires_filename_before_filesystem_or_transport(
 def test_upload_rejects_text_or_closed_stream_before_execution(source: object) -> None:
     if isinstance(source, io.BytesIO):
         source.close()
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     resource = AttachmentResource(transport, ClientConfig())
 
     with pytest.raises(ValueError, match="stream"):
@@ -310,7 +323,7 @@ def test_upload_rejects_text_or_closed_stream_before_execution(source: object) -
     ("", "   ", ".", "..", "../payload.bin", "/absolute", "nested/file.bin", "nested\\file.bin"),
 )
 def test_unified_upload_rejects_unsafe_filenames_before_filesystem_access(filename: str) -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     resource = AttachmentResource(transport, ClientConfig())
 
     with pytest.raises(ValueError, match="filename"):
@@ -320,7 +333,7 @@ def test_unified_upload_rejects_unsafe_filenames_before_filesystem_access(filena
 
 
 def test_unified_upload_accepts_double_dot_basename() -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     resource = AttachmentResource(transport, ClientConfig())
 
@@ -330,7 +343,7 @@ def test_unified_upload_accepts_double_dot_basename() -> None:
 
 
 def test_unified_upload_failure_cleans_stream_temp_directory() -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     paths: list[pathlib.Path] = []
 
     def fail(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
@@ -353,7 +366,7 @@ def test_unified_upload_failure_cleans_stream_temp_directory() -> None:
 def test_attachment_byte_helpers_preserve_content_and_clean_temporary_files(
     case: AttachmentBytesCase,
 ) -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     temporary_directories: list[pathlib.Path] = []
 
     def complete(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
@@ -392,7 +405,7 @@ def test_attachment_byte_helpers_preserve_content_and_clean_temporary_files(
 def test_attachment_byte_helpers_propagate_failures_and_clean_temporary_files(
     case: AttachmentBytesCase,
 ) -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     temporary_directories: list[pathlib.Path] = []
 
     def fail(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
@@ -420,7 +433,7 @@ def test_attachment_byte_helpers_propagate_failures_and_clean_temporary_files(
 def test_attachment_byte_helpers_reject_unsafe_names_before_transport(
     case: AttachmentUnsafeCase,
 ) -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     resource = AttachmentResource(transport, ClientConfig())
 
     with pytest.raises(ValueError):
@@ -435,7 +448,7 @@ def test_attachment_byte_helpers_reject_unsafe_names_before_transport(
 
 @pytest.mark.parametrize("kind", ("outside", "parent", "symlink"))
 def test_download_bytes_rejects_untrusted_cli_paths(kind: str, tmp_path: pathlib.Path) -> None:
-    transport = MagicMock(spec=CliTransport)
+    transport = _transport()
     external = tmp_path / "external.bin"
     external.write_bytes(b"secret")
 

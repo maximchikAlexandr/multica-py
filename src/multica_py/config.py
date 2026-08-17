@@ -99,6 +99,12 @@ def _normalize_cwd(
     return pathlib.Path(value)
 
 
+def _normalize_executable(value: str | os.PathLike[str]) -> str:
+    if not isinstance(value, (str, os.PathLike)):
+        raise TypeError("executable must be a string or path-like value")
+    return os.fspath(value)
+
+
 def _normalize_environment(
     value: Mapping[str, str] | tuple[tuple[str, str], ...] | UnsetType,
 ) -> tuple[tuple[str, str], ...] | UnsetType:
@@ -141,13 +147,20 @@ class OperationOptions(msgspec.Struct, frozen=True, kw_only=True):
 
 
 class ClientConfig(msgspec.Struct, frozen=True, kw_only=True):
-    executable: pathlib.Path | str = "multica"
+    """CLI settings for the execution target.
+
+    ``executable`` and ``cwd`` name paths on that target. ``environment`` contains
+    explicit target-process overrides; it does not replace the executor's own
+    environment policy.
+    """
+
+    executable: str | os.PathLike[str] = "multica"
     server_url: str | None = None
     app_url: str | None = None
     workspace_slug: str | None = None
     workspace_id: str | None = None
     profile: str | None = None
-    cwd: pathlib.Path | None = None
+    cwd: str | os.PathLike[str] | None = None
     environment: tuple[tuple[str, str], ...] = ()
     timeout: datetime.timedelta | None = None
     compatibility: CompatibilityPolicy = CompatibilityPolicy.ignore
@@ -158,6 +171,8 @@ class ClientConfig(msgspec.Struct, frozen=True, kw_only=True):
     max_processes: int = 4
 
     def __post_init__(self) -> None:
+        msgspec.structs.force_setattr(self, "executable", _normalize_executable(self.executable))
+        msgspec.structs.force_setattr(self, "cwd", _normalize_cwd(self.cwd))
         if isinstance(self.environment, Mapping):
             msgspec.structs.force_setattr(self, "environment", _to_env_tuple(self.environment))
         if self.server_url is not None:

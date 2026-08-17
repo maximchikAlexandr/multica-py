@@ -412,7 +412,7 @@ def test_server_url_query_secret_is_redacted_across_public_surfaces(
             stderr=f"stderr {query_secret}".encode(),
         )
 
-    monkeypatch.setattr("multica_py._internal.transport.run_with_timeout", fake_run_with_timeout)
+    monkeypatch.setattr("multica_py.execution.local.run_with_timeout", fake_run_with_timeout)
     transport = CliTransport(config)
     with pytest.raises(NetworkError) as excinfo:
         transport.run_text(("auth", "status"))
@@ -646,7 +646,7 @@ def test_transport_error_message_redacts_detail_and_keeps_actual_subprocess_argv
         executed.append(argv)
         return CompletedProcess(argv, 1, stdout=b"", stderr=f"Request conflict: {secret}".encode())
 
-    monkeypatch.setattr("multica_py._internal.transport.run_with_timeout", fake_run_with_timeout)
+    monkeypatch.setattr("multica_py.execution.local.run_with_timeout", fake_run_with_timeout)
     transport = CliTransport(ClientConfig())
     with pytest.raises(ConflictError) as excinfo:
         transport.run_text(("auth", "login", "--token", secret))
@@ -790,7 +790,7 @@ def test_transport_execution_maps_process_start_errors(
         del args, kwargs
         raise process_error
 
-    monkeypatch.setattr("multica_py._internal.transport.run_with_timeout", fail_start)
+    monkeypatch.setattr("multica_py.execution.local.run_with_timeout", fail_start)
     transport = CliTransport(ClientConfig(executable="missing-multica"))
 
     with pytest.raises(expected_error, match="missing-multica"):
@@ -814,7 +814,7 @@ def test_transport_spawn_maps_process_start_errors(
         del args, kwargs
         raise process_error
 
-    monkeypatch.setattr("multica_py._internal.transport.create_process", fail_start)
+    monkeypatch.setattr("multica_py.execution.local.create_process", fail_start)
     transport = CliTransport(
         ClientConfig(executable="missing-multica", compatibility=CompatibilityPolicy.ignore)
     )

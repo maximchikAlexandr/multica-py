@@ -159,29 +159,29 @@ class AttachmentResource(BaseResource):
         _ = cast("object", ATTACHMENT_UPLOAD_BINDING)
         if task_id is not None:
             validate_nonblank(task_id)
-        temp_provider: _TempPathProvider | None = None
+        stage_provider: _UploadSourceProvider
         if isinstance(source, (str, os.PathLike)):
             if filename is not None:
                 raise ValueError("filename is only valid for in-memory uploads")
-            upload_arg = str(pathlib.Path(os.fspath(source)).resolve())
+            source_path = pathlib.Path(os.fspath(source))
+            stage_provider = _UploadSourceProvider(source_path.name, path=source_path)
         elif isinstance(source, Buffer):
             safe_filename = _safe_leaf(filename or "", "filename")
-            temp_provider = _TempPathProvider(filename=safe_filename, payload=source)
-            upload_arg = ""
+            stage_provider = _UploadSourceProvider(safe_filename, payload=bytes(source))
         else:
             stream = source
             safe_filename = _stream_filename(stream, filename)
-            temp_provider = _TempPathProvider(filename=safe_filename, stream=stream)
-            upload_arg = ""
-        args = ["attachment", "upload", upload_arg]
+            stage_provider = _UploadSourceProvider(safe_filename, stream=stream)
+        args = ["attachment", "upload", ""]
         if task_id is not None:
             args.extend(["--task", task_id])
         plan_args, decode = self._plan_decode(tuple(args), AttachmentResult)
-        refs = ((2, _StepRef(kind="temp")),) if temp_provider is not None else ()
         return self._plan(
-            steps=(_Step(plan_args, "run_bytes", refs=refs, decode=decode),),
+            steps=(
+                _Step(plan_args, "run_bytes", refs=((2, _StepRef(kind="temp")),), decode=decode),
+            ),
             finalize=lambda results: cast("AttachmentResult", results[0]),
-            temp_provider=temp_provider,
+            stage_provider=stage_provider,
             options=options,
         )
 
@@ -300,6 +300,37 @@ class AttachmentResource(BaseResource):
         self, attachment_id: str, *, options: OperationOptions | None = None
     ) -> bytes:
         return self.download_bytes_command(attachment_id, options=options).run()
+
+
+class _UploadSourceProvider:
+    def __init__(
+        self,
+        filename: str,
+        *,
+        path: pathlib.Path | None = None,
+        payload: bytes | None = None,
+        stream: BinaryIO | None = None,
+    ) -> None:
+        self._filename = _safe_leaf(filename, "filename")
+        self._path = path
+        self._payload = payload
+        self._stream = stream
+        self._content: bytes | None = None
+
+    def __call__(self) -> tuple[str, bytes]:
+        if self._content is None:
+            if self._path is not None:
+                self._content = self._path.read_bytes()
+            elif self._stream is not None:
+                payload = self._stream.read()
+                if not isinstance(payload, Buffer):
+                    raise TypeError("stream must yield bytes")
+                self._content = bytes(payload)
+            elif self._payload is not None:
+                self._content = self._payload
+            else:
+                raise RuntimeError("upload source has no content")
+        return self._filename, self._content
 
 
 class _TempPathProvider:
