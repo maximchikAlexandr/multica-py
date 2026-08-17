@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import datetime
 import os
-import pathlib
 from collections.abc import Callable
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import msgspec
 
-from multica_py._internal.commands import Command, _CommandPlan, _Step, _TempProvider
+from multica_py._internal.commands import (
+    Command,
+    _CommandPlan,
+    _StageProvider,
+    _Step,
+    _TempProvider,
+)
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.redaction import collect_secret_values, redact_text
 from multica_py._internal.specs import RawCommandResult, TextResult
@@ -40,7 +45,9 @@ def _validate_optional_string(value: object, field_name: str) -> None:
         raise TypeError(f"{field_name} must be a string or None")
 
 
-def _normalize_description_file(value: str | os.PathLike[str], *, cwd: pathlib.Path | None) -> str:
+def _normalize_description_file(
+    value: str | os.PathLike[str], *, cwd: str | os.PathLike[str] | None
+) -> str:
     try:
         raw_value = cast("str | bytes", os.fspath(value))
     except TypeError as error:
@@ -88,6 +95,8 @@ class BaseResource:
         steps: tuple[_Step, ...],
         finalize: Callable[[tuple[object, ...]], T],
         temp_provider: _TempProvider | None = None,
+        stage_provider: _StageProvider | None = None,
+        capture_output_label: str | None = None,
         options: OperationOptions | None = None,
     ) -> Command[T]:
         config_snapshot = self._effective_config(options)
@@ -99,6 +108,8 @@ class BaseResource:
                 steps=steps,
                 finalize=finalize,
                 _temp_provider=temp_provider,
+                _stage_provider=stage_provider,
+                _capture_output_label=capture_output_label,
             )
         )
 

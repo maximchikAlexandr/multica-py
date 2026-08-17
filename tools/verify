@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+profile=${1:-}
+[ "$#" -eq 0 ] || shift
+
+case "$profile" in
+  offline) target=test ;;
+  packaging) target=package ;;
+  targeted)
+    exec make --no-print-directory -C "$root" targeted PYTEST_ARGS="$*"
+    ;;
+  lint|types|mutation|compat|contract|live|pr) target=$profile ;;
+  *)
+    echo "usage: $0 {targeted|lint|types|offline|mutation|compat|contract|packaging|live|pr} [pytest args]" >&2
+    exit 2
+    ;;
+esac
+
+exec make --no-print-directory -C "$root" "$target"

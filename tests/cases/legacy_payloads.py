@@ -14,7 +14,7 @@ CURRENT_PAYLOAD_FINGERPRINTS: dict[str, str] = {
     "manual:agents.restore:canonical": "fd640d6790bef1180e3d5169818aadc33c5eafd3d9d93c6f2398827cea725054",
     "manual:agents.tasks:canonical": "335dcc5f35c4506be3b093131857836663e5f043425a12fe138a1acd948033bf",
     "manual:agents.avatar:canonical": "a57c0c77e6a2a5b76affc76bd9f3992882f8356af8ba311fbc4b08267da908dd",
-    "manual:attachments.upload:canonical": "7f5603d029603ec344cc6fe28a0915b4d2bac8d40b400d88c0bb352efdc80c60",
+    "manual:attachments.upload:canonical": "587b2cee0c1013d15eaae64ed480519c784cec3b827e6822e38a766cb276dfcd",
     "manual:attachments.download:canonical": "6ff3b2b53d1506c98a3021630234c75c8ff704679b84e731ab04e833d3d502ac",
     "generated:autopilots.list:default:canonical": "72e848fb863f4c7a2677f8394db5218c9b18de2c8bccadb95feebbfa8583ab7d",
     "generated:autopilots.get:default:canonical": "d073ab70008bbe53adaa0b91fac33491bb6ab5825291a6dc1fe06b51bd434191",

@@ -1,0 +1,84 @@
+#!/bin/sh
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd "$root"
+mode=--worktree
+dry_run=false
+background=false
+provider=codex
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --pr) mode=--pr ;;
+    --ship) mode=--ship ;;
+    --background) background=true ;;
+    --provider)
+      shift
+      [ "$#" -gt 0 ] || { echo "--provider requires a value" >&2; exit 2; }
+      provider=$1
+      ;;
+    --dry-run) dry_run=true ;;
+    -*) echo "unknown option: $1" >&2; exit 2 ;;
+    *) [ -z "${change:-}" ] || { echo "only one change ID is accepted" >&2; exit 2; }; change=$1 ;;
+  esac
+  shift
+done
+
+[ -n "${change:-}" ] || {
+  echo "usage: $0 [--pr|--ship] [--background] [--provider NAME] [--dry-run] <openspec-change-id>" >&2
+  exit 2
+}
+case "$change" in *[!A-Za-z0-9._-]*) echo "invalid change ID: $change" >&2; exit 2;; esac
+case "$provider" in *[!A-Za-z0-9._-]*) echo "invalid provider: $provider" >&2; exit 2;; esac
+
+change_dir="$root/openspec/changes/$change"
+for artifact in proposal.md design.md tasks.md; do
+  [ -s "$change_dir/$artifact" ] || { echo "missing required artifact: $change_dir/$artifact" >&2; exit 1; }
+done
+find "$change_dir/specs" -type f -name spec.md -print -quit 2>/dev/null | grep -q . || {
+  echo "missing required specs under $change_dir/specs" >&2
+  exit 1
+}
+openspec validate "$change" --strict
+
+if [ "$provider" = codex ]; then
+  command -v codex >/dev/null 2>&1 || { echo "Codex CLI is required for provider=codex" >&2; exit 1; }
+fi
+if [ "$mode" = --pr ] || [ "$mode" = --ship ]; then
+  gh auth status >/dev/null 2>&1 || { echo "authenticated GitHub CLI is required for $mode" >&2; exit 1; }
+fi
+
+version=$(cat "$root/tools/zeroshot/VERSION")
+zeroshot_bin=${ZEROSHOT_BIN:-zeroshot}
+installed=$($zeroshot_bin --version 2>/dev/null | sed -n 's/[^0-9]*\([0-9][0-9.]*\).*/\1/p' | head -1)
+[ "$installed" = "$version" ] || {
+  echo "Zeroshot $version is required (found: ${installed:-not installed}); run ./tools/zeroshot/bootstrap" >&2
+  exit 1
+}
+
+input=$(mktemp "${TMPDIR:-/tmp}/multica-openspec-${change}.XXXXXX.md")
+trap 'rm -f "$input"' EXIT HUP INT TERM
+{
+  printf '%s\n\n' '# Authoritative OpenSpec change'
+  printf 'Change: `%s`\nBase commit: `%s`\n\n' "$change" "$(git rev-parse HEAD)"
+  cat <<'EOF'
+The files below are authoritative. Do not change accepted architectural decisions or reinterpret MUST requirements. Implement only this change. Every MUST requirement needs reproducible evidence. Tests and code inspection alone do not automatically prove runtime behavior. The worker is not the final verifier. Repository-owned `make` targets are the authoritative verification interface.
+EOF
+  for file in "$change_dir/proposal.md" "$change_dir/design.md" $(find "$change_dir/specs" -type f -name spec.md | LC_ALL=C sort) "$change_dir/tasks.md"; do
+    printf '\n## FILE: %s\n\n' "${file#"$root/"}"
+    cat "$file"
+  done
+} > "$input"
+
+workflow="$root/tools/zeroshot/workflow.json"
+$zeroshot_bin config validate "$workflow"
+if [ "$dry_run" = true ]; then
+  printf 'validated change=%s zeroshot=%s provider=%s isolation=%s input_git_hash=' "$change" "$version" "$provider" "$mode"
+  git hash-object "$input"
+  exit 0
+fi
+if [ "$background" = true ]; then
+  exec "$zeroshot_bin" run "$input" --config "$workflow" "$mode" --provider "$provider" -d
+fi
+exec "$zeroshot_bin" run "$input" --config "$workflow" "$mode" --provider "$provider"

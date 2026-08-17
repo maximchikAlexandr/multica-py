@@ -44,7 +44,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 @pytest.fixture
 def mock_transport() -> MagicMock:
-    return MagicMock(spec=CliTransport)
+    transport = MagicMock(spec=CliTransport)
+    from multica_py.execution import LocalExecutor
+
+    transport.executor = LocalExecutor()
+    return transport
 
 
 @pytest.fixture

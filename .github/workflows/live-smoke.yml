@@ -35,6 +35,4 @@ jobs:
           test -n "$MULTICA_LIVE_SERVER_URL"
           test -n "$MULTICA_LIVE_WORKSPACE_ID"
           test -n "$MULTICA_LIVE_PROFILE"
-      - run: |
-          uv run pytest -o addopts="" -q \
-            -m live_smoke tests/live/test_smoke.py
+      - run: make live

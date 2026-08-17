@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+version=$(cat "$root/tools/zeroshot/VERSION")
+node_major=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || true)
+[ -n "$node_major" ] && [ "$node_major" -ge 22 ] || { echo "Node.js 22 or newer is required" >&2; exit 1; }
+npm install --global "@the-open-engine/zeroshot@$version"
+zeroshot providers set-default codex
+zeroshot config validate "$root/tools/zeroshot/workflow.json"

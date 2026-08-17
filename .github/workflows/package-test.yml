@@ -17,15 +17,8 @@ jobs:
           python-version: "3.12"
       - run: pip install uv
       - run: uv sync --frozen --all-groups
-      - name: Build
-        run: uv build
-      - name: Verify artifacts
-        run: |
-          ls dist/
-          test $(ls dist/*.whl | wc -l) -eq 1
-          test $(ls dist/*.tar.gz | wc -l) -eq 1
-      - name: Run packaging tests
-        run: uv run pytest tests/packaging/ -v -o addopts="" -m packaging
+      - name: Build and run packaging tests
+        run: make package
       - uses: actions/upload-artifact@v4
         with:
           name: dist

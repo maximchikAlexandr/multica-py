@@ -15,6 +15,7 @@ from multica_py._internal.processes import CancellationToken, run_with_timeout
 from multica_py.client import MulticaClient
 from multica_py.entities import Issue
 from multica_py.exceptions import CommandTimeoutError, ProcessOutputModeError
+from multica_py.execution.local import LocalProcessHandle
 from multica_py.process import ManagedProcess, ProcessResult
 from tests.fixtures.fake_multica import FakeMultica
 from tests.fixtures.process_state import ProcessState
@@ -38,7 +39,7 @@ def _managed_child(env: dict[str, str]) -> tuple[ManagedProcess, subprocess.Pope
         stderr=subprocess.PIPE,
         env=child_env,
     )
-    return ManagedProcess(process, argv=_child_argv()), process
+    return ManagedProcess(LocalProcessHandle(process), argv=_child_argv()), process
 
 
 def _wait_for_file(path: pathlib.Path) -> None:

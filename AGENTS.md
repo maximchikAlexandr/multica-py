@@ -84,6 +84,34 @@ uv run python scripts/upstream_contract.py check --approved contracts/sdk-contra
 Evidence is review-only. Only the approved contract may change public generated
 behaviour; all transient output belongs outside tracked directories.
 
+## Zeroshot Development Workflow
+
+After an OpenSpec change is approved and ready for implementation, start the
+worker and independent validators through the repository launcher:
+
+```sh
+./tools/zeroshot/run-change <openspec-change-id>
+```
+
+OpenSpec remains authoritative for requirements and architecture. The launcher
+passes its artifacts to Zeroshot verbatim and uses an isolated Git worktree.
+Use `--pr` only when the run should also create a pull request:
+
+```sh
+./tools/zeroshot/run-change --pr <openspec-change-id>
+```
+
+Bootstrap the pinned development-only Zeroshot version with
+`./tools/zeroshot/bootstrap`. Repository verification is invoked through the
+root `Makefile`; `tools/verify` is its internal implementation. GitHub CI
+remains the final merge authority. The repository pins Codex as the workflow
+provider and `make pr` as the required
+command proof. Use `--ship` only when an approved run should create and merge a
+pull request, `--background` for a detached run, and `zeroshot resume <run-id>`
+to continue a stopped or failed run. Validators MUST NOT run until the worker
+publishes `canValidate=true`; `canValidate=false` continues through
+`WORKER_PROGRESS`.
+
 ## Writing Tests
 
 These rules are binding for every new or changed test (established by feature

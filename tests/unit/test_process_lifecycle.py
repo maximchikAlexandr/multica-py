@@ -24,6 +24,7 @@ from multica_py.exceptions import (
     CommandTimeoutError,
     ProcessOutputModeError,
 )
+from multica_py.execution.local import LocalProcessHandle
 from multica_py.process import ManagedProcess, ProcessResult
 
 
@@ -181,7 +182,7 @@ def test_managed_process_wait_timeout_preserves_semaphore() -> None:
     process = _process()
     process.communicate.side_effect = subprocess.TimeoutExpired(("multica",), 1)
     semaphore = MagicMock()
-    managed = ManagedProcess(process, ("multica",), semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), ("multica",), semaphore)
     with pytest.raises(TimeoutError, match="wait timed out"):
         managed.wait(datetime.timedelta(seconds=1))
     semaphore.release.assert_not_called()
@@ -194,11 +195,11 @@ def test_managed_process_close_escalates_and_finalizes_once() -> None:
     process = _process()
     process.wait.side_effect = (subprocess.TimeoutExpired(("multica",), 3), 0)
     semaphore = MagicMock()
-    managed = ManagedProcess(process, ("multica", "run"), semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), ("multica", "run"), semaphore)
     with (
-        patch("multica_py.process.terminate_process") as terminate,
-        patch("multica_py.process.kill_process") as kill,
-        patch("multica_py.process.close_process_pipes") as close_pipes,
+        patch("multica_py.execution.local.terminate_process") as terminate,
+        patch("multica_py.execution.local.kill_process") as kill,
+        patch("multica_py.execution.local.close_process_pipes") as close_pipes,
     ):
         managed.close()
         managed.close()
@@ -219,7 +220,7 @@ def test_managed_process_streams_decode_and_finalize(case: StreamCase) -> None:
     process = _process(poll=0)
     setattr(process, case.stream_name, io.BytesIO(case.payload))
     semaphore = MagicMock()
-    managed = ManagedProcess(process, semaphore=semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
     lines = managed.stdout_lines() if case.stream_name == "stdout" else managed.stderr_lines()
     assert list(lines) == case.expected
     semaphore.release.assert_called_once_with()
@@ -230,7 +231,7 @@ def test_managed_process_stream_completion_keeps_live_process_owned(stream_name:
     process = _process(poll=None)
     setattr(process, stream_name, io.BytesIO(b"line\n"))
     semaphore = MagicMock()
-    managed = ManagedProcess(process, semaphore=semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
     lines = managed.stdout_lines() if stream_name == "stdout" else managed.stderr_lines()
     assert list(lines) == ["line"]
@@ -275,7 +276,7 @@ def test_process_output_mode_error_identifies_current_and_requested_consumers() 
 def test_managed_process_claims_streaming_only_when_iteration_begins() -> None:
     process = _process(poll=0)
     process.stdout = io.BytesIO(b"one\n")
-    managed = ManagedProcess(process)
+    managed = ManagedProcess(LocalProcessHandle(process))
 
     stream = managed.stdout_lines()
     managed._claim_buffered("buffered result")
@@ -288,7 +289,7 @@ def test_managed_process_claims_streaming_only_when_iteration_begins() -> None:
 def test_managed_process_rejects_buffered_mode_after_streaming_claim() -> None:
     process = _process(poll=0)
     process.stdout = io.BytesIO(b"one\n")
-    managed = ManagedProcess(process)
+    managed = ManagedProcess(LocalProcessHandle(process))
 
     stream = managed.stdout_lines()
     assert next(stream) == "one"
@@ -299,7 +300,7 @@ def test_managed_process_rejects_buffered_mode_after_streaming_claim() -> None:
 
 def test_managed_process_marks_closed_output_as_discarded() -> None:
     process = _process(poll=0)
-    managed = ManagedProcess(process)
+    managed = ManagedProcess(LocalProcessHandle(process))
 
     managed.close()
 
@@ -322,7 +323,7 @@ def test_managed_process_result_drains_both_pipes_caches_and_finalizes_once(
     process.returncode = case.exit_code
     process.communicate.return_value = (case.stdout, case.stderr)
     semaphore = MagicMock()
-    managed = ManagedProcess(process, ("multica", "run"), semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), ("multica", "run"), semaphore)
 
     result = managed.result(datetime.timedelta(seconds=2))
     repeated = managed.result()
@@ -343,7 +344,7 @@ def test_managed_process_wait_delegates_to_result_and_preserves_output() -> None
     process = _process()
     process.returncode = 0
     process.communicate.return_value = (b"out", b"err")
-    managed = ManagedProcess(process)
+    managed = ManagedProcess(LocalProcessHandle(process))
 
     assert managed.wait() == 0
     result = managed.result()
@@ -361,7 +362,7 @@ def test_managed_process_result_timeout_is_retryable_without_cleanup_or_cache() 
         (b"before\nafter", b"warning"),
     )
     semaphore = MagicMock()
-    managed = ManagedProcess(process, semaphore=semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
     with pytest.raises(TimeoutError, match="wait timed out"):
         managed.result(datetime.timedelta(seconds=1))
@@ -385,13 +386,13 @@ def test_managed_process_result_zero_timeout_is_forwarded_and_retryable() -> Non
         (b"out", b"err"),
     )
     semaphore = MagicMock()
-    managed = ManagedProcess(process, semaphore=semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
     with pytest.raises(TimeoutError, match="wait timed out"):
         managed.result(datetime.timedelta(0))
 
     assert managed._result is None
-    assert managed._output_mode == "buffered"
+    assert managed._output.mode == "buffered"
     assert not managed._closed
     semaphore.release.assert_not_called()
     process.stdout.close.assert_not_called()
@@ -418,13 +419,13 @@ def test_managed_process_communicate_exception_preserves_live_process_ownership(
 
     process.communicate.side_effect = communicate
     semaphore = MagicMock()
-    managed = ManagedProcess(process, semaphore=semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
     with pytest.raises(KeyboardInterrupt):
         managed.result()
 
     assert managed._result is None
-    assert managed._output_mode == "buffered"
+    assert managed._output.mode == "buffered"
     assert not managed._closed
     semaphore.release.assert_not_called()
     process.stdin.close.assert_not_called()
@@ -438,7 +439,7 @@ def test_managed_process_communicate_exception_preserves_live_process_ownership(
 def test_managed_process_result_rejects_streaming_before_communicate() -> None:
     process = _process(poll=0)
     process.stdout = io.BytesIO(b"one\n")
-    managed = ManagedProcess(process)
+    managed = ManagedProcess(LocalProcessHandle(process))
     stream = managed.stdout_lines()
     assert next(stream) == "one"
 
@@ -451,7 +452,7 @@ def test_managed_process_rejects_stream_after_buffered_collection_before_pipe_re
     process = _process()
     process.communicate.side_effect = subprocess.TimeoutExpired(("multica",), 1)
     process.stdout = io.BytesIO(b"one\n")
-    managed = ManagedProcess(process)
+    managed = ManagedProcess(LocalProcessHandle(process))
     with pytest.raises(TimeoutError, match="wait timed out"):
         managed.result(datetime.timedelta(seconds=1))
 
@@ -465,9 +466,9 @@ def test_managed_process_close_blocks_result_and_stream_without_refinalizing() -
     process = _process(poll=0)
     process.stdout = io.BytesIO(b"one\n")
     process.stderr = io.BytesIO(b"warning\n")
-    managed = ManagedProcess(process)
+    managed = ManagedProcess(LocalProcessHandle(process))
 
-    with patch("multica_py.process.close_process_pipes") as close_pipes:
+    with patch("multica_py.execution.local.close_process_pipes") as close_pipes:
         managed.close()
         with pytest.raises(ProcessOutputModeError, match="discarded"):
             managed.result()
@@ -484,7 +485,7 @@ def test_managed_process_decode_failure_finalizes_without_caching() -> None:
     process = _process()
     process.communicate.return_value = (b"\xff", b"")
     semaphore = MagicMock()
-    managed = ManagedProcess(process, semaphore=semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
     with pytest.raises(UnicodeDecodeError):
         managed.result()
@@ -501,15 +502,15 @@ def test_managed_process_signals_without_finalizing_before_result() -> None:
     process = _process()
     process.communicate.return_value = (b"out", b"")
     semaphore = MagicMock()
-    managed = ManagedProcess(process, semaphore=semaphore)
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
     with (
-        patch("multica_py.process.terminate_process") as terminate,
-        patch("multica_py.process.kill_process") as kill,
+        patch("multica_py.execution.local.terminate_process") as terminate,
+        patch("multica_py.execution.local.kill_process") as kill,
     ):
         managed.terminate()
         managed.kill()
         assert managed.result().stdout == "out"
 
-    terminate.assert_called_once_with(process)
-    kill.assert_called_once_with(process)
+    assert terminate.call_args_list.count(call(process)) == 1
+    assert kill.call_args_list.count(call(process)) == 1
     semaphore.release.assert_called_once_with()

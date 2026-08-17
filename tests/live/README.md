@@ -25,5 +25,9 @@ Run the smoke suite with:
 
 ```bash
 uv run pytest -o addopts="" -q -rP \
-  -m live_smoke tests/live/test_smoke.py
+  -m live_smoke tests/live
 ```
+
+Executor smoke tests in `test_executor_smoke.py` additionally require either
+the prepared SSH variables or `MULTICA_LIVE_MICROSANDBOX`; unconfigured
+backend rows skip without affecting the ordinary prepared-target smoke.

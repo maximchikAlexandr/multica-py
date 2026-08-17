@@ -1127,10 +1127,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "attachments.upload",
-            ("attachment", "upload", "/p/f.txt", "--output", "json"),
-            args=(pathlib.Path("/p/f.txt"),),
+            ("attachment", "upload", "<dynamic>", "--output", "json"),
+            args=(pathlib.Path("tests/cases/operations.py"),),
             stdout=_AR,
             id="manual:attachments.upload:canonical",
+            expected_commands=("multica attachment upload '${temp.path}' --output json",),
+            dynamic_argv_positions=(2,),
         ),
         _c(
             "attachments.download",

@@ -10,10 +10,6 @@ from multica_py._internal.argv import build_global_args
 from multica_py._internal.compat import check_version_from_config, parse_cli_version
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.decoders import decode_text
-from multica_py._internal.processes import (
-    create_process,
-    run_with_timeout,
-)
 from multica_py._internal.redaction import (
     collect_diagnostic_secret_values,
     redact_diagnostic_argv,
@@ -24,14 +20,12 @@ from multica_py.config import ClientConfig
 from multica_py.exceptions import (
     AuthenticationError,
     CommandExecutionError,
-    CommandTimeoutError,
     ConflictError,
-    ExecutableNotFoundError,
-    ExecutableNotRunnableError,
     NetworkError,
     NotFoundError,
     ValidationError,
 )
+from multica_py.execution import CommandExecutor, ExecutionRequest, LocalExecutor
 from multica_py.process import ManagedProcess
 
 _EXIT_CODE_EXCEPTIONS: dict[int, type[CommandExecutionError]] = {
@@ -126,9 +120,15 @@ def classify_cli_failure(
 
 
 class CliTransport:
-    def __init__(self, config: ClientConfig, semaphore: ProcessSemaphore | None = None) -> None:
+    def __init__(
+        self,
+        config: ClientConfig,
+        semaphore: ProcessSemaphore | None = None,
+        executor: CommandExecutor | None = None,
+    ) -> None:
         self._config = config
         self._semaphore = semaphore
+        self._executor = executor or LocalExecutor()
         self._compatibility_state = _CompatibilityState()
 
     def __enter__(self) -> CliTransport:
@@ -140,13 +140,17 @@ class CliTransport:
     def close(self) -> None:
         """Release transport-owned resources after subprocess calls."""
 
+    @property
+    def executor(self) -> CommandExecutor:
+        return self._executor
+
     def _snapshot(self, config: ClientConfig) -> CliTransport:
         view = copy(self)
         view._config = config
         return view
 
     def build_full_argv(self, command_args: tuple[str, ...]) -> tuple[str, ...]:
-        executable = str(self._config.executable)
+        executable = os.fspath(self._config.executable)
         global_args = build_global_args(self._config)
         return (executable, *global_args, *command_args)
 
@@ -200,9 +204,9 @@ class CliTransport:
             self._check_compat()
 
         argv = self._build_full_argv(command_args)
-        cwd = str(self._config.cwd) if self._config.cwd else None
-        env = _effective_environment(self._config)
-        secret_values = collect_diagnostic_secret_values(argv, env)
+        cwd = os.fspath(self._config.cwd) if self._config.cwd is not None else None
+        environment = tuple(self._config.environment)
+        secret_values = collect_diagnostic_secret_values(argv, _effective_environment(self._config))
         diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
         effective_timeout = timeout if timeout is not None else self._config.timeout
 
@@ -213,27 +217,20 @@ class CliTransport:
 
         t0 = datetime.datetime.now(tz=datetime.UTC)
         try:
-            try:
-                completed = run_with_timeout(
-                    argv,
+            completed = self._executor.run(
+                ExecutionRequest(
+                    argv=argv,
+                    cwd=cwd,
+                    environment=environment,
                     stdin=stdin,
                     timeout=effective_timeout,
-                    cwd=cwd,
-                    env=env,
                 )
-            except CommandTimeoutError:
-                raise
-            except FileNotFoundError:
-                raise ExecutableNotFoundError(f"Executable not found: {self._config.executable!s}")
-            except PermissionError:
-                raise ExecutableNotRunnableError(
-                    f"Executable not runnable: {self._config.executable!s}"
-                )
+            )
 
             duration = datetime.datetime.now(tz=datetime.UTC) - t0
             return RawCommandResult(
                 argv=diagnostic_argv,
-                exit_code=completed.returncode,
+                exit_code=completed.exit_code,
                 stdout=completed.stdout,
                 stderr=completed.stderr,
                 duration=duration,
@@ -286,25 +283,26 @@ class CliTransport:
     ) -> ManagedProcess:
         self._check_compat()
         argv = self._build_full_argv(command_args)
-        cwd = str(self._config.cwd) if self._config.cwd else None
-        env = _effective_environment(self._config)
-        secret_values = collect_diagnostic_secret_values(argv, env)
+        cwd = os.fspath(self._config.cwd) if self._config.cwd is not None else None
+        environment = tuple(self._config.environment)
+        secret_values = collect_diagnostic_secret_values(argv, _effective_environment(self._config))
         diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
 
         if self._semaphore is not None:
             self._semaphore.acquire()
 
         try:
-            proc = create_process(argv, cwd=cwd, env=env)
-        except FileNotFoundError:
-            if self._semaphore is not None:
-                self._semaphore.release()
-            raise ExecutableNotFoundError(f"Executable not found: {self._config.executable!s}")
-        except PermissionError:
-            if self._semaphore is not None:
-                self._semaphore.release()
-            raise ExecutableNotRunnableError(
-                f"Executable not runnable: {self._config.executable!s}"
+            handle = self._executor.spawn(
+                ExecutionRequest(
+                    argv=argv,
+                    cwd=cwd,
+                    environment=environment,
+                    timeout=self._config.timeout,
+                )
             )
+        except BaseException:
+            if self._semaphore is not None:
+                self._semaphore.release()
+            raise
 
-        return ManagedProcess(proc, argv=diagnostic_argv, semaphore=self._semaphore)
+        return ManagedProcess(handle, argv=diagnostic_argv, semaphore=self._semaphore)

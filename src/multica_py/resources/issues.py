@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import pathlib
 from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast, overload
@@ -120,7 +119,7 @@ def _normalize_issue_description(
     description_file: str | os.PathLike[str] | None,
     description_input: IssueDescriptionInput | None,
     *,
-    cwd: pathlib.Path | None,
+    cwd: str | os.PathLike[str] | None,
 ) -> tuple[str, ...]:
     sources = sum(value is not None for value in (description, description_file, description_input))
     if sources > 1:

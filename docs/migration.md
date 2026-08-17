@@ -5,6 +5,16 @@ bound wrappers; scalar data is available through `to_json()` / `to_dict()`,
 and relations load only at explicit load points such as `all()`, `page()`,
 `refresh()`, or `MulticaClient.prefetch()`.
 
+## Execution backends
+
+Local subprocess execution remains the default. Remote execution is explicit:
+install the chosen optional extra, import its executor from
+`multica_py.execution.<provider>`, and pass it to `MulticaClient(executor=...)`.
+There is no plugin registry or automatic provider discovery. See
+[execution backends](execution-backends.md) for installation commands,
+target-path/environment/staging rules, process-control guarantees, and the
+provider-adapter contract.
+
 ## Breaking alpha migration table
 
 This release intentionally removes one-operation input containers and public
