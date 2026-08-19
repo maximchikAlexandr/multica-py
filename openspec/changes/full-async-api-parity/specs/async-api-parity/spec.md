@@ -46,7 +46,7 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 - **THEN** it raises `asyncio.CancelledError`, does not translate cancellation into a Multica exception, and documentation states that the underlying executor operation may continue until completion or timeout
 
 ### Requirement: Awaitable managed process lifecycle
-`ManagedProcess` SHALL expose async counterparts for every lifecycle operation that can perform process-provider I/O: `wait_async()`, `result_async()`, `terminate_async()`, `kill_async()`, and `close_async()`. It SHALL support `async with` by delegating asynchronous exit to `close_async()`. Synchronous and asynchronous lifecycle paths SHALL use one thread-safe per-process lifecycle coordinator that serializes output ownership, result collection/publication, close state, handle finalization, and semaphore release. Concurrent result, close, terminate, kill, and cancellation paths SHALL preserve timeout and cached-result behavior and SHALL finalize the handle and release the semaphore at most once. Synchronous streaming iterators SHALL remain unchanged in this change.
+`ManagedProcess` SHALL expose async counterparts for every lifecycle operation that can perform process-provider I/O: `wait_async()`, `result_async()`, `terminate_async()`, `kill_async()`, and `close_async()`. It SHALL support `async with` by delegating asynchronous exit to `close_async()`. Synchronous and asynchronous lifecycle paths SHALL use one thread-safe per-process lifecycle coordinator. Its mutex SHALL serialize only state transitions, output and collection ownership, result-or-failure publication, close state, handle finalization, and semaphore release; it SHALL NOT be held during blocking provider `collect`, `wait`, `terminate`, or `kill` I/O. A control or close path SHALL therefore be able to signal and advance an active blocked collection without waiting for that collection while holding the mutex. Concurrent result, close, terminate, kill, and cancellation paths SHALL preserve timeout and cached-result behavior and SHALL finalize the handle and release the semaphore exactly once. Synchronous streaming iterators SHALL remain unchanged in this change.
 
 #### Scenario: Process result is awaited
 - **WHEN** a consumer awaits `process.result_async(timeout)`
@@ -66,7 +66,15 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 
 #### Scenario: Concurrent result and close have one finalization
 - **WHEN** deterministic synchronization overlaps sync or async result collection with sync or async close on one managed process
-- **THEN** the lifecycle coordinator prevents conflicting output consumption, publishes at most one cached result, closes the handle once, and releases the semaphore once
+- **THEN** close signals terminate, waits on the coordinator condition, and signals kill after the existing cleanup grace period if still needed without starting a competing provider wait or collection; both callers finish, and the collection owner publishes its `ProcessResult` or existing collection failure before the handle is closed and the semaphore is released exactly once
+
+#### Scenario: Close wins before buffered collection
+- **WHEN** close claims an open managed process before a result caller claims buffered output
+- **THEN** close owns cleanup and discards output, and the later result caller raises the existing discarded-output `ProcessOutputModeError` without starting provider collection
+
+#### Scenario: Signal advances a blocked collection
+- **WHEN** a barrier holds provider collection after it owns buffered output and a concurrent sync or async terminate or kill call signals the handle
+- **THEN** the signal executes without waiting on the coordinator mutex, both callers finish, the collector preserves the normal post-signal result-or-failure contract, and finalization and semaphore release occur exactly once
 
 #### Scenario: Cancellation does not corrupt lifecycle state
 - **WHEN** a task awaiting a started managed-process lifecycle operation is cancelled while another sync or async lifecycle caller proceeds

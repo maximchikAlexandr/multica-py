@@ -1,9 +1,9 @@
 ## 1. Async command and process primitives
 
 - [ ] 1.1 Add `Command.run_async()` in `src/multica_py/_internal/commands.py` using the standard-library asyncio thread bridge around the existing plan run; add focused deterministic tests for identical result/exception behavior, event-loop progress, cancellation propagation, command inspection, composite cleanup, and no new executor protocol.
-- [ ] 1.2 Add one thread-safe per-process lifecycle coordinator in `src/multica_py/process.py` and route sync and async output claims, result collection/publication, close state, handle finalization, and semaphore release through it.
+- [ ] 1.2 Add one thread-safe per-process lifecycle state machine in `src/multica_py/process.py` with short mutex sections for output/collection ownership, `open`/`collecting`/`closing`/`finalized` transitions, result-or-failure publication, and exactly-once finalization/release; run provider collect/wait/terminate/kill calls outside the mutex and coordinate waiters with a condition.
 - [ ] 1.3 Add `ManagedProcess.wait_async()`, `result_async()`, `terminate_async()`, `kill_async()`, `close_async()`, `__aenter__`, and `__aexit__` as offloaded delegates to the coordinated synchronous lifecycle operations, including remote provider I/O.
-- [ ] 1.4 Add event/barrier-driven lifecycle tests for concurrent sync/async result-result, result-close, close-close, terminate/kill, and cancelled-await interleavings; assert one output owner, at most one published result, one handle close, one semaphore release, stable timeout/error behavior, and event-loop progress without timing-only sleeps.
+- [ ] 1.4 Add event/barrier-driven lifecycle tests for every sync/async pairing of blocked result collection with terminate, kill, and close, plus result-result, close-close, and cancelled-await interleavings; assert both callers finish without mutex deadlock, control I/O advances the blocked handle, one output owner preserves the post-signal result-or-failure contract, close-before-result raises discarded-output `ProcessOutputModeError` without collection, and handle finalization/semaphore release occur exactly once.
 - [ ] 1.5 Run the focused command/process tests plus `uv run mypy src` and fix until the new generic and lifecycle annotations are precise without public `Any`.
 
 ## 2. Top-level resource async parity
