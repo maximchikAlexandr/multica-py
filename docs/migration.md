@@ -224,8 +224,8 @@ than serializing an internal snapshot node directly.
 frozen `Plugin`. Validate/pack decode `PluginDigest`. `install()` and all
 Remote MCP mutations are human-local guarded upstream; the SDK builds exact
 argv and does not fake success in offline contexts. Remote MCP configure
-requires `--endpoint` and accepts credentials only through file or stdin
-channels.
+requires `--endpoint` and accepts credentials only through file or
+`credential_stdin: bytes | None` channels. Plugin list/status return `Page[Plugin]`.
 
 ### Workspace property catalog and issue properties
 
@@ -239,6 +239,9 @@ list command as a `LazyMapping` keyed by property name.
 
 `workspaces.mcp` and nested `agents.mcp` expose reviewed MCP server
 operations. Add requires exactly one config channel; update allows at most one.
+`server_config_stdin: bytes | None` supplies the stdin payload. Direct MCP
+list/mutation methods return `Page[McpServer]`; bound relation snapshots remain
+tuples.
 Secret-bearing inline JSON and stdin/file contents are redacted from preview
 and diagnostics while executed argv still receives the reviewed flags.
 

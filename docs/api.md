@@ -254,7 +254,8 @@ validate/pack/init flows. `list()` and `status()` decode frozen `Plugin` rows;
 `plugin install <path>`; upstream human-local guards apply at the CLI rather
 than in Python. Remote MCP configure accepts credentials only through
 `--credential-file` or `--credential-stdin` (mutually exclusive); credential
-bytes are redacted from preview and diagnostics.
+bytes are supplied as `credential_stdin: bytes | None` and are redacted from
+preview and diagnostics.
 
 `client.properties` manages the workspace property catalog. Create/update use
 `Unset` for omitted fields; actor and multi-actor types reject option tuples.
@@ -264,8 +265,9 @@ bytes are redacted from preview and diagnostics.
 
 `workspaces.mcp` and nested `agents.mcp` expose list/add/update/remove (or
 enable/disable) with exactly one server-config channel on add and at most one
-on update (`server_config_file`, `server_config_stdin`, or inline
-`server_config`). List decoding exposes public fields only.
+on update (`server_config_file`, `server_config_stdin: bytes | None`, or inline
+`server_config`). These direct collection methods return `Page[T]`; list
+decoding exposes public fields only.
 
 `skills.refresh(skill_id)` reloads a bound skill from upstream.
 `skills.search(query)` returns `Page[SkillSearchResult]` from

@@ -11,7 +11,9 @@ from multica_py._internal.compat import check_version_from_config, parse_cli_ver
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.decoders import decode_text
 from multica_py._internal.redaction import (
+    collect_diagnostic_secret_bytes,
     collect_diagnostic_secret_values,
+    redact_bytes,
     redact_diagnostic_argv,
     redact_text,
 )
@@ -206,7 +208,10 @@ class CliTransport:
         argv = self._build_full_argv(command_args)
         cwd = os.fspath(self._config.cwd) if self._config.cwd is not None else None
         environment = tuple(self._config.environment)
-        secret_values = collect_diagnostic_secret_values(argv, _effective_environment(self._config))
+        secret_values = collect_diagnostic_secret_values(
+            argv, _effective_environment(self._config), stdin=stdin
+        )
+        secret_bytes = collect_diagnostic_secret_bytes(argv, stdin=stdin)
         diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
         effective_timeout = timeout if timeout is not None else self._config.timeout
 
@@ -231,10 +236,15 @@ class CliTransport:
             return RawCommandResult(
                 argv=diagnostic_argv,
                 exit_code=completed.exit_code,
-                stdout=completed.stdout,
-                stderr=completed.stderr,
+                stdout=redact_bytes(
+                    completed.stdout, secret_values=secret_values, secret_bytes=secret_bytes
+                ),
+                stderr=redact_bytes(
+                    completed.stderr, secret_values=secret_values, secret_bytes=secret_bytes
+                ),
                 duration=duration,
                 secret_values=secret_values,
+                secret_bytes=secret_bytes,
             )
         finally:
             if sem_acquired and self._semaphore is not None:

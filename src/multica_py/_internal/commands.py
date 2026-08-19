@@ -75,7 +75,9 @@ class _CommandPlan(Generic[T_co]):
                 argv[position] = _display_ref(ref)
             full_argv = self.transport.build_full_argv(tuple(argv))
             environment = _effective_environment(self.config_snapshot)
-            secret_values = collect_diagnostic_secret_values(full_argv, environment)
+            secret_values = collect_diagnostic_secret_values(
+                full_argv, environment, stdin=step.stdin
+            )
             rendered.append(
                 shlex.join(redact_diagnostic_argv(full_argv, secret_values=secret_values))
             )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 from collections.abc import Iterable, Mapping
@@ -17,6 +18,7 @@ _SECRET_KEY_PATTERNS = (
     ("access", "token"),
     ("api", "key"),
     ("auth", "token"),
+    ("authorization",),
     ("client", "secret"),
     ("credential",),
     ("key",),
@@ -33,7 +35,7 @@ _FILE_CONTENT_SECRET_OPTIONS = frozenset(
 _STDIN_CONTENT_SECRET_OPTIONS = frozenset(
     {"credential-stdin", "server-config-stdin"},
 )
-_INLINE_SECRET_OPTIONS = frozenset({"server-config"})
+_INLINE_SECRET_OPTIONS = frozenset({"auth-header", "server-config"})
 _SECRET_KEY_COMPACT_ALIASES = frozenset(
     {"apikey", "accesskey", "accesstoken", "authtoken", "clientsecret", "privatekey"}
 )
@@ -52,7 +54,7 @@ def _is_secret_option(arg: str) -> bool:
     name = arg[2:].partition("=")[0]
     if name in _SECRET_OPTION_EXCLUSIONS:
         return False
-    return _is_secret_key(name)
+    return name in _INLINE_SECRET_OPTIONS or _is_secret_key(name)
 
 
 def _collectible_secret_option(arg: str) -> bool:
@@ -114,25 +116,21 @@ def collect_secret_values(argv: tuple[str, ...], *, stdin: bytes | None = None) 
             i += 2
             continue
         if arg == "--credential-stdin" and stdin:
-            decoded = stdin.decode("utf-8", errors="replace").strip()
-            if decoded:
-                secrets.append(decoded)
+            secrets.extend(_collect_content_secret_values(stdin.decode("utf-8", errors="replace")))
             i += 1
             continue
         if arg == "--server-config-stdin" and stdin:
-            decoded = stdin.decode("utf-8", errors="replace").strip()
-            if decoded:
-                secrets.append(decoded)
+            secrets.extend(_collect_content_secret_values(stdin.decode("utf-8", errors="replace")))
             i += 1
             continue
         if _collectible_secret_option(arg) and "=" not in arg and i + 1 < len(argv):
-            secrets.append(argv[i + 1])
+            secrets.extend(_collect_option_secret_values(arg[2:], argv[i + 1]))
             i += 2
             continue
         if _collectible_secret_option(arg) and "=" in arg:
             _, _, value = arg.partition("=")
             if value:
-                secrets.append(value)
+                secrets.extend(_collect_option_secret_values(arg[2:].partition("=")[0], value))
         secrets.extend(_collect_url_secret_values(arg))
         i += 1
     return normalize_secret_values(secrets)
@@ -144,7 +142,59 @@ def _read_file_secrets(path: str) -> tuple[str, ...]:
             decoded = handle.read().strip()
     except OSError:
         return ()
-    return (decoded,) if decoded else ()
+    return _collect_content_secret_values(decoded)
+
+
+def _collect_option_secret_values(name: str, value: str) -> tuple[str, ...]:
+    if name == "auth-header":
+        return (value, *_collect_auth_header_secret_values(value))
+    if name in {"credential-file", "credential-stdin", "server-config-file", "server-config-stdin"}:
+        return _collect_content_secret_values(value)
+    if name == "server-config":
+        return _collect_content_secret_values(value)
+    return (value,)
+
+
+def _collect_content_secret_values(value: str) -> tuple[str, ...]:
+    content = value.strip()
+    if not content:
+        return ()
+    secrets = [content]
+    try:
+        parsed = cast("object", json.loads(content))
+    except (json.JSONDecodeError, TypeError):
+        return (content,)
+    _collect_json_secret_values(parsed, secrets)
+    return tuple(secrets)
+
+
+def _collect_json_secret_values(value: object, secrets: list[str], *, secret: bool = False) -> None:
+    if isinstance(value, Mapping):
+        mapping = cast("Mapping[object, object]", value)
+        for key, child in mapping.items():
+            _collect_json_secret_values(
+                child,
+                secrets,
+                secret=secret or _is_secret_config_key(str(key)),
+            )
+        return
+    if isinstance(value, (list, tuple)):
+        for child in value:
+            _collect_json_secret_values(child, secrets, secret=secret)
+        return
+    if secret and value is not None:
+        secrets.append(str(value).lower() if isinstance(value, bool) else str(value))
+
+
+def _collect_auth_header_secret_values(value: str) -> tuple[str, ...]:
+    _name, separator, remainder = value.partition(":")
+    payload = remainder.strip() if separator else value.strip()
+    if not payload:
+        return ()
+    _scheme, separator, token = payload.partition(" ")
+    if separator and token.strip():
+        return (payload, token.strip())
+    return (payload,)
 
 
 def _collect_url_secret_values(arg: str) -> tuple[str, ...]:
@@ -196,15 +246,24 @@ def normalize_secret_values(values: Iterable[str]) -> tuple[str, ...]:
 
 
 def collect_diagnostic_secret_values(
-    argv: tuple[str, ...], environment: Mapping[str, str]
+    argv: tuple[str, ...], environment: Mapping[str, str], *, stdin: bytes | None = None
 ) -> tuple[str, ...]:
     """Collect all secret values that may appear in command diagnostics."""
     return normalize_secret_values(
         (
-            *collect_secret_values(argv),
+            *collect_secret_values(argv, stdin=stdin),
             *collect_secret_values_from_environment(environment),
         )
     )
+
+
+def collect_diagnostic_secret_bytes(
+    argv: tuple[str, ...], *, stdin: bytes | None = None
+) -> tuple[bytes, ...]:
+    """Collect opaque stdin payloads for byte-preserving diagnostics."""
+    if stdin and any(option in argv for option in _STDIN_CONTENT_SECRET_OPTIONS):
+        return (stdin,)
+    return ()
 
 
 def _secret_sort_key(value: str) -> tuple[int, str]:
@@ -252,12 +311,21 @@ def redact_text(text: str, *, secret_values: tuple[str, ...] = ()) -> str:
     return redacted
 
 
-def redact_bytes(data: bytes, *, secret_values: tuple[str, ...] = ()) -> bytes:
+def redact_bytes(
+    data: bytes,
+    *,
+    secret_values: tuple[str, ...] = (),
+    secret_bytes: tuple[bytes, ...] = (),
+) -> bytes:
     redacted = data
-    for secret in normalize_secret_values(secret_values):
-        encoded = secret.encode("utf-8")
+    replacement = REDACTED.encode("utf-8")
+    for secret in secret_bytes:
+        if secret:
+            redacted = redacted.replace(secret, replacement)
+    for secret_text in normalize_secret_values(secret_values):
+        encoded = secret_text.encode("utf-8")
         if encoded:
-            redacted = redacted.replace(encoded, REDACTED.encode("utf-8"))
+            redacted = redacted.replace(encoded, replacement)
     return redacted
 
 

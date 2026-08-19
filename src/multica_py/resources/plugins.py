@@ -185,7 +185,7 @@ class PluginResource(BaseResource):
         *,
         endpoint: str,
         credential_file: str | os.PathLike[str] | None = None,
-        credential_stdin: bool = False,
+        credential_stdin: bytes | None = None,
         auth_type: str | UnsetType = Unset,
         auth_header: str | UnsetType = Unset,
         failure_policy: str | UnsetType = Unset,
@@ -195,7 +195,9 @@ class PluginResource(BaseResource):
         validate_nonblank(installation_id)
         validate_nonblank(contribution_key)
         validate_nonblank(endpoint)
-        if credential_stdin and credential_file is not None:
+        if credential_stdin is not None and not isinstance(credential_stdin, bytes):
+            raise TypeError("credential_stdin must be bytes or None")
+        if credential_stdin is not None and credential_file is not None:
             raise ValueError("credential_file and credential_stdin are mutually exclusive")
         args = [
             "plugin",
@@ -208,8 +210,7 @@ class PluginResource(BaseResource):
             "--output",
             "json",
         ]
-        stdin: bytes | None = None
-        if credential_stdin:
+        if credential_stdin is not None:
             args.append("--credential-stdin")
         elif credential_file is not None:
             args.extend(["--credential-file", os.fspath(credential_file)])
@@ -222,7 +223,7 @@ class PluginResource(BaseResource):
             if value is not Unset:
                 _validate_optional_string(value, flag.removeprefix("--").replace("-", "_"))
                 args.extend([flag, str(value)])
-        return self._remote_mcp_command(tuple(args), stdin=stdin, options=options)
+        return self._remote_mcp_command(tuple(args), stdin=credential_stdin, options=options)
 
     def configure_remote_mcp(
         self,
@@ -231,7 +232,7 @@ class PluginResource(BaseResource):
         *,
         endpoint: str,
         credential_file: str | os.PathLike[str] | None = None,
-        credential_stdin: bool = False,
+        credential_stdin: bytes | None = None,
         auth_type: str | UnsetType = Unset,
         auth_header: str | UnsetType = Unset,
         failure_policy: str | UnsetType = Unset,

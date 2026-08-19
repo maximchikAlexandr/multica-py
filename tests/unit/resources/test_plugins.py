@@ -8,18 +8,20 @@ from multica_py._internal.redaction import collect_secret_values
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.resources.plugins import PluginResource
+from multica_py.resources.workspace_mcp import WorkspaceMcpResource
 
 
-def test_configure_remote_mcp_credential_stdin_inherits_without_fixture_bytes() -> None:
+def test_configure_remote_mcp_credential_stdin_carries_fixture_bytes() -> None:
+    credential = b"secret-token\x00\xff"
     resource = PluginResource(CliTransport(ClientConfig()), ClientConfig())
     command = resource.configure_remote_mcp_command(
         "inst_001",
         "remote-mcp",
         endpoint="https://mcp.example.com",
-        credential_stdin=True,
+        credential_stdin=credential,
     )
     step = command._plan.steps[0]
-    assert step.stdin is None
+    assert step.stdin == credential
     assert "--credential-stdin" in step.argv
     assert "secret-token" not in step.argv
 
@@ -32,7 +34,7 @@ def test_configure_remote_mcp_rejects_mixed_credential_channels() -> None:
             "remote-mcp",
             endpoint="https://mcp.example.com",
             credential_file="/tmp/credential.txt",
-            credential_stdin=True,
+            credential_stdin=b"stdin-credential",
         )
 
 
@@ -75,7 +77,7 @@ def test_collect_secret_values_reads_server_config_file_contents_not_path(
         str(config_path),
     )
     secrets = collect_secret_values(argv)
-    assert secrets == ('{"token":"file-config-secret"}',)
+    assert secrets == ('{"token":"file-config-secret"}', "file-config-secret")
     assert str(config_path) not in secrets
 
 
@@ -83,6 +85,7 @@ def test_collect_secret_values_reads_server_config_stdin_contents() -> None:
     argv = ("workspace", "mcp", "add", "server-1", "--server-config-stdin")
     assert collect_secret_values(argv, stdin=b'{"token":"stdin-config"}') == (
         '{"token":"stdin-config"}',
+        "stdin-config",
     )
     assert collect_secret_values(argv, stdin=None) == ()
 
@@ -96,7 +99,7 @@ def test_collect_secret_values_reads_inline_server_config() -> None:
         "--server-config",
         '{"token":"inline-config"}',
     )
-    assert collect_secret_values(argv) == ('{"token":"inline-config"}',)
+    assert collect_secret_values(argv) == ('{"token":"inline-config"}', "inline-config")
 
 
 def test_collect_secret_values_ignores_plaintext_credential_flag() -> None:
@@ -110,6 +113,51 @@ def test_collect_secret_values_ignores_plaintext_credential_flag() -> None:
         "inline-credential",
     )
     assert collect_secret_values(argv) == ()
+
+
+def test_secret_channels_are_redacted_from_public_command_previews(
+    tmp_path: pathlib.Path,
+) -> None:
+    config = ClientConfig()
+    plugin = PluginResource(CliTransport(config), config)
+    workspace_mcp = WorkspaceMcpResource(CliTransport(config), config)
+    file_path = tmp_path / "server-config.json"
+    file_path.write_text('{"headers":{"X-API-Key":"file-preview-token"}}', encoding="utf-8")
+    cases = (
+        (
+            plugin.configure_remote_mcp_command(
+                "inst_001",
+                "remote-mcp",
+                endpoint="https://mcp.example.com",
+                credential_stdin=b"stdin-preview-token",
+            ),
+            "stdin-preview-token",
+        ),
+        (
+            plugin.configure_remote_mcp_command(
+                "inst_001",
+                "remote-mcp",
+                endpoint="https://mcp.example.com",
+                auth_header="X-API-Key: header-preview-token",
+            ),
+            "header-preview-token",
+        ),
+        (
+            workspace_mcp.add_command(
+                "server-1",
+                server_config='{"headers":{"X-API-Key":"inline-preview-token"}}',
+            ),
+            "inline-preview-token",
+        ),
+        (
+            workspace_mcp.add_command("server-1", server_config_file=file_path),
+            "file-preview-token",
+        ),
+    )
+    for command, secret in cases:
+        rendered = " ".join(command.commands)
+        assert secret not in rendered
+        assert secret not in repr(command)
 
 
 def test_plugin_install_builds_exact_argv_without_local_refusal() -> None:
@@ -130,7 +178,7 @@ def test_remote_mcp_configure_builds_exact_argv_without_local_refusal() -> None:
         "inst_001",
         "remote-mcp",
         endpoint="https://mcp.example.com",
-        credential_stdin=True,
+        credential_stdin=b"stdin-credential",
     )
     assert command._plan.steps[0].argv == (
         "plugin",

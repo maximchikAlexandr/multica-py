@@ -17,7 +17,7 @@ def test_add_requires_exactly_one_config_channel() -> None:
         resource.add_command(
             "server-1",
             server_config='{"token":"inline"}',
-            server_config_stdin=True,
+            server_config_stdin=b'{"token":"inline"}',
         )
 
 
@@ -29,6 +29,14 @@ def test_update_rejects_mixed_config_channels() -> None:
             server_config='{"token":"inline"}',
             server_config_file="/tmp/config.json",
         )
+
+
+def test_add_with_config_stdin_carries_fixture_bytes() -> None:
+    config = b'{"token":"stdin-config"}\x00\xff'
+    resource = WorkspaceMcpResource(CliTransport(ClientConfig()), ClientConfig())
+    command = resource.add_command("server-1", server_config_stdin=config)
+    assert command._plan.steps[0].stdin == config
+    assert "--server-config-stdin" in command._plan.steps[0].argv
 
 
 def test_add_with_config_file_omits_inline_server_config(

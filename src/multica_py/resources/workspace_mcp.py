@@ -55,7 +55,7 @@ class WorkspaceMcpResource(BaseResource):
         server_name: str,
         *,
         server_config_file: str | os.PathLike[str] | None = None,
-        server_config_stdin: bool = False,
+        server_config_stdin: bytes | None = None,
         server_config: str | None = None,
         options: OperationOptions | None = None,
     ) -> Command[Page[McpServer]]:
@@ -76,14 +76,14 @@ class WorkspaceMcpResource(BaseResource):
             server_config_stdin=server_config_stdin,
             server_config=server_config,
         )
-        return self._mcp_page_command(tuple(args), options=options)
+        return self._mcp_page_command(tuple(args), stdin=server_config_stdin, options=options)
 
     def add(
         self,
         server_name: str,
         *,
         server_config_file: str | os.PathLike[str] | None = None,
-        server_config_stdin: bool = False,
+        server_config_stdin: bytes | None = None,
         server_config: str | None = None,
         options: OperationOptions | None = None,
     ) -> Page[McpServer]:
@@ -101,7 +101,7 @@ class WorkspaceMcpResource(BaseResource):
         *,
         name: str | UnsetType = Unset,
         server_config_file: str | os.PathLike[str] | None = None,
-        server_config_stdin: bool = False,
+        server_config_stdin: bytes | None = None,
         server_config: str | None = None,
         options: OperationOptions | None = None,
     ) -> Command[Page[McpServer]]:
@@ -125,7 +125,7 @@ class WorkspaceMcpResource(BaseResource):
             server_config_stdin=server_config_stdin,
             server_config=server_config,
         )
-        return self._mcp_page_command(tuple(args), options=options)
+        return self._mcp_page_command(tuple(args), stdin=server_config_stdin, options=options)
 
     def update(
         self,
@@ -133,7 +133,7 @@ class WorkspaceMcpResource(BaseResource):
         *,
         name: str | UnsetType = Unset,
         server_config_file: str | os.PathLike[str] | None = None,
-        server_config_stdin: bool = False,
+        server_config_stdin: bytes | None = None,
         server_config: str | None = None,
         options: OperationOptions | None = None,
     ) -> Page[McpServer]:
@@ -156,7 +156,11 @@ class WorkspaceMcpResource(BaseResource):
         return self.remove_command(server_id, options=options).run()
 
     def _mcp_page_command(
-        self, args: tuple[str, ...], *, options: OperationOptions | None
+        self,
+        args: tuple[str, ...],
+        *,
+        stdin: bytes | None = None,
+        options: OperationOptions | None,
     ) -> Command[Page[McpServer]]:
         plan_args = (*args, "--output", "json")
 
@@ -164,7 +168,7 @@ class WorkspaceMcpResource(BaseResource):
             return self._decode_mcp_servers(stdout, command)
 
         return self._plan(
-            steps=(_Step(plan_args, "run_bytes", decode=decode),),
+            steps=(_Step(plan_args, "run_bytes", decode=decode, stdin=stdin),),
             finalize=lambda results: cast("Page[McpServer]", results[0]),
             options=options,
         )
@@ -173,13 +177,15 @@ class WorkspaceMcpResource(BaseResource):
 def _config_channels(
     *,
     server_config_file: str | os.PathLike[str] | None,
-    server_config_stdin: bool,
+    server_config_stdin: bytes | None,
     server_config: str | None,
 ) -> int:
+    if server_config_stdin is not None and not isinstance(server_config_stdin, bytes):
+        raise TypeError("server_config_stdin must be bytes or None")
     return sum(
         (
             server_config_file is not None,
-            server_config_stdin,
+            server_config_stdin is not None,
             server_config is not None,
         )
     )
@@ -189,10 +195,10 @@ def _append_config_args(
     args: list[str],
     *,
     server_config_file: str | os.PathLike[str] | None,
-    server_config_stdin: bool,
+    server_config_stdin: bytes | None,
     server_config: str | None,
 ) -> list[str]:
-    if server_config_stdin:
+    if server_config_stdin is not None:
         args.append("--server-config-stdin")
     elif server_config_file is not None:
         args.extend(["--server-config-file", os.fspath(server_config_file)])

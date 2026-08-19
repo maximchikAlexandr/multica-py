@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import pathlib
 import sys
 from dataclasses import dataclass
 from subprocess import CompletedProcess
@@ -24,6 +25,7 @@ from multica_py.exceptions import (
     UnsupportedCliVersionError,
     ValidationError,
 )
+from multica_py.execution import ExecutionRequest, ExecutionResult, LocalExecutor
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,73 @@ class UrlSecretCase:
 class CompatibilityPolicyCase:
     id: str
     policy: CompatibilityPolicy
+
+
+@dataclass(frozen=True)
+class SecretRedactionCase:
+    id: str
+    option: str
+    payload: bytes
+    secret: str
+    partial: str
+    stdin: bool
+
+
+_SECRET_REDACTION_CASES: tuple[SecretRedactionCase, ...] = (
+    SecretRedactionCase(
+        "credential-stdin",
+        "--credential-stdin",
+        b"credential-token",
+        "credential-token",
+        "credential-token",
+        True,
+    ),
+    SecretRedactionCase(
+        "server-config-stdin-nested-json",
+        "--server-config-stdin",
+        b'{"headers":{"X-API-Key":"nested-token"}}',
+        '{"headers":{"X-API-Key":"nested-token"}}',
+        "nested-token",
+        True,
+    ),
+    SecretRedactionCase(
+        "server-config-inline-nested-json",
+        "--server-config",
+        b'{"headers":{"Authorization":"Bearer inline-token"}}',
+        '{"headers":{"Authorization":"Bearer inline-token"}}',
+        "inline-token",
+        False,
+    ),
+    SecretRedactionCase(
+        "auth-header-bearer",
+        "--auth-header",
+        b"Authorization: Bearer header-token",
+        "Authorization: Bearer header-token",
+        "header-token",
+        False,
+    ),
+    SecretRedactionCase(
+        "auth-header-basic",
+        "--auth-header",
+        b"Basic basic-token",
+        "Basic basic-token",
+        "basic-token",
+        False,
+    ),
+)
+
+
+class _EchoExecutor(LocalExecutor):
+    def __init__(self, echoed: bytes, *, exit_code: int) -> None:
+        self.echoed = echoed
+        self.exit_code = exit_code
+        self.requests: list[ExecutionRequest] = []
+
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        self.requests.append(request)
+        output = b"stdout " + self.echoed
+        error = b"stderr " + self.echoed
+        return ExecutionResult(self.exit_code, output, error)
 
 
 _TRANSPORT_ERROR_CASES: tuple[TransportErrorCase, ...] = (
@@ -290,6 +359,101 @@ def test_transport_redacts_split_token_args():
     assert redacted[-1] == "***"
 
 
+@pytest.mark.parametrize("case", _SECRET_REDACTION_CASES, ids=lambda case: case.id)
+def test_secret_channels_are_redacted_on_result_and_error_surfaces(
+    case: SecretRedactionCase,
+) -> None:
+    value = "" if case.stdin else case.payload.decode("utf-8")
+    args = (
+        "plugin",
+        "remote-mcp",
+        "configure",
+        "inst_001",
+        "remote-mcp",
+        case.option,
+        *(() if case.stdin else (value,)),
+    )
+    config = ClientConfig(compatibility=CompatibilityPolicy.ignore)
+    executor = _EchoExecutor(case.payload, exit_code=0)
+    result = CliTransport(config, executor=executor).run_bytes(
+        args, stdin=case.payload if case.stdin else None
+    )
+
+    assert executor.requests[0].stdin == (case.payload if case.stdin else None)
+    for rendered in (
+        result.stdout.decode("utf-8"),
+        result.stderr.decode("utf-8"),
+        " ".join(result.argv),
+        repr(result),
+    ):
+        assert case.secret not in rendered
+        assert case.partial not in rendered
+    assert b"***" in result.stdout
+    assert b"***" in result.stderr
+
+    failing = _EchoExecutor(case.payload, exit_code=2)
+    transport = CliTransport(config, executor=failing)
+    with pytest.raises(NetworkError) as excinfo:
+        transport.run_bytes(args, stdin=case.payload if case.stdin else None)
+    exc = excinfo.value
+    for diagnostic in (str(exc), exc.stdout, exc.stderr, exc.argv, repr(exc)):
+        rendered_text = repr(diagnostic)
+        assert case.secret not in rendered_text
+        assert case.partial not in rendered_text
+    assert failing.requests[0].stdin == (case.payload if case.stdin else None)
+
+
+@pytest.mark.parametrize(
+    ("option", "payload", "partial"),
+    (
+        ("--credential-file", b"file-credential-token", "file-credential-token"),
+        (
+            "--server-config-file",
+            b'{"headers":{"X-API-Key":"file-nested-token"}}',
+            "file-nested-token",
+        ),
+    ),
+    ids=("credential-file", "server-config-file-nested-json"),
+)
+def test_file_secret_channels_are_redacted_on_result_and_error_surfaces(
+    tmp_path: pathlib.Path,
+    option: str,
+    payload: bytes,
+    partial: str,
+) -> None:
+    path = tmp_path / "secret-input"
+    path.write_bytes(payload)
+    args = (
+        "workspace",
+        "mcp",
+        "add",
+        "server-1",
+        option,
+        str(path),
+    )
+    config = ClientConfig(compatibility=CompatibilityPolicy.ignore)
+    executor = _EchoExecutor(payload, exit_code=0)
+    result = CliTransport(config, executor=executor).run_bytes(args)
+    for rendered in (
+        result.stdout.decode("utf-8"),
+        result.stderr.decode("utf-8"),
+        " ".join(result.argv),
+        repr(result),
+    ):
+        assert payload.decode("utf-8") not in rendered
+        assert partial not in rendered
+    assert str(path) in result.argv
+
+    failing = _EchoExecutor(payload, exit_code=2)
+    with pytest.raises(NetworkError) as excinfo:
+        CliTransport(config, executor=failing).run_bytes(args)
+    exc = excinfo.value
+    for diagnostic in (str(exc), exc.stdout, exc.stderr, exc.argv, repr(exc)):
+        rendered_text = repr(diagnostic)
+        assert payload.decode("utf-8") not in rendered_text
+        assert partial not in rendered_text
+
+
 def test_command_plan_repr_never_exposes_secret_bearing_state() -> None:
     from multica_py.client import MulticaClient
 
@@ -428,9 +592,9 @@ def test_server_url_query_secret_is_redacted_across_public_surfaces(
 
 
 def test_transport_environment_isolation():
-    config = ClientConfig(executable=sys.executable, environment=(("MULTICA_TOKEN", "test"),))
+    config = ClientConfig(executable=sys.executable, environment=(("CUSTOM_VALUE", "test"),))
     transport = CliTransport(config)
-    code = "import os; print(os.environ.get('MULTICA_TOKEN', 'NOT_SET'))"
+    code = "import os; print(os.environ.get('CUSTOM_VALUE', 'NOT_SET'))"
     result = transport.run_text(("-c", code))
     assert result.text.strip() == "test"
 
