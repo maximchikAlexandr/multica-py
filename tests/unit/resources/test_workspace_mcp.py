@@ -35,8 +35,16 @@ def test_add_with_config_stdin_carries_fixture_bytes() -> None:
     config = b'{"token":"stdin-config"}\x00\xff'
     resource = WorkspaceMcpResource(CliTransport(ClientConfig()), ClientConfig())
     command = resource.add_command("server-1", server_config_stdin=config)
+    assert command._plan.steps[0].argv == (
+        "workspace",
+        "mcp",
+        "add",
+        "server-1",
+        "--server-config-stdin",
+        "--output",
+        "json",
+    )
     assert command._plan.steps[0].stdin == config
-    assert "--server-config-stdin" in command._plan.steps[0].argv
 
 
 def test_add_with_config_file_omits_inline_server_config(
@@ -46,10 +54,17 @@ def test_add_with_config_file_omits_inline_server_config(
     config_path.write_text('{"token":"file-config"}', encoding="utf-8")
     resource = WorkspaceMcpResource(CliTransport(ClientConfig()), ClientConfig())
     command = resource.add_command("server-1", server_config_file=config_path)
-    argv = command._plan.steps[0].argv
-    assert "--server-config-file" in argv
-    assert "--server-config" not in argv
-    assert "--server-config-stdin" not in argv
+    assert command._plan.steps[0].argv == (
+        "workspace",
+        "mcp",
+        "add",
+        "server-1",
+        "--server-config-file",
+        str(config_path),
+        "--output",
+        "json",
+    )
+    assert command._plan.steps[0].stdin is None
 
 
 def test_update_with_name_only_omits_config_flags() -> None:

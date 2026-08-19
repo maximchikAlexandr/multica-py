@@ -27,8 +27,16 @@ class CliResult(msgspec.Struct, frozen=True, kw_only=True):
 
 def decode_cli_result(result: RawCommandResult) -> CliResult:
     return CliResult(
-        stdout=redact_bytes(result.stdout, secret_values=result.secret_values),
-        stderr=redact_bytes(result.stderr, secret_values=result.secret_values),
+        stdout=redact_bytes(
+            result.stdout,
+            secret_values=result.secret_values,
+            secret_bytes=result.secret_bytes,
+        ),
+        stderr=redact_bytes(
+            result.stderr,
+            secret_values=result.secret_values,
+            secret_bytes=result.secret_bytes,
+        ),
         duration=result.duration,
     )
 

@@ -91,6 +91,13 @@ class SecretRedactionCase:
     stdin: bool
 
 
+@dataclass(frozen=True)
+class ProcessFileSecretCase:
+    id: str
+    option: str
+    payload: bytes
+
+
 _SECRET_REDACTION_CASES: tuple[SecretRedactionCase, ...] = (
     SecretRedactionCase(
         "credential-stdin",
@@ -139,6 +146,13 @@ _SECRET_REDACTION_CASES: tuple[SecretRedactionCase, ...] = (
         "Basic basic-token",
         "basic-token",
         False,
+    ),
+)
+
+_PROCESS_FILE_SECRET_CASES: tuple[ProcessFileSecretCase, ...] = (
+    ProcessFileSecretCase("credential-file", "--credential-file", b"credential\x00\xff-secret"),
+    ProcessFileSecretCase(
+        "server-config-file", "--server-config-file", b"server-config\x00\xfe-secret"
     ),
 )
 
@@ -368,7 +382,7 @@ def test_transport_redacts_split_token_args():
 
 
 @pytest.mark.parametrize("case", _SECRET_REDACTION_CASES, ids=lambda case: case.id)
-def test_secret_channels_are_redacted_on_result_and_error_surfaces(
+def test_secret_channels_preserve_transport_bytes_and_redact_error_surfaces(
     case: SecretRedactionCase,
 ) -> None:
     value = "" if case.stdin else case.payload.decode("utf-8")
@@ -388,18 +402,9 @@ def test_secret_channels_are_redacted_on_result_and_error_surfaces(
     )
 
     assert executor.requests[0].stdin == (case.payload if case.stdin else None)
-    assert case.payload not in result.stdout
-    assert case.payload not in result.stderr
-    for rendered in (
-        result.stdout.decode("utf-8", errors="replace"),
-        result.stderr.decode("utf-8", errors="replace"),
-        " ".join(result.argv),
-        repr(result),
-    ):
-        assert case.secret not in rendered
-        assert case.partial not in rendered
-    assert b"***" in result.stdout
-    assert b"***" in result.stderr
+    assert result.stdout == b"stdout " + case.payload
+    assert result.stderr == b"stderr " + case.payload
+    assert case.secret not in " ".join(result.argv)
 
     failing = _EchoExecutor(case.payload, exit_code=2)
     transport = CliTransport(config, executor=failing)
@@ -436,7 +441,7 @@ def test_secret_channels_are_redacted_on_result_and_error_surfaces(
         "server-config-file-opaque-json",
     ),
 )
-def test_file_secret_channels_are_redacted_on_result_and_error_surfaces(
+def test_file_secret_channels_preserve_transport_bytes_and_redact_error_surfaces(
     tmp_path: pathlib.Path,
     option: str,
     payload: bytes,
@@ -452,19 +457,10 @@ def test_file_secret_channels_are_redacted_on_result_and_error_surfaces(
     config = ClientConfig(compatibility=CompatibilityPolicy.ignore)
     executor = _EchoExecutor(payload, exit_code=0)
     result = CliTransport(config, executor=executor).run_bytes(args)
-    assert payload not in result.stdout
-    assert payload not in result.stderr
-    for rendered in (
-        result.stdout.decode("utf-8", errors="replace"),
-        result.stderr.decode("utf-8", errors="replace"),
-        " ".join(result.argv),
-        repr(result),
-    ):
-        assert payload.decode("utf-8", errors="replace") not in rendered
-        assert partial not in rendered
+    assert result.stdout == b"stdout " + payload
+    assert result.stderr == b"stderr " + payload
+    assert partial not in " ".join(result.argv)
     assert str(path) in result.argv
-    assert b"***" in result.stdout
-    assert b"***" in result.stderr
 
     failing = _EchoExecutor(payload, exit_code=2)
     with pytest.raises(NetworkError) as excinfo:
@@ -474,6 +470,37 @@ def test_file_secret_channels_are_redacted_on_result_and_error_surfaces(
         rendered_text = repr(diagnostic)
         assert payload.decode("utf-8", errors="replace") not in rendered_text
         assert partial not in rendered_text
+
+
+@pytest.mark.parametrize("case", _PROCESS_FILE_SECRET_CASES, ids=lambda case: case.id)
+def test_process_file_secret_channels_preserve_success_bytes_and_redact_failures(
+    case: ProcessFileSecretCase, tmp_path: pathlib.Path
+) -> None:
+    path = tmp_path / f"{case.id}.bin"
+    path.write_bytes(case.payload)
+    code = (
+        "import pathlib, sys; "
+        "data = pathlib.Path(sys.argv[-2]).read_bytes(); "
+        "sys.stdout.buffer.write(b'stdout ' + data); "
+        "sys.stderr.buffer.write(b'stderr ' + data); "
+        "sys.exit(int(sys.argv[-1]))"
+    )
+    args = ("-c", code, case.option, str(path), "2")
+    config = ClientConfig(executable=sys.executable, compatibility=CompatibilityPolicy.ignore)
+    transport = CliTransport(config)
+
+    result = transport.run_bytes(("-c", code, case.option, str(path), "0"))
+    assert result.stdout == b"stdout " + case.payload
+    assert result.stderr == b"stderr " + case.payload
+
+    with pytest.raises(NetworkError) as excinfo:
+        transport.run_bytes(args)
+    exc = excinfo.value
+    assert case.payload.decode("utf-8", errors="replace") not in repr(exc)
+    assert case.payload.decode("utf-8", errors="replace") not in exc.stdout
+    assert case.payload.decode("utf-8", errors="replace") not in exc.stderr
+    assert "***" in exc.stdout
+    assert "***" in exc.stderr
 
 
 def test_command_plan_repr_never_exposes_secret_bearing_state() -> None:

@@ -236,12 +236,8 @@ class CliTransport:
             return RawCommandResult(
                 argv=diagnostic_argv,
                 exit_code=completed.exit_code,
-                stdout=redact_bytes(
-                    completed.stdout, secret_values=secret_values, secret_bytes=secret_bytes
-                ),
-                stderr=redact_bytes(
-                    completed.stderr, secret_values=secret_values, secret_bytes=secret_bytes
-                ),
+                stdout=completed.stdout,
+                stderr=completed.stderr,
                 duration=duration,
                 secret_values=secret_values,
                 secret_bytes=secret_bytes,
@@ -265,11 +261,25 @@ class CliTransport:
     def _raise_command_error(self, result: RawCommandResult) -> None:
         command = " ".join(result.argv)
         stdout_text = redact_text(
-            decode_text(result.stdout, command=command),
+            decode_text(
+                redact_bytes(
+                    result.stdout,
+                    secret_values=result.secret_values,
+                    secret_bytes=result.secret_bytes,
+                ),
+                command=command,
+            ),
             secret_values=result.secret_values,
         )
         stderr_text = redact_text(
-            decode_text(result.stderr, command=command),
+            decode_text(
+                redact_bytes(
+                    result.stderr,
+                    secret_values=result.secret_values,
+                    secret_bytes=result.secret_bytes,
+                ),
+                command=command,
+            ),
             secret_values=result.secret_values,
         )
         exc_class, reported_exit_code = classify_cli_failure(

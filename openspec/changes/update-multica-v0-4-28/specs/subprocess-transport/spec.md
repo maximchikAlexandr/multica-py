@@ -19,6 +19,13 @@ generic command-failed message SHALL remain the fallback. `--server-config` inli
 SHALL NOT be a secret; plugin Remote MCP stdin and credential-file **contents**
 SHALL be collected into `secret_values`. The SDK SHALL NOT add a plaintext
 `--credential` flag. A `--credential*` key match MUST NOT redact the file path.
+Successful stdout and stderr bytes SHALL reach typed decoders unchanged;
+redaction SHALL occur only while constructing error diagnostics or finalizing
+the public raw `CliResult`. File-channel secret contents SHALL be read only
+immediately before execution, using binary I/O; preview/render SHALL retain
+the file path without reading it. UTF-8/JSON secret extraction from file bytes
+is best-effort, while opaque non-UTF-8 bytes SHALL still participate in exact
+diagnostic redaction.
 
 #### Scenario: Failures expose typed redacted diagnostics
 - **WHEN** malformed output or nonzero exit occurs
@@ -61,3 +68,11 @@ SHALL be collected into `secret_values`. The SDK SHALL NOT add a plaintext
 #### Scenario: Credential file path is not treated as a secret
 - **WHEN** `collect_secret_values` sees `--credential-file <path>` or `--server-config-file <path>`
 - **THEN** the path is not added as a secret; file or stdin contents are collected when those channels carry credentials or config JSON
+
+#### Scenario: File channels are passive during preview
+- **WHEN** a command using `--credential-file` or `--server-config-file` is rendered
+- **THEN** construction and preview do not read the file, the path remains in the rendered argv, and execution reads the bytes only when `run()` starts
+
+#### Scenario: Successful typed output preserves secret-looking values
+- **WHEN** successful stdout contains a short or overlapping environment/file/stdin secret in valid JSON
+- **THEN** the typed decoder receives the original bytes and preserves the numeric/string values, while a public raw `CliResult` redacts the same secret values and bytes

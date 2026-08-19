@@ -93,7 +93,9 @@ def _is_secret_key_with_policy(key: str, *, include_bare_key: bool) -> bool:
     )
 
 
-def collect_secret_values(argv: tuple[str, ...], *, stdin: bytes | None = None) -> tuple[str, ...]:
+def collect_secret_values(
+    argv: tuple[str, ...], *, stdin: bytes | None = None, include_file_contents: bool = True
+) -> tuple[str, ...]:
     secrets: list[str] = []
     i = 0
     while i < len(argv):
@@ -108,7 +110,8 @@ def collect_secret_values(argv: tuple[str, ...], *, stdin: bytes | None = None) 
             i += 4
             continue
         if arg.removeprefix("--") in _FILE_CONTENT_SECRET_OPTIONS and i + 1 < len(argv):
-            secrets.extend(_read_file_secrets(argv[i + 1]))
+            if include_file_contents:
+                secrets.extend(_read_file_secrets(argv[i + 1]))
             i += 2
             continue
         if arg == "--credential-stdin" and stdin:
@@ -249,12 +252,16 @@ def normalize_secret_values(values: Iterable[str]) -> tuple[str, ...]:
 
 
 def collect_diagnostic_secret_values(
-    argv: tuple[str, ...], environment: Mapping[str, str], *, stdin: bytes | None = None
+    argv: tuple[str, ...],
+    environment: Mapping[str, str],
+    *,
+    stdin: bytes | None = None,
+    include_file_contents: bool = True,
 ) -> tuple[str, ...]:
     """Collect all secret values that may appear in command diagnostics."""
     return normalize_secret_values(
         (
-            *collect_secret_values(argv, stdin=stdin),
+            *collect_secret_values(argv, stdin=stdin, include_file_contents=include_file_contents),
             *collect_secret_values_from_environment(environment),
         )
     )

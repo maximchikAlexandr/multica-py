@@ -453,6 +453,27 @@ def test_cli_command_executes_original_argv_and_returns_safe_immutable_result(
     transport.run_bytes.assert_called_once_with(("issue", "get", "i1"), stdin=None, timeout=None)
 
 
+def test_cli_result_redacts_opaque_secret_bytes_at_public_boundary(
+    cli_resource_factory: Callable[..., tuple[CliResource, MagicMock]],
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    resource, transport = cli_resource_factory()
+    opaque = b"opaque-cli-secret\x00\xff"
+    transport.run_bytes.return_value = raw_result(
+        ("multica", "workspace", "mcp", "add"),
+        stdout=b"stdout " + opaque,
+        stderr=b"stderr " + opaque,
+        secret_bytes=(opaque,),
+    )
+
+    result = resource.command("workspace", "mcp", "add").run()
+
+    assert opaque not in result.stdout
+    assert opaque not in result.stderr
+    assert result.stdout == b"stdout ***"
+    assert result.stderr == b"stderr ***"
+
+
 @pytest.mark.parametrize("case", RAW_CLI_SECRET_CASES, ids=lambda case: case.name)
 def test_cli_command_redacts_secret_options_in_preview(case: RawCliSecretCase) -> None:
     client = MulticaClient(ClientConfig(executable=sys.executable))

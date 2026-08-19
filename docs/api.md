@@ -255,7 +255,11 @@ validate/pack/init flows. `list()` and `status()` decode frozen `Plugin` rows;
 than in Python. Remote MCP configure accepts credentials only through
 `--credential-file` or `--credential-stdin` (mutually exclusive); credential
 bytes are supplied as `credential_stdin: bytes | None` and are redacted from
-preview and diagnostics.
+preview and diagnostics. File-channel paths remain visible in preview without
+reading the file; `run()` reads them as bytes immediately before execution.
+Text/JSON secret extraction is best-effort for diagnostics, typed decoders
+receive original successful stdout/stderr bytes, and only public raw `CliResult`
+applies success-path redaction.
 
 `client.properties` manages the workspace property catalog. Create/update use
 `Unset` for omitted fields; actor and multi-actor types reject option tuples.

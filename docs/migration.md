@@ -243,7 +243,11 @@ operations. Add requires exactly one config channel; update allows at most one.
 list/mutation methods return `Page[McpServer]`; bound relation snapshots remain
 tuples.
 Secret-bearing inline JSON and stdin/file contents are redacted from preview
-and diagnostics while executed argv still receives the reviewed flags.
+and diagnostics while executed argv still receives the reviewed flags. File
+contents are read only at `run()` time using binary I/O, so non-UTF-8 payloads
+remain executable and are redacted by exact bytes in diagnostics. Successful
+typed decoders receive original stdout/stderr; the public raw `CliResult`
+redacts its success streams.
 
 ### Skill refresh and search
 
