@@ -1,0 +1,61 @@
+## ADDED Requirements
+
+### Requirement: One async execution path
+The SDK SHALL expose `Command.run_async()` on the existing `Command[T]` abstraction. It SHALL execute the same immutable plan, configuration snapshot, argv, decoding, finalization, cache effects, result type, and public exception behavior as `Command.run()` without blocking the caller's asyncio event-loop thread. The SDK SHALL NOT introduce a separate async command, client, transport, request model, result model, exception hierarchy, or runtime dependency.
+
+#### Scenario: One command supports either execution style
+- **WHEN** a consumer builds a command and executes it with `run()` or `await run_async()` against equivalent responses
+- **THEN** both paths send the same transport request and return equivalent values of the same public type
+
+#### Scenario: Command inspection remains execution-independent
+- **WHEN** a consumer reads `command.commands` before asynchronous execution
+- **THEN** inspection performs no I/O and reports the same immutable plan that `run_async()` executes
+
+#### Scenario: Async execution does not block the event loop
+- **WHEN** a command is awaiting blocking executor I/O
+- **THEN** another scheduled asyncio task can make progress on the event-loop thread
+
+### Requirement: Complete async naming and signature parity
+Every public synchronous SDK method that can perform CLI, process, filesystem, or remote-executor I/O SHALL expose a sibling named `<method>_async`. Each sibling SHALL accept the same operation arguments and configuration options, preserve overload distinctions, and return an awaitable whose resolved value has the synchronous method's public result type. Purely local properties, command builders, validation helpers, serialization, command inspection, cache invalidation, and permalink helpers SHALL remain synchronous and SHALL NOT receive artificial async variants.
+
+#### Scenario: Resource operation has an async sibling
+- **WHEN** a public resource method executes an existing `<method>_command()` plan
+- **THEN** `<method>_async()` exists with an equivalent input signature and delegates to that plan's `run_async()`
+
+#### Scenario: Local helper has no artificial sibling
+- **WHEN** a public method performs only local computation or inspection
+- **THEN** the async inventory excludes an `_async` variant for that method
+
+#### Scenario: Overloads remain typed
+- **WHEN** a synchronous I/O method has overloads with distinct inputs or result types
+- **THEN** its async sibling preserves the corresponding overloads and precise awaitable result annotations without public `Any`
+
+### Requirement: Standard asyncio composition and bounded execution
+Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL retain the client's existing process-concurrency limit. A waiting coroutine SHALL be cancellable using standard asyncio cancellation. Cancellation SHALL stop waiting and raise `asyncio.CancelledError`; because execution reuses synchronous executor backends, it SHALL NOT claim that cancellation terminates a CLI operation that has already started. Existing operation timeouts SHALL remain the mechanism that bounds underlying execution.
+
+#### Scenario: Independent calls overlap
+- **WHEN** two independent async resource calls are passed to `asyncio.gather()` and the configured process limit permits both
+- **THEN** both may execute concurrently and results retain input order under standard gather semantics
+
+#### Scenario: Existing concurrency limit is retained
+- **WHEN** concurrent async calls exceed the client's configured maximum process count
+- **THEN** the existing shared process semaphore limits active executor calls without blocking the event-loop thread
+
+#### Scenario: Awaiting caller is cancelled
+- **WHEN** a task awaiting an already-started async SDK call is cancelled
+- **THEN** it raises `asyncio.CancelledError`, does not translate cancellation into a Multica exception, and documentation states that the underlying executor operation may continue until completion or timeout
+
+### Requirement: Awaitable managed process lifecycle
+`ManagedProcess` SHALL expose async counterparts for blocking buffered lifecycle operations: `wait_async()`, `result_async()`, and `close_async()`. It SHALL support `async with` by delegating asynchronous exit to `close_async()`. These operations SHALL preserve output ownership, timeout, cached-result, cleanup, and semaphore-release semantics of their synchronous counterparts. Synchronous streaming iterators SHALL remain unchanged in this change.
+
+#### Scenario: Process result is awaited
+- **WHEN** a consumer awaits `process.result_async(timeout)`
+- **THEN** the event loop remains responsive and the resolved `ProcessResult` equals the synchronous result contract
+
+#### Scenario: Process is closed with async context management
+- **WHEN** execution leaves `async with managed_process`
+- **THEN** `close_async()` applies the existing terminate-wait-kill cleanup policy and releases the process semaphore exactly once
+
+#### Scenario: Buffered output ownership is shared
+- **WHEN** synchronous and asynchronous lifecycle methods are mixed on one managed process
+- **THEN** they observe one result cache and the existing single-owner buffered-versus-streaming rules
