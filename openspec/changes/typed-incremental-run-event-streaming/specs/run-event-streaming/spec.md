@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Persisted messages map to semantic events
-The SDK SHALL map each persisted run message to exactly one immutable keyword-only semantic event while retaining the complete `RunMessage` as `raw_message`. Every message-backed event SHALL have `task_id: str`, `issue_id: str | None`, `sequence: int` copied from `seq`, `created_at: datetime | None`, and `raw_message: RunMessage`. `RunTextEvent` SHALL add `text: str | None` from `content`; `RunThinkingEvent` SHALL add `thinking: str | None` from `content`; `RunToolStartedEvent` SHALL add `tool: str | None` and `input: Mapping[str, JsonValue] | None`; `RunToolFinishedEvent` SHALL add `tool: str | None` and `output: str | None`; and `RunErrorEvent` SHALL add `error: str | None` from `content`. A missing optional source field SHALL map to `None`, never an empty or fabricated value, and SHALL NOT prevent yielding the semantic event. The mapping SHALL accept `text`, `thinking`, `tool_use`/`tool-use`, `tool_result`/`tool-result`, and `error` respectively. Every other type string, including blank, SHALL produce `RunUnknownEvent` with the shared message fields plus `message_type: str` equal to `RunMessage.type`; sparse unknown payload fields SHALL remain available through `raw_message`.
+The SDK SHALL map each persisted run message to exactly one immutable keyword-only semantic event while retaining the complete `RunMessage` as `raw_message`. Every message-backed event SHALL have `task_id: str`, `issue_id: str | None`, `sequence: int` copied from `seq`, `created_at: datetime | None`, and `raw_message: RunMessage`. `RunTextEvent` SHALL add `text: str | None` from `content`; `RunThinkingEvent` SHALL add `thinking: str | None` from `content`; `RunToolStartedEvent` SHALL add `tool: str | None` and `input: Mapping[str, JsonValue] | None`; `RunToolFinishedEvent` SHALL add `tool: str | None` and `output: str | None`; and `RunErrorEvent` SHALL add `error: str | None` from `content`. A missing optional source field SHALL map to `None`, never an empty or fabricated value, and SHALL NOT prevent yielding the semantic event. The known mapping SHALL be exactly `text`, `thinking`, `tool_use`, `tool_result`, and `error` respectively. Every other type string, including blank and hyphenated `tool-use`/`tool-result`, SHALL produce `RunUnknownEvent` with the shared message fields plus `message_type: str` equal to `RunMessage.type`; sparse unknown payload fields SHALL remain available through `raw_message`.
 
 #### Scenario: Text and thinking messages narrow by type
 - **WHEN** a stream receives ordered `text` and `thinking` messages
@@ -22,6 +22,10 @@ The SDK SHALL map each persisted run message to exactly one immutable keyword-on
 #### Scenario: Unknown or blank message type is lossless
 - **WHEN** pinned or future upstream returns an unrecognized or blank message type
 - **THEN** the stream yields `RunUnknownEvent(message_type=<exact type string>)` in sequence order and preserves the complete raw message
+
+#### Scenario: Internal hyphen spelling is not a persisted alias
+- **WHEN** a raw run-message payload nevertheless contains `type="tool-use"` or `type="tool-result"`
+- **THEN** it yields `RunUnknownEvent` with that exact `message_type` rather than a tool lifecycle event
 
 ### Requirement: Bound task runs stream incrementally
 `TaskRun.stream_events(*, poll_interval: float = 1.0) -> Iterator[RunEvent]` SHALL repeatedly request raw messages with `since` equal to the greatest emitted upstream sequence. Its local message state SHALL contain that cursor and the complete immutable `RunMessage` keyed by every emitted sequence for the iterator lifetime, using `O(emitted messages)` memory and releasing it when iteration ends. For each sequence already in the table, whether repeated within the current batch or in a later poll, it SHALL suppress the row only when the complete payload equals the stored message and SHALL raise `OutputShapeError` when it differs; it SHALL yield unseen messages in ascending sequence order, store them, and advance the cursor. It SHALL sleep for `poll_interval` seconds only when another poll or terminal quiescence read is required. `poll_interval` SHALL be a positive finite real number; booleans, zero, negative, nonnumeric, NaN, and infinity SHALL fail before the first subprocess call.
@@ -51,19 +55,19 @@ The SDK SHALL map each persisted run message to exactly one immutable keyword-on
 - **THEN** iteration raises `TypeError` or `ValueError` before a message or run-status command executes
 
 ### Requirement: Stream termination follows durable run completion
-The iterator SHALL refresh its own task run through the inherited issue context after each incremental message batch. It SHALL treat `completed`, `failed`, and `cancelled` as terminal statuses and SHALL also treat any run with non-null `completed_at` as terminal for forward compatibility. For each observed status change it SHALL create one immutable keyword-only `RunStatusChangedEvent` with `task_id: str`, `issue_id: str | None`, `sequence: None`, `created_at: None`, `raw_message: None`, `previous_status: str | None`, `status: str`, and `observed_at: datetime`. `observed_at` SHALL be an aware UTC timestamp captured immediately after the successful refresh that supplied `status`; it SHALL NOT represent upstream `created_at` or `completed_at`. After first observing a terminal run, the iterator SHALL require two consecutive incremental responses with no unseen message, sleeping exactly `poll_interval` between terminal reads. Empty and verified identical-replay-only responses SHALL count as quiet; any unseen message SHALL be yielded and SHALL reset the quiet count to zero. After the second consecutive quiet response, the iterator SHALL yield the already observed terminal status event and terminate so no message event appears after terminal status. Because pinned upstream exposes no transcript-complete watermark and cancellation acknowledgement occurs after status cancellation, this quiescence rule SHALL NOT be documented as a guarantee that no still-later message can exist.
+The iterator SHALL refresh its own task run through the inherited issue context after each incremental message batch. It SHALL treat `completed`, `failed`, and `cancelled` as terminal statuses and SHALL also treat any run with non-null `completed_at` as terminal for forward compatibility. For each observed status change it SHALL create one immutable keyword-only `RunStatusChangedEvent` with `task_id: str`, `issue_id: str | None`, `sequence: None`, `created_at: None`, `raw_message: None`, `previous_status: str | None`, `status: str`, and `observed_at: datetime`. `observed_at` SHALL be an aware UTC timestamp captured immediately after the successful refresh that supplied `status`; it SHALL NOT represent upstream `created_at` or `completed_at`. For `completed` and `failed`, after the source-backed pre-callback flush, the iterator SHALL immediately drain until one incremental response contains no unseen message and then yield terminal status last. For `cancelled`, and for an unknown status terminal only through non-null `completed_at`, it SHALL instead require two consecutive incremental responses with no unseen message, sleeping exactly `poll_interval` between terminal reads. Empty and verified identical-replay-only responses SHALL count as quiet; any unseen message SHALL be yielded and SHALL reset the quiet count to zero. After the second consecutive quiet response, it SHALL yield terminal status last and terminate. Because cancellation acknowledgement occurs after cancellation status and is not visible through the run API, cancellation quiescence SHALL NOT be documented as a guarantee that no still-later message can exist.
 
 #### Scenario: Running status is observable
 - **WHEN** the first status refresh observes `running`
 - **THEN** the iterator yields one `RunStatusChangedEvent(previous_status=None, status="running")` after all messages from that poll and does not emit the same status again while it remains unchanged
 
 #### Scenario: Terminal transition drains the tail
-- **WHEN** a status refresh changes from `running` to `completed`
-- **THEN** the iterator waits for two consecutive quiet incremental responses separated by `poll_interval`, resets the quiet count when a tail event arrives, yields all observed tail events before one completed status event, and then stops
+- **WHEN** a status refresh changes from `running` to `completed` or `failed`
+- **THEN** the iterator immediately reads until one response has no unseen message, yields all tail events before the terminal status event, and stops without a quiescence sleep
 
-#### Scenario: Failed and cancelled runs end naturally
-- **WHEN** the refreshed run status is `failed` or `cancelled`
-- **THEN** the iterator applies the same two-quiet-read policy, yields the terminal status event last, and terminates without converting the terminal outcome into an iterator exception
+#### Scenario: Cancelled run uses conservative quiescence
+- **WHEN** the refreshed run status is `cancelled`
+- **THEN** the iterator requires two consecutive quiet reads separated by `poll_interval`, yields cancelled status last, and terminates without converting cancellation into an iterator exception
 
 #### Scenario: Delayed cancellation tail resets quiescence
 - **WHEN** the first post-cancellation read is quiet and the next read contains a message flushed by the daemon after cancellation status was stored
@@ -75,7 +79,7 @@ The iterator SHALL refresh its own task run through the inherited issue context 
 
 #### Scenario: Unknown terminal status uses completion timestamp
 - **WHEN** a refreshed run has a future unknown status and non-null `completed_at`
-- **THEN** the iterator treats it as terminal, applies the same two-quiet-read policy, and terminates
+- **THEN** the iterator treats it as terminal, conservatively applies the cancellation two-quiet-read policy because no flush ordering is known, and terminates
 
 ### Requirement: Stream failures remain explicit
 Streaming SHALL require the same bound client and inherited issue ID used by `TaskRun.messages`. Missing binding or issue context SHALL raise the existing typed entity/relation context error before polling. A successful run-list refresh that omits the target run SHALL raise `ProtocolError`. Two different complete `RunMessage` payloads at one sequence SHALL raise `OutputShapeError`. Existing typed command failures, including transport `NotFoundError`, SHALL propagate unchanged. None of these failures SHALL be silently retried or interpreted as completion.
