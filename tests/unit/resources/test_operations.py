@@ -594,6 +594,7 @@ def test_discovered_public_methods() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
+    assert len(canonical) == 193
     assert len(canonical_cases) == len(canonical)
     contract_entrypoints = {
         (operation.operation_id, entrypoint.entrypoint_id): entrypoint

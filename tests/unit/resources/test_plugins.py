@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pathlib
+import stat
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
@@ -14,6 +15,7 @@ from multica_py._internal.redaction import (
 )
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
+from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.execution import ExecutionRequest, ExecutionResult, LocalExecutor
 from multica_py.resources.plugins import PluginResource
@@ -146,9 +148,19 @@ class _JsonExecutor(LocalExecutor):
     def __init__(self, stdout: bytes) -> None:
         self.stdout = stdout
         self.requests: list[ExecutionRequest] = []
+        self.snapshot_payloads: list[bytes] = []
+        self.snapshot_modes: list[int] = []
 
     def run(self, request: ExecutionRequest) -> ExecutionResult:
         self.requests.append(request)
+        for index, argument in enumerate(request.argv):
+            if not argument.startswith(("--credential-file", "--server-config-file")):
+                continue
+            snapshot = argument.partition("=")[2] if "=" in argument else request.argv[index + 1]
+            snapshot_path = pathlib.Path(snapshot)
+            self.snapshot_payloads.append(snapshot_path.read_bytes())
+            self.snapshot_modes.append(stat.S_IMODE(snapshot_path.stat().st_mode))
+            break
         return ExecutionResult(0, self.stdout, b"")
 
 
@@ -253,7 +265,20 @@ def test_typed_decoders_receive_unredacted_success_json_for_secret_channels(
         assert workspace_result.items[0].name == case.payload.decode()
         assert workspace_result.items[0].transport == "abc123"
 
-    assert executor.requests[0].argv == ("multica", *expected)
+    if case.channel == "file":
+        file_index = expected.index(
+            "--credential-file" if case.resource == "plugin" else "--server-config-file"
+        )
+        request_argv = executor.requests[0].argv
+        request_file_index = file_index + 1
+        assert request_argv[:request_file_index] == ("multica", *expected[:file_index])
+        assert request_argv[request_file_index] == expected[file_index]
+        assert request_argv[request_file_index + 1] != expected[file_index + 1]
+        assert executor.snapshot_payloads == [case.payload]
+        assert executor.snapshot_modes == [0o600]
+        assert not pathlib.Path(request_argv[request_file_index + 1]).exists()
+    else:
+        assert executor.requests[0].argv == ("multica", *expected)
     assert executor.requests[0].stdin == (case.payload if case.channel == "stdin" else None)
 
 
@@ -286,6 +311,16 @@ def test_file_secret_channels_are_not_read_during_preview(
     )
     assert workspace_command.commands == (
         f"multica workspace mcp add server-1 --server-config-file {server_config_path} --output json",
+    )
+    raw_command = MulticaClient(config).cli.command(
+        "workspace",
+        "mcp",
+        "add",
+        "server-1",
+        f"--server-config-file={server_config_path}",
+    )
+    assert raw_command.commands == (
+        f"multica workspace mcp add server-1 --server-config-file={server_config_path}",
     )
 
 

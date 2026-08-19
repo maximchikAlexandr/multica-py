@@ -3,11 +3,22 @@ from __future__ import annotations
 import json
 import os
 import re
-from collections.abc import Iterable, Mapping
+import stat
+import tempfile
+from collections.abc import Iterable, Iterator, Mapping
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
 from typing import cast
 from urllib.parse import unquote, unquote_plus, urlsplit
 
+from multica_py.exceptions import ValidationError
+
 REDACTED = "***"
+
+# File channels are intentionally bounded before they are staged for a child
+# process.  The extra byte read is what makes the limit deterministic without
+# trusting a racy stat result.
+MAX_SECRET_FILE_BYTES = 1024 * 1024
 
 _token_pattern = re.compile(r"--token(?:[= ])(\S+)", re.IGNORECASE)
 _token_text_pattern = re.compile(
@@ -41,6 +52,43 @@ _SECRET_KEY_COMPACT_ALIASES = frozenset(
 )
 _SECRET_KEY_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
 _SECRET_KEY_SEPARATOR = re.compile(r"[^A-Za-z0-9]+")
+
+
+@dataclass(frozen=True, slots=True)
+class SecretFileArgument:
+    option_index: int
+    value_index: int | None
+    option: str
+    path: str
+
+    @property
+    def is_equals_form(self) -> bool:
+        return self.value_index is None
+
+
+def iter_secret_file_arguments(argv: tuple[str, ...]) -> tuple[SecretFileArgument, ...]:
+    """Find both split and ``--option=path`` file-channel forms."""
+    found: list[SecretFileArgument] = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if not arg.startswith("--"):
+            i += 1
+            continue
+        name, separator, value = arg[2:].partition("=")
+        if name not in _FILE_CONTENT_SECRET_OPTIONS:
+            i += 1
+            continue
+        if separator:
+            found.append(SecretFileArgument(i, None, name, value))
+            i += 1
+            continue
+        if i + 1 < len(argv):
+            found.append(SecretFileArgument(i, i + 1, name, argv[i + 1]))
+            i += 2
+            continue
+        i += 1
+    return tuple(found)
 
 
 def _is_secret_config_key(key: str) -> bool:
@@ -94,9 +142,14 @@ def _is_secret_key_with_policy(key: str, *, include_bare_key: bool) -> bool:
 
 
 def collect_secret_values(
-    argv: tuple[str, ...], *, stdin: bytes | None = None, include_file_contents: bool = True
+    argv: tuple[str, ...],
+    *,
+    stdin: bytes | None = None,
+    include_file_contents: bool = True,
+    file_contents: Mapping[str, bytes] | None = None,
 ) -> tuple[str, ...]:
     secrets: list[str] = []
+    file_arguments = {item.option_index: item for item in iter_secret_file_arguments(argv)}
     i = 0
     while i < len(argv):
         arg = argv[i]
@@ -109,10 +162,11 @@ def collect_secret_values(
             secrets.append(argv[i + 3])
             i += 4
             continue
-        if arg.removeprefix("--") in _FILE_CONTENT_SECRET_OPTIONS and i + 1 < len(argv):
+        file_argument = file_arguments.get(i)
+        if file_argument is not None:
             if include_file_contents:
-                secrets.extend(_read_file_secrets(argv[i + 1]))
-            i += 2
+                secrets.extend(_read_file_secrets(file_argument.path, file_contents=file_contents))
+            i += 1 if file_argument.is_equals_form else 2
             continue
         if arg == "--credential-stdin" and stdin:
             secrets.extend(_collect_content_secret_values(stdin.decode("utf-8", errors="replace")))
@@ -135,8 +189,14 @@ def collect_secret_values(
     return normalize_secret_values(secrets)
 
 
-def _read_file_secrets(path: str) -> tuple[str, ...]:
-    content = _read_file_bytes(path)
+def _read_file_secrets(
+    path: str, *, file_contents: Mapping[str, bytes] | None = None
+) -> tuple[str, ...]:
+    content = (
+        file_contents[path]
+        if file_contents is not None and path in file_contents
+        else _read_file_bytes(path)
+    )
     if not content:
         return ()
     decoded = content.decode("utf-8", errors="replace")
@@ -145,10 +205,93 @@ def _read_file_secrets(path: str) -> tuple[str, ...]:
 
 def _read_file_bytes(path: str) -> bytes:
     try:
-        with open(os.fspath(path), "rb") as handle:
-            return handle.read()
-    except OSError:
+        return read_secret_file_bytes(path)
+    except ValidationError:
+        # Standalone redaction is best effort.  Execution uses the strict
+        # reader through ``snapshot_secret_files`` so malformed channels fail
+        # before a subprocess can observe them.
         return b""
+
+
+def read_secret_file_bytes(path: str) -> bytes:
+    """Read one owner-only, bounded, regular file without following links."""
+    flags = os.O_RDONLY | os.O_NONBLOCK
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(os.fspath(path), flags)
+    except OSError as error:
+        raise ValidationError(
+            f"secret file is not readable as a regular file: {os.fspath(path)}"
+        ) from error
+    try:
+        mode = os.fstat(descriptor).st_mode
+        if not stat.S_ISREG(mode):
+            raise ValidationError(f"secret file is not a regular file: {os.fspath(path)}")
+        content = bytearray()
+        while len(content) <= MAX_SECRET_FILE_BYTES:
+            chunk = os.read(
+                descriptor,
+                min(64 * 1024, MAX_SECRET_FILE_BYTES + 1 - len(content)),
+            )
+            if not chunk:
+                break
+            content.extend(chunk)
+        if len(content) > MAX_SECRET_FILE_BYTES:
+            raise ValidationError(
+                f"secret file exceeds the {MAX_SECRET_FILE_BYTES}-byte limit: {os.fspath(path)}"
+            )
+        return bytes(content)
+    except OSError as error:
+        raise ValidationError(f"secret file could not be read: {os.fspath(path)}") from error
+    finally:
+        os.close(descriptor)
+
+
+@contextmanager
+def snapshot_secret_files(
+    argv: tuple[str, ...],
+) -> Iterator[tuple[tuple[str, ...], Mapping[str, bytes]]]:
+    """Stage file-channel bytes once and rewrite only the child argv paths."""
+    file_arguments = iter_secret_file_arguments(argv)
+    if not file_arguments:
+        yield argv, {}
+        return
+
+    snapshots: dict[str, tuple[str, bytes]] = {}
+    temporary_paths: list[str] = []
+    rewritten = list(argv)
+    try:
+        for argument in file_arguments:
+            snapshot = snapshots.get(argument.path)
+            if snapshot is None:
+                content = read_secret_file_bytes(argument.path)
+                descriptor, snapshot_path = tempfile.mkstemp(
+                    prefix="multica-py-secret-", suffix=".bin"
+                )
+                temporary_paths.append(snapshot_path)
+                try:
+                    os.fchmod(descriptor, 0o600)
+                    with os.fdopen(descriptor, "wb") as handle:
+                        handle.write(content)
+                except BaseException:
+                    with suppress(OSError):
+                        os.close(descriptor)
+                    raise
+                snapshot = (snapshot_path, content)
+                snapshots[argument.path] = snapshot
+            snapshot_path, _content = snapshot
+            if argument.is_equals_form:
+                name = argv[argument.option_index].partition("=")[0]
+                rewritten[argument.option_index] = f"{name}={snapshot_path}"
+            else:
+                assert argument.value_index is not None
+                rewritten[argument.value_index] = snapshot_path
+        yield tuple(rewritten), {path: content for path, (_snapshot, content) in snapshots.items()}
+    finally:
+        for temporary_path in temporary_paths:
+            with suppress(FileNotFoundError):
+                os.unlink(temporary_path)
 
 
 def _collect_option_secret_values(name: str, value: str) -> tuple[str, ...]:
@@ -257,33 +400,40 @@ def collect_diagnostic_secret_values(
     *,
     stdin: bytes | None = None,
     include_file_contents: bool = True,
+    file_contents: Mapping[str, bytes] | None = None,
 ) -> tuple[str, ...]:
     """Collect all secret values that may appear in command diagnostics."""
     return normalize_secret_values(
         (
-            *collect_secret_values(argv, stdin=stdin, include_file_contents=include_file_contents),
+            *collect_secret_values(
+                argv,
+                stdin=stdin,
+                include_file_contents=include_file_contents,
+                file_contents=file_contents,
+            ),
             *collect_secret_values_from_environment(environment),
         )
     )
 
 
 def collect_diagnostic_secret_bytes(
-    argv: tuple[str, ...], *, stdin: bytes | None = None
+    argv: tuple[str, ...],
+    *,
+    stdin: bytes | None = None,
+    file_contents: Mapping[str, bytes] | None = None,
 ) -> tuple[bytes, ...]:
     """Collect opaque file/stdin payloads for byte-preserving diagnostics."""
     secrets: list[bytes] = []
     if stdin and any(f"--{option}" in argv for option in _STDIN_CONTENT_SECRET_OPTIONS):
         secrets.append(stdin)
-    i = 0
-    while i < len(argv):
-        arg = argv[i]
-        if arg.removeprefix("--") in _FILE_CONTENT_SECRET_OPTIONS and i + 1 < len(argv):
-            content = _read_file_bytes(argv[i + 1])
-            if content:
-                secrets.append(content)
-            i += 2
-            continue
-        i += 1
+    for argument in iter_secret_file_arguments(argv):
+        content = (
+            file_contents[argument.path]
+            if file_contents is not None and argument.path in file_contents
+            else _read_file_bytes(argument.path)
+        )
+        if content:
+            secrets.append(content)
     unique: list[bytes] = []
     for secret in secrets:
         if secret not in unique:
@@ -300,13 +450,14 @@ def redact_argv(argv: tuple[str, ...]) -> tuple[str, ...]:
     i = 0
     while i < len(argv):
         arg = argv[i]
-        if arg == "--credential-file" and i + 1 < len(argv):
-            redacted.extend((arg, argv[i + 1]))
-            i += 2
-            continue
-        if arg == "--server-config-file" and i + 1 < len(argv):
-            redacted.extend((arg, argv[i + 1]))
-            i += 2
+        name, separator, _value = arg[2:].partition("=") if arg.startswith("--") else ("", "", "")
+        if name in _FILE_CONTENT_SECRET_OPTIONS:
+            redacted.append(arg)
+            if not separator and i + 1 < len(argv):
+                redacted.append(argv[i + 1])
+                i += 2
+            else:
+                i += 1
             continue
         if _is_secret_option(arg) and "=" not in arg and i + 1 < len(argv):
             redacted.extend((arg, REDACTED))

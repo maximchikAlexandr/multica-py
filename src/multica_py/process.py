@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import msgspec
 
@@ -33,10 +33,12 @@ class ManagedProcess:
         handle: ProcessHandle,
         argv: tuple[str, ...] = (),
         semaphore: ProcessSemaphore | None = None,
+        cleanup: Callable[[], None] | None = None,
     ) -> None:
         self._handle = handle
         self._argv = argv
         self._semaphore = semaphore
+        self._cleanup = cleanup
         self._closed = False
         self._output = OutputOwnership()
         self._result: ProcessResult | None = None
@@ -67,9 +69,17 @@ class ManagedProcess:
         if self._closed:
             return
         self._closed = True
-        self._handle.close()
-        if self._semaphore is not None:
-            self._semaphore.release()
+        try:
+            self._handle.close()
+        finally:
+            try:
+                if self._cleanup is not None:
+                    cleanup = self._cleanup
+                    self._cleanup = None
+                    cleanup()
+            finally:
+                if self._semaphore is not None:
+                    self._semaphore.release()
 
     @property
     def id(self) -> str | int | None:

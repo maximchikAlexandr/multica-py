@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 import re
+import sys
 from copy import copy
 from dataclasses import dataclass
 
@@ -16,6 +17,7 @@ from multica_py._internal.redaction import (
     redact_bytes,
     redact_diagnostic_argv,
     redact_text,
+    snapshot_secret_files,
 )
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py.config import ClientConfig
@@ -208,11 +210,6 @@ class CliTransport:
         argv = self._build_full_argv(command_args)
         cwd = os.fspath(self._config.cwd) if self._config.cwd is not None else None
         environment = tuple(self._config.environment)
-        secret_values = collect_diagnostic_secret_values(
-            argv, _effective_environment(self._config), stdin=stdin
-        )
-        secret_bytes = collect_diagnostic_secret_bytes(argv, stdin=stdin)
-        diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
         effective_timeout = timeout if timeout is not None else self._config.timeout
 
         sem_acquired = False
@@ -222,15 +219,26 @@ class CliTransport:
 
         t0 = datetime.datetime.now(tz=datetime.UTC)
         try:
-            completed = self._executor.run(
-                ExecutionRequest(
-                    argv=argv,
-                    cwd=cwd,
-                    environment=environment,
+            with snapshot_secret_files(argv) as (execution_argv, file_contents):
+                secret_values = collect_diagnostic_secret_values(
+                    argv,
+                    _effective_environment(self._config),
                     stdin=stdin,
-                    timeout=effective_timeout,
+                    file_contents=file_contents,
                 )
-            )
+                secret_bytes = collect_diagnostic_secret_bytes(
+                    argv, stdin=stdin, file_contents=file_contents
+                )
+                diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
+                completed = self._executor.run(
+                    ExecutionRequest(
+                        argv=execution_argv,
+                        cwd=cwd,
+                        environment=environment,
+                        stdin=stdin,
+                        timeout=effective_timeout,
+                    )
+                )
 
             duration = datetime.datetime.now(tz=datetime.UTC) - t0
             return RawCommandResult(
@@ -305,24 +313,40 @@ class CliTransport:
         argv = self._build_full_argv(command_args)
         cwd = os.fspath(self._config.cwd) if self._config.cwd is not None else None
         environment = tuple(self._config.environment)
-        secret_values = collect_diagnostic_secret_values(argv, _effective_environment(self._config))
-        diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
 
         if self._semaphore is not None:
             self._semaphore.acquire()
 
+        snapshots = snapshot_secret_files(argv)
+        snapshots_entered = False
         try:
+            execution_argv, file_contents = snapshots.__enter__()
+            snapshots_entered = True
+            secret_values = collect_diagnostic_secret_values(
+                argv, _effective_environment(self._config), file_contents=file_contents
+            )
+            diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
             handle = self._executor.spawn(
                 ExecutionRequest(
-                    argv=argv,
+                    argv=execution_argv,
                     cwd=cwd,
                     environment=environment,
                     timeout=self._config.timeout,
                 )
             )
         except BaseException:
+            if snapshots_entered:
+                snapshots.__exit__(*sys.exc_info())
             if self._semaphore is not None:
                 self._semaphore.release()
             raise
 
-        return ManagedProcess(handle, argv=diagnostic_argv, semaphore=self._semaphore)
+        def close_snapshots() -> None:
+            snapshots.__exit__(None, None, None)
+
+        return ManagedProcess(
+            handle,
+            argv=diagnostic_argv,
+            semaphore=self._semaphore,
+            cleanup=close_snapshots,
+        )

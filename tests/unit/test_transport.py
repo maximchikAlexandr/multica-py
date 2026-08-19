@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import datetime
+import os
 import pathlib
+import stat
 import sys
 from dataclasses import dataclass
 from subprocess import CompletedProcess
 
 import pytest
 
-from multica_py._internal.redaction import redact_argv, redact_text
+from multica_py._internal.redaction import (
+    MAX_SECRET_FILE_BYTES,
+    collect_diagnostic_secret_bytes,
+    collect_secret_values,
+    redact_argv,
+    redact_text,
+)
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport, classify_cli_failure
 from multica_py.config import ClientConfig
@@ -96,6 +104,7 @@ class ProcessFileSecretCase:
     id: str
     option: str
     payload: bytes
+    equals: bool = False
 
 
 _SECRET_REDACTION_CASES: tuple[SecretRedactionCase, ...] = (
@@ -154,6 +163,15 @@ _PROCESS_FILE_SECRET_CASES: tuple[ProcessFileSecretCase, ...] = (
     ProcessFileSecretCase(
         "server-config-file", "--server-config-file", b"server-config\x00\xfe-secret"
     ),
+    ProcessFileSecretCase(
+        "credential-file-equals", "--credential-file", b"credential-equals\x00\xff-secret", True
+    ),
+    ProcessFileSecretCase(
+        "server-config-file-equals",
+        "--server-config-file",
+        b"server-config-equals\x00\xfe-secret",
+        True,
+    ),
 )
 
 
@@ -168,6 +186,43 @@ class _EchoExecutor(LocalExecutor):
         output = b"stdout " + self.echoed
         error = b"stderr " + self.echoed
         return ExecutionResult(self.exit_code, output, error)
+
+
+class _SnapshotExecutor(LocalExecutor):
+    def __init__(
+        self,
+        *,
+        exit_code: int = 0,
+        mutate_path: pathlib.Path | None = None,
+        replacement: bytes = b"",
+    ) -> None:
+        self.exit_code = exit_code
+        self.mutate_path = mutate_path
+        self.replacement = replacement
+        self.requests: list[ExecutionRequest] = []
+        self.snapshot_path: pathlib.Path | None = None
+        self.snapshot_payload: bytes | None = None
+        self.snapshot_mode: int | None = None
+
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        self.requests.append(request)
+        for index, argument in enumerate(request.argv):
+            if not argument.startswith(("--credential-file", "--server-config-file")):
+                continue
+            snapshot = argument.partition("=")[2] if "=" in argument else request.argv[index + 1]
+            if self.mutate_path is not None:
+                self.mutate_path.write_bytes(self.replacement)
+            self.snapshot_path = pathlib.Path(snapshot)
+            self.snapshot_payload = self.snapshot_path.read_bytes()
+            self.snapshot_mode = stat.S_IMODE(self.snapshot_path.stat().st_mode)
+            break
+        else:
+            raise AssertionError("test executor did not receive a file secret channel")
+        return ExecutionResult(
+            self.exit_code,
+            b"stdout " + self.snapshot_payload,
+            b"stderr " + self.snapshot_payload,
+        )
 
 
 _TRANSPORT_ERROR_CASES: tuple[TransportErrorCase, ...] = (
@@ -419,19 +474,28 @@ def test_secret_channels_preserve_transport_bytes_and_redact_error_surfaces(
 
 
 @pytest.mark.parametrize(
-    ("option", "payload", "partial"),
+    ("option", "payload", "partial", "equals"),
     (
-        ("--credential-file", b"file-credential-token", "file-credential-token"),
+        ("--credential-file", b"file-credential-token", "file-credential-token", False),
         (
             "--server-config-file",
             b'{"headers":{"X-API-Key":"file-nested-token"}}',
             "file-nested-token",
+            False,
         ),
-        ("--credential-file", b"file-credential\x00\xff-secret", "file-credential"),
+        ("--credential-file", b"file-credential\x00\xff-secret", "file-credential", False),
         (
             "--server-config-file",
             b'{"headers":{"X-API-Key":"file-config\xff-secret"}}',
             "file-config",
+            False,
+        ),
+        ("--credential-file", b"equals-credential-token", "equals-credential-token", True),
+        (
+            "--server-config-file",
+            b'{"headers":{"X-API-Key":"equals-config-token"}}',
+            "equals-config-token",
+            True,
         ),
     ),
     ids=(
@@ -439,6 +503,8 @@ def test_secret_channels_preserve_transport_bytes_and_redact_error_surfaces(
         "server-config-file-nested-json",
         "credential-file-opaque",
         "server-config-file-opaque-json",
+        "credential-file-equals",
+        "server-config-file-equals",
     ),
 )
 def test_file_secret_channels_preserve_transport_bytes_and_redact_error_surfaces(
@@ -446,6 +512,7 @@ def test_file_secret_channels_preserve_transport_bytes_and_redact_error_surfaces
     option: str,
     payload: bytes,
     partial: str,
+    equals: bool,
 ) -> None:
     path = tmp_path / "secret-input"
     path.write_bytes(payload)
@@ -453,14 +520,14 @@ def test_file_secret_channels_preserve_transport_bytes_and_redact_error_surfaces
         ("plugin", "remote-mcp", "configure", "inst_001", "remote-mcp")
         if option == "--credential-file"
         else ("workspace", "mcp", "add", "server-1")
-    ) + (option, str(path))
+    ) + ((f"{option}={path}",) if equals else (option, str(path)))
     config = ClientConfig(compatibility=CompatibilityPolicy.ignore)
     executor = _EchoExecutor(payload, exit_code=0)
     result = CliTransport(config, executor=executor).run_bytes(args)
     assert result.stdout == b"stdout " + payload
     assert result.stderr == b"stderr " + payload
     assert partial not in " ".join(result.argv)
-    assert str(path) in result.argv
+    assert any(str(path) in argument for argument in result.argv)
 
     failing = _EchoExecutor(payload, exit_code=2)
     with pytest.raises(NetworkError) as excinfo:
@@ -480,16 +547,21 @@ def test_process_file_secret_channels_preserve_success_bytes_and_redact_failures
     path.write_bytes(case.payload)
     code = (
         "import pathlib, sys; "
-        "data = pathlib.Path(sys.argv[-2]).read_bytes(); "
+        "file_arg = next(value for value in sys.argv if value.startswith('--credential-file') "
+        "or value.startswith('--server-config-file')); "
+        "path = file_arg.partition('=')[2] if '=' in file_arg else sys.argv[sys.argv.index(file_arg) + 1]; "
+        "data = pathlib.Path(path).read_bytes(); "
         "sys.stdout.buffer.write(b'stdout ' + data); "
         "sys.stderr.buffer.write(b'stderr ' + data); "
         "sys.exit(int(sys.argv[-1]))"
     )
-    args = ("-c", code, case.option, str(path), "2")
+    file_arg = f"{case.option}={path}" if case.equals else case.option
+    file_args = (file_arg,) if case.equals else (file_arg, str(path))
+    args = ("-c", code, *file_args, "2")
     config = ClientConfig(executable=sys.executable, compatibility=CompatibilityPolicy.ignore)
     transport = CliTransport(config)
 
-    result = transport.run_bytes(("-c", code, case.option, str(path), "0"))
+    result = transport.run_bytes(("-c", code, *file_args, "0"))
     assert result.stdout == b"stdout " + case.payload
     assert result.stderr == b"stderr " + case.payload
 
@@ -501,6 +573,143 @@ def test_process_file_secret_channels_preserve_success_bytes_and_redact_failures
     assert case.payload.decode("utf-8", errors="replace") not in exc.stderr
     assert "***" in exc.stdout
     assert "***" in exc.stderr
+
+
+@pytest.mark.parametrize(
+    ("option", "equals"),
+    (
+        ("--credential-file", False),
+        ("--credential-file", True),
+        ("--server-config-file", False),
+        ("--server-config-file", True),
+    ),
+    ids=("credential-split", "credential-equals", "server-config-split", "server-config-equals"),
+)
+def test_file_snapshot_is_owner_only_and_cleaned(
+    tmp_path: pathlib.Path,
+    option: str,
+    equals: bool,
+) -> None:
+    source = tmp_path / "secret.bin"
+    payload = b"opaque-owner-only\x00\xff"
+    source.write_bytes(payload)
+    file_args = (f"{option}={source}",) if equals else (option, str(source))
+    executor = _SnapshotExecutor()
+    result = CliTransport(
+        ClientConfig(compatibility=CompatibilityPolicy.ignore), executor=executor
+    ).run_bytes(("workspace", "mcp", "add", "server-1", *file_args))
+
+    assert result.stdout == b"stdout " + payload
+    assert executor.snapshot_payload == payload
+    assert executor.snapshot_mode == 0o600
+    assert executor.snapshot_path is not None
+    assert executor.snapshot_path != source
+    assert not executor.snapshot_path.exists()
+    assert any(str(source) in argument for argument in result.argv)
+
+
+@pytest.mark.parametrize(
+    ("option", "equals"),
+    (
+        ("--credential-file", False),
+        ("--credential-file", True),
+        ("--server-config-file", False),
+        ("--server-config-file", True),
+    ),
+    ids=("credential-split", "credential-equals", "server-config-split", "server-config-equals"),
+)
+def test_file_snapshot_accepts_exact_limit_and_rejects_oversize(
+    tmp_path: pathlib.Path,
+    option: str,
+    equals: bool,
+) -> None:
+    config = ClientConfig(compatibility=CompatibilityPolicy.ignore)
+
+    exact_path = tmp_path / "exact.bin"
+    exact_payload = b"x" * MAX_SECRET_FILE_BYTES
+    exact_path.write_bytes(exact_payload)
+    exact_args = (f"{option}={exact_path}",) if equals else (option, str(exact_path))
+    exact_executor = _SnapshotExecutor()
+    CliTransport(config, executor=exact_executor).run_bytes(
+        ("workspace", "mcp", "add", "server-1", *exact_args)
+    )
+    assert exact_executor.snapshot_payload == exact_payload
+
+    oversize_path = tmp_path / "oversize.bin"
+    oversize_path.write_bytes(b"x" * (MAX_SECRET_FILE_BYTES + 1))
+    oversize_args = (f"{option}={oversize_path}",) if equals else (option, str(oversize_path))
+    oversize_executor = _SnapshotExecutor()
+    with pytest.raises(ValidationError, match="exceeds"):
+        CliTransport(config, executor=oversize_executor).run_bytes(
+            ("workspace", "mcp", "add", "server-1", *oversize_args)
+        )
+    assert oversize_executor.requests == []
+
+
+@pytest.mark.parametrize(
+    ("option", "equals"),
+    (
+        ("--credential-file", False),
+        ("--credential-file", True),
+        ("--server-config-file", False),
+        ("--server-config-file", True),
+    ),
+    ids=("credential-split", "credential-equals", "server-config-split", "server-config-equals"),
+)
+def test_file_snapshot_rejects_fifo_without_blocking(
+    tmp_path: pathlib.Path, option: str, equals: bool
+) -> None:
+    fifo = tmp_path / "secret.fifo"
+    os.mkfifo(fifo)
+    executor = _SnapshotExecutor()
+    file_args = (f"{option}={fifo}",) if equals else (option, str(fifo))
+    with pytest.raises(ValidationError, match=r"regular file|readable"):
+        CliTransport(
+            ClientConfig(compatibility=CompatibilityPolicy.ignore), executor=executor
+        ).run_bytes(("workspace", "mcp", "add", "server-1", *file_args))
+    assert executor.requests == []
+
+
+@pytest.mark.parametrize("equals", (False, True), ids=("split", "equals"))
+def test_file_snapshot_redaction_uses_one_mutation_stable_byte_source(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    equals: bool,
+) -> None:
+    import multica_py._internal.redaction as redaction
+
+    source = tmp_path / "secret.bin"
+    original = b"original-opaque-secret\x00\xff"
+    replacement = b"replacement-secret"
+    source.write_bytes(original)
+    reads: list[str] = []
+    reader = redaction.read_secret_file_bytes
+
+    def read_once(path: str) -> bytes:
+        reads.append(path)
+        content = reader(path)
+        source.write_bytes(replacement)
+        return content
+
+    monkeypatch.setattr(redaction, "read_secret_file_bytes", read_once)
+    file_args = (f"--credential-file={source}",) if equals else ("--credential-file", str(source))
+    executor = _SnapshotExecutor(exit_code=2)
+    with pytest.raises(NetworkError) as excinfo:
+        CliTransport(
+            ClientConfig(compatibility=CompatibilityPolicy.ignore), executor=executor
+        ).run_bytes(("plugin", "remote-mcp", "configure", *file_args))
+
+    assert reads == [str(source)]
+    assert executor.snapshot_payload == original
+    assert original.decode("utf-8", errors="replace") not in repr(excinfo.value)
+    assert replacement not in excinfo.value.stdout.encode("utf-8", errors="replace")
+    assert collect_diagnostic_secret_bytes(
+        ("plugin", "remote-mcp", "configure", *file_args), file_contents={str(source): original}
+    ) == (original,)
+    assert collect_secret_values(
+        ("plugin", "remote-mcp", "configure", *file_args),
+        file_contents={str(source): original},
+    )
 
 
 def test_command_plan_repr_never_exposes_secret_bearing_state() -> None:
