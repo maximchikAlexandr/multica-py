@@ -152,6 +152,10 @@ For `Issue`, the normative reference-changing matrix is: `update(parent_id=...)`
 - **WHEN** any row in the Issue mutation matrix succeeds with a changed or cleared reference
 - **THEN** the returned Issue's scalar/snapshot field, private presence, and corresponding handle agree with the response, while the original Issue and all original handle caches remain unchanged
 
+#### Scenario: Successful no-change mutation still creates independent state
+- **WHEN** any of `update(parent_id=...)`, `update(project_id=...)`, `update(assignee_id=...)`, `assign(...)`, or `unassign()` succeeds and the response retains the same reference ID or absence as the source Issue
+- **THEN** a new Issue wrapper and fresh unloaded-or-absence handle state are derived solely from that response, the original wrapper and cache remain unchanged, and no loaded target or relation cache is transferred to the replacement merely because the reference value is equal
+
 ### Requirement: Closed embedded seed catalog
 No current embedded singular target snapshot SHALL seed a loaded entity value because none is contract-proven complete for its governed target type. An explicit null for an optional inventory row MAY seed loaded absence; omitted fields SHALL not seed; partial embedded assignee data SHALL remain available only through `Issue.assignee` and SHALL not seed `Issue.assignee_ref`.
 
@@ -164,9 +168,9 @@ No current embedded singular target snapshot SHALL seed a loaded entity value be
 - **THEN** the reference remains unloaded unless a future delta adds that exact operation and field to the closed catalog
 
 ### Requirement: Bounded duplicate-aware prefetch
-`MulticaClient.prefetch()` SHALL accept selectors returning `LazyRef` as well as collection and mapping containers. Within one invocation it SHALL skip loaded handles, deduplicate identical handles, coalesce unloaded references with the same exact originating scope, target service/type, and target ID into one lookup, and publish independent bound target wrappers to each source handle. The exact originating-scope key SHALL contain the effective normalized CLI executable/server URL, profile, workspace ID, executor identity, and process-semaphore identity used by the source client view. Mixed originating-scope keys SHALL fail validation before any I/O. Distinct target keys SHALL use the existing `ThreadPoolExecutor`, `max_parallel`, shared process semaphore, validation, and fail-fast rules.
+`MulticaClient.prefetch()` SHALL accept selectors returning `LazyRef` as well as collection and mapping containers. Within one invocation it SHALL skip loaded handles, deduplicate identical handles, coalesce unloaded references with the same exact originating scope, target service/type, and target ID into one lookup, and publish independent bound target wrappers to each source handle. One private scope-key helper SHALL derive the exact originating scope from the effective normalized `ClientConfig` values that affect command execution or decoding: executable, server URL, profile, workspace ID, cwd, sorted environment entries, timeout, debug, encoding, compatibility policy, minimum CLI version, and maximum CLI version; it SHALL also include executor identity and process-semaphore identity. Path-like values SHALL use their post-`os.fspath` strings, environment SHALL use its normalized sorted tuple, timeout SHALL use its normalized `timedelta`, and URLs/identifiers/policies SHALL use their validated config values. Display-only app URL and workspace slug SHALL NOT affect the key; `max_processes` SHALL be represented by the actual process-semaphore identity. Mixed originating-scope keys SHALL fail validation before any I/O. Distinct target keys SHALL use the existing `ThreadPoolExecutor`, `max_parallel`, shared process semaphore, validation, and fail-fast rules.
 
-Fan-out SHALL copy the primary target's immutable public snapshot plus immutable private wire-presence/operation provenance required to construct its nested references, and SHALL bind each copy to the identical originating client view. It SHALL create fresh mutable runtime state, including every nested relation handle, `_GenerationState`, loader closure, lock, and cached success/failure, so no target wrapper or nested relation cache is shared.
+Fan-out SHALL copy the primary target's immutable public snapshot plus immutable private wire-presence/operation provenance required to construct its nested references. For each destination handle, including the primary, the published target SHALL be an independent clone bound to that destination handle's own source `_client`; structurally equal scope keys SHALL permit one lookup but SHALL NOT replace a destination client object with the lookup owner's client object. Each clone SHALL create fresh mutable runtime state, including every nested relation handle, `_GenerationState`, loader closure, lock, and cached success/failure, so no target wrapper or nested relation cache is shared.
 
 #### Scenario: Duplicate target IDs load once
 - **WHEN** several source wrappers in one prefetch invocation reference the same project ID
@@ -176,12 +180,16 @@ Fan-out SHALL copy the primary target's immutable public snapshot plus immutable
 - **WHEN** a coalesced lookup returns a target with omitted, explicit-null, or non-null nested reference fields
 - **THEN** primary and secondary target wrappers expose the same nested-reference presence and originating-scope semantics, but loading or invalidating a nested reference on one wrapper does not change the other
 
+#### Scenario: Structurally equal client views retain destination identity
+- **WHEN** equal target keys originate from distinct client objects whose complete scope-key components are equal
+- **THEN** one lookup runs, each destination receives an independent target whose `_client` is that destination handle's own source client, and every nested reference uses that same destination-specific client without shared mutable state
+
 #### Scenario: Different target kinds do not collide
 - **WHEN** equal ID strings refer to different governed resource types or originating scopes
 - **THEN** prefetch treats them as distinct keys and does not share their result
 
 #### Scenario: Exact scope controls coalescing
-- **WHEN** selected references have the same target type and ID under identical effective executable/server, profile, workspace, executor, and semaphore components
+- **WHEN** selected references have the same target type and ID under identical normalized execution/decode config, executor identity, and semaphore identity
 - **THEN** they coalesce into one lookup; if any component differs, mixed-scope validation raises `ValueError` before transport I/O
 
 #### Scenario: Optional absence needs no job

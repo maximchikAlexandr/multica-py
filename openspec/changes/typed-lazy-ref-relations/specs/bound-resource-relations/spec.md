@@ -9,9 +9,12 @@ parallelism through the shared process semaphore. The selector MAY return a
 or `LazyRef`. Collection and mapping behavior remains keyed by handle identity;
 singular references additionally coalesce equal originating-scope, target-type,
 and target-ID keys within that invocation and publish independent target
-wrappers to each handle. Originating scope is the effective normalized CLI
-executable/server URL, profile, workspace ID, executor identity, and shared
-process-semaphore identity; every component MUST match.
+wrappers to each handle. One private helper MUST define originating scope from
+the effective normalized executable, server URL, profile, workspace ID, cwd,
+sorted environment, timeout, debug, encoding, compatibility policy, minimum
+and maximum CLI versions, plus executor and process-semaphore identities; every
+component MUST match. Display-only app URL/workspace slug are excluded, and the
+actual semaphore identity represents the process limit.
 
 #### Scenario: Prefetch does not fake server batching
 - **WHEN** the CLI has no multi-parent or multi-ID filter
@@ -19,7 +22,7 @@ process-semaphore identity; every component MUST match.
 
 #### Scenario: Duplicate singular targets are coalesced locally
 - **WHEN** multiple selected `LazyRef` handles in one call address the same governed target key
-- **THEN** one direct lookup runs and each handle receives an independent bound target wrapper with identical immutable public and private provenance but fresh mutable relation state, without a persistent identity map
+- **THEN** one direct lookup runs and each handle receives an independent bound target wrapper with identical immutable public/private provenance, its own source client view, and fresh mutable relation state, without a persistent identity map
 
 #### Scenario: Prefetch obeys max parallelism
 - **WHEN** `prefetch(..., max_parallel=N)` loads multiple distinct keys
@@ -30,8 +33,8 @@ process-semaphore identity; every component MUST match.
 - **THEN** `ValueError` is raised before transport access
 
 #### Scenario: Client views define exact prefetch scope
-- **WHEN** client views differ in workspace, profile, server/executable, executor, or process semaphore
-- **THEN** they are mixed origin scopes and validation raises before I/O; views whose complete scope components match may coalesce equal singular target keys
+- **WHEN** client views differ in executable, server, profile, workspace, cwd, environment, timeout, debug, encoding, compatibility/min/max policy, executor, or process semaphore
+- **THEN** they are mixed origin scopes and validation raises before I/O; distinct client objects whose complete normalized scope components match may coalesce equal singular target keys while retaining each destination's client object
 
 #### Scenario: Prefetch failure is fail-fast
 - **WHEN** one loader fails
