@@ -46,7 +46,7 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 - **THEN** it raises `asyncio.CancelledError`, does not translate cancellation into a Multica exception, and documentation states that the underlying executor operation may continue until completion or timeout
 
 ### Requirement: Awaitable managed process lifecycle
-`ManagedProcess` SHALL expose async counterparts for blocking buffered lifecycle operations: `wait_async()`, `result_async()`, and `close_async()`. It SHALL support `async with` by delegating asynchronous exit to `close_async()`. These operations SHALL preserve output ownership, timeout, cached-result, cleanup, and semaphore-release semantics of their synchronous counterparts. Synchronous streaming iterators SHALL remain unchanged in this change.
+`ManagedProcess` SHALL expose async counterparts for every lifecycle operation that can perform process-provider I/O: `wait_async()`, `result_async()`, `terminate_async()`, `kill_async()`, and `close_async()`. It SHALL support `async with` by delegating asynchronous exit to `close_async()`. Synchronous and asynchronous lifecycle paths SHALL use one thread-safe per-process lifecycle coordinator that serializes output ownership, result collection/publication, close state, handle finalization, and semaphore release. Concurrent result, close, terminate, kill, and cancellation paths SHALL preserve timeout and cached-result behavior and SHALL finalize the handle and release the semaphore at most once. Synchronous streaming iterators SHALL remain unchanged in this change.
 
 #### Scenario: Process result is awaited
 - **WHEN** a consumer awaits `process.result_async(timeout)`
@@ -59,3 +59,15 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 #### Scenario: Buffered output ownership is shared
 - **WHEN** synchronous and asynchronous lifecycle methods are mixed on one managed process
 - **THEN** they observe one result cache and the existing single-owner buffered-versus-streaming rules
+
+#### Scenario: Remote process signals do not block the event loop
+- **WHEN** a consumer awaits `terminate_async()` or `kill_async()` while the process handle performs provider I/O
+- **THEN** the provider call runs outside the event-loop thread and preserves the synchronous signal behavior and exception contract
+
+#### Scenario: Concurrent result and close have one finalization
+- **WHEN** deterministic synchronization overlaps sync or async result collection with sync or async close on one managed process
+- **THEN** the lifecycle coordinator prevents conflicting output consumption, publishes at most one cached result, closes the handle once, and releases the semaphore once
+
+#### Scenario: Cancellation does not corrupt lifecycle state
+- **WHEN** a task awaiting a started managed-process lifecycle operation is cancelled while another sync or async lifecycle caller proceeds
+- **THEN** cancellation reaches that awaiter unchanged, the started coordinator operation completes safely, and later callers observe one consistent result-or-closed state with exactly-once finalization

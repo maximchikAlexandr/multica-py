@@ -1,8 +1,10 @@
 ## 1. Async command and process primitives
 
 - [ ] 1.1 Add `Command.run_async()` in `src/multica_py/_internal/commands.py` using the standard-library asyncio thread bridge around the existing plan run; add focused deterministic tests for identical result/exception behavior, event-loop progress, cancellation propagation, command inspection, composite cleanup, and no new executor protocol.
-- [ ] 1.2 Add `ManagedProcess.wait_async()`, `result_async()`, `close_async()`, `__aenter__`, and `__aexit__` in `src/multica_py/process.py` as async delegates to existing lifecycle behavior; extend lifecycle tests for timeout, cached result, mixed sync/async calls, output ownership, terminate-wait-kill cleanup, cancellation, and exactly-once semaphore release.
-- [ ] 1.3 Run the focused command/process tests plus `uv run mypy src` and fix until the new generic and lifecycle annotations are precise without public `Any`.
+- [ ] 1.2 Add one thread-safe per-process lifecycle coordinator in `src/multica_py/process.py` and route sync and async output claims, result collection/publication, close state, handle finalization, and semaphore release through it.
+- [ ] 1.3 Add `ManagedProcess.wait_async()`, `result_async()`, `terminate_async()`, `kill_async()`, `close_async()`, `__aenter__`, and `__aexit__` as offloaded delegates to the coordinated synchronous lifecycle operations, including remote provider I/O.
+- [ ] 1.4 Add event/barrier-driven lifecycle tests for concurrent sync/async result-result, result-close, close-close, terminate/kill, and cancelled-await interleavings; assert one output owner, at most one published result, one handle close, one semaphore release, stable timeout/error behavior, and event-loop progress without timing-only sleeps.
+- [ ] 1.5 Run the focused command/process tests plus `uv run mypy src` and fix until the new generic and lifecycle annotations are precise without public `Any`.
 
 ## 2. Top-level resource async parity
 
@@ -24,8 +26,9 @@
 - [ ] 4.1 Add `all_async()` and `refresh_async()` to `LazyCollection` and `LazyMapping` by awaiting their existing command forms; prove loaded cache hits perform zero I/O and failed refreshes retain the prior generation.
 - [ ] 4.2 Add `page_async()` plus async all/refresh behavior to offset and cursor lazy collections by reusing existing page/composite commands; retain total metadata, cursor pairs, and every empty/repeated/maximum progress guard with identical bounded call counts.
 - [ ] 4.3 Verify overlapping sync and async loads on one relation use the existing coordinator and completed cache generation without blocking the event-loop thread; add deterministic synchronization tests for success, failure/retry, invalidation, and refresh overlap.
-- [ ] 4.4 Add `MulticaClient.close_async()`, async context management, and `prefetch_async()` with the same origin checks, deduplication, input-order result tuple, fail-fast behavior, cache effects, and configured process bound as synchronous client lifecycle/prefetch.
-- [ ] 4.5 Run focused relation, client-scope, concurrency, local executor, SSH, and microsandbox tests to prove all backends use the unchanged synchronous executor contract outside the event-loop thread.
+- [ ] 4.4 Add `MulticaClient.close_async()`, async context management, and `prefetch_async()` with the same origin checks, deduplication, cache effects, and `None` return contract as synchronous client lifecycle/prefetch; use explicit task admission to preserve `max_parallel` independently of the shared process semaphore.
+- [ ] 4.5 Add deterministic prefetch tests proving both concurrency ceilings, cancellation of jobs not yet started after failure, draining and cleanup of started jobs, `None` on success, and selection of the smallest failing deduplicated input-job index regardless of completion order.
+- [ ] 4.6 Run focused relation, client-scope, concurrency, local executor, SSH, and microsandbox tests to prove all backends use the unchanged synchronous executor contract outside the event-loop thread.
 
 ## 5. Closed public surface and typing gates
 
@@ -38,7 +41,8 @@
 - [ ] 6.1 Add deterministic asyncio tests showing two permitted calls overlap under `asyncio.gather()`, results retain gather order, and calls above `max_concurrent_processes` never exceed the existing shared semaphore bound.
 - [ ] 6.2 Add cancellation tests showing `asyncio.CancelledError` reaches the awaiter unchanged, the event loop remains responsive, and an already-started fake executor is allowed to finish its existing plan cleanup; use synchronization events rather than timing-only sleeps.
 - [ ] 6.3 Add parity cases for classified CLI failures, operation timeout, executable/backend failure, decoding failure, configuration snapshot, redaction, staging/output capture, multi-step success/failure, and relation pagination errors through both execution styles.
-- [ ] 6.4 Run `uv run pytest -m "not live" --collect-only` and confirm async additions do not collect live tests or introduce serial markers outside the existing process/live boundaries.
+- [ ] 6.4 Add invalid-input async cases that await resource and entity delegates, assert the synchronous validation class/message, and prove zero transport/executor calls.
+- [ ] 6.5 Run `uv run pytest -m "not live" --collect-only` and confirm async additions do not collect live tests or introduce serial markers outside the existing process/live boundaries.
 
 ## 7. Documentation
 

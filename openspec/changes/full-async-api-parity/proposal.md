@@ -7,6 +7,8 @@ Async Python applications currently have to move every blocking SDK call into th
 - Add `Command.run_async()` to execute the same immutable command plan without blocking the caller's event loop.
 - Add `<method>_async(...)` counterparts for every public I/O-bound resource method and bound entity action, with signatures and results equivalent to their synchronous forms.
 - Add async loading and refresh entry points for lazy collections and mappings; keep local inspection, serialization, invalidation, and permalink helpers synchronous.
+- Add async client prefetch with the synchronous `None` return contract, per-call `max_parallel` bound, shared process bound, and deterministic failure selection.
+- Add async managed-process wait, result, terminate, kill, and close operations over one thread-safe lifecycle state shared with synchronous callers.
 - Preserve the existing synchronous API and `Command` abstraction unchanged apart from the additive async entry point.
 - Document primary workflows in both execution styles and verify async concurrency, error parity, command parity, and backwards compatibility offline.
 

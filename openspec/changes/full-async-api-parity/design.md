@@ -45,11 +45,11 @@ Adding backend-specific forced cancellation would require a second lifecycle con
 
 `all_async`, `refresh_async`, and paged `page_async` call the existing relation command forms' `run_async`. They do not introduce async caches or duplicate pagination loops. The current condition-based load coordinator remains the single serialization point across sync and async callers; any blocking coordinator wait is also offloaded so it cannot block the event loop. Cache hits resolve without transport access, and all pagination guards remain in the existing command plan.
 
-`prefetch_async` uses asyncio tasks over relation async methods and relies on the existing process semaphore as the final concurrency bound. It preserves input deduplication, origin checks, ordering, and fail-fast behavior.
+`prefetch_async` uses a per-call asyncio worker pool (or equivalent task admission gate) sized by `max_parallel`, in addition to the existing shared process semaphore inside command execution. Jobs retain their deduplicated input index. On the first observed failure, the coordinator stops admitting work and cancels jobs that have not started, drains every admitted job so command finalization completes, records all admitted failures, and raises the failure with the smallest input index. Successful completion returns `None`, matching `prefetch()`. This preserves both independent bounds rather than treating the process semaphore as a replacement for `max_parallel`.
 
-### Add only buffered async process lifecycle methods
+### Coordinate all process lifecycle I/O across sync and async callers
 
-`ManagedProcess.wait_async`, `result_async`, and `close_async` offload their synchronous counterparts and therefore share result caching, output ownership, cleanup, and semaphore release. `__aenter__` returns the same process and `__aexit__` awaits close.
+Add one thread-safe lifecycle coordinator/lock owned by each `ManagedProcess`, and route both existing synchronous methods and new async delegates through it. The coordinator is authoritative for output-mode claims, in-progress and cached result collection, close state, handle finalization, and semaphore release; it prevents a sync call and an offloaded async call from concurrently consuming output or finalizing the same handle. A started collection or cleanup completes under coordinator ownership even if its async awaiter is cancelled, after which later callers observe the published result or closed state. `wait_async`, `result_async`, `terminate_async`, `kill_async`, and `close_async` offload the corresponding coordinated synchronous lifecycle operation, including microsandbox provider I/O. `__aenter__` returns the same process and `__aexit__` awaits close.
 
 The existing `stdout_lines()` and `stderr_lines()` iterators remain synchronous. Turning iterators into async iterators requires queueing, cross-thread generator ownership, and cancellation policy that is separate from the issue's awaitable operation requirement; consumers needing incremental streaming can continue to dedicate a worker or use buffered `result_async()`.
 
@@ -61,7 +61,8 @@ Canonical operation cases already prove exact transport behavior and command pre
 
 - **Cancelled awaiters do not stop started commands** → State this prominently, preserve cleanup in the worker, and require operation timeouts for bounded underlying execution.
 - **Many repetitive public methods can drift** → Generate or mechanically derive them and enforce bidirectional discovery/signature equality.
-- **Default thread-pool capacity differs from the SDK process limit** → Treat the existing shared process semaphore as authoritative; test the configured active-process bound under async gather.
+- **Prefetch has a per-call job bound distinct from the process limit** → Use explicit `max_parallel` task admission plus the shared process semaphore and test both bounds independently.
+- **Sync and async process lifecycle calls can race** → Serialize both paths through one per-process coordinator and deterministically test result/close/signal/cancellation interleavings and exactly-once finalization.
 - **Blocking relation coordination could leak onto the event loop** → Route every unloaded/coalesced async relation path through offloaded command execution and deterministically test responsiveness.
 - **Async and sync calls may race over shared lazy state** → Reuse the existing relation coordinator and generation checks; do not add an independent async lock/cache.
 - **Client/process shutdown can block** → Provide async context management and async close methods while keeping existing sync context management unchanged.
