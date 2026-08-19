@@ -171,9 +171,10 @@ All resources accessed as attributes of `MulticaClient`:
 - **setup**: `cloud()`, `self_host(url)` → both return `ManagedProcess`
 - **daemon**: `start/logs()` → `ManagedProcess`, `status/stop/restart()` → `DaemonStatus`, `disk_usage()` → `Page[DaemonDiskUsageEntry]`
 - **workspaces**: `list/members` → `Page[T]`, `get()` → object, `watch/unwatch` → `ActionResult[None]`
-- **issues**: full CRUD + `comments`, `recent_comment_threads`, `labels`, `subscribers`, `metadata`, `pull_requests`, `children`, `runs`, `run_messages`, `usage`, `rerun(issue_id)`, `cancel_task(task_id)`, `assign`, `unassign`, `move_to_top`, `move_to_bottom`, `move_before`, and `move_after`; root create accepts ordinary descriptions and an optional canonical `project`, while project-scoped create supplies its project from the bound relation
+- **issues**: full CRUD + `comments`, `recent_comment_threads`, `labels`, `subscribers`, `metadata`, `properties`, `pull_requests`, `children`, `runs`, `run_messages`, `usage`, `rerun(issue_id)`, `cancel_task(task_id)`, `assign`, `unassign`, `move_to_top`, `move_to_bottom`, `move_before`, and `move_after`; root create accepts ordinary descriptions and an optional canonical `project`, while project-scoped create supplies its project from the bound relation
 - **issues.comments**: `list` for flat comments, `list_flat`, `list_thread`, `list_recent`, `add`, `reply`, `delete`, `resolve`, `unresolve`
 - **issues.metadata**: `list`, `query`, `get`, `set`, `set_typed`, `delete`
+- **issues.properties**: `list`, `set`, `unset` for workspace property values on an issue
 - **issues.subscribers**: `list/add/remove`
 - **issues.labels**: `list/add/remove`
 - **projects**: `list/get/create/update/delete/set_status`
@@ -181,8 +182,12 @@ All resources accessed as attributes of `MulticaClient`:
 - **labels**: `list/get/create/update/delete`
 - **agents**: `list/get/create/update/copy/copy_command/archive/restore/tasks/avatar`
 - **agents.skills**: `list/set`
-- **skills**: `list/get/create/update/delete/import_from_url`
+- **agents.mcp**: `list/add/enable/disable/remove`
+- **skills**: `list/get/create/update/delete/import_from_url/refresh/search`
 - **skills.files**: `list/upsert/delete`
+- **plugins**: `list/status/validate/pack/init/install` and Remote MCP `configure/test/approve/revoke`
+- **properties**: `list/get/create/update/archive/unarchive` for the workspace property catalog
+- **workspaces.mcp**: `list/add/update/remove` for workspace MCP servers
 - **autopilots**: `list/get/create/update/delete/trigger/history/trigger_add/trigger_update/trigger_delete`
 - **repositories**: `list/add/remove/checkout`
 - **runtimes**: `list/usage/activity/update/rename/delete`; `delete(..., cascade=True)`
@@ -235,11 +240,36 @@ emitted; skills can be omitted only with `copy_skills=False`.
 
 `issues.search(query)` returns a `Page[Issue]`; `search_command(query)`
 returns `Command[Page[Issue]]`. The exact invocation is
-`issue search <query> --output json`. Results accept the v0.4.20 envelope or
+`issue search <query> --output json`. Results accept the v0.4.28 envelope or
 the legacy top-level array; iterate the page or use `.items`, and each issue may expose the optional
 string `match_source` (`"title"`, `"description"`, `"comment"`, or a future
 upstream value). It defaults to `None` when omitted; the envelope's `total`
 is preserved as page metadata.
+
+## Plugins, properties, MCP, and skill refresh
+
+`client.plugins` exposes workspace-private plugin installations plus local
+validate/pack/init flows. `list()` and `status()` decode frozen `Plugin` rows;
+`validate()` and `pack()` decode a distinct `PluginDigest`. `install()` emits
+`plugin install <path>`; upstream human-local guards apply at the CLI rather
+than in Python. Remote MCP configure accepts credentials only through
+`--credential-file` or `--credential-stdin` (mutually exclusive); credential
+bytes are redacted from preview and diagnostics.
+
+`client.properties` manages the workspace property catalog. Create/update use
+`Unset` for omitted fields; actor and multi-actor types reject option tuples.
+`client.issues.properties` is separate from metadata: `set()` requires
+`--name` and `--value`, actor values pass through verbatim, and `unset()` omits
+`--value`.
+
+`workspaces.mcp` and nested `agents.mcp` expose list/add/update/remove (or
+enable/disable) with exactly one server-config channel on add and at most one
+on update (`server_config_file`, `server_config_stdin`, or inline
+`server_config`). List decoding exposes public fields only.
+
+`skills.refresh(skill_id)` reloads a bound skill from upstream.
+`skills.search(query)` returns `Page[SkillSearchResult]` from
+`skill search <query> --output json`.
 
 ## Exceptions
 

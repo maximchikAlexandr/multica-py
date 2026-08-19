@@ -24,7 +24,7 @@ def test_sdk_contract() -> None:
     assert len(contract.binding_descriptors) == sum(
         len(operation.entrypoints) for operation in contract.operations
     )
-    assert len(contract.test_vectors) == 58
+    assert len(contract.test_vectors) == 89
     assert (
         tuple((item.operation_id, item.entrypoint_id) for item in contract.binding_descriptors)
         != ()
@@ -52,8 +52,8 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.4.20'" in runtime
-    assert b"MAX_CLI_VERSION = '0.4.21'" in runtime
+    assert b"TARGET_VERSION = '0.4.28'" in runtime
+    assert b"MAX_CLI_VERSION = '0.4.29'" in runtime
 
     descriptors = {
         item.operation_id: item

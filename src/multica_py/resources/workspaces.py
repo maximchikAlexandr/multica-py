@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
-from multica_py.config import OperationOptions
+from multica_py._internal.transport import CliTransport
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.agents import Agent
 from multica_py.entities.autopilots import Autopilot
 from multica_py.entities.issues import Issue
@@ -13,18 +16,42 @@ from multica_py.entities.squads import Squad
 from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter
+from multica_py.models.plugins import Plugin
+from multica_py.models.properties import PropertyDefinition
 from multica_py.models.relations import (
     OffsetPage,
     RelationMetadata,
     _RelationLoad,
 )
 from multica_py.models.system import RepositoryRecord, RuntimeDefinition
-from multica_py.resources._base import BaseResource
+from multica_py.models.workspaces import McpServer
+from multica_py.resources._base import BaseResource, _page_items
+from multica_py.resources.workspace_mcp import WorkspaceMcpResource
+
+if TYPE_CHECKING:
+    from multica_py.client import MulticaClient
 
 __all__ = ["Workspace", "WorkspaceMember", "WorkspaceResource"]
 
 
 class WorkspaceResource(BaseResource):
+    def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
+        super().__init__(transport, config)
+        self.mcp = WorkspaceMcpResource(transport, config)
+
+    def _set_client(self, client: MulticaClient) -> None:
+        super()._set_client(client)
+        self.mcp._set_client(client)
+
+    def _mcp_servers_relation_command(self) -> Command[tuple[McpServer, ...]]:
+        return self._bound_client().workspaces.mcp.list_command()._map(_page_items)
+
+    def _plugins_relation_command(self) -> Command[tuple[Plugin, ...]]:
+        return self._bound_client().plugins.list_command()._map(lambda page: tuple(page.items))
+
+    def _properties_relation_command(self) -> Command[tuple[PropertyDefinition, ...]]:
+        return self._bound_client().properties.list_command()._map(lambda page: tuple(page.items))
+
     def _members_relation_command(self, workspace_id: str) -> Command[tuple[WorkspaceMember, ...]]:
         return (
             self._bound_client()

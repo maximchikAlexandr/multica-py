@@ -17,6 +17,7 @@ from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
 from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.models.autopilots import AutopilotListPage
+from multica_py.models.common import Page
 from multica_py.models.issues import IssueListFilter, IssueListPage
 from multica_py.models.relations import OffsetPage, RelationMetadata, _RelationLoad
 from multica_py.models.system import RepositoryRecord, RuntimeDefinition
@@ -68,6 +69,13 @@ def make_workspace_clients(
     else:
         scoped.issues.list.side_effect = issues
     scoped.autopilots.list.return_value = autopilots or AutopilotListPage(items=(), total=0)
+    scoped.plugins.list.return_value = Page(items=(), total=0)
+    scoped.properties.list.return_value = Page(items=(), total=0)
+    scoped.workspaces.mcp.list.return_value = Page(items=(), total=0)
+
+    scoped.plugins.list_command = direct_list_command(scoped.plugins.list)
+    scoped.properties.list_command = direct_list_command(scoped.properties.list)
+    scoped.workspaces.mcp.list_command = direct_list_command(scoped.workspaces.mcp.list)
 
     def issues_command(issue_filter: IssueListFilter) -> Command[object]:
         def decode(_stdout: bytes, command_text: str) -> object:
@@ -154,6 +162,21 @@ def make_workspace_clients(
 
     scoped.workspaces._autopilots_relation_command = autopilots_relation
 
+    def page_items_command(
+        list_fn: Callable[[], object],
+    ) -> Callable[[], Command[object]]:
+        def loader() -> object:
+            result = list_fn()
+            if isinstance(result, Page):
+                return result.items
+            return result
+
+        return lambda: empty_command(loader)
+
+    scoped.workspaces._plugins_relation_command = page_items_command(scoped.plugins.list)
+    scoped.workspaces._properties_relation_command = page_items_command(scoped.properties.list)
+    scoped.workspaces._mcp_servers_relation_command = page_items_command(scoped.workspaces.mcp.list)
+
     return WorkspaceClients(origin=origin, scoped=scoped)
 
 
@@ -172,6 +195,9 @@ def workspace_relation_method(client: MagicMock, relation_name: str) -> MagicMoc
         "runtimes": "runtimes.list",
         "squads": "squads.list",
         "autopilots": "autopilots.list",
+        "plugins": "plugins.list",
+        "properties": "properties.list",
+        "mcp_servers": "workspaces.mcp.list",
     }[relation_name]
     current = client
     for part in dotted.split("."):

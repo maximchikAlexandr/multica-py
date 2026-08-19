@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import msgspec
 
-from multica_py.enums import IssueStatus, ProjectStatus
+from multica_py.enums import ProjectStatus, _coerce_issue_status
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.autopilots import (
     AutopilotListPage,
@@ -24,7 +24,9 @@ from multica_py.models.issues import (
     IssueMetadataItem,
     LinkedPullRequest,
 )
+from multica_py.models.plugins import Plugin, PluginDigest
 from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
+from multica_py.models.properties import PropertyDefinition
 from multica_py.models.system import AttachmentResult
 from multica_py.types import MetadataValue
 
@@ -45,7 +47,7 @@ class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     title: str
     description: str | None = None
-    status: IssueStatus
+    status: str
     priority: str | None = None
     assignee: IssueAssignee | None = None
     pull_requests: tuple[LinkedPullRequest, ...] | msgspec.UnsetType = msgspec.UNSET
@@ -105,7 +107,7 @@ def _issue_from_wire(wire: _IssueWire) -> Issue:
         id=wire.id,
         title=wire.title,
         description=wire.description,
-        status=wire.status,
+        status=_coerce_issue_status(wire.status),
         priority=wire.priority,
         assignee=wire.assignee,
         pull_request_snapshot=pull_requests,
@@ -452,4 +454,93 @@ def project_resource_from_wire(wire: _ProjectResourceRecordWire) -> ProjectResou
             daemon_id=ref.daemon_id,
             label=ref.label,
         ),
+    )
+
+
+class _PropertyOptionWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    name: str
+    color: str = ""
+
+
+class _PropertyConfigWire(msgspec.Struct, frozen=True, kw_only=True):
+    options: tuple[_PropertyOptionWire, ...] = ()
+
+
+class _PropertyDefinitionWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    name: str
+    type: str
+    description: str = ""
+    icon: str = ""
+    config: _PropertyConfigWire = msgspec.field(default_factory=_PropertyConfigWire)
+    position: float = 0.0
+    archived: bool = False
+    usage_count: int = 0
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
+
+
+class _PluginWire(msgspec.Struct, frozen=True, kw_only=True):
+    plugin_key: str
+    desired_version: str
+    lifecycle_status: str
+    trust_tier: str
+    uploader_id: str = ""
+
+
+class _PluginDigestWire(msgspec.Struct, frozen=True, kw_only=True):
+    plugin_key: str
+    version: str
+    manifest_digest: str
+    archive_digest: str
+    artifact_digest: str
+    size_bytes: int
+    file_count: int
+
+
+def plugin_from_wire(wire: _PluginWire) -> Plugin:
+    from multica_py.models.plugins import Plugin
+
+    return Plugin(
+        plugin_key=wire.plugin_key,
+        desired_version=wire.desired_version,
+        lifecycle_status=wire.lifecycle_status,
+        trust_tier=wire.trust_tier,
+        uploader_id=wire.uploader_id,
+    )
+
+
+def plugin_digest_from_wire(wire: _PluginDigestWire) -> PluginDigest:
+    from multica_py.models.plugins import PluginDigest
+
+    return PluginDigest(
+        plugin_key=wire.plugin_key,
+        version=wire.version,
+        manifest_digest=wire.manifest_digest,
+        archive_digest=wire.archive_digest,
+        artifact_digest=wire.artifact_digest,
+        size_bytes=wire.size_bytes,
+        file_count=wire.file_count,
+    )
+
+
+def property_definition_from_wire(wire: _PropertyDefinitionWire) -> PropertyDefinition:
+    from multica_py.models.properties import PropertyDefinition, PropertyOption
+
+    return PropertyDefinition(
+        id=wire.id,
+        name=wire.name,
+        type=wire.type,
+        description=wire.description,
+        icon=wire.icon,
+        options=tuple(
+            PropertyOption(id=option.id, name=option.name, color=option.color)
+            for option in wire.config.options
+        ),
+        position=wire.position,
+        archived=wire.archived,
+        usage_count=wire.usage_count,
+        created_at=wire.created_at,
+        updated_at=wire.updated_at,
     )

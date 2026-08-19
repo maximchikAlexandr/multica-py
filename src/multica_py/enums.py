@@ -26,6 +26,13 @@ class IssueStatus(enum.StrEnum):
     cancelled = "cancelled"
 
 
+def _coerce_issue_status(value: str) -> IssueStatus | str:
+    try:
+        return IssueStatus(value)
+    except ValueError:
+        return value
+
+
 class ProjectStatus(enum.StrEnum):
     planned = "planned"
     in_progress = "in_progress"

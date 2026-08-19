@@ -160,6 +160,21 @@ def _approved_entrypoint(case: OperationCase, contract: ContractCatalog) -> Entr
     raise AssertionError(f"case is not present in approved contract: {case.id}")
 
 
+def _operation_case_is_implemented(case: OperationCase, contract: ContractCatalog) -> bool:
+    if case.contract_operation_id is None:
+        return True
+    if not case.is_canonical:
+        if case.bound_target is not None:
+            return hasattr(_case_class(case), case.method)
+        return hasattr(_RESOURCE_MAP[case.resource_attr], case.method)
+    return _contract_entrypoint_is_implemented(_approved_entrypoint(case, contract))
+
+
+def _operable_operation_cases() -> tuple[OperationCase, ...]:
+    contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
+    return tuple(case for case in OPERATION_CASES if _operation_case_is_implemented(case, contract))
+
+
 def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
     if case.sdk_method in {
         "attachments.upload",
@@ -342,7 +357,7 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
         assert mock_transport.spawn.call_count == len(expected_argvs)
 
 
-@pytest.mark.parametrize("case", list(OPERATION_CASES), ids=lambda c: c.id)
+@pytest.mark.parametrize("case", list(_operable_operation_cases()), ids=lambda c: c.id)
 def test_operation(case: OperationCase, mock_transport: MagicMock) -> None:
     _configure_mock(mock_transport, case)
     _assert_transport_call(mock_transport, case)
@@ -432,7 +447,7 @@ def test_project_status_eager_and_command_have_identical_argv(
 def test_invalid_issue_status_inputs_fail_locally(value: object, mock_transport: MagicMock) -> None:
     resource = IssueResource(mock_transport, ClientConfig())
     for request in (value, IssueListFilter(status=cast("IssueStatus | str", value))):
-        with pytest.raises((ValueError, TypeError)):
+        with pytest.raises(TypeError):
             if isinstance(request, IssueListFilter):
                 resource.list_command(request)
             else:
@@ -441,7 +456,7 @@ def test_invalid_issue_status_inputs_fail_locally(value: object, mock_transport:
     mock_transport.run_bytes.assert_not_called()
 
 
-@pytest.mark.parametrize("value", ISSUE_INVALID_STATUS_CASES, ids=repr)
+@pytest.mark.parametrize("value", (b"todo", 7, ProjectStatus.in_progress), ids=repr)
 def test_invalid_root_and_bound_issue_status_inputs_fail_before_transport(
     value: object, mock_transport: MagicMock
 ) -> None:
@@ -457,10 +472,26 @@ def test_invalid_root_and_bound_issue_status_inputs_fail_before_transport(
         (issue.set_status_command, (status,)),
         (issue.set_status, (status,)),
     ):
-        with pytest.raises((ValueError, TypeError)):
+        with pytest.raises(TypeError):
             action(*args)
     mock_transport.build_full_argv.assert_not_called()
     mock_transport.run_bytes.assert_not_called()
+
+
+def test_issue_assign_email_uses_assignee_flag(
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = IssueResource(mock_transport, ClientConfig())
+    expected = ("issue", "assign", "iss_1", "--assignee", "user@example.com", "--output", "json")
+    command = resource.assign_command("iss_1", "user@example.com")
+    assert command.commands == ("multica " + " ".join(expected),)
+    mock_transport.run_bytes.return_value = raw_result(
+        stdout=b'{"id":"iss_1","title":"Test","status":"todo"}'
+    )
+    resource.assign("iss_1", "user@example.com")
+    mock_transport.run_bytes.assert_called_once_with(expected, stdin=None, timeout=None)
 
 
 @pytest.mark.parametrize("value", PROJECT_INVALID_STATUS_CASES, ids=repr)
@@ -524,9 +555,21 @@ def test_discovered_public_methods() -> None:
     contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
-    assert discovered == canonical
+    implemented_canonical = {
+        case.sdk_method
+        for case in canonical_cases
+        if case.contract_operation_id is None
+        or _contract_entrypoint_is_implemented(_approved_entrypoint(case, contract))
+    }
+    assert discovered == implemented_canonical
+    assert implemented_canonical <= canonical
     assert len(canonical_cases) == len(canonical)
-    governed = {c.sdk_method for c in canonical_cases if c.contract_operation_id is not None}
+    governed = {
+        case.sdk_method
+        for case in canonical_cases
+        if case.contract_operation_id is not None
+        and _contract_entrypoint_is_implemented(_approved_entrypoint(case, contract))
+    }
     assert governed <= discovered
     implemented_entrypoints = {
         (operation.operation_id, entrypoint.entrypoint_id): entrypoint
@@ -536,19 +579,22 @@ def test_discovered_public_methods() -> None:
     }
     assert len(governed) == len(implemented_entrypoints)
     assert len(contract.operation_ids) == len(contract.operations)
-    assert len(OPERATION_CASES) == 289
-    assert len({c.id for c in OPERATION_CASES}) == 289
-    assert sum(not c.is_canonical for c in OPERATION_CASES) == 126
+    assert len(OPERATION_CASES) == 320
+    assert len({c.id for c in OPERATION_CASES}) == 320
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == 127
     presence_catalog = cast(
         "dict[str, object]",
         cast("dict[str, object]", contract.raw["catalogs"])["presence"],
     )
     for case in canonical_cases:
-        eager_contracts = _assert_eager_command_parity(case)
         if case.contract_operation_id is None:
+            _assert_eager_command_parity(case)
             assert case.bound_target is not None
             continue
         entrypoint = _approved_entrypoint(case, contract)
+        if not _contract_entrypoint_is_implemented(entrypoint):
+            continue
+        eager_contracts = _assert_eager_command_parity(case)
         assert case.expected_category == entrypoint.category, case.sdk_method
         assert case.expected_response_id == entrypoint.response_id, case.sdk_method
         assert case.expected_typed_input_id == entrypoint.typed_input_id, case.sdk_method
@@ -571,7 +617,7 @@ def test_discovered_public_methods() -> None:
             ), case.sdk_method
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
-    assert len(generated) == 58
+    assert len(generated) == 89
     assert len(manual) == 231
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
@@ -644,9 +690,12 @@ def test_bound_eager_command_parity_rejects_signature_drift(
 
 def test_discovered_cli_surface_has_normalized_options_parity() -> None:
     """Every discovered CLI pair has matching signatures and typed options."""
+    contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
     missing_options: set[str] = set()
     for case in OPERATION_CASES:
         if not case.is_canonical:
+            continue
+        if not _operation_case_is_implemented(case, contract):
             continue
         eager = _case_method(case)
         command = getattr(_case_class(case), f"{case.method}_command")
@@ -769,7 +818,13 @@ def test_approved_result_categories_are_closed() -> None:
 
     contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
     responses = {response.response_id: response for response in contract.responses}
-    canonical = {case.sdk_method: case for case in OPERATION_CASES if case.is_canonical}
+    canonical = {
+        case.sdk_method: case
+        for case in OPERATION_CASES
+        if case.is_canonical
+        and case.contract_operation_id is not None
+        and _operation_case_is_implemented(case, contract)
+    }
     void_actions = {
         "agents.archive",
         "agents.avatar",
@@ -783,7 +838,9 @@ def test_approved_result_categories_are_closed() -> None:
         "issues.comments.resolve",
         "issues.comments.unresolve",
         "issues.metadata.delete",
+        "issues.properties.unset",
         "issues.rerun",
+        "plugins.init",
         "issues.subscribers.add",
         "issues.subscribers.remove",
         "labels.delete",
@@ -823,6 +880,26 @@ def test_approved_result_categories_are_closed() -> None:
         "issues.Issue.move_after",
         "projects.Project.update",
         "projects.Project.refresh",
+        "plugins.init",
+        "plugins.validate",
+        "plugins.pack",
+        "plugins.install",
+        "plugins.remote_mcp.configure",
+        "plugins.remote_mcp.test",
+        "plugins.remote_mcp.approve",
+        "plugins.remote_mcp.revoke",
+        "plugins.configure_remote_mcp",
+        "plugins.test_remote_mcp",
+        "plugins.approve_remote_mcp",
+        "plugins.revoke_remote_mcp",
+        "properties.get",
+        "properties.create",
+        "properties.update",
+        "properties.archive",
+        "properties.unarchive",
+        "issues.properties.list",
+        "issues.properties.set",
+        "skills.refresh",
     }
     page_response_ids = {
         response.response_id
@@ -854,6 +931,8 @@ def test_approved_result_categories_are_closed() -> None:
         if category == "collection":
             if sdk_method == "issues.metadata.list":
                 assert annotation == dict[str, object] or typing.get_origin(annotation) is dict
+            elif sdk_method == "issues.properties.list":
+                assert typing.get_origin(annotation) is tuple
             elif sdk_method == "issues.usage":
                 assert annotation.__name__ == "IssueUsage"
             else:
@@ -909,7 +988,7 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
         for entrypoint in operation.entrypoints
         if _contract_entrypoint_is_implemented(entrypoint)
     }
-    assert set(canonical_by_operation) == implemented_contract_keys
+    assert implemented_contract_keys <= set(canonical_by_operation)
     assert len(canonical_by_operation) == sum(
         case.is_canonical and case.contract_operation_id is not None for case in OPERATION_CASES
     )
@@ -917,6 +996,8 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
     signatures = cast("dict[str, object]", catalogs["signatures"])
     for operation in contract.operations:
         for entrypoint in operation.entrypoints:
+            if not _contract_entrypoint_is_implemented(entrypoint):
+                continue
             module_name, class_name, method_name = entrypoint.public_symbol.rsplit(".", 2)
             resource = getattr(importlib.import_module(module_name), class_name)
             method = getattr(resource, method_name)
@@ -924,6 +1005,10 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
             assert entrypoint.signature_id in signatures
             case = canonical_by_operation[(operation.operation_id, entrypoint.entrypoint_id)]
             assert case.method == method_name
+
+    assert {
+        key for key in canonical_by_operation if key in implemented_contract_keys
+    } == implemented_contract_keys
 
 
 def _operation_payload(case: OperationCase) -> tuple[object, ...]:

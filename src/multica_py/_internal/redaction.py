@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Iterable, Mapping
 from typing import cast
@@ -25,6 +26,14 @@ _SECRET_KEY_PATTERNS = (
     ("secret",),
     ("token",),
 )
+_SECRET_OPTION_EXCLUSIONS = frozenset({"credential"})
+_FILE_CONTENT_SECRET_OPTIONS = frozenset(
+    {"credential-file", "server-config-file"},
+)
+_STDIN_CONTENT_SECRET_OPTIONS = frozenset(
+    {"credential-stdin", "server-config-stdin"},
+)
+_INLINE_SECRET_OPTIONS = frozenset({"server-config"})
 _SECRET_KEY_COMPACT_ALIASES = frozenset(
     {"apikey", "accesskey", "accesstoken", "authtoken", "clientsecret", "privatekey"}
 )
@@ -41,7 +50,23 @@ def _is_secret_option(arg: str) -> bool:
     if not arg.startswith("--"):
         return False
     name = arg[2:].partition("=")[0]
+    if name in _SECRET_OPTION_EXCLUSIONS:
+        return False
     return _is_secret_key(name)
+
+
+def _collectible_secret_option(arg: str) -> bool:
+    if not arg.startswith("--"):
+        return False
+    name = arg[2:].partition("=")[0]
+    if name in _SECRET_OPTION_EXCLUSIONS:
+        return False
+    return (
+        name in _INLINE_SECRET_OPTIONS
+        or name in _FILE_CONTENT_SECRET_OPTIONS
+        or name in _STDIN_CONTENT_SECRET_OPTIONS
+        or _is_secret_key(name)
+    )
 
 
 def _secret_key_segments(key: str) -> tuple[str, ...]:
@@ -66,7 +91,7 @@ def _is_secret_key_with_policy(key: str, *, include_bare_key: bool) -> bool:
     )
 
 
-def collect_secret_values(argv: tuple[str, ...]) -> tuple[str, ...]:
+def collect_secret_values(argv: tuple[str, ...], *, stdin: bytes | None = None) -> tuple[str, ...]:
     secrets: list[str] = []
     i = 0
     while i < len(argv):
@@ -80,17 +105,46 @@ def collect_secret_values(argv: tuple[str, ...]) -> tuple[str, ...]:
             secrets.append(argv[i + 3])
             i += 4
             continue
-        if _is_secret_option(arg) and "=" not in arg and i + 1 < len(argv):
+        if arg == "--credential-file" and i + 1 < len(argv):
+            secrets.extend(_read_file_secrets(argv[i + 1]))
+            i += 2
+            continue
+        if arg == "--server-config-file" and i + 1 < len(argv):
+            secrets.extend(_read_file_secrets(argv[i + 1]))
+            i += 2
+            continue
+        if arg == "--credential-stdin" and stdin:
+            decoded = stdin.decode("utf-8", errors="replace").strip()
+            if decoded:
+                secrets.append(decoded)
+            i += 1
+            continue
+        if arg == "--server-config-stdin" and stdin:
+            decoded = stdin.decode("utf-8", errors="replace").strip()
+            if decoded:
+                secrets.append(decoded)
+            i += 1
+            continue
+        if _collectible_secret_option(arg) and "=" not in arg and i + 1 < len(argv):
             secrets.append(argv[i + 1])
             i += 2
             continue
-        if _is_secret_option(arg) and "=" in arg:
+        if _collectible_secret_option(arg) and "=" in arg:
             _, _, value = arg.partition("=")
             if value:
                 secrets.append(value)
         secrets.extend(_collect_url_secret_values(arg))
         i += 1
     return normalize_secret_values(secrets)
+
+
+def _read_file_secrets(path: str) -> tuple[str, ...]:
+    try:
+        with open(os.fspath(path), encoding="utf-8") as handle:
+            decoded = handle.read().strip()
+    except OSError:
+        return ()
+    return (decoded,) if decoded else ()
 
 
 def _collect_url_secret_values(arg: str) -> tuple[str, ...]:
@@ -162,6 +216,14 @@ def redact_argv(argv: tuple[str, ...]) -> tuple[str, ...]:
     i = 0
     while i < len(argv):
         arg = argv[i]
+        if arg == "--credential-file" and i + 1 < len(argv):
+            redacted.extend((arg, argv[i + 1]))
+            i += 2
+            continue
+        if arg == "--server-config-file" and i + 1 < len(argv):
+            redacted.extend((arg, argv[i + 1]))
+            i += 2
+            continue
         if _is_secret_option(arg) and "=" not in arg and i + 1 < len(argv):
             redacted.extend((arg, REDACTED))
             i += 2

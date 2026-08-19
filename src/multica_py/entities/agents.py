@@ -12,6 +12,7 @@ from multica_py.entities.issues import Issue
 from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
+from multica_py.models.workspaces import McpServer
 
 S = TypeVar("S", bound=msgspec.Struct)
 
@@ -30,6 +31,9 @@ class Agent(_BoundEntity):  # type: ignore[misc]
     _skills: LazyCollection[AgentSkill] | None = msgspec.field(default=None, name="_skills")
     _tasks: LazyCollection[AgentTask] | None = msgspec.field(default=None, name="_tasks")
     _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
+    _mcp_servers: LazyCollection[McpServer] | None = msgspec.field(
+        default=None, name="_mcp_servers"
+    )
 
     @property
     def skills(self) -> LazyCollection[AgentSkill]:
@@ -94,6 +98,27 @@ class Agent(_BoundEntity):  # type: ignore[misc]
                 ),
             )
         return self._issues  # type: ignore[return-value]
+
+    @property
+    def mcp_servers(self) -> LazyCollection[McpServer]:
+        if self._mcp_servers is None:
+            client = self._require_client(
+                entity_type="Agent", entity_id=self.id, relation_name="mcp_servers"
+            )
+            aid = self.id
+            agents = client.agents
+
+            def loader() -> tuple[McpServer, ...]:
+                return _page_items(agents.mcp.list(aid))
+
+            self._set_runtime(
+                "_mcp_servers",
+                LazyCollection[McpServer](
+                    loader,
+                    command_loader=lambda: agents._mcp_servers_relation_command(aid),
+                ),
+            )
+        return self._mcp_servers  # type: ignore[return-value]
 
     def _invalidate_skills(self) -> None:
         if self._skills is not None:

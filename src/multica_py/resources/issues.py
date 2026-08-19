@@ -52,6 +52,7 @@ from multica_py.models.issues import (
     ProjectReference,
     StdinDescription,
 )
+from multica_py.models.properties import PropertyValue
 from multica_py.models.relations import (
     CursorPage,
     OffsetPage,
@@ -62,6 +63,7 @@ from multica_py.resources._base import BaseResource, _normalize_description_file
 from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
+from multica_py.resources.issue_properties import IssuePropertyResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import MetadataValue
@@ -76,24 +78,36 @@ _NO_DESCRIPTION_TYPE: type[object] = type(NoDescription())
 _STDIN_DESCRIPTION_TYPE: type[object] = type(StdinDescription())
 
 
-def _normalize_issue_status(value: IssueStatus | str) -> IssueStatus:
+def _issue_status_token(value: IssueStatus | str) -> str:
     if isinstance(value, IssueStatus):
-        return value
+        return value.value
     if type(value) is str:
-        return IssueStatus(value)
-    raise TypeError("status must be an IssueStatus or exact status string")
+        return value
+    raise TypeError("status must be an IssueStatus or status string")
 
 
-def _normalize_assignment_target(value: AssignmentTarget) -> str:
+def _assignee_assign_args(assignee: AssignmentTarget) -> tuple[str, ...]:
     from multica_py.entities.agents import Agent
     from multica_py.entities.squads import Squad
     from multica_py.entities.workspaces import WorkspaceMember
 
-    return _normalize_entity_id(
-        value,
-        field_name="assignee",
-        allowed_types=(Agent, Squad, WorkspaceMember),
-    )
+    allowed_types = (Agent, Squad, WorkspaceMember)
+    if isinstance(assignee, allowed_types):
+        return (
+            "--to-id",
+            _normalize_entity_id(
+                assignee,
+                field_name="assignee",
+                allowed_types=allowed_types,
+            ),
+        )
+    if isinstance(assignee, str):
+        if not assignee.strip():
+            raise ValueError("assignee must be non-empty")
+        if "@" in assignee:
+            return ("--assignee", assignee)
+        return ("--to-id", assignee)
+    raise TypeError("assignee must be a non-empty ID or one of: Agent, Squad, WorkspaceMember")
 
 
 def _normalize_issue_reference(value: IssueReference, *, field_name: str = "other_issue") -> str:
@@ -213,6 +227,7 @@ class IssueResource(BaseResource):
         super().__init__(transport, config)
         self.comments = IssueCommentResource(transport, config)
         self.metadata = IssueMetadataResource(transport, config)
+        self.properties = IssuePropertyResource(transport, config)
         self.subscribers = IssueSubscriberResource(transport, config)
         self.labels = IssueLabelResource(transport, config)
 
@@ -220,6 +235,7 @@ class IssueResource(BaseResource):
         super()._set_client(client)
         self.comments._set_client(client)
         self.metadata._set_client(client)
+        self.properties._set_client(client)
         self.subscribers._set_client(client)
         self.labels._set_client(client)
 
@@ -254,6 +270,11 @@ class IssueResource(BaseResource):
 
     def _metadata_relation_command(self, issue_id: str) -> Command[Mapping[str, MetadataValue]]:
         return self.metadata.list_command(issue_id)
+
+    def _properties_relation_command(self, issue_id: str) -> Command[Mapping[str, PropertyValue]]:
+        return self.properties.list_command(issue_id)._map(
+            lambda rows: {row.name: row for row in rows}
+        )
 
     def _pull_requests_relation_command(
         self, issue_id: str
@@ -499,7 +520,7 @@ class IssueResource(BaseResource):
             metadata=metadata,
         )
         args = ["issue", "list"]
-        status = _normalize_issue_status(filter.status) if filter.status is not None else None
+        status = _issue_status_token(filter.status) if filter.status is not None else None
         priority = filter.priority
         assignee_id = filter.assignee_id
         limit = filter.limit
@@ -515,7 +536,7 @@ class IssueResource(BaseResource):
                 "IssueResource.list: direction requires sort (direction_requires_sort)"
             )
         if status is not None:
-            args.extend(["--status", status.value])
+            args.extend(["--status", status])
         if priority is not None:
             args.extend(["--priority", priority])
         if assignee_id is not None:
@@ -851,9 +872,7 @@ class IssueResource(BaseResource):
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
-        target = _normalize_assignment_target(assignee)
-        args = ["issue", "assign", issue_id]
-        args.extend(["--to-id", target])
+        args = ["issue", "assign", issue_id, *_assignee_assign_args(assignee)]
         return self._decoded_command(tuple(args), _IssueWire, options=options)._map(
             self._bind_issue
         )
@@ -882,9 +901,9 @@ class IssueResource(BaseResource):
         self, issue_id: str, status: IssueStatus | str, *, options: OperationOptions | None = None
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
-        normalized_status = _normalize_issue_status(status)
+        status_token = _issue_status_token(status)
         return self._decoded_command(
-            ("issue", "status", issue_id, normalized_status.value), _IssueWire, options=options
+            ("issue", "status", issue_id, status_token), _IssueWire, options=options
         )._map(self._bind_issue)
 
     def set_status(

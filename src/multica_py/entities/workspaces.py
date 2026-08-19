@@ -15,6 +15,8 @@ from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
 from multica_py.models.autopilots import AutopilotListPage
 from multica_py.models.common import Page
+from multica_py.models.plugins import Plugin
+from multica_py.models.properties import PropertyDefinition
 from multica_py.models.relations import (
     LazyCollection,
     OffsetLazyCollection,
@@ -23,6 +25,7 @@ from multica_py.models.relations import (
     _RelationLoad,
 )
 from multica_py.models.system import RepositoryRecord, RuntimeDefinition
+from multica_py.models.workspaces import McpServer
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
@@ -88,6 +91,13 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
     _squads: LazyCollection[Squad] | None = msgspec.field(default=None, name="_squads")
     _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
     _autopilots: LazyCollection[Autopilot] | None = msgspec.field(default=None, name="_autopilots")
+    _mcp_servers: LazyCollection[McpServer] | None = msgspec.field(
+        default=None, name="_mcp_servers"
+    )
+    _plugins: LazyCollection[Plugin] | None = msgspec.field(default=None, name="_plugins")
+    _properties: LazyCollection[PropertyDefinition] | None = msgspec.field(
+        default=None, name="_properties"
+    )
 
     def _check_client(self, relation_name: str) -> MulticaClient:
         return self._require_client(
@@ -249,3 +259,45 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
             )
             self._set_runtime("_autopilots", _autopilots)
         return self._autopilots  # type: ignore[return-value]
+
+    @property
+    def mcp_servers(self) -> LazyCollection[McpServer]:
+        if self._mcp_servers is None:
+            client = self._check_client("mcp_servers")
+
+            self._set_runtime(
+                "_mcp_servers",
+                LazyCollection[McpServer](
+                    lambda: _page_items(client.workspaces.mcp.list()),
+                    command_loader=client.workspaces._mcp_servers_relation_command,
+                ),
+            )
+        return self._mcp_servers  # type: ignore[return-value]
+
+    @property
+    def plugins(self) -> LazyCollection[Plugin]:
+        if self._plugins is None:
+            client = self._check_client("plugins")
+
+            self._set_runtime(
+                "_plugins",
+                LazyCollection[Plugin](
+                    lambda: _page_items(client.plugins.list()),
+                    command_loader=client.workspaces._plugins_relation_command,
+                ),
+            )
+        return self._plugins  # type: ignore[return-value]
+
+    @property
+    def properties(self) -> LazyCollection[PropertyDefinition]:
+        if self._properties is None:
+            client = self._check_client("properties")
+
+            self._set_runtime(
+                "_properties",
+                LazyCollection[PropertyDefinition](
+                    lambda: _page_items(client.properties.list()),
+                    command_loader=client.workspaces._properties_relation_command,
+                ),
+            )
+        return self._properties  # type: ignore[return-value]

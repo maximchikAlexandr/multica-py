@@ -1,6 +1,6 @@
 # CLI Coverage
 
-Pinned upstream: `multica-ai/multica@93342d04a7a9f788fec921e5aa736f86c7f22d8f` (tag `v0.4.20`)
+Pinned upstream: `multica-ai/multica@38c992ad0a757434fb51584fa34e3bc57d1b78e1` (tag `v0.4.28`)
 
 ## Coverage authority
 

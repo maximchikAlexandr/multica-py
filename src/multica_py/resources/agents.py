@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pathlib
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import msgspec
 
@@ -12,9 +13,14 @@ from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.agents import Agent
 from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
-from multica_py.resources._base import BaseResource, _validate_optional_string
+from multica_py.models.workspaces import McpServer
+from multica_py.resources._base import BaseResource, _page_items, _validate_optional_string
+from multica_py.resources.agent_mcp import AgentMcpResource
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.sentinels import Unset, UnsetType
+
+if TYPE_CHECKING:
+    from multica_py.client import MulticaClient
 
 __all__ = ["Agent", "AgentResource"]
 
@@ -23,6 +29,15 @@ class AgentResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
         self.skills = AgentSkillResource(transport, config)
+        self.mcp = AgentMcpResource(transport, config)
+
+    def _set_client(self, client: MulticaClient) -> None:
+        super()._set_client(client)
+        self.skills._set_client(client)
+        self.mcp._set_client(client)
+
+    def _mcp_servers_relation_command(self, agent_id: str) -> Command[tuple[McpServer, ...]]:
+        return self.mcp.list_command(agent_id)._map(_page_items)
 
     def _skills_relation_command(self, agent_id: str) -> Command[tuple[AgentSkill, ...]]:
         return self.skills.list_command(agent_id)._map(lambda page: tuple(page.items))

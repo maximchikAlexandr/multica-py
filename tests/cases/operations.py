@@ -18,6 +18,7 @@ from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
 from multica_py.enums import IssueStatus as IssueStatusValue
 from multica_py.enums import ProjectStatus as ProjectStatusValue
+from multica_py.resources.agent_mcp import AgentMcpResource
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
@@ -29,12 +30,15 @@ from multica_py.resources.daemon import DaemonResource
 from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
+from multica_py.resources.issue_properties import IssuePropertyResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.labels import LabelResource
 from multica_py.resources.maintenance import MaintenanceResource
+from multica_py.resources.plugins import PluginResource
 from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
+from multica_py.resources.properties import PropertyResource
 from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.setup import SetupResource
@@ -43,6 +47,7 @@ from multica_py.resources.skills import SkillResource
 from multica_py.resources.squad_members import SquadMemberResource
 from multica_py.resources.squads import SquadResource
 from multica_py.resources.users import UserResource
+from multica_py.resources.workspace_mcp import WorkspaceMcpResource
 from multica_py.resources.workspaces import WorkspaceResource
 from multica_py.sentinels import Unset
 from tools.upstream_contract.contract import validate_contract as _validate_contract
@@ -54,6 +59,7 @@ _CANONICAL_BOUND_RESULT_TYPES = {
     "multica_py.resources.issues.Issue": "multica_py.entities.issues.Issue",
     "multica_py.resources.issue_comments.Comment": "multica_py.entities.comments.Comment",
     "multica_py.resources.projects.Project": "multica_py.entities.projects.Project",
+    "multica_py.models.skills.Skill": "multica_py.entities.skills.Skill",
 }
 
 
@@ -101,20 +107,18 @@ class StatusInputCase:
 ISSUE_STATUS_CASES: tuple[StatusInputCase, ...] = (
     StatusInputCase("issue enum", IssueStatusValue.todo, "todo"),
     StatusInputCase("issue exact string", "in_review", "in_review"),
+    StatusInputCase("issue unknown string", "open", "open"),
+)
+
+ISSUE_INVALID_STATUS_CASES: tuple[object, ...] = (
+    b"todo",
+    7,
+    ProjectStatusValue.in_progress,
 )
 
 PROJECT_STATUS_CASES: tuple[StatusInputCase, ...] = (
     StatusInputCase("project enum", ProjectStatusValue.planned, "planned"),
     StatusInputCase("project exact string", "completed", "completed"),
-)
-
-ISSUE_INVALID_STATUS_CASES: tuple[object, ...] = (
-    "open",
-    "TODO",
-    "",
-    b"todo",
-    7,
-    ProjectStatusValue.in_progress,
 )
 
 PROJECT_INVALID_STATUS_CASES: tuple[object, ...] = (
@@ -129,6 +133,7 @@ PROJECT_INVALID_STATUS_CASES: tuple[object, ...] = (
 
 RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("agents", AgentResource),
+    ("agent_mcp", AgentMcpResource),
     ("agent_skills", AgentSkillResource),
     ("attachments", AttachmentResource),
     ("auth", AuthResource),
@@ -139,12 +144,15 @@ RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("issue_comments", IssueCommentResource),
     ("issue_labels", IssueLabelResource),
     ("issue_metadata", IssueMetadataResource),
+    ("issue_properties", IssuePropertyResource),
     ("issue_subscribers", IssueSubscriberResource),
     ("issues", IssueResource),
     ("labels", LabelResource),
     ("maintenance", MaintenanceResource),
+    ("plugins", PluginResource),
     ("project_resources", ProjectResourceCollection),
     ("projects", ProjectResource),
+    ("properties", PropertyResource),
     ("repositories", RepositoryResource),
     ("runtimes", RuntimeResource),
     ("setup", SetupResource),
@@ -153,18 +161,22 @@ RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("squads", SquadResource),
     ("squads_members", SquadMemberResource),
     ("users", UserResource),
+    ("workspace_mcp", WorkspaceMcpResource),
     ("workspaces", WorkspaceResource),
 )
 
 _NESTED_RESOURCE_ATTRS: dict[tuple[str, str], str] = {
+    ("agents", "mcp"): "agent_mcp",
     ("agents", "skills"): "agent_skills",
     ("issues", "comments"): "issue_comments",
     ("issues", "labels"): "issue_labels",
     ("issues", "metadata"): "issue_metadata",
+    ("issues", "properties"): "issue_properties",
     ("issues", "subscribers"): "issue_subscribers",
     ("projects", "resources"): "project_resources",
     ("skills", "files"): "skill_files",
     ("squads", "members"): "squads_members",
+    ("workspaces", "mcp"): "workspace_mcp",
 }
 
 _NESTED_DOTTED_PREFIXES: dict[str, str] = {
@@ -310,6 +322,8 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
             if operation_id in {
                 "autopilots.delete",
                 "issues.comments.delete",
+                "issues.properties.unset",
+                "plugins.init",
                 "projects.resources.remove",
             }:
 
@@ -347,6 +361,21 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                     raise AssertionError("Page cursor metadata field is missing")
 
             def assert_type(result: object, _mt: MagicMock = MagicMock()) -> None:
+                if expected == "builtins.dict":
+                    if type(result) is not dict:
+                        raise AssertionError(f"expected dict, got {result!r}")
+                    return
+                if expected == "multica_py.models.properties.PropertyValue" and operation_id in {
+                    "issues.properties.list",
+                    "issues.properties.set",
+                }:
+                    if not isinstance(result, tuple):
+                        raise AssertionError(f"expected tuple of PropertyValue, got {result!r}")
+                    for item in result:
+                        actual_item = f"{type(item).__module__}.{type(item).__qualname__}"
+                        if actual_item != expected:
+                            raise AssertionError(f"expected {expected}, got {actual_item}")
+                    return
                 actual = f"{type(result).__module__}.{type(result).__qualname__}"
                 if expected in {
                     "multica_py.models.common.Page",

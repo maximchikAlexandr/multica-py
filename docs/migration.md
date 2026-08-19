@@ -215,7 +215,52 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
-## v0.4.20 SDK additions and behavior
+## v0.4.28 SDK additions and behavior
+
+### Plugins and Remote MCP
+
+`client.plugins` covers `plugin list|status|validate|pack|init|install` and
+`plugin remote-mcp configure|test|approve|revoke`. List/status rows decode to
+frozen `Plugin`. Validate/pack decode `PluginDigest`. `install()` and all
+Remote MCP mutations are human-local guarded upstream; the SDK builds exact
+argv and does not fake success in offline contexts. Remote MCP configure
+requires `--endpoint` and accepts credentials only through file or stdin
+channels.
+
+### Workspace property catalog and issue properties
+
+`client.properties` maps to `property list|get|create|update|archive|unarchive`.
+Actor and multi-actor catalog types reject option tuples at construction.
+`client.issues.properties` maps to `issue property list|set|unset` and is
+distinct from `issues.metadata`. Bound `Issue.properties` loads through the
+list command as a `LazyMapping` keyed by property name.
+
+### Workspace and agent MCP
+
+`workspaces.mcp` and nested `agents.mcp` expose reviewed MCP server
+operations. Add requires exactly one config channel; update allows at most one.
+Secret-bearing inline JSON and stdin/file contents are redacted from preview
+and diagnostics while executed argv still receives the reviewed flags.
+
+### Skill refresh and search
+
+`skills.refresh(skill_id)` emits `skill refresh <id> --output json`.
+`skills.search(query)` returns `Page[SkillSearchResult]` from
+`skill search <query> --output json`.
+
+### Issue status pass-through
+
+Issue status inputs (list filters, `set_status`, bound `Issue.set_status`) accept
+the seven `IssueStatus` members or any upstream string without local membership
+rejection. Email assignees map to `--assignee` when provided as strings.
+
+### Bound relations R34–R38
+
+`Workspace.plugins`, `Workspace.properties`, `Workspace.mcp_servers`,
+`Agent.mcp_servers`, and `Issue.properties` are lazy relations with explicit
+load points. The relation inventory now contains 38 rows.
+
+## v0.4.20 SDK additions and behavior (historical)
 
 ### Agent copy
 

@@ -51,6 +51,9 @@ _UNPAGED_RELATION_CASES = (
     WorkspaceUnpagedCase("runtimes"),
     WorkspaceUnpagedCase("squads"),
     WorkspaceUnpagedCase("autopilots"),
+    WorkspaceUnpagedCase("plugins"),
+    WorkspaceUnpagedCase("properties"),
+    WorkspaceUnpagedCase("mcp_servers"),
 )
 
 
@@ -393,3 +396,104 @@ def test_workspace_member_issue_page_command_preserves_assignee_and_is_lazy() ->
         "multica issue list --assignee-id membership-1 --offset 0 --output json",
     )
     assert command.run().items[0].id == "i1"
+
+
+NORMATIVE_RELATION_MEMBERS: frozenset[str] = frozenset(
+    {
+        "Workspace.members",
+        "Workspace.agents",
+        "Workspace.skills",
+        "Workspace.projects",
+        "Workspace.issues",
+        "Workspace.labels",
+        "Workspace.autopilots",
+        "Workspace.repositories",
+        "Workspace.runtimes",
+        "Workspace.squads",
+        "Workspace.plugins",
+        "Workspace.properties",
+        "Workspace.mcp_servers",
+        "Agent.skills",
+        "Agent.tasks",
+        "Agent.issues",
+        "Agent.mcp_servers",
+        "Skill.files",
+        "Squad.members",
+        "Squad.issues",
+        "WorkspaceMember.issues",
+        "Project.resources",
+        "Project.issues",
+        "Issue.comments",
+        "Issue.recent_comment_threads",
+        "Issue.labels",
+        "Issue.subscribers",
+        "Issue.metadata",
+        "Issue.pull_requests",
+        "Issue.children",
+        "Issue.runs",
+        "Issue.properties",
+        "CommentThread.comments",
+        "TaskRun.messages",
+        "Autopilot.runs",
+        "Autopilot.triggers",
+        "Autopilot.subscribers",
+        "AutopilotRun.messages",
+    }
+)
+
+
+def test_normative_relation_inventory_matches_public_surface() -> None:
+    from multica_py.entities.agents import Agent
+    from multica_py.entities.autopilots import Autopilot, AutopilotRun
+    from multica_py.entities.comments import CommentThread
+    from multica_py.entities.issues import Issue, TaskRun
+    from multica_py.entities.projects import Project
+    from multica_py.entities.skills import Skill
+    from multica_py.entities.squads import Squad
+
+    inventory = {
+        (Workspace, "members"),
+        (Workspace, "agents"),
+        (Workspace, "skills"),
+        (Workspace, "projects"),
+        (Workspace, "issues"),
+        (Workspace, "labels"),
+        (Workspace, "autopilots"),
+        (Workspace, "repositories"),
+        (Workspace, "runtimes"),
+        (Workspace, "squads"),
+        (Workspace, "plugins"),
+        (Workspace, "properties"),
+        (Workspace, "mcp_servers"),
+        (Agent, "skills"),
+        (Agent, "tasks"),
+        (Agent, "issues"),
+        (Agent, "mcp_servers"),
+        (Skill, "files"),
+        (Squad, "members"),
+        (Squad, "issues"),
+        (WorkspaceMember, "issues"),
+        (Project, "resources"),
+        (Project, "issues"),
+        (Issue, "comments"),
+        (Issue, "labels"),
+        (Issue, "subscribers"),
+        (Issue, "metadata"),
+        (Issue, "pull_requests"),
+        (Issue, "children"),
+        (Issue, "runs"),
+        (Issue, "properties"),
+        (CommentThread, "comments"),
+        (TaskRun, "messages"),
+        (Autopilot, "runs"),
+        (Autopilot, "triggers"),
+        (Autopilot, "subscribers"),
+        (AutopilotRun, "messages"),
+    }
+    discovered = {f"{owner.__name__}.{member}" for owner, member in inventory}
+    discovered.add("Issue.recent_comment_threads")
+    assert discovered == NORMATIVE_RELATION_MEMBERS
+    assert len(discovered) == 38
+    for owner, member in inventory:
+        assert hasattr(owner, member)
+    assert callable(Issue.recent_comment_threads)
