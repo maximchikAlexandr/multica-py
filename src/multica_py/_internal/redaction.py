@@ -107,11 +107,7 @@ def collect_secret_values(argv: tuple[str, ...], *, stdin: bytes | None = None) 
             secrets.append(argv[i + 3])
             i += 4
             continue
-        if arg == "--credential-file" and i + 1 < len(argv):
-            secrets.extend(_read_file_secrets(argv[i + 1]))
-            i += 2
-            continue
-        if arg == "--server-config-file" and i + 1 < len(argv):
+        if arg.removeprefix("--") in _FILE_CONTENT_SECRET_OPTIONS and i + 1 < len(argv):
             secrets.extend(_read_file_secrets(argv[i + 1]))
             i += 2
             continue
@@ -137,12 +133,19 @@ def collect_secret_values(argv: tuple[str, ...], *, stdin: bytes | None = None) 
 
 
 def _read_file_secrets(path: str) -> tuple[str, ...]:
-    try:
-        with open(os.fspath(path), encoding="utf-8") as handle:
-            decoded = handle.read().strip()
-    except OSError:
+    content = _read_file_bytes(path)
+    if not content:
         return ()
+    decoded = content.decode("utf-8", errors="replace")
     return _collect_content_secret_values(decoded)
+
+
+def _read_file_bytes(path: str) -> bytes:
+    try:
+        with open(os.fspath(path), "rb") as handle:
+            return handle.read()
+    except OSError:
+        return b""
 
 
 def _collect_option_secret_values(name: str, value: str) -> tuple[str, ...]:
@@ -260,10 +263,25 @@ def collect_diagnostic_secret_values(
 def collect_diagnostic_secret_bytes(
     argv: tuple[str, ...], *, stdin: bytes | None = None
 ) -> tuple[bytes, ...]:
-    """Collect opaque stdin payloads for byte-preserving diagnostics."""
-    if stdin and any(option in argv for option in _STDIN_CONTENT_SECRET_OPTIONS):
-        return (stdin,)
-    return ()
+    """Collect opaque file/stdin payloads for byte-preserving diagnostics."""
+    secrets: list[bytes] = []
+    if stdin and any(f"--{option}" in argv for option in _STDIN_CONTENT_SECRET_OPTIONS):
+        secrets.append(stdin)
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg.removeprefix("--") in _FILE_CONTENT_SECRET_OPTIONS and i + 1 < len(argv):
+            content = _read_file_bytes(argv[i + 1])
+            if content:
+                secrets.append(content)
+            i += 2
+            continue
+        i += 1
+    unique: list[bytes] = []
+    for secret in secrets:
+        if secret not in unique:
+            unique.append(secret)
+    return tuple(unique)
 
 
 def _secret_sort_key(value: str) -> tuple[int, str]:

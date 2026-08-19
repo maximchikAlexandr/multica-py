@@ -135,6 +135,68 @@ def _contains_type(annotation: object, expected: object) -> bool:
     return any(_contains_type(argument, expected) for argument in typing.get_args(annotation))
 
 
+_PAGE_CONTRACT_RETURN_NAMES = frozenset(
+    {
+        "AutopilotListPage",
+        "AutopilotRunListPage",
+        "IssueChildrenResult",
+        "IssueListPage",
+        "MetadataPage",
+        "page_daemon_disk_usage",
+        "page_issue_usage",
+    }
+)
+
+
+def _runtime_return_category(annotation: object) -> str:
+    origin = typing.get_origin(annotation)
+    if (
+        _contains_type(annotation, Page)
+        or (isinstance(annotation, type) and issubclass(annotation, Page))
+        or (isinstance(origin, type) and issubclass(origin, Page))
+    ):
+        return "Page"
+    if origin is tuple:
+        return "tuple"
+    if origin is dict or annotation is dict:
+        return "mapping"
+    return "other"
+
+
+def _contract_return_category(signature: str) -> str:
+    result = signature.rsplit("->", 1)[-1] if "->" in signature else signature.rsplit(":", 1)[-1]
+    result = result.strip()
+    if result.startswith("Page[") or result in _PAGE_CONTRACT_RETURN_NAMES:
+        return "Page"
+    if result.startswith("tuple["):
+        return "tuple"
+    if result.startswith("dict["):
+        return "mapping"
+    return "other"
+
+
+def _assert_return_categories_match(annotation: object, signature: str) -> None:
+    runtime_category = _runtime_return_category(annotation)
+    contract_category = _contract_return_category(signature)
+    assert runtime_category == contract_category, (runtime_category, contract_category)
+
+
+@pytest.mark.parametrize(
+    ("runtime_annotation", "contract_signature"),
+    (
+        (Page[int], "() -> tuple[int, ...]"),
+        (tuple[int, ...], "() -> Page[int]"),
+    ),
+    ids=("runtime-page-mutated-to-tuple", "contract-page-mutated-to-tuple"),
+)
+def test_return_category_invariant_rejects_both_page_tuple_mutations(
+    runtime_annotation: object,
+    contract_signature: str,
+) -> None:
+    with pytest.raises(AssertionError):
+        _assert_return_categories_match(runtime_annotation, contract_signature)
+
+
 def _approved_entrypoint(case: OperationCase, contract: ContractCatalog) -> Entrypoint:
     assert case.contract_operation_id is not None
     entrypoint_id = (
@@ -965,11 +1027,9 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
             assert inspect.isfunction(method)
             assert entrypoint.signature_id in signatures
             annotation = typing.get_type_hints(method)["return"]
-            if _contains_type(annotation, Page):
-                signature_return = cast("str", signatures[entrypoint.signature_id]).rsplit("->", 1)[
-                    -1
-                ]
-                assert "tuple[" not in signature_return
+            _assert_return_categories_match(
+                annotation, cast("str", signatures[entrypoint.signature_id])
+            )
             case = canonical_by_operation[(operation.operation_id, entrypoint.entrypoint_id)]
             assert case.method == method_name
 

@@ -101,6 +101,14 @@ _SECRET_REDACTION_CASES: tuple[SecretRedactionCase, ...] = (
         True,
     ),
     SecretRedactionCase(
+        "credential-stdin-opaque",
+        "--credential-stdin",
+        b"opaque-stdin\x00\xff-secret",
+        "opaque-stdin\x00\ufffd-secret",
+        "opaque-stdin",
+        True,
+    ),
+    SecretRedactionCase(
         "server-config-stdin-nested-json",
         "--server-config-stdin",
         b'{"headers":{"X-API-Key":"nested-token"}}',
@@ -380,9 +388,11 @@ def test_secret_channels_are_redacted_on_result_and_error_surfaces(
     )
 
     assert executor.requests[0].stdin == (case.payload if case.stdin else None)
+    assert case.payload not in result.stdout
+    assert case.payload not in result.stderr
     for rendered in (
-        result.stdout.decode("utf-8"),
-        result.stderr.decode("utf-8"),
+        result.stdout.decode("utf-8", errors="replace"),
+        result.stderr.decode("utf-8", errors="replace"),
         " ".join(result.argv),
         repr(result),
     ):
@@ -412,8 +422,19 @@ def test_secret_channels_are_redacted_on_result_and_error_surfaces(
             b'{"headers":{"X-API-Key":"file-nested-token"}}',
             "file-nested-token",
         ),
+        ("--credential-file", b"file-credential\x00\xff-secret", "file-credential"),
+        (
+            "--server-config-file",
+            b'{"headers":{"X-API-Key":"file-config\xff-secret"}}',
+            "file-config",
+        ),
     ),
-    ids=("credential-file", "server-config-file-nested-json"),
+    ids=(
+        "credential-file",
+        "server-config-file-nested-json",
+        "credential-file-opaque",
+        "server-config-file-opaque-json",
+    ),
 )
 def test_file_secret_channels_are_redacted_on_result_and_error_surfaces(
     tmp_path: pathlib.Path,
@@ -424,25 +445,26 @@ def test_file_secret_channels_are_redacted_on_result_and_error_surfaces(
     path = tmp_path / "secret-input"
     path.write_bytes(payload)
     args = (
-        "workspace",
-        "mcp",
-        "add",
-        "server-1",
-        option,
-        str(path),
-    )
+        ("plugin", "remote-mcp", "configure", "inst_001", "remote-mcp")
+        if option == "--credential-file"
+        else ("workspace", "mcp", "add", "server-1")
+    ) + (option, str(path))
     config = ClientConfig(compatibility=CompatibilityPolicy.ignore)
     executor = _EchoExecutor(payload, exit_code=0)
     result = CliTransport(config, executor=executor).run_bytes(args)
+    assert payload not in result.stdout
+    assert payload not in result.stderr
     for rendered in (
-        result.stdout.decode("utf-8"),
-        result.stderr.decode("utf-8"),
+        result.stdout.decode("utf-8", errors="replace"),
+        result.stderr.decode("utf-8", errors="replace"),
         " ".join(result.argv),
         repr(result),
     ):
-        assert payload.decode("utf-8") not in rendered
+        assert payload.decode("utf-8", errors="replace") not in rendered
         assert partial not in rendered
     assert str(path) in result.argv
+    assert b"***" in result.stdout
+    assert b"***" in result.stderr
 
     failing = _EchoExecutor(payload, exit_code=2)
     with pytest.raises(NetworkError) as excinfo:
@@ -450,7 +472,7 @@ def test_file_secret_channels_are_redacted_on_result_and_error_surfaces(
     exc = excinfo.value
     for diagnostic in (str(exc), exc.stdout, exc.stderr, exc.argv, repr(exc)):
         rendered_text = repr(diagnostic)
-        assert payload.decode("utf-8") not in rendered_text
+        assert payload.decode("utf-8", errors="replace") not in rendered_text
         assert partial not in rendered_text
 
 

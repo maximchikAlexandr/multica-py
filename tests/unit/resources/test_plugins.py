@@ -4,7 +4,10 @@ import pathlib
 
 import pytest
 
-from multica_py._internal.redaction import collect_secret_values
+from multica_py._internal.redaction import (
+    collect_diagnostic_secret_bytes,
+    collect_secret_values,
+)
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.resources.plugins import PluginResource
@@ -55,6 +58,18 @@ def test_collect_secret_values_reads_credential_file_contents_not_path(
     secrets = collect_secret_values(argv)
     assert secrets == ("file-secret-token",)
     assert str(credential_path) not in secrets
+
+
+def test_collect_binary_file_secret_is_best_effort_text_and_exact_bytes(
+    tmp_path: pathlib.Path,
+) -> None:
+    credential_path = tmp_path / "credential.bin"
+    payload = b"binary-file-secret\x00\xff"
+    credential_path.write_bytes(payload)
+    argv = ("plugin", "remote-mcp", "configure", "--credential-file", str(credential_path))
+
+    assert collect_secret_values(argv) == ("binary-file-secret\x00\ufffd",)
+    assert collect_diagnostic_secret_bytes(argv) == (payload,)
 
 
 def test_collect_secret_values_reads_credential_stdin_contents() -> None:
@@ -158,6 +173,32 @@ def test_secret_channels_are_redacted_from_public_command_previews(
         rendered = " ".join(command.commands)
         assert secret not in rendered
         assert secret not in repr(command)
+
+
+def test_binary_file_secret_channels_do_not_break_command_preview(
+    tmp_path: pathlib.Path,
+) -> None:
+    config = ClientConfig()
+    plugin = PluginResource(CliTransport(config), config)
+    workspace_mcp = WorkspaceMcpResource(CliTransport(config), config)
+    credential_path = tmp_path / "credential.bin"
+    server_config_path = tmp_path / "server-config.bin"
+    credential_path.write_bytes(b"credential-preview\x00\xff")
+    server_config_path.write_bytes(b"server-config-preview\x00\xff")
+
+    commands = (
+        plugin.configure_remote_mcp_command(
+            "inst_001",
+            "remote-mcp",
+            endpoint="https://mcp.example.com",
+            credential_file=credential_path,
+        ),
+        workspace_mcp.add_command("server-1", server_config_file=server_config_path),
+    )
+    for command in commands:
+        rendered = " ".join(command.commands)
+        assert "credential-preview" not in rendered
+        assert "server-config-preview" not in rendered
 
 
 def test_plugin_install_builds_exact_argv_without_local_refusal() -> None:
