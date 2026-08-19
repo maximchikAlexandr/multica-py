@@ -19,6 +19,10 @@ The SDK SHALL expose `LazyRef[T]` from `multica_py.models.relations` with passiv
 - **WHEN** `get_command()` or `refresh_command()` is inspected and run
 - **THEN** it uses the same governed typed-resource plan, result typing, cache transition, and error behavior as `get()` or `refresh()` respectively
 
+#### Scenario: Loaded optional absence cannot be refreshed remotely
+- **WHEN** `refresh()` is called or `refresh_command()` is inspected and run for a handle seeded from an explicitly null optional source field
+- **THEN** it returns cached `None` through a no-step command, remains loaded, and performs zero transport calls because no target ID exists
+
 ### Requirement: Normative singular-reference inventory
 The SDK SHALL expose exactly the reference members in the following table. Each loadable discriminator SHALL dispatch through the listed governed direct operation using the source wrapper's originating client view. Unlisted singular IDs and embedded snapshots SHALL NOT acquire a lazy-reference property.
 
@@ -60,6 +64,8 @@ Existing scalar reference IDs SHALL remain passive public fields with their curr
 ### Requirement: Source presence is distinct from optional absence
 Wire decoders SHALL retain private presence for every optional source ID or embedded discriminator used by the inventory. An explicitly present null SHALL seed a loaded absent optional reference; an omitted field SHALL remain unloaded and fail `get()` with `MissingRelationContextError`; a present non-null ID SHALL remain unloaded until explicitly loaded. Public scalar compatibility SHALL remain unchanged.
 
+The immutable private presence seed SHALL survive `detach()` because detach removes operation context rather than wire provenance. `to_dict()` and `to_json()` SHALL continue to omit that seed; consequently `from_dict(to_dict(entity))` SHALL reconstruct from public data only and SHALL treat a public optional `None` as missing context, not as proof of explicit null. Direct/manual construction SHALL follow the same conservative rule: non-null public IDs are loadable when bound, while defaulted or explicitly supplied public `None` without decoder provenance is missing context.
+
 #### Scenario: Omitted optional ID is not absent
 - **WHEN** a partial issue payload omits `project_id`
 - **THEN** `issue.project.loaded` is false and `issue.project.get()` raises `MissingRelationContextError` before transport access
@@ -71,6 +77,14 @@ Wire decoders SHALL retain private presence for every optional source ID or embe
 #### Scenario: Present ID is initially unloaded
 - **WHEN** an autopilot run contains a non-null `issue_id`
 - **THEN** `run.issue.loaded` is false until `get()`, `refresh()`, or prefetch explicitly loads it
+
+#### Scenario: Detach preserves wire presence without relation cache
+- **WHEN** a decoded entity with an omitted, explicitly null, or non-null optional source field is detached
+- **THEN** the detached wrapper preserves that field's missing/absent/loadable classification, discards its originating client and mutable relation handles, and any loadable detached reference raises `DetachedEntityError` before I/O
+
+#### Scenario: Public serialization cannot assert explicit-null provenance
+- **WHEN** an entity whose public optional source field is `None` is reconstructed by `from_dict(entity.to_dict())` or by direct construction without a decoder seed
+- **THEN** its reference is unloaded and `get()` raises `MissingRelationContextError` before I/O, regardless of whether the original decoded wire field was omitted or explicit null
 
 ### Requirement: Unsupported discriminator fails before I/O
 If a declared discriminated reference contains an unknown or unsupported target kind, its handle SHALL remain passive and SHALL raise `UnsupportedReferenceTargetError` when loading is requested. The error SHALL identify the source entity, reference name, discriminator, and value, and SHALL occur before transport access.
@@ -103,7 +117,7 @@ Each `LazyRef` SHALL own its source wrapper's state and reuse the existing priva
 - **THEN** each owns an independent handle and loading one outside a common prefetch invocation does not load the other
 
 ### Requirement: Refresh and invalidation are atomic
-`refresh()` SHALL force a governed lookup even when loaded. During load, refresh, or invalidation, operations on the same handle SHALL synchronize on its generation state. A successful refresh SHALL atomically publish a replacement bound target; a failed refresh SHALL retain the prior loaded value, including loaded absence; invalidation SHALL wait for an active transition and leave the handle unloaded.
+`refresh()` SHALL force a governed lookup when a target ID exists, even when loaded. A handle seeded as loaded optional absence has no target ID: its `refresh()` and `refresh_command()` SHALL return cached `None` without I/O. During load, refresh, or invalidation, operations on the same handle SHALL synchronize on its generation state. A successful live refresh SHALL atomically publish a replacement bound target; a failed live refresh SHALL retain the prior loaded target; invalidation SHALL wait for an active transition and leave the handle unloaded.
 
 #### Scenario: Successful refresh replaces the target
 - **WHEN** refresh succeeds for a loaded reference
@@ -111,7 +125,11 @@ Each `LazyRef` SHALL own its source wrapper's state and reuse the existing priva
 
 #### Scenario: Failed refresh preserves prior value
 - **WHEN** refresh fails after a reference loaded successfully
-- **THEN** the exception is raised while `loaded` remains true and `value` remains the previous target or absence
+- **THEN** the exception is raised while `loaded` remains true and `value` remains the previous target
+
+#### Scenario: Refresh of loaded absence is a cached operation
+- **WHEN** `refresh()` or `refresh_command().run()` targets an explicitly null optional reference
+- **THEN** it returns `None`, remains loaded with `None`, and creates no governed lookup or transport I/O
 
 #### Scenario: Invalidation waits for transition
 - **WHEN** `invalidate()` races a load or refresh
@@ -120,6 +138,8 @@ Each `LazyRef` SHALL own its source wrapper's state and reuse the existing priva
 ### Requirement: Immutable source mutation semantics
 Reference-changing source mutations SHALL continue to return a new bound entity wrapper. The returned wrapper's reference handles SHALL be derived from the returned wire presence and IDs; the original wrapper, its scalar snapshot, and its handle caches SHALL remain unchanged. No source mutation SHALL retarget a handle whose source snapshot still contains the old ID.
 
+For `Issue`, the normative reference-changing matrix is: `update(parent_id=...)` changes `parent`; `update(project_id=...)` changes `project`; `update(assignee_id=...)`, `assign(...)`, and `unassign()` change `assignee_ref`. Each successful operation SHALL derive all three handles from the complete returned wire snapshot, including omitted versus explicit-null presence. A failed operation SHALL publish no replacement and SHALL change no state on the original wrapper.
+
 #### Scenario: Issue project change returns a coherent replacement
 - **WHEN** `issue.update(project_id=...)` succeeds
 - **THEN** the returned issue's `project_id` and `project` handle describe the new response while the original issue and its project handle retain their prior snapshot state
@@ -127,6 +147,10 @@ Reference-changing source mutations SHALL continue to return a new bound entity 
 #### Scenario: Failed mutation changes no reference state
 - **WHEN** a reference-changing mutation fails
 - **THEN** the original wrapper and all of its handle states are unchanged
+
+#### Scenario: Every Issue reference-changing operation returns a coherent replacement
+- **WHEN** any row in the Issue mutation matrix succeeds with a changed or cleared reference
+- **THEN** the returned Issue's scalar/snapshot field, private presence, and corresponding handle agree with the response, while the original Issue and all original handle caches remain unchanged
 
 ### Requirement: Closed embedded seed catalog
 No current embedded singular target snapshot SHALL seed a loaded entity value because none is contract-proven complete for its governed target type. An explicit null for an optional inventory row MAY seed loaded absence; omitted fields SHALL not seed; partial embedded assignee data SHALL remain available only through `Issue.assignee` and SHALL not seed `Issue.assignee_ref`.
@@ -140,15 +164,25 @@ No current embedded singular target snapshot SHALL seed a loaded entity value be
 - **THEN** the reference remains unloaded unless a future delta adds that exact operation and field to the closed catalog
 
 ### Requirement: Bounded duplicate-aware prefetch
-`MulticaClient.prefetch()` SHALL accept selectors returning `LazyRef` as well as collection and mapping containers. Within one invocation it SHALL skip loaded handles, deduplicate identical handles, coalesce unloaded references with the same originating scope, target service/type, and target ID into one lookup, and publish independent bound target wrappers to each source handle. Distinct target keys SHALL use the existing `ThreadPoolExecutor`, `max_parallel`, shared process semaphore, validation, and fail-fast rules.
+`MulticaClient.prefetch()` SHALL accept selectors returning `LazyRef` as well as collection and mapping containers. Within one invocation it SHALL skip loaded handles, deduplicate identical handles, coalesce unloaded references with the same exact originating scope, target service/type, and target ID into one lookup, and publish independent bound target wrappers to each source handle. The exact originating-scope key SHALL contain the effective normalized CLI executable/server URL, profile, workspace ID, executor identity, and process-semaphore identity used by the source client view. Mixed originating-scope keys SHALL fail validation before any I/O. Distinct target keys SHALL use the existing `ThreadPoolExecutor`, `max_parallel`, shared process semaphore, validation, and fail-fast rules.
+
+Fan-out SHALL copy the primary target's immutable public snapshot plus immutable private wire-presence/operation provenance required to construct its nested references, and SHALL bind each copy to the identical originating client view. It SHALL create fresh mutable runtime state, including every nested relation handle, `_GenerationState`, loader closure, lock, and cached success/failure, so no target wrapper or nested relation cache is shared.
 
 #### Scenario: Duplicate target IDs load once
 - **WHEN** several source wrappers in one prefetch invocation reference the same project ID
 - **THEN** one `projects.get` call runs and every selected handle becomes loaded with its own bound project wrapper
 
+#### Scenario: Fan-out preserves nested-reference semantics without shared state
+- **WHEN** a coalesced lookup returns a target with omitted, explicit-null, or non-null nested reference fields
+- **THEN** primary and secondary target wrappers expose the same nested-reference presence and originating-scope semantics, but loading or invalidating a nested reference on one wrapper does not change the other
+
 #### Scenario: Different target kinds do not collide
 - **WHEN** equal ID strings refer to different governed resource types or originating scopes
 - **THEN** prefetch treats them as distinct keys and does not share their result
+
+#### Scenario: Exact scope controls coalescing
+- **WHEN** selected references have the same target type and ID under identical effective executable/server, profile, workspace, executor, and semaphore components
+- **THEN** they coalesce into one lookup; if any component differs, mixed-scope validation raises `ValueError` before transport I/O
 
 #### Scenario: Optional absence needs no job
 - **WHEN** selected references are already loaded with `None`

@@ -7,8 +7,8 @@ Collection and mapping relations retain their originating client and provide exp
 - Add a typed `LazyRef[T]` container for passive singular handles with explicit `get()`, cached `value`, atomic `refresh()`, and `invalidate()` behavior.
 - Add an evidence-backed singular-reference inventory and expose only references whose target has a governed direct get operation: issue parent/project and supported assignee kinds; autopilot project/assignee; autopilot-run autopilot/issue; and task-run issue/agent.
 - Preserve scalar IDs and the existing `Issue.assignee` embedded snapshot; use `Issue.assignee_ref` for the new relation to avoid silently changing that field's meaning.
-- Distinguish unloaded, loaded value, loaded optional absence, detached source, missing/omitted source context, and failed load states without adding a global cache or identity map.
-- Extend the existing bounded `MulticaClient.prefetch()` workflow to singular handles and coalesce duplicate target IDs within one call while retaining per-wrapper caches.
+- Distinguish unloaded, loaded value, loaded optional absence, detached source, missing/omitted source context, and failed load states; preserve wire-presence provenance across detach and prefetch fan-out while keeping serialization/manual construction conservative, without adding a global cache or identity map.
+- Extend the existing bounded `MulticaClient.prefetch()` workflow to singular handles and coalesce duplicate target IDs only within one exact profile/workspace/server/execution scope while retaining per-wrapper caches and nested-reference provenance.
 - Keep creator/member, trigger, and task references without a governed direct lookup out of the lazy-reference surface.
 - Document the new API, compatibility boundary, and runnable optional-reference/refresh/prefetch workflow.
 

@@ -9,7 +9,9 @@ parallelism through the shared process semaphore. The selector MAY return a
 or `LazyRef`. Collection and mapping behavior remains keyed by handle identity;
 singular references additionally coalesce equal originating-scope, target-type,
 and target-ID keys within that invocation and publish independent target
-wrappers to each handle.
+wrappers to each handle. Originating scope is the effective normalized CLI
+executable/server URL, profile, workspace ID, executor identity, and shared
+process-semaphore identity; every component MUST match.
 
 #### Scenario: Prefetch does not fake server batching
 - **WHEN** the CLI has no multi-parent or multi-ID filter
@@ -17,7 +19,7 @@ wrappers to each handle.
 
 #### Scenario: Duplicate singular targets are coalesced locally
 - **WHEN** multiple selected `LazyRef` handles in one call address the same governed target key
-- **THEN** one direct lookup runs and each handle receives an independent bound target wrapper without a persistent identity map
+- **THEN** one direct lookup runs and each handle receives an independent bound target wrapper with identical immutable public and private provenance but fresh mutable relation state, without a persistent identity map
 
 #### Scenario: Prefetch obeys max parallelism
 - **WHEN** `prefetch(..., max_parallel=N)` loads multiple distinct keys
@@ -26,6 +28,10 @@ wrappers to each handle.
 #### Scenario: Prefetch validates before I/O
 - **WHEN** `max_parallel < 1`, entities have mixed origin scopes, or the selector yields an unsupported lazy object
 - **THEN** `ValueError` is raised before transport access
+
+#### Scenario: Client views define exact prefetch scope
+- **WHEN** client views differ in workspace, profile, server/executable, executor, or process semaphore
+- **THEN** they are mixed origin scopes and validation raises before I/O; views whose complete scope components match may coalesce equal singular target keys
 
 #### Scenario: Prefetch failure is fail-fast
 - **WHEN** one loader fails

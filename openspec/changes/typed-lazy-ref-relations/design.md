@@ -46,7 +46,7 @@ No governed direct get exists for workspace memberships, users by arbitrary ID, 
 
 `get()` is chosen over `load()`/`resolve()` because every accepted edge delegates to a typed resource `get`, and it is the shortest spelling already used in the issue examples. `.value` remains useful for post-prefetch reads; raising while unloaded prevents it from conflating that state with an optional `None`. No iterator, truthiness, descriptor, or separate optional container is added.
 
-`get_command()` mirrors relation command inspection: when cached it returns a no-step cached command; otherwise it wraps the governed typed service command and installs the result only after successful execution. `refresh_command()` always constructs the governed request.
+`get_command()` mirrors relation command inspection: when cached it returns a no-step cached command; otherwise it wraps the governed typed service command and installs the result only after successful execution. `refresh_command()` constructs the governed request whenever the handle has a target ID. Explicit optional absence has no target ID, so `refresh()` and `refresh_command()` use the same no-step cached-`None` path as `get()` and perform no I/O.
 
 Alternative considered: only `get()` and `loaded`. Rejected because it would leave no passive post-prefetch read and no inspectable command equivalent to the rest of the SDK.
 
@@ -63,7 +63,7 @@ This yields:
 | omitted required context | false | raises `UnloadedReferenceError` | raises `MissingRelationContextError` pre-I/O |
 | detached source with loadable ID | false | raises `UnloadedReferenceError` | raises `DetachedEntityError` pre-I/O |
 | failed first load | false | raises `UnloadedReferenceError` | retries next time |
-| failed refresh after success | true | prior target/`None` | later get returns prior cache |
+| failed refresh after loaded target | true | prior target | later get returns prior cache |
 
 Target `NotFoundError` is a retryable load failure, not optional absence. Only source payload presence can establish legitimate absence; a temporarily missing remote target must not be cached forever as `None`.
 
@@ -94,7 +94,7 @@ Reference construction follows three rules:
 2. explicit null is a loaded optional absence;
 3. omitted ID/discriminator is an unloaded handle whose loader raises `MissingRelationContextError`.
 
-The private presence seed is excluded by `_EntityPolicy` from `to_dict()`, `to_json()`, repr, equality, and hashing. A manually constructed entity with a non-null scalar can load normally; a defaulted `None` without a decoder presence seed is missing context, not proven absence.
+The private presence seed is immutable provenance excluded by `_EntityPolicy` from `to_dict()`, `to_json()`, repr, equality, and hashing. `detach()` must therefore stop using a lossy `from_dict(to_dict())` reconstruction for this provenance: it copies public fields plus immutable presence seeds, clears the originating client, and creates fresh mutable runtime/relation state. Serialization remains intentionally public-only, so `from_dict(to_dict(entity))` cannot distinguish an original omitted field from explicit null; either public `None` is reconstructed conservatively as missing context. Direct/manual construction follows that same rule. A manually constructed entity with a non-null scalar can load normally once bound; a defaulted or explicitly supplied `None` without a decoder seed is missing context, not proven absence.
 
 No embedded entity snapshot currently qualifies as complete. `IssueAssignee` remains display/snapshot data and never seeds an `Agent` or `Squad`; explicit null may seed absence because it does not assert target completeness.
 
@@ -109,15 +109,15 @@ Every property can construct its `LazyRef` from snapshot data without requiring 
 3. missing originating client → `DetachedEntityError`;
 4. otherwise construct/run the governed typed resource command.
 
-An explicit-null optional handle needs no client and remains loaded with `None`, including on a detached snapshot. This preserves passive property access and gives errors only at explicit load points.
+An explicit-null optional handle needs no client and remains loaded with `None`, including on a detached snapshot. Its refresh path is also a cached no-op because there is no target ID from which to build a governed lookup. This preserves passive property access and gives errors only at explicit load points.
 
 Alternative considered: raise on property access, as some older collection paths do. Rejected because it makes a supposedly passive handle impossible to inspect and conflicts with the required detached state model.
 
 ### 6. Refresh replaces handle state, not previously returned entities
 
-`refresh()` forces a new typed get through the same `_GenerationState`. Readers of the same handle wait during the generation. Success atomically publishes the new immutable bound wrapper; failure restores the previous loaded value, including `None`. `invalidate()` waits for an active generation and then removes the handle cache.
+`refresh()` forces a new typed get through the same `_GenerationState` only when the handle has a target ID. Readers of the same handle wait during the generation. Success atomically publishes the new immutable bound wrapper; failure restores the previous loaded target. Loaded optional absence cannot address a target, so eager and command refresh return cached `None` through a no-step command with zero I/O. `invalidate()` waits for an active generation and then removes the handle cache.
 
-Source mutations keep the repository's immutable replacement rule. For example, `issue.update(project_id=...)` returns a new issue whose scalar ID, presence seed, and new handle agree. The original issue and its handle remain a coherent historical snapshot. Retargeting or invalidating the old handle would make it disagree with the old public scalar ID, so no mutation does that. A failed mutation changes neither wrapper.
+Source mutations keep the repository's immutable replacement rule. The complete Issue matrix is `update(parent_id=...)` → `parent`, `update(project_id=...)` → `project`, and `update(assignee_id=...)` / `assign(...)` / `unassign()` → `assignee_ref`. Every successful command returns a newly decoded Issue whose scalar/snapshot, wire-presence seed, and handles come from the response; clearing a reference therefore uses the response's explicit-null/omitted semantics rather than mutating local state. The original issue and every old handle remain a coherent historical snapshot. Retargeting or invalidating an old handle would make it disagree with the old public scalar/snapshot, so no mutation does that. A failed mutation publishes no replacement and changes no original handle.
 
 Alternative considered: invalidate the old source handle after mutation. Rejected because its loader is necessarily keyed by the old immutable scalar and would reload the wrong edge.
 
@@ -125,9 +125,9 @@ Alternative considered: invalidate the old source handle after mutation. Rejecte
 
 Collections and mappings keep current identity deduplication. `LazyRef` contributes a private prefetch key only when it has a supported, non-null target:
 
-`(origin semaphore/scope identity, target entity type/service, target ID)`.
+`(origin scope, target entity type/service, target ID)`, where origin scope is the effective normalized `(CLI executable, server URL, profile, workspace ID, executor identity, process-semaphore identity)` used by the source client view.
 
-The client validates all source origins and selected lazy objects before scheduling I/O. One job runs per distinct unloaded key. After the primary get succeeds, duplicate handles receive independent target wrappers cloned from the immutable public target snapshot and rebound to their identical origin client; add one private `_BoundEntity` clone helper rather than a public cache/registry. This prevents target relation caches from becoming shared identity state. Loaded absence schedules no job. Unsupported or missing-context handles remain ordinary jobs whose explicit pre-I/O error participates in existing earliest-input/fail-fast behavior.
+The client validates all source origins and selected lazy objects before scheduling I/O. Any difference in workspace, profile, server/executable, executor, or semaphore rejects the mixed invocation before transport, even when semaphore identity happens to match; identical complete scopes may coalesce. One job runs per distinct unloaded key. After the primary get succeeds, duplicate handles receive independent target wrappers cloned and rebound by one private `_BoundEntity` helper rather than a public cache/registry. The clone copies immutable public target data and immutable private provenance needed by nested references (wire-presence/operation seeds and the identical originating client view), but allocates fresh mutable runtime state: relation-handle maps, `_GenerationState` objects, loaders, locks, and cached outcomes. Primary and secondary wrappers thus interpret nested omitted/null/value fields identically without sharing nested caches. Loaded absence schedules no job. Unsupported or missing-context handles remain ordinary jobs whose explicit pre-I/O error participates in existing earliest-input/fail-fast behavior.
 
 Distinct keys use the existing `ThreadPoolExecutor(max_workers=max_parallel)` and transport semaphore. There is no approved batch operation for the accepted targets, so no `get_many` API is added.
 
@@ -143,7 +143,7 @@ Docs add `LazyRef` to the dedicated relation import list, a migration/inventory 
 
 - [Open upstream discriminator strings can expand] → Fail closed with `UnsupportedReferenceTargetError`; add a target only with contract evidence and tests.
 - [Presence-aware wire changes can accidentally alter scalar decoding] → Keep public defaults unchanged and test omitted/null/value cases at decoder and entity levels.
-- [Duplicate prefetch fan-out could leak shared nested caches] → Clone immutable targets into independent bound wrappers before publishing to secondary handles.
+- [Duplicate prefetch fan-out could lose provenance or leak shared nested caches] → Copy immutable public data and private presence/operation seeds, then allocate fresh mutable runtime/relation state for every published wrapper.
 - [A source mutation may surprise callers holding the old wrapper] → Document immutable replacement explicitly; the returned wrapper is authoritative and the old snapshot remains internally coherent.
 - [Adding command methods enlarges the surface] → Reuse existing command transformations and expose only the get/refresh equivalents needed for SDK-wide inspectability.
 
