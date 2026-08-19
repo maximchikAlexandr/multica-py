@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Incremental run-message input is contract-approved
-The approved `issues.run_messages` operation SHALL add `since: int = 0` to its eager and command signatures, map a present value to `--since <sequence>`, and require an exact nonnegative integer that is not a boolean. The canonical vector SHALL include `--since 0`; positive and negative vectors SHALL prove positive cursor mapping and pre-I/O rejection of negative, boolean, and noninteger values. Source references SHALL pin the `v0.4.20` Cobra flag, `runIssueRunMessages` query mapping, and server strict-greater-than sequence query.
+The approved `issues.run_messages` operation SHALL add `since: int = 0` to its eager and command signatures, map a present value to `--since <sequence>`, and require an exact non-boolean integer in the inclusive DB/server-safe range `0..2_147_483_647`. The canonical vector SHALL include `--since 0`; positive and negative vectors SHALL prove boundary mapping and pre-I/O rejection. Source references SHALL pin the `v0.4.20` Cobra flag, `runIssueRunMessages` use of `strconv.Atoi`, the subsequent `int32(sinceSeq)` handler/query argument, and the server strict-greater-than sequence query. The SDK SHALL enforce the `int32` upper bound even on a 64-bit CLI host so the cast cannot wrap to an incorrect SQL cursor.
 
 #### Scenario: Zero cursor is explicit
 - **WHEN** `run_messages(task_id, issue_id=issue_id, since=0)` executes
@@ -11,8 +11,12 @@ The approved `issues.run_messages` operation SHALL add `since: int = 0` to its e
 - **WHEN** `since=42` is supplied
 - **THEN** argv contains `--since 42` and pinned upstream returns only rows whose sequence is greater than 42 in ascending sequence order
 
-#### Scenario: Invalid cursor fails before transport
-- **WHEN** `since` is negative, boolean, noninteger, or outside the supported CLI integer range
+#### Scenario: Maximum server-safe cursor is accepted
+- **WHEN** `since=2_147_483_647` is supplied
+- **THEN** argv contains `--since 2147483647` and the handler's `int32` query cursor preserves the requested value
+
+#### Scenario: Invalid or overflowing cursor fails before transport
+- **WHEN** `since` is negative, boolean, noninteger, or greater than `2_147_483_647` (including `2_147_483_648` on a 64-bit CLI host)
 - **THEN** construction raises `TypeError` or `ValueError` before subprocess execution
 
 ### Requirement: Run-message response schema is source-governed
@@ -25,4 +29,3 @@ The approved contract SHALL replace the unsupported run-message response schema 
 #### Scenario: Semantic events do not alter the transport contract
 - **WHEN** event streaming converts a decoded `RunMessage`
 - **THEN** the governed operation still returns raw messages and semantic classification remains handwritten SDK policy above the approved transport adapter
-

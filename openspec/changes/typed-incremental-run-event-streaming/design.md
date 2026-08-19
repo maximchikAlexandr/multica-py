@@ -31,32 +31,34 @@ This is preferred to weakening `RunMessage.input` to `object`, teaching event co
 
 ### 2. Use a small closed set of concrete events plus one open fallback
 
-Create `models/run_events.py` with a frozen `RunEvent` base and frozen concrete subclasses. Message-backed events carry `task_id`, optional `issue_id`, `sequence`, `created_at`, and `raw_message`; status events carry the same task context, `sequence=None`, `raw_message=None`, previous/current status, and observation time. A private total conversion function maps the five persisted `v0.4.20` categories and accepts both underscore and historical hyphen tool spellings. `RunUnknownEvent` preserves every future type through its raw message.
+Create `models/run_events.py` with a frozen, keyword-only `RunEvent` base and frozen concrete subclasses. Every message-backed event has `task_id: str`, `issue_id: str | None`, `sequence: int`, `created_at: datetime | None`, and `raw_message: RunMessage`. `RunTextEvent` adds `text: str | None`; `RunThinkingEvent` adds `thinking: str | None`; `RunToolStartedEvent` adds `tool: str | None` and `input: Mapping[str, JsonValue] | None`; `RunToolFinishedEvent` adds `tool: str | None` and `output: str | None`; `RunErrorEvent` adds `error: str | None`; and `RunUnknownEvent` adds `message_type: str`. `RunStatusChangedEvent` has `task_id: str`, `issue_id: str | None`, `sequence: None`, `created_at: None`, `raw_message: None`, `previous_status: str | None`, `status: str`, and `observed_at: datetime`; `observed_at` is an aware UTC timestamp captured immediately after the successful refresh whose status it reports, not an upstream run timestamp.
+
+A private total conversion function maps the five persisted `v0.4.20` categories and accepts both underscore and historical hyphen tool spellings. Content maps to `text`, `thinking`, or `error` according to the concrete class. Every other `type` string, including blank, maps losslessly to `RunUnknownEvent(message_type=message.type)` and retains the complete raw message.
 
 This is preferred to an enum-plus-payload bag, user registration hooks, or one class per provider. Concrete classes give the requested narrowing; the fallback avoids coupling SDK releases to upstream message vocabulary.
 
 ### 3. Extend the governed raw operation with an explicit sequence cursor
 
-Add keyword-only `since: int = 0` to eager, command, and private relation helpers and always render `--since <value>`. Validate an exact nonnegative non-boolean integer before command construction. Update the approved contract, source references, generated/runtime projection, canonical operation case, and raw relation expectations together.
+Add keyword-only `since: int = 0` to eager, command, and private relation helpers and always render `--since <value>`. Validate an exact non-boolean integer in the DB/server-safe inclusive range `0..2_147_483_647` before command construction. The pinned handler parses with `strconv.Atoi` and then casts to `int32` before the strict-greater-than SQL query, so accepting a larger 64-bit CLI integer could wrap the query cursor. Update the approved contract, source references, generated/runtime projection, canonical operation case, and raw relation expectations together.
 
 Always rendering zero produces one deterministic argv contract and lets `stream_events()` use the same call shape on every iteration. It is preferred to a second private incremental command or post-filtering full snapshots, both of which duplicate or waste an upstream capability.
 
 ### 4. Keep the stream loop on bound `TaskRun`
 
-`TaskRun.stream_events()` validates `poll_interval`, then obtains its bound client and required `issue_id`. It owns only local iterator state: greatest emitted sequence, last observed status, and whether terminal state has been observed. Each cycle:
+`TaskRun.stream_events()` validates `poll_interval`, then obtains its bound client and required `issue_id`. It owns only local iterator state: greatest emitted sequence, a `sequence -> RunMessage` table for every emitted message, last observed status, and whether terminal state has been observed. Retaining the immutable raw message is the minimum state that can distinguish an identical replay from a different payload at an already emitted sequence. Each cycle:
 
 1. Call `issues.run_messages(task_id, issue_id=issue_id, since=cursor)`.
-2. Sort by `seq`, suppress identical repeats at or below the cursor, reject conflicting same-sequence payloads, convert messages, and yield them.
+2. Sort by `seq`. For a sequence in the table, suppress the row only when its complete `RunMessage` equals the stored value; otherwise raise `OutputShapeError`. Convert and yield each unseen row in ascending order, record its raw message, and advance the cursor to the greatest emitted sequence.
 3. Refresh `issues.runs(issue_id)` and locate this exact task ID.
 4. For a changed nonterminal status, yield one status event.
-5. For a terminal status (`completed`, `failed`, `cancelled`, or non-null `completed_at`), immediately read and yield unseen messages until one incremental read is empty, yield the terminal status event last, and return.
+5. For a terminal status (`completed`, `failed`, `cancelled`, or non-null `completed_at`), immediately read and yield unseen messages until one incremental response contains no unseen message. An empty response and a non-empty response containing only verified identical replays both satisfy this criterion. Yield the terminal status event last and return.
 6. Otherwise sleep for `poll_interval` and repeat.
 
 Keeping the loop on `TaskRun` reuses its established identity/binding contract and makes `for event in run.stream_events()` discoverable. A separate stream manager, client-wide scheduler, or cache-backed implementation would add ownership and lifecycle problems without improving the current synchronous use case.
 
 ### 5. Treat transport failures and run disappearance as errors
 
-The iterator does not retry command failures: existing typed transport exceptions propagate. If a successful run-list refresh omits the target ID, raise an explicit protocol/not-found error. A failed or cancelled run is not itself an iterator failure; it is a terminal status event after the raw error tail has drained.
+The iterator does not retry command failures: existing typed transport exceptions propagate. If a successful run-list refresh omits the target ID, raise `ProtocolError`: transport `NotFoundError` is reserved for a CLI/server not-found failure, whereas a successful response that violates the iterator's observation contract is a protocol failure. Raise `OutputShapeError` when an already emitted sequence is returned with a different `RunMessage` payload. A failed or cancelled run is not itself an iterator failure; it is a terminal status event after the raw error tail has drained.
 
 This separates “the observed run failed” from “the SDK could not observe the run.” Automatic retry, backoff, cancellation tokens, and total stream timeouts remain follow-up policy because the SDK has no shared retry contract today.
 
@@ -73,7 +75,7 @@ This separates “the observed run failed” from “the SDK could not observe t
 - **Breaking `RunMessage` constructor fields** → Document exact migration and keep the raw snapshot method name stable; the old fields are not backed by the pinned CLI and cannot be preserved truthfully.
 - **Polling starts one CLI process per interval plus status refreshes** → Default to one second, expose only a validated interval, and document that this is incremental polling rather than push. Optimize only after measurement or a server-push contract exists.
 - **A future terminal status may be unknown** → Treat non-null `completed_at` as terminal while keeping status strings open.
-- **A backend/server race could expose tail messages near completion** → Drain incremental reads to empty before emitting the terminal status event; pinned upstream already flushes the transcript before terminal transition.
+- **A backend/server race could expose tail messages near completion** → Drain until an incremental response has no unseen message before emitting the terminal status event; pinned upstream already flushes the transcript before terminal transition.
 - **An upstream bug could repeat or reorder rows** → Sort by sequence, suppress identical repeats, and fail explicitly on conflicting payloads for one sequence instead of silently corrupting order.
 - **A stream can run indefinitely while its task remains active** → This matches the task lifecycle; consumers can stop iteration themselves. A total deadline belongs in a future shared stream/cancellation policy.
 
