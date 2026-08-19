@@ -5,10 +5,10 @@ Consumers can read a task run's messages only as a complete snapshot, so every l
 ## What Changes
 
 - Add immutable semantic run-event models for text, thinking, tool start, tool finish, error, observed run-status changes, and unknown future message types.
-- Add `TaskRun.stream_events()` for ordered incremental consumption from a bound task run, including cursor management, duplicate suppression, terminal-state detection, and one final message drain.
+- Add `TaskRun.stream_events()` for ordered incremental consumption from a bound task run, including cursor management, duplicate suppression, terminal-state detection, and a documented terminal quiescence drain.
 - Add the governed `since` input to raw run-message reads and keep `TaskRun.messages` / `IssueResource.run_messages()` available for snapshot access.
 - Correct `RunMessage` to the pinned upstream payload (`task_id`, `issue_id`, `seq`, `type`, `tool`, `content`, `input`, `output`, `created_at`) so raw and typed views share one truthful source model.
-- Document that the iterator is polling-backed incremental delivery, not server push or a real-time guarantee.
+- Document that the iterator is polling-backed incremental delivery, not server push or a real-time guarantee, and that upstream exposes no transcript-complete watermark so terminal quiescence reduces but cannot eliminate a late-tail race.
 - Keep this change synchronous because the SDK has no asynchronous client or command execution model; an async stream is deferred until an SDK-wide async API exists.
 - **BREAKING**: replace the unsupported `RunMessage.id`, `run_id`, and `role` constructor fields with the pinned upstream message fields.
 

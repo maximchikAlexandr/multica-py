@@ -20,11 +20,15 @@
 - **THEN** construction fails and migration documentation directs the caller to `task_id`, `seq`, and `type`
 
 ### Requirement: Semantic event types are public and narrowable
-The root `multica_py` package SHALL export `RunEvent`, `RunTextEvent`, `RunThinkingEvent`, `RunToolStartedEvent`, `RunToolFinishedEvent`, `RunErrorEvent`, `RunStatusChangedEvent`, and `RunUnknownEvent`. These immutable types SHALL support `isinstance`, structural pattern matching, and strict static type narrowing without `Any`; provider-controlled message and run-status strings SHALL remain open strings.
+The root `multica_py` package SHALL export `RunEvent`, `RunTextEvent`, `RunThinkingEvent`, `RunToolStartedEvent`, `RunToolFinishedEvent`, `RunErrorEvent`, `RunStatusChangedEvent`, and `RunUnknownEvent`. These immutable keyword-only types SHALL support `isinstance`, structural pattern matching, and strict static type narrowing without `Any`; provider-controlled message and run-status strings SHALL remain open strings. Every message-backed concrete class SHALL narrow `sequence` to `int` and `raw_message` to `RunMessage`, while `RunStatusChangedEvent` SHALL narrow `sequence`, `created_at`, and `raw_message` to literal `None`. The concrete semantic fields SHALL be exactly `text: str | None`, `thinking: str | None`, `tool: str | None` with `input: Mapping[str, JsonValue] | None` or `output: str | None`, `error: str | None`, `message_type: str`, and status `previous_status: str | None`, `status: str`, `observed_at: datetime`; absent optional message payload fields SHALL remain `None`.
 
 #### Scenario: Root imports support pattern matching
 - **WHEN** a user imports semantic run events from `multica_py` and matches an event by concrete class
 - **THEN** the class-specific fields are available with precise annotations and no raw dictionary parsing
+
+#### Scenario: Message and status variants narrow shared fields
+- **WHEN** static analysis narrows a `RunEvent` to a message-backed class or `RunStatusChangedEvent`
+- **THEN** the message variant exposes `sequence: int` and `raw_message: RunMessage`, while the status variant exposes `sequence=None`, `created_at=None`, and `raw_message=None`
 
 #### Scenario: Future strings remain accepted
 - **WHEN** upstream returns a new message type or run status string
