@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 from typing import cast
 
+import pytest
+
 import multica_py
 import multica_py.entities as entities
 import multica_py.models as models
@@ -251,20 +253,22 @@ def test_resource_entity_imports_use_canonical_entity_modules() -> None:
             assert not imported_names & entity_names, (module_name, node.module)
 
 
-def test_entity_and_resource_modules_import_in_fresh_interpreters() -> None:
-    modules = (
-        _package_modules("multica_py.entities")
-        + _package_modules("multica_py.resources")
-        + (
-            "multica_py._internal.wire_models",
-            "multica_py._internal.decoders",
-        )
+_FRESH_INTERPRETER_MODULES: tuple[str, ...] = (
+    _package_modules("multica_py.entities")
+    + _package_modules("multica_py.resources")
+    + (
+        "multica_py._internal.wire_models",
+        "multica_py._internal.decoders",
     )
-    for module in modules:
-        result = subprocess.run(
-            [sys.executable, "-c", f"import {module}"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        assert result.returncode == 0, result.stderr
+)
+
+
+@pytest.mark.parametrize("module", _FRESH_INTERPRETER_MODULES, ids=_FRESH_INTERPRETER_MODULES)
+def test_module_imports_in_fresh_interpreter(module: str) -> None:
+    result = subprocess.run(
+        [sys.executable, "-c", f"import {module}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr

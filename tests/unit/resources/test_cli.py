@@ -12,6 +12,7 @@ import msgspec
 import pytest
 
 from multica_py._internal.argv import build_global_args, normalize_global_args
+from multica_py._internal.redaction import redact_argv, redact_text
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
@@ -792,3 +793,237 @@ def test_raw_execution_registry_covers_managed_process_operations_without_heuris
     assert isinstance(cli_module._RAW_EXECUTION_MODE_REGISTRY, tuple)
     assert managed_process_paths <= registry_paths | reviewed_exceptions
     assert not reviewed_exceptions
+
+
+_GLOBAL_VALUE_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("--server-url", "https://srv.example"),
+    ("--profile", "profile-secret"),
+    ("--workspace-id", "workspace-secret"),
+)
+_GLOBAL_BOOLEAN_OPTIONS: tuple[str, ...] = ("--debug", "--debug=true")
+_NON_GLOBAL_ARGS: tuple[tuple[str, ...], ...] = (
+    ("issue", "list"),
+    ("auth", "login"),
+    ("--token", "positional-secret"),
+    ("config", "set", "setting.key", "setting-value"),
+)
+
+
+@dataclass(frozen=True)
+class NormalizeGlobalCase:
+    id: str
+    argv: tuple[str, ...]
+    expected: tuple[str, ...]
+
+
+def _global_option_argv(form: str, option: str, value: str) -> tuple[str, ...]:
+    if form == "split":
+        return (option, value)
+    return (f"{option}={value}",)
+
+
+_NORMALIZE_GLOBAL_CASES: tuple[NormalizeGlobalCase, ...] = (
+    *(
+        NormalizeGlobalCase(
+            id=f"strips-bare-{option.lstrip('-')}-{form}",
+            argv=_global_option_argv(form, option, value),
+            expected=(),
+        )
+        for option, value in _GLOBAL_VALUE_OPTIONS
+        for form in ("split", "equals")
+    ),
+    *(
+        NormalizeGlobalCase(
+            id=f"strips-leading-{option.lstrip('-')}-{form}",
+            argv=("issue", *_global_option_argv(form, option, value)),
+            expected=("issue",),
+        )
+        for option, value in _GLOBAL_VALUE_OPTIONS
+        for form in ("split", "equals")
+    ),
+    *(
+        NormalizeGlobalCase(
+            id=f"strips-bare-boolean-{flag_id}",
+            argv=(flag,),
+            expected=(),
+        )
+        for flag_id, flag in enumerate(_GLOBAL_BOOLEAN_OPTIONS)
+        for flag in (flag,)
+    ),
+    *(
+        NormalizeGlobalCase(
+            id=f"strips-leading-boolean-{flag_id}",
+            argv=("issue", flag),
+            expected=("issue",),
+        )
+        for flag_id, flag in enumerate(_GLOBAL_BOOLEAN_OPTIONS)
+        for flag in (flag,)
+    ),
+    *(
+        NormalizeGlobalCase(
+            id=f"preserves-nonglobal-{nonglobal_id}-with-{option.lstrip('-')}-{form}",
+            argv=(*_global_option_argv(form, option, value), *nonglobal),
+            expected=nonglobal,
+        )
+        for nonglobal_id, nonglobal in enumerate(_NON_GLOBAL_ARGS)
+        for option, value in _GLOBAL_VALUE_OPTIONS
+        for form in ("split", "equals")
+    ),
+    NormalizeGlobalCase("dangling-server-url", ("--server-url",), ()),
+    NormalizeGlobalCase("dangling-profile", ("--profile",), ()),
+    NormalizeGlobalCase("dangling-workspace-id", ("--workspace-id",), ()),
+    NormalizeGlobalCase(
+        "dangling-global-consumes-following-option-as-value",
+        ("--server-url", "--debug"),
+        (),
+    ),
+    NormalizeGlobalCase(
+        "dangling-global-consumes-following-nonglobal-as-value",
+        ("--server-url", "issue", "list"),
+        ("list",),
+    ),
+    NormalizeGlobalCase(
+        "interleaved-globals-and-nonglobals",
+        ("--profile", "p1", "issue", "list", "--workspace-id=ws1", "--debug", "auth", "status"),
+        ("issue", "list", "auth", "status"),
+    ),
+    *(
+        NormalizeGlobalCase(
+            id=f"split-equals-equivalence-{option.lstrip('-')}",
+            argv=("issue", *_global_option_argv("split", option, value), "auth", "status"),
+            expected=("issue", "auth", "status"),
+        )
+        for option, value in _GLOBAL_VALUE_OPTIONS
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _NORMALIZE_GLOBAL_CASES, ids=lambda case: case.id)
+def test_normalize_global_args_strips_global_options(case: NormalizeGlobalCase) -> None:
+    assert normalize_global_args(case.argv) == case.expected
+
+
+@pytest.mark.parametrize("case", _NORMALIZE_GLOBAL_CASES, ids=lambda case: case.id)
+def test_normalize_global_args_is_idempotent(case: NormalizeGlobalCase) -> None:
+    once = normalize_global_args(case.argv)
+    assert normalize_global_args(once) == once
+
+
+_REDACTION_SURFACES: tuple[tuple[str, str], ...] = (
+    ("stdout", "stdout {secret}"),
+    ("stderr", "stderr {secret}"),
+    ("exception", "request failed: {secret}"),
+    ("repr", "multica {secret} --token {secret}"),
+)
+
+
+@dataclass(frozen=True)
+class RedactionPropertyCase:
+    id: str
+    argv: tuple[str, ...]
+    secret: str
+    decoded_secret: str | None = None
+
+
+_REDACTION_PROPERTY_CASES: tuple[RedactionPropertyCase, ...] = tuple(
+    RedactionPropertyCase(
+        id=f"{case.name}-property",
+        argv=case.argv,
+        secret=case.secret,
+        decoded_secret=case.decoded_secret,
+    )
+    for case in RAW_CLI_SECRET_CASES
+) + (
+    RedactionPropertyCase(
+        id="split-and-equals-combined",
+        argv=("--password", "p-secret", "--api-key=k-secret", "--token", "t-secret"),
+        secret="p-secret",
+        decoded_secret=None,
+    ),
+    RedactionPropertyCase(
+        id="url-and-option-combined",
+        argv=(
+            "https://example.test/cb?access_token=url-secret",
+            "--client-secret",
+            "opt-secret",
+        ),
+        secret="url-secret",
+        decoded_secret=None,
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _REDACTION_PROPERTY_CASES, ids=lambda case: case.id)
+def test_redaction_never_leaks_secret_across_surfaces(case: RedactionPropertyCase) -> None:
+    redacted_argv = redact_argv(("multica", *case.argv))
+    joined = " ".join(redacted_argv)
+    assert case.secret not in joined
+    assert "***" in joined
+    if case.decoded_secret is not None:
+        assert case.decoded_secret not in joined
+    for _surface, template in _REDACTION_SURFACES:
+        text = template.format(secret=case.secret)
+        redacted = redact_text(text, secret_values=(case.secret,))
+        assert case.secret not in redacted
+        if case.decoded_secret is not None:
+            assert case.decoded_secret not in redacted
+
+
+@pytest.mark.parametrize("case", _REDACTION_PROPERTY_CASES, ids=lambda case: case.id)
+def test_redaction_is_idempotent(case: RedactionPropertyCase) -> None:
+    redacted_argv = redact_argv(("multica", *case.argv))
+    assert redact_argv(redacted_argv) == redacted_argv
+    text = f"prefix {case.secret} suffix"
+    redacted = redact_text(text, secret_values=(case.secret,))
+    assert redact_text(redacted, secret_values=(case.secret,)) == redacted
+
+
+@pytest.mark.parametrize("case", _REDACTION_PROPERTY_CASES, ids=lambda case: case.id)
+def test_redaction_preserves_non_secret_arguments(case: RedactionPropertyCase) -> None:
+    full = ("multica", *case.argv)
+    redacted = redact_argv(full)
+    secrets = (case.secret, case.decoded_secret) if case.decoded_secret else (case.secret,)
+    non_secret_original = tuple(
+        arg for arg in _non_secret_args(full) if not _carries_secret(arg, secrets)
+    )
+    non_secret_redacted = tuple(
+        arg for arg in _non_secret_args(redacted) if not _carries_secret(arg, secrets)
+    )
+    assert non_secret_redacted == non_secret_original
+
+
+def _carries_secret(arg: str, secrets: tuple[str, ...]) -> bool:
+    return any(secret and secret in arg for secret in secrets) or "://" in arg
+
+
+def _non_secret_args(argv: tuple[str, ...]) -> tuple[str, ...]:
+    result: list[str] = []
+    skip_next = False
+    for arg in argv:
+        if skip_next:
+            skip_next = False
+            continue
+        if _is_secret_arg(arg):
+            if "=" not in arg:
+                skip_next = True
+            continue
+        result.append(arg)
+    return tuple(result)
+
+
+def _is_secret_arg(arg: str) -> bool:
+    if not arg.startswith("--"):
+        return False
+    name = arg[2:].partition("=")[0]
+    return name in {
+        "password",
+        "api-key",
+        "token",
+        "client-secret",
+        "auth-header",
+        "server-config",
+        "credential-stdin",
+        "server-config-stdin",
+        "credential-file",
+        "server-config-file",
+    }
