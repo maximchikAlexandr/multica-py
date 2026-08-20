@@ -17,6 +17,9 @@ and process-semaphore identities. Equal singular keys coalesce only when every
 component matches; other full scopes produce distinct jobs. Display-only app
 URL/workspace slug are excluded, and actual semaphore identity represents the
 process limit. Environment order and duplicates MUST be preserved.
+The v0.4.28 additions `Workspace.plugins`, `Workspace.properties`,
+`Workspace.mcp_servers`, `Agent.mcp_servers`, and `Issue.properties` MUST retain
+their established collection/mapping identity behavior under this extension.
 
 #### Scenario: Prefetch does not fake server batching
 - **WHEN** the CLI has no multi-parent or multi-ID filter
@@ -46,6 +49,10 @@ process limit. Environment order and duplicates MUST be preserved.
 - **WHEN** one loader fails
 - **THEN** pending futures are cancelled, the earliest input failure is re-raised, and already completed successful loads remain cached
 
+#### Scenario: v0.4.28 relation containers remain compatible
+- **WHEN** prefetch selects any of the five plugin/property/MCP collection or mapping relations added for v0.4.28
+- **THEN** it uses the existing handle-identity job, loading, and cache behavior and never enters singular target-ID coalescing
+
 ### Requirement: Unsupported inverse and singular relations stay explicit
 The SDK MUST NOT expose a lazy collection when the pinned CLI lacks a
 server-side list/filter or would require a hidden workspace scan/N+1. Singular
@@ -62,5 +69,5 @@ snapshot MUST remain passive data.
 - **THEN** each is a passive `LazyRef` backed by its listed governed direct lookup and is not represented as a collection
 
 #### Scenario: Unsupported singular references remain data
-- **WHEN** a creator/member, trigger, task, leader, author, or user edge without a governed discriminator-safe direct lookup is inspected
+- **WHEN** a creator/member, trigger, task, leader, author, user, property-value, plugin-uploader, or MCP-record edge outside the nine-row singular inventory is inspected
 - **THEN** its scalar ID or embedded snapshot remains available and no lazy relation performs a scan or invented lookup

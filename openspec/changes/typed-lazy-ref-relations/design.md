@@ -1,6 +1,6 @@
 ## Context
 
-The bound-resource work established immutable entities, private originating-client context, per-wrapper lazy caches, a shared `_GenerationState`, typed command plans, and bounded `MulticaClient.prefetch()`. Singular edges were deliberately deferred because their state and presence semantics differ from collections. Today `Issue.parent_id`/`project_id`, `Autopilot.project_id`/assignee fields, and run IDs require callers to carry the correct client and manually choose a service.
+The bound-resource work established immutable entities, private originating-client context, per-wrapper lazy caches, a shared `_GenerationState`, typed command plans, and bounded `MulticaClient.prefetch()`. This design is reconciled to the accepted Multica CLI `[0.4.28, 0.4.29)` baseline, including its plugin/property/MCP resources and 38-row collection/mapping relation inventory. Singular edges were deliberately deferred because their state and presence semantics differ from collections. Today `Issue.parent_id`/`project_id`, `Autopilot.project_id`/assignee fields, and run IDs require callers to carry the correct client and manually choose a service.
 
 The current code already supplies the important primitives:
 
@@ -9,7 +9,7 @@ The current code already supplies the important primitives:
 - typed resource `get_command()` methods exist for issues, projects, agents, squads, and autopilots.
 - `MulticaClient.prefetch()` uses a thread pool plus the shared `ProcessSemaphore`.
 
-No governed direct get exists for workspace memberships, users by arbitrary ID, task runs, autopilot triggers, or comment authors. Those edges cannot be safely promoted merely because a payload contains an ID.
+No governed direct get exists for workspace memberships, users by arbitrary ID, task runs, autopilot triggers, or comment authors. v0.4.28 adds `properties.get`, but `PropertyValue` is an immutable mapping value rather than a bound source entity in this change; plugin uploader and MCP record IDs likewise do not form supported bound source/target pairs. Those edges cannot be promoted merely because a payload contains an ID.
 
 ## Goals / Non-Goals
 
@@ -78,7 +78,7 @@ The nine public members in the specification are the complete first release. Eac
 - autopilot run → owning autopilot, created issue;
 - task run → owning issue, executing agent.
 
-`Issue.assignee` remains the existing `IssueAssignee` snapshot. The handle is named `assignee_ref` to avoid a breaking semantic replacement. For `agent` and `squad`, the loader dispatches to `client.agents.get_command()` or `client.squads.get_command()`. `member` and unknown strings raise `UnsupportedReferenceTargetError` with no scan. The same fail-closed rule applies to `Autopilot.assignee`.
+`Issue.assignee` remains the existing `IssueAssignee` snapshot. The handle is named `assignee_ref` to avoid a breaking semantic replacement. For `agent` and `squad`, the loader dispatches to `client.agents.get_command()` or `client.squads.get_command()`. v0.4.28 broadens `Issue.assign(...)` inputs to IDs, bound workspace members, and email tokens, but it adds no workspace-member get-by-ID command: a returned embedded `member` snapshot therefore remains supported assignment output while `assignee_ref` raises `UnsupportedReferenceTargetError` with no scan. Unknown strings fail the same way. The same fail-closed rule applies to `Autopilot.assignee`.
 
 Creator references are excluded even when a particular payload happens to say `agent`: the field is open-string data and the capability should not present a partially reliable creator relation until the upstream contract proves all supported kinds and direct lookups. Task/trigger IDs are excluded because no direct target service exists.
 
@@ -123,7 +123,7 @@ Alternative considered: invalidate the old source handle after mutation. Rejecte
 
 ### 7. Extend existing prefetch with an internal singular key and clone fan-out
 
-Collections and mappings keep current identity deduplication. `LazyRef` contributes a private prefetch key only when it has a supported, non-null target:
+All 38 collection/mapping relations in the v0.4.28 baseline—including the five new plugin/property/MCP relations—keep current identity deduplication. `LazyRef` contributes a private prefetch key only when it has a supported, non-null target:
 
 `(origin scope, target entity type/service, target ID)`. One private helper builds origin scope from the effective normalized command/decode-affecting config snapshot: `(executable, server URL, profile, workspace ID, cwd, tuple(config.environment), timeout timedelta, debug, encoding, compatibility policy, min CLI version, max CLI version, executor identity, process-semaphore identity)`. It consumes `ClientConfig` after its existing path/URL/timeout normalization but uses the stored environment tuple verbatim in execution order: it never sorts or deduplicates it, so reversed duplicate-name tuples with different last-value-wins results remain different. It excludes display-only `app_url`/`workspace_slug`, and semaphore identity subsumes configured `max_processes` for the actual execution view.
 
@@ -137,7 +137,7 @@ Alternative considered: share one returned target wrapper among duplicate handle
 
 Add one focused relation-state test module/table set rather than per-property test files. Reuse existing fake transport, bound-entity factories, generation-state concurrency patterns, operation case tables, public-symbol discovery, and mypy usage fixtures. Verification covers exact argv/service dispatch and zero-I/O conditions, not private implementation shape.
 
-Docs add `LazyRef` to the dedicated relation import list, a migration/inventory table, service-usage examples, and one runnable `examples/singular_references.py`. No dependency or test framework is added.
+Docs add `LazyRef` to the dedicated relation import list, a migration/inventory table pinned to the reviewed `[0.4.28, 0.4.29)` interval, service-usage examples, and one runnable `examples/singular_references.py`. No dependency or test framework is added.
 
 ## Risks / Trade-offs
 

@@ -24,7 +24,7 @@ The SDK SHALL expose `LazyRef[T]` from `multica_py.models.relations` with passiv
 - **THEN** it returns cached `None` through a no-step command, remains loaded, and performs zero transport calls because no target ID exists
 
 ### Requirement: Normative singular-reference inventory
-The SDK SHALL expose exactly the reference members in the following table. Each loadable discriminator SHALL dispatch through the listed governed direct operation using the source wrapper's originating client view. Unlisted singular IDs and embedded snapshots SHALL NOT acquire a lazy-reference property.
+For the reviewed Multica CLI compatibility interval `[0.4.28, 0.4.29)`, the SDK SHALL expose exactly the reference members in the following table. Each loadable discriminator SHALL dispatch through the listed governed direct operation using the source wrapper's originating client view. Unlisted singular IDs and embedded snapshots SHALL NOT acquire a lazy-reference property.
 
 | Public member | Type | Governed lookup | Supported source values |
 |---|---|---|---|
@@ -47,8 +47,12 @@ The SDK SHALL expose exactly the reference members in the following table. Each 
 - **THEN** `get()` invokes exactly one `agents.get` or `squads.get` operation for its ID and returns the matching bound type
 
 #### Scenario: Unsupported singular edges remain snapshots
-- **WHEN** creator/member, autopilot trigger, task, squad leader, comment author, or workspace-user edges are inspected
-- **THEN** no lazy-reference member exists because the pinned SDK has no discriminator-safe governed direct lookup for that edge
+- **WHEN** creator/member, autopilot trigger, task, squad leader, comment author, workspace-user, `PropertyValue.property_id`, `Plugin.uploader_id`, or MCP record IDs are inspected
+- **THEN** no lazy-reference member exists because the pinned SDK has no supported bound source/target contract for that edge in the nine-row inventory, regardless of whether an unrelated direct resource operation exists
+
+#### Scenario: New v0.4.28 records do not expand bound singular scope
+- **WHEN** the v0.4.28 plugin, property, workspace-MCP, agent-MCP, and issue-property surfaces are compared with the inventory
+- **THEN** their five collection/mapping relations retain existing relation-container behavior, `properties.get` remains a direct resource operation, and no immutable record acquires `LazyRef` because this change adds singular handles only to the listed bound source entities
 
 ### Requirement: Scalar and snapshot compatibility
 Existing scalar reference IDs SHALL remain passive public fields with their current meanings. Existing `Issue.assignee` SHALL remain the immutable embedded `IssueAssignee | None` snapshot, while `Issue.assignee_ref` SHALL be the separate lazy handle. Lazy handles, targets, loaders, locks, errors, and state SHALL NOT appear in `to_dict()`, `to_json()`, equality, hashing, or representation.
@@ -92,6 +96,10 @@ If a declared discriminated reference contains an unknown or unsupported target 
 #### Scenario: Member assignee is not scanned
 - **WHEN** `Issue.assignee_ref.get()` is called for an embedded assignee whose type is `member`
 - **THEN** `UnsupportedReferenceTargetError` is raised and no workspace-member list or other transport call occurs
+
+#### Scenario: v0.4.28 assignment inputs do not imply a member lookup
+- **WHEN** `Issue.assign(...)` accepts a workspace-member object or email and the returned Issue contains an embedded member assignee
+- **THEN** the replacement wrapper preserves that snapshot, `assignee_ref` remains an unsupported target, and loading it fails before I/O because v0.4.28 has no governed workspace-member get-by-ID operation
 
 #### Scenario: Unknown autopilot assignee kind fails closed
 - **WHEN** an autopilot has an unrecognized `assignee_type`
@@ -207,7 +215,7 @@ Fan-out SHALL copy the primary target's immutable public snapshot plus immutable
 - **THEN** no more than `N` lookup jobs and no more than the shared runtime process limit execute concurrently
 
 ### Requirement: Documentation and verification surface
-The SDK SHALL document imports, passive versus explicit load points, optional absence, refresh, unsupported edges, and duplicate-aware bounded prefetch. A runnable example SHALL demonstrate optional issue references, refresh, and prefetch. Tests SHALL cover public typing, exact inventory and governed dispatch, omitted/null/present fields, detached and missing context, unsupported discriminators, caching, retry, refresh, concurrency, serialization passivity, and duplicate-key prefetch.
+The SDK SHALL document the `[0.4.28, 0.4.29)` baseline, imports, passive versus explicit load points, optional absence, refresh, unsupported edges, and duplicate-aware bounded prefetch. A runnable example SHALL demonstrate optional issue references, refresh, and prefetch. Tests SHALL cover public typing, exact inventory and governed dispatch, omitted/null/present fields, detached and missing context, unsupported discriminators including v0.4.28 member/email assignment results, caching, retry, refresh, concurrency, serialization passivity, and duplicate-key prefetch.
 
 #### Scenario: Example has no implicit loading
 - **WHEN** the singular-reference example is inspected or run with its documented setup
