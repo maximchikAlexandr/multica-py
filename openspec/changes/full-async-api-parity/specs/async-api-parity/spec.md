@@ -46,7 +46,7 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 - **THEN** it raises `asyncio.CancelledError`, does not translate cancellation into a Multica exception, and documentation states that the underlying executor operation may continue until completion or timeout
 
 ### Requirement: Awaitable managed process lifecycle
-`ManagedProcess` SHALL expose async counterparts for every lifecycle operation that can perform process-provider I/O: `poll_async()`, `wait_async()`, `result_async()`, `terminate_async()`, `kill_async()`, and `close_async()`. It SHALL support `async with` by delegating asynchronous exit to `close_async()`. Synchronous and asynchronous lifecycle paths SHALL use one thread-safe per-process lifecycle coordinator. Its mutex SHALL serialize only state transitions, buffered/streaming and collection ownership, active stdout/stderr stream membership, result-or-failure publication, close state, and exactly-once finalization; it SHALL NOT be held during provider `poll`, `collect`, `wait`, `terminate`, or `kill` I/O or the cleanup callback. A control, poll, or close path SHALL therefore progress without holding the mutex across provider work. Finalization SHALL call the handle close, optional cleanup callback, and semaphore release exactly once, including exception paths, and SHALL NOT occur while either stdout or stderr stream remains active. Synchronous streaming iterators SHALL remain unchanged in this change.
+`ManagedProcess` SHALL expose async counterparts for every lifecycle operation that can perform process-provider I/O: `poll_async()`, `wait_async()`, `result_async()`, `terminate_async()`, `kill_async()`, and `close_async()`. It SHALL support `async with` by delegating asynchronous exit to `close_async()`. Synchronous and asynchronous lifecycle paths SHALL use one thread-safe per-process lifecycle coordinator with an in-flight provider-operation lease count. Its mutex SHALL serialize only admission, state transitions, buffered/streaming and collection ownership, active stdout/stderr stream membership, result-or-failure publication, close state, and exactly-once finalization; it SHALL NOT be held during provider I/O or cleanup. Every handle `poll`, `collect`, stream read, `wait`, `terminate`, or `kill` SHALL hold a lease acquired before the call and released after its outcome is published. Finalization SHALL reject general new leases, wait for admitted leases, and then call handle close, optional cleanup, and semaphore release exactly once. No provider I/O SHALL start on a closing/finalized handle except the finalizer-owned terminate/wait/kill control sequence.
 
 #### Scenario: Process poll is awaited
 - **WHEN** a consumer awaits `process.poll_async()` while provider poll I/O is blocked
@@ -58,7 +58,7 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 
 #### Scenario: Process is closed with async context management
 - **WHEN** execution leaves `async with managed_process`
-- **THEN** `close_async()` applies the existing terminate-wait-kill cleanup policy and releases the process semaphore exactly once
+- **THEN** `close_async()` applies the existing terminate-wait-kill cleanup policy and does not return until admitted provider calls finish and handle close, cleanup, and semaphore release have each been attempted exactly once
 
 #### Scenario: Buffered output ownership is shared
 - **WHEN** synchronous and asynchronous lifecycle methods are mixed on one managed process
@@ -85,9 +85,25 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 - **THEN** cancellation reaches that awaiter unchanged, the started coordinator operation completes safely, and later callers observe one consistent result-or-closed state with exactly-once finalization
 
 #### Scenario: Active streams delay lifecycle finalization
-- **WHEN** deterministic barriers overlap active stdout and stderr iterators with sync or async poll, close, result, terminate, or kill
-- **THEN** output ownership remains streaming, provider operations run without the state mutex, neither handle close nor cleanup nor semaphore release occurs until both streams end, and each finalization side effect occurs once
+- **WHEN** passive poll or stream EOF observes process exit while stdout or stderr generators remain active
+- **THEN** output ownership remains streaming and finalization waits until both generators end and all provider leases are released
+
+#### Scenario: Explicit close revokes abandoned streams
+- **WHEN** the same thread consumes part of a stream and then calls `close()` or leaves sync/async context without exhausting that generator
+- **THEN** close revokes the paused generator without waiting for another `next()`, completes handle close, cleanup, and semaphore release before returning, and later iteration ends without provider I/O
+
+#### Scenario: Explicit close joins concurrent stream reads
+- **WHEN** deterministic barriers hold concurrent stdout and stderr provider reads while sync or async close begins
+- **THEN** close blocks new reads, uses its control sequence to advance both admitted reads, waits for both leases, revokes remaining stream registrations, finalizes once, and then returns without deadlock
+
+#### Scenario: Provider lease prevents use after finalization
+- **WHEN** deterministic barriers overlap sync or async poll or terminate/kill with result, stream finalization, or close on local, SSH, or microsandbox handles
+- **THEN** every admitted provider call completes before handle close, later calls use the published closed-state outcome without provider I/O, and handle close, cleanup, and semaphore release occur once
+
+#### Scenario: Closed-state outcomes are deterministic
+- **WHEN** poll, result, close, terminate, or kill is called after closing or finalization
+- **THEN** poll returns the recorded terminal code or `None`, result returns its cached result or raises the existing discarded-output `ProcessOutputModeError`, close reuses the published close outcome, and terminate/kill return without provider I/O
 
 #### Scenario: Cleanup failure still releases once
 - **WHEN** handle close or the cleanup callback raises during any sync or async finalization path
-- **THEN** the existing exception behavior is preserved, remaining finalization steps run once, and later lifecycle calls do not repeat handle close, cleanup, or semaphore release
+- **THEN** an admitted provider/collection/control error remains primary and finalization failure is chained; otherwise the first handle-close or cleanup failure is the published close error; remaining finalization steps run once and concurrent close callers observe the same outcome
