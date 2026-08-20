@@ -55,7 +55,7 @@ The SDK SHALL map each persisted run message to exactly one immutable keyword-on
 - **THEN** iteration raises `TypeError` or `ValueError` before a message or run-status command executes
 
 ### Requirement: Stream termination follows durable run completion
-The iterator SHALL refresh its own task run through the inherited issue context after each incremental message batch. It SHALL treat `completed`, `failed`, and `cancelled` as terminal statuses and SHALL also treat any run with non-null `completed_at` as terminal for forward compatibility. For each observed status change it SHALL create one immutable keyword-only `RunStatusChangedEvent` with `task_id: str`, `issue_id: str | None`, `sequence: None`, `created_at: None`, `raw_message: None`, `previous_status: str | None`, `status: str`, and `observed_at: datetime`. `observed_at` SHALL be an aware UTC timestamp captured immediately after the successful refresh that supplied `status`; it SHALL NOT represent upstream `created_at` or `completed_at`. For `completed` and `failed`, after the source-backed pre-callback flush, the iterator SHALL immediately drain until one incremental response contains no unseen message and then yield terminal status last. For `cancelled`, and for an unknown status terminal only through non-null `completed_at`, it SHALL instead require two consecutive incremental responses with no unseen message, sleeping exactly `poll_interval` between terminal reads. Empty and verified identical-replay-only responses SHALL count as quiet; any unseen message SHALL be yielded and SHALL reset the quiet count to zero. After the second consecutive quiet response, it SHALL yield terminal status last and terminate. Because cancellation acknowledgement occurs after cancellation status and is not visible through the run API, cancellation quiescence SHALL NOT be documented as a guarantee that no still-later message can exist.
+The iterator SHALL refresh its own task run through the inherited issue context after each incremental message batch. It SHALL treat `completed`, `failed`, and `cancelled` as terminal statuses and SHALL also treat any run with non-null `completed_at` as terminal for forward compatibility. For each observed status change it SHALL create one immutable keyword-only `RunStatusChangedEvent` with `task_id: str`, `issue_id: str | None`, `sequence: None`, `created_at: None`, `raw_message: None`, `previous_status: str | None`, `status: str`, and `observed_at: datetime`. `observed_at` SHALL be an aware UTC timestamp captured immediately after the successful refresh that supplied `status`; it SHALL NOT represent upstream `created_at` or `completed_at`. For `completed` and `failed`, the iterator SHALL immediately drain until one incremental response contains no unseen message and then yield terminal status last. This ordinary-path rule SHALL NOT be documented as a transcript-completeness watermark: upstream normally drains before its terminal callback, but its drain is bounded and a failed message report is discarded. For `cancelled`, and for an unknown status terminal only through non-null `completed_at`, the iterator SHALL instead require two consecutive incremental responses with no unseen message, sleeping exactly `poll_interval` between terminal reads. Empty and verified identical-replay-only responses SHALL count as quiet; any unseen message SHALL be yielded and SHALL reset the quiet count to zero. After the second consecutive quiet response, it SHALL yield terminal status last and terminate. Neither policy SHALL promise recovery of a row upstream failed to persist; a later raw snapshot SHALL be described only as best-effort recovery for rows persisted after the iterator's quiet window.
 
 #### Scenario: Running status is observable
 - **WHEN** the first status refresh observes `running`
@@ -64,6 +64,10 @@ The iterator SHALL refresh its own task run through the inherited issue context 
 #### Scenario: Terminal transition drains the tail
 - **WHEN** a status refresh changes from `running` to `completed` or `failed`
 - **THEN** the iterator immediately reads until one response has no unseen message, yields all tail events before the terminal status event, and stops without a quiescence sleep
+
+#### Scenario: Completed or failed drain has an upstream persistence limit
+- **WHEN** upstream reaches its bounded drain fallback or a `ReportTaskMessages` call fails before the terminal callback
+- **THEN** the iterator still applies one quiet read and terminates naturally, but does not promise the transcript contains the discarded or not-yet-persisted row
 
 #### Scenario: Cancelled run uses conservative quiescence
 - **WHEN** the refreshed run status is `cancelled`
@@ -75,7 +79,7 @@ The iterator SHALL refresh its own task run through the inherited issue context 
 
 #### Scenario: Quiescence is not an upstream completeness watermark
 - **WHEN** a message is persisted only after the two-quiet-read window has ended
-- **THEN** the completed iterator does not promise to include it and documentation directs authoritative consumers to a later raw message snapshot
+- **THEN** the completed iterator does not promise to include it and documentation describes a later raw message snapshot as best-effort recovery only if upstream eventually persisted that row
 
 #### Scenario: Unknown terminal status uses completion timestamp
 - **WHEN** a refreshed run has a future unknown status and non-null `completed_at`
