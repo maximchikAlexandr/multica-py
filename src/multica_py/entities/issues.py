@@ -60,6 +60,7 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     started_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
     issue_id: str | None = msgspec.field(default=None, name="_issue_id")
+    _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
     _messages: LazyCollection[RunMessage] | None = msgspec.field(default=None, name="_messages")
 
     @property
@@ -116,6 +117,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     creator_id: str | None = None
     creator_type: str | None = None
     match_source: str | None = None
+    _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
 
     _comments: LazyCollection[Comment] | None = msgspec.field(default=None, name="_comments")
     _recent_threads: dict[

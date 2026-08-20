@@ -110,6 +110,7 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
     trigger_payload: JsonValue | None = None
     result: JsonValue | None = None
     created_at: datetime.datetime | None = None
+    _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
 
     _messages: LazyCollection[RunMessage] | None = msgspec.field(default=None, name="_messages")
 
@@ -229,6 +230,7 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
     )
     can_write: bool | None = None
     can_manage_access: bool | None = None
+    _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
 
     _triggers: LazyCollection[AutopilotTrigger] | None = msgspec.field(
         default=None, name="_triggers"

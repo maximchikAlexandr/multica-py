@@ -13,9 +13,9 @@
 
 ## 2. Presence-preserving source decoding
 
-- [ ] 2.1 Make optional reference-bearing Issue wire fields (`parent_issue_id`, `project_id`, and `assignee`) presence-aware with `msgspec.UNSET`, while preserving current public `Issue.parent_id`, `project_id`, and `assignee` values.
-- [ ] 2.2 Make optional reference-bearing Autopilot, AutopilotRun, and TaskRun inputs presence-aware for `project_id`, `issue_id`, and `agent_id`; preserve existing public values and inherited TaskRun issue context.
-- [ ] 2.3 Store only immutable wire-presence seeds in private schema/provenance state; make `detach()` copy them while clearing client and freshening mutable relation state, and verify repr, equality, hashing, `to_dict()`, and `to_json()` neither expose them nor perform I/O.
+- [x] 2.1 Make optional reference-bearing Issue wire fields (`parent_issue_id`, `project_id`, and `assignee`) presence-aware with `msgspec.UNSET`, while preserving current public `Issue.parent_id`, `project_id`, and `assignee` values.
+- [x] 2.2 Make optional reference-bearing Autopilot, AutopilotRun, and TaskRun inputs presence-aware for `project_id`, `issue_id`, and `agent_id`; preserve existing public values and inherited TaskRun issue context.
+- [x] 2.3 Store only immutable wire-presence seeds in private schema/provenance state; make `detach()` copy them while clearing client and freshening mutable relation state, and verify repr, equality, hashing, `to_dict()`, and `to_json()` neither expose them nor perform I/O.
 - [ ] 2.4 Add table-driven decoder/entity tests for each optional source shape: omitted produces missing context, explicit null produces loaded absence, and a non-null ID produces an unloaded loadable handle; repeat the classification after detach and assert a loadable detached handle raises `DetachedEntityError`.
 - [ ] 2.5 Add serialization/construction tests proving `from_dict(to_dict(entity))` and direct/manual public `None` construction have missing context (never inferred explicit absence), while a manually constructed non-null ID is loadable once bound.
 

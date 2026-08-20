@@ -21,6 +21,8 @@ from multica_py._internal.wire_models import (
     _IssueSearchResultWire,
     _IssueWire,
     _LabelWire,
+    _task_run_from_wire,
+    _TaskRunWire,
 )
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities._base import _normalize_entity_id
@@ -1038,18 +1040,10 @@ class IssueResource(BaseResource):
     def runs_command(
         self, issue_id: str, *, options: OperationOptions | None = None
     ) -> Command[Page[TaskRun]]:
-        def finalize(page: Page[TaskRun]) -> Page[TaskRun]:
+        def finalize(page: Page[_TaskRunWire]) -> Page[TaskRun]:
             return Page(
                 items=tuple(
-                    TaskRun(
-                        id=run.id,
-                        status=run.status,
-                        agent_id=run.agent_id,
-                        started_at=run.started_at,
-                        completed_at=run.completed_at,
-                        _client=self._client,
-                        issue_id=issue_id,
-                    )
+                    _task_run_from_wire(run, issue_id=issue_id)._with_client(self._client)
                     for run in page.items
                 ),
                 limit=page.limit,
@@ -1060,7 +1054,7 @@ class IssueResource(BaseResource):
             )
 
         return self._decoded_page_command(
-            ("issue", "runs", issue_id), TaskRun, options=options
+            ("issue", "runs", issue_id), _TaskRunWire, options=options
         )._map(finalize)
 
     def runs(self, issue_id: str, *, options: OperationOptions | None = None) -> Page[TaskRun]:
