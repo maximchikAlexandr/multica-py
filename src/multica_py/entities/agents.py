@@ -12,6 +12,7 @@ from multica_py.entities.issues import Issue
 from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
+from multica_py.models.workspaces import McpServer
 
 S = TypeVar("S", bound=msgspec.Struct)
 
@@ -30,6 +31,9 @@ class Agent(_BoundEntity):  # type: ignore[misc]
     _skills: LazyCollection[AgentSkill] | None = msgspec.field(default=None, name="_skills")
     _tasks: LazyCollection[AgentTask] | None = msgspec.field(default=None, name="_tasks")
     _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
+    _mcp_servers: LazyCollection[McpServer] | None = msgspec.field(
+        default=None, name="_mcp_servers"
+    )
 
     @property
     def skills(self) -> LazyCollection[AgentSkill]:
@@ -95,9 +99,114 @@ class Agent(_BoundEntity):  # type: ignore[misc]
             )
         return self._issues  # type: ignore[return-value]
 
+    @property
+    def mcp_servers(self) -> LazyCollection[McpServer]:
+        if self._mcp_servers is None:
+            client = self._require_client(
+                entity_type="Agent", entity_id=self.id, relation_name="mcp_servers"
+            )
+            aid = self.id
+            agents = client.agents
+
+            def loader() -> tuple[McpServer, ...]:
+                return _page_items(agents.mcp.list(aid))
+
+            self._set_runtime(
+                "_mcp_servers",
+                LazyCollection[McpServer](
+                    loader,
+                    command_loader=lambda: agents._mcp_servers_relation_command(aid),
+                ),
+            )
+        return self._mcp_servers  # type: ignore[return-value]
+
     def _invalidate_skills(self) -> None:
         if self._skills is not None:
             self._skills.invalidate()
+
+    def _invalidate_mcp_servers(self) -> None:
+        if self._mcp_servers is not None:
+            self._mcp_servers.invalidate()
+
+    def add_mcp_server(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> Page[McpServer]:
+        return self.add_mcp_server_command(server_id, options=options).run()
+
+    def add_mcp_server_command(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[McpServer]]:
+        client = self._require_client(
+            entity_type="Agent", entity_id=self.id, relation_name="add_mcp_server"
+        )
+
+        def invalidate(result: Page[McpServer]) -> Page[McpServer]:
+            self._invalidate_mcp_servers()
+            return result
+
+        return client.agents._add_mcp_server_command(
+            self.id, server_id, invalidate=invalidate, options=options
+        )
+
+    def enable_mcp_server(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> Page[McpServer]:
+        return self.enable_mcp_server_command(server_id, options=options).run()
+
+    def enable_mcp_server_command(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[McpServer]]:
+        client = self._require_client(
+            entity_type="Agent", entity_id=self.id, relation_name="enable_mcp_server"
+        )
+
+        def invalidate(result: Page[McpServer]) -> Page[McpServer]:
+            self._invalidate_mcp_servers()
+            return result
+
+        return client.agents._enable_mcp_server_command(
+            self.id, server_id, invalidate=invalidate, options=options
+        )
+
+    def disable_mcp_server(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> Page[McpServer]:
+        return self.disable_mcp_server_command(server_id, options=options).run()
+
+    def disable_mcp_server_command(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[McpServer]]:
+        client = self._require_client(
+            entity_type="Agent", entity_id=self.id, relation_name="disable_mcp_server"
+        )
+
+        def invalidate(result: Page[McpServer]) -> Page[McpServer]:
+            self._invalidate_mcp_servers()
+            return result
+
+        return client.agents._disable_mcp_server_command(
+            self.id, server_id, invalidate=invalidate, options=options
+        )
+
+    def remove_mcp_server(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> Page[McpServer]:
+        return self.remove_mcp_server_command(server_id, options=options).run()
+
+    def remove_mcp_server_command(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[McpServer]]:
+        client = self._require_client(
+            entity_type="Agent", entity_id=self.id, relation_name="remove_mcp_server"
+        )
+
+        def invalidate(result: Page[McpServer]) -> Page[McpServer]:
+            self._invalidate_mcp_servers()
+            return result
+
+        return client.agents._remove_mcp_server_command(
+            self.id, server_id, invalidate=invalidate, options=options
+        )
 
     def set_skills(
         self, skill_ids: tuple[str, ...], *, options: OperationOptions | None = None

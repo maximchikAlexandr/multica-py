@@ -33,8 +33,8 @@ class AuthResource(BaseResource):
         self, token: str | None = None, *, options: OperationOptions | None = None
     ) -> Command[ActionResult[str]] | Command[ManagedProcess]:
         if token is not None:
-            return self._action_text_command(("auth", "login", "--token", token), options=options)
-        return self._spawn_command(("auth", "login"), options=options)
+            return self._action_text_command(("login", "--token", token), options=options)
+        return self._spawn_command(("login",), options=options)
 
     @overload
     def login(

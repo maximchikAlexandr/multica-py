@@ -187,7 +187,7 @@ The unified operation contract applies the same rules across resources:
 | Direct top-level and nested CLI/resource `tuple[T, ...]` lists | `Page[T]` or a compatible page subtype | `page.items`, iteration, `len(page)`, indexing |
 | `IssueListPage`, `AutopilotListPage`, `AutopilotRunListPage`, `MetadataPage`, and `IssueChildrenResult` duplicate cores | Frozen generic `Page[T]` core with warning-free compatibility aliases | Prefer `items`; aliases are identity-preserving |
 | `None` from archive/avatar/restore, delete/remove, cancellation/rerun, watcher, subscriber, membership, and configuration-set actions | `ActionResult[None]` | Check `.success` and optional redacted `.message` |
-| `str` from `issues.deprioritize` or token login | `ActionResult[str]` | Read `.value` |
+| `str` from token login | `ActionResult[str]` | Read `.value`; v0.4.28 uses root `login` |
 | `RepositoryMutationResult` from repository add/remove | `ActionResult[RepositoryMutationResult]` | Read `.value.added`, `.value.repos`, and related fields |
 | `RuntimeUpdateResult` from runtime update | `ActionResult[RuntimeUpdateResult]` | Read `.value` |
 | Resource-specific command assumptions | `Command[T]` matching eager `T` | Inspect `.commands`, then call `.run()` |
@@ -215,7 +215,63 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
-## v0.4.20 SDK additions and behavior
+## v0.4.28 SDK additions and behavior
+
+### Plugins and Remote MCP
+
+`client.plugins` covers `plugin list|status|validate|pack|init|install` and
+`plugin remote-mcp configure|test|approve|revoke`. List/status rows decode to
+frozen `Plugin`. Validate/pack decode `PluginDigest`. `install()` and all
+Remote MCP mutations are human-local guarded upstream; the SDK builds exact
+argv and does not fake success in offline contexts. Remote MCP configure
+requires `--endpoint` and accepts credentials only through file or
+`credential_stdin: bytes | None` channels. Plugin list/status return `Page[Plugin]`.
+
+### Workspace property catalog and issue properties
+
+`client.properties` maps to `property list|get|create|update|archive|unarchive`.
+Actor and multi-actor catalog types reject option tuples at construction.
+`client.issues.properties` maps to `issue property list|set|unset` and is
+distinct from `issues.metadata`. Bound `Issue.properties` loads through the
+list command as a `LazyMapping` keyed by property name.
+
+### Workspace and agent MCP
+
+`workspaces.mcp` and nested `agents.mcp` expose reviewed MCP server
+operations. Add requires exactly one config channel; update allows at most one.
+`server_config_stdin: bytes | None` supplies the stdin payload. Direct MCP
+list/mutation methods return `Page[McpServer]`; bound relation snapshots remain
+tuples.
+Secret-bearing inline JSON and stdin/file contents are redacted from preview
+and diagnostics while executed argv still receives the reviewed flags. File
+contents are read only at `run()` time using binary I/O, so non-UTF-8 payloads
+remain executable and are redacted by exact bytes in diagnostics. Successful
+typed decoders receive original stdout/stderr; the public raw `CliResult`
+redacts its success streams.
+
+### Skill refresh and search
+
+`skills.refresh(skill_id)` emits `skill refresh <id> --output json`.
+`skills.search(query)` returns `Page[SkillSearchResult]` from
+`skill search <query> --output json`.
+
+### Issue status pass-through
+
+Issue status inputs (list filters, `set_status`, bound `Issue.set_status`) accept
+the seven `IssueStatus` members or any upstream string without local membership
+rejection. Email assignees map to `--assignee` when provided as strings.
+
+### Bound relations R34–R38
+
+`Workspace.plugins`, `Workspace.properties`, `Workspace.mcp_servers`,
+`Agent.mcp_servers`, and `Issue.properties` are lazy relations with explicit
+load points. The relation inventory now contains 38 rows.
+Successful bound MCP mutations invalidate an already-loaded MCP relation.
+`workspace mcp remove` is a text action returning `ActionResult[None]`, not a
+JSON page. Plugin init likewise has no `--output`; Remote MCP configure accepts
+`public_config_file` without SDK-side file reads.
+
+## v0.4.20 SDK additions and behavior (historical)
 
 ### Agent copy
 

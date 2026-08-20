@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import os
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
-from multica_py.config import OperationOptions
+from multica_py._internal.transport import CliTransport
+from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.agents import Agent
 from multica_py.entities.autopilots import Autopilot
 from multica_py.entities.issues import Issue
@@ -13,18 +18,102 @@ from multica_py.entities.squads import Squad
 from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter
+from multica_py.models.plugins import Plugin
+from multica_py.models.properties import PropertyDefinition
 from multica_py.models.relations import (
     OffsetPage,
     RelationMetadata,
     _RelationLoad,
 )
 from multica_py.models.system import RepositoryRecord, RuntimeDefinition
-from multica_py.resources._base import BaseResource
+from multica_py.models.workspaces import McpServer
+from multica_py.resources._base import BaseResource, _page_items
+from multica_py.resources.workspace_mcp import WorkspaceMcpResource
+from multica_py.sentinels import UnsetType
+
+if TYPE_CHECKING:
+    from multica_py.client import MulticaClient
 
 __all__ = ["Workspace", "WorkspaceMember", "WorkspaceResource"]
 
 
 class WorkspaceResource(BaseResource):
+    def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
+        super().__init__(transport, config)
+        self.mcp = WorkspaceMcpResource(transport, config)
+
+    def _set_client(self, client: MulticaClient) -> None:
+        super()._set_client(client)
+        self.mcp._set_client(client)
+
+    def _mcp_servers_relation_command(self) -> Command[tuple[McpServer, ...]]:
+        return self._bound_client().workspaces.mcp.list_command()._map(_page_items)
+
+    def _add_mcp_server_command(
+        self,
+        server_name: str,
+        *,
+        server_config_file: str | os.PathLike[str] | None,
+        server_config_stdin: bytes | None,
+        server_config: str | None,
+        invalidate: Callable[[Page[McpServer]], Page[McpServer]],
+        options: OperationOptions | None,
+    ) -> Command[Page[McpServer]]:
+        return (
+            self._bound_client()
+            .workspaces.mcp.add_command(
+                server_name,
+                server_config_file=server_config_file,
+                server_config_stdin=server_config_stdin,
+                server_config=server_config,
+                options=options,
+            )
+            ._map(invalidate)
+        )
+
+    def _update_mcp_server_command(
+        self,
+        server_id: str,
+        *,
+        name: str | UnsetType,
+        server_config_file: str | os.PathLike[str] | None,
+        server_config_stdin: bytes | None,
+        server_config: str | None,
+        invalidate: Callable[[Page[McpServer]], Page[McpServer]],
+        options: OperationOptions | None,
+    ) -> Command[Page[McpServer]]:
+        return (
+            self._bound_client()
+            .workspaces.mcp.update_command(
+                server_id,
+                name=name,
+                server_config_file=server_config_file,
+                server_config_stdin=server_config_stdin,
+                server_config=server_config,
+                options=options,
+            )
+            ._map(invalidate)
+        )
+
+    def _remove_mcp_server_command(
+        self,
+        server_id: str,
+        *,
+        invalidate: Callable[[ActionResult[None]], ActionResult[None]],
+        options: OperationOptions | None,
+    ) -> Command[ActionResult[None]]:
+        return (
+            self._bound_client()
+            .workspaces.mcp.remove_command(server_id, options=options)
+            ._map(invalidate)
+        )
+
+    def _plugins_relation_command(self) -> Command[tuple[Plugin, ...]]:
+        return self._bound_client().plugins.list_command()._map(lambda page: tuple(page.items))
+
+    def _properties_relation_command(self) -> Command[tuple[PropertyDefinition, ...]]:
+        return self._bound_client().properties.list_command()._map(lambda page: tuple(page.items))
+
     def _members_relation_command(self, workspace_id: str) -> Command[tuple[WorkspaceMember, ...]]:
         return (
             self._bound_client()
@@ -130,23 +219,3 @@ class WorkspaceResource(BaseResource):
         self, workspace_id: str, *, options: OperationOptions | None = None
     ) -> ActionResult[None]:
         return self.switch_command(workspace_id, options=options).run()
-
-    def watch_command(
-        self, workspace_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
-        return self._action_command(("workspace", "watch", workspace_id), options=options)
-
-    def watch(
-        self, workspace_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.watch_command(workspace_id, options=options).run()
-
-    def unwatch_command(
-        self, workspace_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
-        return self._action_command(("workspace", "unwatch", workspace_id), options=options)
-
-    def unwatch(
-        self, workspace_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.unwatch_command(workspace_id, options=options).run()

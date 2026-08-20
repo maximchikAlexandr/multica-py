@@ -1,13 +1,26 @@
 from __future__ import annotations
 
 import datetime
+import os
+import pathlib
+import stat
 import sys
+import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from subprocess import CompletedProcess
 
 import pytest
 
-from multica_py._internal.redaction import redact_argv, redact_text
+from multica_py._internal.redaction import (
+    MAX_SECRET_FILE_BYTES,
+    collect_diagnostic_secret_bytes,
+    collect_secret_values,
+    redact_argv,
+    redact_diagnostic_argv,
+    redact_text,
+)
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport, classify_cli_failure
 from multica_py.config import ClientConfig
@@ -23,6 +36,16 @@ from multica_py.exceptions import (
     NotFoundError,
     UnsupportedCliVersionError,
     ValidationError,
+)
+from multica_py.execution import ExecutionRequest, ExecutionResult, LocalExecutor
+from multica_py.execution.local import LocalProcessHandle
+from multica_py.process import ManagedProcess
+from tests.unit.resources.execution_cases import (
+    FILE_SECRET_SURFACE_CASES,
+    PROCESS_FILE_SECRET_CASES,
+    FileSecretSurfaceCase,
+    ProcessFileSecretCase,
+    file_secret_args,
 )
 
 
@@ -77,6 +100,349 @@ class UrlSecretCase:
 class CompatibilityPolicyCase:
     id: str
     policy: CompatibilityPolicy
+
+
+@dataclass(frozen=True)
+class SecretRedactionCase:
+    id: str
+    option: str
+    payload: bytes
+    secret: str
+    partial: str
+    stdin: bool
+
+
+@dataclass(frozen=True)
+class RedactTextCase:
+    id: str
+    text: str
+    secret: str
+    expected: str
+
+
+@dataclass(frozen=True)
+class ProcessLifecycleCase:
+    id: str
+    file_secret: ProcessFileSecretCase
+    command: str
+    consume: Callable[[ManagedProcess], str | None]
+    expected_output: str | None
+
+
+_SECRET_REDACTION_CASES: tuple[SecretRedactionCase, ...] = (
+    SecretRedactionCase(
+        "credential-stdin",
+        "--credential-stdin",
+        b"credential-token",
+        "credential-token",
+        "credential-token",
+        True,
+    ),
+    SecretRedactionCase(
+        "credential-stdin-opaque",
+        "--credential-stdin",
+        b"opaque-stdin\x00\xff-secret",
+        "opaque-stdin\x00\ufffd-secret",
+        "opaque-stdin",
+        True,
+    ),
+    SecretRedactionCase(
+        "server-config-stdin-nested-json",
+        "--server-config-stdin",
+        b'{"headers":{"X-API-Key":"nested-token"}}',
+        '{"headers":{"X-API-Key":"nested-token"}}',
+        "nested-token",
+        True,
+    ),
+    SecretRedactionCase(
+        "server-config-inline-nested-json",
+        "--server-config",
+        b'{"headers":{"Authorization":"Bearer inline-token"}}',
+        '{"headers":{"Authorization":"Bearer inline-token"}}',
+        "inline-token",
+        False,
+    ),
+    SecretRedactionCase(
+        "auth-header-bearer",
+        "--auth-header",
+        b"Authorization: Bearer header-token",
+        "Authorization: Bearer header-token",
+        "header-token",
+        False,
+    ),
+    SecretRedactionCase(
+        "auth-header-basic",
+        "--auth-header",
+        b"Basic basic-token",
+        "Basic basic-token",
+        "basic-token",
+        False,
+    ),
+)
+
+
+_REDACT_TEXT_CASES: tuple[RedactTextCase, ...] = (
+    RedactTextCase(
+        "ascii-below-limit",
+        f"prefix {'S' * 4095} suffix",
+        "s" * 4095,
+        "prefix *** suffix",
+    ),
+    RedactTextCase(
+        "ascii-mixed-case-at-limit",
+        f"prefix {'aB' * 2048} suffix",
+        "Ab" * 2048,
+        "prefix *** suffix",
+    ),
+    RedactTextCase(
+        "ascii-two-occurrences-at-limit",
+        f"left {'X' * 4096} middle {'x' * 4096} right",
+        "x" * 4096,
+        "left *** middle *** right",
+    ),
+    RedactTextCase(
+        "unicode-case-variant-at-limit",
+        f"prefix {'Ä' * 4096} suffix",
+        "ä" * 4096,
+        "prefix *** suffix",
+    ),
+)
+
+
+class _EchoExecutor(LocalExecutor):
+    def __init__(self, echoed: bytes, *, exit_code: int) -> None:
+        self.echoed = echoed
+        self.exit_code = exit_code
+        self.requests: list[ExecutionRequest] = []
+
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        self.requests.append(request)
+        output = b"stdout " + self.echoed
+        error = b"stderr " + self.echoed
+        return ExecutionResult(self.exit_code, output, error)
+
+
+class _SnapshotExecutor(LocalExecutor):
+    def __init__(
+        self,
+        *,
+        exit_code: int = 0,
+        mutate_path: pathlib.Path | None = None,
+        replacement: bytes = b"",
+    ) -> None:
+        self.exit_code = exit_code
+        self.mutate_path = mutate_path
+        self.replacement = replacement
+        self.requests: list[ExecutionRequest] = []
+        self.snapshot_path: pathlib.Path | None = None
+        self.snapshot_payload: bytes | None = None
+        self.snapshot_mode: int | None = None
+
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        self.requests.append(request)
+        for index, argument in enumerate(request.argv):
+            if not argument.startswith(("--credential-file", "--server-config-file")):
+                continue
+            snapshot = argument.partition("=")[2] if "=" in argument else request.argv[index + 1]
+            if self.mutate_path is not None:
+                self.mutate_path.write_bytes(self.replacement)
+            self.snapshot_path = pathlib.Path(snapshot)
+            self.snapshot_payload = self.snapshot_path.read_bytes()
+            self.snapshot_mode = stat.S_IMODE(self.snapshot_path.stat().st_mode)
+            break
+        else:
+            raise AssertionError("test executor did not receive a file secret channel")
+        return ExecutionResult(
+            self.exit_code,
+            b"stdout " + self.snapshot_payload,
+            b"stderr " + self.snapshot_payload,
+        )
+
+
+class _SpawnStageExecutor(LocalExecutor):
+    def __init__(self, *, fail_spawn: bool = False) -> None:
+        self.fail_spawn = fail_spawn
+        self.requests: list[ExecutionRequest] = []
+        self.entered_paths: list[pathlib.Path] = []
+        self.cleaned_paths: list[pathlib.Path] = []
+
+    @contextmanager
+    def stage(self, label: str, content: bytes) -> Iterator[str]:
+        with super().stage(label, content) as path:
+            staged_path = pathlib.Path(path)
+            self.entered_paths.append(staged_path)
+            try:
+                yield path
+            finally:
+                self.cleaned_paths.append(staged_path)
+
+    def spawn(self, request: ExecutionRequest) -> LocalProcessHandle:
+        self.requests.append(request)
+        if self.fail_spawn:
+            raise RuntimeError("spawn failed")
+        return super().spawn(request)
+
+
+def _wait_for_stream_process_completion(process: ManagedProcess) -> None:
+    deadline = time.monotonic() + 5
+    while process.poll() is None:
+        if time.monotonic() >= deadline:
+            raise AssertionError("stream process did not report completion")
+        time.sleep(0.01)
+
+
+def _consume_result(process: ManagedProcess) -> str:
+    return process.result().stdout
+
+
+def _consume_close(process: ManagedProcess) -> None:
+    process.close()
+
+
+def _consume_stdout(process: ManagedProcess) -> str:
+    lines = list(process.stdout_lines())
+    _wait_for_stream_process_completion(process)
+    return lines[0]
+
+
+def _consume_stderr(process: ManagedProcess) -> str:
+    lines = list(process.stderr_lines())
+    _wait_for_stream_process_completion(process)
+    return lines[0]
+
+
+_SPAWN_CODE = (
+    "import pathlib,sys; "
+    "file_arg=next(value for value in sys.argv if value.startswith('--credential-file') "
+    "or value.startswith('--server-config-file')); "
+    "path=file_arg.partition('=')[2] if '=' in file_arg else "
+    "sys.argv[sys.argv.index(file_arg)+1]; "
+    "data=pathlib.Path(path).read_bytes(); "
+    "sys.stdout.write('stdout:'+data.hex()); sys.stdout.flush(); "
+    "sys.stderr.write('stderr:'+data.hex()); sys.stderr.flush()"
+)
+_SPAWN_CLOSE_CODE = _SPAWN_CODE + "; import time; time.sleep(10)"
+_CREDENTIAL_FILE_CASE = PROCESS_FILE_SECRET_CASES[0]
+_SERVER_CONFIG_FILE_CASE = PROCESS_FILE_SECRET_CASES[1]
+_CREDENTIAL_FILE_EQUALS_CASE = PROCESS_FILE_SECRET_CASES[2]
+_SERVER_CONFIG_FILE_EQUALS_CASE = PROCESS_FILE_SECRET_CASES[3]
+
+
+_PROCESS_LIFECYCLE_CASES: tuple[ProcessLifecycleCase, ...] = (
+    ProcessLifecycleCase(
+        "credential-result",
+        _CREDENTIAL_FILE_CASE,
+        _SPAWN_CODE,
+        _consume_result,
+        "stdout:" + _CREDENTIAL_FILE_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "credential-close", _CREDENTIAL_FILE_CASE, _SPAWN_CLOSE_CODE, _consume_close, None
+    ),
+    ProcessLifecycleCase(
+        "credential-stdout",
+        _CREDENTIAL_FILE_CASE,
+        _SPAWN_CODE,
+        _consume_stdout,
+        "stdout:" + _CREDENTIAL_FILE_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "credential-stderr",
+        _CREDENTIAL_FILE_CASE,
+        _SPAWN_CODE,
+        _consume_stderr,
+        "stderr:" + _CREDENTIAL_FILE_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "server-config-result",
+        _SERVER_CONFIG_FILE_CASE,
+        _SPAWN_CODE,
+        _consume_result,
+        "stdout:" + _SERVER_CONFIG_FILE_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "server-config-close", _SERVER_CONFIG_FILE_CASE, _SPAWN_CLOSE_CODE, _consume_close, None
+    ),
+    ProcessLifecycleCase(
+        "server-config-stdout",
+        _SERVER_CONFIG_FILE_CASE,
+        _SPAWN_CODE,
+        _consume_stdout,
+        "stdout:" + _SERVER_CONFIG_FILE_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "server-config-stderr",
+        _SERVER_CONFIG_FILE_CASE,
+        _SPAWN_CODE,
+        _consume_stderr,
+        "stderr:" + _SERVER_CONFIG_FILE_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "credential-equals-result",
+        _CREDENTIAL_FILE_EQUALS_CASE,
+        _SPAWN_CODE,
+        _consume_result,
+        "stdout:" + _CREDENTIAL_FILE_EQUALS_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "credential-equals-close",
+        _CREDENTIAL_FILE_EQUALS_CASE,
+        _SPAWN_CLOSE_CODE,
+        _consume_close,
+        None,
+    ),
+    ProcessLifecycleCase(
+        "credential-equals-stdout",
+        _CREDENTIAL_FILE_EQUALS_CASE,
+        _SPAWN_CODE,
+        _consume_stdout,
+        "stdout:" + _CREDENTIAL_FILE_EQUALS_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "credential-equals-stderr",
+        _CREDENTIAL_FILE_EQUALS_CASE,
+        _SPAWN_CODE,
+        _consume_stderr,
+        "stderr:" + _CREDENTIAL_FILE_EQUALS_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "server-config-equals-result",
+        _SERVER_CONFIG_FILE_EQUALS_CASE,
+        _SPAWN_CODE,
+        _consume_result,
+        "stdout:" + _SERVER_CONFIG_FILE_EQUALS_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "server-config-equals-close",
+        _SERVER_CONFIG_FILE_EQUALS_CASE,
+        _SPAWN_CLOSE_CODE,
+        _consume_close,
+        None,
+    ),
+    ProcessLifecycleCase(
+        "server-config-equals-stdout",
+        _SERVER_CONFIG_FILE_EQUALS_CASE,
+        _SPAWN_CODE,
+        _consume_stdout,
+        "stdout:" + _SERVER_CONFIG_FILE_EQUALS_CASE.payload.hex(),
+    ),
+    ProcessLifecycleCase(
+        "server-config-equals-stderr",
+        _SERVER_CONFIG_FILE_EQUALS_CASE,
+        _SPAWN_CODE,
+        _consume_stderr,
+        "stderr:" + _SERVER_CONFIG_FILE_EQUALS_CASE.payload.hex(),
+    ),
+)
+
+
+def _staged_path_from_argv(argv: tuple[str, ...], case: ProcessFileSecretCase) -> str:
+    for index, argument in enumerate(argv):
+        if argument.startswith(f"{case.option}="):
+            return argument.partition("=")[2]
+        if argument == case.option:
+            return argv[index + 1]
+    raise AssertionError(f"missing staged {case.option} in argv: {argv!r}")
 
 
 _TRANSPORT_ERROR_CASES: tuple[TransportErrorCase, ...] = (
@@ -290,6 +656,305 @@ def test_transport_redacts_split_token_args():
     assert redacted[-1] == "***"
 
 
+@pytest.mark.parametrize("case", _SECRET_REDACTION_CASES, ids=lambda case: case.id)
+def test_secret_channels_preserve_transport_bytes_and_redact_error_surfaces(
+    case: SecretRedactionCase,
+) -> None:
+    value = "" if case.stdin else case.payload.decode("utf-8")
+    args = (
+        "plugin",
+        "remote-mcp",
+        "configure",
+        "inst_001",
+        "remote-mcp",
+        case.option,
+        *(() if case.stdin else (value,)),
+    )
+    config = ClientConfig(compatibility=CompatibilityPolicy.ignore)
+    executor = _EchoExecutor(case.payload, exit_code=0)
+    result = CliTransport(config, executor=executor).run_bytes(
+        args, stdin=case.payload if case.stdin else None
+    )
+
+    assert executor.requests[0].stdin == (case.payload if case.stdin else None)
+    assert result.stdout == b"stdout " + case.payload
+    assert result.stderr == b"stderr " + case.payload
+    assert case.secret not in " ".join(result.argv)
+
+    failing = _EchoExecutor(case.payload, exit_code=2)
+    transport = CliTransport(config, executor=failing)
+    with pytest.raises(NetworkError) as excinfo:
+        transport.run_bytes(args, stdin=case.payload if case.stdin else None)
+    exc = excinfo.value
+    for diagnostic in (str(exc), exc.stdout, exc.stderr, exc.argv, repr(exc)):
+        rendered_text = repr(diagnostic)
+        assert case.secret not in rendered_text
+        assert case.partial not in rendered_text
+    assert failing.requests[0].stdin == (case.payload if case.stdin else None)
+
+
+@pytest.mark.parametrize("case", FILE_SECRET_SURFACE_CASES, ids=lambda case: case.id)
+def test_file_secret_channels_preserve_transport_bytes_and_redact_error_surfaces(
+    tmp_path: pathlib.Path,
+    case: FileSecretSurfaceCase,
+) -> None:
+    path = tmp_path / "secret-input"
+    path.write_bytes(case.payload)
+    args = (
+        *case.command_prefix,
+        *file_secret_args(case.file_secret, path),
+    )
+    config = ClientConfig(compatibility=CompatibilityPolicy.ignore)
+    executor = _EchoExecutor(case.payload, exit_code=0)
+    result = CliTransport(config, executor=executor).run_bytes(args)
+    assert result.stdout == b"stdout " + case.payload
+    assert result.stderr == b"stderr " + case.payload
+    assert case.partial not in " ".join(result.argv)
+    assert any(str(path) in argument for argument in result.argv)
+    staged_path = _staged_path_from_argv(executor.requests[0].argv, case.file_secret)
+    assert executor.requests[0].argv == (
+        "multica",
+        *case.command_prefix,
+        *file_secret_args(case.file_secret, staged_path),
+    )
+
+    failing = _EchoExecutor(case.payload, exit_code=2)
+    with pytest.raises(NetworkError) as excinfo:
+        CliTransport(config, executor=failing).run_bytes(args)
+    exc = excinfo.value
+    for diagnostic in (str(exc), exc.stdout, exc.stderr, exc.argv, repr(exc)):
+        rendered_text = repr(diagnostic)
+        assert case.payload.decode("utf-8", errors="replace") not in rendered_text
+        assert case.partial not in rendered_text
+
+
+@pytest.mark.parametrize("case", PROCESS_FILE_SECRET_CASES, ids=lambda case: case.id)
+def test_process_file_secret_channels_preserve_success_bytes_and_redact_failures(
+    case: ProcessFileSecretCase, tmp_path: pathlib.Path
+) -> None:
+    path = tmp_path / f"{case.id}.bin"
+    path.write_bytes(case.payload)
+    code = (
+        "import pathlib, sys; "
+        "file_arg = next(value for value in sys.argv if value.startswith('--credential-file') "
+        "or value.startswith('--server-config-file')); "
+        "path = file_arg.partition('=')[2] if '=' in file_arg else sys.argv[sys.argv.index(file_arg) + 1]; "
+        "data = pathlib.Path(path).read_bytes(); "
+        "sys.stdout.buffer.write(b'stdout ' + data); "
+        "sys.stderr.buffer.write(b'stderr ' + data); "
+        "sys.exit(int(sys.argv[-1]))"
+    )
+    file_args = file_secret_args(case, path)
+    args = ("-c", code, *file_args, "2")
+    config = ClientConfig(executable=sys.executable, compatibility=CompatibilityPolicy.ignore)
+    transport = CliTransport(config)
+
+    result = transport.run_bytes(("-c", code, *file_args, "0"))
+    assert result.stdout == b"stdout " + case.payload
+    assert result.stderr == b"stderr " + case.payload
+
+    with pytest.raises(NetworkError) as excinfo:
+        transport.run_bytes(args)
+    exc = excinfo.value
+    assert case.payload.decode("utf-8", errors="replace") not in repr(exc)
+    assert case.payload.decode("utf-8", errors="replace") not in exc.stdout
+    assert case.payload.decode("utf-8", errors="replace") not in exc.stderr
+    assert "***" in exc.stdout
+    assert "***" in exc.stderr
+
+
+@pytest.mark.parametrize("case", PROCESS_FILE_SECRET_CASES, ids=lambda case: case.id)
+def test_exact_limit_file_failure_redacts_every_exception_surface(
+    tmp_path: pathlib.Path,
+    case: ProcessFileSecretCase,
+) -> None:
+    payload = b"x" * MAX_SECRET_FILE_BYTES
+    payload_text = payload.decode("ascii")
+    path = tmp_path / f"{case.id}-exact.bin"
+    path.write_bytes(payload)
+    code = (
+        "import pathlib, sys; "
+        "file_arg = next(value for value in sys.argv if value.startswith('--credential-file') "
+        "or value.startswith('--server-config-file')); "
+        "path = file_arg.partition('=')[2] if '=' in file_arg else "
+        "sys.argv[sys.argv.index(file_arg) + 1]; "
+        "data = pathlib.Path(path).read_bytes(); "
+        "sys.stdout.buffer.write(data); sys.stderr.buffer.write(data); sys.exit(2)"
+    )
+    config = ClientConfig(executable=sys.executable, compatibility=CompatibilityPolicy.ignore)
+
+    with pytest.raises(NetworkError) as excinfo:
+        CliTransport(config).run_bytes(("-c", code, *file_secret_args(case, path)))
+
+    exc = excinfo.value
+    for diagnostic in (str(exc), exc.stdout, exc.stderr, exc.argv, repr(exc)):
+        assert payload_text not in repr(diagnostic)
+    assert exc.stdout.count("***") == 1
+    assert exc.stderr.count("***") == 1
+
+
+@pytest.mark.parametrize("case", _PROCESS_LIFECYCLE_CASES, ids=lambda case: case.id)
+def test_spawn_file_staging_lives_until_each_managed_process_finalizer(
+    tmp_path: pathlib.Path,
+    case: ProcessLifecycleCase,
+) -> None:
+    source = tmp_path / "spawn-source.bin"
+    source.write_bytes(case.file_secret.payload)
+    file_args = file_secret_args(case.file_secret, source)
+    executor = _SpawnStageExecutor()
+    transport = CliTransport(
+        ClientConfig(executable=sys.executable, compatibility=CompatibilityPolicy.ignore),
+        executor=executor,
+    )
+
+    process = transport.spawn(("-c", case.command, *file_args))
+    assert len(executor.entered_paths) == 1
+    staged_path = executor.entered_paths[0]
+    assert staged_path.read_bytes() == case.file_secret.payload
+    assert str(source) not in executor.requests[0].argv
+
+    expected_file_args = file_secret_args(case.file_secret, staged_path)
+    assert executor.requests[0].argv == (sys.executable, "-c", case.command, *expected_file_args)
+    assert case.consume(process) == case.expected_output
+    assert not staged_path.exists()
+    assert executor.cleaned_paths == [staged_path]
+    process.close()
+    process.close()
+
+    assert not staged_path.exists()
+    assert executor.cleaned_paths == [staged_path]
+
+
+@pytest.mark.parametrize("case", PROCESS_FILE_SECRET_CASES, ids=lambda case: case.id)
+def test_spawn_file_staging_cleans_up_when_executor_spawn_fails(
+    tmp_path: pathlib.Path,
+    case: ProcessFileSecretCase,
+) -> None:
+    source = tmp_path / "spawn-failure-source.bin"
+    source.write_bytes(case.payload)
+    file_args = file_secret_args(case, source)
+    executor = _SpawnStageExecutor(fail_spawn=True)
+    transport = CliTransport(
+        ClientConfig(compatibility=CompatibilityPolicy.ignore), executor=executor
+    )
+
+    with pytest.raises(RuntimeError, match="spawn failed"):
+        transport.spawn(("workspace", "mcp", "add", "server-1", *file_args))
+
+    assert len(executor.entered_paths) == 1
+    staged_path = executor.entered_paths[0]
+    assert not staged_path.exists()
+    assert executor.cleaned_paths == [staged_path]
+
+
+@pytest.mark.parametrize("case", PROCESS_FILE_SECRET_CASES, ids=lambda case: case.id)
+def test_file_snapshot_is_owner_only_and_cleaned(
+    tmp_path: pathlib.Path,
+    case: ProcessFileSecretCase,
+) -> None:
+    source = tmp_path / "secret.bin"
+    payload = case.payload
+    source.write_bytes(payload)
+    file_args = file_secret_args(case, source)
+    executor = _SnapshotExecutor()
+    result = CliTransport(
+        ClientConfig(compatibility=CompatibilityPolicy.ignore), executor=executor
+    ).run_bytes(("workspace", "mcp", "add", "server-1", *file_args))
+
+    assert result.stdout == b"stdout " + payload
+    assert executor.snapshot_payload == payload
+    assert executor.snapshot_mode == 0o600
+    assert executor.snapshot_path is not None
+    assert executor.snapshot_path != source
+    assert not executor.snapshot_path.exists()
+    assert any(str(source) in argument for argument in result.argv)
+
+
+@pytest.mark.parametrize("case", PROCESS_FILE_SECRET_CASES, ids=lambda case: case.id)
+def test_file_snapshot_accepts_exact_limit_and_rejects_oversize(
+    tmp_path: pathlib.Path,
+    case: ProcessFileSecretCase,
+) -> None:
+    config = ClientConfig(compatibility=CompatibilityPolicy.ignore)
+
+    exact_path = tmp_path / "exact.bin"
+    exact_payload = b"x" * MAX_SECRET_FILE_BYTES
+    exact_path.write_bytes(exact_payload)
+    exact_args = file_secret_args(case, exact_path)
+    exact_executor = _SnapshotExecutor()
+    CliTransport(config, executor=exact_executor).run_bytes(
+        ("workspace", "mcp", "add", "server-1", *exact_args)
+    )
+    assert exact_executor.snapshot_payload == exact_payload
+
+    oversize_path = tmp_path / "oversize.bin"
+    oversize_path.write_bytes(b"x" * (MAX_SECRET_FILE_BYTES + 1))
+    oversize_args = file_secret_args(case, oversize_path)
+    oversize_executor = _SnapshotExecutor()
+    with pytest.raises(ValidationError, match="exceeds"):
+        CliTransport(config, executor=oversize_executor).run_bytes(
+            ("workspace", "mcp", "add", "server-1", *oversize_args)
+        )
+    assert oversize_executor.requests == []
+
+
+@pytest.mark.parametrize("case", PROCESS_FILE_SECRET_CASES, ids=lambda case: case.id)
+def test_file_snapshot_rejects_fifo_without_blocking(
+    tmp_path: pathlib.Path, case: ProcessFileSecretCase
+) -> None:
+    fifo = tmp_path / "secret.fifo"
+    os.mkfifo(fifo)
+    executor = _SnapshotExecutor()
+    file_args = file_secret_args(case, fifo)
+    with pytest.raises(ValidationError, match=r"regular file|readable"):
+        CliTransport(
+            ClientConfig(compatibility=CompatibilityPolicy.ignore), executor=executor
+        ).run_bytes(("workspace", "mcp", "add", "server-1", *file_args))
+    assert executor.requests == []
+
+
+@pytest.mark.parametrize("case", PROCESS_FILE_SECRET_CASES, ids=lambda case: case.id)
+def test_file_snapshot_redaction_uses_one_mutation_stable_byte_source(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    case: ProcessFileSecretCase,
+) -> None:
+    import multica_py._internal.redaction as redaction
+
+    source = tmp_path / "secret.bin"
+    original = b"original-opaque-secret\x00\xff"
+    replacement = b"replacement-secret"
+    source.write_bytes(original)
+    reads: list[str] = []
+    reader = redaction.read_secret_file_bytes
+
+    def read_once(path: str) -> bytes:
+        reads.append(path)
+        content = reader(path)
+        source.write_bytes(replacement)
+        return content
+
+    monkeypatch.setattr(redaction, "read_secret_file_bytes", read_once)
+    file_args = file_secret_args(case, source)
+    executor = _SnapshotExecutor(exit_code=2)
+    with pytest.raises(NetworkError) as excinfo:
+        CliTransport(
+            ClientConfig(compatibility=CompatibilityPolicy.ignore), executor=executor
+        ).run_bytes(("plugin", "remote-mcp", "configure", *file_args))
+
+    assert reads == [str(source)]
+    assert executor.snapshot_payload == original
+    assert original.decode("utf-8", errors="replace") not in repr(excinfo.value)
+    assert replacement not in excinfo.value.stdout.encode("utf-8", errors="replace")
+    assert collect_diagnostic_secret_bytes(
+        ("plugin", "remote-mcp", "configure", *file_args), file_contents={str(source): original}
+    ) == (original,)
+    assert collect_secret_values(
+        ("plugin", "remote-mcp", "configure", *file_args),
+        file_contents={str(source): original},
+    )
+
+
 def test_command_plan_repr_never_exposes_secret_bearing_state() -> None:
     from multica_py.client import MulticaClient
 
@@ -428,9 +1093,9 @@ def test_server_url_query_secret_is_redacted_across_public_surfaces(
 
 
 def test_transport_environment_isolation():
-    config = ClientConfig(executable=sys.executable, environment=(("MULTICA_TOKEN", "test"),))
+    config = ClientConfig(executable=sys.executable, environment=(("CUSTOM_VALUE", "test"),))
     transport = CliTransport(config)
-    code = "import os; print(os.environ.get('MULTICA_TOKEN', 'NOT_SET'))"
+    code = "import os; print(os.environ.get('CUSTOM_VALUE', 'NOT_SET'))"
     result = transport.run_text(("-c", code))
     assert result.text.strip() == "test"
 
@@ -755,10 +1420,50 @@ def test_transport_strict_policy_rejects_unparseable_version_output_from_check()
         transport._check_compat()
 
 
+@pytest.mark.parametrize("case", _REDACT_TEXT_CASES, ids=lambda case: case.id)
+def test_redact_text_bounded_long_secrets_preserve_case_insensitive_semantics(
+    case: RedactTextCase,
+) -> None:
+    redacted = redact_text(case.text, secret_values=(case.secret,))
+    preview = redact_diagnostic_argv(("multica", case.text), secret_values=(case.secret,))
+
+    assert redacted == case.expected
+    assert preview == ("multica", case.expected)
+    assert case.secret not in redacted
+    assert redacted.count("***") == case.expected.count("***")
+
+
 def test_redact_text_redacts_embedded_token_value():
     redacted = redact_text("token: secret123", secret_values=("secret123",))
     assert "secret123" not in redacted
     assert "***" in redacted
+
+
+def test_transport_redacts_long_unicode_case_variant_from_all_exception_surfaces() -> None:
+    secret = "ä" * 4096
+    case_variant = "Ä" * 4096
+    config = ClientConfig(
+        executable=sys.executable,
+        compatibility=CompatibilityPolicy.ignore,
+        environment=(("MULTICA_TOKEN", secret),),
+    )
+    code = (
+        "import os, sys; "
+        "sys.stdout.write(os.environ['MULTICA_TOKEN'].upper()); "
+        "sys.stderr.write(sys.argv[-1]); sys.exit(2)"
+    )
+
+    with pytest.raises(NetworkError) as excinfo:
+        CliTransport(config).run_bytes(("-c", code, case_variant))
+
+    exc = excinfo.value
+    for diagnostic in (str(exc), exc.stdout, exc.stderr, exc.argv, repr(exc)):
+        rendered = repr(diagnostic)
+        assert secret not in rendered
+        assert case_variant not in rendered
+    assert exc.stdout == "***"
+    assert exc.stderr == "***"
+    assert exc.argv[-1] == "***"
 
 
 def test_transport_command_timeout_propagates() -> None:

@@ -2,7 +2,9 @@
 
 Define how reviewed upstream CLI evidence becomes deterministic public SDK
 behavior.
+
 ## Requirements
+
 ### Requirement: Pinned source authority
 The approved contract MUST cite full pinned source commits and locations, while extraction records only declared declarative facts.
 #### Scenario: Unknown patterns require review
@@ -148,64 +150,6 @@ suggestions remain review-only inputs.
 - **WHEN** source evidence or a generated suggestion contains any of these fields or mappings
 - **THEN** production mapping generation remains blocked until the supported existing-schema mapping is present in `contracts/sdk-contract.json`; handwritten projections still require reviewed decoder tests
 
-### Requirement: Multica v0.4.20 is the reviewed compatibility baseline
-
-The approved SDK contract SHALL target tag `v0.4.20`, version `0.4.20`, release
-ID `366120041`, and commit
-`93342d04a7a9f788fec921e5aa736f86c7f22d8f`. Every retained or added source
-reference SHALL point to that exact commit and a reviewed path, symbol, and line
-range. Release evidence SHALL be collected from a verified `v0.4.20` CLI asset
-whose name, operating system, architecture, SHA-256, and `version --output
-json` bytes agree with release metadata. Evidence and transient projections
-SHALL remain outside version control and SHALL NOT directly promote public SDK
-behavior.
-
-#### Scenario: Baseline metadata is exact
-- **WHEN** `contracts/sdk-contract.json` and the generated runtime projection are inspected
-- **THEN** they identify `v0.4.20` at commit `93342d04a7a9f788fec921e5aa736f86c7f22d8f`, release ID `366120041`, and no retained `v0.4.9` target or source commit remains
-
-#### Scenario: Compatibility interval advances one patch
-- **WHEN** default compatibility policy is generated from the approved target
-- **THEN** its minimum is `0.4.20` and its exclusive maximum is `0.4.21`
-
-#### Scenario: Promotion uses the complete workflow
-- **WHEN** maintainers prepare the baseline upgrade
-- **THEN** they run `collect` with pinned source and verified binary evidence, `validate --source-checkout` against the approved contract, deterministic `render`, and `check` in that order before offline release verification
-
-#### Scenario: Unreleased main commands stay excluded
-- **WHEN** upstream `main` contains commands or behavior absent from tag `v0.4.20`
-- **THEN** those candidates do not enter the approved contract, generated runtime, public SDK, or canonical operation inventory through this change
-
-### Requirement: v0.4.20 changed operations are source-governed
-
-The approved contract SHALL add governed `agents.copy` and `issues.search`
-operations and SHALL update the reviewed semantics and source evidence for
-`runtimes.delete`, error classification, and `autopilots.trigger`. Every exposed
-positional argument and flag SHALL record its CLI binding, actual landing
-destination or local-control role, presence policy, normalized constraint,
-response/adapter policy, exact source references, and positive/negative test
-references. Imperative `Flags().Changed(...)` behavior and runtime-specific
-copy rules SHALL be reviewed explicitly rather than inferred from flag names.
-
-#### Scenario: Agent copy mapping traces GET and create behavior
-- **WHEN** `agents.copy` is inspected in the approved contract
-- **THEN** source-agent lookup, copied/defaulted portable fields, each exposed override, cross-runtime model policy, permission targets, skill omission, and excluded secret/machine-local fields are traced through `runAgentCopy` to path, JSON-body, or local-control destinations
-
-#### Scenario: Issue search adapter is governed
-- **WHEN** `issues.search` is inspected in the approved contract
-- **THEN** the query maps to the search path/query behavior, exact CLI argv is fixed, the `issues` envelope and optional open-string `match_source` adapter are approved, and legacy array compatibility is identified as handwritten SDK policy
-
-#### Scenario: Runtime cascade semantics are reviewed
-- **WHEN** `runtimes.delete` contract rationale and source references are inspected
-- **THEN** `cascade=True` is documented as conflict discovery followed by unbind-agents-and-delete, with active work cancellation and preserved agent configuration/history rather than agent archive or destruction
-
-#### Scenario: Existing autopilot trigger cannot regress
-- **WHEN** approved bindings and canonical vectors are validated against `v0.4.20`
-- **THEN** `autopilots.trigger` emits `autopilot trigger <id>`, no `autopilot run` binding or legacy public method is present, and source-contract validation fails if the old spelling returns
-
-#### Scenario: Error source evidence pins actionable prefixes
-- **WHEN** conflict and validation classification rules are reviewed
-- **THEN** their accepted HTTP statuses, exit behavior, localized formatter prefixes, safe-detail extraction, and fallback behavior cite the `v0.4.20` CLI error implementation and matching tests
 ### Requirement: Approved-operation realization starts with one bounded pilot
 The approved SDK contract SHALL remain the only production generator input. The generator SHALL emit ordinary private Python argv builders and validators for exactly the homogeneous `squads.members.list`, `squads.members.add`, and `squads.members.remove` pilot family only when the pilot's stop/go decision succeeds. On a failed stop/go decision, the rollback SHALL be the normative terminal state: generation SHALL remain descriptor-only for this family, with no private argv builders, and `SquadMemberResource` eager and `*_command()` methods SHALL retain manual validation and argv construction. No other marker-only binding may be considered after a failed pilot. When the pilot succeeds, explicit typed `SquadMemberResource` eager and `*_command()` methods SHALL call the private generated functions and SHALL retain their public signatures, return types, eager delegation, validation timing, exact argv, decoding, options, and error behavior.
 
@@ -235,3 +179,67 @@ After the pilot, expansion to another marker-only family SHALL occur only when a
 #### Scenario: Deferred families remain markers
 - **WHEN** a marker-only binding lies outside an explicitly recorded passing expansion decision
 - **THEN** its current handwritten resource implementation and generated descriptor remain unchanged
+
+### Requirement: Multica v0.4.28 is the reviewed compatibility baseline
+
+The approved SDK contract SHALL target tag `v0.4.28`, version `0.4.28`, release
+ID `371790559`, and commit
+`38c992ad0a757434fb51584fa34e3bc57d1b78e1`. Every retained or added source
+reference SHALL point to that exact commit and a reviewed path, symbol, and line
+range. Release evidence SHALL be collected from a verified `v0.4.28` CLI asset
+whose name, operating system, architecture, SHA-256, and `version --output
+json` bytes agree with release metadata. Evidence and transient projections
+SHALL remain outside version control and SHALL NOT directly promote public SDK
+behavior.
+
+#### Scenario: Baseline metadata is exact
+- **WHEN** `contracts/sdk-contract.json` and the generated runtime projection are inspected
+- **THEN** they identify `v0.4.28` at commit `38c992ad0a757434fb51584fa34e3bc57d1b78e1`, release ID `371790559`, and no retained `v0.4.20` target or source commit remains except in historical/archive material
+
+#### Scenario: Compatibility interval advances one patch
+- **WHEN** default compatibility policy is generated from the approved target
+- **THEN** its minimum is `0.4.28` and its exclusive maximum is `0.4.29`
+
+#### Scenario: Promotion uses the complete workflow
+- **WHEN** maintainers prepare the baseline upgrade
+- **THEN** they run `collect` with pinned source and verified binary evidence, `validate --source-checkout` against the approved contract, deterministic `render`, and `check` in that order before offline release verification
+
+#### Scenario: Unreleased main commands stay excluded
+- **WHEN** upstream `main` contains commands or behavior absent from tag `v0.4.28`
+- **THEN** those candidates do not enter the approved contract, generated runtime, public SDK, or canonical operation inventory through this change
+
+### Requirement: v0.4.28 command tree is reconciled before promotion
+
+The approved contract SHALL classify every tagged `v0.4.28` Cobra command as
+retained, newly approved, or explicitly deferred with rationale. Newly approved
+families SHALL include plugins, properties, issue properties, workspace MCP,
+agent MCP, and skill refresh unless source proves a command is hidden,
+interactive, or otherwise unsafe. Every exposed positional argument and flag
+SHALL record its CLI binding, actual landing destination or local-control role,
+presence policy, normalized constraint, response/adapter policy, exact source
+references, and positive/negative test references. Name similarity SHALL NOT
+prove mapping.
+
+#### Scenario: Plugin operations are source-governed
+- **WHEN** `plugins.list` and `plugins.install` are inspected
+- **THEN** list traces to `/api/workspaces/{id}/plugins/private` and install traces to the private install upload path, with human-local guards recorded from `requireHumanLocalCommand`
+
+#### Scenario: Property actor types are source-governed
+- **WHEN** `properties.create` and `issues.properties.set` are inspected
+- **THEN** `actor` / `multi_actor` types, option rejection, and `--value` encoding are traced through `cmd_property.go` rather than inferred from flag names
+
+#### Scenario: MCP config channels are source-governed
+- **WHEN** `workspaces.mcp.add` is inspected
+- **THEN** exactly-one config input among inline JSON, file, and stdin is recorded from `resolveMcpJSONObject`, and list decoding cites the write-only public fields
+
+#### Scenario: Deferred commands are explicit
+- **WHEN** a tagged command is not approved
+- **THEN** contract compatibility metadata names the command and the deferral rationale, and generated public SDK behavior does not include it
+
+#### Scenario: Retained command paths exist in the pinned tree
+- **WHEN** every approved operation command path is compared with the tagged Cobra tree
+- **THEN** the exact leaf exists or the operation is remapped/removed; canonical fixtures cannot approve `auth login`, `config get`, `issue deprioritize`, or `workspace watch|unwatch` when those leaves are absent
+
+#### Scenario: Destination mappings follow CLI preprocessing
+- **WHEN** a flag or stdin/file channel is transformed before the API call
+- **THEN** traceability records the transformed local-control or request-body destination, including file contents rather than falsely recording the path as the JSON value

@@ -266,9 +266,9 @@ def test_closed_contract_rejects_invalid_rows(
 
 def test_v3_catalogs_are_closed() -> None:
     contract = validate_contract(APPROVED)
-    assert len(contract.test_vectors) == 58
-    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 46
-    assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 12
+    assert len(contract.test_vectors) == 89
+    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 76
+    assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 13
     assert {item.public_name for item in contract.enum_definitions} == {
         "IssueSort",
         "SortDirection",
@@ -486,20 +486,40 @@ def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     )
 
 
-def test_current_target_and_source_refs_are_pinned_to_v0420() -> None:
+def test_current_target_and_source_refs_are_pinned_to_v0428() -> None:
     contract = load_contract(APPROVED)
-    assert contract.target.version == "0.4.20"
-    assert contract.target.tag == "v0.4.20"
-    assert contract.target.commit == "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
-    assert contract.target.release_id == "366120041"
+    assert contract.target.version == "0.4.28"
+    assert contract.target.tag == "v0.4.28"
+    assert contract.target.commit == "38c992ad0a757434fb51584fa34e3bc57d1b78e1"
+    assert contract.target.release_id == "371790559"
     assert (
         contract.target.release_provenance_ref
-        == ".devlocal/upstream-contract/v0.4.9..v0.4.20/release/release-verification.json"
+        == ".devlocal/upstream-contract/v0.4.20..v0.4.28/release/release-verification.json"
     )
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
+    stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
+    assert stale_commit not in {ref.commit for ref in contract.source_refs}
+    assert stale_commit not in APPROVED.read_text(encoding="utf-8")
     assert all(
         ref.commit != "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18" for ref in contract.source_refs
     )
+
+
+def test_approved_binding_command_paths_are_pinned_upstream_leaves() -> None:
+    """Every non-local approved binding must name a visible Cobra leaf."""
+    contract = validate_contract(APPROVED)
+    fixture = json.loads(
+        pathlib.Path("tests/fixtures/provenance/upstream_commands.json").read_text(encoding="utf-8")
+    )
+    assert fixture["_meta"]["pinned_sha"] == contract.target.commit
+    approved_bindings = cast("dict[str, object]", contract.raw["catalogs"])["bindings"]
+    command_paths = {
+        " ".join(cast("list[str]", binding["command"]))
+        for binding in cast("dict[str, dict[str, object]]", approved_bindings).values()
+        if cast("list[str]", binding["command"])
+    }
+    upstream_leaves = set(cast("list[str]", fixture["commands"]))
+    assert command_paths <= upstream_leaves
 
 
 def test_v0420_delta_source_refs_cover_copy_search_and_runtime_delete() -> None:

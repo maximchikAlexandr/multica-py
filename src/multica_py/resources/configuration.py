@@ -13,11 +13,17 @@ class ConfigurationResource(BaseResource):
     def show(self, *, options: OperationOptions | None = None) -> str:
         return self.show_command(options=options).run()
 
-    def get_command(self, key: str, *, options: OperationOptions | None = None) -> Command[str]:
-        return self._text_command(("config", "get", key), options=options)
+    def get_command(self, *, options: OperationOptions | None = None) -> Command[str]:
+        """Compatibility alias for :meth:`show_command`.
 
-    def get(self, key: str, *, options: OperationOptions | None = None) -> str:
-        return self.get_command(key, options=options).run()
+        Multica CLI v0.4.28 has no ``config get <key>`` command; configuration
+        is exposed as the complete human-readable ``config show`` output.
+        """
+        return self.show_command(options=options)
+
+    def get(self, *, options: OperationOptions | None = None) -> str:
+        """Compatibility alias for :meth:`show`."""
+        return self.get_command(options=options).run()
 
     def set_command(
         self, key: str, value: str, *, options: OperationOptions | None = None

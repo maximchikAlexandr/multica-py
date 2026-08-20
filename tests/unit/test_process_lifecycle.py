@@ -227,19 +227,45 @@ def test_managed_process_streams_decode_and_finalize(case: StreamCase) -> None:
 
 
 @pytest.mark.parametrize("stream_name", ("stdout", "stderr"))
-def test_managed_process_stream_completion_keeps_live_process_owned(stream_name: str) -> None:
+def test_managed_process_stream_completion_finalizes_on_poll_once(stream_name: str) -> None:
     process = _process(poll=None)
     setattr(process, stream_name, io.BytesIO(b"line\n"))
     semaphore = MagicMock()
-    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
+    cleanup = MagicMock()
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore, cleanup=cleanup)
 
     lines = managed.stdout_lines() if stream_name == "stdout" else managed.stderr_lines()
     assert list(lines) == ["line"]
 
-    assert not managed._closed
+    cleanup.assert_not_called()
     semaphore.release.assert_not_called()
     process.poll.return_value = 0
+    assert managed.poll() == 0
+    cleanup.assert_called_once_with()
+    semaphore.release.assert_called_once_with()
+    assert managed.poll() == 0
     managed.close()
+    cleanup.assert_called_once_with()
+    semaphore.release.assert_called_once_with()
+
+
+@pytest.mark.parametrize("stream_name", ("stdout", "stderr"))
+def test_managed_process_poll_preserves_active_stream_output(stream_name: str) -> None:
+    process = _process(poll=None)
+    setattr(process, stream_name, io.BytesIO(b"first\nremaining\n"))
+    semaphore = MagicMock()
+    cleanup = MagicMock()
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore, cleanup=cleanup)
+    stream = managed.stdout_lines() if stream_name == "stdout" else managed.stderr_lines()
+
+    assert next(stream) == "first"
+    process.poll.return_value = 0
+    assert managed.poll() == 0
+    assert not managed._closed
+    assert next(stream) == "remaining"
+    with pytest.raises(StopIteration):
+        next(stream)
+    cleanup.assert_called_once_with()
     semaphore.release.assert_called_once_with()
 
 

@@ -464,7 +464,6 @@ OPERATION_OPTIONS_CASES = (
     OperationOptionsCase(
         IssueResource, "set_status_command", (("issue_id", "i1"), ("status", IssueStatus.todo))
     ),
-    OperationOptionsCase(IssueResource, "deprioritize_command", (("issue_id", "i1"),)),
     OperationOptionsCase(IssueResource, "reorder_command", (("issue_id", "i1"), ("top", True))),
     OperationOptionsCase(IssueResource, "search_command", (("query", "needle"),)),
     OperationOptionsCase(IssueResource, "pull_requests_command", (("issue_id", "i1"),)),

@@ -22,6 +22,9 @@ TBD - created by archiving change simplify-public-sdk-experience. Update Purpose
 - **WHEN** the Multica CLI exits nonzero for a raw command
 - **THEN** the same classification, detail redaction, timeout, and exception contracts as typed resources apply and no unsuccessful `CliResult` is returned
 
+#### Scenario: Raw command uses the configured executor
+- **WHEN** a raw command runs on a client configured with a non-local executor
+- **THEN** the command executes through that executor and `CliResult` exposes only provider-independent stdout/stderr/exit/duration
 ### Requirement: Escape hatch participates in SDK configuration
 Raw commands SHALL honor base/scoped configuration and `OperationOptions` using the same precedence and immutable command-plan snapshot as typed operations. The feature SHALL follow the current `Command` execution contract and SHALL NOT introduce asynchronous execution, interactive login, TTY attachment, indefinite streaming, or process spawning.
 
@@ -71,4 +74,3 @@ Raw commands SHALL honor base/scoped configuration and `OperationOptions` using 
 #### Scenario: Token values stay out of diagnostics
 - **WHEN** an allowed token-login command is previewed or its bounded execution returns a failure containing the token in stdout/stderr
 - **THEN** the command preview, representation, exception text/argv/stdout/stderr, and returned bounded result surfaces contain the existing redaction marker instead of the token value
-

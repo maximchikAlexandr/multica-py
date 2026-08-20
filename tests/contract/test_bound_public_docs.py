@@ -123,13 +123,12 @@ CONVENTION_DOCUMENTATION_CASES = (
 
 RAW_BOUNDARY_DOCUMENTATION_CASES = (
     DocumentationCase(ROOT / "docs/api.md", "## Raw CLI execution boundary"),
-    DocumentationCase(ROOT / "docs/api.md", "auth login --token <token>"),
+    DocumentationCase(ROOT / "docs/api.md", "login --token <token>"),
     DocumentationCase(ROOT / "docs/api.md", "setup cloud"),
     DocumentationCase(ROOT / "docs/api.md", "setup self-host"),
     DocumentationCase(ROOT / "docs/api.md", "daemon start"),
     DocumentationCase(ROOT / "docs/api.md", "daemon logs"),
     DocumentationCase(ROOT / "docs/api.md", "top-level `update`"),
-    DocumentationCase(ROOT / "docs/api.md", "workspace watch"),
     DocumentationCase(ROOT / "docs/api.md", "Unknown non-interactive bounded argv"),
     DocumentationCase(ROOT / "docs/service-usage.md", "no transport or spawn call"),
     DocumentationCase(ROOT / "docs/service-usage.md", "redaction marker `***`"),

@@ -19,6 +19,7 @@ from multica_py._internal.wire_models import (
 from multica_py.config import ClientConfig
 from multica_py.entities._base import _entity_policy
 from multica_py.entities.issues import Issue
+from multica_py.enums import IssueStatus
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.issues import (
     IssueListFilter,
@@ -38,6 +39,12 @@ def test_issue_summary_is_not_a_public_model() -> None:
 def test_issue_summary_name_is_absent_from_package_source() -> None:
     source_root = Path(__file__).parents[2] / "src" / "multica_py"
     assert all("IssueSummary" not in path.read_text() for path in source_root.rglob("*.py"))
+
+
+def test_issue_unknown_status_decodes_without_constructor_crash() -> None:
+    wire = decode_json(b'{"id":"iss_001","title":"T","status":"open"}', _IssueWire)
+    issue = _issue_from_wire(wire)
+    assert issue.status == "open"
 
 
 def test_issue_get_decoding() -> None:
@@ -61,7 +68,7 @@ def test_issue_get_decoding() -> None:
     issue = _issue_from_wire(wire)
     assert issue.id == "iss_001"
     assert issue.title == "Test issue"
-    assert issue.status.value == "todo"
+    assert issue.status == IssueStatus.todo
 
 
 def test_issue_pull_request_snapshot_preserves_r26_relation_name() -> None:

@@ -1,19 +1,31 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import cast
+
+import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
-from multica_py._internal.commands import Command
+from multica_py._internal.commands import Command, _Step
+from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.skills import Skill
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.skills import SkillFile
+from multica_py.models.skills import SkillFile, SkillSearchResult
 from multica_py.resources._base import BaseResource, _page_items, _validate_optional_string
 from multica_py.resources.skill_files import SkillFileResource
 from multica_py.sentinels import Unset, UnsetType
 
 __all__ = ["Skill", "SkillResource"]
+
+
+class _SkillSearchResultWire(msgspec.Struct, frozen=True, kw_only=True):
+    name: str
+    url: str
+    source: str
+    install_count: int
+    description: str = ""
 
 
 class SkillResource(BaseResource):
@@ -133,6 +145,68 @@ class SkillResource(BaseResource):
         return self.update_command(
             skill_id, name=name, description=description, options=options
         ).run()
+
+    def refresh_command(
+        self, skill_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Skill]:
+        validate_nonblank(skill_id)
+        return self._decoded_command(("skill", "refresh", skill_id), Skill, options=options)._map(
+            lambda skill: skill._with_client(self._client)
+        )
+
+    def refresh(self, skill_id: str, *, options: OperationOptions | None = None) -> Skill:
+        return self.refresh_command(skill_id, options=options).run()
+
+    @staticmethod
+    def _decode_skill_search_result(stdout: bytes, command: str) -> SkillSearchResult:
+        row = decode_json(stdout, _SkillSearchResultWire, command=command)
+        return SkillSearchResult(
+            name=row.name,
+            url=row.url,
+            source=row.source,
+            install_count=row.install_count,
+            description=row.description,
+        )
+
+    @staticmethod
+    def _decode_skill_search_results(stdout: bytes, command: str) -> Page[SkillSearchResult]:
+        rows = decode_json(stdout, list[_SkillSearchResultWire], command=command)
+        items = tuple(
+            SkillSearchResult(
+                name=row.name,
+                url=row.url,
+                source=row.source,
+                install_count=row.install_count,
+                description=row.description,
+            )
+            for row in rows
+        )
+        return Page(items=items, total=len(items))
+
+    def search_command(
+        self, query: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[SkillSearchResult]]:
+        validate_nonblank(query)
+        return self._skill_search_page_command(("skill", "search", query), options=options)
+
+    def search(
+        self, query: str, *, options: OperationOptions | None = None
+    ) -> Page[SkillSearchResult]:
+        return self.search_command(query, options=options).run()
+
+    def _skill_search_page_command(
+        self, args: tuple[str, ...], *, options: OperationOptions | None
+    ) -> Command[Page[SkillSearchResult]]:
+        plan_args = (*args, "--output", "json")
+
+        def decode(stdout: bytes, command: str) -> object:
+            return self._decode_skill_search_results(stdout, command)
+
+        return self._plan(
+            steps=(_Step(plan_args, "run_bytes", decode=decode),),
+            finalize=lambda results: cast("Page[SkillSearchResult]", results[0]),
+            options=options,
+        )
 
     def delete_command(
         self, skill_id: str, *, options: OperationOptions | None = None

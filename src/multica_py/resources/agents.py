@@ -2,19 +2,25 @@ from __future__ import annotations
 
 import pathlib
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import msgspec
 
-from multica_py._generated.approved_sdk import AGENT_AVATAR_BINDING, validate_nonblank
+from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.agents import Agent
 from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
-from multica_py.resources._base import BaseResource, _validate_optional_string
+from multica_py.models.workspaces import McpServer
+from multica_py.resources._base import BaseResource, _page_items, _validate_optional_string
+from multica_py.resources.agent_mcp import AgentMcpResource
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.sentinels import Unset, UnsetType
+
+if TYPE_CHECKING:
+    from multica_py.client import MulticaClient
 
 __all__ = ["Agent", "AgentResource"]
 
@@ -23,6 +29,15 @@ class AgentResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
         self.skills = AgentSkillResource(transport, config)
+        self.mcp = AgentMcpResource(transport, config)
+
+    def _set_client(self, client: MulticaClient) -> None:
+        super()._set_client(client)
+        self.skills._set_client(client)
+        self.mcp._set_client(client)
+
+    def _mcp_servers_relation_command(self, agent_id: str) -> Command[tuple[McpServer, ...]]:
+        return self.mcp.list_command(agent_id)._map(_page_items)
 
     def _skills_relation_command(self, agent_id: str) -> Command[tuple[AgentSkill, ...]]:
         return self.skills.list_command(agent_id)._map(lambda page: tuple(page.items))
@@ -39,6 +54,46 @@ class AgentResource(BaseResource):
         options: OperationOptions | None,
     ) -> Command[ActionResult[None]]:
         return self.skills.set_command(agent_id, skill_ids, options=options)._map(invalidate)
+
+    def _add_mcp_server_command(
+        self,
+        agent_id: str,
+        server_id: str,
+        *,
+        invalidate: Callable[[Page[McpServer]], Page[McpServer]],
+        options: OperationOptions | None,
+    ) -> Command[Page[McpServer]]:
+        return self.mcp.add_command(agent_id, server_id, options=options)._map(invalidate)
+
+    def _enable_mcp_server_command(
+        self,
+        agent_id: str,
+        server_id: str,
+        *,
+        invalidate: Callable[[Page[McpServer]], Page[McpServer]],
+        options: OperationOptions | None,
+    ) -> Command[Page[McpServer]]:
+        return self.mcp.enable_command(agent_id, server_id, options=options)._map(invalidate)
+
+    def _disable_mcp_server_command(
+        self,
+        agent_id: str,
+        server_id: str,
+        *,
+        invalidate: Callable[[Page[McpServer]], Page[McpServer]],
+        options: OperationOptions | None,
+    ) -> Command[Page[McpServer]]:
+        return self.mcp.disable_command(agent_id, server_id, options=options)._map(invalidate)
+
+    def _remove_mcp_server_command(
+        self,
+        agent_id: str,
+        server_id: str,
+        *,
+        invalidate: Callable[[Page[McpServer]], Page[McpServer]],
+        options: OperationOptions | None,
+    ) -> Command[Page[McpServer]]:
+        return self.mcp.remove_command(agent_id, server_id, options=options)._map(invalidate)
 
     def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Agent]]:
         return self._decoded_page_command(("agent", "list"), Agent, options=options)._map(
@@ -311,7 +366,6 @@ class AgentResource(BaseResource):
     def avatar_command(
         self, agent_id: str, file: pathlib.Path, *, options: OperationOptions | None = None
     ) -> Command[ActionResult[None]]:
-        _ = AGENT_AVATAR_BINDING
         validate_nonblank(agent_id)
         path = file.resolve()
         if not path.is_file():

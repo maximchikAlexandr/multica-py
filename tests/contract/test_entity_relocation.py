@@ -167,6 +167,7 @@ RESOURCE_ADAPTERS = {
         "_labels_relation_command",
         "_subscribers_relation_command",
         "_metadata_relation_command",
+        "_properties_relation_command",
         "_children_relation_command",
         "_runs_relation_command",
         "_run_messages_relation_command",
@@ -209,6 +210,9 @@ RESOURCE_ADAPTERS = {
         "_squads_relation_command",
         "_issues_page_command",
         "_autopilots_relation_command",
+        "_plugins_relation_command",
+        "_properties_relation_command",
+        "_mcp_servers_relation_command",
     ),
 }
 

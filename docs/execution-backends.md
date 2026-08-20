@@ -61,7 +61,7 @@ uv add --extra vps multica-py
 ```
 
 `microsandbox` is tested with `microsandbox>=0.6,<0.7`; `vps` is tested with
-`paramiko>=3,<4`. Constructing a provider without its extra raises an
+`paramiko>=5,<6`. Constructing a provider without its extra raises an
 actionable `ImportError` naming the corresponding `multica-py[...]` install.
 
 ## Target boundaries and lifecycle

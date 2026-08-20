@@ -98,7 +98,7 @@ test to this change.
 
 #### Scenario: Optional builds remain independent
 - **WHEN** packaging metadata is inspected for the `microsandbox` and `vps` extras
-- **THEN** `microsandbox` installs only `microsandbox>=0.6,<0.7`, `vps` installs only `paramiko>=3,<4`, and neither dependency is present in the base installation
+- **THEN** `microsandbox` installs only `microsandbox>=0.6,<0.7`, `vps` installs only `paramiko>=5,<6`, and neither dependency is present in the base installation
 
 #### Scenario: Git-extra installation is documented exactly
 - **WHEN** installation documentation is checked

@@ -12,7 +12,7 @@ from multica_py.config import OperationOptions
 from multica_py.entities._base import _BoundEntity
 from multica_py.entities.comments import Comment, CommentThread, _bind_comment, _bind_thread
 from multica_py.entities.labels import Label
-from multica_py.enums import IssueStatus
+from multica_py.enums import IssueStatus, _coerce_issue_status
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import (
     CommentCursor,
@@ -29,6 +29,7 @@ from multica_py.models.issues import (
     IssueReference,
     LinkedPullRequest,
 )
+from multica_py.models.properties import PropertyValue
 from multica_py.models.relations import (
     CursorLazyCollection,
     CursorPage,
@@ -99,7 +100,7 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
 class Issue(_BoundEntity):  # type: ignore[misc]
     id: str
     title: str
-    status: IssueStatus
+    status: str
     description: str | None = None
     priority: str | None = None
     assignee: IssueAssignee | None = None
@@ -127,11 +128,21 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     _metadata: LazyMapping[str, MetadataValue] | None = msgspec.field(
         default=None, name="_metadata"
     )
+    _properties: LazyMapping[str, PropertyValue] | None = msgspec.field(
+        default=None, name="_properties"
+    )
     _pull_requests: LazyCollection[LinkedPullRequest] | None = msgspec.field(
         default=None, name="_pull_requests"
     )
     _children: LazyCollection[Issue] | None = msgspec.field(default=None, name="_children")
     _runs: LazyCollection[TaskRun] | None = msgspec.field(default=None, name="_runs")
+
+    @classmethod
+    def _normalize_from_dict(cls, data: dict[str, object]) -> dict[str, object]:
+        status = data.get("status")
+        if isinstance(status, str):
+            return {**data, "status": _coerce_issue_status(status)}
+        return data
 
     def permalink(self) -> str:
         client = cast("MulticaClient | None", self._client)
@@ -259,6 +270,27 @@ class Issue(_BoundEntity):  # type: ignore[misc]
                 ),
             )
         return self._metadata  # type: ignore[return-value]
+
+    @property
+    def properties(self) -> LazyMapping[str, PropertyValue]:
+        if self._properties is None:
+            client = self._require_client(
+                entity_type="Issue", entity_id=self.id, relation_name="properties"
+            )
+            issue_id = self.id
+            properties_resource = client.issues.properties
+
+            def loader() -> Mapping[str, PropertyValue]:
+                return {row.name: row for row in properties_resource.list(issue_id)}
+
+            self._set_runtime(
+                "_properties",
+                LazyMapping[str, PropertyValue](
+                    loader,
+                    command_loader=lambda: client.issues._properties_relation_command(issue_id),
+                ),
+            )
+        return self._properties  # type: ignore[return-value]
 
     @property
     def pull_requests(self) -> LazyCollection[LinkedPullRequest]:

@@ -25,8 +25,10 @@ from multica_py.models.system import (
 from multica_py.resources._base import BaseResource
 from multica_py.resources.auth import AuthResource
 from multica_py.resources.configuration import ConfigurationResource
+from multica_py.resources.issues import IssueResource
 from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
+from multica_py.resources.workspaces import WorkspaceResource
 from tests.cases.operations import OPERATION_CASES, RESOURCE_SPECS
 
 APPROVED_ACTION_METHODS = frozenset(
@@ -43,9 +45,10 @@ APPROVED_ACTION_METHODS = frozenset(
         "issues.comments.delete",
         "issues.comments.resolve",
         "issues.comments.unresolve",
-        "issues.deprioritize",
         "issues.metadata.delete",
+        "issues.properties.unset",
         "issues.rerun",
+        "plugins.init",
         "issues.subscribers.add",
         "issues.subscribers.remove",
         "labels.delete",
@@ -59,9 +62,8 @@ APPROVED_ACTION_METHODS = frozenset(
         "skills.files.delete",
         "squads.members.add",
         "squads.members.remove",
+        "workspaces.mcp.remove",
         "workspaces.switch",
-        "workspaces.watch",
-        "workspaces.unwatch",
     }
 )
 
@@ -104,6 +106,24 @@ def test_configuration_set_redacts_bare_secret_from_preview_and_message(
 
     assert result.message == "stored ***"
     assert secret not in (result.message or "")
+
+
+def test_configuration_get_is_a_full_config_show_alias() -> None:
+    transport = _transport()
+    transport.run_text.return_value = TextResult("server_url: https://example.test", "", 0)
+    resource = ConfigurationResource(transport, ClientConfig())
+
+    assert resource.get_command().commands == ("multica config show",)
+    assert resource.get() == "server_url: https://example.test"
+
+
+def test_removed_v0428_commands_are_not_public_sdk_methods() -> None:
+    assert not hasattr(IssueResource, "deprioritize")
+    assert not hasattr(IssueResource, "deprioritize_command")
+    assert not hasattr(WorkspaceResource, "watch")
+    assert not hasattr(WorkspaceResource, "watch_command")
+    assert not hasattr(WorkspaceResource, "unwatch")
+    assert not hasattr(WorkspaceResource, "unwatch_command")
 
 
 @pytest.mark.parametrize(
@@ -159,8 +179,8 @@ def test_token_login_wraps_scalar_and_interactive_login_stays_process() -> None:
     token_result = auth.login("secret-token")
 
     assert token_result == ActionResult(value="login successful")
-    assert auth.login_command(None).commands == ("multica auth login",)
-    assert auth.login_command("secret-token").commands == ("multica auth login --token '***'",)
+    assert auth.login_command(None).commands == ("multica login",)
+    assert auth.login_command("secret-token").commands == ("multica login --token '***'",)
 
 
 def test_token_login_redacts_echoed_bare_token_from_action_value() -> None:
@@ -188,7 +208,7 @@ def test_interactive_login_runs_as_managed_process() -> None:
     result = AuthResource(transport, ClientConfig()).login()
 
     assert result is process
-    transport.spawn.assert_called_once_with(("auth", "login"))
+    transport.spawn.assert_called_once_with(("login",))
 
 
 def test_action_transport_and_decode_failures_are_not_wrapped() -> None:
@@ -244,7 +264,6 @@ def test_bound_action_mapper_preserves_identity_and_gates_invalidation(success: 
 def test_action_case_table_contains_all_approved_void_surfaces() -> None:
     approved = APPROVED_ACTION_METHODS - {
         "auth.login",
-        "issues.deprioritize",
         "repositories.add",
         "repositories.remove",
         "runtimes.update",

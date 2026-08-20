@@ -70,6 +70,8 @@ class _RemoteFile(Protocol):
 class _Sftp(Protocol):
     def open(self, path: str, mode: str = "r") -> _RemoteFile: ...
 
+    def chmod(self, path: str, mode: int) -> None: ...
+
     def remove(self, path: str) -> None: ...
 
     def rmdir(self, path: str) -> None: ...
@@ -325,12 +327,13 @@ class SshExecutor:
         sftp = self._client.open_sftp()
         try:
             path = self._new_target_path(_STAGING_COMMAND)
-            remote = sftp.open(path, "wb")
-            try:
-                remote.write(content)
-            finally:
-                remote.close()
             with _cleanup_after(lambda: sftp.remove(path)):
+                remote = sftp.open(path, "wb")
+                try:
+                    remote.write(content)
+                finally:
+                    remote.close()
+                sftp.chmod(path, 0o600)
                 yield path
         finally:
             sftp.close()

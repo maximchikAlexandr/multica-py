@@ -120,8 +120,8 @@ The full pattern catalog is in [docs/service-usage.md](docs/service-usage.md).
 See also the [API surface](docs/api.md), [migration guide](docs/migration.md),
 and [CLI coverage](docs/cli-coverage.md).
 
-Raw CLI commands are deliberately bounded. `auth login --token <token>` and
-`workspace watch` remain supported raw forms; interactive auth, setup, daemon,
+Raw CLI commands are deliberately bounded. `login --token <token>` remains a
+supported raw form; interactive auth, setup, daemon,
 and maintenance process forms must use their typed SDK methods. Unknown
 non-interactive bounded argv remains forward-compatible when it passes the
 structured-argument checks. See the [raw CLI boundary](docs/api.md#raw-cli-execution-boundary)
@@ -129,7 +129,7 @@ for the complete rejected-form table and replacements.
 
 ## Security notes
 
-- The SDK wraps an external `multica` binary via `subprocess`. The upstream `auth login` accepts the token only on argv, so the token is briefly visible to other local users via `ps`/`/proc/<pid>/cmdline` while the login process is running. Redaction scrubs it from logs and `CommandExecutionError` payloads, but on a shared host treat the live process as observable.
+- The SDK wraps an external `multica` binary via `subprocess`. The upstream root `login` command accepts the token only on argv, so the token is briefly visible to other local users via `ps`/`/proc/<pid>/cmdline` while the login process is running. Redaction scrubs it from logs and `CommandExecutionError` payloads, but on a shared host treat the live process as observable.
 - `ClientConfig.server_url` must be `https://...`; `http://localhost`, `http://127.0.0.1`, `http://[::1]` are allowed for local dev.
 - Output from the `multica` binary is JSON-decoded via `msgspec` (strict, no `eval`/`pickle`).
 

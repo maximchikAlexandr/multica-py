@@ -12,6 +12,7 @@ class RawCommandResult:
         stderr: bytes,
         duration: datetime.timedelta,
         secret_values: tuple[str, ...] = (),
+        secret_bytes: tuple[bytes, ...] = (),
     ) -> None:
         self.argv = argv
         self.exit_code = exit_code
@@ -19,6 +20,7 @@ class RawCommandResult:
         self.stderr = stderr
         self.duration = duration
         self.secret_values = secret_values
+        self.secret_bytes = secret_bytes
 
 
 class TextResult:

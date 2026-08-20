@@ -5,7 +5,7 @@ import datetime
 import importlib
 import threading
 from collections import deque
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -80,14 +80,21 @@ class _Exec:
 @dataclass
 class _Fs:
     files: dict[str, bytes] = field(default_factory=dict)
+    written: dict[str, bytes] = field(default_factory=dict)
     removed: list[str] = field(default_factory=list)
     mkdir_error: Exception | None = None
+    write_error: Exception | None = None
+    write_partial: bytes | None = None
 
     async def write(self, path: str, data: bytes) -> None:
-        self.files[path] = data
+        self.files[path] = data if self.write_partial is None else self.write_partial
+        if self.write_error is not None:
+            raise self.write_error
 
     async def remove(self, path: str) -> None:
         self.removed.append(path)
+        if path in self.files:
+            self.written[path] = self.files[path]
         self.files.pop(path, None)
 
     async def read(self, path: str) -> bytes:
@@ -109,6 +116,29 @@ class _Fs:
             for file_path in self.files
             if file_path.startswith(path)
         ]
+
+
+@dataclass(frozen=True)
+class _StageEntryFailureCase:
+    id: str
+    configure: Callable[[_Fs], None]
+    expected_error: str
+    expected_written: bytes
+
+
+def _configure_partial_fs_write_failure(fs: _Fs) -> None:
+    fs.write_error = RuntimeError("write failed")
+    fs.write_partial = b"part"
+
+
+_STAGE_ENTRY_FAILURE_CASES: tuple[_StageEntryFailureCase, ...] = (
+    _StageEntryFailureCase(
+        "partial-fs-write",
+        _configure_partial_fs_write_failure,
+        "write failed",
+        b"part",
+    ),
+)
 
 
 @dataclass
@@ -325,6 +355,27 @@ def test_staging_is_target_local_exact_and_cleaned() -> None:
 
     assert factory.sandbox.fs.files == {}
     assert factory.sandbox.fs.removed == [path]
+    executor.close()
+
+
+@pytest.mark.parametrize("case", _STAGE_ENTRY_FAILURE_CASES, ids=lambda case: case.id)
+def test_staging_entry_failure_cleans_once_and_preserves_primary_error(
+    case: _StageEntryFailureCase,
+) -> None:
+    factory = _Factory()
+    case.configure(factory.sandbox.fs)
+    executor = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
+
+    with (
+        pytest.raises(ExecutionUnavailableError, match=case.expected_error),
+        executor.stage("payload.bin", b"secret-bytes"),
+    ):
+        pass
+
+    assert len(factory.sandbox.fs.removed) == 1
+    path = factory.sandbox.fs.removed[0]
+    assert factory.sandbox.fs.files == {}
+    assert factory.sandbox.fs.written.get(path, b"") == case.expected_written
     executor.close()
 
 

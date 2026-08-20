@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, TypeVar
 
 import msgspec
 
 from multica_py._internal.commands import Command
+from multica_py.config import OperationOptions
 from multica_py.entities._base import _BoundEntity
 from multica_py.entities.agents import Agent
 from multica_py.entities.autopilots import Autopilot
@@ -14,7 +16,9 @@ from multica_py.entities.projects import Project
 from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
 from multica_py.models.autopilots import AutopilotListPage
-from multica_py.models.common import Page
+from multica_py.models.common import ActionResult, Page
+from multica_py.models.plugins import Plugin
+from multica_py.models.properties import PropertyDefinition
 from multica_py.models.relations import (
     LazyCollection,
     OffsetLazyCollection,
@@ -23,6 +27,8 @@ from multica_py.models.relations import (
     _RelationLoad,
 )
 from multica_py.models.system import RepositoryRecord, RuntimeDefinition
+from multica_py.models.workspaces import McpServer
+from multica_py.sentinels import Unset, UnsetType
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
@@ -88,6 +94,13 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
     _squads: LazyCollection[Squad] | None = msgspec.field(default=None, name="_squads")
     _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
     _autopilots: LazyCollection[Autopilot] | None = msgspec.field(default=None, name="_autopilots")
+    _mcp_servers: LazyCollection[McpServer] | None = msgspec.field(
+        default=None, name="_mcp_servers"
+    )
+    _plugins: LazyCollection[Plugin] | None = msgspec.field(default=None, name="_plugins")
+    _properties: LazyCollection[PropertyDefinition] | None = msgspec.field(
+        default=None, name="_properties"
+    )
 
     def _check_client(self, relation_name: str) -> MulticaClient:
         return self._require_client(
@@ -249,3 +262,154 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
             )
             self._set_runtime("_autopilots", _autopilots)
         return self._autopilots  # type: ignore[return-value]
+
+    @property
+    def mcp_servers(self) -> LazyCollection[McpServer]:
+        if self._mcp_servers is None:
+            client = self._check_client("mcp_servers")
+
+            self._set_runtime(
+                "_mcp_servers",
+                LazyCollection[McpServer](
+                    lambda: _page_items(client.workspaces.mcp.list()),
+                    command_loader=client.workspaces._mcp_servers_relation_command,
+                ),
+            )
+        return self._mcp_servers  # type: ignore[return-value]
+
+    def _invalidate_mcp_servers(self) -> None:
+        if self._mcp_servers is not None:
+            self._mcp_servers.invalidate()
+
+    def add_mcp_server(
+        self,
+        server_name: str,
+        *,
+        server_config_file: str | os.PathLike[str] | None = None,
+        server_config_stdin: bytes | None = None,
+        server_config: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Page[McpServer]:
+        return self.add_mcp_server_command(
+            server_name,
+            server_config_file=server_config_file,
+            server_config_stdin=server_config_stdin,
+            server_config=server_config,
+            options=options,
+        ).run()
+
+    def add_mcp_server_command(
+        self,
+        server_name: str,
+        *,
+        server_config_file: str | os.PathLike[str] | None = None,
+        server_config_stdin: bytes | None = None,
+        server_config: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[Page[McpServer]]:
+        client = self._check_client("add_mcp_server")
+
+        def invalidate(result: Page[McpServer]) -> Page[McpServer]:
+            self._invalidate_mcp_servers()
+            return result
+
+        return client.workspaces._add_mcp_server_command(
+            server_name,
+            server_config_file=server_config_file,
+            server_config_stdin=server_config_stdin,
+            server_config=server_config,
+            invalidate=invalidate,
+            options=options,
+        )
+
+    def update_mcp_server(
+        self,
+        server_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        server_config_file: str | os.PathLike[str] | None = None,
+        server_config_stdin: bytes | None = None,
+        server_config: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Page[McpServer]:
+        return self.update_mcp_server_command(
+            server_id,
+            name=name,
+            server_config_file=server_config_file,
+            server_config_stdin=server_config_stdin,
+            server_config=server_config,
+            options=options,
+        ).run()
+
+    def update_mcp_server_command(
+        self,
+        server_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        server_config_file: str | os.PathLike[str] | None = None,
+        server_config_stdin: bytes | None = None,
+        server_config: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[Page[McpServer]]:
+        client = self._check_client("update_mcp_server")
+
+        def invalidate(result: Page[McpServer]) -> Page[McpServer]:
+            self._invalidate_mcp_servers()
+            return result
+
+        return client.workspaces._update_mcp_server_command(
+            server_id,
+            name=name,
+            server_config_file=server_config_file,
+            server_config_stdin=server_config_stdin,
+            server_config=server_config,
+            invalidate=invalidate,
+            options=options,
+        )
+
+    def remove_mcp_server(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> ActionResult[None]:
+        return self.remove_mcp_server_command(server_id, options=options).run()
+
+    def remove_mcp_server_command(
+        self, server_id: str, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
+        client = self._check_client("remove_mcp_server")
+
+        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
+            if result.success:
+                self._invalidate_mcp_servers()
+            return result
+
+        return client.workspaces._remove_mcp_server_command(
+            server_id, invalidate=invalidate, options=options
+        )
+
+    @property
+    def plugins(self) -> LazyCollection[Plugin]:
+        if self._plugins is None:
+            client = self._check_client("plugins")
+
+            self._set_runtime(
+                "_plugins",
+                LazyCollection[Plugin](
+                    lambda: _page_items(client.plugins.list()),
+                    command_loader=client.workspaces._plugins_relation_command,
+                ),
+            )
+        return self._plugins  # type: ignore[return-value]
+
+    @property
+    def properties(self) -> LazyCollection[PropertyDefinition]:
+        if self._properties is None:
+            client = self._check_client("properties")
+
+            self._set_runtime(
+                "_properties",
+                LazyCollection[PropertyDefinition](
+                    lambda: _page_items(client.properties.list()),
+                    command_loader=client.workspaces._properties_relation_command,
+                ),
+            )
+        return self._properties  # type: ignore[return-value]

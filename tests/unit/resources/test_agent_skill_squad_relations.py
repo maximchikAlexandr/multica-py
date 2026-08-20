@@ -46,6 +46,7 @@ from multica_py.models.issues import (
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
 from multica_py.models.skills import SkillFile
 from multica_py.models.system import SquadMember
+from multica_py.models.workspaces import McpServer
 from multica_py.resources._base import BaseResource
 from multica_py.resources.agent_skills import AgentSkillResource
 from multica_py.resources.agents import AgentResource
@@ -78,6 +79,19 @@ class AvatarArgvCase:
 
 
 AVATAR_ARGV_CASES = (AvatarArgvCase("ag_1", "avatar.png"),)
+
+
+@dataclass(frozen=True)
+class AgentMcpMutationCase:
+    method: str
+
+
+AGENT_MCP_MUTATION_CASES = (
+    AgentMcpMutationCase("add_mcp_server"),
+    AgentMcpMutationCase("enable_mcp_server"),
+    AgentMcpMutationCase("disable_mcp_server"),
+    AgentMcpMutationCase("remove_mcp_server"),
+)
 
 
 def _make_client(
@@ -1153,6 +1167,36 @@ def test_agent_set_skills_command_invalidates_only_after_success() -> None:
 
     assert transport.run_text.call_count == 1
     assert not entity.skills.loaded
+
+
+@pytest.mark.parametrize("case", AGENT_MCP_MUTATION_CASES, ids=lambda case: case.method)
+def test_agent_mcp_mutation_command_invalidates_loaded_relation(
+    case: AgentMcpMutationCase,
+) -> None:
+    client = MagicMock()
+    resource = BaseResource(MagicMock(spec=CliTransport), ClientConfig())
+    page: Page[McpServer] = Page(items=())
+    command = resource._plan(steps=(), finalize=lambda _results: page)
+    mcp_method = getattr(client.agents.mcp, f"{case.method.removesuffix('_mcp_server')}_command")
+    mcp_method.return_value = command
+    setattr(
+        client.agents,
+        f"_{case.method}_command",
+        lambda agent_id, server_id, *, invalidate, options: mcp_method(
+            agent_id, server_id, options=options
+        )._map(invalidate),
+    )
+    entity = _agent(client=client)
+    entity._set_runtime("_mcp_servers", LazyCollection(lambda: ()))
+    assert entity.mcp_servers.all() == ()
+
+    bound_command = cast(
+        "Command[Page[McpServer]]", getattr(entity, f"{case.method}_command")("mcp_1")
+    )
+
+    assert bound_command.run() is page
+    assert not entity.mcp_servers.loaded
+    mcp_method.assert_called_once_with("ag_1", "mcp_1", options=None)
 
 
 @pytest.mark.parametrize("case", AVATAR_VALIDATION_CASES)

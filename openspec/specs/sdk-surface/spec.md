@@ -2,7 +2,9 @@
 
 Define the public synchronous SDK surface, its type guarantees, and its
 distribution boundary.
+
 ## Requirements
+
 ### Requirement: Synchronous resource client
 The SDK MUST expose one synchronous `MulticaClient` with stateless domain resources and immutable typed models.
 #### Scenario: Resource calls remain stateless
@@ -10,6 +12,42 @@ The SDK MUST expose one synchronous `MulticaClient` with stateless domain resour
 - **THEN** no model performs hidden I/O or Active Record persistence.
 <!-- Source IDs: 001:FR-001,FR-002,FR-003,FR-004,FR-005 -->
 
+#### Scenario: Domain methods delegate to resources
+- **WHEN** a unified-class instance method (e.g. `Issue.add_comment`,
+  `Issue.set_status`, `Project.add_local_directory`) is called on an attached
+  instance
+- **THEN** it delegates to the originating client's resource method and does
+  not construct CLI argv or invoke the transport directly
+
+#### Scenario: Every CLI-executing operation has a command sibling
+
+- **WHEN** the public resource surface is discovered
+- **THEN** every CLI-executing public resource method has a typed
+  `*_command()` sibling whose arguments and validation match the eager
+  operation, and the eager method delegates through
+  `*_command(...).run()`
+
+#### Scenario: No preview flag or mirrored namespace
+
+- **WHEN** the public surface is inspected
+- **THEN** no `preview=True` parameter, no union return type on eager
+  operations, no `client.commands.*` namespace, no callable proxy, and no
+  generic workflow/DAG API exists
+
+#### Scenario: No command variant for local-only methods
+
+- **WHEN** the public surface is inspected
+- **THEN** methods that perform no CLI subprocess (e.g. `invalidate()`)
+  have no `*_command()` variant and no fake command is constructed for
+  them
+
+#### Scenario: Default client is local
+- **WHEN** `MulticaClient(config)` is constructed without an executor
+- **THEN** it behaves equivalently to `MulticaClient(config, executor=LocalExecutor())` and uses local execution
+
+#### Scenario: Executor is separate from config
+- **WHEN** `MulticaClient(config, executor=SshExecutor(...))` is constructed
+- **THEN** `config` remains the immutable CLI-invocation description and the executor is the live runtime execution backend
 ### Requirement: Public resource surface
 The SDK MUST retain every public resource method present in the canonical operation table.
 #### Scenario: Public methods have canonical rows
@@ -33,6 +71,58 @@ The SDK MUST use immutable `msgspec` models and closed public enums or primitive
 <!-- Modified by issue-list-pagination: `IssueListPage` is a frozen `msgspec.Struct`
      with typed `issues: tuple[IssueSummary, ...]` and closed-scalar pagination
      fields; no public `Any`. -->
+
+#### Scenario: One public class per concept
+- **WHEN** a consumer imports a full domain concept
+- **THEN** exactly one public class represents it (e.g. `Issue`, `Project`,
+  `Agent`) and no separate `*Data`, `*Entity`, or passive DTO class for that
+  concept is exported from `multica_py` or its submodules
+
+#### Scenario: Public domain fields are declared once and frozen
+- **WHEN** the unified class is inspected
+- **THEN** each public domain field is declared exactly once on the class and
+  the class is `msgspec.Struct, frozen=True, kw_only=True`
+
+#### Scenario: Runtime state is private and excluded
+- **WHEN** a unified instance is compared, printed, or serialized
+- **THEN** `_client`, lazy-relation caches, locks, and loaders are excluded
+  from equality, `repr`, `to_json`, and `to_dict`
+
+#### Scenario: No public ResourceEntity base
+- **WHEN** the public surface is inspected
+- **THEN** `ResourceEntity` is absent from `multica_py.__all__` and from
+  `multica_py.models.__all__`; a private `_BoundEntity` helper may exist but
+  is not exported
+
+#### Scenario: Request and filter models stay separate
+- **WHEN** a create, update, assignment, reorder, or list-filter operation is
+  inspected
+- **THEN** its request/filter model (`IssueCreateRequest`,
+  `IssueUpdateRequest`, `IssueAssignmentRequest`, `IssueReorderRequest`,
+  `IssueListFilter`, ...) remains a distinct public class and is not merged
+  into the unified domain class
+
+#### Scenario: IssueSummary stays a distinct partial response
+- **WHEN** `issues.list` or a list-backed relation returns rows
+- **THEN** the rows are `IssueSummary` values and the SDK does not construct a
+  full `Issue` with empty defaults for fields the list response omitted
+
+#### Scenario: JSON values have immutable public snapshots
+- **WHEN** a consumer reads an `AutopilotRun.trigger_payload` or `result`
+  value
+- **THEN** object nodes are typed as `Mapping[str, JsonValue]`, arrays are
+  tuples, and recursively mutating the original input cannot change the run
+
+#### Scenario: JSON values serialize through the SDK boundary
+- **WHEN** a consumer calls `AutopilotRun.to_dict()` or `to_json()`
+- **THEN** immutable Mapping/tuple snapshots are materialized as standard
+  JSON dict/list containers and the result is directly serializable
+
+#### Scenario: Command is the only new public type
+
+- **WHEN** the public surface is inspected after this change
+- **THEN** `Command` is exported from `multica_py`, is a generic with no
+  public mutable state, and no other new public type is added
 
 ### Requirement: Distribution boundary
 The distribution MUST remain `multica-py`, import as `multica_py`, include `py.typed`, and import without a CLI.
@@ -318,6 +408,13 @@ unchanged.
 - **WHEN** a timeout is negative, non-finite, or not a supported duration/number, or a non-`None` profile/workspace is blank
 - **THEN** construction raises `TypeError` or `ValueError` before command or transport I/O
 
+#### Scenario: Explicit configuration and executor remain available
+- **WHEN** a caller passes a `ClientConfig` and an executor to `MulticaClient`
+- **THEN** that exact immutable configuration remains the base layer and that executor is the execution backend
+
+#### Scenario: Scoped clients preserve the executor
+- **WHEN** `remote.with_workspace("ws_123")` is created from a client configured with a non-local executor
+- **THEN** the scoped client uses the same non-local executor and does not silently fall back to local execution
 ### Requirement: Direct typed parameters are the sole operation input
 Affected eager and `*_command()` operations SHALL expose matching explicit typed parameters and SHALL NOT accept a one-operation request DTO, a generic `request | None` positional slot, or public `**kwargs: object`. The SDK SHALL remove exactly `AgentCreateRequest`, `AgentUpdateRequest`, `ProjectCreateRequest`, `ProjectUpdateRequest`, `SkillCreateRequest`, `SkillUpdateRequest`, `LabelUpdateRequest`, `IssueCreateRequest`, `IssueUpdateRequest`, `IssueAssignmentRequest`, `IssueReorderRequest`, `ProjectResourceAddLocalDirectoryRequest`, `ProjectResourceUpdateLocalDirectoryRequest`, `CommentListFlatRequest`, `CommentListThreadRequest`, `CommentListRecentRequest`, `MetadataListRequest`, `MetadataSetRequest`, `AutopilotUpdateRequest`, `AutopilotTriggerCreate`, `AutopilotTriggerUpdate`, `RuntimeUpdate`, and `UserProfileUpdate`. Validation formerly owned by those DTOs SHALL run in the public method or command-building layer before I/O.
 
@@ -425,6 +522,9 @@ The `multica_py` root SHALL export only the default/configuration and operation 
 - **WHEN** `multica_py.__all__` is inspected
 - **THEN** request DTOs and advanced relation/wire/value/compatibility types are absent and documentation gives their dedicated-module locations when retained
 
+#### Scenario: Executors leave root autocomplete
+- **WHEN** `multica_py.__all__` is inspected
+- **THEN** every optional provider executor (including `MicrosandboxExecutor` and `SshExecutor`) and provider-specific configuration is absent from the root namespace and documentation gives its `multica_py.execution.<provider>` location
 ### Requirement: Natural issue and project operation inputs
 Project and issue creation SHALL accept ordinary Python text, path, identifier, and appropriate entity-reference values without restoring one-operation request DTOs. `ProjectResource.create` and `create_command` SHALL expose matching `description: str | None` and `description_file: str | os.PathLike[str] | None` keywords. `IssueResource.create` and `create_command` SHALL expose matching ordinary `description`, `description_file`, and `project: str | Project | None` keywords while retaining `description_input: IssueDescriptionInput | None` for the semantically distinct `InlineDescription`, `FileDescription`, `StdinDescription`, and `NoDescription` variants. The existing `project_id` keyword MAY remain as a compatibility spelling, but documentation SHALL use `project`; callers SHALL NOT provide both. Project-scoped issue creation SHALL expose the same description forms while continuing to supply its bound project implicitly. Normalization SHALL preserve the approved argv, `OperationOptions`, eager/command parity, result decoding, and client binding.
 
@@ -449,7 +549,26 @@ Project and issue creation SHALL accept ordinary Python text, path, identifier, 
 - **THEN** construction raises `TypeError` or `ValueError` before filesystem or transport I/O and never leaks an implementation `AttributeError`
 
 ### Requirement: Public status inputs normalize exact enum values
-Issue status inputs on direct list fields, `IssueListFilter`, issue resource `set_status`, and bound `Issue.set_status`, plus `ProjectResource.set_status`, SHALL accept either the corresponding `IssueStatus`/`ProjectStatus` member or its exact case-sensitive string value. `Project` has no `set_status[_command]` bound-entity surface, and this change SHALL NOT add one. Normalization SHALL occur before `.value` access or command construction. Unknown strings SHALL not be aliased to a different upstream status; documentation SHALL use real values such as `"todo"`, `"in_progress"`, and `"done"`, and SHALL not use the unsupported `"open"` spelling.
+Issue status inputs on direct list fields, `IssueListFilter`, issue resource
+`set_status`, and bound `Issue.set_status` SHALL accept `IssueStatus | str`.
+Canonical `IssueStatus` members remain the seven values `backlog`, `todo`,
+`in_progress`, `in_review`, `done`, `blocked`, and `cancelled`. List, filter,
+and `set_status` construction SHALL pass the enum value or string through to
+argv without a local enum membership check for unknown custom names; invalid
+names fail at the CLI after construction. Non-str/non-enum values SHALL raise
+`TypeError` before transport. Documentation SHALL use real values such as
+`"todo"`, `"in_progress"`, and `"done"`. `"open"` SHALL remain a documentation
+anti-example of a non-status spelling and SHALL NOT be a local `ValueError`
+oracle for unknown issue status strings. Get/list/`Issue.status` /
+`_IssueWire.status` decoding SHALL use `IssueStatus | str` and SHALL preserve
+unknown status names without a constructor crash. This change SHALL NOT add
+workspace-status CRUD. Whether tagged CLI accepts custom names is a source
+mapping note, not a second SDK construction rule.
+
+`ProjectResource.set_status` SHALL continue to accept a `ProjectStatus` member
+or its exact case-sensitive string value. Unknown project status strings SHALL
+raise `ValueError` before transport. `Project` has no `set_status[_command]`
+bound-entity surface, and this change SHALL NOT add one.
 
 #### Scenario: Exact issue status string is accepted
 - **WHEN** a caller uses `issues.list(status="todo")` or `issue.set_status("done")`
@@ -459,7 +578,303 @@ Issue status inputs on direct list fields, `IssueListFilter`, issue resource `se
 - **WHEN** a caller uses `client.projects.set_status(project_id, "in_progress")`
 - **THEN** the command contains the same governed status value as `ProjectStatus.in_progress`
 
-#### Scenario: Unknown status fails with a typed local error
-- **WHEN** a caller passes `"open"`, a differently cased spelling, or a non-string/non-enum value to a public status input
-- **THEN** construction raises `ValueError` for an unknown string or `TypeError` for an incompatible type before transport and does not raise `AttributeError`
+#### Scenario: Unknown issue status strings pass through on set_status
+- **WHEN** a caller passes a non-canonical status string to resource or bound `set_status`
+- **THEN** construction emits that string in argv and does not raise `ValueError` for unknown membership; invalid names fail at the CLI
 
+#### Scenario: Unknown issue status strings pass through on list and IssueListFilter
+- **WHEN** a caller passes a non-canonical status string to `issues.list(status=...)` or `IssueListFilter`
+- **THEN** construction emits that string in argv and does not raise `ValueError` for unknown membership; invalid names fail at the CLI
+
+#### Scenario: Incompatible issue status types fail locally
+- **WHEN** a caller passes a non-string/non-enum value to an issue status input
+- **THEN** construction raises `TypeError` before transport and does not raise `AttributeError`
+
+#### Scenario: Unknown status fails with a typed local error
+- **WHEN** a caller passes a non-string/non-enum value to any public status input, or passes `"open"`, a differently cased spelling, or another unknown string to `ProjectResource.set_status`
+- **THEN** construction raises `TypeError` for incompatible types or `ValueError` for unknown project status strings before transport and does not raise `AttributeError`
+
+### Requirement: Workspace and agent MCP libraries are public operations
+
+The SDK SHALL expose tagged `v0.4.28` MCP library commands as eager/command
+pairs on nested resource classes: `workspace mcp list|add|update|remove` and
+`agent mcp list|add|enable|disable|remove`. Those nested surfaces SHALL register
+in `RESOURCE_SPECS` / `_NESTED_RESOURCE_ATTRS` (and `__init__` / docs exports)
+the same way `issues.metadata` does, so discovery tests see the methods. Workspace add and update SHALL
+accept exactly one of `server_config_file`, `server_config_stdin`, or an inline
+`server_config` string. File and stdin SHALL be the documented default channels.
+When an inline JSON string is accepted, it SHALL be redacted from preview,
+diagnostics, and exception attributes. Workspace MCP list decoding SHALL use
+only reviewed public fields and SHALL NOT claim to return stored server
+config or tokens. Agent MCP mutations SHALL take `agent_id` and `server_id`
+only. Workspace and agent MCP mutations SHALL emit `--output json` unless
+source proves a given command is non-JSON.
+`workspace mcp remove` is source-proven text output and SHALL return
+`ActionResult[None]` without JSON decoding. Bound Agent and Workspace MCP
+mutations SHALL invalidate an already-loaded `mcp_servers` relation after a
+successful run.
+
+#### Scenario: Workspace MCP list omits secrets
+- **WHEN** `workspace.mcp_servers.all()` loads
+- **THEN** argv is `workspace mcp list --output json` (command tokens only; workspace scope is client `--workspace-id`, not a required command `--workspace`) and decoded rows contain reviewed public identity fields without config JSON or credentials
+
+#### Scenario: Workspace MCP add prefers a config file
+- **WHEN** add is called with `server_config_file=path`
+- **THEN** argv contains `--server-config-file <path>` and does not contain `--server-config` or `--server-config-stdin`
+
+#### Scenario: Workspace MCP add rejects mixed config channels
+- **WHEN** more than one of inline JSON, file, and stdin is present
+- **THEN** construction raises `ValueError` before transport
+
+#### Scenario: Inline MCP JSON is redacted
+- **WHEN** add is called with inline `server_config` containing a token
+- **THEN** preview and exception diagnostics omit the token while the executed argv still carries the JSON flag if that channel is used
+
+#### Scenario: Agent MCP enable is a distinct command
+- **WHEN** `agents.mcp.enable(agent_id, server_id)` runs
+- **THEN** argv is `agent mcp enable <agent-id> <server-id> --output json` unless source proves enable is non-JSON, and is not implemented as add or update
+
+#### Scenario: Workspace MCP remove is a text action
+- **WHEN** `workspaces.mcp.remove(server_id)` succeeds
+- **THEN** the SDK consumes the tagged CLI text result as `ActionResult[None]` and does not attempt to decode an MCP-server JSON page
+
+#### Scenario: Bound MCP mutations invalidate loaded relations
+- **WHEN** a bound Agent or Workspace MCP mutation succeeds after `mcp_servers` has loaded
+- **THEN** the cached relation is invalidated and its next load observes the server-side state
+
+### Requirement: Skill refresh is a governed operation
+
+`SkillResource` SHALL expose `refresh` / `refresh_command` mapping to
+`skill refresh <id> --output json`. The method SHALL validate a nonblank skill
+id before transport and SHALL decode the reviewed JSON result into the existing
+`Skill` model or the reviewed action envelope, whichever source returns.
+
+#### Scenario: Skill refresh emits exact argv
+- **WHEN** `client.skills.refresh(skill_id)` runs
+- **THEN** argv is `skill refresh <skill-id> --output json` and construction performs no subprocess I/O until `run()`
+
+### Requirement: Issue status and assignee follow tagged CLI semantics
+
+`IssueStatus` SHALL retain the seven canonical values `backlog`, `todo`,
+`in_progress`, `in_review`, `done`, `blocked`, and `cancelled`. Get/list,
+`Issue.status`, and `_IssueWire.status` decoding SHALL accept `IssueStatus | str`
+and SHALL preserve unknown names without a constructor crash. Issue list,
+filter, and `set_status` SHALL accept `IssueStatus | str` and SHALL pass the
+value through to argv without a local enum membership check; invalid names
+fail at the CLI after construction. The SDK SHALL NOT invent a
+workspace-status CRUD API. Source-trace of whether tagged CLI accepts custom
+names is a mapping note, not a second SDK rule. Any reviewed category
+field SHALL be an optional open string on issue models and SHALL default to
+`None` when omitted.
+
+`--assignee` SHALL remain a single string flag. When source resolves email
+addresses through that flag, canonical vectors MAY use an email value; the SDK
+SHALL NOT add a separate `assignee_email` parameter.
+
+#### Scenario: Canonical statuses still construct
+- **WHEN** `set_status(issue_id, IssueStatus.in_review)` runs
+- **THEN** argv is `issue status <issue-id> in_review`
+
+#### Scenario: Unknown status strings pass through on set_status
+- **WHEN** a caller passes a non-canonical status string to `set_status`
+- **THEN** construction emits that string in argv and does not raise `ValueError` for unknown membership; invalid names fail at the CLI
+
+#### Scenario: Unknown status strings pass through on list and IssueListFilter
+- **WHEN** a caller passes a non-canonical status string to `issues.list(status=...)` or `IssueListFilter`
+- **THEN** construction emits that string in argv and does not raise `ValueError` for unknown membership; invalid names fail at the CLI
+
+#### Scenario: Unknown status strings decode
+- **WHEN** issue get JSON contains a status name absent from the seven canonical values
+- **THEN** decoding succeeds and `Issue.status` preserves that string
+
+#### Scenario: Assignee email uses the existing flag
+- **WHEN** create or assign is called with `assignee="user@example.com"` and source accepts email on `--assignee`
+- **THEN** argv contains `--assignee user@example.com` and does not add a second email flag
+
+### Requirement: Unified domain class serialization and detach
+
+The unified class SHALL expose `to_json() -> str`, `from_json(payload: str |
+bytes) -> Self`, `to_dict() -> dict[str, object]`, and `from_dict(data:
+dict[str, object]) -> Self` covering only public domain fields. It SHALL
+expose `detach() -> Self` returning the same class with `_client=None` and
+relation caches reset to their unloaded state. The SDK SHALL NOT serialize
+`_client`, lazy caches, locks, or loaders. `from_json` / `from_dict` SHALL
+construct a detached instance (`_client=None`). The legacy
+`ResourceEntity.to_data()` / `from_data()` boundary SHALL be removed.
+
+#### Scenario: to_json round-trips public fields only
+- **WHEN** `issue.to_json()` is decoded via `Issue.from_json(payload)`
+- **THEN** the result equals `issue.detach()` on public fields and its
+  `_client is None`
+
+#### Scenario: to_dict excludes runtime state
+- **WHEN** `issue.to_dict()` is inspected
+- **THEN** the dict contains only public domain field keys and no `_client`,
+  `_comments`, `_labels`, or other runtime-state keys
+
+#### Scenario: detach clears client and caches
+- **WHEN** `issue.detach()` is called on an attached issue
+- **THEN** the result is an `Issue` with `_client is None` and any lazy
+  relation caches reset to unloaded
+
+#### Scenario: to_data and from_data are removed
+- **WHEN** the public surface is inspected
+- **THEN** no `to_data` or `from_data` method exists on any unified class and
+  `ResourceEntity.to_data` / `from_data` are absent
+
+### Requirement: Attached and detached instances use the same class
+
+The same public unified class SHALL support both attached (constructed by a
+resource with a client) and detached (constructed without a client)
+instances. An operation requiring a client called on a detached instance SHALL
+raise `DetachedEntityError` before any subprocess invocation. The SDK SHALL
+NOT require a separate public `*Data` class to represent a detached instance.
+
+#### Scenario: Attached instance delegates to resources
+- **WHEN** `issue = client.issues.get("issue_123"); issue.add_comment("x")`
+- **THEN** the call delegates to `client.issues.comments.add` and returns a
+  bound `Comment`
+
+#### Scenario: Detached instance raises on client-requiring operations
+- **WHEN** `issue = Issue.from_json(payload); issue.add_comment("x")`
+- **THEN** `DetachedEntityError` is raised before any subprocess invocation
+
+#### Scenario: Detached instance scalar access works
+- **WHEN** `issue = Issue.from_json(payload); print(issue.title)`
+- **THEN** the public field is readable without a client and no I/O occurs
+
+### Requirement: Wire models are private and retained only where they normalize
+
+Wire models SHALL use private `_...Wire` names and SHALL be retained only
+where they perform at least one of: field renaming, `UNSET` normalization,
+nested object conversion, validation of CLI output, compatibility handling,
+or isolation from an unstable external schema. Where the CLI output already
+matches the public model, the SDK SHALL decode directly into the unified
+class. Wire models SHALL NOT be exported from `multica_py` or its public
+submodules.
+
+#### Scenario: Wire models are private
+- **WHEN** `_internal/wire_models.py` is inspected
+- **THEN** every wire class is named with a leading underscore
+  (`_IssueWire`, `_AutopilotWire`, `_ProjectWire`, `_CommentWire`, ...) and
+  none is exported from `multica_py` or `multica_py.models`
+
+#### Scenario: Wire models retained only with a reason
+- **WHEN** a wire model exists
+- **THEN** it performs at least one normalization (rename, `UNSET`, nested
+  conversion, validation, or schema isolation) and is documented in the
+  change design
+
+#### Scenario: Direct decode where no normalization is needed
+- **WHEN** the CLI output for a concept already matches the public model
+  (Agent, Workspace, Skill, Squad, WorkspaceMember, TaskRun, Label)
+- **THEN** the resource decodes directly into the unified class and no wire
+  model is introduced for that concept
+
+
+### Requirement: Unified domain class naming and migration
+
+The SDK SHALL rename each `*Entity` class to the canonical domain name and
+absorb the `*Data` fields into it. Redundant passive DTOs between the wire
+model and the data/entity pair SHALL be removed. The migration is a single
+breaking change; the SDK SHALL NOT ship `*Data = <Unified>` aliases because
+the unified class carries private runtime state and does not preserve the
+old pure-client-free-data-container guarantee. `docs/migration.md` SHALL
+record the full rename table and the `to_data() -> to_json()/to_dict()`
+replacement.
+
+#### Scenario: Canonical names replace Entity names
+- **WHEN** the public surface is inspected
+- **THEN** `IssueEntity` is renamed `Issue`, `AgentEntity` is renamed `Agent`,
+  `SkillEntity` is renamed `Skill`, `SquadEntity` is renamed `Squad`,
+  `WorkspaceEntity` is renamed `Workspace`,
+  `WorkspaceMemberEntity` is renamed `WorkspaceMember`,
+  `AutopilotEntity` is renamed `Autopilot`,
+  `AutopilotRunEntity` is renamed `AutopilotRun`, and the `Project` /
+  `Comment` / `CommentThread` / `TaskRun` / `Label` entities already bearing
+  the canonical name keep it
+
+#### Scenario: Data classes are removed
+- **WHEN** the public surface is inspected
+- **THEN** `IssueData`, `ProjectData`, `AgentData`, `WorkspaceData`,
+  `SkillData`, `AutopilotData`, `AutopilotRunData`, `SquadData`,
+  `WorkspaceMemberData`, `CommentData`, `CommentThreadData`, `TaskRunData`,
+  and `LabelData` are removed from public exports and their fields move to
+  the unified class
+
+#### Scenario: Redundant passive DTOs are removed
+- **WHEN** the `models` package is inspected
+- **THEN** the passive DTOs `models.issues.Issue`, `models.projects.Project`,
+  `models.agents.Agent`, `models.workspaces.Workspace`,
+  `models.skills.Skill`, `models.autopilots.Autopilot`,
+  `models.autopilots.AutopilotRun`, `models.system.Squad`,
+  `models.system.WorkspaceMember`, `models.issue_activity.Comment`,
+  `models.issue_activity.CommentThread`, `models.issue_activity.TaskRun` are
+  removed and the canonical name is used only by the unified class
+
+#### Scenario: No misleading aliases
+- **WHEN** the public surface is inspected
+- **THEN** no `IssueData = Issue`, `AgentData = Agent`, or similar alias
+  exists in `multica_py.__all__` or in any public module
+
+#### Scenario: Migration table is documented
+- **WHEN** `docs/migration.md` is reviewed
+- **THEN** it contains a rename table mapping each removed `*Data`/`*Entity`/
+  passive DTO name to the unified class name and records the
+  `to_data() -> to_json()`/`to_dict()` replacement
+
+### Requirement: Command preview documentation default
+
+The SDK documentation SHALL present the eager form as the default example
+for every CLI-executing operation and SHALL document the `*_command()`
+form as the inspectable alternative, explaining when command preview is
+useful (debugging, scripting, audit, asserting CLI routing in tests). It
+SHALL state that `commands` is always a tuple (empty for a no-op, one
+item for one CLI call, ordered items/templates for a composite
+operation), that preview construction performs no I/O, and that
+`command.run()` executes the same immutable plan.
+
+#### Scenario: Docs show eager form first
+
+- **WHEN** the resource method documentation for a CLI-executing
+  operation is reviewed
+- **THEN** the primary example uses the eager form and a secondary
+  example shows the `*_command()` form labeled as the inspectable
+  alternative
+
+#### Scenario: Docs explain the commands tuple shape
+
+- **WHEN** the `Command` documentation is reviewed
+- **THEN** it states that `commands` is always a tuple, explains the
+  empty/one-item/ordered-items cases, and notes that preview performs no
+  I/O while `run()` executes the same immutable plan
+
+### Requirement: Executor lifecycle on the client
+`MulticaClient` SHALL expose an explicit `close()` method in addition to
+context-manager cleanup. `MulticaClient` owns the executor if and only if
+it constructed it (the default `LocalExecutor()` when `executor is None`);
+a user-supplied executor is NEVER owned by any client. `close()` on the
+root client SHALL close the transport and SHALL close the executor only if
+the client owns it. `close()` on a scoped `with_*()` client SHALL close
+only the scoped transport and SHALL NEVER close the shared executor. Provider
+executors SHALL create and own their sessions from connection parameters;
+provider-client injection is outside this milestone. `close()` SHALL close
+the session but SHALL NEVER destroy the execution
+environment (sandbox or VM). Derived client views SHALL NOT
+independently destroy a shared executor/session.
+
+#### Scenario: Explicit close is available
+- **WHEN** a caller calls `client.close()` or the context manager exits on a root client that used the default `LocalExecutor()`
+- **THEN** the transport and the client-owned default executor are closed
+
+#### Scenario: User-supplied executor survives a root client close
+- **WHEN** the root client that was given a user-supplied executor is closed
+- **THEN** the transport is closed and the executor is NOT closed (the user owns its lifecycle)
+
+#### Scenario: User-supplied executor survives a scoped view close
+- **WHEN** a scoped client view using a user-supplied executor is closed while the root client still uses it
+- **THEN** only the scoped transport is closed, the executor is not closed, and the root client remains usable with that executor
+
+#### Scenario: Executor closes its session without destroying the target
+- **WHEN** a provider executor is closed
+- **THEN** its provider session is closed and the underlying sandbox or VM remains intact

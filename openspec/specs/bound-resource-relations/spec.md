@@ -2,7 +2,9 @@
 
 ## Purpose
 TBD - created by archiving change resource-relations-lazy-loading. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Bound entity data boundary
 Participating resource operations MUST return typed entities that privately
 retain their originating `MulticaClient` view, while scalar data remains available as an
@@ -16,6 +18,44 @@ immutable typed snapshot that excludes runtime context and relations.
 - **WHEN** a consumer reads scalar fields or uses `to_data()`, repr, equality, hashing, logging, or supported serialization
 - **THEN** zero subprocess calls occur and runtime context is not serialized
 
+#### Scenario: Autopilot run JSON snapshots remain immutable
+- **WHEN** a consumer reads `AutopilotRun.trigger_payload` or `result`
+- **THEN** JSON object nodes are immutable `Mapping[str, JsonValue]` values
+  and arrays are immutable tuples; `to_dict()` / `to_json()` materialize
+  standard JSON containers for compatible serialization
+
+#### Scenario: Relation entry points expose command forms
+
+- **WHEN** a CLI-loading relation entry point is inspected
+- **THEN** `all_command()`, `refresh_command()`, and (where applicable)
+  `page_command()` exist and return `Command[...]`, while `invalidate()`
+  has no command variant
+
+#### Scenario: Dunder loading routes through the command plan
+
+- **WHEN** a consumer iterates a `LazyCollection`, calls `len()` on it,
+  tests containment, or looks up a `LazyMapping` key
+- **THEN** the load is performed through `all_command().run()` and the
+  same plan-derived argv reaches the transport as the eager `all()`
+  would produce
+
+#### Scenario: Command construction performs no I/O
+
+- **WHEN** `relation.all_command()`, `refresh_command()`, or
+  `page_command()` is constructed
+- **THEN** no `CliTransport` method is called and no subprocess is
+  spawned
+
+#### Scenario: Concurrent command runs coalesce
+
+- **WHEN** multiple threads call `all_command().run()` on the same
+  lazy object concurrently
+- **THEN** one loader sequence runs and all waiters observe its result
+  or error, matching the existing coalescing behavior
+
+#### Scenario: Resource result is bound to the same executor
+- **WHEN** a participating list, get, create, update, or aggregate operation returns an entity under a non-local executor
+- **THEN** its relations use the exact configuration, the same executor, and the shared process semaphore of the originating client view
 ### Requirement: Relation load points are explicit
 Reading a relation property or query view MUST perform no I/O. I/O MAY begin
 only through iteration, length, containment, mapping lookup, `all()`, `page()`, `refresh()`, or explicit
@@ -29,8 +69,13 @@ only through iteration, length, containment, mapping lookup, `all()`, `page()`, 
 - **WHEN** iteration or `all()` completes successfully
 - **THEN** the immutable complete result is cached and repeated complete access performs zero additional subprocess calls until invalidation
 
+#### Scenario: Command construction is lazy
+
+- **WHEN** a consumer stores `command = relation.all_command()`
+- **THEN** transport call count remains zero and `relation.loaded` is
+  unchanged
 ### Requirement: Normative relation inventory
-The implementation MUST provide exactly the following 33 relation contracts. Operation IDs and public signatures in this table are normative; unlisted relations are outside this change. Issue-list relations return bound `Issue` entities constructed from their governed list rows and originating client without additional `issues.get` calls.
+The implementation MUST provide exactly the following 38 relation contracts. Operation IDs and public signatures in this table are normative; unlisted relations are outside this change. Issue-list relations return bound `Issue` entities constructed from their governed list rows and originating client without additional `issues.get` calls.
 
 | # | Public member | Operation ID | Request / strategy | Result and context | Invalidation |
 |---:|---|---|---|---|---|
@@ -67,10 +112,15 @@ The implementation MUST provide exactly the following 33 relation contracts. Ope
 | relation:R31 (31) | `Autopilot.triggers: LazyCollection[AutopilotTrigger]` | `autopilots.get` | get-envelope seed/read | immutable trigger records | trigger add/update/delete |
 | relation:R32 (32) | `Autopilot.subscribers: LazyCollection[AutopilotSubscriber]` | `autopilots.get` | get-envelope seed/read | immutable subscriber records | autopilot subscriber update |
 | relation:R33 (33) | `AutopilotRun.messages: LazyCollection[RunMessage]` | `issues.run_messages` | required `task_id`, optional `issue_id`; one call | immutable messages | none |
+| relation:R34 (34) | `Workspace.plugins: LazyCollection[Plugin]` | `plugins.list` | scoped workspace via `with_workspace(self.id)`; one call; command argv has no required `--workspace` | immutable `Plugin` rows | explicit refresh and successful install |
+| relation:R35 (35) | `Workspace.properties: LazyCollection[PropertyDefinition]` | `properties.list` | scoped workspace; one call | immutable property definitions | create/update/archive/unarchive |
+| relation:R36 (36) | `Workspace.mcp_servers: LazyCollection[WorkspaceMcpServer]` | `workspaces.mcp.list` | scoped workspace via `with_workspace(self.id)`; one call; command argv is `workspace mcp list --output json` | public MCP identity rows without config secrets | add/update/remove |
+| relation:R37 (37) | `Agent.mcp_servers: LazyCollection[AgentMcpBinding]` | `agents.mcp.list` | `agent_id`; one call | assigned MCP bindings | add/enable/disable/remove |
+| relation:R38 (38) | `Issue.properties: LazyMapping[str, PropertyValue]` | `issues.properties.list` | `issue_id`; JSON object or reviewed list | mapping distinct from metadata | set/unset |
 
 #### Scenario: Inventory is exact
 - **WHEN** public bound relation members are discovered
-- **THEN** they correspond one-to-one with the 33 rows above and each row has approved operation and behavior coverage
+- **THEN** they correspond one-to-one with the 38 rows above and each row has approved operation and behavior coverage
 
 #### Scenario: Issue rows are bound without extra gets
 - **WHEN** any of rows R05, R13, R16, R17, or R19 loads N issues
@@ -80,11 +130,15 @@ The implementation MUST provide exactly the following 33 relation contracts. Ope
 - **WHEN** `Workspace.autopilots` loads
 - **THEN** it performs exactly one `autopilots.list` page call and is not implemented as offset traversal or get aggregate
 
+#### Scenario: New v0.4.28 relations use one parent-addressed call
+- **WHEN** `Workspace.plugins`, `Workspace.properties`, `Workspace.mcp_servers`, `Agent.mcp_servers`, or `Issue.properties` completely loads
+- **THEN** exactly one governed list operation runs and the result is cached until the documented invalidation
+
 ### Requirement: Workspace relation graph
-A bound `Workspace` MUST expose `members`, `agents`, `skills`, `projects`, `issues`, `labels`, `autopilots`, `repositories`, `runtimes`, and `squads` using the workspace identifier as server-side scope and the original client runtime. `Workspace.issues` MUST yield bound `Issue` entities.
+A bound `Workspace` MUST expose `members`, `agents`, `skills`, `projects`, `issues`, `labels`, `autopilots`, `repositories`, `runtimes`, `squads`, `plugins`, `properties`, and `mcp_servers` using the workspace identifier as server-side scope and the original client runtime. `Workspace.issues` MUST yield bound `Issue` entities.
 
 #### Scenario: Workspace unpaged relations use one scoped call
-- **WHEN** `members`, `agents`, `skills`, `projects`, `labels`, `repositories`, `runtimes`, or `squads` is completely loaded
+- **WHEN** `members`, `agents`, `skills`, `projects`, `labels`, `repositories`, `runtimes`, `squads`, `plugins`, `properties`, or `mcp_servers` is completely loaded
 - **THEN** exactly one governed workspace-scoped list operation runs and typed entities are returned in response order
 
 #### Scenario: Workspace issues traverse offset pages
@@ -96,7 +150,7 @@ A bound `Workspace` MUST expose `members`, `agents`, `skills`, `projects`, `issu
 - **THEN** its entities are available through the relation and upstream total metadata remains accessible
 
 ### Requirement: Agent skill squad and member graph
-Bound `Agent`, `Skill`, `Squad`, and `WorkspaceMember` entities MUST expose the relations `Agent.skills`, `Agent.tasks`, `Agent.issues`, `Skill.files`, `Squad.members`, `Squad.issues`, and `WorkspaceMember.issues` through governed server-side operations. The three issue relations MUST yield bound `Issue` entities. `WorkspaceMember.issues` MUST use the membership `id` as the assignee filter while `user_id` remains available for user reconciliation.
+Bound `Agent`, `Skill`, `Squad`, and `WorkspaceMember` entities MUST expose the relations `Agent.skills`, `Agent.tasks`, `Agent.issues`, `Agent.mcp_servers`, `Skill.files`, `Squad.members`, `Squad.issues`, and `WorkspaceMember.issues` through governed server-side operations. The three issue relations MUST yield bound `Issue` entities. `WorkspaceMember.issues` MUST use the membership `id` as the assignee filter while `user_id` remains available for user reconciliation.
 
 #### Scenario: Agent and skill nested commands are plural
 - **WHEN** `Agent.skills` or `Skill.files` loads
@@ -109,6 +163,10 @@ Bound `Agent`, `Skill`, `Squad`, and `WorkspaceMember` entities MUST expose the 
 #### Scenario: Assignee issue relations are server filtered
 - **WHEN** `Agent.issues`, `Squad.issues`, or `WorkspaceMember.issues` loads
 - **THEN** every issue-list page uses `--assignee-id <parent-id>`, yields bound issues, uses `WorkspaceMember.id` for member scope, and performs no broad client-side scan or per-item get
+
+#### Scenario: Agent MCP bindings load from agent mcp list
+- **WHEN** `Agent.mcp_servers` completely loads
+- **THEN** argv is `agent mcp list <agent-id> --output json` and enable/disable/remove invalidate the cache
 
 ### Requirement: Project relation graph
 A bound `Project` MUST expose unpaged `resources` and a domain-specific offset-paged `issues` relation through governed operations. `Project.issues` MUST yield bound `Issue` entities and provide project-scoped issue creation.
@@ -127,7 +185,7 @@ A bound `Project` MUST expose unpaged `resources` and a domain-specific offset-p
 
 ### Requirement: Issue activity relation graph
 A bound `Issue` MUST expose `comments`, `recent_comment_threads`, `labels`,
-`subscribers`, `metadata`, `pull_requests`, `children`, and `runs`; bound
+`subscribers`, `metadata`, `properties`, `pull_requests`, `children`, and `runs`; bound
 `CommentThread` MUST expose `comments`; bound `TaskRun` MUST expose `messages`.
 
 #### Scenario: Default comments are a flat relation
@@ -149,6 +207,10 @@ A bound `Issue` MUST expose `comments`, `recent_comment_threads`, `labels`,
 #### Scenario: Issue metadata is a mapping
 - **WHEN** `Issue.metadata` loads from the upstream JSON object
 - **THEN** it behaves as `LazyMapping[str, MetadataValue]` and preserves keys and typed values without converting them into artificial list entries
+
+#### Scenario: Issue properties are a distinct mapping
+- **WHEN** `Issue.properties` loads
+- **THEN** it behaves as `LazyMapping[str, PropertyValue]` from `issue property list` and does not reuse metadata types or loaders
 
 #### Scenario: Pull requests adapt their wrapper
 - **WHEN** `Issue.pull_requests` loads
@@ -231,6 +293,11 @@ The SDK MUST NOT maintain an identity map or enrich an existing wrapper.
 - **WHEN** callers need structural equality or serialization
 - **THEN** they compare or encode `entity.to_data()` rather than relying on wrapper identity
 
+#### Scenario: Structural comparison uses public fields
+- **WHEN** callers need structural equality or serialization
+- **THEN** they compare or encode `entity.to_dict()` / `entity.to_json()` (or
+  use `entity.detach()`) rather than relying on instance identity, and
+  `_client`/caches are excluded
 ### Requirement: Relation cache refresh and invalidation
 Each bound entity MUST memoize one lazy object per relation and normalized query parameters. The lazy object owns its state and lock; failed loads remain retryable, refresh swaps only on success, and successful nested mutations call `invalidate()` only on proven-stale memoized relations. Automatic invalidation is local only when the successful mutation signature contains the exact parent ID used by the memoized relation: rows 11, 14, 15, 18, scoped create on row 19, parent-addressed comment add in 20–22, 23–25, and 31–32. Parentless comment delete/resolve, workspace-wide and filtered relations, and unrelated top-level mutations remain stale until explicit `refresh()`; no reverse index or global scan is introduced.
 
@@ -250,6 +317,20 @@ Each bound entity MUST memoize one lazy object per relation and normalized query
 - **WHEN** project resources/issues, agent skills, skill files, squad members, issue labels/subscribers/metadata/comments, or autopilot triggers mutate successfully through their parent-bound surface
 - **THEN** only matching affected cache keys are invalidated
 
+#### Scenario: Cache-hit command is a no-op
+
+- **WHEN** `all_command()` is constructed on an already-loaded relation
+  and run
+- **THEN** `command.commands == ()`, `command.run()` returns the cached
+  value, and no `CliTransport` method is called
+
+#### Scenario: Refresh command always carries a loader plan
+
+- **WHEN** `refresh_command()` is constructed on a loaded or unloaded
+  relation
+- **THEN** `command.commands` contains the loader plan argv and
+  `command.run()` performs the load with `force=True` semantics, updates
+  the cache on success, and preserves the prior value on failure
 ### Requirement: Lazy state transitions
 Every lazy object MUST use exactly `UNLOADED`, `LOADING`, and `LOADED` with one
 `threading.Lock`. `loaded` MUST be true only for LOADED; page calls MUST not
@@ -290,6 +371,17 @@ parallelism through the shared process semaphore.
 - **WHEN** one loader fails
 - **THEN** pending futures are cancelled, the first loader exception is re-raised, and already completed successful loads remain cached
 
+#### Scenario: Prefetch routes through relation command plans
+
+- **WHEN** `prefetch` loads a selected relation
+- **THEN** the load is performed through the relation's
+  `all_command().run()` path and the same plan-derived argv reaches the
+  transport as an eager `all()` would produce
+
+#### Scenario: No prefetch command
+
+- **WHEN** the public surface is inspected
+- **THEN** no `prefetch_command()` method exists on `MulticaClient`
 ### Requirement: Relation lifecycle errors
 Detached entities and missing inherited relation context MUST fail with typed
 errors before subprocess invocation. Client views otherwise retain existing
@@ -420,3 +512,23 @@ Relation code SHALL construct cached/no-step commands, coalesced run wrappers, a
 - **WHEN** cached, coalesced, offset, or cursor relation commands are previewed
 - **THEN** command rendering uses the command snapshot and existing redaction rules and exposes no secret-bearing internal state
 
+### Requirement: Lazy/entity follow-up operations preserve the execution scope
+Bound entity mutation methods, lazy-relation loaders, `*_command()` siblings,
+and follow-up operations SHALL preserve the originating `CommandExecutor`.
+A bound entity returned by a client configured with a non-local executor
+SHALL execute all of its follow-up operations and lazy relations through
+that same executor and SHALL NOT fall back to local execution. Prefetch
+SHALL continue to share the same executor and the same concurrency scope.
+Closing a scoped client view SHALL NOT close a shared user-supplied executor.
+
+#### Scenario: Bound entity follow-up uses the same executor
+- **WHEN** an `Issue` returned by a client configured with an `SshExecutor` calls `issue.update(...)` or `issue.comments.all()`
+- **THEN** the follow-up operation executes through the same SSH executor and does not fall back to local
+
+#### Scenario: Lazy relations preserve the executor
+- **WHEN** `workspace.agents.all()` loads on a workspace bound to a client using a `MicrosandboxExecutor`
+- **THEN** the `agents.list` command executes inside that same Microsandbox VM
+
+#### Scenario: Prefetch shares the executor
+- **WHEN** relation prefetch runs on entities bound to a non-local executor
+- **THEN** every relation load executes through that same executor and the shared concurrency scope

@@ -1,4 +1,9 @@
-## ADDED Requirements
+# Execution Backends Specification
+
+## Purpose
+Define provider-neutral execution contracts, lifecycle rules, optional dependency boundaries, staging semantics, and conformance requirements for local and remote backends.
+
+## Requirements
 
 ### Requirement: Provider-independent execution contracts
 The SDK SHALL expose a provider-independent execution layer under
@@ -180,7 +185,7 @@ require `microsandbox` or `paramiko`. Microsandbox support SHALL be the
 optional extra `multica-py[microsandbox]` backed by `microsandbox` with a
 bounded range (`microsandbox>=0.6,<0.7` for the pre-1.0 async-only API);
 VPS/SSH support SHALL be `multica-py[vps]` backed by `paramiko` with a tested range
-(`paramiko>=3,<4`). Each adapter contract SHALL be designed and tested
+(`paramiko>=5,<6`). Each adapter contract SHALL be designed and tested
 against the lower bound of its range. Bumping a range SHALL require
 re-running the real-backend integration smoke tests. Importing
 `multica_py.execution` (contracts + `LocalExecutor`) SHALL NOT import any
@@ -225,7 +230,7 @@ same explicit injection seam.
 
 #### Scenario: Git consumer installs only the VPS build
 - **WHEN** a consumer runs `uv add "multica-py[vps] @ git+https://github.com/maximchikAlexandr/multica-py"`
-- **THEN** uv records the Git source and installs the base dependencies plus `paramiko>=3,<4`, without `microsandbox`
+- **THEN** uv records the Git source and installs the base dependencies plus `paramiko>=5,<6`, without `microsandbox`
 
 #### Scenario: Existing Git dependency enables one provider
 - **WHEN** a consumer with an existing Git source for `multica-py` runs `uv add --extra microsandbox multica-py` or `uv add --extra vps multica-py`

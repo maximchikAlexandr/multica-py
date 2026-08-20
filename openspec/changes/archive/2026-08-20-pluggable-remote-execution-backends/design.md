@@ -512,7 +512,7 @@ conformance suite defined here.
 ### `SshExecutor` (`execution/ssh.py`)
 
 Optional extra `multica-py[vps]`, backed by `paramiko` (compatibility range
-`paramiko>=3,<4` — see Packaging). Constructed with `host`, `port=22`,
+`paramiko>=5,<6` — see Packaging). Constructed with `host`, `port=22`,
 `username`, optional
 `key_filename`/`password`/`look_for_keys`/... Host-key verification is
 **safe by default**: a missing/changed host key raises
@@ -780,7 +780,7 @@ construction).
 ```toml
 [project.optional-dependencies]
 microsandbox = ["microsandbox>=0.6,<0.7"]  # pre-1.0, bounded range (async API 0.6.x)
-vps = ["paramiko>=3,<4"]                     # generic SSH/VPS support
+vps = ["paramiko>=5,<6"]                     # generic SSH/VPS support
 ```
 
 **Compatibility ranges (#11).** Each optional extra has a tested

@@ -58,15 +58,6 @@ _LAZY_OPTIONS_PARITY_EXCEPTIONS = frozenset(
 )
 
 
-def _contract_entrypoint_is_implemented(entrypoint: Entrypoint) -> bool:
-    module_name, class_name, method_name = entrypoint.public_symbol.rsplit(".", 2)
-    try:
-        resource = getattr(importlib.import_module(module_name), class_name)
-    except (ImportError, AttributeError):
-        return False
-    return hasattr(resource, method_name)
-
-
 def _case_class(case: OperationCase) -> type:
     if case.bound_target == "agent":
         from multica_py.entities.agents import Agent
@@ -142,6 +133,68 @@ def _contains_type(annotation: object, expected: object) -> bool:
     if annotation is expected or typing.get_origin(annotation) is expected:
         return True
     return any(_contains_type(argument, expected) for argument in typing.get_args(annotation))
+
+
+_PAGE_CONTRACT_RETURN_NAMES = frozenset(
+    {
+        "AutopilotListPage",
+        "AutopilotRunListPage",
+        "IssueChildrenResult",
+        "IssueListPage",
+        "MetadataPage",
+        "page_daemon_disk_usage",
+        "page_issue_usage",
+    }
+)
+
+
+def _runtime_return_category(annotation: object) -> str:
+    origin = typing.get_origin(annotation)
+    if (
+        _contains_type(annotation, Page)
+        or (isinstance(annotation, type) and issubclass(annotation, Page))
+        or (isinstance(origin, type) and issubclass(origin, Page))
+    ):
+        return "Page"
+    if origin is tuple:
+        return "tuple"
+    if origin is dict or annotation is dict:
+        return "mapping"
+    return "other"
+
+
+def _contract_return_category(signature: str) -> str:
+    result = signature.rsplit("->", 1)[-1] if "->" in signature else signature.rsplit(":", 1)[-1]
+    result = result.strip()
+    if result.startswith("Page[") or result in _PAGE_CONTRACT_RETURN_NAMES:
+        return "Page"
+    if result.startswith("tuple["):
+        return "tuple"
+    if result.startswith("dict["):
+        return "mapping"
+    return "other"
+
+
+def _assert_return_categories_match(annotation: object, signature: str) -> None:
+    runtime_category = _runtime_return_category(annotation)
+    contract_category = _contract_return_category(signature)
+    assert runtime_category == contract_category, (runtime_category, contract_category)
+
+
+@pytest.mark.parametrize(
+    ("runtime_annotation", "contract_signature"),
+    (
+        (Page[int], "() -> tuple[int, ...]"),
+        (tuple[int, ...], "() -> Page[int]"),
+    ),
+    ids=("runtime-page-mutated-to-tuple", "contract-page-mutated-to-tuple"),
+)
+def test_return_category_invariant_rejects_both_page_tuple_mutations(
+    runtime_annotation: object,
+    contract_signature: str,
+) -> None:
+    with pytest.raises(AssertionError):
+        _assert_return_categories_match(runtime_annotation, contract_signature)
 
 
 def _approved_entrypoint(case: OperationCase, contract: ContractCatalog) -> Entrypoint:
@@ -277,6 +330,7 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
         client.issues.metadata._transport = transport
         client.issues.subscribers._transport = transport
         client.agents._transport = transport
+        client.agents.mcp._transport = transport
         client.agents.skills._transport = transport
         client.autopilots._transport = transport
         client.projects._transport = transport
@@ -432,7 +486,7 @@ def test_project_status_eager_and_command_have_identical_argv(
 def test_invalid_issue_status_inputs_fail_locally(value: object, mock_transport: MagicMock) -> None:
     resource = IssueResource(mock_transport, ClientConfig())
     for request in (value, IssueListFilter(status=cast("IssueStatus | str", value))):
-        with pytest.raises((ValueError, TypeError)):
+        with pytest.raises(TypeError):
             if isinstance(request, IssueListFilter):
                 resource.list_command(request)
             else:
@@ -441,7 +495,7 @@ def test_invalid_issue_status_inputs_fail_locally(value: object, mock_transport:
     mock_transport.run_bytes.assert_not_called()
 
 
-@pytest.mark.parametrize("value", ISSUE_INVALID_STATUS_CASES, ids=repr)
+@pytest.mark.parametrize("value", (b"todo", 7, ProjectStatus.in_progress), ids=repr)
 def test_invalid_root_and_bound_issue_status_inputs_fail_before_transport(
     value: object, mock_transport: MagicMock
 ) -> None:
@@ -457,10 +511,26 @@ def test_invalid_root_and_bound_issue_status_inputs_fail_before_transport(
         (issue.set_status_command, (status,)),
         (issue.set_status, (status,)),
     ):
-        with pytest.raises((ValueError, TypeError)):
+        with pytest.raises(TypeError):
             action(*args)
     mock_transport.build_full_argv.assert_not_called()
     mock_transport.run_bytes.assert_not_called()
+
+
+def test_issue_assign_email_uses_assignee_flag(
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = IssueResource(mock_transport, ClientConfig())
+    expected = ("issue", "assign", "iss_1", "--assignee", "user@example.com", "--output", "json")
+    command = resource.assign_command("iss_1", "user@example.com")
+    assert command.commands == ("multica " + " ".join(expected),)
+    mock_transport.run_bytes.return_value = raw_result(
+        stdout=b'{"id":"iss_1","title":"Test","status":"todo"}'
+    )
+    resource.assign("iss_1", "user@example.com")
+    mock_transport.run_bytes.assert_called_once_with(expected, stdin=None, timeout=None)
 
 
 @pytest.mark.parametrize("value", PROJECT_INVALID_STATUS_CASES, ids=repr)
@@ -525,30 +595,39 @@ def test_discovered_public_methods() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
+    assert len(canonical) == 194
     assert len(canonical_cases) == len(canonical)
-    governed = {c.sdk_method for c in canonical_cases if c.contract_operation_id is not None}
-    assert governed <= discovered
-    implemented_entrypoints = {
+    contract_entrypoints = {
         (operation.operation_id, entrypoint.entrypoint_id): entrypoint
         for operation in contract.operations
         for entrypoint in operation.entrypoints
-        if _contract_entrypoint_is_implemented(entrypoint)
     }
-    assert len(governed) == len(implemented_entrypoints)
+    governed: set[tuple[str, str]] = set()
+    for case in canonical_cases:
+        if case.contract_operation_id is None:
+            continue
+        entrypoint_id = (
+            case.id.removeprefix("generated:").rsplit(":", 2)[1]
+            if case.id.startswith("generated:")
+            else "default"
+        )
+        governed.add((case.contract_operation_id, entrypoint_id))
+    assert governed == set(contract_entrypoints)
     assert len(contract.operation_ids) == len(contract.operations)
-    assert len(OPERATION_CASES) == 289
-    assert len({c.id for c in OPERATION_CASES}) == 289
-    assert sum(not c.is_canonical for c in OPERATION_CASES) == 126
+    assert len(OPERATION_CASES) == 321
+    assert len({c.id for c in OPERATION_CASES}) == 321
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == 127
     presence_catalog = cast(
         "dict[str, object]",
         cast("dict[str, object]", contract.raw["catalogs"])["presence"],
     )
     for case in canonical_cases:
-        eager_contracts = _assert_eager_command_parity(case)
         if case.contract_operation_id is None:
+            _assert_eager_command_parity(case)
             assert case.bound_target is not None
             continue
         entrypoint = _approved_entrypoint(case, contract)
+        eager_contracts = _assert_eager_command_parity(case)
         assert case.expected_category == entrypoint.category, case.sdk_method
         assert case.expected_response_id == entrypoint.response_id, case.sdk_method
         assert case.expected_typed_input_id == entrypoint.typed_input_id, case.sdk_method
@@ -571,8 +650,8 @@ def test_discovered_public_methods() -> None:
             ), case.sdk_method
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
-    assert len(generated) == 58
-    assert len(manual) == 231
+    assert len(generated) == 89
+    assert len(manual) == 232
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
@@ -769,7 +848,11 @@ def test_approved_result_categories_are_closed() -> None:
 
     contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
     responses = {response.response_id: response for response in contract.responses}
-    canonical = {case.sdk_method: case for case in OPERATION_CASES if case.is_canonical}
+    canonical = {
+        case.sdk_method: case
+        for case in OPERATION_CASES
+        if case.is_canonical and case.contract_operation_id is not None
+    }
     void_actions = {
         "agents.archive",
         "agents.avatar",
@@ -783,7 +866,9 @@ def test_approved_result_categories_are_closed() -> None:
         "issues.comments.resolve",
         "issues.comments.unresolve",
         "issues.metadata.delete",
+        "issues.properties.unset",
         "issues.rerun",
+        "plugins.init",
         "issues.subscribers.add",
         "issues.subscribers.remove",
         "labels.delete",
@@ -795,8 +880,7 @@ def test_approved_result_categories_are_closed() -> None:
         "squads.members.add",
         "squads.members.remove",
         "workspaces.switch",
-        "workspaces.watch",
-        "workspaces.unwatch",
+        "workspaces.mcp.remove",
     }
     natural_action_exceptions = {
         "attachments.upload_bytes",
@@ -823,6 +907,26 @@ def test_approved_result_categories_are_closed() -> None:
         "issues.Issue.move_after",
         "projects.Project.update",
         "projects.Project.refresh",
+        "plugins.init",
+        "plugins.validate",
+        "plugins.pack",
+        "plugins.install",
+        "plugins.remote_mcp.configure",
+        "plugins.remote_mcp.test",
+        "plugins.remote_mcp.approve",
+        "plugins.remote_mcp.revoke",
+        "plugins.configure_remote_mcp",
+        "plugins.test_remote_mcp",
+        "plugins.approve_remote_mcp",
+        "plugins.revoke_remote_mcp",
+        "properties.get",
+        "properties.create",
+        "properties.update",
+        "properties.archive",
+        "properties.unarchive",
+        "issues.properties.list",
+        "issues.properties.set",
+        "skills.refresh",
     }
     page_response_ids = {
         response.response_id
@@ -854,6 +958,8 @@ def test_approved_result_categories_are_closed() -> None:
         if category == "collection":
             if sdk_method == "issues.metadata.list":
                 assert annotation == dict[str, object] or typing.get_origin(annotation) is dict
+            elif sdk_method == "issues.properties.list":
+                assert typing.get_origin(annotation) is tuple
             elif sdk_method == "issues.usage":
                 assert annotation.__name__ == "IssueUsage"
             else:
@@ -868,7 +974,7 @@ def test_approved_result_categories_are_closed() -> None:
             if sdk_method in void_actions:
                 assert response_id == "action_result_none", sdk_method
                 assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method in {"auth.login", "issues.deprioritize"}:
+            elif sdk_method == "auth.login":
                 assert response_id == "action_result_str", sdk_method
                 assert _contains_type(annotation, ActionResult), sdk_method
             elif sdk_method in {"repositories.add", "repositories.remove"}:
@@ -903,13 +1009,12 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
         for case in OPERATION_CASES
         if case.is_canonical and case.contract_operation_id is not None
     }
-    implemented_contract_keys = {
+    contract_keys = {
         (operation.operation_id, entrypoint.entrypoint_id)
         for operation in contract.operations
         for entrypoint in operation.entrypoints
-        if _contract_entrypoint_is_implemented(entrypoint)
     }
-    assert set(canonical_by_operation) == implemented_contract_keys
+    assert contract_keys == set(canonical_by_operation)
     assert len(canonical_by_operation) == sum(
         case.is_canonical and case.contract_operation_id is not None for case in OPERATION_CASES
     )
@@ -922,8 +1027,14 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
             method = getattr(resource, method_name)
             assert inspect.isfunction(method)
             assert entrypoint.signature_id in signatures
+            annotation = typing.get_type_hints(method)["return"]
+            _assert_return_categories_match(
+                annotation, cast("str", signatures[entrypoint.signature_id])
+            )
             case = canonical_by_operation[(operation.operation_id, entrypoint.entrypoint_id)]
             assert case.method == method_name
+
+    assert set(canonical_by_operation) == contract_keys
 
 
 def _operation_payload(case: OperationCase) -> tuple[object, ...]:
@@ -949,7 +1060,7 @@ def test_current_payload_fingerprint_guard() -> None:
     from tests.cases.legacy_payloads import CURRENT_PAYLOAD_FINGERPRINTS
 
     resolved = [case for case in OPERATION_CASES if case.id in CURRENT_PAYLOAD_FINGERPRINTS]
-    assert len(CURRENT_PAYLOAD_FINGERPRINTS) == 142
+    assert len(CURRENT_PAYLOAD_FINGERPRINTS) == 143
     assert len(resolved) == len(CURRENT_PAYLOAD_FINGERPRINTS)
     assert len({case.id for case in resolved}) == len(resolved)
     assert {case.id for case in resolved} == set(CURRENT_PAYLOAD_FINGERPRINTS)

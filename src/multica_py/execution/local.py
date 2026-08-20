@@ -132,6 +132,7 @@ class LocalExecutor:
             path = os.path.join(directory, label)
             with open(path, "wb") as staged:
                 staged.write(content)
+            os.chmod(path, 0o600)
             yield path
 
     @contextlib.contextmanager

@@ -61,6 +61,7 @@ def raw_result() -> Callable[..., RawCommandResult]:
         stderr: bytes = b"",
         duration: datetime.timedelta | None = None,
         secret_values: tuple[str, ...] = (),
+        secret_bytes: tuple[bytes, ...] = (),
     ) -> RawCommandResult:
         return RawCommandResult(
             argv=argv,
@@ -69,6 +70,7 @@ def raw_result() -> Callable[..., RawCommandResult]:
             stderr=stderr,
             duration=duration or datetime.timedelta(),
             secret_values=secret_values,
+            secret_bytes=secret_bytes,
         )
 
     return _raw_result
