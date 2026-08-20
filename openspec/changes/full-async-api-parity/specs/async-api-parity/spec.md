@@ -50,7 +50,7 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 
 #### Scenario: Process poll is awaited
 - **WHEN** a consumer awaits `process.poll_async()` while provider poll I/O is blocked
-- **THEN** another event-loop task progresses, the resolved exit code matches `poll()`, and a completed streaming process finalizes only after both active output streams have ended
+- **THEN** another event-loop task progresses, the resolved exit code matches `poll()`, and a completed streaming process finalizes only after every stream admitted by the selected backend concurrency policy has ended
 
 #### Scenario: Process result is awaited
 - **WHEN** a consumer awaits `process.result_async(timeout)`
@@ -85,16 +85,20 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 - **THEN** cancellation reaches that awaiter unchanged, the started coordinator operation completes safely, and later callers observe one consistent result-or-closed state with exactly-once finalization
 
 #### Scenario: Active streams delay lifecycle finalization
-- **WHEN** passive poll or stream EOF observes process exit while stdout or stderr generators remain active
-- **THEN** output ownership remains streaming and finalization waits until both generators end and all provider leases are released
+- **WHEN** passive poll or stream EOF observes process exit while an admitted stream generator remains active
+- **THEN** output ownership remains streaming and finalization waits until every stream admitted by the selected backend concurrency policy ends and all provider leases are released
 
 #### Scenario: Explicit close revokes abandoned streams
 - **WHEN** the same thread consumes part of a stream and then calls `close()` or leaves sync/async context without exhausting that generator
 - **THEN** close revokes the paused generator without waiting for another `next()`, completes handle close, cleanup, and semaphore release before returning, and later iteration ends without provider I/O
 
-#### Scenario: Explicit close joins concurrent stream reads
-- **WHEN** deterministic barriers hold concurrent stdout and stderr provider reads while sync or async close begins
-- **THEN** close blocks new reads, uses its control sequence to advance both admitted reads, waits for both leases, revokes remaining stream registrations, finalizes once, and then returns without deadlock
+#### Scenario: Stream-read concurrency policy is explicit
+- **WHEN** stdout and stderr reads are requested concurrently on local, SSH, and microsandbox handles
+- **THEN** the implementation follows one recorded policy: coordinator serialization/demultiplexing supports both reads on every backend, or cross-stream concurrency is rejected/documented on handles such as microsandbox that expose one shared event iterator; tests SHALL NOT assume both policies
+
+#### Scenario: Explicit close joins admitted stream reads
+- **WHEN** deterministic barriers hold every stream read admitted by the selected concurrency policy while sync or async close begins
+- **THEN** close blocks new reads, uses its control sequence to advance admitted reads, waits for their leases, revokes remaining stream registrations, finalizes once, and returns without deadlock
 
 #### Scenario: Provider lease prevents use after finalization
 - **WHEN** deterministic barriers overlap sync or async poll or terminate/kill with result, stream finalization, or close on local, SSH, or microsandbox handles

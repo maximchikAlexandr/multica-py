@@ -9,8 +9,8 @@ Async Python applications currently have to move every blocking SDK call into th
 - Add async loading and refresh entry points for command-backed and loader-only lazy collections and mappings; keep local inspection, serialization, invalidation, and permalink helpers synchronous.
 - Add async client prefetch with the synchronous `None` return contract, per-call `max_parallel` bound, shared process bound, and deterministic failure selection.
 - Add async managed-process poll, wait, result, terminate, kill, and close operations over one thread-safe lifecycle state shared with synchronous callers, using provider-operation leases to prevent I/O after finalization and explicit close semantics that safely revoke abandoned streams before returning after cleanup.
-- Preserve the existing synchronous API and `Command` abstraction unchanged apart from the additive async entry point.
-- Derive async coverage from the merged v0.4.28 public/command inventory while leaving its 194-method synchronous canonical table, 321 cases, approved upstream contract, and generated descriptors unchanged.
+- Preserve every existing synchronous API and the `Command` abstraction; the only additive synchronous surface is the selected `list_messages()` pair required by the `.messages` naming collision.
+- Derive async coverage from the merged v0.4.28 public/command inventory; before implementation, settle how `_async` and the two new synchronous `list_messages` methods interact with the current 194-method/321-case canonical consumer without adding async operations to the approved upstream contract or generated descriptors.
 - Document primary workflows in both execution styles and verify async concurrency, error parity, command parity, and backwards compatibility offline.
 
 ## Capabilities
@@ -28,4 +28,4 @@ Async Python applications currently have to move every blocking SDK call into th
 
 ## Impact
 
-The additive API affects `Command`, all I/O-bearing resource classes in the merged v0.4.28 tree (including Plugin, Property, MCP, issue-property, and new Skill operations), bound entities and relations R01–R38, lazy relation types, managed-process lifecycle, public documentation, typing checks, and a separate derived async coverage inventory. It reuses the standard library and current executor backends; no runtime dependency, separate async client, duplicate request/result model, approved upstream operation, or breaking synchronous change is introduced. The compatibility interval remains `[0.4.28, 0.4.29)`.
+The additive API affects `Command`, all I/O-bearing resource classes in the merged v0.4.28 tree (including Plugin, Property, MCP, issue-property, and new Skill operations), bound entities and relations R01–R38, lazy relation types, managed-process lifecycle, public documentation, typing checks, and async coverage discovery. It reuses the standard library and current executor backends; no runtime dependency, separate async client, duplicate request/result model, or approved upstream async operation is introduced. The compatibility interval remains `[0.4.28, 0.4.29)`. Implementation remains blocked on the canonical-accounting and microsandbox stream-read decisions recorded in design.

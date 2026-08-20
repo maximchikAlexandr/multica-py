@@ -1,23 +1,23 @@
 ## ADDED Requirements
 
 ### Requirement: Closed async parity inventory
-Offline verification SHALL leave the merged v0.4.28 synchronous canonical inventory and its existing consumer unchanged at 194 public methods and 321 operation cases. It SHALL derive a separate expected async surface from that actual public I/O and command inventory plus explicit client, relation, managed-process lifecycle, and run-message declarations. Every in-scope synchronous operation SHALL have exactly one `_async` counterpart with an equivalent normalized signature and resolved return type, and every out-of-scope local operation SHALL have none. The inventory SHALL map `TaskRun.list_messages_async` and `AutopilotRun.list_messages_async` to their direct `list_messages` siblings while retaining `.messages` as a relation property. No allowlist SHALL hide missing or extra async methods, and async symbols SHALL NOT be added to the approved upstream contract or generated descriptors.
+Offline verification SHALL derive the expected async surface from the actual merged v0.4.28 public I/O and command inventory plus explicit client, relation, managed-process lifecycle, and run-message declarations. Before implementation, one canonical-accounting decision SHALL be recorded and applied consistently: either (A) structurally exclude `_async` from the existing synchronous consumer, retain its 194/321 baseline, and keep the two `list_messages` pairs in separate bound evidence, or (B) add the new synchronous `list_messages` methods to canonical rows and update all derived counts and repository instructions. Every in-scope synchronous operation SHALL then have exactly one `_async` counterpart with an equivalent normalized signature and resolved return type, and every out-of-scope local operation SHALL have none. No allowlist SHALL hide missing or extra async methods, options A and B SHALL NOT be mixed, and async symbols SHALL NOT enter the approved upstream contract or generated descriptors.
 
 #### Scenario: Async inventory is complete
 - **WHEN** public resource and bound entity methods are discovered
 - **THEN** every command-executing eager method, including both run `list_messages` methods, has a corresponding async method and every async method maps back to one synchronous command-executing method or an explicitly declared relation/client/process primitive
 
-#### Scenario: Synchronous canonical inventory remains authoritative
-- **WHEN** the existing `test_discovered_public_methods` and canonical consumer run
-- **THEN** they still compare the synchronous discovered set to 194 unique canonical rows within 321 cases, contain no `_async` symbols, and require no approved-contract or generated-descriptor change
+#### Scenario: Canonical accounting is internally consistent
+- **WHEN** the existing canonical consumer and the async parity gate run after the decision is recorded
+- **THEN** option A preserves 194/321 with structural `_async` exclusion and separate `list_messages` evidence, or option B includes the new synchronous rows and updates every derived counter; either option excludes `_async` from approved upstream contract/descriptors
 
 #### Scenario: v0.4.28 compatibility boundary remains fixed
 - **WHEN** compatibility constants, docs, contract provenance, and async tests are inspected
 - **THEN** they consistently preserve the supported interval `[0.4.28, 0.4.29)`
 
 #### Scenario: Run message pair has canonical evidence
-- **WHEN** canonical bound-entity cases discover `TaskRun` and `AutopilotRun` message listing
-- **THEN** table-driven sync and async rows assert the same signature, complete command plan, result tuple, validation/error, binding, subprocess count, and unchanged `.messages` cache state
+- **WHEN** table-driven bound-entity cases discover `TaskRun` and `AutopilotRun` message listing
+- **THEN** sync and async evidence asserts the same signature, complete command plan, result tuple, validation/error, binding, subprocess count, and unchanged `.messages` cache state in the location selected by the canonical-accounting decision
 
 #### Scenario: Typing remains closed
 - **WHEN** mypy checks source, tests, overloads, and public exports
