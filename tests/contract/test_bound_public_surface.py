@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import importlib
 import inspect
+from collections.abc import Callable
 from dataclasses import dataclass
 from types import ModuleType
-from typing import cast
+from typing import cast, get_origin, get_type_hints
 
 import pytest
 
@@ -33,6 +34,8 @@ from multica_py.exceptions import (
     UnsupportedReferenceTargetError,
 )
 from multica_py.models.issues import IssueListFilter, IssueListPage, IssueMetadataItem
+from multica_py.models.plugins import Plugin
+from multica_py.models.properties import PropertyValue
 from multica_py.models.relations import (
     CursorLazyCollection,
     CursorPage,
@@ -47,6 +50,7 @@ from multica_py.models.system import (
     RepositoryRecord,
     RuntimeDefinition,
 )
+from multica_py.models.workspaces import McpServer
 from multica_py.resources.projects import ProjectIssueCollection
 from tests.contract.test_public_invariants import assert_public_annotations_precise
 
@@ -121,10 +125,10 @@ class SingularRelationCase:
 
 
 SINGULAR_RELATION_CASES = (
-    SingularRelationCase(Issue, ("parent", "project", "assignee", "creator")),
-    SingularRelationCase(Autopilot, ("project", "assignee", "creator")),
+    SingularRelationCase(Issue, ("parent", "project", "assignee_ref")),
+    SingularRelationCase(Autopilot, ("project", "assignee")),
     SingularRelationCase(AutopilotRun, ("autopilot", "issue")),
-    SingularRelationCase(TaskRun, ("issue", "autopilot")),
+    SingularRelationCase(TaskRun, ("issue", "agent")),
 )
 
 
@@ -144,6 +148,73 @@ def test_singular_references_are_not_many_relations(case: SingularRelationCase) 
         if descriptor is None:
             continue
         assert not isinstance(descriptor, relation_types)
+
+
+EXPECTED_LAZY_REF_MEMBERS = {
+    Issue: {"parent", "project", "assignee_ref"},
+    Autopilot: {"project", "assignee"},
+    AutopilotRun: {"autopilot", "issue"},
+    TaskRun: {"issue", "agent"},
+}
+
+
+def _lazy_ref_members(owner: type[object]) -> set[str]:
+    members: set[str] = set()
+    for name in dir(owner):
+        descriptor = cast("object | None", inspect.getattr_static(owner, name, None))
+        getter = cast("Callable[[object], object] | None", getattr(descriptor, "fget", None))
+        if getter is None:
+            continue
+        annotation = cast("dict[str, object]", get_type_hints(getter))["return"]
+        if cast("object", get_origin(annotation)) is cast("object", LazyRef):
+            members.add(name)
+    return members
+
+
+def test_exact_nine_lazy_ref_members_are_public_and_inventory_bound() -> None:
+    discovered = {owner: _lazy_ref_members(owner) for owner in EXPECTED_LAZY_REF_MEMBERS}
+    assert discovered == EXPECTED_LAZY_REF_MEMBERS
+    assert sum(len(members) for members in discovered.values()) == 9
+
+
+UNSUPPORTED_SINGULAR_NAMES = (
+    (Issue, {"creator", "member", "trigger", "task", "author", "users", "leader"}),
+    (Autopilot, {"creator", "member", "trigger", "task", "author", "users", "leader"}),
+    (AutopilotRun, {"creator", "member", "trigger", "task", "author", "users", "agent"}),
+    (TaskRun, {"autopilot", "creator", "member", "trigger", "task", "author", "users"}),
+)
+
+
+@pytest.mark.parametrize(
+    ("owner", "names"),
+    UNSUPPORTED_SINGULAR_NAMES,
+    ids=("Issue", "Autopilot", "AutopilotRun", "TaskRun"),
+)
+def test_excluded_singular_edges_have_no_lazy_ref_surface(
+    owner: type[object], names: set[str]
+) -> None:
+    assert _lazy_ref_members(owner).isdisjoint(names)
+
+
+def test_property_plugin_and_mcp_ids_remain_passive_values() -> None:
+    property_value = PropertyValue(
+        property_id="property-1", name="Priority", type="text", value="high"
+    )
+    plugin = Plugin(
+        plugin_key="plugin-1",
+        desired_version="1.0.0",
+        lifecycle_status="installed",
+        trust_tier="trusted",
+        uploader_id="agent-1",
+    )
+    mcp_server = McpServer(id="server-1", name="MCP", transport="stdio")
+
+    assert isinstance(property_value.property_id, str)
+    assert isinstance(plugin.uploader_id, str)
+    assert isinstance(mcp_server.id, str)
+    assert not _lazy_ref_members(type(property_value))
+    assert not _lazy_ref_members(type(plugin))
+    assert not _lazy_ref_members(type(mcp_server))
 
 
 @dataclass(frozen=True)

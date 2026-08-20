@@ -236,7 +236,8 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
         from multica_py._internal.wire_models import _autopilot_run_from_wire, _AutopilotRunWire
 
         wire = msgspec.convert(data, type=_AutopilotRunWire, strict=True)
-        return _autopilot_run_from_wire(wire)
+        result = _autopilot_run_from_wire(wire)
+        return msgspec.structs.replace(result, _wire_presence=())
 
     @property
     def messages(self) -> LazyCollection[RunMessage]:

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import cast
 from unittest.mock import MagicMock
 
 import msgspec
@@ -17,9 +20,15 @@ from multica_py._internal.wire_models import (
     _task_run_from_wire,
     _TaskRunWire,
 )
+from multica_py.client import MulticaClient
+from multica_py.config import ClientConfig
+from multica_py.entities._base import _BoundEntity
+from multica_py.entities.autopilots import Autopilot, AutopilotRun
 from multica_py.entities.issues import Issue, TaskRun
 from multica_py.enums import IssueStatus
+from multica_py.exceptions import DetachedEntityError, MissingRelationContextError
 from multica_py.models.issues import IssueAssignee
+from multica_py.models.relations import LazyRef
 
 
 def _issue_payload(**fields: object) -> bytes:
@@ -181,3 +190,146 @@ def test_detach_preserves_run_context_and_manual_none_has_no_seed() -> None:
     assert direct._wire_presence == ()
     assert direct.to_dict()["parent_id"] is None
     assert "_wire_presence" not in direct.to_json()
+
+
+@dataclass(frozen=True)
+class OptionalReferenceCase:
+    name: str
+    relation: str
+    build: Callable[[object], _BoundEntity]
+
+
+def _build_issue_optional(field: str, value: object) -> _BoundEntity:
+    fields = {} if value is msgspec.UNSET else {field: value}
+    return _issue_from_wire(decode_json(_issue_payload(**fields), _IssueWire))
+
+
+def _build_issue_assignee_optional(value: object) -> _BoundEntity:
+    if value not in (msgspec.UNSET, None):
+        value = {"id": "agent-1", "name": "Agent", "type": "agent"}
+    return _build_issue_optional("assignee", value)
+
+
+def _build_autopilot_optional(value: object) -> _BoundEntity:
+    fields = {} if value is msgspec.UNSET else {"project_id": value}
+    payload = {
+        "id": "autopilot-1",
+        "workspace_id": "workspace-1",
+        "title": "Autopilot",
+        "assignee_type": "agent",
+        "assignee_id": "agent-1",
+        "status": "active",
+        "execution_mode": "manual",
+        "created_by_type": "member",
+        "created_by_id": "member-1",
+        **fields,
+    }
+    return _autopilot_from_wire(decode_json(json.dumps(payload).encode(), _AutopilotWire))
+
+
+def _build_autopilot_run_optional(value: object) -> _BoundEntity:
+    fields = {} if value is msgspec.UNSET else {"issue_id": value}
+    payload = {
+        "id": "run-1",
+        "autopilot_id": "autopilot-1",
+        "source": "manual",
+        "status": "completed",
+        **fields,
+    }
+    return _autopilot_run_from_wire(decode_json(json.dumps(payload).encode(), _AutopilotRunWire))
+
+
+def _build_task_run_optional(value: object) -> _BoundEntity:
+    fields = {} if value is msgspec.UNSET else {"agent_id": value}
+    payload = {"id": "task-1", "status": "completed", **fields}
+    return _task_run_from_wire(
+        decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+    )
+
+
+OPTIONAL_REFERENCE_CASES = (
+    OptionalReferenceCase(
+        "issue parent", "parent", lambda value: _build_issue_optional("parent_issue_id", value)
+    ),
+    OptionalReferenceCase(
+        "issue project", "project", lambda value: _build_issue_optional("project_id", value)
+    ),
+    OptionalReferenceCase("issue assignee", "assignee_ref", _build_issue_assignee_optional),
+    OptionalReferenceCase("autopilot project", "project", _build_autopilot_optional),
+    OptionalReferenceCase("autopilot run issue", "issue", _build_autopilot_run_optional),
+    OptionalReferenceCase("task run agent", "agent", _build_task_run_optional),
+)
+
+
+OPTIONAL_REFERENCE_VALUES = (
+    pytest.param(msgspec.UNSET, id="omitted"),
+    pytest.param(None, id="explicit-null"),
+    pytest.param("target-1", id="value"),
+)
+
+
+@pytest.mark.parametrize("case", OPTIONAL_REFERENCE_CASES, ids=lambda case: case.name)
+@pytest.mark.parametrize("wire_value", OPTIONAL_REFERENCE_VALUES)
+def test_optional_reference_shapes_classify_before_and_after_detach(
+    case: OptionalReferenceCase, wire_value: object
+) -> None:
+    entity = case.build(wire_value)
+
+    if wire_value is msgspec.UNSET:
+        reference = cast("LazyRef[object | None]", getattr(entity, case.relation))
+        assert reference.loaded is False
+        with pytest.raises(MissingRelationContextError):
+            reference.get()
+        detached = entity.detach()
+    elif wire_value is None:
+        reference = cast("LazyRef[object | None]", getattr(entity, case.relation))
+        assert reference.loaded is True
+        assert reference.value is None
+        assert reference.get() is None
+        detached = entity.detach()
+    else:
+        client = MulticaClient(ClientConfig())
+        try:
+            bound = entity._with_client(client)
+            bound_reference = cast("LazyRef[object | None]", getattr(bound, case.relation))
+            assert bound_reference.loaded is False
+            assert bound_reference.get_command().commands
+            detached = bound.detach()
+        finally:
+            client.close()
+
+    detached_reference = cast("LazyRef[object | None]", getattr(detached, case.relation))
+    if wire_value is None:
+        assert detached_reference.loaded is True
+        assert detached_reference.get() is None
+    elif wire_value is msgspec.UNSET:
+        with pytest.raises(MissingRelationContextError):
+            detached_reference.get()
+    else:
+        with pytest.raises(DetachedEntityError):
+            detached_reference.get()
+
+
+@pytest.mark.parametrize("case", OPTIONAL_REFERENCE_CASES, ids=lambda case: case.name)
+def test_public_serialization_and_manual_none_do_not_seed_absence(
+    case: OptionalReferenceCase,
+) -> None:
+    decoded = case.build(None)
+    reconstructed = type(decoded).from_dict(decoded.to_dict())
+    reconstructed_reference = cast("LazyRef[object | None]", getattr(reconstructed, case.relation))
+    assert reconstructed_reference.loaded is False
+    with pytest.raises(MissingRelationContextError):
+        reconstructed_reference.get()
+
+
+def test_manual_non_null_reference_is_loadable_after_binding() -> None:
+    issue = Issue(id="issue-1", title="Issue", status=IssueStatus.todo, project_id="project-1")
+    client = MulticaClient(ClientConfig())
+    try:
+        bound = issue._with_client(client)
+        assert bound.project.loaded is False
+        assert bound.project.get_command().commands == (
+            "multica project get project-1 --output json",
+        )
+    finally:
+        client.close()
