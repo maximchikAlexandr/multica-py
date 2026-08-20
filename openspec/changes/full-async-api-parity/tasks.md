@@ -16,23 +16,24 @@
 
 ## 3. Bound entity action async parity
 
-- [ ] 3.1 Add async siblings for every I/O action on `Issue` and `TaskRun` in `entities/issues.py`, including refresh, update, assignment, status, ordering, comments, labels, subscribers, metadata, and messages; preserve originating client binding and targeted cache invalidation.
-- [ ] 3.2 Add async siblings for entity actions in `entities/agents.py`, `entities/skills.py`, `entities/squads.py`, and `entities/projects.py`; preserve detached-context validation, immutable replacement, and relation invalidation.
-- [ ] 3.3 Add async siblings for entity actions in `entities/autopilots.py`, including trigger mutations and run messages; preserve aggregate relation cache seeding/invalidation and missing-task-context failures before I/O.
-- [ ] 3.4 Extend bound-entity table cases to compare sync and async command, result, exception, cache, and binding behavior; run focused entity/relation tests and `uv run mypy src tests` for overload parity.
+- [ ] 3.1 Add async siblings for every I/O action on `Issue` in `entities/issues.py`, including refresh, update, assignment, status, ordering, comments, labels, subscribers, and metadata; preserve originating client binding and targeted cache invalidation.
+- [ ] 3.2 Add `TaskRun.list_messages()` and `list_messages_async()` as the direct sibling pair over `messages_command()`; retain `.messages` as the lazy relation and prove equivalent options, typed tuple results, validation/errors, binding, and no implicit relation-cache mutation.
+- [ ] 3.3 Add async siblings for entity actions in `entities/agents.py`, `entities/skills.py`, `entities/squads.py`, and `entities/projects.py`; preserve detached-context validation, immutable replacement, and relation invalidation.
+- [ ] 3.4 Add async siblings for entity actions in `entities/autopilots.py`; add `AutopilotRun.list_messages()` and `list_messages_async()` over `messages_command()` while retaining `.messages`, aggregate relation cache behavior, and missing-task-context failures before I/O.
+- [ ] 3.5 Extend bound-entity table cases to compare sync and async command, result, exception, cache, and binding behavior, with canonical rows for both `list_messages` pairs and assertions that direct calls leave `.messages` cache unchanged; run focused entity/relation tests and `uv run mypy src tests` for signature parity.
 
 ## 4. Lazy relations and client lifecycle
 
-- [ ] 4.1 Add `all_async()` and `refresh_async()` to `LazyCollection` and `LazyMapping` by awaiting their existing command forms; prove loaded cache hits perform zero I/O and failed refreshes retain the prior generation.
-- [ ] 4.2 Add `page_async()` plus async all/refresh behavior to offset and cursor lazy collections by reusing existing page/composite commands; retain total metadata, cursor pairs, and every empty/repeated/maximum progress guard with identical bounded call counts.
-- [ ] 4.3 Verify overlapping sync and async loads on one relation use the existing coordinator and completed cache generation without blocking the event-loop thread; add deterministic synchronization tests for success, failure/retry, invalidation, and refresh overlap.
+- [ ] 4.1 Add `all_async()` and `refresh_async()` to `LazyCollection` and `LazyMapping`: use existing command forms with `run_async()` when present, otherwise offload the corresponding existing sync loader path through the stdlib asyncio thread bridge.
+- [ ] 4.2 Add `page_async()` plus async all/refresh behavior to offset and cursor lazy collections: use existing page/composite commands when present and offload existing sync page/pagination paths for loader-only instances; retain total metadata, cursor pairs, and every empty/repeated/maximum progress guard with identical bounded call counts.
+- [ ] 4.3 Add deterministic command-backed and loader-only fixtures for all/refresh/page success, cache hit, failure/retry, pagination guards, and event-loop progress; verify overlapping sync/async all or refresh calls use one generation coordinator and preserve identical results, errors, metadata, cache state, and loader/transport call counts.
 - [ ] 4.4 Add `MulticaClient.close_async()`, async context management, and `prefetch_async()` with the same origin checks, deduplication, cache effects, and `None` return contract as synchronous client lifecycle/prefetch; use explicit task admission to preserve `max_parallel` independently of the shared process semaphore.
 - [ ] 4.5 Add deterministic prefetch tests proving both concurrency ceilings, cancellation of jobs not yet started after failure, draining and cleanup of started jobs, `None` on success, and selection of the smallest failing deduplicated input-job index regardless of completion order.
 - [ ] 4.6 Run focused relation, client-scope, concurrency, local executor, SSH, and microsandbox tests to prove all backends use the unchanged synchronous executor contract outside the event-loop thread.
 
 ## 5. Closed public surface and typing gates
 
-- [ ] 5.1 Extend public method discovery to derive in-scope async methods from command-executing eager resource/entity methods, excluding command builders, passive/local helpers, serialization, invalidation, permalinks, `CliResource.command()`, and synchronous line iterators by structural rules rather than a missing-method allowlist.
+- [ ] 5.1 Extend public method discovery to derive in-scope async methods from command-executing eager resource/entity methods, including the explicit `TaskRun` and `AutopilotRun` `list_messages` pairs, while excluding command builders, relation properties, passive/local helpers, serialization, invalidation, permalinks, `CliResource.command()`, and synchronous line iterators by structural rules rather than a missing-method allowlist.
 - [ ] 5.2 Add a bidirectional gate: every derived synchronous I/O method has exactly one `_async` sibling, every public `_async` method maps to a derived synchronous method or an explicitly declared client/relation/process lifecycle primitive, and normalized inputs plus resolved result annotations are equivalent.
 - [ ] 5.3 Update public export, API contract, and typing tests for additive async members while confirming `Command` remains the only command abstraction, approved operation counts/argv stay unchanged, and no `AsyncClient`, `AsyncCommand`, duplicate models, public `Any`, or new dependency appears.
 

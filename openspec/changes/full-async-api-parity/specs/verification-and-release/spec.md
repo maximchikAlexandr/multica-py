@@ -1,18 +1,22 @@
 ## ADDED Requirements
 
 ### Requirement: Closed async parity inventory
-Offline verification SHALL derive the expected async surface from the existing public I/O and command inventory plus explicit client, relation, and managed-process lifecycle declarations. Every in-scope synchronous operation SHALL have exactly one `_async` counterpart with an equivalent normalized signature and resolved return type, and every out-of-scope local operation SHALL have none. No allowlist SHALL hide missing or extra async methods.
+Offline verification SHALL derive the expected async surface from the existing public I/O and command inventory plus explicit client, relation, managed-process lifecycle, and run-message declarations. Every in-scope synchronous operation SHALL have exactly one `_async` counterpart with an equivalent normalized signature and resolved return type, and every out-of-scope local operation SHALL have none. The inventory SHALL map `TaskRun.list_messages_async` and `AutopilotRun.list_messages_async` to their direct `list_messages` siblings while retaining `.messages` as a relation property. No allowlist SHALL hide missing or extra async methods.
 
 #### Scenario: Async inventory is complete
 - **WHEN** public resource and bound entity methods are discovered
-- **THEN** every command-executing eager method has a corresponding async method and every async method maps back to one synchronous command-executing method
+- **THEN** every command-executing eager method, including both run `list_messages` methods, has a corresponding async method and every async method maps back to one synchronous command-executing method or an explicitly declared relation/client/process primitive
+
+#### Scenario: Run message pair has canonical evidence
+- **WHEN** canonical bound-entity cases discover `TaskRun` and `AutopilotRun` message listing
+- **THEN** table-driven sync and async rows assert the same signature, complete command plan, result tuple, validation/error, binding, subprocess count, and unchanged `.messages` cache state
 
 #### Scenario: Typing remains closed
 - **WHEN** mypy checks source, tests, overloads, and public exports
 - **THEN** async APIs resolve to the existing concrete public result types without `Any`, broad object returns, or a duplicate async model type
 
 ### Requirement: Async behavior is verified offline
-Offline tests SHALL prove command equivalence, event-loop responsiveness, standard gather composition, shared concurrency limits, cancellation boundaries, result and exception parity, relation cache/coalescing behavior, managed-process cleanup, documentation examples, and unchanged synchronous behavior. Tests SHALL use the standard library and pytest with existing table-driven cases and shared fixtures before adding new test structures.
+Offline tests SHALL prove command equivalence, event-loop responsiveness, standard gather composition, shared concurrency limits, cancellation boundaries, result and exception parity, command-backed and loader-only relation cache/coalescing behavior, managed-process cleanup, documentation examples, and unchanged synchronous behavior. Tests SHALL use the standard library and pytest with existing table-driven cases and shared fixtures before adding new test structures.
 
 #### Scenario: Sync and async cases share operation evidence
 - **WHEN** canonical operation cases execute both styles against equivalent fake executor responses
