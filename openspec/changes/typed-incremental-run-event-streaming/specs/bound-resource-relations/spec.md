@@ -21,4 +21,3 @@ A bound `TaskRun` SHALL continue exposing cached snapshot access through `messag
 #### Scenario: Autopilot messages do not imply completion streaming
 - **WHEN** an `AutopilotRun` has task and issue context
 - **THEN** its raw `messages` and `messages_command()` APIs continue to work and no `stream_events()` method is advertised
-
