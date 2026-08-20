@@ -12,6 +12,7 @@ import msgspec
 import pytest
 
 from multica_py._internal.argv import build_global_args, normalize_global_args
+from multica_py._internal.redaction import collect_secret_values, redact_argv, redact_text
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
@@ -360,6 +361,20 @@ RAW_CLI_SECRET_CASES = (
         ("https://example.test/callback?privatekey=compact+private+key+7Qz",),
         "compact+private+key+7Qz",
         "compact private key 7Qz",
+    ),
+    RawCliSecretCase(
+        "combined split and equals options",
+        ("--password", "combo-option-secret", "--api-key=combo-option-secret"),
+        "combo-option-secret",
+    ),
+    RawCliSecretCase(
+        "combined url and option",
+        (
+            "https://example.test/callback?access_token=combo-url-secret",
+            "--client-secret",
+            "combo-url-secret",
+        ),
+        "combo-url-secret",
     ),
 )
 
@@ -792,3 +807,141 @@ def test_raw_execution_registry_covers_managed_process_operations_without_heuris
     assert isinstance(cli_module._RAW_EXECUTION_MODE_REGISTRY, tuple)
     assert managed_process_paths <= registry_paths | reviewed_exceptions
     assert not reviewed_exceptions
+
+
+_GLOBAL_VALUE_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("--server-url", "https://srv.example"),
+    ("--profile", "profile-1"),
+    ("--workspace-id", "workspace-1"),
+)
+_GLOBAL_BOOLEAN_FORMS: tuple[str, ...] = ("--debug", "--debug=true")
+_NON_GLOBAL_ARGS: tuple[tuple[str, ...], ...] = (
+    ("issue", "list"),
+    ("auth", "login"),
+    ("--token", "raw-token"),
+    ("config", "set", "setting.key", "setting-value"),
+)
+
+
+@dataclass(frozen=True)
+class NormalizeGlobalCase:
+    id: str
+    argv: tuple[str, ...]
+    expected: tuple[str, ...]
+
+
+def _global_option_argv(form: str, option: str, value: str) -> tuple[str, ...]:
+    if form == "split":
+        return (option, value)
+    return (f"{option}={value}",)
+
+
+_NORMALIZE_GLOBAL_CASES: tuple[NormalizeGlobalCase, ...] = (
+    *(
+        NormalizeGlobalCase(
+            id=f"strips-bare-{option.lstrip('-')}-{form}",
+            argv=_global_option_argv(form, option, value),
+            expected=(),
+        )
+        for option, value in _GLOBAL_VALUE_OPTIONS
+        for form in ("split", "equals")
+    ),
+    *(
+        NormalizeGlobalCase(
+            id=f"strips-leading-{option.lstrip('-')}-{form}",
+            argv=("issue", *_global_option_argv(form, option, value)),
+            expected=("issue",),
+        )
+        for option, value in _GLOBAL_VALUE_OPTIONS
+        for form in ("split", "equals")
+    ),
+    *(
+        NormalizeGlobalCase(
+            id=f"strips-bare-boolean-{flag.lstrip('-')}",
+            argv=(flag,),
+            expected=(),
+        )
+        for flag in _GLOBAL_BOOLEAN_FORMS
+    ),
+    *(
+        NormalizeGlobalCase(
+            id=f"strips-leading-boolean-{flag.lstrip('-')}",
+            argv=("issue", flag),
+            expected=("issue",),
+        )
+        for flag in _GLOBAL_BOOLEAN_FORMS
+    ),
+    *(
+        NormalizeGlobalCase(
+            id=f"preserves-nonglobal-{nonglobal_id}-with-{option.lstrip('-')}-{form}",
+            argv=(*_global_option_argv(form, option, value), *nonglobal),
+            expected=nonglobal,
+        )
+        for nonglobal_id, nonglobal in enumerate(_NON_GLOBAL_ARGS)
+        for option, value in _GLOBAL_VALUE_OPTIONS
+        for form in ("split", "equals")
+    ),
+    NormalizeGlobalCase("dangling-server-url", ("--server-url",), ()),
+    NormalizeGlobalCase("dangling-profile", ("--profile",), ()),
+    NormalizeGlobalCase("dangling-workspace-id", ("--workspace-id",), ()),
+    NormalizeGlobalCase(
+        "dangling-global-consumes-following-option-as-value",
+        ("--server-url", "--debug"),
+        (),
+    ),
+    NormalizeGlobalCase(
+        "dangling-global-consumes-following-nonglobal-as-value",
+        ("--server-url", "issue", "list"),
+        ("list",),
+    ),
+    NormalizeGlobalCase(
+        "interleaved-globals-and-nonglobals",
+        ("--profile", "p1", "issue", "list", "--workspace-id=ws1", "--debug", "auth", "status"),
+        ("issue", "list", "auth", "status"),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _NORMALIZE_GLOBAL_CASES, ids=lambda case: case.id)
+def test_normalize_global_args_strips_global_options(case: NormalizeGlobalCase) -> None:
+    assert normalize_global_args(case.argv) == case.expected
+
+
+@pytest.mark.parametrize("case", _NORMALIZE_GLOBAL_CASES, ids=lambda case: case.id)
+def test_normalize_global_args_is_idempotent(case: NormalizeGlobalCase) -> None:
+    once = normalize_global_args(case.argv)
+    assert normalize_global_args(once) == once
+
+
+@pytest.mark.parametrize(
+    ("option", "value"),
+    _GLOBAL_VALUE_OPTIONS,
+    ids=[option.lstrip("-") for option, _value in _GLOBAL_VALUE_OPTIONS],
+)
+def test_normalize_global_args_treats_split_and_equals_forms_as_equivalent(
+    option: str, value: str
+) -> None:
+    assert (
+        normalize_global_args(("issue", option, value, "auth", "status"))
+        == normalize_global_args(("issue", f"{option}={value}", "auth", "status"))
+        == ("issue", "auth", "status")
+    )
+
+
+@pytest.mark.parametrize("case", RAW_CLI_SECRET_CASES, ids=lambda case: case.name)
+def test_redaction_is_idempotent(case: RawCliSecretCase) -> None:
+    redacted_argv = redact_argv(("multica", *case.argv))
+    redacted_text = redact_text(f"prefix {case.secret} suffix", secret_values=(case.secret,))
+    assert redact_argv(redacted_argv) == redacted_argv
+    assert redact_text(redacted_text, secret_values=(case.secret,)) == redacted_text
+
+
+@pytest.mark.parametrize("case", RAW_CLI_SECRET_CASES, ids=lambda case: case.name)
+def test_redaction_preserves_non_secret_arguments(case: RawCliSecretCase) -> None:
+    argv = ("multica", *case.argv)
+    secret_values = collect_secret_values(argv)
+    redacted = redact_argv(argv)
+
+    assert len(redacted) == len(argv)
+    for original, rewritten in zip(argv, redacted, strict=True):
+        assert original == rewritten or any(secret in original for secret in secret_values)
