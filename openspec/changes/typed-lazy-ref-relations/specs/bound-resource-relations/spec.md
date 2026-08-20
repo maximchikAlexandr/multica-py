@@ -9,12 +9,14 @@ parallelism through the shared process semaphore. The selector MAY return a
 or `LazyRef`. Collection and mapping behavior remains keyed by handle identity;
 singular references additionally coalesce equal originating-scope, target-type,
 and target-ID keys within that invocation and publish independent target
-wrappers to each handle. One private helper MUST define originating scope from
-the effective normalized executable, server URL, profile, workspace ID, cwd,
-sorted environment, timeout, debug, encoding, compatibility policy, minimum
-and maximum CLI versions, plus executor and process-semaphore identities; every
-component MUST match. Display-only app URL/workspace slug are excluded, and the
-actual semaphore identity represents the process limit.
+wrappers to each handle. One private helper MUST define singular coalescing
+scope from the effective normalized executable, server URL, profile, workspace
+ID, cwd, execution-ordered `tuple(config.environment)`, timeout, debug,
+encoding, compatibility policy, minimum and maximum CLI versions, plus executor
+and process-semaphore identities. Equal singular keys coalesce only when every
+component matches; other full scopes produce distinct jobs. Display-only app
+URL/workspace slug are excluded, and actual semaphore identity represents the
+process limit. Environment order and duplicates MUST be preserved.
 
 #### Scenario: Prefetch does not fake server batching
 - **WHEN** the CLI has no multi-parent or multi-ID filter
@@ -29,12 +31,16 @@ actual semaphore identity represents the process limit.
 - **THEN** no more than `N` relation loaders and no more than the runtime process limit execute concurrently
 
 #### Scenario: Prefetch validates before I/O
-- **WHEN** `max_parallel < 1`, entities have mixed origin scopes, or the selector yields an unsupported lazy object
+- **WHEN** `max_parallel < 1`, an entity originates from a different process-semaphore object, or the selector yields an unsupported lazy object
 - **THEN** `ValueError` is raised before transport access
 
-#### Scenario: Client views define exact prefetch scope
-- **WHEN** client views differ in executable, server, profile, workspace, cwd, environment, timeout, debug, encoding, compatibility/min/max policy, executor, or process semaphore
-- **THEN** they are mixed origin scopes and validation raises before I/O; distinct client objects whose complete normalized scope components match may coalesce equal singular target keys while retaining each destination's client object
+#### Scenario: Shared semaphore admits derived views
+- **WHEN** root and derived client views have different workspace or other config but share the invoking client's process semaphore
+- **THEN** the invocation is admitted; collection/mapping handles retain identity-only jobs, and equal singular targets with different full scopes run as separate bounded jobs
+
+#### Scenario: Full singular scope controls only coalescing
+- **WHEN** admitted singular references have equal target type and ID
+- **THEN** fully equal execution/decode scopes coalesce, differing scopes (including reversed duplicate environment tuples) run separate lookups, and every destination retains its own client object
 
 #### Scenario: Prefetch failure is fail-fast
 - **WHEN** one loader fails
