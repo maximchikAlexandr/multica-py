@@ -13,13 +13,13 @@ from multica_py._internal.commands import (
     _result_field_argument,
     _sequential_command,
 )
+from multica_py.entities._base import _BoundEntity
 from multica_py.exceptions import UnloadedReferenceError
 from multica_py.models.issue_activity import CommentCursor
 from multica_py.models.issues import IssueChildStageGroup
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
-    from multica_py.entities._base import _BoundEntity
     from multica_py.entities.issues import Issue
 
 T_co = TypeVar("T_co", covariant=True)
@@ -361,8 +361,10 @@ class LazyRef(Generic[T_co]):
         return self._generation_state.run_reserved(generation, self._command().run)
 
     def _prefetch_publish(self, generation: int, value: object) -> bool:
-        client = cast("MulticaClient | None", self._origin_client)
-        published = cast("_BoundEntity", value)._clone_for_client(client)
+        published = value
+        if isinstance(value, _BoundEntity):
+            client = cast("MulticaClient | None", self._origin_client)
+            published = value._clone_for_client(client)
         return self._generation_state.publish_reserved(generation, cast("T_co", published))
 
     def _prefetch_fail(self, generation: int, error: Exception) -> bool:

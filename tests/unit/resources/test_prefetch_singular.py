@@ -81,6 +81,26 @@ def test_prefetch_deduplicates_repeated_singular_destination_handle() -> None:
         client.close()
 
 
+def test_prefetch_publishes_ordinary_lazy_ref_value_without_bound_clone() -> None:
+    client = MulticaClient(ClientConfig())
+    source = issue_factory(client, "source-raw")
+    calls = MagicMock()
+    calls.return_value = client.issues._plan(steps=(), finalize=lambda _results: "raw-value")
+    reference = LazyRef[str](
+        command_loader=calls,
+        _prefetch_target=lambda: ("Raw", "raw-1"),
+        _origin_client=client,
+    )
+
+    try:
+        client.prefetch((source,), lambda _issue: reference)
+
+        assert reference.value == "raw-value"
+        calls.assert_called_once_with()
+    finally:
+        client.close()
+
+
 def _run_secondary_load_race() -> None:
     root = MulticaClient(ClientConfig())
     secondary = root.with_options()

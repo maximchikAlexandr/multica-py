@@ -182,6 +182,7 @@ class MulticaClient:
         jobs: list[tuple[int, Callable[[], object]]] = []
         job_specs: list[LazyLoadable[object] | list[LazyRef[object]]] = []
         collection_ids: set[int] = set()
+        singular_jobs: dict[tuple[object, ...], list[LazyRef[object]]] = {}
         for entity in entity_values:
             origin = entity._client
             semaphore = cast("object | None", getattr(origin, "_semaphore", None))
@@ -195,13 +196,13 @@ class MulticaClient:
             if isinstance(selected, LazyRef):
                 singular = selected
                 key = singular._prefetch_key()
-                for spec in job_specs:
-                    if isinstance(spec, list) and spec[0]._prefetch_key() == key:
-                        if not any(destination is singular for destination in spec):
-                            spec.append(singular)
-                        break
-                else:
-                    job_specs.append([singular])
+                destinations = singular_jobs.get(key)
+                if destinations is None:
+                    destinations = [singular]
+                    singular_jobs[key] = destinations
+                    job_specs.append(destinations)
+                elif not any(destination is singular for destination in destinations):
+                    destinations.append(singular)
                 continue
             relation = cast("LazyLoadable[object]", selected)
             relation_id = id(relation)
