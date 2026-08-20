@@ -19,6 +19,14 @@ The SDK SHALL expose async counterparts for every public I/O-bound resource meth
 - **WHEN** a consumer awaits an async resource call with input rejected by its synchronous command builder
 - **THEN** the same validation error is raised and no transport or executor I/O starts
 
+#### Scenario: Merged v0.4.28 resource surface is complete
+- **WHEN** async resource discovery runs against the merged public/command inventory
+- **THEN** it includes Plugin, Property, Agent MCP, Workspace MCP, Issue Property, and Skill refresh/search eager methods; excludes removed issue deprioritize and workspace watch/unwatch methods; and preserves the no-key `configuration.get()` signature and result
+
+#### Scenario: Sensitive and filesystem operations retain execution evidence
+- **WHEN** plugin/filesystem operations or MCP/configuration operations with credential, stdin, or file inputs execute through sync and async siblings
+- **THEN** canonical table-driven cases assert identical complete command plans, validation, redaction, staging ownership, cleanup, typed results, errors, and subprocess counts
+
 ### Requirement: Async client lifecycle and prefetch
 `MulticaClient` SHALL support `async with` and an awaitable `close_async()` that preserve the existing close behavior without blocking the event loop. The client SHALL expose `prefetch_async()` with the same relation selection, origin validation, deduplication, cache effects, and `None` return contract as `prefetch()`. It SHALL limit started relation jobs to the call's `max_parallel` value while every underlying executor call remains subject to the client's shared process semaphore. After any job fails, it SHALL prevent jobs not yet started from starting, await every already-started job through completion and cleanup, and then raise the captured failure with the smallest deduplicated input-job index.
 

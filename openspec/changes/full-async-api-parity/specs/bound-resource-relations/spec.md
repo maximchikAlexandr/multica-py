@@ -11,6 +11,10 @@ Every public bound entity action that performs I/O SHALL expose a sibling named 
 - **WHEN** an async action is requested from an entity without required client context
 - **THEN** the same typed validation or relation-context error is raised before transport I/O
 
+#### Scenario: Bound MCP actions retain cache invalidation
+- **WHEN** sync or async Agent MCP add/enable/disable/remove or Workspace MCP add/update/remove succeeds
+- **THEN** both styles use the same command, result binding, validation, secret redaction, and invalidation of the originating entity's `mcp_servers` relation
+
 ### Requirement: Direct run message sibling pair
 `TaskRun` and `AutopilotRun` SHALL retain the backward-compatible `.messages` lazy-relation property and existing `messages_command()` command builder. Each SHALL additionally expose `list_messages()` and `list_messages_async()` as a direct synchronous/asynchronous sibling pair over `messages_command()`. The pair SHALL accept the same operation options, return the same `tuple[RunMessage, ...]`, and preserve identical client binding, detached or missing-task-context validation, transport errors, and `.messages` cache effects. Direct listing SHALL NOT implicitly mark, replace, or invalidate the `.messages` relation cache.
 
@@ -56,3 +60,7 @@ Every public bound entity action that performs I/O SHALL expose a sibling named 
 #### Scenario: Both relation execution paths retain parity
 - **WHEN** the same all, refresh, cache-hit, loader failure/retry, or pagination-guard case is exercised on command-backed and loader-only fixtures
 - **THEN** each async operation matches its corresponding synchronous result, exception, bounded loader or transport call count, generation, metadata, and cache state
+
+#### Scenario: New v0.4.28 relations are included
+- **WHEN** async relation inventory and table-driven cases discover Workspace, Agent, and Issue relations
+- **THEN** Workspace plugins/properties/mcp_servers, Agent mcp_servers, and Issue properties are covered alongside the pre-existing relations with identical command, binding, cache, invalidation, and error semantics

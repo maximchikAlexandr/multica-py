@@ -2,7 +2,7 @@
 
 The SDK currently has a synchronous `MulticaClient`, synchronous resource/entity methods, synchronous lazy relations, and three executor backends. All CLI-backed public operations already converge on immutable `Command[T]` plans: eager methods call `<method>_command(...).run()`, plans snapshot configuration, and transport owns compatibility checks, process limits, decoding, redaction, and typed error classification. `ManagedProcess` separately owns long-running process collection and cleanup.
 
-Async parity crosses most public modules, but the actual execution seam is narrow. The design must keep command preview authoritative, preserve 163 canonical operations and their signatures, work with every installed executor, avoid public `Any`, and add no dependency or second object model.
+Async parity crosses most public modules, but the actual execution seam is narrow. The merged v0.4.28 tree has a synchronous canonical inventory of 194 public methods and 321 operation cases. The design must keep that inventory, command preview, approved upstream contract/descriptors, and `[0.4.28, 0.4.29)` compatibility interval unchanged; derive async coverage separately; work with every installed executor; avoid public `Any`; and add no dependency or second object model.
 
 ## Goals / Non-Goals
 
@@ -11,7 +11,7 @@ Async parity crosses most public modules, but the actual execution seam is narro
 - Make all public I/O-bound resource and entity operations naturally awaitable with matching arguments, results, validation, cache effects, and errors.
 - Keep the event-loop thread responsive and permit standard `asyncio.gather()` composition while retaining the configured process bound.
 - Reuse one `Command`, transport, executor protocol, model set, exception hierarchy, and relation cache.
-- Provide awaitable buffered lifecycle operations for `ManagedProcess`.
+- Provide awaitable I/O lifecycle operations for `ManagedProcess`, including provider-backed polling.
 - Make completeness mechanically discoverable rather than maintaining a handwritten exception list.
 
 **Non-Goals:**
@@ -35,6 +35,8 @@ Async siblings are structurally uniform, but this repository's public resource a
 
 Runtime `__getattr__`, decorators that erase signatures, and dynamic monkey-patching are rejected: they save lines but weaken IDE discovery, overload precision, and closed-surface verification.
 
+The discovery source is the actual merged public eager/command surface, not a frozen module list. It includes `resources/plugins.py`, `properties.py`, `agent_mcp.py`, `workspace_mcp.py`, `issue_properties.py`, `skills.refresh/search`, bound MCP actions in `entities/agents.py` and `entities/workspaces.py`, and Workspace/Issue/Agent relations R34–R38. Removed `issues.deprioritize` and `workspaces.watch/unwatch` remain absent; `configuration.get()` keeps its v0.4.28 no-key compatibility-alias signature. The existing sync canonical consumer and its 194/321 assertions remain untouched. A separate async parity consumer derives eager siblings and explicit relation/client/process declarations without adding `_async` entrypoints to `contracts/sdk-contract.json` or generated approved descriptors.
+
 `TaskRun` and `AutopilotRun` are the explicit naming collision: their backward-compatible `.messages` property is a `LazyCollection`, while `messages_command()` is already the direct command form. Add `list_messages()` and `list_messages_async()` as the sync/async eager sibling pair over that command. Both accept the same `options`, return the same typed message tuple, preserve detached/missing-task validation and binding, and leave `.messages` cache state unchanged; relation loading remains available through `.messages.all()` / `.messages.all_async()`. The closed inventory declares this pair directly instead of inventing `messages_async()` without a synchronous sibling.
 
 ### Keep cancellation honest and backend-neutral
@@ -51,17 +53,17 @@ For command-backed relations, `all_async`, `refresh_async`, and paged `page_asyn
 
 ### Coordinate all process lifecycle I/O across sync and async callers
 
-Add one thread-safe lifecycle coordinator owned by each `ManagedProcess`, and route both existing synchronous methods and new async delegates through it. Its mutex protects only short state transitions and publication: output ownership, `open`/`collecting`/`closing`/`finalized` state, one collection owner, cached result or collection failure, and exactly-once handle finalization/semaphore release. No blocking provider `collect`, `wait`, `terminate`, or `kill` call runs while that mutex is held.
+Add one thread-safe lifecycle coordinator owned by each `ManagedProcess`, and route both existing synchronous methods and new async delegates through it. Its mutex protects only short state transitions and publication: buffered/streaming ownership, active stdout/stderr stream membership, `open`/`collecting`/`closing`/`finalized` state, one collection owner, cached result or collection failure, and exactly-once finalization. Finalization performs `handle.close`, the optional cleanup callback, and semaphore release exactly once even when close or cleanup raises. No blocking provider `poll`, `collect`, `wait`, `terminate`, `kill`, or cleanup callback runs while that mutex is held.
 
 The first buffered result caller atomically claims output and collection ownership, then performs `collect` outside the mutex. Other result callers wait on the coordinator condition and reuse its published result or failure. If terminate or kill overlaps collection, its provider signal executes outside the mutex and may unblock the collector; it does not take collection ownership or consume output. If close overlaps an owned collection, close atomically moves to `closing`, sends terminate outside the mutex, waits on the coordinator condition for the existing cleanup grace period, sends kill outside the mutex if the collector is still blocked, and waits for that owner to publish; it never starts a competing provider wait or collection. The collection owner publishes its normal post-signal `ProcessResult` or existing collection failure, and the winning finalizer closes/releases once. If close claims an open process before any result caller claims buffered output, it discards output and owns the existing terminate-wait-kill cleanup; a later result call observes the existing discarded-output `ProcessOutputModeError` without provider collection. Thus the linearization order yields one explicit result-or-closed outcome and control operations can advance a blocked collection without lock inversion.
 
-A started collection or cleanup retains coordinator ownership if its async awaiter is cancelled, after which later callers observe the same published result, failure, or discarded closed state. `wait_async`, `result_async`, `terminate_async`, `kill_async`, and `close_async` offload the corresponding coordinated synchronous lifecycle operation, including microsandbox provider I/O. `__aenter__` returns the same process and `__aexit__` awaits close.
+A started collection or cleanup retains coordinator ownership if its async awaiter is cancelled, after which later callers observe the same published result, failure, or discarded closed state. `poll_async`, `wait_async`, `result_async`, `terminate_async`, `kill_async`, and `close_async` offload the corresponding coordinated synchronous lifecycle operation, including remote provider I/O and cleanup. Poll may record exit but finalization waits until both active stdout and stderr iterators have left the coordinator; closing or one stream ending cannot finalize resources still owned by the other stream. `__aenter__` returns the same process and `__aexit__` awaits close.
 
 The existing `stdout_lines()` and `stderr_lines()` iterators remain synchronous. Turning iterators into async iterators requires queueing, cross-thread generator ownership, and cancellation policy that is separate from the issue's awaitable operation requirement; consumers needing incremental streaming can continue to dedicate a worker or use buffered `result_async()`.
 
 ### Verify parity by extending existing inventories
 
-Canonical operation cases already prove exact transport behavior and command previews. Extend those tables/tests to invoke async siblings against the same expected rows rather than creating a parallel fixture corpus. Add small deterministic focused tests for event-loop progress, gather, cancellation, mixed sync/async relation coalescing, and process lifecycle. Documentation and public-symbol contract tests cover the additive surface.
+The existing `OPERATION_CASES`, `discover_public_methods`, canonical consumer, and shared resource execution fixtures remain the source for synchronous transport evidence and stay green at 194 canonical methods / 321 cases. A separate derived async parity gate reuses those rows and fixtures to invoke async siblings, plus explicit bound/relation/client/process declarations; it has no missing-method allowlist and does not mutate the approved upstream contract. This covers new plugin/filesystem, Property/MCP/issue-property, Skill refresh/search, credential/config stdin/file, redaction, staging/cleanup, binding, and cache-invalidation paths. Add small deterministic focused tests for event-loop progress, gather, cancellation, mixed sync/async relation coalescing, and process lifecycle.
 
 ## Risks / Trade-offs
 

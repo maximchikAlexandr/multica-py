@@ -46,7 +46,11 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 - **THEN** it raises `asyncio.CancelledError`, does not translate cancellation into a Multica exception, and documentation states that the underlying executor operation may continue until completion or timeout
 
 ### Requirement: Awaitable managed process lifecycle
-`ManagedProcess` SHALL expose async counterparts for every lifecycle operation that can perform process-provider I/O: `wait_async()`, `result_async()`, `terminate_async()`, `kill_async()`, and `close_async()`. It SHALL support `async with` by delegating asynchronous exit to `close_async()`. Synchronous and asynchronous lifecycle paths SHALL use one thread-safe per-process lifecycle coordinator. Its mutex SHALL serialize only state transitions, output and collection ownership, result-or-failure publication, close state, handle finalization, and semaphore release; it SHALL NOT be held during blocking provider `collect`, `wait`, `terminate`, or `kill` I/O. A control or close path SHALL therefore be able to signal and advance an active blocked collection without waiting for that collection while holding the mutex. Concurrent result, close, terminate, kill, and cancellation paths SHALL preserve timeout and cached-result behavior and SHALL finalize the handle and release the semaphore exactly once. Synchronous streaming iterators SHALL remain unchanged in this change.
+`ManagedProcess` SHALL expose async counterparts for every lifecycle operation that can perform process-provider I/O: `poll_async()`, `wait_async()`, `result_async()`, `terminate_async()`, `kill_async()`, and `close_async()`. It SHALL support `async with` by delegating asynchronous exit to `close_async()`. Synchronous and asynchronous lifecycle paths SHALL use one thread-safe per-process lifecycle coordinator. Its mutex SHALL serialize only state transitions, buffered/streaming and collection ownership, active stdout/stderr stream membership, result-or-failure publication, close state, and exactly-once finalization; it SHALL NOT be held during provider `poll`, `collect`, `wait`, `terminate`, or `kill` I/O or the cleanup callback. A control, poll, or close path SHALL therefore progress without holding the mutex across provider work. Finalization SHALL call the handle close, optional cleanup callback, and semaphore release exactly once, including exception paths, and SHALL NOT occur while either stdout or stderr stream remains active. Synchronous streaming iterators SHALL remain unchanged in this change.
+
+#### Scenario: Process poll is awaited
+- **WHEN** a consumer awaits `process.poll_async()` while provider poll I/O is blocked
+- **THEN** another event-loop task progresses, the resolved exit code matches `poll()`, and a completed streaming process finalizes only after both active output streams have ended
 
 #### Scenario: Process result is awaited
 - **WHEN** a consumer awaits `process.result_async(timeout)`
@@ -79,3 +83,11 @@ Independent async SDK calls SHALL compose with `asyncio.gather()` and SHALL reta
 #### Scenario: Cancellation does not corrupt lifecycle state
 - **WHEN** a task awaiting a started managed-process lifecycle operation is cancelled while another sync or async lifecycle caller proceeds
 - **THEN** cancellation reaches that awaiter unchanged, the started coordinator operation completes safely, and later callers observe one consistent result-or-closed state with exactly-once finalization
+
+#### Scenario: Active streams delay lifecycle finalization
+- **WHEN** deterministic barriers overlap active stdout and stderr iterators with sync or async poll, close, result, terminate, or kill
+- **THEN** output ownership remains streaming, provider operations run without the state mutex, neither handle close nor cleanup nor semaphore release occurs until both streams end, and each finalization side effect occurs once
+
+#### Scenario: Cleanup failure still releases once
+- **WHEN** handle close or the cleanup callback raises during any sync or async finalization path
+- **THEN** the existing exception behavior is preserved, remaining finalization steps run once, and later lifecycle calls do not repeat handle close, cleanup, or semaphore release
