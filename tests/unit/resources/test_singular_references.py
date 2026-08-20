@@ -19,6 +19,7 @@ from multica_py.entities.squads import Squad
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.models.issues import IssueAssignee
 from multica_py.models.relations import LazyRef
+from tests.unit.resources._factories import bound_entity_factory
 
 
 @dataclass(frozen=True)
@@ -255,31 +256,6 @@ GOVERNED_REFERENCE_CASES = (
 )
 
 
-def _target(case: GovernedReferenceCase, client: MulticaClient) -> _BoundEntity:
-    if case.target_type is Issue:
-        return Issue(id=case.target_id, title="Target", status=IssueStatus.todo, _client=client)
-    if case.target_type is Project:
-        return Project(
-            id=case.target_id, name="Target", status=ProjectStatus.planned, _client=client
-        )
-    if case.target_type is Agent:
-        return Agent(id=case.target_id, name="Target", _client=client)
-    if case.target_type is Squad:
-        return Squad(id=case.target_id, name="Target", _client=client)
-    return Autopilot(
-        id=case.target_id,
-        workspace_id="workspace-1",
-        title="Target",
-        assignee_type="agent",
-        assignee_id="agent-1",
-        status="active",
-        execution_mode="manual",
-        created_by_type="member",
-        created_by_id="member-1",
-        _client=client,
-    )
-
-
 @pytest.mark.parametrize("case", GOVERNED_REFERENCE_CASES, ids=lambda case: case.name)
 def test_governed_dispatch_inventory_is_typed_passive_and_bound(
     case: GovernedReferenceCase,
@@ -298,7 +274,7 @@ def test_governed_dispatch_inventory_is_typed_passive_and_bound(
     assert reference.get_command().commands == (" ".join(case.expected_argv),)
     assert transport.run_bytes.call_count == 0
 
-    target = _target(case, client)
+    target = bound_entity_factory(client, case.target_type, case.target_id)
     service = getattr(client, case.service)
     service.get_command = MagicMock(
         return_value=client.issues._plan(steps=(), finalize=lambda _results: target)

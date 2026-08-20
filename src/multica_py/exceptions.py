@@ -152,11 +152,6 @@ class UnloadedReferenceError(RelationError):
         self.entity_type = entity_type
         self.entity_id = entity_id
         self.relation_name = relation_name
-        self.source_type = entity_type
-        self.source_id = entity_id
-        self.reference_name = relation_name
-        self.source = entity_type
-        self.reference = relation_name
 
 
 class UnsupportedReferenceTargetError(RelationError):
@@ -178,11 +173,6 @@ class UnsupportedReferenceTargetError(RelationError):
         self.relation_name = relation_name
         self.discriminator = discriminator
         self.value = value
-        self.source_type = entity_type
-        self.source_id = entity_id
-        self.reference_name = relation_name
-        self.source = entity_type
-        self.reference = relation_name
 
 
 class RelationPaginationError(RelationError):

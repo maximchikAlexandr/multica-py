@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import threading
 import types
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -17,41 +17,28 @@ from multica_py.enums import CompatibilityPolicy, IssueStatus
 from multica_py.exceptions import MissingRelationContextError
 from multica_py.execution import LocalExecutor
 from multica_py.models.relations import LazyCollection, LazyMapping, LazyRef
-
-
-def _issue(client: MulticaClient, issue_id: str, parent_id: str | None = "parent-1") -> Issue:
-    presence = () if parent_id is not None else (("parent_id", "null"),)
-    return Issue(
-        id=issue_id,
-        title="Source",
-        status=IssueStatus.todo,
-        parent_id=parent_id,
-        _wire_presence=presence,
-        _client=client,
-    )
-
-
-def _target(client: MulticaClient, title: str) -> Issue:
-    return Issue(id="parent-1", title=title, status=IssueStatus.todo, _client=client)
+from tests.unit.resources._factories import bound_entity_factory, issue_factory
 
 
 def test_prefetch_coalesces_equal_scopes_and_rebinds_independent_targets() -> None:
+    make_issue = issue_factory
+    make_target = bound_entity_factory
     client = MulticaClient(ClientConfig())
     derived = client.with_options()
     calls = MagicMock()
-    target = _target(client, "Target")
+    target = make_target(client, title="Target")
     calls.side_effect = lambda _issue_id: client.issues._plan(
         steps=(), finalize=lambda _results: target
     )
     client.issues.get_command = calls  # type: ignore[method-assign]
 
-    first = _issue(client, "source-1")
-    second = _issue(derived, "source-2")
+    first = make_issue(client, "source-1")
+    second = make_issue(derived, "source-2")
     first_ref = first.parent
     second_ref = second.parent
 
     try:
-        client.prefetch((first, second), lambda issue: issue.parent, max_parallel=2)  # type: ignore[type-var]
+        client.prefetch((first, second), lambda issue: issue.parent, max_parallel=2)
 
         assert calls.call_count == 1
         first_target = first_ref.value
@@ -72,23 +59,193 @@ def test_prefetch_coalesces_equal_scopes_and_rebinds_independent_targets() -> No
 
 
 def test_prefetch_deduplicates_repeated_singular_destination_handle() -> None:
+    make_issue = issue_factory
+    make_target = bound_entity_factory
     client = MulticaClient(ClientConfig())
     calls = MagicMock()
-    target = _target(client, "Target")
+    target = make_target(client, title="Target")
     calls.return_value = client.issues._plan(steps=(), finalize=lambda _results: target)
     client.issues.get_command = calls  # type: ignore[method-assign]
-    source = _issue(client, "source-1")
+    source = make_issue(client, "source-1")
     reference = source.parent
     publish = MagicMock(wraps=reference._prefetch_publish)
     reference._prefetch_publish = publish  # type: ignore[method-assign]
 
     try:
-        client.prefetch((source, source), lambda _issue: reference, max_parallel=1)  # type: ignore[type-var]
+        client.prefetch((source, source), lambda _issue: reference, max_parallel=1)
 
         calls.assert_called_once_with("parent-1")
-        publish.assert_called_once_with(target)
+        publish.assert_called_once()
     finally:
         client.close()
+
+
+def test_prefetch_does_not_overwrite_secondary_load_that_won_the_race() -> None:
+    root = MulticaClient(ClientConfig())
+    secondary = root.with_options()
+    first = issue_factory(root, "first", parent_id="shared")
+    second = issue_factory(secondary, "second", parent_id="shared")
+    secondary_started = threading.Event()
+    release_secondary = threading.Event()
+    old_target = cast("Issue", bound_entity_factory(root, Issue, "shared", title="old"))
+    new_target = cast("Issue", bound_entity_factory(secondary, Issue, "shared", title="new"))
+
+    setattr(
+        root.issues,
+        "get_command",
+        MagicMock(return_value=root.issues._plan(steps=(), finalize=lambda _results: old_target)),
+    )
+
+    def secondary_command(_issue_id: str) -> object:
+        def finalize(_results: tuple[object, ...]) -> Issue:
+            secondary_started.set()
+            assert release_secondary.wait(timeout=2)
+            return new_target
+
+        return secondary.issues._plan(steps=(), finalize=finalize)
+
+    setattr(secondary.issues, "get_command", MagicMock(side_effect=secondary_command))
+    loading = threading.Thread(target=second.parent.get)
+    loading.start()
+    assert secondary_started.wait(timeout=2)
+
+    try:
+        root.prefetch((first, second), lambda issue: issue.parent, max_parallel=1)
+        assert first.parent.value is not old_target
+        first_value = first.parent.value
+        assert first_value is not None
+        assert first_value.title == old_target.title
+        assert second.parent.loaded is False
+    finally:
+        release_secondary.set()
+        loading.join(timeout=2)
+        secondary.close()
+        root.close()
+
+    assert not loading.is_alive()
+    assert second.parent.value is new_target
+
+
+def test_prefetch_does_not_overwrite_secondary_refresh_that_won_the_race() -> None:
+    root = MulticaClient(ClientConfig())
+    secondary = root.with_options()
+    first = issue_factory(root, "first", parent_id="shared")
+    second = issue_factory(secondary, "second", parent_id="shared")
+    old_target = cast("Issue", bound_entity_factory(secondary, Issue, "shared", title="old"))
+    new_target = cast("Issue", bound_entity_factory(secondary, Issue, "shared", title="new"))
+    refresh_started = threading.Event()
+    release_refresh = threading.Event()
+    calls = 0
+
+    def secondary_command(_issue_id: str) -> object:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return secondary.issues._plan(steps=(), finalize=lambda _results: old_target)
+
+        def finalize(_results: tuple[object, ...]) -> Issue:
+            refresh_started.set()
+            assert release_refresh.wait(timeout=2)
+            return new_target
+
+        return secondary.issues._plan(steps=(), finalize=finalize)
+
+    setattr(secondary.issues, "get_command", MagicMock(side_effect=secondary_command))
+    setattr(
+        root.issues,
+        "get_command",
+        MagicMock(
+            return_value=root.issues._plan(
+                steps=(),
+                finalize=lambda _results: cast(
+                    "Issue", bound_entity_factory(root, Issue, "shared")
+                ),
+            )
+        ),
+    )
+    assert second.parent.get() is old_target
+    second.parent.invalidate()
+    first_selected = threading.Event()
+    continue_selection = threading.Event()
+
+    def selector(issue: Issue) -> LazyRef[Issue | None]:
+        if issue is first:
+            first_selected.set()
+            assert continue_selection.wait(timeout=2)
+        return issue.parent
+
+    prefetching = threading.Thread(
+        target=lambda: root.prefetch((first, second), selector, max_parallel=1)
+    )
+    prefetching.start()
+    assert first_selected.wait(timeout=2)
+    refreshing = threading.Thread(target=second.parent.refresh)
+    refreshing.start()
+    assert refresh_started.wait(timeout=2)
+
+    try:
+        continue_selection.set()
+        prefetching.join(timeout=2)
+        assert first.parent.loaded
+        assert second.parent.loaded is False
+    finally:
+        release_refresh.set()
+        refreshing.join(timeout=2)
+        secondary.close()
+        root.close()
+
+    assert not prefetching.is_alive()
+    assert not refreshing.is_alive()
+    assert second.parent.value is new_target
+
+
+def test_prefetch_invalidation_wins_after_fanout_reservation() -> None:
+    root = MulticaClient(ClientConfig())
+    secondary = root.with_options()
+    first = issue_factory(root, "first", parent_id="shared")
+    second = issue_factory(secondary, "second", parent_id="shared")
+    primary_started = threading.Event()
+    release_primary = threading.Event()
+    invalidation_done = threading.Event()
+    target = cast("Issue", bound_entity_factory(root, Issue, "shared"))
+
+    def primary_command(_issue_id: str) -> object:
+        def finalize(_results: tuple[object, ...]) -> Issue:
+            primary_started.set()
+            assert release_primary.wait(timeout=2)
+            return target
+
+        return root.issues._plan(steps=(), finalize=finalize)
+
+    setattr(root.issues, "get_command", MagicMock(side_effect=primary_command))
+    secondary_get_command = MagicMock()
+    setattr(secondary.issues, "get_command", secondary_get_command)
+    prefetching = threading.Thread(
+        target=lambda: root.prefetch((first, second), lambda issue: issue.parent, max_parallel=1)
+    )
+    prefetching.start()
+    assert primary_started.wait(timeout=2)
+
+    def invalidate() -> None:
+        second.parent.invalidate()
+        invalidation_done.set()
+
+    invalidating = threading.Thread(target=invalidate)
+    invalidating.start()
+    assert invalidation_done.wait(timeout=0.05) is False
+    release_primary.set()
+
+    prefetching.join(timeout=2)
+    invalidating.join(timeout=2)
+    try:
+        assert not prefetching.is_alive()
+        assert not invalidating.is_alive()
+        assert first.parent.loaded
+        assert second.parent.loaded is False
+        secondary_get_command.assert_not_called()
+    finally:
+        secondary.close()
+        root.close()
 
 
 def test_prefetch_runs_equal_targets_in_different_profiles_separately() -> None:
@@ -97,18 +254,18 @@ def test_prefetch_runs_equal_targets_in_different_profiles_separately() -> None:
     first_calls = MagicMock()
     other_calls = MagicMock()
     first_calls.side_effect = lambda _issue_id: client.issues._plan(
-        steps=(), finalize=lambda _results: _target(client, "first")
+        steps=(), finalize=lambda _results: bound_entity_factory(client, title="first")
     )
     other_calls.side_effect = lambda _issue_id: other.issues._plan(
-        steps=(), finalize=lambda _results: _target(other, "other")
+        steps=(), finalize=lambda _results: bound_entity_factory(other, title="other")
     )
     client.issues.get_command = first_calls  # type: ignore[method-assign]
     other.issues.get_command = other_calls  # type: ignore[method-assign]
-    first = _issue(client, "source-1")
-    second = _issue(other, "source-2")
+    first = issue_factory(client, "source-1")
+    second = issue_factory(other, "source-2")
 
     try:
-        client.prefetch((first, second), lambda issue: issue.parent, max_parallel=2)  # type: ignore[type-var]
+        client.prefetch((first, second), lambda issue: issue.parent, max_parallel=2)
 
         assert first_calls.call_count == 1
         assert other_calls.call_count == 1
@@ -122,12 +279,12 @@ def test_prefetch_skips_explicit_null_singular_absence() -> None:
     client = MulticaClient(ClientConfig())
     calls = MagicMock()
     client.issues.get_command = calls  # type: ignore[method-assign]
-    issue = _issue(client, "source-1", parent_id=None)
+    issue = issue_factory(client, "source-1", parent_id=None)
 
     try:
         reference = issue.parent
         assert reference.loaded
-        client.prefetch((issue,), lambda value: value.parent)  # type: ignore[type-var]
+        client.prefetch((issue,), lambda value: value.parent)
         assert reference.value is None
         calls.assert_not_called()
     finally:
@@ -192,7 +349,7 @@ def test_prefetch_separates_every_non_semaphore_scope_component() -> None:
     base_config = ClientConfig(environment=(("X", "a"), ("X", "b")))
     root = MulticaClient(base_config)
     clients: list[MulticaClient] = [root]
-    sources = [_issue(root, "source-root")]
+    sources = [issue_factory(root, "source-root")]
     calls: list[MagicMock] = []
 
     for name, changes, separate_executor in _SCOPE_COMPONENTS:
@@ -200,9 +357,9 @@ def test_prefetch_separates_every_non_semaphore_scope_component() -> None:
         executor = LocalExecutor() if separate_executor else root._executor
         client = MulticaClient(config, executor=executor, _semaphore=root._semaphore)
         clients.append(client)
-        sources.append(_issue(client, f"source-{name}"))
+        sources.append(issue_factory(client, f"source-{name}"))
         calls_for_client = MagicMock()
-        target = _target(client, name)
+        target = bound_entity_factory(client, title=name)
         calls_for_client.side_effect = lambda _issue_id, target=target, client=client: (
             client.issues._plan(steps=(), finalize=lambda _results, target=target: target)
         )
@@ -210,7 +367,7 @@ def test_prefetch_separates_every_non_semaphore_scope_component() -> None:
         calls.append(calls_for_client)
 
     root_calls = MagicMock()
-    root_target = _target(root, "root")
+    root_target = bound_entity_factory(root, title="root")
     root_calls.side_effect = lambda _issue_id: root.issues._plan(
         steps=(), finalize=lambda _results: root_target
     )
@@ -218,7 +375,7 @@ def test_prefetch_separates_every_non_semaphore_scope_component() -> None:
     calls.insert(0, root_calls)
 
     try:
-        root.prefetch(tuple(sources), lambda issue: issue.parent, max_parallel=len(sources))  # type: ignore[type-var]
+        root.prefetch(tuple(sources), lambda issue: issue.parent, max_parallel=len(sources))
         assert [call.call_count for call in calls] == [1] * len(calls)
     finally:
         for client in reversed(clients[1:]):
@@ -230,9 +387,9 @@ def test_prefetch_rejects_foreign_semaphore_before_singular_io() -> None:
     root = MulticaClient(ClientConfig())
     derived = root.with_profile("derived")
     foreign = MulticaClient(ClientConfig())
-    first = _issue(root, "first")
-    second = _issue(derived, "second")
-    third = _issue(foreign, "third")
+    first = issue_factory(root, "first")
+    second = issue_factory(derived, "second")
+    third = issue_factory(foreign, "third")
     selected = 0
 
     def selector(issue: Issue) -> LazyRef[Issue | None]:
@@ -242,7 +399,7 @@ def test_prefetch_rejects_foreign_semaphore_before_singular_io() -> None:
 
     try:
         with pytest.raises(ValueError, match="origin"):
-            root.prefetch((first, second, third), selector)  # type: ignore[type-var]
+            root.prefetch((first, second, third), selector)
         assert selected == 2
         assert first.parent.loaded is False
         assert second.parent.loaded is False
@@ -250,6 +407,25 @@ def test_prefetch_rejects_foreign_semaphore_before_singular_io() -> None:
         foreign.close()
         derived.close()
         root.close()
+
+
+def test_prefetch_rejects_unknown_relation_before_reading_relation_state() -> None:
+    client = MulticaClient(ClientConfig())
+    issue = issue_factory(client, "source")
+
+    class UnsupportedRelation:
+        @property
+        def loaded(self) -> bool:
+            pytest.fail("unsupported relation state must not be read")
+
+        def all(self) -> object:
+            pytest.fail("unsupported relation must not be loaded")
+
+    try:
+        with pytest.raises(ValueError, match="LazyRef, LazyCollection, or LazyMapping"):
+            client.prefetch((issue,), lambda _issue: UnsupportedRelation())
+    finally:
+        client.close()
 
 
 def test_prefetch_keeps_collection_and_mapping_identity_dedup_for_all_inventory_rows() -> None:
@@ -376,11 +552,11 @@ def test_prefetch_fanout_preserves_nested_provenance_and_local_state(shape: str)
     secondary_get = MagicMock(side_effect=lambda issue_id: get_command(secondary, issue_id))
     root.issues.get_command = root_get  # type: ignore[method-assign]
     secondary.issues.get_command = secondary_get  # type: ignore[method-assign]
-    first = _issue(root, "first", parent_id="shared")
-    second = _issue(secondary, "second", parent_id="shared")
+    first = issue_factory(root, "first", parent_id="shared")
+    second = issue_factory(secondary, "second", parent_id="shared")
 
     try:
-        root.prefetch((first, second), lambda issue: issue.parent, max_parallel=2)  # type: ignore[type-var]
+        root.prefetch((first, second), lambda issue: issue.parent, max_parallel=2)
         first_target = first.parent.value
         second_target = second.parent.value
         assert first_target is not None
@@ -428,7 +604,7 @@ def test_prefetch_fanout_preserves_nested_provenance_and_local_state(shape: str)
 
 def test_prefetch_distinguishes_target_type_collision() -> None:
     root = MulticaClient(ClientConfig())
-    issue = _issue(root, "issue-source", parent_id="same-id")
+    issue = issue_factory(root, "issue-source", parent_id="same-id")
     project_source = Issue(
         id="project-source",
         title="Source",
@@ -436,8 +612,8 @@ def test_prefetch_distinguishes_target_type_collision() -> None:
         project_id="same-id",
         _client=root,
     )
-    issue_target = _target(root, "Issue target")
-    project_target = _target(root, "Project target")
+    issue_target = bound_entity_factory(root, title="Issue target")
+    project_target = bound_entity_factory(root, title="Project target")
     issue_get = MagicMock(
         return_value=root.issues._plan(steps=(), finalize=lambda _results: issue_target)
     )
@@ -450,7 +626,7 @@ def test_prefetch_distinguishes_target_type_collision() -> None:
     try:
         root.prefetch(
             (issue, project_source), lambda value: value.parent if value is issue else value.project
-        )  # type: ignore[type-var]
+        )
         assert issue_get.call_count == 1
         assert project_get.call_count == 1
         assert id(issue.parent.value) != id(project_source.project.value)
@@ -460,7 +636,7 @@ def test_prefetch_distinguishes_target_type_collision() -> None:
 
 def test_prefetch_retries_a_failed_singular_generation() -> None:
     root = MulticaClient(ClientConfig())
-    source = _issue(root, "source")
+    source = issue_factory(root, "source")
     calls: int = 0
 
     def command_for(_issue_id: str) -> object:
@@ -472,14 +648,16 @@ def test_prefetch_retries_a_failed_singular_generation() -> None:
                 raise RuntimeError("transient")
 
             return root.issues._plan(steps=(), finalize=fail)
-        return root.issues._plan(steps=(), finalize=lambda _results: _target(root, "retry"))
+        return root.issues._plan(
+            steps=(), finalize=lambda _results: bound_entity_factory(root, title="retry")
+        )
 
     root.issues.get_command = MagicMock(side_effect=command_for)  # type: ignore[method-assign]
     try:
         with pytest.raises(RuntimeError, match="transient"):
-            root.prefetch((source,), lambda value: value.parent)  # type: ignore[type-var]
+            root.prefetch((source,), lambda value: value.parent)
         assert source.parent.loaded is False
-        root.prefetch((source,), lambda value: value.parent)  # type: ignore[type-var]
+        root.prefetch((source,), lambda value: value.parent)
         retry_value = source.parent.value
         assert retry_value is not None
         assert retry_value.title == "retry"
@@ -491,7 +669,7 @@ def test_prefetch_retries_a_failed_singular_generation() -> None:
 def test_prefetch_respects_max_parallel_for_distinct_singular_jobs() -> None:
     root = MulticaClient(ClientConfig())
     clients = [root, root.with_profile("one"), root.with_profile("two")]
-    sources = [_issue(client, f"source-{index}") for index, client in enumerate(clients)]
+    sources = [issue_factory(client, f"source-{index}") for index, client in enumerate(clients)]
     lock = threading.Lock()
     release = threading.Event()
     active = 0
@@ -508,7 +686,7 @@ def test_prefetch_respects_max_parallel_for_distinct_singular_jobs() -> None:
             assert release.wait(timeout=2)
             with lock:
                 active -= 1
-            return _target(client, "bounded")
+            return cast("Issue", bound_entity_factory(client, title="bounded"))
 
         return client.issues._plan(steps=(), finalize=finalize)
 
@@ -518,7 +696,7 @@ def test_prefetch_respects_max_parallel_for_distinct_singular_jobs() -> None:
         )
 
     try:
-        root.prefetch(tuple(sources), lambda value: value.parent, max_parallel=2)  # type: ignore[type-var]
+        root.prefetch(tuple(sources), lambda value: value.parent, max_parallel=2)
         assert maximum == 2
     finally:
         for client in reversed(clients[1:]):

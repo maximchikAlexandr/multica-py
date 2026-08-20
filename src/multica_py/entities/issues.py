@@ -81,13 +81,6 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             issue_id = self.issue_id
             client = cast("MulticaClient | None", self._client)
 
-            def load() -> Issue:
-                if not issue_id:
-                    raise MissingRelationContextError("TaskRun", self.id, "issue", "issue_id")
-                if client is None:
-                    raise DetachedEntityError("TaskRun", self.id, "issue")
-                return client.issues.get(issue_id)
-
             def command() -> Command[Issue]:
                 if not issue_id:
                     raise MissingRelationContextError("TaskRun", self.id, "issue", "issue_id")
@@ -98,7 +91,6 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_issue",
                 LazyRef(
-                    load,
                     command_loader=command,
                     _prefetch_target=lambda: ("Issue", issue_id),
                     _origin_client=client,
@@ -116,13 +108,6 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             client = cast("MulticaClient | None", self._client)
             presence = _reference_presence(self, "agent_id", agent_id)
 
-            def load() -> Agent | None:
-                if presence == "missing" or not agent_id:
-                    raise MissingRelationContextError("TaskRun", self.id, "agent", "agent_id")
-                if client is None:
-                    raise DetachedEntityError("TaskRun", self.id, "agent")
-                return client.agents.get(agent_id)
-
             def command() -> Command[Agent | None]:
                 if presence == "null" and agent_id is None:
                     return _cached_value_command(lambda: None)
@@ -135,7 +120,6 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_agent",
                 LazyRef(
-                    load,
                     command_loader=command,
                     initial=None if presence == "null" else _GENERATION_UNSET,
                     _prefetch_target=lambda: ("Agent", agent_id),
@@ -250,13 +234,6 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             client = cast("MulticaClient | None", self._client)
             presence = _reference_presence(self, "parent_id", parent_id)
 
-            def load() -> Issue | None:
-                if presence == "missing" or not parent_id:
-                    raise MissingRelationContextError("Issue", self.id, "parent", "parent_id")
-                if client is None:
-                    raise DetachedEntityError("Issue", self.id, "parent")
-                return client.issues.get(parent_id)
-
             def command() -> Command[Issue | None]:
                 if presence == "null" and parent_id is None:
                     return _cached_value_command(lambda: None)
@@ -269,7 +246,6 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_parent",
                 LazyRef(
-                    load,
                     command_loader=command,
                     initial=None if presence == "null" else _GENERATION_UNSET,
                     _prefetch_target=lambda: ("Issue", parent_id),
@@ -288,13 +264,6 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             client = cast("MulticaClient | None", self._client)
             presence = _reference_presence(self, "project_id", project_id)
 
-            def load() -> Project | None:
-                if presence == "missing" or not project_id:
-                    raise MissingRelationContextError("Issue", self.id, "project", "project_id")
-                if client is None:
-                    raise DetachedEntityError("Issue", self.id, "project")
-                return client.projects.get(project_id)
-
             def command() -> Command[Project | None]:
                 if presence == "null" and project_id is None:
                     return _cached_value_command(lambda: None)
@@ -307,7 +276,6 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_project",
                 LazyRef(
-                    load,
                     command_loader=command,
                     initial=None if presence == "null" else _GENERATION_UNSET,
                     _prefetch_target=lambda: ("Project", project_id),
@@ -341,23 +309,6 @@ class Issue(_BoundEntity):  # type: ignore[misc]
                     )
                 return assignee.type, assignee.id
 
-            def load() -> Agent | Squad | None:
-                if presence == "null" and assignee is None:
-                    return None
-                if presence == "missing" and assignee is None:
-                    raise MissingRelationContextError("Issue", self.id, "assignee_ref", "assignee")
-                resolved = target()
-                if resolved is None:
-                    raise MissingRelationContextError(
-                        "Issue", self.id, "assignee_ref", "assignee_type"
-                    )
-                discriminator, assignee_id = resolved
-                if client is None:
-                    raise DetachedEntityError("Issue", self.id, "assignee_ref")
-                if discriminator == "agent":
-                    return client.agents.get(assignee_id)
-                return client.squads.get(assignee_id)
-
             def command() -> Command[Agent | Squad | None]:
                 if presence == "null" and assignee is None:
                     return _cached_value_command(lambda: None)
@@ -378,7 +329,6 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_assignee_ref",
                 LazyRef(
-                    load,
                     command_loader=command,
                     initial=None if presence == "null" and assignee is None else _GENERATION_UNSET,
                     _prefetch_target=target,

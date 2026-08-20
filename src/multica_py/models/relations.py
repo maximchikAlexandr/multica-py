@@ -18,6 +18,8 @@ from multica_py.models.issue_activity import CommentCursor
 from multica_py.models.issues import IssueChildStageGroup
 
 if TYPE_CHECKING:
+    from multica_py.client import MulticaClient
+    from multica_py.entities._base import _BoundEntity
     from multica_py.entities.issues import Issue
 
 T_co = TypeVar("T_co", covariant=True)
@@ -87,17 +89,6 @@ class LazyLoadable(Protocol[T_co]):
     def loaded(self) -> bool: ...
 
     def all(self) -> T_co: ...
-
-
-class _PrefetchLoadable(Protocol):  # noqa: PYI046
-    @property
-    def loaded(self) -> bool: ...
-
-    def _prefetch_key(self) -> tuple[object, ...]: ...
-
-    def _prefetch_load(self) -> object: ...
-
-    def _prefetch_publish(self, value: object) -> None: ...
 
 
 @dataclass(slots=True)
@@ -190,6 +181,65 @@ class _GenerationState(Generic[R]):
             self._condition.notify_all()
             return loaded
 
+    def reserve(self) -> int | None:
+        """Reserve an unloaded generation for a singular prefetch fan-out.
+
+        A pre-existing load owns its generation and is deliberately not
+        replaced: the fan-out must never publish over a destination operation
+        that won the race.  An unloaded state gets an exclusive token that
+        concurrent readers can join through :meth:`run`.
+        """
+        with self._condition:
+            if self._state != self._UNLOADED:
+                return None
+            self._state = self._LOADING
+            self._generation += 1
+            generation = self._generation
+            self._waiters[generation] = 0
+            return generation
+
+    def run_reserved(self, generation: int, load: Callable[[], R]) -> R:
+        """Execute the owner operation for a previously reserved generation."""
+        with self._condition:
+            if self._state != self._LOADING or self._generation != generation:
+                return self._value
+
+        try:
+            loaded = load()
+        except Exception as error:
+            self.fail_reserved(generation, error)
+            raise
+
+        return loaded
+
+    def _complete_reserved(self, generation: int, loaded: R) -> bool:
+        with self._condition:
+            if self._state != self._LOADING or self._generation != generation:
+                return False
+            self._value = loaded
+            self._state = self._LOADED
+            waiters = self._waiters.pop(generation)
+            if waiters:
+                self._outcomes[generation] = _GenerationSuccess(value=loaded, waiters=waiters)
+            self._condition.notify_all()
+            return True
+
+    def publish_reserved(self, generation: int, value: R) -> bool:
+        """Publish only while the exact reserved destination generation lives."""
+        return self._complete_reserved(generation, value)
+
+    def fail_reserved(self, generation: int, error: Exception) -> bool:
+        with self._condition:
+            if self._state != self._LOADING or self._generation != generation:
+                return False
+            waiters = self._waiters.pop(generation)
+            if waiters:
+                self._outcomes[generation] = _GenerationFailure(error=error, waiters=waiters)
+            self._value = self._empty
+            self._state = self._UNLOADED
+            self._condition.notify_all()
+            return True
+
     def _consume_outcome(self, generation: int) -> R:
         outcome = self._outcomes[generation]
         outcome.waiters -= 1
@@ -207,14 +257,6 @@ class _GenerationState(Generic[R]):
             self._value = self._empty
             self._condition.notify_all()
 
-    def publish(self, value: R) -> None:
-        with self._condition:
-            while self._state == self._LOADING:
-                self._condition.wait()
-            self._value = value
-            self._state = self._LOADED
-            self._condition.notify_all()
-
 
 class _OffsetLoader(Protocol[T]):
     def __call__(self, *, limit: int | None, offset: int) -> OffsetPage[T]: ...
@@ -229,7 +271,6 @@ class LazyRef(Generic[T_co]):
 
     def __init__(
         self,
-        loader: Callable[[], T_co],
         *,
         command_loader: Callable[[], Command[T_co]],
         initial: T_co | _GenerationUnset = _GENERATION_UNSET,
@@ -241,7 +282,6 @@ class LazyRef(Generic[T_co]):
     ) -> None:
         if not callable(command_loader):
             raise TypeError("command_loader is required for LazyRef")
-        self._loader = loader
         self._command_loader = command_loader
         self._entity_type = entity_type
         self._entity_id = entity_id
@@ -261,9 +301,6 @@ class LazyRef(Generic[T_co]):
         if not self.loaded:
             raise UnloadedReferenceError(self._entity_type, self._entity_id, self._relation_name)
         return self._generation_state.value
-
-    def _run_load(self, *, force: bool) -> T_co:
-        return self._generation_state.run(force=force, load=self._loader)
 
     def _run_command(self, command: Command[T_co], *, force: bool) -> T_co:
         return self._generation_state.run(force=force, load=command.run)
@@ -324,20 +361,21 @@ class LazyRef(Generic[T_co]):
         )
         return scope_key(target_type, target_id)
 
-    def _prefetch_load(self) -> T_co:
-        return self.get()
+    def _prefetch_reserve(self) -> int | None:
+        return self._generation_state.reserve()
 
-    def _prefetch_publish(self, value: object) -> None:
-        client = self._origin_client
-        try:
-            clone = cast(
-                "Callable[[object | None], object]",
-                object.__getattribute__(value, "_clone_for_client"),
-            )
-        except AttributeError:
-            clone = None
-        published = clone(client) if client is not None and callable(clone) else value
-        self._generation_state.publish(cast("T_co", published))
+    def _prefetch_load(self, generation: int | None) -> T_co:
+        if generation is None:
+            return self.get()
+        return self._generation_state.run_reserved(generation, self._command().run)
+
+    def _prefetch_publish(self, generation: int, value: object) -> bool:
+        client = cast("MulticaClient | None", self._origin_client)
+        published = cast("_BoundEntity", value)._clone_for_client(client)
+        return self._generation_state.publish_reserved(generation, cast("T_co", published))
+
+    def _prefetch_fail(self, generation: int, error: Exception) -> bool:
+        return self._generation_state.fail_reserved(generation, error)
 
 
 def _pagination_error(relation_name: str, reason: str) -> Exception:

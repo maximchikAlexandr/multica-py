@@ -138,15 +138,6 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
             autopilot_id = self.autopilot_id
             client = cast("MulticaClient | None", self._client)
 
-            def load() -> Autopilot:
-                if not autopilot_id:
-                    raise MissingRelationContextError(
-                        "AutopilotRun", self.id, "autopilot", "autopilot_id"
-                    )
-                if client is None:
-                    raise DetachedEntityError("AutopilotRun", self.id, "autopilot")
-                return client.autopilots.get(autopilot_id)
-
             def command() -> Command[Autopilot]:
                 if not autopilot_id:
                     raise MissingRelationContextError(
@@ -159,7 +150,6 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_autopilot",
                 LazyRef(
-                    load,
                     command_loader=command,
                     _prefetch_target=lambda: ("Autopilot", autopilot_id),
                     _origin_client=client,
@@ -177,13 +167,6 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
             client = cast("MulticaClient | None", self._client)
             presence = _reference_presence(self, "issue_id", issue_id)
 
-            def load() -> Issue | None:
-                if presence == "missing" or not issue_id:
-                    raise MissingRelationContextError("AutopilotRun", self.id, "issue", "issue_id")
-                if client is None:
-                    raise DetachedEntityError("AutopilotRun", self.id, "issue")
-                return client.issues.get(issue_id)
-
             def command() -> Command[Issue | None]:
                 if presence == "null" and issue_id is None:
                     return _cached_value_command(lambda: None)
@@ -196,7 +179,6 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_issue",
                 LazyRef(
-                    load,
                     command_loader=command,
                     initial=None if presence == "null" else _GENERATION_UNSET,
                     _prefetch_target=lambda: ("Issue", issue_id),
@@ -396,13 +378,6 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             client = cast("MulticaClient | None", self._client)
             presence = _reference_presence(self, "project_id", project_id)
 
-            def load() -> Project | None:
-                if presence == "missing" or not project_id:
-                    raise MissingRelationContextError("Autopilot", self.id, "project", "project_id")
-                if client is None:
-                    raise DetachedEntityError("Autopilot", self.id, "project")
-                return client.projects.get(project_id)
-
             def command() -> Command[Project | None]:
                 if presence == "null" and project_id is None:
                     return _cached_value_command(lambda: None)
@@ -415,7 +390,6 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_project",
                 LazyRef(
-                    load,
                     command_loader=command,
                     initial=None if presence == "null" else _GENERATION_UNSET,
                     _prefetch_target=lambda: ("Project", project_id),
@@ -449,14 +423,6 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
                     )
                 return discriminator, assignee_id
 
-            def load() -> Agent | Squad:
-                kind, target_id = resolve()
-                if client is None:
-                    raise DetachedEntityError("Autopilot", self.id, "assignee")
-                if kind == "agent":
-                    return client.agents.get(target_id)
-                return client.squads.get(target_id)
-
             def command() -> Command[Agent | Squad]:
                 kind, target_id = resolve()
                 if client is None:
@@ -468,7 +434,6 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             self._set_runtime(
                 "_assignee_ref",
                 LazyRef(
-                    load,
                     command_loader=command,
                     _prefetch_target=resolve,
                     _origin_client=client,

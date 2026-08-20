@@ -62,7 +62,7 @@ def prefetch_parents(client: MulticaClient, issues: Sequence[Issue]) -> None:
 
     # The runtime-bound client is intentionally opaque in the entity model;
     # the public prefetch protocol still accepts these bound Issue wrappers.
-    client.prefetch(issues, lambda issue: issue.parent, max_parallel=2)  # type: ignore[type-var]
+    client.prefetch(issues, lambda issue: issue.parent, max_parallel=2)
     for issue in issues:
         parent = issue.parent
         if parent.loaded:

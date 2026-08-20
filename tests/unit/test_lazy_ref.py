@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import TypeVar, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -53,7 +53,6 @@ def test_lazy_ref_initial_value_and_cached_get(command_resource: BaseResource) -
         return "loaded"
 
     reference = LazyRef(
-        load,
         command_loader=_command_loader(command_resource, load),
         initial="initial",
     )
@@ -75,7 +74,6 @@ def test_lazy_ref_value_raises_before_first_load(command_resource: BaseResource)
         return "loaded"
 
     reference = LazyRef(
-        load,
         command_loader=_command_loader(command_resource, load),
         entity_type="Issue",
         entity_id="i1",
@@ -95,7 +93,7 @@ def test_lazy_ref_failed_first_load_is_retryable(command_resource: BaseResource)
             raise RuntimeError("temporary failure")
         return "loaded"
 
-    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
+    reference = LazyRef(command_loader=_command_loader(command_resource, load))
 
     with pytest.raises(RuntimeError, match="temporary failure"):
         reference.get()
@@ -112,7 +110,7 @@ def _run_concurrent(
     *,
     expected_loaded: bool,
 ) -> tuple[list[str], list[Exception]]:
-    reference = LazyRef(loader, command_loader=_command_loader(resource, loader))
+    reference = LazyRef(command_loader=_command_loader(resource, loader))
     results: list[str] = []
     errors: list[Exception] = []
 
@@ -203,7 +201,7 @@ def test_lazy_ref_refresh_success_replaces_cached_target(command_resource: BaseR
     def load() -> str:
         return next(values)
 
-    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
+    reference = LazyRef(command_loader=_command_loader(command_resource, load))
 
     assert reference.get() == "first"
     assert reference.refresh() == "second"
@@ -221,7 +219,7 @@ def test_lazy_ref_failed_refresh_preserves_cached_target(command_resource: BaseR
             return "first"
         raise RuntimeError("refresh failed")
 
-    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
+    reference = LazyRef(command_loader=_command_loader(command_resource, load))
     assert reference.get() == "first"
 
     with pytest.raises(RuntimeError, match="refresh failed"):
@@ -241,7 +239,7 @@ def test_lazy_ref_invalidation_waits_for_active_generation(command_resource: Bas
         assert load_release.wait(timeout=2)
         return "loaded"
 
-    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
+    reference = LazyRef(command_loader=_command_loader(command_resource, load))
     loading = threading.Thread(target=reference.get)
     loading.start()
     assert load_started.wait(timeout=2)
@@ -267,10 +265,10 @@ def test_lazy_ref_invalidation_waits_for_active_generation(command_resource: Bas
 
 def test_lazy_ref_requires_command_loader() -> None:
     with pytest.raises(TypeError, match="missing 1 required keyword-only argument"):
-        LazyRef(lambda: "loaded")  # type: ignore[call-arg]
+        cast("Callable[..., object]", LazyRef)()
 
     with pytest.raises(TypeError, match="command_loader is required"):
-        LazyRef(lambda: "loaded", command_loader=None)  # type: ignore[arg-type]
+        LazyRef(command_loader=None)  # type: ignore[arg-type]
 
 
 def test_direct_lazy_ref_command_paths(command_resource: BaseResource) -> None:
@@ -279,7 +277,7 @@ def test_direct_lazy_ref_command_paths(command_resource: BaseResource) -> None:
     def load() -> str:
         return next(values)
 
-    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
+    reference = LazyRef(command_loader=_command_loader(command_resource, load))
 
     assert reference.get_command().run() == "first"
     assert reference.refresh_command().run() == "second"
@@ -298,7 +296,6 @@ def test_explicit_null_refresh_is_cached_no_step_and_zero_io() -> None:
         return resource._plan(steps=(), finalize=lambda _results: None)
 
     reference = LazyRef[str | None](
-        lambda: pytest.fail("explicit absence must not call loader"),
         command_loader=command_loader,
         initial=None,
     )

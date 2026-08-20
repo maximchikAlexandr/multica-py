@@ -4,13 +4,13 @@ import datetime
 import os
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, as_completed
-from typing import Protocol, TypeVar, cast
+from typing import TypeVar, cast
 
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions, _apply_operation_options
 from multica_py.execution import CommandExecutor, LocalExecutor
-from multica_py.models.relations import LazyLoadable, LazyRef, _PrefetchLoadable
+from multica_py.models.relations import LazyCollection, LazyLoadable, LazyMapping, LazyRef
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
@@ -33,17 +33,8 @@ from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
 from multica_py.sentinels import Unset, UnsetType
 
-TEntity = TypeVar("TEntity", bound="_BoundEntity")
+TEntity = TypeVar("TEntity")
 TRelationValue_co = TypeVar("TRelationValue_co", covariant=True)
-
-
-class _OriginClient(Protocol):
-    _semaphore: ProcessSemaphore
-
-
-class _BoundEntity(Protocol):
-    @property
-    def _client(self) -> _OriginClient | None: ...
 
 
 def _load_relation(relation: LazyLoadable[TRelationValue_co]) -> None:
@@ -187,7 +178,7 @@ class MulticaClient:
     def prefetch(
         self,
         entities: Iterable[TEntity],
-        selector: Callable[[TEntity], LazyLoadable[TRelationValue_co] | _PrefetchLoadable],
+        selector: Callable[[TEntity], LazyLoadable[TRelationValue_co] | LazyRef[object]],
         *,
         max_parallel: int = 4,
     ) -> None:
@@ -197,36 +188,50 @@ class MulticaClient:
         entity_values = tuple(entities)
         jobs: list[tuple[int, Callable[[], None]]] = []
         seen_collections: set[int] = set()
-        singular_jobs: dict[tuple[object, ...], list[LazyRef[object]]] = {}
+        singular_jobs: dict[tuple[object, ...], list[tuple[LazyRef[object], int | None]]] = {}
         for entity in entity_values:
-            origin = entity._client
-            if origin is None or origin._semaphore is not self._semaphore:
+            origin = cast("object | None", getattr(entity, "_client", None))
+            semaphore = cast("object | None", getattr(origin, "_semaphore", None))
+            if origin is None or semaphore is not self._semaphore:
                 raise ValueError("entities must share an origin scope")
-            relation = selector(entity)
-            if relation.loaded:
+            selected: object = selector(entity)
+            if not isinstance(selected, (LazyRef, LazyCollection, LazyMapping)):
+                raise ValueError("selector must return LazyRef, LazyCollection, or LazyMapping")
+            if selected.loaded:
                 continue
-            if isinstance(relation, LazyRef):
-                singular = cast("LazyRef[object]", relation)
+            if isinstance(selected, LazyRef):
+                singular = selected
                 key = singular._prefetch_key()
                 destinations = singular_jobs.get(key)
                 if destinations is not None:
-                    if not any(destination is singular for destination in destinations):
-                        destinations.append(singular)
+                    if not any(destination is singular for destination, _ in destinations):
+                        destinations.append((singular, singular._prefetch_reserve()))
                     continue
-                destinations = [singular]
+                destinations = [(singular, singular._prefetch_reserve())]
                 singular_jobs[key] = destinations
                 index = len(jobs)
 
                 def load_singular(
                     primary: LazyRef[object] = singular,
-                    targets: list[LazyRef[object]] = destinations,
+                    primary_generation: int | None = destinations[0][1],
+                    targets: list[tuple[LazyRef[object], int | None]] = destinations,
                 ) -> None:
-                    value = primary._prefetch_load()
-                    for target in targets:
-                        target._prefetch_publish(value)
+                    try:
+                        value = primary._prefetch_load(primary_generation)
+                        for target, generation in targets:
+                            if generation is not None:
+                                target._prefetch_publish(generation, value)
+                    except Exception as error:
+                        for target, generation in targets:
+                            if generation is not None:
+                                target._prefetch_fail(generation, error)
+                        raise
 
                 jobs.append((index, load_singular))
                 continue
+            if not isinstance(selected, (LazyCollection, LazyMapping)):
+                raise AssertionError("validated relation type disappeared")
+            relation = selected
             if id(relation) in seen_collections:
                 continue
             seen_collections.add(id(relation))

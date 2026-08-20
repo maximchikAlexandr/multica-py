@@ -71,11 +71,6 @@ def test_reference_errors_have_typed_fields_and_stable_messages() -> None:
     assert unloaded.entity_type == "Issue"
     assert unloaded.entity_id == "i1"
     assert unloaded.relation_name == "project"
-    assert unloaded.source_type == "Issue"
-    assert unloaded.source_id == "i1"
-    assert unloaded.reference_name == "project"
-    assert unloaded.source == "Issue"
-    assert unloaded.reference == "project"
     assert str(unloaded) == (
         "Cannot access Issue.project.value: reference is unloaded for Issue 'i1'. "
         "Call get() or prefetch() first."
@@ -89,11 +84,6 @@ def test_reference_errors_have_typed_fields_and_stable_messages() -> None:
     assert unsupported.relation_name == "assignee_ref"
     assert unsupported.discriminator == "assignee_type"
     assert unsupported.value == "member"
-    assert unsupported.source_type == "Issue"
-    assert unsupported.source_id == "i1"
-    assert unsupported.reference_name == "assignee_ref"
-    assert unsupported.source == "Issue"
-    assert unsupported.reference == "assignee_ref"
     assert str(unsupported) == (
         "Cannot access Issue.assignee_ref: unsupported reference target "
         "assignee_type='member' for Issue 'i1'."
