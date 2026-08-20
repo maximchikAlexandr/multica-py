@@ -130,6 +130,7 @@ diagnostic redaction.
 #### Scenario: Failures expose typed redacted diagnostics
 - **WHEN** malformed output or nonzero exit occurs
 - **THEN** the diagnostic has redacted command context and the documented error type.
+<!-- Source IDs: 001:FR-011–FR-014,FR-040–FR-044 -->
 
 #### Scenario: Failures retain redacted streams
 - **WHEN** malformed output or a nonzero CLI exit occurs
