@@ -327,6 +327,15 @@ def test_relation_module_exports_only_public_relation_types() -> None:
     assert all(not name.startswith("_") for name in exports)
 
 
+def test_lazy_ref_is_only_exported_by_the_dedicated_relations_module() -> None:
+    assert LazyRef.__module__ == "multica_py.models.relations"
+    assert "LazyRef" in relations_pkg.__all__
+    assert not hasattr(multica_py, "LazyRef")
+    assert not hasattr(models_pkg, "LazyRef")
+    assert "LazyRef" not in multica_py.__all__
+    assert "LazyRef" not in models_pkg.__all__
+
+
 def test_models_package_exports_only_non_runtime_relation_types() -> None:
     exports = cast("list[str]", getattr(models_pkg, "__all__"))
     assert "_RelationLoad" not in exports
