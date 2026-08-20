@@ -49,8 +49,8 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Run focused unit, component, contract, and typecheck tests for relation state, presence decoding, inventory dispatch, immutable mutation, serialization passivity, and prefetch; verify test discovery before execution.
-- [ ] 6.2 Run `uv run pytest -m "not live"` and collect-only, confirming no live nodes enter the offline suite.
-- [ ] 6.3 Run `uv run mypy src`, `uv run mypy tests`, `uv run ruff check`, and `uv run ruff format --check` with no new dependency, public `Any`, duplicate helper, or unrelated serial marker.
-- [ ] 6.4 Run approved-contract check/render determinism against the pinned Multica v0.4.28 contract and `[0.4.28, 0.4.29)` generated compatibility constants, package/release validation, public-symbol/signature and canonical-operation integrity checks, then `openspec validate typed-lazy-ref-relations --strict`.
-- [ ] 6.5 Review the final implementation diff against all nine inventory rows and the exclusion list, recording any infrastructure-limited live verification without weakening offline acceptance.
+- [x] 6.1 Run focused unit, component, contract, and typecheck tests for relation state, presence decoding, inventory dispatch, immutable mutation, serialization passivity, and prefetch; verify test discovery before execution.
+- [x] 6.2 Run `uv run pytest -m "not live"` and collect-only, confirming no live nodes enter the offline suite.
+- [x] 6.3 Run `uv run mypy src`, `uv run mypy tests`, `uv run ruff check`, and `uv run ruff format --check` with no new dependency, public `Any`, duplicate helper, or unrelated serial marker.
+- [x] 6.4 Run approved-contract check/render determinism against the pinned Multica v0.4.28 contract and `[0.4.28, 0.4.29)` generated compatibility constants, package/release validation, public-symbol/signature and canonical-operation integrity checks, then `openspec validate typed-lazy-ref-relations --strict`.
+- [x] 6.5 Review the final implementation diff against all nine inventory rows and the exclusion list, recording any infrastructure-limited live verification without weakening offline acceptance.
