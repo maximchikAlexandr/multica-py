@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import datetime
 import threading
-import types
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -80,7 +80,7 @@ def test_prefetch_deduplicates_repeated_singular_destination_handle() -> None:
         client.close()
 
 
-def test_prefetch_does_not_overwrite_secondary_load_that_won_the_race() -> None:
+def _run_secondary_load_race() -> None:
     root = MulticaClient(ClientConfig())
     secondary = root.with_options()
     first = issue_factory(root, "first", parent_id="shared")
@@ -126,7 +126,7 @@ def test_prefetch_does_not_overwrite_secondary_load_that_won_the_race() -> None:
     assert second.parent.value is new_target
 
 
-def test_prefetch_does_not_overwrite_secondary_refresh_that_won_the_race() -> None:
+def _run_secondary_refresh_race() -> None:
     root = MulticaClient(ClientConfig())
     secondary = root.with_options()
     first = issue_factory(root, "first", parent_id="shared")
@@ -199,7 +199,7 @@ def test_prefetch_does_not_overwrite_secondary_refresh_that_won_the_race() -> No
     assert second.parent.value is new_target
 
 
-def test_prefetch_invalidation_wins_after_fanout_reservation() -> None:
+def _run_invalidation_race() -> None:
     root = MulticaClient(ClientConfig())
     secondary = root.with_options()
     first = issue_factory(root, "first", parent_id="shared")
@@ -246,6 +246,24 @@ def test_prefetch_invalidation_wins_after_fanout_reservation() -> None:
     finally:
         secondary.close()
         root.close()
+
+
+@dataclass(frozen=True)
+class PrefetchRaceCase:
+    name: str
+    run: Callable[[], None]
+
+
+PREFETCH_RACE_CASES = (
+    PrefetchRaceCase("secondary-get", _run_secondary_load_race),
+    PrefetchRaceCase("secondary-refresh", _run_secondary_refresh_race),
+    PrefetchRaceCase("invalidation", _run_invalidation_race),
+)
+
+
+@pytest.mark.parametrize("case", PREFETCH_RACE_CASES, ids=lambda case: case.name)
+def test_prefetch_race_matrix_preserves_newer_destination_state(case: PrefetchRaceCase) -> None:
+    case.run()
 
 
 def test_prefetch_runs_equal_targets_in_different_profiles_separately() -> None:
@@ -328,20 +346,27 @@ def test_singular_scope_preserves_environment_order_and_ignores_display_fields()
         base.close()
 
 
-_SCOPE_COMPONENTS: tuple[tuple[str, dict[str, object], bool], ...] = (
-    ("workspace", {"workspace_id": "workspace-2"}, False),
-    ("profile", {"profile": "profile-2"}, False),
-    ("server", {"server_url": "https://server.example"}, False),
-    ("executable", {"executable": "/opt/multica"}, False),
-    ("cwd", {"cwd": "/tmp/multica"}, False),
-    ("environment", {"environment": (("X", "b"), ("X", "a"))}, False),
-    ("timeout", {"timeout": datetime.timedelta(seconds=12)}, False),
-    ("debug", {"debug": True}, False),
-    ("encoding", {"encoding": "utf-16"}, False),
-    ("compatibility", {"compatibility": CompatibilityPolicy.strict}, False),
-    ("min-cli", {"min_cli_version": "0.4.28"}, False),
-    ("max-cli", {"max_cli_version": "0.4.29"}, False),
-    ("executor", {}, True),
+@dataclass(frozen=True)
+class ScopeComponentCase:
+    name: str
+    changes: tuple[tuple[str, object], ...]
+    separate_executor: bool
+
+
+SCOPE_COMPONENT_CASES = (
+    ScopeComponentCase("workspace", (("workspace_id", "workspace-2"),), False),
+    ScopeComponentCase("profile", (("profile", "profile-2"),), False),
+    ScopeComponentCase("server", (("server_url", "https://server.example"),), False),
+    ScopeComponentCase("executable", (("executable", "/opt/multica"),), False),
+    ScopeComponentCase("cwd", (("cwd", "/tmp/multica"),), False),
+    ScopeComponentCase("environment", (("environment", (("X", "b"), ("X", "a"))),), False),
+    ScopeComponentCase("timeout", (("timeout", datetime.timedelta(seconds=12)),), False),
+    ScopeComponentCase("debug", (("debug", True),), False),
+    ScopeComponentCase("encoding", (("encoding", "utf-16"),), False),
+    ScopeComponentCase("compatibility", (("compatibility", CompatibilityPolicy.strict),), False),
+    ScopeComponentCase("min-cli", (("min_cli_version", "0.4.28"),), False),
+    ScopeComponentCase("max-cli", (("max_cli_version", "0.4.29"),), False),
+    ScopeComponentCase("executor", (), True),
 )
 
 
@@ -352,14 +377,14 @@ def test_prefetch_separates_every_non_semaphore_scope_component() -> None:
     sources = [issue_factory(root, "source-root")]
     calls: list[MagicMock] = []
 
-    for name, changes, separate_executor in _SCOPE_COMPONENTS:
-        config = msgspec.structs.replace(base_config, **changes)
-        executor = LocalExecutor() if separate_executor else root._executor
+    for case in SCOPE_COMPONENT_CASES:
+        config = msgspec.structs.replace(base_config, **dict(case.changes))
+        executor = LocalExecutor() if case.separate_executor else root._executor
         client = MulticaClient(config, executor=executor, _semaphore=root._semaphore)
         clients.append(client)
-        sources.append(issue_factory(client, f"source-{name}"))
+        sources.append(issue_factory(client, f"source-{case.name}"))
         calls_for_client = MagicMock()
-        target = bound_entity_factory(client, title=name)
+        target = bound_entity_factory(client, title=case.name)
         calls_for_client.side_effect = lambda _issue_id, target=target, client=client: (
             client.issues._plan(steps=(), finalize=lambda _results, target=target: target)
         )
@@ -428,108 +453,114 @@ def test_prefetch_rejects_unknown_relation_before_reading_relation_state() -> No
         client.close()
 
 
-def test_prefetch_keeps_collection_and_mapping_identity_dedup_for_all_inventory_rows() -> None:
-    relation_names = (
-        "Workspace.members",
-        "Workspace.agents",
-        "Workspace.skills",
-        "Workspace.projects",
-        "Workspace.issues",
-        "Workspace.labels",
-        "Workspace.autopilots",
-        "Workspace.repositories",
-        "Workspace.runtimes",
-        "Workspace.squads",
-        "Workspace.plugins",
-        "Workspace.properties",
-        "Workspace.mcp_servers",
-        "Agent.skills",
-        "Agent.tasks",
-        "Agent.issues",
-        "Agent.mcp_servers",
-        "Skill.files",
-        "Squad.members",
-        "Squad.issues",
-        "WorkspaceMember.issues",
-        "Project.resources",
-        "Project.issues",
-        "Issue.comments",
-        "Issue.recent_comment_threads",
-        "Issue.labels",
-        "Issue.subscribers",
-        "Issue.metadata",
-        "Issue.pull_requests",
-        "Issue.children",
-        "Issue.runs",
-        "Issue.properties",
-        "CommentThread.comments",
-        "TaskRun.messages",
-        "Autopilot.runs",
-        "Autopilot.triggers",
-        "Autopilot.subscribers",
-        "AutopilotRun.messages",
-    )
-    mapping_rows = {"Issue.metadata", "Issue.properties"}
+@dataclass(frozen=True)
+class RelationInventoryCase:
+    name: str
+    mapping: bool
+
+
+PREFETCH_RELATION_CASES = (
+    RelationInventoryCase("Workspace.members", False),
+    RelationInventoryCase("Workspace.agents", False),
+    RelationInventoryCase("Workspace.skills", False),
+    RelationInventoryCase("Workspace.projects", False),
+    RelationInventoryCase("Workspace.issues", False),
+    RelationInventoryCase("Workspace.labels", False),
+    RelationInventoryCase("Workspace.autopilots", False),
+    RelationInventoryCase("Workspace.repositories", False),
+    RelationInventoryCase("Workspace.runtimes", False),
+    RelationInventoryCase("Workspace.squads", False),
+    RelationInventoryCase("Workspace.plugins", False),
+    RelationInventoryCase("Workspace.properties", False),
+    RelationInventoryCase("Workspace.mcp_servers", False),
+    RelationInventoryCase("Agent.skills", False),
+    RelationInventoryCase("Agent.tasks", False),
+    RelationInventoryCase("Agent.issues", False),
+    RelationInventoryCase("Agent.mcp_servers", False),
+    RelationInventoryCase("Skill.files", False),
+    RelationInventoryCase("Squad.members", False),
+    RelationInventoryCase("Squad.issues", False),
+    RelationInventoryCase("WorkspaceMember.issues", False),
+    RelationInventoryCase("Project.resources", False),
+    RelationInventoryCase("Project.issues", False),
+    RelationInventoryCase("Issue.comments", False),
+    RelationInventoryCase("Issue.recent_comment_threads", False),
+    RelationInventoryCase("Issue.labels", False),
+    RelationInventoryCase("Issue.subscribers", False),
+    RelationInventoryCase("Issue.metadata", True),
+    RelationInventoryCase("Issue.pull_requests", False),
+    RelationInventoryCase("Issue.children", False),
+    RelationInventoryCase("Issue.runs", False),
+    RelationInventoryCase("Issue.properties", True),
+    RelationInventoryCase("CommentThread.comments", False),
+    RelationInventoryCase("TaskRun.messages", False),
+    RelationInventoryCase("Autopilot.runs", False),
+    RelationInventoryCase("Autopilot.triggers", False),
+    RelationInventoryCase("Autopilot.subscribers", False),
+    RelationInventoryCase("AutopilotRun.messages", False),
+)
+
+
+@pytest.mark.parametrize("case", PREFETCH_RELATION_CASES, ids=lambda case: case.name)
+def test_prefetch_keeps_collection_and_mapping_identity_dedup_for_inventory_case(
+    case: RelationInventoryCase,
+) -> None:
+    relation_name = case.name
     client = MulticaClient(ClientConfig())
     try:
-        for relation_name in relation_names:
-            calls = {"count": 0}
+        calls = {"count": 0}
 
-            def mapping_loader() -> Mapping[str, str]:
-                calls["count"] += 1
-                return {"value": relation_name}
+        def mapping_loader() -> Mapping[str, str]:
+            calls["count"] += 1
+            return {"value": relation_name}
 
-            def collection_loader() -> tuple[object, ...]:
-                calls["count"] += 1
-                return ()
+        def collection_loader() -> tuple[object, ...]:
+            calls["count"] += 1
+            return ()
 
-            if relation_name in mapping_rows:
-                relation: LazyMapping[str, str] | LazyCollection[object] = LazyMapping(
-                    mapping_loader
-                )
-            else:
-                relation = LazyCollection(collection_loader)
-            entity = types.SimpleNamespace(_client=client)
-            selected = iter((relation, relation))
-            client.prefetch((entity, entity), lambda _entity: next(selected), max_parallel=1)
-            assert calls["count"] == 1, relation_name
+        relation: LazyMapping[str, str] | LazyCollection[object]
+        if case.mapping:
+            relation = LazyMapping(mapping_loader)
+        else:
+            relation = LazyCollection(collection_loader)
+        entity = bound_entity_factory(client)
+        client.prefetch((entity, entity), lambda _entity: relation, max_parallel=1)
+        assert calls["count"] == 1
     finally:
         client.close()
 
 
-@pytest.mark.parametrize("shape", ["omitted", "null", "value"])
-def test_prefetch_fanout_preserves_nested_provenance_and_local_state(shape: str) -> None:
+@dataclass(frozen=True)
+class FanoutShapeCase:
+    name: str
+    parent_id: str | None
+    wire_presence: tuple[tuple[str, str], ...]
+
+
+FANOUT_SHAPE_CASES = (
+    FanoutShapeCase("omitted", None, ()),
+    FanoutShapeCase("null", None, (("parent_id", "null"),)),
+    FanoutShapeCase("value", "nested-1", (("parent_id", "value"),)),
+)
+
+
+@pytest.mark.parametrize("case", FANOUT_SHAPE_CASES, ids=lambda case: case.name)
+def test_prefetch_fanout_preserves_nested_provenance_and_local_state(
+    case: FanoutShapeCase,
+) -> None:
+    shape = case.name
     root = MulticaClient(ClientConfig())
     secondary = root.with_options()
     nested_target_calls: list[tuple[MulticaClient, str]] = []
 
-    if shape == "omitted":
-        target = Issue(
-            id="shared",
-            title="Target",
-            status=IssueStatus.todo,
-            parent_id=None,
-            _wire_presence=(),
-            _client=root,
-        )
-    elif shape == "null":
-        target = Issue(
-            id="shared",
-            title="Target",
-            status=IssueStatus.todo,
-            parent_id=None,
-            _wire_presence=(("parent_id", "null"),),
-            _client=root,
-        )
-    else:
-        target = Issue(
-            id="shared",
-            title="Target",
-            status=IssueStatus.todo,
-            parent_id="nested-1",
-            _wire_presence=(("parent_id", "value"),),
-            _client=root,
-        )
+    target = Issue(
+        id="shared",
+        title="Target",
+        status=IssueStatus.todo,
+        parent_id=case.parent_id,
+        _wire_presence=case.wire_presence,
+        _client=root,
+    )
 
     def get_command(client: MulticaClient, issue_id: str) -> object:
         nested_target_calls.append((client, issue_id))

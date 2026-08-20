@@ -108,6 +108,8 @@ def _run_concurrent(
     resource: BaseResource,
     loader: Callable[[], str],
     *,
+    load_started: threading.Event,
+    load_release: threading.Event,
     expected_loaded: bool,
 ) -> tuple[list[str], list[Exception]]:
     reference = LazyRef(command_loader=_command_loader(resource, loader))
@@ -123,9 +125,14 @@ def _run_concurrent(
     first = threading.Thread(target=call_get)
     second = threading.Thread(target=call_get)
     first.start()
-    assert _LOAD_STARTED.wait(timeout=2)
+    assert load_started.wait(timeout=2)
     second.start()
-    _LOAD_RELEASE.set()
+    state = reference._generation_state
+    with state.condition:
+        assert state.condition.wait_for(
+            lambda: any(waiters > 0 for waiters in state.waiters.values()), timeout=2
+        )
+    load_release.set()
     first.join(timeout=2)
     second.join(timeout=2)
     assert not first.is_alive()
@@ -136,10 +143,6 @@ def _run_concurrent(
         _assert_loaded(reference, False)
         assert all(isinstance(error, RuntimeError) for error in errors)
     return results, errors
-
-
-_LOAD_STARTED = threading.Event()
-_LOAD_RELEASE = threading.Event()
 
 
 @dataclass(frozen=True)
@@ -175,20 +178,26 @@ def test_lazy_ref_concurrent_is_coalesced(
 ) -> None:
     calls = 0
     lock = threading.Lock()
-    _LOAD_STARTED.clear()
-    _LOAD_RELEASE.clear()
+    load_started = threading.Event()
+    load_release = threading.Event()
 
     def load() -> str:
         nonlocal calls
         with lock:
             calls += 1
-        _LOAD_STARTED.set()
-        assert _LOAD_RELEASE.wait(timeout=2)
+        load_started.set()
+        assert load_release.wait(timeout=2)
         if case.error_message is not None:
             raise RuntimeError(case.error_message)
         return "loaded"
 
-    results, errors = _run_concurrent(command_resource, load, expected_loaded=case.expected_loaded)
+    results, errors = _run_concurrent(
+        command_resource,
+        load,
+        load_started=load_started,
+        load_release=load_release,
+        expected_loaded=case.expected_loaded,
+    )
 
     assert calls == 1
     assert results == list(case.expected_results)

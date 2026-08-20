@@ -343,23 +343,28 @@ def test_issue_mutations_publish_fresh_response_state_and_preserve_original(
 MutationFailure = Callable[[Issue], Issue]
 
 
-@pytest.mark.parametrize(
-    ("name", "invoke"),
-    (
-        ("update parent", _update_parent_changed),
-        ("update project", _update_project_changed),
-        ("update assignee", _update_assignee_changed),
-        ("assign", _assign_changed),
-        ("unassign", _unassign_cleared),
-    ),
-    ids=lambda value: value if isinstance(value, str) else None,
+@dataclass(frozen=True)
+class MutationFailureCase:
+    name: str
+    invoke: MutationFailure
+
+
+MUTATION_FAILURE_CASES = (
+    MutationFailureCase("update parent", _update_parent_changed),
+    MutationFailureCase("update project", _update_project_changed),
+    MutationFailureCase("update assignee", _update_assignee_changed),
+    MutationFailureCase("assign", _assign_changed),
+    MutationFailureCase("unassign", _unassign_cleared),
 )
+
+
+@pytest.mark.parametrize("case", MUTATION_FAILURE_CASES, ids=lambda case: case.name)
 def test_failed_issue_mutation_does_not_publish_or_change_original(
-    name: str,
-    invoke: MutationFailure,
+    case: MutationFailureCase,
     client_with_transport: tuple[MulticaClient, MagicMock],
 ) -> None:
     client, transport = client_with_transport
+    name = case.name
     source = _issue(
         _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE),
         client,
@@ -372,7 +377,7 @@ def test_failed_issue_mutation_does_not_publish_or_change_original(
     transport.run_bytes.side_effect = RuntimeError(f"{name} failed")
 
     with pytest.raises(RuntimeError, match="failed"):
-        invoke(source)
+        case.invoke(source)
 
     assert source.parent_id == _OLD_PARENT
     assert source.project_id == _OLD_PROJECT
@@ -383,26 +388,30 @@ def test_failed_issue_mutation_does_not_publish_or_change_original(
     assert all(not handle.loaded for handle in old_handles.values())
 
 
-@pytest.mark.parametrize(
-    ("name", "target", "expected_argv"),
-    (
-        (
-            "workspace member",
-            WorkspaceMember(id="member-1", name="Member"),
-            ("issue", "assign", "issue-1", "--to-id", "member-1", "--output", "json"),
-        ),
-        (
-            "email",
-            "member@example.com",
-            ("issue", "assign", "issue-1", "--assignee", "member@example.com", "--output", "json"),
-        ),
+@dataclass(frozen=True)
+class AssignmentCase:
+    name: str
+    target: str | WorkspaceMember
+    expected_argv: tuple[str, ...]
+
+
+ASSIGNMENT_CASES = (
+    AssignmentCase(
+        "workspace member",
+        WorkspaceMember(id="member-1", name="Member"),
+        ("issue", "assign", "issue-1", "--to-id", "member-1", "--output", "json"),
     ),
-    ids=lambda value: value if isinstance(value, str) else None,
+    AssignmentCase(
+        "email",
+        "member@example.com",
+        ("issue", "assign", "issue-1", "--assignee", "member@example.com", "--output", "json"),
+    ),
 )
+
+
+@pytest.mark.parametrize("case", ASSIGNMENT_CASES, ids=lambda case: case.name)
 def test_assignment_keeps_member_snapshot_and_rejects_lazy_load_before_io(
-    name: str,
-    target: object,
-    expected_argv: tuple[str, ...],
+    case: AssignmentCase,
     client_with_transport: tuple[MulticaClient, MagicMock],
     raw_result: Callable[..., RawCommandResult],
 ) -> None:
@@ -415,9 +424,9 @@ def test_assignment_keeps_member_snapshot_and_rejects_lazy_load_before_io(
     response = _issue_payload(
         parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=member_snapshot
     )
-    transport.run_bytes.return_value = raw_result(expected_argv, stdout=response)
+    transport.run_bytes.return_value = raw_result(case.expected_argv, stdout=response)
 
-    replacement = source.assign(cast("str | WorkspaceMember", target))
+    replacement = source.assign(case.target)
 
     assert replacement.assignee == member_snapshot
     assert replacement.assignee_ref.loaded is False

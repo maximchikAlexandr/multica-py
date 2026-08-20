@@ -9,6 +9,7 @@ from typing import TypeVar, cast
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions, _apply_operation_options
+from multica_py.entities._base import _BoundEntity
 from multica_py.execution import CommandExecutor, LocalExecutor
 from multica_py.models.relations import LazyCollection, LazyLoadable, LazyMapping, LazyRef
 from multica_py.resources.agents import AgentResource
@@ -33,7 +34,7 @@ from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
 from multica_py.sentinels import Unset, UnsetType
 
-TEntity = TypeVar("TEntity")
+TEntity = TypeVar("TEntity", bound=_BoundEntity)
 TRelationValue_co = TypeVar("TRelationValue_co", covariant=True)
 
 
@@ -190,7 +191,7 @@ class MulticaClient:
         seen_collections: set[int] = set()
         singular_jobs: dict[tuple[object, ...], list[tuple[LazyRef[object], int | None]]] = {}
         for entity in entity_values:
-            origin = cast("object | None", getattr(entity, "_client", None))
+            origin = entity._client
             semaphore = cast("object | None", getattr(origin, "_semaphore", None))
             if origin is None or semaphore is not self._semaphore:
                 raise ValueError("entities must share an origin scope")
