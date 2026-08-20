@@ -71,6 +71,26 @@ def test_prefetch_coalesces_equal_scopes_and_rebinds_independent_targets() -> No
         client.close()
 
 
+def test_prefetch_deduplicates_repeated_singular_destination_handle() -> None:
+    client = MulticaClient(ClientConfig())
+    calls = MagicMock()
+    target = _target(client, "Target")
+    calls.return_value = client.issues._plan(steps=(), finalize=lambda _results: target)
+    client.issues.get_command = calls  # type: ignore[method-assign]
+    source = _issue(client, "source-1")
+    reference = source.parent
+    publish = MagicMock(wraps=reference._prefetch_publish)
+    reference._prefetch_publish = publish  # type: ignore[method-assign]
+
+    try:
+        client.prefetch((source, source), lambda _issue: reference, max_parallel=1)  # type: ignore[type-var]
+
+        calls.assert_called_once_with("parent-1")
+        publish.assert_called_once_with(target)
+    finally:
+        client.close()
+
+
 def test_prefetch_runs_equal_targets_in_different_profiles_separately() -> None:
     client = MulticaClient(ClientConfig())
     other = client.with_profile("other")

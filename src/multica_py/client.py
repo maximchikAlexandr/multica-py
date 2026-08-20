@@ -210,7 +210,8 @@ class MulticaClient:
                 key = singular._prefetch_key()
                 destinations = singular_jobs.get(key)
                 if destinations is not None:
-                    destinations.append(singular)
+                    if not any(destination is singular for destination in destinations):
+                        destinations.append(singular)
                     continue
                 destinations = [singular]
                 singular_jobs[key] = destinations

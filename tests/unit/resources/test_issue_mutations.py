@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -11,10 +10,8 @@ import pytest
 
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
-from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import _issue_from_wire, _IssueWire
 from multica_py.client import MulticaClient
-from multica_py.config import ClientConfig
 from multica_py.entities.issues import Issue
 from multica_py.entities.workspaces import WorkspaceMember
 from multica_py.exceptions import UnsupportedReferenceTargetError
@@ -50,41 +47,16 @@ def _issue(payload: bytes, client: MulticaClient) -> Issue:
     return _issue_from_wire(decode_json(payload, _IssueWire))._with_client(client)
 
 
-def _client_with_transport() -> tuple[MulticaClient, MagicMock]:
-    client = MulticaClient(ClientConfig())
-    transport = MagicMock(spec=CliTransport)
-    transport._snapshot.side_effect = lambda _config: transport
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    client._transport = transport
-    for resource_name in (
-        "issues",
-        "projects",
-        "agents",
-        "squads",
-        "autopilots",
-    ):
-        getattr(client, resource_name)._transport = transport
-    return client, transport
-
-
-def _raw_result(argv: tuple[str, ...], stdout: bytes) -> RawCommandResult:
-    return RawCommandResult(
-        argv=argv,
-        exit_code=0,
-        stdout=stdout,
-        stderr=b"",
-        duration=datetime.timedelta(),
-    )
-
-
-def _transport_response(argv: tuple[str, ...], issue_payload: bytes) -> RawCommandResult:
+def _transport_response(
+    argv: tuple[str, ...], issue_payload: bytes, raw_result: Callable[..., RawCommandResult]
+) -> RawCommandResult:
     if argv == ("issue", "get", _OLD_PARENT, "--output", "json"):
-        return _raw_result(argv, b'{"id":"parent-old","title":"Parent","status":"todo"}')
+        return raw_result(argv, stdout=b'{"id":"parent-old","title":"Parent","status":"todo"}')
     if argv == ("project", "get", _OLD_PROJECT, "--output", "json"):
-        return _raw_result(argv, b'{"id":"project-old","title":"Project","status":"planned"}')
+        return raw_result(argv, stdout=b'{"id":"project-old","title":"Project","status":"planned"}')
     if argv == ("agent", "get", _OLD_AGENT, "--output", "json"):
-        return _raw_result(argv, b'{"id":"agent-old","name":"Old agent"}')
-    return _raw_result(argv, issue_payload)
+        return raw_result(argv, stdout=b'{"id":"agent-old","name":"Old agent"}')
+    return raw_result(argv, stdout=issue_payload)
 
 
 MutationName = Literal["update-parent", "update-project", "update-assignee", "assign", "unassign"]
@@ -288,9 +260,15 @@ _MUTATION_SUCCESS_CASES = (
 )
 
 
-def _load_original_handles(issue: Issue, transport: MagicMock) -> dict[str, LazyRef[object]]:
+def _load_original_handles(
+    issue: Issue,
+    transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
+) -> dict[str, LazyRef[object]]:
     transport.run_bytes.side_effect = lambda argv, **_kwargs: _transport_response(
-        argv, _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE)
+        argv,
+        _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE),
+        raw_result,
     )
     handles: dict[str, LazyRef[object]] = {
         "parent": cast("LazyRef[object]", issue.parent),
@@ -305,62 +283,61 @@ def _load_original_handles(issue: Issue, transport: MagicMock) -> dict[str, Lazy
 @pytest.mark.parametrize("case", _MUTATION_SUCCESS_CASES, ids=lambda case: case.name)
 def test_issue_mutations_publish_fresh_response_state_and_preserve_original(
     case: MutationSuccessCase,
+    client_with_transport: tuple[MulticaClient, MagicMock],
+    raw_result: Callable[..., RawCommandResult],
 ) -> None:
-    client, transport = _client_with_transport()
-    try:
-        source = _issue(
-            _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE),
-            client,
-        )
-        old_handles = _load_original_handles(source, transport)
-        response = _issue_payload(
-            parent_id=case.response_parent,
-            project_id=case.response_project,
-            assignee=case.response_assignee,
-        )
-        transport.run_bytes.side_effect = lambda argv, **_kwargs: _transport_response(
-            argv, response
-        )
+    client, transport = client_with_transport
+    source = _issue(
+        _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE),
+        client,
+    )
+    old_handles = _load_original_handles(source, transport, raw_result)
+    response = _issue_payload(
+        parent_id=case.response_parent,
+        project_id=case.response_project,
+        assignee=case.response_assignee,
+    )
+    transport.run_bytes.side_effect = lambda argv, **_kwargs: _transport_response(
+        argv, response, raw_result
+    )
 
-        replacement = case.invoke(source)
+    replacement = case.invoke(source)
 
-        assert replacement is not source
-        assert replacement.id == source.id
-        assert replacement.parent_id == case.response_parent
-        assert replacement.project_id == case.response_project
-        assert replacement.assignee == case.response_assignee
-        assert replacement._client is client
+    assert replacement is not source
+    assert replacement.id == source.id
+    assert replacement.parent_id == case.response_parent
+    assert replacement.project_id == case.response_project
+    assert replacement.assignee == case.response_assignee
+    assert replacement._client is client
 
-        response_handles = (
-            ("parent", "parent_id", case.response_parent),
-            ("project", "project_id", case.response_project),
-            ("assignee_ref", "assignee", case.response_assignee),
-        )
-        for name, field_name, value in response_handles:
-            new_handle = getattr(replacement, name)
-            assert new_handle is not old_handles[name]
-            expected_seed = "null" if value is None else "value"
-            assert (field_name, expected_seed) in replacement._wire_presence
-            if value is None:
-                assert new_handle.loaded is True
-                assert new_handle.value is None
-            else:
-                assert new_handle.loaded is False
+    response_handles = (
+        ("parent", "parent_id", case.response_parent),
+        ("project", "project_id", case.response_project),
+        ("assignee_ref", "assignee", case.response_assignee),
+    )
+    for name, field_name, value in response_handles:
+        new_handle = getattr(replacement, name)
+        assert new_handle is not old_handles[name]
+        expected_seed = "null" if value is None else "value"
+        assert (field_name, expected_seed) in replacement._wire_presence
+        if value is None:
+            assert new_handle.loaded is True
+            assert new_handle.value is None
+        else:
+            assert new_handle.loaded is False
 
-        assert (
-            "assignee" if case.reference == "assignee_ref" else f"{case.reference}_id",
-            case.expected_seed,
-        ) in replacement._wire_presence
+    assert (
+        "assignee" if case.reference == "assignee_ref" else f"{case.reference}_id",
+        case.expected_seed,
+    ) in replacement._wire_presence
 
-        assert source.parent_id == _OLD_PARENT
-        assert source.project_id == _OLD_PROJECT
-        assert source.assignee == _OLD_ASSIGNEE
-        for name, handle in old_handles.items():
-            assert getattr(source, name) is handle
-            assert handle.loaded is True
-        assert transport.run_bytes.call_count >= 4
-    finally:
-        client.close()
+    assert source.parent_id == _OLD_PARENT
+    assert source.project_id == _OLD_PROJECT
+    assert source.assignee == _OLD_ASSIGNEE
+    for name, handle in old_handles.items():
+        assert getattr(source, name) is handle
+        assert handle.loaded is True
+    assert transport.run_bytes.call_count >= 4
 
 
 MutationFailure = Callable[[Issue], Issue]
@@ -378,33 +355,32 @@ MutationFailure = Callable[[Issue], Issue]
     ids=lambda value: value if isinstance(value, str) else None,
 )
 def test_failed_issue_mutation_does_not_publish_or_change_original(
-    name: str, invoke: MutationFailure
+    name: str,
+    invoke: MutationFailure,
+    client_with_transport: tuple[MulticaClient, MagicMock],
 ) -> None:
-    client, transport = _client_with_transport()
-    try:
-        source = _issue(
-            _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE),
-            client,
-        )
-        old_handles: dict[str, LazyRef[object]] = {
-            "parent": cast("LazyRef[object]", source.parent),
-            "project": cast("LazyRef[object]", source.project),
-            "assignee_ref": cast("LazyRef[object]", source.assignee_ref),
-        }
-        transport.run_bytes.side_effect = RuntimeError(f"{name} failed")
+    client, transport = client_with_transport
+    source = _issue(
+        _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE),
+        client,
+    )
+    old_handles: dict[str, LazyRef[object]] = {
+        "parent": cast("LazyRef[object]", source.parent),
+        "project": cast("LazyRef[object]", source.project),
+        "assignee_ref": cast("LazyRef[object]", source.assignee_ref),
+    }
+    transport.run_bytes.side_effect = RuntimeError(f"{name} failed")
 
-        with pytest.raises(RuntimeError, match="failed"):
-            invoke(source)
+    with pytest.raises(RuntimeError, match="failed"):
+        invoke(source)
 
-        assert source.parent_id == _OLD_PARENT
-        assert source.project_id == _OLD_PROJECT
-        assert source.assignee == _OLD_ASSIGNEE
-        assert source.parent is old_handles["parent"]
-        assert source.project is old_handles["project"]
-        assert source.assignee_ref is old_handles["assignee_ref"]
-        assert all(not handle.loaded for handle in old_handles.values())
-    finally:
-        client.close()
+    assert source.parent_id == _OLD_PARENT
+    assert source.project_id == _OLD_PROJECT
+    assert source.assignee == _OLD_ASSIGNEE
+    assert source.parent is old_handles["parent"]
+    assert source.project is old_handles["project"]
+    assert source.assignee_ref is old_handles["assignee_ref"]
+    assert all(not handle.loaded for handle in old_handles.values())
 
 
 @pytest.mark.parametrize(
@@ -424,27 +400,28 @@ def test_failed_issue_mutation_does_not_publish_or_change_original(
     ids=lambda value: value if isinstance(value, str) else None,
 )
 def test_assignment_keeps_member_snapshot_and_rejects_lazy_load_before_io(
-    name: str, target: object, expected_argv: tuple[str, ...]
+    name: str,
+    target: object,
+    expected_argv: tuple[str, ...],
+    client_with_transport: tuple[MulticaClient, MagicMock],
+    raw_result: Callable[..., RawCommandResult],
 ) -> None:
-    client, transport = _client_with_transport()
-    try:
-        source = _issue(
-            _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE),
-            client,
-        )
-        member_snapshot = IssueAssignee(id="member-1", name="Member", type="member")
-        response = _issue_payload(
-            parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=member_snapshot
-        )
-        transport.run_bytes.return_value = _raw_result(expected_argv, response)
+    client, transport = client_with_transport
+    source = _issue(
+        _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE),
+        client,
+    )
+    member_snapshot = IssueAssignee(id="member-1", name="Member", type="member")
+    response = _issue_payload(
+        parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=member_snapshot
+    )
+    transport.run_bytes.return_value = raw_result(expected_argv, stdout=response)
 
-        replacement = source.assign(cast("str | WorkspaceMember", target))
+    replacement = source.assign(cast("str | WorkspaceMember", target))
 
-        assert replacement.assignee == member_snapshot
-        assert replacement.assignee_ref.loaded is False
-        assert transport.run_bytes.call_count == 1
-        with pytest.raises(UnsupportedReferenceTargetError):
-            replacement.assignee_ref.get()
-        assert transport.run_bytes.call_count == 1
-    finally:
-        client.close()
+    assert replacement.assignee == member_snapshot
+    assert replacement.assignee_ref.loaded is False
+    assert transport.run_bytes.call_count == 1
+    with pytest.raises(UnsupportedReferenceTargetError):
+        replacement.assignee_ref.get()
+    assert transport.run_bytes.call_count == 1

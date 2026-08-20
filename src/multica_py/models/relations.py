@@ -231,7 +231,7 @@ class LazyRef(Generic[T_co]):
         self,
         loader: Callable[[], T_co],
         *,
-        command_loader: Callable[[], Command[T_co]] | None = None,
+        command_loader: Callable[[], Command[T_co]],
         initial: T_co | _GenerationUnset = _GENERATION_UNSET,
         entity_type: str = "Reference",
         entity_id: str = "unknown",
@@ -239,6 +239,8 @@ class LazyRef(Generic[T_co]):
         _prefetch_target: Callable[[], tuple[str, str | None] | None] | None = None,
         _origin_client: object | None = None,
     ) -> None:
+        if not callable(command_loader):
+            raise TypeError("command_loader is required for LazyRef")
         self._loader = loader
         self._command_loader = command_loader
         self._entity_type = entity_type
@@ -267,15 +269,11 @@ class LazyRef(Generic[T_co]):
         return self._generation_state.run(force=force, load=command.run)
 
     def _command(self) -> Command[T_co]:
-        if self._command_loader is None:
-            raise RuntimeError("reference has no command loader")
         return self._command_loader()
 
     def get(self) -> T_co:
         if self.loaded:
             return self._generation_state.value
-        if self._command_loader is None:
-            return self._run_load(force=False)
         return self.get_command().run()
 
     def get_command(self) -> Command[T_co]:
@@ -290,8 +288,6 @@ class LazyRef(Generic[T_co]):
     def refresh(self) -> T_co:
         if self.loaded and self._generation_state.value is None:
             return self._generation_state.value
-        if self._command_loader is None:
-            return self._run_load(force=True)
         return self.refresh_command().run()
 
     def refresh_command(self) -> Command[T_co]:

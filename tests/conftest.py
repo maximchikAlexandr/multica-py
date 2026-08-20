@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -74,6 +74,24 @@ def raw_result() -> Callable[..., RawCommandResult]:
         )
 
     return _raw_result
+
+
+@pytest.fixture
+def client_with_transport(mock_transport: MagicMock) -> Iterator[tuple[MulticaClient, MagicMock]]:
+    client = MulticaClient(ClientConfig())
+    mock_transport._snapshot.side_effect = lambda _config: mock_transport
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    client._transport = mock_transport
+    for resource_name in (
+        "issues",
+        "projects",
+        "agents",
+        "squads",
+        "autopilots",
+    ):
+        getattr(client, resource_name)._transport = mock_transport
+    yield client, mock_transport
+    client.close()
 
 
 @pytest.fixture

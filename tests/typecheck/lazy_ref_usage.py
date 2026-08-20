@@ -1,12 +1,17 @@
-from typing import assert_type
+from typing import assert_type, cast
 
+from multica_py._internal.commands import Command
 from multica_py.entities.projects import Project
 from multica_py.enums import ProjectStatus
 from multica_py.models.relations import LazyRef
 
 project = Project(id="project", name="Project", status=ProjectStatus("planned"))
-required: LazyRef[Project] = LazyRef(lambda: project)
-optional: LazyRef[Project | None] = LazyRef(lambda: None, initial=None)
+project_command = cast("Command[Project]", object())
+optional_command = cast("Command[Project | None]", object())
+required: LazyRef[Project] = LazyRef(lambda: project, command_loader=lambda: project_command)
+optional: LazyRef[Project | None] = LazyRef(
+    lambda: None, command_loader=lambda: optional_command, initial=None
+)
 
 required_value: Project = required.get()
 optional_value: Project | None = optional.get()

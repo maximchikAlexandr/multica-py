@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass
+from typing import TypeVar
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,9 +15,23 @@ from multica_py.exceptions import UnloadedReferenceError
 from multica_py.models.relations import LazyRef, _GenerationState
 from multica_py.resources._base import BaseResource
 
+T = TypeVar("T")
+
 
 def _assert_loaded(reference: LazyRef[object], expected: bool) -> None:
     assert reference.loaded is expected
+
+
+@pytest.fixture
+def command_resource() -> Iterator[BaseResource]:
+    config = ClientConfig()
+    transport = CliTransport(config)
+    yield BaseResource(transport, config)
+    transport.close()
+
+
+def _command_loader(resource: BaseResource, loader: Callable[[], T]) -> Callable[[], Command[T]]:
+    return lambda: resource._plan(steps=(), finalize=lambda _results: loader())
 
 
 def test_generation_state_distinguishes_unloaded_from_initial_none() -> None:
@@ -28,7 +44,7 @@ def test_generation_state_distinguishes_unloaded_from_initial_none() -> None:
     assert loaded_none.value is None
 
 
-def test_lazy_ref_initial_value_and_cached_get() -> None:
+def test_lazy_ref_initial_value_and_cached_get(command_resource: BaseResource) -> None:
     calls = 0
 
     def load() -> str:
@@ -36,7 +52,11 @@ def test_lazy_ref_initial_value_and_cached_get() -> None:
         calls += 1
         return "loaded"
 
-    reference = LazyRef(load, initial="initial")
+    reference = LazyRef(
+        load,
+        command_loader=_command_loader(command_resource, load),
+        initial="initial",
+    )
 
     _assert_loaded(reference, True)
     assert reference.value == "initial"
@@ -50,14 +70,22 @@ def test_lazy_ref_initial_value_and_cached_get() -> None:
     assert calls == 1
 
 
-def test_lazy_ref_value_raises_before_first_load() -> None:
-    reference = LazyRef(lambda: "loaded", entity_type="Issue", entity_id="i1")
+def test_lazy_ref_value_raises_before_first_load(command_resource: BaseResource) -> None:
+    def load() -> str:
+        return "loaded"
+
+    reference = LazyRef(
+        load,
+        command_loader=_command_loader(command_resource, load),
+        entity_type="Issue",
+        entity_id="i1",
+    )
 
     with pytest.raises(UnloadedReferenceError, match=r"Issue\.reference\.value"):
         _ = reference.value
 
 
-def test_lazy_ref_failed_first_load_is_retryable() -> None:
+def test_lazy_ref_failed_first_load_is_retryable(command_resource: BaseResource) -> None:
     attempts = 0
 
     def load() -> str:
@@ -67,7 +95,7 @@ def test_lazy_ref_failed_first_load_is_retryable() -> None:
             raise RuntimeError("temporary failure")
         return "loaded"
 
-    reference = LazyRef(load)
+    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
 
     with pytest.raises(RuntimeError, match="temporary failure"):
         reference.get()
@@ -79,11 +107,12 @@ def test_lazy_ref_failed_first_load_is_retryable() -> None:
 
 
 def _run_concurrent(
+    resource: BaseResource,
     loader: Callable[[], str],
     *,
-    expected_error: type[Exception] | None = None,
+    expected_loaded: bool,
 ) -> tuple[list[str], list[Exception]]:
-    reference = LazyRef(loader)
+    reference = LazyRef(loader, command_loader=_command_loader(resource, loader))
     results: list[str] = []
     errors: list[Exception] = []
 
@@ -103,11 +132,11 @@ def _run_concurrent(
     second.join(timeout=2)
     assert not first.is_alive()
     assert not second.is_alive()
-    if expected_error is None:
+    if expected_loaded:
         _assert_loaded(reference, True)
     else:
         _assert_loaded(reference, False)
-        assert all(isinstance(error, expected_error) for error in errors)
+        assert all(isinstance(error, RuntimeError) for error in errors)
     return results, errors
 
 
@@ -115,7 +144,37 @@ _LOAD_STARTED = threading.Event()
 _LOAD_RELEASE = threading.Event()
 
 
-def test_lazy_ref_concurrent_success_is_coalesced() -> None:
+@dataclass(frozen=True)
+class ConcurrentCase:
+    name: str
+    error_message: str | None
+    expected_loaded: bool
+    expected_results: tuple[str, ...]
+    expected_errors: tuple[str, ...]
+
+
+_CONCURRENT_CASES = (
+    ConcurrentCase(
+        "success",
+        None,
+        True,
+        ("loaded", "loaded"),
+        (),
+    ),
+    ConcurrentCase(
+        "failure",
+        "shared failure",
+        False,
+        (),
+        ("shared failure", "shared failure"),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _CONCURRENT_CASES, ids=lambda case: case.name)
+def test_lazy_ref_concurrent_is_coalesced(
+    case: ConcurrentCase, command_resource: BaseResource
+) -> None:
     calls = 0
     lock = threading.Lock()
     _LOAD_STARTED.clear()
@@ -127,39 +186,24 @@ def test_lazy_ref_concurrent_success_is_coalesced() -> None:
             calls += 1
         _LOAD_STARTED.set()
         assert _LOAD_RELEASE.wait(timeout=2)
+        if case.error_message is not None:
+            raise RuntimeError(case.error_message)
         return "loaded"
 
-    results, errors = _run_concurrent(load)
+    results, errors = _run_concurrent(command_resource, load, expected_loaded=case.expected_loaded)
 
     assert calls == 1
-    assert results == ["loaded", "loaded"]
-    assert errors == []
+    assert results == list(case.expected_results)
+    assert [str(error) for error in errors] == list(case.expected_errors)
 
 
-def test_lazy_ref_concurrent_failure_is_coalesced() -> None:
-    calls = 0
-    lock = threading.Lock()
-    _LOAD_STARTED.clear()
-    _LOAD_RELEASE.clear()
+def test_lazy_ref_refresh_success_replaces_cached_target(command_resource: BaseResource) -> None:
+    values = iter(("first", "second"))
 
     def load() -> str:
-        nonlocal calls
-        with lock:
-            calls += 1
-        _LOAD_STARTED.set()
-        assert _LOAD_RELEASE.wait(timeout=2)
-        raise RuntimeError("shared failure")
+        return next(values)
 
-    results, errors = _run_concurrent(load, expected_error=RuntimeError)
-
-    assert calls == 1
-    assert results == []
-    assert [str(error) for error in errors] == ["shared failure", "shared failure"]
-
-
-def test_lazy_ref_refresh_success_replaces_cached_target() -> None:
-    values = iter(("first", "second"))
-    reference = LazyRef(lambda: next(values))
+    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
 
     assert reference.get() == "first"
     assert reference.refresh() == "second"
@@ -167,7 +211,7 @@ def test_lazy_ref_refresh_success_replaces_cached_target() -> None:
     assert reference.value == "second"
 
 
-def test_lazy_ref_failed_refresh_preserves_cached_target() -> None:
+def test_lazy_ref_failed_refresh_preserves_cached_target(command_resource: BaseResource) -> None:
     attempts = 0
 
     def load() -> str:
@@ -177,7 +221,7 @@ def test_lazy_ref_failed_refresh_preserves_cached_target() -> None:
             return "first"
         raise RuntimeError("refresh failed")
 
-    reference = LazyRef(load)
+    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
     assert reference.get() == "first"
 
     with pytest.raises(RuntimeError, match="refresh failed"):
@@ -187,7 +231,7 @@ def test_lazy_ref_failed_refresh_preserves_cached_target() -> None:
     assert reference.get() == "first"
 
 
-def test_lazy_ref_invalidation_waits_for_active_generation() -> None:
+def test_lazy_ref_invalidation_waits_for_active_generation(command_resource: BaseResource) -> None:
     load_started = threading.Event()
     load_release = threading.Event()
     invalidation_done = threading.Event()
@@ -197,7 +241,7 @@ def test_lazy_ref_invalidation_waits_for_active_generation() -> None:
         assert load_release.wait(timeout=2)
         return "loaded"
 
-    reference = LazyRef(load)
+    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
     loading = threading.Thread(target=reference.get)
     loading.start()
     assert load_started.wait(timeout=2)
@@ -219,6 +263,27 @@ def test_lazy_ref_invalidation_waits_for_active_generation() -> None:
     _assert_loaded(reference, False)
     with pytest.raises(UnloadedReferenceError):
         _ = reference.value
+
+
+def test_lazy_ref_requires_command_loader() -> None:
+    with pytest.raises(TypeError, match="missing 1 required keyword-only argument"):
+        LazyRef(lambda: "loaded")  # type: ignore[call-arg]
+
+    with pytest.raises(TypeError, match="command_loader is required"):
+        LazyRef(lambda: "loaded", command_loader=None)  # type: ignore[arg-type]
+
+
+def test_direct_lazy_ref_command_paths(command_resource: BaseResource) -> None:
+    values = iter(("first", "second"))
+
+    def load() -> str:
+        return next(values)
+
+    reference = LazyRef(load, command_loader=_command_loader(command_resource, load))
+
+    assert reference.get_command().run() == "first"
+    assert reference.refresh_command().run() == "second"
+    assert reference.value == "second"
 
 
 def test_explicit_null_refresh_is_cached_no_step_and_zero_io() -> None:

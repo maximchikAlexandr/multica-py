@@ -9,9 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from multica_py._internal.commands import Command
-from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
-from multica_py.config import ClientConfig
 from multica_py.entities._base import _BoundEntity
 from multica_py.entities.agents import Agent
 from multica_py.entities.autopilots import Autopilot, AutopilotRun
@@ -56,6 +54,16 @@ def _issue_assignee(client: MulticaClient) -> Issue:
         title="Issue",
         status=IssueStatus.todo,
         assignee=IssueAssignee(id="agent-1", name="Agent", type="agent"),
+        _client=client,
+    )
+
+
+def _issue_squad(client: MulticaClient) -> Issue:
+    return Issue(
+        id="issue-1",
+        title="Issue",
+        status=IssueStatus.todo,
+        assignee=IssueAssignee(id="squad-1", name="Squad", type="squad"),
         _client=client,
     )
 
@@ -154,6 +162,19 @@ GOVERNED_REFERENCE_CASES = (
         IssueAssignee(id="agent-1", name="Agent", type="agent"),
     ),
     GovernedReferenceCase(
+        "Issue.assignee_ref[squad]",
+        Issue,
+        "assignee_ref",
+        _issue_squad,
+        "squads",
+        "squad-1",
+        Squad,
+        LazyRef[Agent | Squad | None],
+        ("multica", "squad", "get", "squad-1", "--output", "json"),
+        "assignee",
+        IssueAssignee(id="squad-1", name="Squad", type="squad"),
+    ),
+    GovernedReferenceCase(
         "Autopilot.project",
         Autopilot,
         "project",
@@ -234,23 +255,6 @@ GOVERNED_REFERENCE_CASES = (
 )
 
 
-def _client_with_command_transport() -> tuple[MulticaClient, MagicMock]:
-    client = MulticaClient(ClientConfig())
-    transport = MagicMock(spec=CliTransport)
-    transport._snapshot.side_effect = lambda _config: transport
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    client._transport = transport
-    for resource_name in (
-        "issues",
-        "projects",
-        "agents",
-        "squads",
-        "autopilots",
-    ):
-        getattr(client, resource_name)._transport = transport
-    return client, transport
-
-
 def _target(case: GovernedReferenceCase, client: MulticaClient) -> _BoundEntity:
     if case.target_type is Issue:
         return Issue(id=case.target_id, title="Target", status=IssueStatus.todo, _client=client)
@@ -279,46 +283,27 @@ def _target(case: GovernedReferenceCase, client: MulticaClient) -> _BoundEntity:
 @pytest.mark.parametrize("case", GOVERNED_REFERENCE_CASES, ids=lambda case: case.name)
 def test_governed_dispatch_inventory_is_typed_passive_and_bound(
     case: GovernedReferenceCase,
+    client_with_transport: tuple[MulticaClient, MagicMock],
 ) -> None:
-    client, transport = _client_with_command_transport()
-    try:
-        source = case.source(client)
-        descriptor = cast("property", inspect.getattr_static(case.owner, case.relation))
-        annotation = get_type_hints(cast("Callable[..., object]", descriptor.fget))["return"]
-        assert annotation == case.annotation
+    client, transport = client_with_transport
+    source = case.source(client)
+    descriptor = cast("property", inspect.getattr_static(case.owner, case.relation))
+    annotation = get_type_hints(cast("Callable[..., object]", descriptor.fget))["return"]
+    assert annotation == case.annotation
 
-        reference = cast("LazyRef[object]", getattr(source, case.relation))
-        assert reference.loaded is False
-        assert getattr(source, case.scalar_field) == case.scalar_value
-        assert transport.run_bytes.call_count == 0
-        assert reference.get_command().commands == (" ".join(case.expected_argv),)
-        assert transport.run_bytes.call_count == 0
+    reference = cast("LazyRef[object]", getattr(source, case.relation))
+    assert reference.loaded is False
+    assert getattr(source, case.scalar_field) == case.scalar_value
+    assert transport.run_bytes.call_count == 0
+    assert reference.get_command().commands == (" ".join(case.expected_argv),)
+    assert transport.run_bytes.call_count == 0
 
-        target = _target(case, client)
-        service = getattr(client, case.service)
-        service.get_command = MagicMock(
-            return_value=client.issues._plan(steps=(), finalize=lambda _results: target)
-        )
-        loaded = reference.get()
-        assert type(loaded) is case.target_type
-        assert cast("_BoundEntity", loaded)._client is client
-        cast("MagicMock", service.get_command).assert_called_once_with(case.target_id)
-    finally:
-        client.close()
-
-
-def test_assignee_squad_dispatch_is_governed() -> None:
-    client, transport = _client_with_command_transport()
-    try:
-        issue = Issue(
-            id="issue-1",
-            title="Issue",
-            status=IssueStatus.todo,
-            assignee=IssueAssignee(id="squad-1", name="Squad", type="squad"),
-            _client=client,
-        )
-        reference = issue.assignee_ref
-        assert reference.get_command().commands == ("multica squad get squad-1 --output json",)
-        assert transport.run_bytes.call_count == 0
-    finally:
-        client.close()
+    target = _target(case, client)
+    service = getattr(client, case.service)
+    service.get_command = MagicMock(
+        return_value=client.issues._plan(steps=(), finalize=lambda _results: target)
+    )
+    loaded = reference.get()
+    assert type(loaded) is case.target_type
+    assert cast("_BoundEntity", loaded)._client is client
+    cast("MagicMock", service.get_command).assert_called_once_with(case.target_id)
