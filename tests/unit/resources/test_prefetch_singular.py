@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import datetime
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
+from concurrent.futures import Future
 from dataclasses import dataclass
 from typing import cast
 from unittest.mock import MagicMock
@@ -349,24 +350,25 @@ def test_singular_scope_preserves_environment_order_and_ignores_display_fields()
 @dataclass(frozen=True)
 class ScopeComponentCase:
     name: str
-    changes: tuple[tuple[str, object], ...]
+    field: str | None
+    value: object | None
     separate_executor: bool
 
 
 SCOPE_COMPONENT_CASES = (
-    ScopeComponentCase("workspace", (("workspace_id", "workspace-2"),), False),
-    ScopeComponentCase("profile", (("profile", "profile-2"),), False),
-    ScopeComponentCase("server", (("server_url", "https://server.example"),), False),
-    ScopeComponentCase("executable", (("executable", "/opt/multica"),), False),
-    ScopeComponentCase("cwd", (("cwd", "/tmp/multica"),), False),
-    ScopeComponentCase("environment", (("environment", (("X", "b"), ("X", "a"))),), False),
-    ScopeComponentCase("timeout", (("timeout", datetime.timedelta(seconds=12)),), False),
-    ScopeComponentCase("debug", (("debug", True),), False),
-    ScopeComponentCase("encoding", (("encoding", "utf-16"),), False),
-    ScopeComponentCase("compatibility", (("compatibility", CompatibilityPolicy.strict),), False),
-    ScopeComponentCase("min-cli", (("min_cli_version", "0.4.28"),), False),
-    ScopeComponentCase("max-cli", (("max_cli_version", "0.4.29"),), False),
-    ScopeComponentCase("executor", (), True),
+    ScopeComponentCase("workspace", "workspace_id", "workspace-2", False),
+    ScopeComponentCase("profile", "profile", "profile-2", False),
+    ScopeComponentCase("server", "server_url", "https://server.example", False),
+    ScopeComponentCase("executable", "executable", "/opt/multica", False),
+    ScopeComponentCase("cwd", "cwd", "/tmp/multica", False),
+    ScopeComponentCase("environment", "environment", (("X", "b"), ("X", "a")), False),
+    ScopeComponentCase("timeout", "timeout", datetime.timedelta(seconds=12), False),
+    ScopeComponentCase("debug", "debug", True, False),
+    ScopeComponentCase("encoding", "encoding", "utf-16", False),
+    ScopeComponentCase("compatibility", "compatibility", CompatibilityPolicy.strict, False),
+    ScopeComponentCase("min-cli", "min_cli_version", "0.4.28", False),
+    ScopeComponentCase("max-cli", "max_cli_version", "0.4.29", False),
+    ScopeComponentCase("executor", None, None, True),
 )
 
 
@@ -378,7 +380,11 @@ def test_prefetch_separates_every_non_semaphore_scope_component() -> None:
     calls: list[MagicMock] = []
 
     for case in SCOPE_COMPONENT_CASES:
-        config = msgspec.structs.replace(base_config, **dict(case.changes))
+        config = (
+            base_config
+            if case.field is None
+            else msgspec.structs.replace(base_config, **{case.field: case.value})
+        )
         executor = LocalExecutor() if case.separate_executor else root._executor
         client = MulticaClient(config, executor=executor, _semaphore=root._semaphore)
         clients.append(client)
@@ -434,6 +440,86 @@ def test_prefetch_rejects_foreign_semaphore_before_singular_io() -> None:
         root.close()
 
 
+def test_prefetch_rolls_back_reservations_before_late_validation_error() -> None:
+    root = MulticaClient(ClientConfig())
+    foreign = MulticaClient(ClientConfig())
+    first = issue_factory(root, "first")
+    second = issue_factory(foreign, "second")
+    target = bound_entity_factory(root, title="retryable")
+    setattr(
+        root.issues,
+        "get_command",
+        MagicMock(return_value=root.issues._plan(steps=(), finalize=lambda _results: target)),
+    )
+
+    try:
+        with pytest.raises(ValueError, match="origin"):
+            root.prefetch((first, second), lambda issue: issue.parent)
+
+        assert first.parent.loaded is False
+        root.prefetch((first,), lambda issue: issue.parent)
+        assert first.parent.value is not None
+        assert first.parent.value.id == target.id
+    finally:
+        foreign.close()
+        root.close()
+
+
+class _CancelledPrefetchExecutor:
+    def __init__(self, max_workers: int) -> None:
+        del max_workers
+        self._submitted = 0
+
+    def __enter__(self) -> _CancelledPrefetchExecutor:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        del args
+
+    def submit(self, load: Callable[[], None]) -> Future[None]:
+        del load
+        future: Future[None] = Future()
+        if self._submitted == 0:
+            future.set_exception(RuntimeError("first job failed"))
+        self._submitted += 1
+        return future
+
+
+def test_prefetch_rolls_back_reservations_for_cancelled_jobs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = MulticaClient(ClientConfig())
+    first = issue_factory(client, "first")
+    second = issue_factory(client, "second")
+    collection: LazyCollection[object] = LazyCollection(lambda: ())
+    target = bound_entity_factory(client, title="retryable")
+    setattr(
+        client.issues,
+        "get_command",
+        MagicMock(return_value=client.issues._plan(steps=(), finalize=lambda _results: target)),
+    )
+    monkeypatch.setattr("multica_py.client.ThreadPoolExecutor", _CancelledPrefetchExecutor)
+    monkeypatch.setattr(
+        "multica_py.client.as_completed",
+        lambda futures: iter((next(iter(futures)),)),
+    )
+
+    def selector(issue: Issue) -> LazyCollection[object] | LazyRef[object]:
+        return collection if issue is first else issue.parent
+
+    try:
+        with pytest.raises(RuntimeError, match="first job failed"):
+            client.prefetch((first, second), selector, max_parallel=1)
+
+        assert second.parent.loaded is False
+        monkeypatch.undo()
+        client.prefetch((second,), lambda issue: issue.parent)
+        assert second.parent.value is not None
+        assert second.parent.value.id == target.id
+    finally:
+        client.close()
+
+
 def test_prefetch_rejects_unknown_relation_before_reading_relation_state() -> None:
     client = MulticaClient(ClientConfig())
     issue = issue_factory(client, "source")
@@ -456,48 +542,56 @@ def test_prefetch_rejects_unknown_relation_before_reading_relation_state() -> No
 @dataclass(frozen=True)
 class RelationInventoryCase:
     name: str
-    mapping: bool
+    build: Callable[[Callable[[], object]], LazyCollection[object] | LazyMapping[str, str]]
+
+
+def _build_collection(loader: Callable[[], object]) -> LazyCollection[object]:
+    return LazyCollection(cast("Callable[[], Iterable[object]]", loader))
+
+
+def _build_mapping(loader: Callable[[], object]) -> LazyMapping[str, str]:
+    return LazyMapping(cast("Callable[[], Mapping[str, str]]", loader))
 
 
 PREFETCH_RELATION_CASES = (
-    RelationInventoryCase("Workspace.members", False),
-    RelationInventoryCase("Workspace.agents", False),
-    RelationInventoryCase("Workspace.skills", False),
-    RelationInventoryCase("Workspace.projects", False),
-    RelationInventoryCase("Workspace.issues", False),
-    RelationInventoryCase("Workspace.labels", False),
-    RelationInventoryCase("Workspace.autopilots", False),
-    RelationInventoryCase("Workspace.repositories", False),
-    RelationInventoryCase("Workspace.runtimes", False),
-    RelationInventoryCase("Workspace.squads", False),
-    RelationInventoryCase("Workspace.plugins", False),
-    RelationInventoryCase("Workspace.properties", False),
-    RelationInventoryCase("Workspace.mcp_servers", False),
-    RelationInventoryCase("Agent.skills", False),
-    RelationInventoryCase("Agent.tasks", False),
-    RelationInventoryCase("Agent.issues", False),
-    RelationInventoryCase("Agent.mcp_servers", False),
-    RelationInventoryCase("Skill.files", False),
-    RelationInventoryCase("Squad.members", False),
-    RelationInventoryCase("Squad.issues", False),
-    RelationInventoryCase("WorkspaceMember.issues", False),
-    RelationInventoryCase("Project.resources", False),
-    RelationInventoryCase("Project.issues", False),
-    RelationInventoryCase("Issue.comments", False),
-    RelationInventoryCase("Issue.recent_comment_threads", False),
-    RelationInventoryCase("Issue.labels", False),
-    RelationInventoryCase("Issue.subscribers", False),
-    RelationInventoryCase("Issue.metadata", True),
-    RelationInventoryCase("Issue.pull_requests", False),
-    RelationInventoryCase("Issue.children", False),
-    RelationInventoryCase("Issue.runs", False),
-    RelationInventoryCase("Issue.properties", True),
-    RelationInventoryCase("CommentThread.comments", False),
-    RelationInventoryCase("TaskRun.messages", False),
-    RelationInventoryCase("Autopilot.runs", False),
-    RelationInventoryCase("Autopilot.triggers", False),
-    RelationInventoryCase("Autopilot.subscribers", False),
-    RelationInventoryCase("AutopilotRun.messages", False),
+    RelationInventoryCase("Workspace.members", _build_collection),
+    RelationInventoryCase("Workspace.agents", _build_collection),
+    RelationInventoryCase("Workspace.skills", _build_collection),
+    RelationInventoryCase("Workspace.projects", _build_collection),
+    RelationInventoryCase("Workspace.issues", _build_collection),
+    RelationInventoryCase("Workspace.labels", _build_collection),
+    RelationInventoryCase("Workspace.autopilots", _build_collection),
+    RelationInventoryCase("Workspace.repositories", _build_collection),
+    RelationInventoryCase("Workspace.runtimes", _build_collection),
+    RelationInventoryCase("Workspace.squads", _build_collection),
+    RelationInventoryCase("Workspace.plugins", _build_collection),
+    RelationInventoryCase("Workspace.properties", _build_collection),
+    RelationInventoryCase("Workspace.mcp_servers", _build_collection),
+    RelationInventoryCase("Agent.skills", _build_collection),
+    RelationInventoryCase("Agent.tasks", _build_collection),
+    RelationInventoryCase("Agent.issues", _build_collection),
+    RelationInventoryCase("Agent.mcp_servers", _build_collection),
+    RelationInventoryCase("Skill.files", _build_collection),
+    RelationInventoryCase("Squad.members", _build_collection),
+    RelationInventoryCase("Squad.issues", _build_collection),
+    RelationInventoryCase("WorkspaceMember.issues", _build_collection),
+    RelationInventoryCase("Project.resources", _build_collection),
+    RelationInventoryCase("Project.issues", _build_collection),
+    RelationInventoryCase("Issue.comments", _build_collection),
+    RelationInventoryCase("Issue.recent_comment_threads", _build_collection),
+    RelationInventoryCase("Issue.labels", _build_collection),
+    RelationInventoryCase("Issue.subscribers", _build_collection),
+    RelationInventoryCase("Issue.metadata", _build_mapping),
+    RelationInventoryCase("Issue.pull_requests", _build_collection),
+    RelationInventoryCase("Issue.children", _build_collection),
+    RelationInventoryCase("Issue.runs", _build_collection),
+    RelationInventoryCase("Issue.properties", _build_mapping),
+    RelationInventoryCase("CommentThread.comments", _build_collection),
+    RelationInventoryCase("TaskRun.messages", _build_collection),
+    RelationInventoryCase("Autopilot.runs", _build_collection),
+    RelationInventoryCase("Autopilot.triggers", _build_collection),
+    RelationInventoryCase("Autopilot.subscribers", _build_collection),
+    RelationInventoryCase("AutopilotRun.messages", _build_collection),
 )
 
 
@@ -510,19 +604,11 @@ def test_prefetch_keeps_collection_and_mapping_identity_dedup_for_inventory_case
     try:
         calls = {"count": 0}
 
-        def mapping_loader() -> Mapping[str, str]:
+        def relation_loader() -> object:
             calls["count"] += 1
             return {"value": relation_name}
 
-        def collection_loader() -> tuple[object, ...]:
-            calls["count"] += 1
-            return ()
-
-        relation: LazyMapping[str, str] | LazyCollection[object]
-        if case.mapping:
-            relation = LazyMapping(mapping_loader)
-        else:
-            relation = LazyCollection(collection_loader)
+        relation = case.build(relation_loader)
         entity = bound_entity_factory(client)
         client.prefetch((entity, entity), lambda _entity: relation, max_parallel=1)
         assert calls["count"] == 1

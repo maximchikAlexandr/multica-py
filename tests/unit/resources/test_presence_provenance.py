@@ -35,51 +35,56 @@ def _issue_payload(**fields: object) -> bytes:
     return json.dumps({"id": "issue-1", "title": "Issue", "status": "todo", **fields}).encode()
 
 
-@pytest.mark.parametrize(
-    ("field", "wire_value", "seed"),
-    (
-        ("parent_issue_id", msgspec.UNSET, "missing"),
-        ("parent_issue_id", None, "null"),
-        ("parent_issue_id", "parent-1", "value"),
-        ("project_id", msgspec.UNSET, "missing"),
-        ("project_id", None, "null"),
-        ("project_id", "project-1", "value"),
-        ("assignee", msgspec.UNSET, "missing"),
-        ("assignee", None, "null"),
-        (
-            "assignee",
-            {"id": "agent-1", "name": "Agent", "type": "agent"},
-            "value",
-        ),
-    ),
+@dataclass(frozen=True)
+class WirePresenceCase:
+    field: str
+    wire_value: object
+    seed: str
+
+
+ISSUE_WIRE_PRESENCE_CASES = (
+    WirePresenceCase("parent_issue_id", msgspec.UNSET, "missing"),
+    WirePresenceCase("parent_issue_id", None, "null"),
+    WirePresenceCase("parent_issue_id", "parent-1", "value"),
+    WirePresenceCase("project_id", msgspec.UNSET, "missing"),
+    WirePresenceCase("project_id", None, "null"),
+    WirePresenceCase("project_id", "project-1", "value"),
+    WirePresenceCase("assignee", msgspec.UNSET, "missing"),
+    WirePresenceCase("assignee", None, "null"),
+    WirePresenceCase("assignee", {"id": "agent-1", "name": "Agent", "type": "agent"}, "value"),
 )
-def test_issue_wire_presence_preserves_public_values(
-    field: str, wire_value: object, seed: str
-) -> None:
-    encoded = {} if wire_value is msgspec.UNSET else {field: wire_value}
+
+
+@pytest.mark.parametrize(
+    "case", ISSUE_WIRE_PRESENCE_CASES, ids=lambda case: f"{case.field}-{case.seed}"
+)
+def test_issue_wire_presence_preserves_public_values(case: WirePresenceCase) -> None:
+    encoded = {} if case.wire_value is msgspec.UNSET else {case.field: case.wire_value}
     issue = _issue_from_wire(decode_json(_issue_payload(**encoded), _IssueWire))
 
-    public_field = "parent_id" if field == "parent_issue_id" else field
-    expected = None if wire_value is msgspec.UNSET else wire_value
-    if field == "assignee" and isinstance(expected, dict):
+    public_field = "parent_id" if case.field == "parent_issue_id" else case.field
+    expected = None if case.wire_value is msgspec.UNSET else case.wire_value
+    if case.field == "assignee" and isinstance(expected, dict):
         expected = IssueAssignee(**expected)
     assert getattr(issue, public_field) == expected
-    presence_field = "parent_id" if field == "parent_issue_id" else field
-    assert (presence_field, seed) in issue._wire_presence
+    presence_field = "parent_id" if case.field == "parent_issue_id" else case.field
+    assert (presence_field, case.seed) in issue._wire_presence
+
+
+AUTOPILOT_PROJECT_PRESENCE_CASES = (
+    WirePresenceCase("project_id", msgspec.UNSET, "missing"),
+    WirePresenceCase("project_id", None, "null"),
+    WirePresenceCase("project_id", "project-1", "value"),
+)
 
 
 @pytest.mark.parametrize(
-    ("field", "wire_value", "seed"),
-    (
-        ("project_id", msgspec.UNSET, "missing"),
-        ("project_id", None, "null"),
-        ("project_id", "project-1", "value"),
-    ),
+    "case", AUTOPILOT_PROJECT_PRESENCE_CASES, ids=lambda case: f"{case.field}-{case.seed}"
 )
 def test_autopilot_project_presence_preserves_public_value(
-    field: str, wire_value: object, seed: str
+    case: WirePresenceCase,
 ) -> None:
-    fields = {} if wire_value is msgspec.UNSET else {field: wire_value}
+    fields = {} if case.wire_value is msgspec.UNSET else {case.field: case.wire_value}
     wire = decode_json(
         json.dumps(
             {
@@ -99,16 +104,22 @@ def test_autopilot_project_presence_preserves_public_value(
     )
     autopilot = _autopilot_from_wire(wire)
 
-    assert autopilot.project_id == (None if wire_value is msgspec.UNSET else wire_value)
-    assert ("project_id", seed) in autopilot._wire_presence
+    assert autopilot.project_id == (None if case.wire_value is msgspec.UNSET else case.wire_value)
+    assert ("project_id", case.seed) in autopilot._wire_presence
+
+
+AUTOPILOT_RUN_ISSUE_PRESENCE_CASES = (
+    WirePresenceCase("issue_id", msgspec.UNSET, "missing"),
+    WirePresenceCase("issue_id", None, "null"),
+    WirePresenceCase("issue_id", "issue-1", "value"),
+)
 
 
 @pytest.mark.parametrize(
-    ("wire_value", "seed"),
-    ((msgspec.UNSET, "missing"), (None, "null"), ("issue-1", "value")),
+    "case", AUTOPILOT_RUN_ISSUE_PRESENCE_CASES, ids=lambda case: f"{case.field}-{case.seed}"
 )
-def test_autopilot_run_issue_presence_preserves_public_value(wire_value: object, seed: str) -> None:
-    fields = {} if wire_value is msgspec.UNSET else {"issue_id": wire_value}
+def test_autopilot_run_issue_presence_preserves_public_value(case: WirePresenceCase) -> None:
+    fields = {} if case.wire_value is msgspec.UNSET else {case.field: case.wire_value}
     wire = decode_json(
         json.dumps(
             {
@@ -123,18 +134,24 @@ def test_autopilot_run_issue_presence_preserves_public_value(wire_value: object,
     )
     run = _autopilot_run_from_wire(wire)
 
-    assert run.issue_id == (None if wire_value is msgspec.UNSET else wire_value)
-    assert ("issue_id", seed) in run._wire_presence
+    assert run.issue_id == (None if case.wire_value is msgspec.UNSET else case.wire_value)
+    assert ("issue_id", case.seed) in run._wire_presence
+
+
+TASK_RUN_AGENT_PRESENCE_CASES = (
+    WirePresenceCase("agent_id", msgspec.UNSET, "missing"),
+    WirePresenceCase("agent_id", None, "null"),
+    WirePresenceCase("agent_id", "agent-1", "value"),
+)
 
 
 @pytest.mark.parametrize(
-    ("wire_value", "seed"),
-    ((msgspec.UNSET, "missing"), (None, "null"), ("agent-1", "value")),
+    "case", TASK_RUN_AGENT_PRESENCE_CASES, ids=lambda case: f"{case.field}-{case.seed}"
 )
 def test_task_run_agent_presence_preserves_inherited_issue_context(
-    wire_value: object, seed: str
+    case: WirePresenceCase,
 ) -> None:
-    fields = {} if wire_value is msgspec.UNSET else {"agent_id": wire_value}
+    fields = {} if case.wire_value is msgspec.UNSET else {case.field: case.wire_value}
     wire = decode_json(
         json.dumps({"id": "task-1", "status": "completed", **fields}).encode(),
         _TaskRunWire,
@@ -142,9 +159,9 @@ def test_task_run_agent_presence_preserves_inherited_issue_context(
     task_run = _task_run_from_wire(wire, issue_id="issue-1")
 
     assert isinstance(task_run, TaskRun)
-    assert task_run.agent_id == (None if wire_value is msgspec.UNSET else wire_value)
+    assert task_run.agent_id == (None if case.wire_value is msgspec.UNSET else case.wire_value)
     assert task_run.issue_id == "issue-1"
-    assert ("agent_id", seed) in task_run._wire_presence
+    assert ("agent_id", case.seed) in task_run._wire_presence
 
 
 def test_detach_preserves_presence_and_freshens_runtime_state() -> None:
@@ -261,18 +278,25 @@ OPTIONAL_REFERENCE_CASES = (
 )
 
 
+@dataclass(frozen=True)
+class OptionalReferenceValueCase:
+    name: str
+    value: object
+
+
 OPTIONAL_REFERENCE_VALUES = (
-    pytest.param(msgspec.UNSET, id="omitted"),
-    pytest.param(None, id="explicit-null"),
-    pytest.param("target-1", id="value"),
+    OptionalReferenceValueCase("omitted", msgspec.UNSET),
+    OptionalReferenceValueCase("explicit-null", None),
+    OptionalReferenceValueCase("value", "target-1"),
 )
 
 
 @pytest.mark.parametrize("case", OPTIONAL_REFERENCE_CASES, ids=lambda case: case.name)
-@pytest.mark.parametrize("wire_value", OPTIONAL_REFERENCE_VALUES)
+@pytest.mark.parametrize("value_case", OPTIONAL_REFERENCE_VALUES, ids=lambda case: case.name)
 def test_optional_reference_shapes_classify_before_and_after_detach(
-    case: OptionalReferenceCase, wire_value: object
+    case: OptionalReferenceCase, value_case: OptionalReferenceValueCase
 ) -> None:
+    wire_value = value_case.value
     entity = case.build(wire_value)
 
     if wire_value is msgspec.UNSET:

@@ -177,23 +177,42 @@ def test_exact_nine_lazy_ref_members_are_public_and_inventory_bound() -> None:
     assert sum(len(members) for members in discovered.values()) == 9
 
 
+@dataclass(frozen=True)
+class ExcludedSingularCase:
+    owner: type[object]
+    names: frozenset[str]
+
+
 UNSUPPORTED_SINGULAR_NAMES = (
-    (Issue, {"creator", "member", "trigger", "task", "author", "users", "leader"}),
-    (Autopilot, {"creator", "member", "trigger", "task", "author", "users", "leader"}),
-    (AutopilotRun, {"creator", "member", "trigger", "task", "author", "users", "agent"}),
-    (TaskRun, {"autopilot", "creator", "member", "trigger", "task", "author", "users"}),
+    ExcludedSingularCase(
+        Issue, frozenset({"creator", "member", "trigger", "task", "author", "users", "leader"})
+    ),
+    ExcludedSingularCase(
+        Autopilot,
+        frozenset({"creator", "member", "trigger", "task", "author", "users", "leader"}),
+    ),
+    ExcludedSingularCase(
+        AutopilotRun,
+        frozenset({"creator", "member", "trigger", "task", "author", "users", "agent"}),
+    ),
+    ExcludedSingularCase(
+        TaskRun,
+        frozenset({"autopilot", "creator", "member", "trigger", "task", "author", "users"}),
+    ),
 )
+
+
+def _excluded_singular_id(case: ExcludedSingularCase) -> str:
+    return case.owner.__name__
 
 
 @pytest.mark.parametrize(
-    ("owner", "names"),
+    "case",
     UNSUPPORTED_SINGULAR_NAMES,
-    ids=("Issue", "Autopilot", "AutopilotRun", "TaskRun"),
+    ids=_excluded_singular_id,
 )
-def test_excluded_singular_edges_have_no_lazy_ref_surface(
-    owner: type[object], names: set[str]
-) -> None:
-    assert _lazy_ref_members(owner).isdisjoint(names)
+def test_excluded_singular_edges_have_no_lazy_ref_surface(case: ExcludedSingularCase) -> None:
+    assert _lazy_ref_members(case.owner).isdisjoint(case.names)
 
 
 def test_property_plugin_and_mcp_ids_remain_passive_values() -> None:

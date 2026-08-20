@@ -280,6 +280,13 @@ def _load_original_handles(
     return handles
 
 
+@dataclass(frozen=True)
+class ResponseHandleCase:
+    name: str
+    field_name: str
+    value: str | IssueAssignee | None
+
+
 @pytest.mark.parametrize("case", _MUTATION_SUCCESS_CASES, ids=lambda case: case.name)
 def test_issue_mutations_publish_fresh_response_state_and_preserve_original(
     case: MutationSuccessCase,
@@ -311,16 +318,16 @@ def test_issue_mutations_publish_fresh_response_state_and_preserve_original(
     assert replacement._client is client
 
     response_handles = (
-        ("parent", "parent_id", case.response_parent),
-        ("project", "project_id", case.response_project),
-        ("assignee_ref", "assignee", case.response_assignee),
+        ResponseHandleCase("parent", "parent_id", case.response_parent),
+        ResponseHandleCase("project", "project_id", case.response_project),
+        ResponseHandleCase("assignee_ref", "assignee", case.response_assignee),
     )
-    for name, field_name, value in response_handles:
-        new_handle = getattr(replacement, name)
-        assert new_handle is not old_handles[name]
-        expected_seed = "null" if value is None else "value"
-        assert (field_name, expected_seed) in replacement._wire_presence
-        if value is None:
+    for response_handle in response_handles:
+        new_handle = getattr(replacement, response_handle.name)
+        assert new_handle is not old_handles[response_handle.name]
+        expected_seed = "null" if response_handle.value is None else "value"
+        assert (response_handle.field_name, expected_seed) in replacement._wire_presence
+        if response_handle.value is None:
             assert new_handle.loaded is True
             assert new_handle.value is None
         else:
