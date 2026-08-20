@@ -4,13 +4,13 @@ import datetime
 import os
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, as_completed
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, cast
 
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions, _apply_operation_options
 from multica_py.execution import CommandExecutor, LocalExecutor
-from multica_py.models.relations import LazyLoadable
+from multica_py.models.relations import LazyLoadable, LazyRef, _PrefetchLoadable
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
@@ -162,10 +162,32 @@ class MulticaClient:
     ) -> MulticaClient:
         return self.with_options(environment=environment)
 
+    def _singular_scope_key(self, target_type: str, target_id: str) -> tuple[object, ...]:
+        config = self._config
+        cwd = None if config.cwd is None else os.fspath(config.cwd)
+        return (
+            os.fspath(config.executable),
+            config.server_url,
+            config.profile,
+            config.workspace_id,
+            cwd,
+            tuple(config.environment),
+            config.timeout,
+            config.debug,
+            config.encoding,
+            config.compatibility,
+            config.min_cli_version,
+            config.max_cli_version,
+            id(self._executor),
+            id(self._semaphore),
+            target_type,
+            target_id,
+        )
+
     def prefetch(
         self,
         entities: Iterable[TEntity],
-        selector: Callable[[TEntity], LazyLoadable[TRelationValue_co]],
+        selector: Callable[[TEntity], LazyLoadable[TRelationValue_co] | _PrefetchLoadable],
         *,
         max_parallel: int = 4,
     ) -> None:
@@ -174,17 +196,41 @@ class MulticaClient:
 
         entity_values = tuple(entities)
         jobs: list[tuple[int, Callable[[], None]]] = []
-        seen: set[int] = set()
+        seen_collections: set[int] = set()
+        singular_jobs: dict[tuple[object, ...], list[LazyRef[object]]] = {}
         for entity in entity_values:
             origin = entity._client
             if origin is None or origin._semaphore is not self._semaphore:
                 raise ValueError("entities must share an origin scope")
             relation = selector(entity)
-            if relation.loaded or id(relation) in seen:
+            if relation.loaded:
                 continue
-            seen.add(id(relation))
+            if isinstance(relation, LazyRef):
+                singular = cast("LazyRef[object]", relation)
+                key = singular._prefetch_key()
+                destinations = singular_jobs.get(key)
+                if destinations is not None:
+                    destinations.append(singular)
+                    continue
+                destinations = [singular]
+                singular_jobs[key] = destinations
+                index = len(jobs)
+
+                def load_singular(
+                    primary: LazyRef[object] = singular,
+                    targets: list[LazyRef[object]] = destinations,
+                ) -> None:
+                    value = primary._prefetch_load()
+                    for target in targets:
+                        target._prefetch_publish(value)
+
+                jobs.append((index, load_singular))
+                continue
+            if id(relation) in seen_collections:
+                continue
+            seen_collections.add(id(relation))
             index = len(jobs)
-            jobs.append((index, _load_job(relation)))
+            jobs.append((index, _load_job(cast("LazyLoadable[object]", relation))))
         failures: dict[int, Exception] = {}
         futures: dict[Future[None], int] = {}
         with ThreadPoolExecutor(max_workers=max_parallel) as executor:

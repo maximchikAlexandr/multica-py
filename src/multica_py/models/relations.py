@@ -89,6 +89,17 @@ class LazyLoadable(Protocol[T_co]):
     def all(self) -> T_co: ...
 
 
+class _PrefetchLoadable(Protocol):  # noqa: PYI046
+    @property
+    def loaded(self) -> bool: ...
+
+    def _prefetch_key(self) -> tuple[object, ...]: ...
+
+    def _prefetch_load(self) -> object: ...
+
+    def _prefetch_publish(self, value: object) -> None: ...
+
+
 @dataclass(slots=True)
 class _GenerationSuccess(Generic[R]):
     value: R
@@ -196,6 +207,14 @@ class _GenerationState(Generic[R]):
             self._value = self._empty
             self._condition.notify_all()
 
+    def publish(self, value: R) -> None:
+        with self._condition:
+            while self._state == self._LOADING:
+                self._condition.wait()
+            self._value = value
+            self._state = self._LOADED
+            self._condition.notify_all()
+
 
 class _OffsetLoader(Protocol[T]):
     def __call__(self, *, limit: int | None, offset: int) -> OffsetPage[T]: ...
@@ -217,12 +236,16 @@ class LazyRef(Generic[T_co]):
         entity_type: str = "Reference",
         entity_id: str = "unknown",
         relation_name: str = "reference",
+        _prefetch_target: Callable[[], tuple[str, str | None] | None] | None = None,
+        _origin_client: object | None = None,
     ) -> None:
         self._loader = loader
         self._command_loader = command_loader
         self._entity_type = entity_type
         self._entity_id = entity_id
         self._relation_name = relation_name
+        self._prefetch_target = _prefetch_target
+        self._origin_client = _origin_client
         self._generation_state: _GenerationState[T_co] = _GenerationState(
             cast("T_co", None), initial=initial
         )
@@ -282,6 +305,43 @@ class LazyRef(Generic[T_co]):
 
     def invalidate(self) -> None:
         self._generation_state.invalidate()
+
+    def _prefetch_key(self) -> tuple[object, ...]:
+        prefetch_target = self._prefetch_target
+        if prefetch_target is None:
+            return ("lazy-ref-error", id(self))
+        try:
+            target = prefetch_target()
+        except Exception:
+            return ("lazy-ref-error", id(self))
+        if target is None:
+            return ("lazy-ref-error", id(self))
+        target_type, target_id = target
+        if not target_id:
+            return ("lazy-ref-error", id(self))
+        client = self._origin_client
+        if client is None:
+            return ("lazy-ref-error", id(self))
+        scope_key = cast(
+            "Callable[[str, str], tuple[object, ...]]",
+            getattr(client, "_singular_scope_key"),
+        )
+        return scope_key(target_type, target_id)
+
+    def _prefetch_load(self) -> T_co:
+        return self.get()
+
+    def _prefetch_publish(self, value: object) -> None:
+        client = self._origin_client
+        try:
+            clone = cast(
+                "Callable[[object | None], object]",
+                object.__getattribute__(value, "_clone_for_client"),
+            )
+        except AttributeError:
+            clone = None
+        published = clone(client) if client is not None and callable(clone) else value
+        self._generation_state.publish(cast("T_co", published))
 
 
 def _pagination_error(relation_name: str, reason: str) -> Exception:

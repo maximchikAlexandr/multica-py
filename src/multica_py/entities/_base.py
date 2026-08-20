@@ -156,6 +156,10 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
         _runtime_state(result).update(_runtime_state(self))
         return result
 
+    def _clone_for_client(self, client: MulticaClient | None) -> Self:
+        """Clone immutable target data with fresh destination-local runtime state."""
+        return msgspec.structs.replace(self, _client=client)
+
     def _set_runtime(self, name: str, value: object) -> None:
         """Store relation state without mutating a frozen msgspec field.
 
