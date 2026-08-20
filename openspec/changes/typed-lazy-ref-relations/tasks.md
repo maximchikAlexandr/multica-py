@@ -1,6 +1,6 @@
 ## 0. Pre-implementation baseline gate
 
-- [ ] 0.1 Before any implementation edit, fetch the current `origin/main` and integrate it into the working feature branch using the implementer's chosen merge or rebase workflow; verify `git merge-base --is-ancestor origin/main HEAD` succeeds, all existing `typed-lazy-ref-relations` proposal/specs/design/tasks content remains present without loss, and `uv run openspec validate typed-lazy-ref-relations --strict` still passes after the sync.
+- [x] 0.1 Before any implementation edit, fetch the current `origin/main` and integrate it into the working feature branch using the implementer's chosen merge or rebase workflow; verify `git merge-base --is-ancestor origin/main HEAD` succeeds, all existing `typed-lazy-ref-relations` proposal/specs/design/tasks content remains present without loss, and `uv run openspec validate typed-lazy-ref-relations --strict` still passes after the sync.
 
 ## 1. Lazy reference foundation
 
