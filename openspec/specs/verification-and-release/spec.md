@@ -2,7 +2,9 @@
 
 Define the offline, packaging, live-smoke, and release checks required for the
 SDK.
+
 ## Requirements
+
 ### Requirement: Offline quality and release
 CI MUST run Ruff, configured mypy, offline pytest, statement and branch coverage, contract check, package validation, and approved release validation through `uv`. Coverage acceptance MUST include named gates for process lifecycle code and individually selected critical resource modules so that aggregate package coverage cannot conceal their regression.
 
@@ -28,6 +30,19 @@ equal the lengths computed from the final case tables; historic literals
 - **WHEN** `discovered_public_methods` is compared to `{case.sdk_method for case in OPERATION_CASES if case.is_canonical}`
 - **THEN** the sets are equal, every supported method has one canonical row, removed methods have none, and stored count constants equal the computed table partitions
 
+#### Scenario: CLI-executing methods have command coverage
+
+- **WHEN** the canonical method set is inspected for command preview
+  coverage
+- **THEN** every CLI-executing canonical method has a matching typed
+  `*_command()` method and a command-preview test case, and local-only
+  methods are excluded
+
+#### Scenario: New uncovered CLI-executing method fails the gate
+
+- **WHEN** a new public CLI-executing method is added without a
+  `*_command()` sibling and command-preview case
+- **THEN** the offline completeness gate fails
 ### Requirement: Focused process and offline checks
 Offline tests MUST use stdlib and pytest, keep exact argv assertions including operations with dynamic temporary paths, retain exactly three real-process cases, and use deterministic synchronization or subprocess test doubles for additional lifecycle branches.
 
@@ -40,6 +55,20 @@ Offline tests MUST use stdlib and pytest, keep exact argv assertions including o
 - **WHEN** an operation creates a temporary file or directory path
 - **THEN** only the declared dynamic argv position is normalized and the complete remaining argv, transport method, stdin, and timeout are compared exactly
 
+#### Scenario: Routing tests use the public command preview
+
+- **WHEN** a CLI-routing `OperationCase` runs
+- **THEN** it constructs the matching `*_command()`, asserts
+  `command.commands`, calls `command.run()`, asserts the result, and
+  asserts the transport received argv/execution-mode/stdin/timeout from
+  the same plan, instead of reconstructing expected argv through a
+  separate path
+
+#### Scenario: No parallel command-preview case hierarchy
+
+- **WHEN** command-preview coverage is added
+- **THEN** it extends the existing `OperationCase` table and shared
+  fixtures rather than creating a parallel case type or file
 ### Requirement: Prepared-target live smoke
 Live smoke MUST run separately against a prepared CLI/profile/workspace and clean uniquely named resources through the SDK.
 #### Scenario: Prepared targets run live smoke
@@ -96,6 +125,14 @@ public migration behavior using stdlib and pytest.
 - **WHEN** offset or cursor fixtures return empty, repeated, malformed, or no-progress continuation state
 - **THEN** a bounded call count and typed error are asserted and no partial complete result is cached
 
+#### Scenario: Relation command forms are verified
+
+- **WHEN** relation command-preview coverage is audited
+- **THEN** cache-hit (`commands == ()`), forced refresh,
+  `OffsetLazyCollection.page_command`, `CursorLazyCollection.page_command`,
+  and prefetch routing through `all_command().run()` under concurrency
+  are each covered by focused cases
+
 ### Requirement: Relation live smoke by strategy
 Gated live verification MUST exercise representative prepared-target flows for
 workspace, project, agent/skill/squad, issue/comment/run, and autopilot graph
@@ -112,58 +149,6 @@ phases without direct HTTP access or backend provisioning.
 #### Scenario: Offline collection excludes live nodes
 - **WHEN** `uv run pytest -m "not live" --collect-only` runs
 - **THEN** no `tests/live/*` node is collected
-
-### Requirement: v0.4.20 compatibility delta is verified end to end
-
-Offline verification SHALL cover the pinned baseline, contract reconciliation,
-runtime cascade semantics, agent copy, issue-search response adaptation,
-forward-compatible upstream strings, conflict/validation detail preservation,
-the retained autopilot trigger mapping, command preview, and documentation.
-Repeated operation and decoding cases SHALL extend the repository's existing
-frozen dataclass tables and shared fixtures. The full acceptance gate SHALL run
-Ruff check and format check, `mypy src`, `mypy tests`, contract validation and
-check, package validation, and `pytest -m "not live"` without requiring a
-backend or network.
-
-#### Scenario: Compatibility constants and provenance agree
-- **WHEN** contract, generated runtime, compatibility policy, docs, and provenance fixtures are checked
-- **THEN** tracked baseline values consistently identify `v0.4.20` and `[0.4.20, 0.4.21)`, with no stale `v0.4.9` expectation outside historical/archive material
-
-#### Scenario: Agent copy has table-driven command coverage
-- **WHEN** canonical and variant operation cases run
-- **THEN** they cover same-runtime copy, cross-runtime default model, explicit portable overrides, repeated permission members, `copy_skills=False`, exact command preview, bound result decoding, and zero-I/O validation failures
-
-#### Scenario: Secret and machine-local copy behavior is negative-tested
-- **WHEN** agent copy is constructed without secret configuration
-- **THEN** tests prove `--custom-env`, `--mcp-config`, and `--runtime-config` are absent from signature, preview, executed argv, and copied behavior
-
-#### Scenario: Issue search shapes and sources are covered
-- **WHEN** search decoding tests run
-- **THEN** they cover a `v0.4.20` envelope and legacy array, present title/description/comment sources, a number-shaped query, an omitted source, an unknown future source, exact argv, and the unchanged tuple return type
-
-#### Scenario: Conflict and validation matrices preserve detail
-- **WHEN** transport failure cases run
-- **THEN** raw statuses, pinned English/Chinese prefixes, generic fallbacks, exit `5`, reviewed local validation, empty diagnostics, and secret-bearing diagnostics assert exact exception class, reported exit code, redacted attributes, and useful `str(exc)` text
-
-#### Scenario: Runtime cascade docs and tests use unbind semantics
-- **WHEN** runtime resource tests and public/maintainer documentation are inspected
-- **THEN** `cascade=True` is described and asserted as unbinding agents and cancelling active work while preserving configuration, chats, and history, and no current documentation claims that agents are deleted or archived
-
-#### Scenario: Autopilot source-contract regression rejects run spelling
-- **WHEN** the approved binding, generated descriptor, canonical operation case, and source-validation fixture are checked
-- **THEN** every expected command uses `autopilot trigger` and a mutation back to `autopilot run` fails at least one offline gate
-
-#### Scenario: Unknown upstream-owned strings stay decodable
-- **WHEN** typed model and command cases use future provider, model, thinking-level, service-tier, or match-source strings
-- **THEN** no closed-enum decode or construction failure occurs before upstream validation
-
-#### Scenario: Canonical discovery includes new command methods
-- **WHEN** public method discovery is compared with canonical operation cases
-- **THEN** `agents.copy` and `agents.copy_command` follow the repository's command-preview completeness convention, every eager CLI method still has exactly one canonical row, and stored counts equal computed table partitions
-
-#### Scenario: Complete offline gate is green
-- **WHEN** the change is ready for delivery
-- **THEN** contract `validate --source-checkout`, deterministic render/check, Ruff check, Ruff format check, `mypy src`, `mypy tests`, package validation, and `pytest -m "not live"` all pass
 
 ### Requirement: Simplified public surface is verified from one inventory
 Offline verification SHALL derive the final public method and symbol inventories, direct-only input signatures, eager/command pairs, operation categories, and return contracts from the approved SDK contract plus explicit bound/relation declarations. Every added, removed, or changed operation SHALL have exactly one canonical success case and focused invalid-input cases. No allowlist SHALL hide an ungoverned request DTO, summary return, domain alias, operation-options parameter, or raw command entry point.
@@ -319,3 +304,267 @@ After Phases 2 through 4, the implementer SHALL remeasure private entity-to-reso
 #### Scenario: Remeasurement supports a pilot
 - **WHEN** material duplication remains and one complex relation can test the hypothesis
 - **THEN** implementation stops at a documented follow-up proposal rather than adding the pilot or a universal relation framework to this change
+
+### Requirement: v0.4.28 compatibility delta is verified end to end
+
+Offline verification SHALL cover the pinned `v0.4.28` baseline, full command-tree
+reconciliation, Plugin and Property resources, Workspace/Agent MCP operations,
+skill refresh, issue status/assignee decoding, secret redaction for MCP and
+plugin credentials, bound relations R34–R38, command preview, and documentation.
+Repeated operation and decoding cases SHALL extend the repository's existing
+frozen dataclass tables and shared fixtures. The full acceptance gate SHALL run
+Ruff check and format check, `mypy src`, `mypy tests`, contract validation and
+check, package validation, and `pytest -m "not live"` without requiring a
+backend or network.
+
+#### Scenario: Compatibility constants and provenance agree
+- **WHEN** contract, generated runtime, compatibility policy, docs, and provenance fixtures are checked
+- **THEN** tracked baseline values consistently identify `v0.4.28` and `[0.4.28, 0.4.29)`, with no stale `v0.4.20` expectation outside historical/archive material
+
+#### Scenario: Plugin and property operations have table-driven coverage
+- **WHEN** canonical and variant operation cases run
+- **THEN** they cover plugin list/status/validate/pack/init/install, property catalog CRUD/archive, issue property list/set/unset, exact command preview, and zero-I/O validation failures
+
+#### Scenario: MCP secret channels are negative-tested
+- **WHEN** workspace MCP add is constructed with a config file
+- **THEN** tests prove `--server-config` is absent, file/stdin exclusivity is enforced, and tokens never appear in preview or diagnostics
+
+#### Scenario: Skill refresh and agent MCP are covered
+- **WHEN** canonical operation cases run
+- **THEN** they include `skill refresh <id>` and `agent mcp list|add|enable|disable|remove` with exact argv
+
+#### Scenario: Canonical discovery includes new command methods
+- **WHEN** public method discovery is compared with canonical operation cases
+- **THEN** every eager CLI method still has exactly one canonical row, stored counts equal computed table partitions, and no allowlist is accepted
+
+#### Scenario: Complete offline gate is green
+- **WHEN** the change is ready for delivery
+- **THEN** contract `validate --source-checkout`, deterministic render/check, Ruff check, Ruff format check, `mypy src`, `mypy tests`, package validation, and `pytest -m "not live"` all pass
+
+#### Scenario: Audited binary mismatches have regressions
+- **WHEN** Plugin init, Workspace MCP remove, root login, configuration, issue prioritization, and workspace watch surfaces are verified
+- **THEN** exact argv/response tests agree with the pinned `v0.4.28` Cobra source and verified release binary rather than legacy fixture paths
+
+#### Scenario: GitHub final authority is green
+- **WHEN** the remediation commit is pushed to the feature branch
+- **THEN** every required GitHub check for the feature PR completes successfully at the pushed HEAD
+
+### Requirement: Command preview focused coverage
+
+Offline verification MUST cover focused command-preview cases using
+stdlib and pytest: no-I/O command construction; one-command,
+multi-command, `run_text`, `run_bytes`, and `spawn` plans; global args
+and shell quoting; token redaction without changing executed argv; stdin
+and timeout preservation; runtime path and result-reference resolution;
+cache hit (`commands == ()`) and forced refresh; offset/cursor
+pagination and failure guards; prefetch calling relation command plans
+under concurrency; command/config snapshot behavior; and failures
+stopping a composite plan at the correct step. These cases MUST extend
+the existing frozen-dataclass case tables (`OperationCase` and the
+relation case containers) rather than creating a parallel hierarchy.
+
+#### Scenario: No-I/O command construction is verified
+
+- **WHEN** a `*_command()` is constructed for any covered case
+- **THEN** no `CliTransport` method is called and no subprocess is
+  spawned
+
+#### Scenario: Composite failure stops at the correct step
+
+- **WHEN** a composite plan case fails at a defined step
+- **THEN** the case asserts the exception type, that no later step
+  executed, and that completed steps were not rolled back or repeated
+
+#### Scenario: Snapshot behavior is verified
+
+- **WHEN** a constructed `Command` outlives a later client/config change
+- **THEN** the case asserts `command.commands` and the executed argv
+  reflect the snapshotted configuration, not the later value
+
+#### Scenario: Runtime placeholders are verified
+
+- **WHEN** a local-I/O wrapper case (`upload_bytes`/`download_bytes`)
+  runs
+- **THEN** the case asserts the placeholder appears in preview, the
+  resolved path reaches the transport during `run()`, the return value
+  decodes correctly, and the temporary directory is removed on success
+  and failure
+
+### Requirement: Execution backends are verified offline and against real backends
+Offline verification SHALL cover the provider-independent execution
+contracts, the three initial first-party executors, optional-dependency gating,
+executor lifecycle/ownership, target-aware environment/path/staging
+semantics, preview independence, and the `CliTransport`/`ManagedProcess`
+refactor using stdlib and pytest without a backend or network. One reusable
+executor-conformance case table SHALL exercise every first-party executor
+through provider-neutral factories; adding a provider SHALL add its factory
+to that table rather than copy the common assertions into a new suite. The
+shared cases SHALL cover exact argv, cwd, explicit environment, stdin,
+timeout, byte-exact stdout/stderr/exit, run, non-PTY spawn, poll/wait,
+collect/stream single ownership, opaque identity, staging and
+cleanup, error mapping, and close without target destruction. Provider-only
+serialization, authentication, protocol, and process-control behavior SHALL
+remain in focused adapter tests.
+`LocalExecutor` SHALL be asserted to preserve the pre-change ordinary-command
+local subprocess behavior (argv, cwd, environment inheritance,
+stdin, timeout, descendant cleanup, terminate/kill escalation, semaphore
+release); path-like uploads may use a staged path but SHALL preserve bytes and
+results. `MicrosandboxExecutor` and `SshExecutor`
+SHALL be tested with fake provider clients asserting exact
+`ExecutionRequest` construction (argv, target-local cwd, explicit
+environment overrides only, stdin, timeout), `ExecutionResult`/
+`ProcessHandle` mapping (including `collect()` buffered collection and
+mutual-exclusion with streaming), provider-failure mapping to the small
+`ExecutionError` hierarchy, and direct use of the existing executable errors
+for reachable-target binary failures. Microsandbox tests SHALL assert native
+`ExecHandle.collect`, `signal(SIGTERM)`, and `kill()` mapping, connection to an
+existing sandbox through `Sandbox.get`/`SandboxHandle.connect`, and no
+sandbox-level stop/kill/remove. SSH serialization SHALL be tested with
+adversarial inputs (whitespace, quotes, `$`, backticks, `;`, newlines,
+unicode in cwd/env-values/argv; invalid env names rejected). Missing-extra
+errors SHALL assert the exact actionable install message.
+`Command[T].commands` SHALL be asserted to remain provider-independent
+(no `ssh` or provider wrapper) under non-local executors. Scoped
+`with_*()` clients and bound entities SHALL be asserted to preserve the
+originating executor and not fall back to local; closing a scoped view
+SHALL be asserted not to close a shared user-supplied executor; root
+close SHALL be asserted not to close a user-supplied executor. A
+packaging test SHALL assert the base install stays lightweight (no
+`microsandbox`/`paramiko` requirement) and the `microsandbox`/`vps` extras install
+their backing packages with the tested compatibility ranges. In addition
+to the offline suite, opt-in/gated integration smoke tests (marker
+`@pytest.mark.live_executor` requiring a real backend) SHALL verify each
+first-party executor against the real SDK/runtime: run a command
+preserving stdout/stderr/exit; spawn and stream a long-running command;
+`collect()` buffered output; terminate/kill per the executor's documented
+guarantee; cwd/environment semantics; `stage(label, content)` + cleanup.
+These integration tests SHALL NOT run in the default offline suite and
+SHALL be excluded from `pytest -m "not live"`.
+
+CubeSandbox SHALL be evaluated only by a compatibility spike in this change.
+The spike SHALL pin reviewed source/runtime versions and record whether the
+public SDK or E2B-compatible `envd` API can satisfy exact argv semantics,
+non-PTY spawn, separate streams, collection, process control, staging, error
+mapping, and non-destructive close. It SHALL record CubeSandbox's actual
+HTTP Connect `envd` path rather than assume SSH. The spike result SHALL NOT
+add a dependency, extra, production adapter, image/template build, or live
+test to this change.
+
+#### Scenario: LocalExecutor preserves byte-for-byte behavior
+- **WHEN** the existing component fake-CLI suite runs with the default `LocalExecutor`
+- **THEN** ordinary commands preserve argv, cwd, environment inheritance, stdin, timeout, descendant cleanup, terminate/kill escalation, and semaphore release; path-like uploads preserve exact bytes and results through staging
+
+#### Scenario: Remote executors construct exact requests
+- **WHEN** `MicrosandboxExecutor`/`SshExecutor` run a Multica command with fake provider clients
+- **THEN** the executor receives an `ExecutionRequest` with exact argv, target-local cwd, explicit environment overrides only (no controller `os.environ` leak), stdin, and timeout
+
+#### Scenario: Shared conformance cases admit another provider
+- **WHEN** a new first-party executor factory is added to the conformance case table
+- **THEN** the same provider-neutral run/spawn/collect/stream/control/stage/error/lifecycle assertions execute without modifying transport, command-plan, resource, or model tests
+
+#### Scenario: Provider-only behavior stays focused
+- **WHEN** an adapter requires provider-specific shell serialization, authentication, async bridging, or protocol mapping
+- **THEN** only focused adapter tests cover that behavior while the shared conformance expectations remain unchanged
+
+#### Scenario: Provider failures map to the execution hierarchy
+- **WHEN** a fake provider client raises a connection-refused, target-missing, executable-missing, or session-disappeared error
+- **THEN** connection/target/session failures use the matching `ExecutionError`, reachable-target executable failures use the existing executable errors, and none is classified as a Multica CLI failure
+
+#### Scenario: SSH serialization is adversarially safe
+- **WHEN** `_serialize_ssh_command` is called with cwd/env-values/argv containing shell metacharacters, whitespace, quotes, newlines, or unicode
+- **THEN** the serialized command is shell-safe (every component individually quoted) and invalid env names are rejected with `ValueError`
+
+#### Scenario: Buffered collection and streaming are mutually exclusive
+- **WHEN** `ProcessHandle.collect()` is called after `stdout_lines()` has been consumed (or vice versa) in a fake-provider test
+- **THEN** a `RuntimeError` is raised
+
+#### Scenario: CLI nonzero exit is classified by the transport
+- **WHEN** a fake provider returns an `ExecutionResult` with a nonzero exit code
+- **THEN** `CliTransport` classifies it through the existing CLI error classifier and no `ExecutionError` is raised for that exit code
+
+#### Scenario: Missing optional dependency gives actionable guidance
+- **WHEN** a provider executor is constructed without its extra installed
+- **THEN** an `ImportError` is raised whose message names the dependency and the required `multica-py[<extra>]` requirement, while installation docs provide exact uv/Git commands
+
+#### Scenario: Optional builds remain independent
+- **WHEN** packaging metadata is inspected for the `microsandbox` and `vps` extras
+- **THEN** `microsandbox` installs only `microsandbox>=0.6,<0.7`, `vps` installs only `paramiko>=5,<6`, and neither dependency is present in the base installation
+
+#### Scenario: Git-extra installation is documented exactly
+- **WHEN** installation documentation is checked
+- **THEN** it contains exact uv commands for base Git, `multica-py[microsandbox]`, `multica-py[vps]`, tag/SHA pinning, and enabling either extra on an existing Git dependency
+
+#### Scenario: Provider activation is explicit
+- **WHEN** an optional provider dependency is installed
+- **THEN** tests and documentation require an explicit provider import and `MulticaClient(executor=...)`, with no entry-point discovery or runtime package installation
+
+#### Scenario: Preview stays provider-independent
+- **WHEN** a `*_command()` is constructed on a client configured with a non-local executor
+- **THEN** `command.commands` renders only the logical Multica CLI command and no `ssh` or provider wrapper prefix appears
+
+#### Scenario: Scoped clients and entities preserve the executor
+- **WHEN** a scoped `with_workspace()` client and a bound entity from a non-local-executor client execute follow-up operations
+- **THEN** they use the same non-local executor and do not fall back to local execution
+
+#### Scenario: Scoped view close does not destroy a shared executor
+- **WHEN** a scoped client view using a user-supplied executor is closed while another view still uses it
+- **THEN** only the scoped transport is closed, the executor is not closed, and the other view remains usable
+
+#### Scenario: Root close does not close a user-supplied executor
+- **WHEN** the root client that was given a user-supplied executor is closed
+- **THEN** the transport is closed and the executor is NOT closed
+
+#### Scenario: Base install stays lightweight
+- **WHEN** the packaging test inspects `pyproject.toml` base dependencies
+- **THEN** `microsandbox` and `paramiko` are absent from base `dependencies` and are reachable only through the `microsandbox` and `vps` optional extras with tested compatibility ranges
+
+#### Scenario: ManagedProcess identity is provider-appropriate
+- **WHEN** a spawned process is inspected under each executor
+- **THEN** a local handle exposes the integer PID via `.pid` and `.id`, and a remote handle exposes `.id` (`str | None`) with `.pid` returning `None` when no Unix PID is meaningful
+
+#### Scenario: Real-backend integration smoke tests are gated
+- **WHEN** `pytest -m "not live"` runs
+- **THEN** no `live_executor`-marked integration test is collected
+
+#### Scenario: Real SSH backend preserves stdout/stderr/exit
+- **WHEN** the gated SSH integration test runs `SshExecutor.run` against a real SSH host
+- **THEN** stdout, stderr, and exit code are preserved and `stage(label, content)` + cleanup works against the real host
+
+#### Scenario: Real Microsandbox backend preserves stdout/stderr/exit
+- **WHEN** the explicitly enabled Microsandbox integration test runs against a real runtime
+- **THEN** stdout, stderr, and exit code are preserved; spawn + stream + native `collect()` work; terminate sends per-command SIGTERM and kill sends per-command SIGKILL without sandbox destruction; cwd/env semantics hold; `stage(label, content)` + cleanup works via `sandbox.fs`
+
+#### Scenario: CubeSandbox compatibility is evidence-gated
+- **WHEN** the CubeSandbox spike completes against pinned upstream evidence
+- **THEN** it records pass/fail for every mandatory conformance behavior, confirms the non-SSH `envd` path, and leaves production dependencies and adapters unchanged; only a complete pass may justify a later OpenSpec change
+
+#### Scenario: Complete offline gate is green
+- **WHEN** the change is ready for delivery
+- **THEN** Ruff check, Ruff format check, `mypy src`, `mypy tests`, package validation, and `pytest -m "not live"` all pass without backend or network access
+
+### Requirement: Execution backends use focused checkpoints and one final gate
+The implementation SHALL use `79501f3b1c5afe960a6b4b63abba4acae508653c`
+as the immutable behavior baseline and record its complete offline evidence
+once before implementation. After the local refactor, the focused component
+fake-CLI and process-lifecycle tests SHALL prove local parity. Each provider
+SHALL run the shared conformance cases and its own focused fake-client tests
+when added. Ruff, mypy, the full
+offline suite, package validation, collection-only marker verification, and
+`git diff --check` SHALL run together once at the delivery gate. A failed
+focused checkpoint or final gate SHALL be corrected before delivery.
+
+#### Scenario: Baseline is recorded before implementation
+- **WHEN** implementation starts
+- **THEN** required offline, type, style, contract, collection, and diff gates are recorded from the pinned baseline `79501f3b1c5afe960a6b4b63abba4acae508653c` before production changes
+
+#### Scenario: Local behavior is preserved at the Phase 1 gate
+- **WHEN** Phase 1 completes
+- **THEN** the existing component fake-CLI suite and process-lifecycle tests pass against `LocalExecutor` byte-for-byte against the baseline
+
+#### Scenario: Each provider phase is independently verified
+- **WHEN** Phase 4 or 5 completes
+- **THEN** that provider's shared conformance cases and focused fake-client tests pass and no other optional provider dependency is required to run them
+
+#### Scenario: Live tests remain excluded from offline collection
+- **WHEN** `pytest -m "not live" --collect-only` runs at the final gate
+- **THEN** no `tests/live/*` node is collected
