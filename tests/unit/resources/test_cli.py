@@ -12,7 +12,7 @@ import msgspec
 import pytest
 
 from multica_py._internal.argv import build_global_args, normalize_global_args
-from multica_py._internal.redaction import redact_argv, redact_text
+from multica_py._internal.redaction import collect_secret_values, redact_argv, redact_text
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
@@ -361,6 +361,20 @@ RAW_CLI_SECRET_CASES = (
         ("https://example.test/callback?privatekey=compact+private+key+7Qz",),
         "compact+private+key+7Qz",
         "compact private key 7Qz",
+    ),
+    RawCliSecretCase(
+        "combined split and equals options",
+        ("--password", "combo-option-secret", "--api-key=combo-option-secret"),
+        "combo-option-secret",
+    ),
+    RawCliSecretCase(
+        "combined url and option",
+        (
+            "https://example.test/callback?access_token=combo-url-secret",
+            "--client-secret",
+            "combo-url-secret",
+        ),
+        "combo-url-secret",
     ),
 )
 
@@ -797,14 +811,14 @@ def test_raw_execution_registry_covers_managed_process_operations_without_heuris
 
 _GLOBAL_VALUE_OPTIONS: tuple[tuple[str, str], ...] = (
     ("--server-url", "https://srv.example"),
-    ("--profile", "profile-secret"),
-    ("--workspace-id", "workspace-secret"),
+    ("--profile", "profile-1"),
+    ("--workspace-id", "workspace-1"),
 )
-_GLOBAL_BOOLEAN_OPTIONS: tuple[str, ...] = ("--debug", "--debug=true")
+_GLOBAL_BOOLEAN_FORMS: tuple[str, ...] = ("--debug", "--debug=true")
 _NON_GLOBAL_ARGS: tuple[tuple[str, ...], ...] = (
     ("issue", "list"),
     ("auth", "login"),
-    ("--token", "positional-secret"),
+    ("--token", "raw-token"),
     ("config", "set", "setting.key", "setting-value"),
 )
 
@@ -843,21 +857,19 @@ _NORMALIZE_GLOBAL_CASES: tuple[NormalizeGlobalCase, ...] = (
     ),
     *(
         NormalizeGlobalCase(
-            id=f"strips-bare-boolean-{flag_id}",
+            id=f"strips-bare-boolean-{flag.lstrip('-')}",
             argv=(flag,),
             expected=(),
         )
-        for flag_id, flag in enumerate(_GLOBAL_BOOLEAN_OPTIONS)
-        for flag in (flag,)
+        for flag in _GLOBAL_BOOLEAN_FORMS
     ),
     *(
         NormalizeGlobalCase(
-            id=f"strips-leading-boolean-{flag_id}",
+            id=f"strips-leading-boolean-{flag.lstrip('-')}",
             argv=("issue", flag),
             expected=("issue",),
         )
-        for flag_id, flag in enumerate(_GLOBAL_BOOLEAN_OPTIONS)
-        for flag in (flag,)
+        for flag in _GLOBAL_BOOLEAN_FORMS
     ),
     *(
         NormalizeGlobalCase(
@@ -887,14 +899,6 @@ _NORMALIZE_GLOBAL_CASES: tuple[NormalizeGlobalCase, ...] = (
         ("--profile", "p1", "issue", "list", "--workspace-id=ws1", "--debug", "auth", "status"),
         ("issue", "list", "auth", "status"),
     ),
-    *(
-        NormalizeGlobalCase(
-            id=f"split-equals-equivalence-{option.lstrip('-')}",
-            argv=("issue", *_global_option_argv("split", option, value), "auth", "status"),
-            expected=("issue", "auth", "status"),
-        )
-        for option, value in _GLOBAL_VALUE_OPTIONS
-    ),
 )
 
 
@@ -909,121 +913,35 @@ def test_normalize_global_args_is_idempotent(case: NormalizeGlobalCase) -> None:
     assert normalize_global_args(once) == once
 
 
-_REDACTION_SURFACES: tuple[tuple[str, str], ...] = (
-    ("stdout", "stdout {secret}"),
-    ("stderr", "stderr {secret}"),
-    ("exception", "request failed: {secret}"),
-    ("repr", "multica {secret} --token {secret}"),
+@pytest.mark.parametrize(
+    ("option", "value"),
+    _GLOBAL_VALUE_OPTIONS,
+    ids=[option.lstrip("-") for option, _value in _GLOBAL_VALUE_OPTIONS],
 )
-
-
-@dataclass(frozen=True)
-class RedactionPropertyCase:
-    id: str
-    argv: tuple[str, ...]
-    secret: str
-    decoded_secret: str | None = None
-
-
-_REDACTION_PROPERTY_CASES: tuple[RedactionPropertyCase, ...] = tuple(
-    RedactionPropertyCase(
-        id=f"{case.name}-property",
-        argv=case.argv,
-        secret=case.secret,
-        decoded_secret=case.decoded_secret,
+def test_normalize_global_args_treats_split_and_equals_forms_as_equivalent(
+    option: str, value: str
+) -> None:
+    assert (
+        normalize_global_args(("issue", option, value, "auth", "status"))
+        == normalize_global_args(("issue", f"{option}={value}", "auth", "status"))
+        == ("issue", "auth", "status")
     )
-    for case in RAW_CLI_SECRET_CASES
-) + (
-    RedactionPropertyCase(
-        id="split-and-equals-combined",
-        argv=("--password", "p-secret", "--api-key=k-secret", "--token", "t-secret"),
-        secret="p-secret",
-        decoded_secret=None,
-    ),
-    RedactionPropertyCase(
-        id="url-and-option-combined",
-        argv=(
-            "https://example.test/cb?access_token=url-secret",
-            "--client-secret",
-            "opt-secret",
-        ),
-        secret="url-secret",
-        decoded_secret=None,
-    ),
-)
 
 
-@pytest.mark.parametrize("case", _REDACTION_PROPERTY_CASES, ids=lambda case: case.id)
-def test_redaction_never_leaks_secret_across_surfaces(case: RedactionPropertyCase) -> None:
+@pytest.mark.parametrize("case", RAW_CLI_SECRET_CASES, ids=lambda case: case.name)
+def test_redaction_is_idempotent(case: RawCliSecretCase) -> None:
     redacted_argv = redact_argv(("multica", *case.argv))
-    joined = " ".join(redacted_argv)
-    assert case.secret not in joined
-    assert "***" in joined
-    if case.decoded_secret is not None:
-        assert case.decoded_secret not in joined
-    for _surface, template in _REDACTION_SURFACES:
-        text = template.format(secret=case.secret)
-        redacted = redact_text(text, secret_values=(case.secret,))
-        assert case.secret not in redacted
-        if case.decoded_secret is not None:
-            assert case.decoded_secret not in redacted
-
-
-@pytest.mark.parametrize("case", _REDACTION_PROPERTY_CASES, ids=lambda case: case.id)
-def test_redaction_is_idempotent(case: RedactionPropertyCase) -> None:
-    redacted_argv = redact_argv(("multica", *case.argv))
+    redacted_text = redact_text(f"prefix {case.secret} suffix", secret_values=(case.secret,))
     assert redact_argv(redacted_argv) == redacted_argv
-    text = f"prefix {case.secret} suffix"
-    redacted = redact_text(text, secret_values=(case.secret,))
-    assert redact_text(redacted, secret_values=(case.secret,)) == redacted
+    assert redact_text(redacted_text, secret_values=(case.secret,)) == redacted_text
 
 
-@pytest.mark.parametrize("case", _REDACTION_PROPERTY_CASES, ids=lambda case: case.id)
-def test_redaction_preserves_non_secret_arguments(case: RedactionPropertyCase) -> None:
-    full = ("multica", *case.argv)
-    redacted = redact_argv(full)
-    secrets = (case.secret, case.decoded_secret) if case.decoded_secret else (case.secret,)
-    non_secret_original = tuple(
-        arg for arg in _non_secret_args(full) if not _carries_secret(arg, secrets)
-    )
-    non_secret_redacted = tuple(
-        arg for arg in _non_secret_args(redacted) if not _carries_secret(arg, secrets)
-    )
-    assert non_secret_redacted == non_secret_original
+@pytest.mark.parametrize("case", RAW_CLI_SECRET_CASES, ids=lambda case: case.name)
+def test_redaction_preserves_non_secret_arguments(case: RawCliSecretCase) -> None:
+    argv = ("multica", *case.argv)
+    secret_values = collect_secret_values(argv)
+    redacted = redact_argv(argv)
 
-
-def _carries_secret(arg: str, secrets: tuple[str, ...]) -> bool:
-    return any(secret and secret in arg for secret in secrets) or "://" in arg
-
-
-def _non_secret_args(argv: tuple[str, ...]) -> tuple[str, ...]:
-    result: list[str] = []
-    skip_next = False
-    for arg in argv:
-        if skip_next:
-            skip_next = False
-            continue
-        if _is_secret_arg(arg):
-            if "=" not in arg:
-                skip_next = True
-            continue
-        result.append(arg)
-    return tuple(result)
-
-
-def _is_secret_arg(arg: str) -> bool:
-    if not arg.startswith("--"):
-        return False
-    name = arg[2:].partition("=")[0]
-    return name in {
-        "password",
-        "api-key",
-        "token",
-        "client-secret",
-        "auth-header",
-        "server-config",
-        "credential-stdin",
-        "server-config-stdin",
-        "credential-file",
-        "server-config-file",
-    }
+    assert len(redacted) == len(argv)
+    for original, rewritten in zip(argv, redacted, strict=True):
+        assert original == rewritten or any(secret in original for secret in secret_values)
