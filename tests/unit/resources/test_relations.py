@@ -4,7 +4,11 @@ import pytest
 
 from multica_py.entities.projects import Project
 from multica_py.enums import ProjectStatus
-from multica_py.exceptions import DetachedEntityError
+from multica_py.exceptions import (
+    DetachedEntityError,
+    UnloadedReferenceError,
+    UnsupportedReferenceTargetError,
+)
 from multica_py.models.relations import LazyCollection
 
 _PLANNED = ProjectStatus("planned")
@@ -60,3 +64,37 @@ def test_detached_entity_error_has_typed_fields() -> None:
     assert err.entity_id == "p1"
     assert err.relation_name == "resources"
     assert "detached" in str(err).lower()
+
+
+def test_reference_errors_have_typed_fields_and_stable_messages() -> None:
+    unloaded = UnloadedReferenceError("Issue", "i1", "project")
+    assert unloaded.entity_type == "Issue"
+    assert unloaded.entity_id == "i1"
+    assert unloaded.relation_name == "project"
+    assert unloaded.source_type == "Issue"
+    assert unloaded.source_id == "i1"
+    assert unloaded.reference_name == "project"
+    assert unloaded.source == "Issue"
+    assert unloaded.reference == "project"
+    assert str(unloaded) == (
+        "Cannot access Issue.project.value: reference is unloaded for Issue 'i1'. "
+        "Call get() or prefetch() first."
+    )
+
+    unsupported = UnsupportedReferenceTargetError(
+        "Issue", "i1", "assignee_ref", "assignee_type", "member"
+    )
+    assert unsupported.entity_type == "Issue"
+    assert unsupported.entity_id == "i1"
+    assert unsupported.relation_name == "assignee_ref"
+    assert unsupported.discriminator == "assignee_type"
+    assert unsupported.value == "member"
+    assert unsupported.source_type == "Issue"
+    assert unsupported.source_id == "i1"
+    assert unsupported.reference_name == "assignee_ref"
+    assert unsupported.source == "Issue"
+    assert unsupported.reference == "assignee_ref"
+    assert str(unsupported) == (
+        "Cannot access Issue.assignee_ref: unsupported reference target "
+        "assignee_type='member' for Issue 'i1'."
+    )

@@ -29,6 +29,8 @@ from multica_py.exceptions import (
     MissingRelationContextError,
     RelationError,
     RelationPaginationError,
+    UnloadedReferenceError,
+    UnsupportedReferenceTargetError,
 )
 from multica_py.models.issues import IssueListFilter, IssueListPage, IssueMetadataItem
 from multica_py.models.relations import (
@@ -36,6 +38,7 @@ from multica_py.models.relations import (
     CursorPage,
     LazyCollection,
     LazyMapping,
+    LazyRef,
     OffsetLazyCollection,
     OffsetPage,
     RelationMetadata,
@@ -168,6 +171,10 @@ PUBLIC_EXPORT_CASES = (
     PublicExportCase(multica_py, "RelationError", RelationError),
     PublicExportCase(multica_py, "DetachedEntityError", DetachedEntityError),
     PublicExportCase(multica_py, "MissingRelationContextError", MissingRelationContextError),
+    PublicExportCase(
+        multica_py, "UnsupportedReferenceTargetError", UnsupportedReferenceTargetError
+    ),
+    PublicExportCase(multica_py, "UnloadedReferenceError", UnloadedReferenceError),
     PublicExportCase(multica_py, "MissingPermalinkContextError", MissingPermalinkContextError),
     PublicExportCase(multica_py, "RelationPaginationError", RelationPaginationError),
 )
@@ -312,6 +319,7 @@ def test_relation_module_exports_only_public_relation_types() -> None:
         "CursorPage",
         "LazyCollection",
         "LazyMapping",
+        "LazyRef",
         "OffsetLazyCollection",
         "OffsetPage",
         "RelationMetadata",

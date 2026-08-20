@@ -13,6 +13,7 @@ from multica_py._internal.commands import (
     _result_field_argument,
     _sequential_command,
 )
+from multica_py.exceptions import UnloadedReferenceError
 from multica_py.models.issue_activity import CommentCursor
 from multica_py.models.issues import IssueChildStageGroup
 
@@ -25,6 +26,13 @@ K = TypeVar("K")
 V = TypeVar("V")
 R = TypeVar("R")
 
+
+class _GenerationUnset:
+    __slots__ = ()
+
+
+_GENERATION_UNSET = _GenerationUnset()
+
 _MAX_RELATION_PAGES = 1_000
 _MAX_RELATION_ITEMS = 100_000
 
@@ -33,6 +41,7 @@ __all__ = (
     "CursorPage",
     "LazyCollection",
     "LazyMapping",
+    "LazyRef",
     "OffsetLazyCollection",
     "OffsetPage",
     "RelationMetadata",
@@ -99,10 +108,11 @@ class _GenerationState(Generic[R]):
     _LOADING = 1
     _LOADED = 2
 
-    def __init__(self, empty: R, *, initial: R | None = None) -> None:
+    def __init__(self, empty: R, *, initial: R | _GenerationUnset = _GENERATION_UNSET) -> None:
         self._condition = threading.Condition()
-        self._state = self._LOADED if initial is not None else self._UNLOADED
-        self._value = empty if initial is None else initial
+        has_initial = initial is not _GENERATION_UNSET
+        self._state = self._LOADED if has_initial else self._UNLOADED
+        self._value = empty if not has_initial else cast("R", initial)
         self._empty = empty
         self._generation = 0
         self._outcomes: dict[int, _GenerationSuccess[R] | _GenerationFailure] = {}
@@ -142,6 +152,7 @@ class _GenerationState(Generic[R]):
                 return self._consume_outcome(waited_generation)
 
             previous_value = self._value
+            previous_loaded = self._state == self._LOADED
             self._state = self._LOADING
             self._generation += 1
             generation = self._generation
@@ -155,7 +166,7 @@ class _GenerationState(Generic[R]):
                 if waiters:
                     self._outcomes[generation] = _GenerationFailure(error=error, waiters=waiters)
                 self._value = previous_value
-                self._state = self._LOADED if previous_value is not self._empty else self._UNLOADED
+                self._state = self._LOADED if previous_loaded else self._UNLOADED
                 self._condition.notify_all()
             raise
 
@@ -194,6 +205,85 @@ class _CursorLoader(Protocol[T]):
     def __call__(self, *, cursor: CommentCursor | None) -> CursorPage[T]: ...
 
 
+class LazyRef(Generic[T_co]):
+    """A passive, explicitly loaded singular relation."""
+
+    def __init__(
+        self,
+        loader: Callable[[], T_co],
+        *,
+        command_loader: Callable[[], Command[T_co]] | None = None,
+        initial: T_co | _GenerationUnset = _GENERATION_UNSET,
+        entity_type: str = "Reference",
+        entity_id: str = "unknown",
+        relation_name: str = "reference",
+    ) -> None:
+        self._loader = loader
+        self._command_loader = command_loader
+        self._entity_type = entity_type
+        self._entity_id = entity_id
+        self._relation_name = relation_name
+        self._generation_state: _GenerationState[T_co] = _GenerationState(
+            cast("T_co", None), initial=initial
+        )
+
+    @property
+    def loaded(self) -> bool:
+        return self._generation_state.loaded
+
+    @property
+    def value(self) -> T_co:
+        if not self.loaded:
+            raise UnloadedReferenceError(self._entity_type, self._entity_id, self._relation_name)
+        return self._generation_state.value
+
+    def _run_load(self, *, force: bool) -> T_co:
+        return self._generation_state.run(force=force, load=self._loader)
+
+    def _run_command(self, command: Command[T_co], *, force: bool) -> T_co:
+        return self._generation_state.run(force=force, load=command.run)
+
+    def _command(self) -> Command[T_co]:
+        if self._command_loader is None:
+            raise RuntimeError("reference has no command loader")
+        return self._command_loader()
+
+    def get(self) -> T_co:
+        if self.loaded:
+            return self._generation_state.value
+        if self._command_loader is None:
+            return self._run_load(force=False)
+        return self.get_command().run()
+
+    def get_command(self) -> Command[T_co]:
+        command = self._command()
+        if self.loaded:
+            return _cached_result_command(command, lambda: self._generation_state.value)
+        return _coalesced_command(
+            command,
+            lambda: self._run_command(command, force=False),
+        )
+
+    def refresh(self) -> T_co:
+        if self.loaded and self._generation_state.value is None:
+            return self._generation_state.value
+        if self._command_loader is None:
+            return self._run_load(force=True)
+        return self.refresh_command().run()
+
+    def refresh_command(self) -> Command[T_co]:
+        command = self._command()
+        if self.loaded and self._generation_state.value is None:
+            return _cached_result_command(command, lambda: self._generation_state.value)
+        return _coalesced_command(
+            command,
+            lambda: self._run_command(command, force=True),
+        )
+
+    def invalidate(self) -> None:
+        self._generation_state.invalidate()
+
+
 def _pagination_error(relation_name: str, reason: str) -> Exception:
     from multica_py.exceptions import RelationPaginationError
 
@@ -218,8 +308,10 @@ class LazyCollection(Collection[T], Generic[T]):
         snapshot: _RelationLoad[T] | None = (
             None if initial is None else _RelationLoad(tuple(initial), relation_metadata)
         )
-        self._generation_state: _GenerationState[_RelationLoad[T]] = _GenerationState(
-            empty, initial=snapshot
+        self._generation_state: _GenerationState[_RelationLoad[T]] = (
+            _GenerationState(empty)
+            if snapshot is None
+            else _GenerationState(empty, initial=snapshot)
         )
 
     @property

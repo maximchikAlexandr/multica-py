@@ -4,9 +4,9 @@
 
 ## 1. Lazy reference foundation
 
-- [ ] 1.1 Add `UnloadedReferenceError` and `UnsupportedReferenceTargetError` to the public exception hierarchy with source/reference/discriminator fields and stable pre-I/O messages; extend public-symbol tests for both.
-- [ ] 1.2 Change `_GenerationState` initialization to use an explicit sentinel so `None` can be a loaded value, while preserving collection/mapping cache, waiter, retry, refresh-restoration, and invalidation behavior.
-- [ ] 1.3 Implement `LazyRef[T]` in `models/relations.py` with `loaded`, raising `value`, `get`, `get_command`, `refresh`, `refresh_command`, and `invalidate`; build cached and live commands only through existing `_internal.commands` transformations.
+- [x] 1.1 Add `UnloadedReferenceError` and `UnsupportedReferenceTargetError` to the public exception hierarchy with source/reference/discriminator fields and stable pre-I/O messages; extend public-symbol tests for both.
+- [x] 1.2 Change `_GenerationState` initialization to use an explicit sentinel so `None` can be a loaded value, while preserving collection/mapping cache, waiter, retry, refresh-restoration, and invalidation behavior.
+- [x] 1.3 Implement `LazyRef[T]` in `models/relations.py` with `loaded`, raising `value`, `get`, `get_command`, `refresh`, `refresh_command`, and `invalidate`; build cached and live commands only through existing `_internal.commands` transformations.
 - [ ] 1.4 Add focused generation-state/LazyRef tests for initial value and initial `None`, cached get, unload error, failed-first-load retry, concurrent success/failure coalescing, atomic successful/failed target refresh, and invalidation racing a generation.
 - [ ] 1.5 Verify `refresh()` and `refresh_command().run()` on an explicitly-null loaded absence both return cached `None`, remain loaded, produce a no-step command, and perform zero transport I/O.
 - [ ] 1.6 Add typed usage cases proving `LazyRef[T]` and `LazyRef[T | None]` narrow without `Any`, and keep `LazyRef` importable only from the dedicated relations module.
