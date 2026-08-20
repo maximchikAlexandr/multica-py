@@ -42,10 +42,10 @@
 
 ## 5. Documentation and example
 
-- [ ] 5.1 Update API and service-usage docs with the reviewed `[0.4.28, 0.4.29)` baseline, dedicated `LazyRef` import, exact inventory, passive properties, explicit load points, optional absence, typed errors, refresh semantics, and bounded duplicate-aware prefetch.
-- [ ] 5.2 Update migration documentation to preserve scalar IDs and `Issue.assignee`, introduce `Issue.assignee_ref`, list unsupported singular edges, and explain immutable mutation replacement.
-- [ ] 5.3 Add `examples/singular_references.py` demonstrating optional issue parent/project handling, `value` after load/prefetch, refresh, and bounded prefetch with no implicit I/O.
-- [ ] 5.4 Extend docs/example contract tests so every documented reference resolves, unsupported names remain absent, and examples use only approved public imports and typed services.
+- [x] 5.1 Update API and service-usage docs with the reviewed `[0.4.28, 0.4.29)` baseline, dedicated `LazyRef` import, exact inventory, passive properties, explicit load points, optional absence, typed errors, refresh semantics, and bounded duplicate-aware prefetch.
+- [x] 5.2 Update migration documentation to preserve scalar IDs and `Issue.assignee`, introduce `Issue.assignee_ref`, list unsupported singular edges, and explain immutable mutation replacement.
+- [x] 5.3 Add `examples/singular_references.py` demonstrating optional issue parent/project handling, `value` after load/prefetch, refresh, and bounded prefetch with no implicit I/O.
+- [x] 5.4 Extend docs/example contract tests so every documented reference resolves, unsupported names remain absent, and examples use only approved public imports and typed services.
 
 ## 6. Verification
 
