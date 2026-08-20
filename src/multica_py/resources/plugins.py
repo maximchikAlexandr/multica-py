@@ -45,25 +45,50 @@ class PluginResource(BaseResource):
         row = decode_json(stdout, _PluginDigestWire, command=command)
         return plugin_digest_from_wire(row)
 
-    def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Plugin]]:
-        return self._plugins_page_command(("plugin", "list"), options=options)
+    def list_command(
+        self,
+        *,
+        workspace: str | UnsetType = Unset,
+        options: OperationOptions | None = None,
+    ) -> Command[Page[Plugin]]:
+        args = ["plugin", "list"]
+        if workspace is not Unset:
+            validate_nonblank(workspace)
+            args.extend(["--workspace", workspace])
+        return self._plugins_page_command(tuple(args), options=options)
 
-    def list(self, *, options: OperationOptions | None = None) -> Page[Plugin]:
-        return self.list_command(options=options).run()
+    def list(
+        self,
+        *,
+        workspace: str | UnsetType = Unset,
+        options: OperationOptions | None = None,
+    ) -> Page[Plugin]:
+        return self.list_command(workspace=workspace, options=options).run()
 
     def status_command(
-        self, plugin_key_or_id: str | None = None, *, options: OperationOptions | None = None
+        self,
+        plugin_key_or_id: str | None = None,
+        *,
+        workspace: str | UnsetType = Unset,
+        options: OperationOptions | None = None,
     ) -> Command[Page[Plugin]]:
-        args: tuple[str, ...] = ("plugin", "status")
+        args = ["plugin", "status"]
         if plugin_key_or_id is not None:
             validate_nonblank(plugin_key_or_id)
-            args = (*args, plugin_key_or_id)
-        return self._plugins_page_command(args, options=options)
+            args.append(plugin_key_or_id)
+        if workspace is not Unset:
+            validate_nonblank(workspace)
+            args.extend(["--workspace", workspace])
+        return self._plugins_page_command(tuple(args), options=options)
 
     def status(
-        self, plugin_key_or_id: str | None = None, *, options: OperationOptions | None = None
+        self,
+        plugin_key_or_id: str | None = None,
+        *,
+        workspace: str | UnsetType = Unset,
+        options: OperationOptions | None = None,
     ) -> Page[Plugin]:
-        return self.status_command(plugin_key_or_id, options=options).run()
+        return self.status_command(plugin_key_or_id, workspace=workspace, options=options).run()
 
     def validate_command(
         self, source: str | os.PathLike[str], *, options: OperationOptions | None = None
@@ -121,7 +146,7 @@ class PluginResource(BaseResource):
         options: OperationOptions | None = None,
     ) -> Command[ActionResult[None]]:
         validate_nonblank(str(directory))
-        args = ["plugin", "init", os.fspath(directory), "--output", "json"]
+        args = ["plugin", "init", os.fspath(directory)]
         for flag, value in (
             ("--key", key),
             ("--name", name),
@@ -185,7 +210,8 @@ class PluginResource(BaseResource):
         *,
         endpoint: str,
         credential_file: str | os.PathLike[str] | None = None,
-        credential_stdin: bool = False,
+        credential_stdin: bytes | None = None,
+        public_config_file: str | os.PathLike[str] | None = None,
         auth_type: str | UnsetType = Unset,
         auth_header: str | UnsetType = Unset,
         failure_policy: str | UnsetType = Unset,
@@ -195,7 +221,9 @@ class PluginResource(BaseResource):
         validate_nonblank(installation_id)
         validate_nonblank(contribution_key)
         validate_nonblank(endpoint)
-        if credential_stdin and credential_file is not None:
+        if credential_stdin is not None and not isinstance(credential_stdin, bytes):
+            raise TypeError("credential_stdin must be bytes or None")
+        if credential_stdin is not None and credential_file is not None:
             raise ValueError("credential_file and credential_stdin are mutually exclusive")
         args = [
             "plugin",
@@ -208,11 +236,12 @@ class PluginResource(BaseResource):
             "--output",
             "json",
         ]
-        stdin: bytes | None = None
-        if credential_stdin:
+        if credential_stdin is not None:
             args.append("--credential-stdin")
         elif credential_file is not None:
             args.extend(["--credential-file", os.fspath(credential_file)])
+        if public_config_file is not None:
+            args.extend(["--public-config-file", os.fspath(public_config_file)])
         for flag, value in (
             ("--auth-type", auth_type),
             ("--auth-header", auth_header),
@@ -222,7 +251,7 @@ class PluginResource(BaseResource):
             if value is not Unset:
                 _validate_optional_string(value, flag.removeprefix("--").replace("-", "_"))
                 args.extend([flag, str(value)])
-        return self._remote_mcp_command(tuple(args), stdin=stdin, options=options)
+        return self._remote_mcp_command(tuple(args), stdin=credential_stdin, options=options)
 
     def configure_remote_mcp(
         self,
@@ -231,7 +260,8 @@ class PluginResource(BaseResource):
         *,
         endpoint: str,
         credential_file: str | os.PathLike[str] | None = None,
-        credential_stdin: bool = False,
+        credential_stdin: bytes | None = None,
+        public_config_file: str | os.PathLike[str] | None = None,
         auth_type: str | UnsetType = Unset,
         auth_header: str | UnsetType = Unset,
         failure_policy: str | UnsetType = Unset,
@@ -244,6 +274,7 @@ class PluginResource(BaseResource):
             endpoint=endpoint,
             credential_file=credential_file,
             credential_stdin=credential_stdin,
+            public_config_file=public_config_file,
             auth_type=auth_type,
             auth_header=auth_header,
             failure_policy=failure_policy,

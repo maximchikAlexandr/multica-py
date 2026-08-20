@@ -18,4 +18,4 @@ def test_execution_provider_extras_are_opt_in_and_version_bounded() -> None:
     assert all("microsandbox" not in dependency.lower() for dependency in dependencies)
     assert all("paramiko" not in dependency.lower() for dependency in dependencies)
     assert extras["microsandbox"] == ["microsandbox>=0.6,<0.7"]
-    assert extras["vps"] == ["paramiko>=3,<4"]
+    assert extras["vps"] == ["paramiko>=5,<6"]

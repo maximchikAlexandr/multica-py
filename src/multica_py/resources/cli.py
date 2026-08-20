@@ -27,8 +27,16 @@ class CliResult(msgspec.Struct, frozen=True, kw_only=True):
 
 def decode_cli_result(result: RawCommandResult) -> CliResult:
     return CliResult(
-        stdout=redact_bytes(result.stdout, secret_values=result.secret_values),
-        stderr=redact_bytes(result.stderr, secret_values=result.secret_values),
+        stdout=redact_bytes(
+            result.stdout,
+            secret_values=result.secret_values,
+            secret_bytes=result.secret_bytes,
+        ),
+        stderr=redact_bytes(
+            result.stderr,
+            secret_values=result.secret_values,
+            secret_bytes=result.secret_bytes,
+        ),
         duration=result.duration,
     )
 
@@ -42,7 +50,7 @@ class _RawExecutionModeRule:
 
 _RAW_EXECUTION_MODE_REGISTRY: tuple[_RawExecutionModeRule, ...] = (
     _RawExecutionModeRule(
-        ("auth", "login"),
+        ("login",),
         "client.auth.login(token=...)",
         "auth",
     ),
@@ -74,9 +82,7 @@ _RAW_EXECUTION_MODE_REGISTRY: tuple[_RawExecutionModeRule, ...] = (
 )
 
 # Reviewed bounded command paths intentionally remain outside the deny registry.
-_RAW_EXECUTION_MODE_REVIEWED_EXCEPTIONS: frozenset[tuple[str, ...]] = frozenset(
-    {("workspace", "watch")}
-)
+_RAW_EXECUTION_MODE_REVIEWED_EXCEPTIONS: frozenset[tuple[str, ...]] = frozenset()
 
 
 def _matching_execution_mode_rule(argv: tuple[str, ...]) -> _RawExecutionModeRule | None:
@@ -98,7 +104,7 @@ def _validate_auth_login_argv(argv: tuple[str, ...], rule: _RawExecutionModeRule
         argv[token_option] == "--token" or argv[token_option].startswith("--token=")
     ):
         raise ValueError(
-            "raw auth login without --token is interactive; use client.auth.login() / ManagedProcess"
+            "raw login without --token is interactive; use client.auth.login() / ManagedProcess"
         )
     if (
         len(argv) > token_option + 1
@@ -107,7 +113,7 @@ def _validate_auth_login_argv(argv: tuple[str, ...], rule: _RawExecutionModeRule
         and not argv[token_option + 1].startswith("-")
     ):
         return
-    raise ValueError(f"raw auth login requires bounded --token <token>; use {rule.replacement}")
+    raise ValueError(f"raw login requires bounded --token <token>; use {rule.replacement}")
 
 
 def _validate_execution_mode(argv: tuple[str, ...]) -> None:

@@ -56,6 +56,14 @@ prove mapping.
 - **WHEN** a tagged command is not approved
 - **THEN** contract compatibility metadata names the command and the deferral rationale, and generated public SDK behavior does not include it
 
+#### Scenario: Retained command paths exist in the pinned tree
+- **WHEN** every approved operation command path is compared with the tagged Cobra tree
+- **THEN** the exact leaf exists or the operation is remapped/removed; canonical fixtures cannot approve `auth login`, `config get`, `issue deprioritize`, or `workspace watch|unwatch` when those leaves are absent
+
+#### Scenario: Destination mappings follow CLI preprocessing
+- **WHEN** a flag or stdin/file channel is transformed before the API call
+- **THEN** traceability records the transformed local-control or request-body destination, including file contents rather than falsely recording the path as the JSON value
+
 ## REMOVED Requirements
 
 ### Requirement: Multica v0.4.20 is the reviewed compatibility baseline

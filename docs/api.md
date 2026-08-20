@@ -55,17 +55,16 @@ reviewed process-oriented forms are rejected locally before transport:
 
 | Raw form | Typed replacement |
 |---|---|
-| `auth login` (with or without suffixes) | `client.auth.login()` → `ManagedProcess` |
-| `auth login --token` or an option-like token operand | `client.auth.login(token)` → `ActionResult[str]` |
+| root `login` (with or without suffixes) | `client.auth.login()` → `ManagedProcess` |
+| `login --token` or an option-like token operand | `client.auth.login(token)` → `ActionResult[str]` |
 | `setup cloud` | `client.setup.cloud()` → `ManagedProcess` |
 | `setup self-host` | `client.setup.self_host(url)` → `ManagedProcess` |
 | `daemon start` | `client.daemon.start()` → `ManagedProcess` |
 | `daemon logs` | `client.daemon.logs()` → `ManagedProcess` |
 | top-level `update` (with or without suffixes) | `client.maintenance.update()` → `ManagedProcess` |
 
-The bounded `auth login --token <token>` form remains allowed, including
-trailing options, and `workspace watch` remains available as a bounded raw
-form. Unknown non-interactive bounded argv remains forward-compatible when it
+The bounded `login --token <token>` form remains allowed, including trailing
+options. Unknown non-interactive bounded argv remains forward-compatible when it
 passes structured-argv validation. Rejected forms produce a typed local
 `ValueError`; the token placeholder and raw argv are never copied into the
 error, preview, or diagnostics. Allowed token execution is redacted with the
@@ -170,7 +169,7 @@ All resources accessed as attributes of `MulticaClient`:
 - **auth**: `status()` → `AuthenticationStatus`, token `login(token)` → `ActionResult[str]`, interactive `login()` → `ManagedProcess`, `logout()` → `AuthenticationStatus`
 - **setup**: `cloud()`, `self_host(url)` → both return `ManagedProcess`
 - **daemon**: `start/logs()` → `ManagedProcess`, `status/stop/restart()` → `DaemonStatus`, `disk_usage()` → `Page[DaemonDiskUsageEntry]`
-- **workspaces**: `list/members` → `Page[T]`, `get()` → object, `watch/unwatch` → `ActionResult[None]`
+- **workspaces**: `list/members` → `Page[T]`, `get()` → object, `switch()` → `ActionResult[None]`; tagged v0.4.28 has no `watch/unwatch` leaves
 - **issues**: full CRUD + `comments`, `recent_comment_threads`, `labels`, `subscribers`, `metadata`, `properties`, `pull_requests`, `children`, `runs`, `run_messages`, `usage`, `rerun(issue_id)`, `cancel_task(task_id)`, `assign`, `unassign`, `move_to_top`, `move_to_bottom`, `move_before`, and `move_after`; root create accepts ordinary descriptions and an optional canonical `project`, while project-scoped create supplies its project from the bound relation
 - **issues.comments**: `list` for flat comments, `list_flat`, `list_thread`, `list_recent`, `add`, `reply`, `delete`, `resolve`, `unresolve`
 - **issues.metadata**: `list`, `query`, `get`, `set`, `set_typed`, `delete`
@@ -250,11 +249,19 @@ is preserved as page metadata.
 
 `client.plugins` exposes workspace-private plugin installations plus local
 validate/pack/init flows. `list()` and `status()` decode frozen `Plugin` rows;
+both accept an optional explicit `workspace` override. `init()` is a tagged
+text/local action and never appends an `--output` flag.
 `validate()` and `pack()` decode a distinct `PluginDigest`. `install()` emits
 `plugin install <path>`; upstream human-local guards apply at the CLI rather
 than in Python. Remote MCP configure accepts credentials only through
-`--credential-file` or `--credential-stdin` (mutually exclusive); credential
-bytes are redacted from preview and diagnostics.
+`--credential-file` or `--credential-stdin` (mutually exclusive), plus optional
+non-secret `public_config_file` mapped to `--public-config-file`; credential
+bytes are supplied as `credential_stdin: bytes | None` and are redacted from
+preview and diagnostics. File-channel paths remain visible in preview without
+reading the file; `run()` reads them as bytes immediately before execution.
+Text/JSON secret extraction is best-effort for diagnostics, typed decoders
+receive original successful stdout/stderr bytes, and only public raw `CliResult`
+applies success-path redaction.
 
 `client.properties` manages the workspace property catalog. Create/update use
 `Unset` for omitted fields; actor and multi-actor types reject option tuples.
@@ -264,8 +271,11 @@ bytes are redacted from preview and diagnostics.
 
 `workspaces.mcp` and nested `agents.mcp` expose list/add/update/remove (or
 enable/disable) with exactly one server-config channel on add and at most one
-on update (`server_config_file`, `server_config_stdin`, or inline
-`server_config`). List decoding exposes public fields only.
+on update (`server_config_file`, `server_config_stdin: bytes | None`, or inline
+`server_config`). Collection list/add/update methods return `Page[T]`; workspace
+remove returns text `ActionResult[None]`. List decoding exposes public fields
+only. Bound Agent/Workspace MCP mutations invalidate a loaded `mcp_servers`
+relation after success.
 
 `skills.refresh(skill_id)` reloads a bound skill from upstream.
 `skills.search(query)` returns `Page[SkillSearchResult]` from
@@ -283,7 +293,7 @@ on update (`server_config_file`, `server_config_stdin`, or inline
 
 `ConflictError` and `ValidationError` preserve actionable upstream detail in
 `str(exc)` and the redacted `stderr`/`stdout` attributes. Conflict failures
-retain the actual CLI exit code; v0.4.20 semantic validation failures use exit
+retain the actual CLI exit code; v0.4.28 semantic validation failures use exit
 code `5` (including raw HTTP 400/422 mappings). Diagnostics contain redacted
 argv only, never secrets or the actual subprocess argv:
 

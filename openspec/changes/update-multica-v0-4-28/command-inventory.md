@@ -80,14 +80,23 @@ Per Decision 1; operation IDs to be added in task 2.3–2.6.
 | `skill refresh` | `skills.refresh` | `POST /api/skills/<id>/refresh` |
 | `skill search` | `skills.search` | Stable JSON array (`name`, `url`, `source`, `installs`, `description`) at pinned commit |
 
-## Retained from v0.4.20 contract (139 operations)
+## Retained from v0.4.20 contract
 
-All existing `contracts/sdk-contract.json` operation IDs are **retained** and
-require source-ref refresh only (task 2.2). No removals. Representative
+Existing operation IDs are retained only when the exact tagged Cobra leaf or a
+source-proven replacement exists. Representative
 families: agents, issues (incl. search/copy deltas), projects, skills (except
-refresh/search), workspaces (list/get/members/switch/watch), runtimes, daemon
+refresh/search), workspaces (list/get/members/switch), runtimes, daemon
 subset, auth, setup, attachments, repositories (list/add/remove only), squads,
 labels, autopilots, configuration, maintenance.
+
+The post-implementation audit corrected retained drift:
+
+| Prior SDK operation | v0.4.28 disposition |
+| --- | --- |
+| `auth.login` → `auth login` | Retained and remapped to root `login` |
+| `configuration.get(key)` → `config get` | Retained only as no-arg compatibility alias of `config show` |
+| `issues.deprioritize` | Removed; tagged Cobra tree has no equivalent leaf |
+| `workspaces.watch`, `workspaces.unwatch` | Removed; tagged Cobra tree has no equivalent leaves |
 
 Issue status/assignee behavior **changes** decode/construction policy per
 Decision 6 but retains `issues.set_status`, `issues.list`, and assignee argv
@@ -100,17 +109,17 @@ mappings.
 | `chat history`, `chat thread` | Interactive; requires in-task chat context (`MULTICA_TASK_ID`); family `chat-read` stays `separate_extension_candidate` |
 | `repo checkout` | Human-local daemon worktree control; not in v0.4.20 contract |
 | `workspace create`, `workspace update`, `workspace member invite` | Out of governed workspace subset; CLI-only |
-| `agent create`, `agent update`, `agent archive`, `agent restore` | CLI-only lifecycle; SDK exposes list/get/copy/skills/tasks/avatar/MCP only |
+| `agent create`, `agent update`, `agent archive`, `agent restore`, `agent env get`, `agent env set`, `agent skills add` | CLI-only lifecycle/environment mutation; SDK exposes reviewed list/get/copy/skills/tasks/avatar/MCP subset only |
 | `issue create`, `issue update`, `issue assign`, `issue delete`, reorder variants not in contract | Partial issue subset governed; remainder CLI-only |
 | `project create`, `project delete`, status CRUD | Project subset governed; workspace-status CRUD explicitly out of scope |
 | `skill create`, `skill update`, `skill delete`, `skill import` | Governed subset is list/get/files; create/update/delete/import remain CLI-only |
-| `squad create`, `squad update`, `squad delete`, member set-role | Squad subset is get/list/members add/remove |
+| `squad create`, `squad update`, `squad delete`, member set-role, `squad activity` | Squad subset is get/list/members add/remove |
 | `label *` (full CRUD) | Not in approved contract |
 | `autopilot create/update/delete` and trigger-* except governed trigger | Partial autopilot subset |
-| `login`, `logout` (direct) | Human-local auth; SDK uses `auth.login` / `auth.logout` wrappers |
+| `login`, `logout` (direct command ownership) | Human-local auth; SDK wrappers map to root `login` and `auth logout` respectively |
 | `setup *` | Human-local interactive bootstrap |
 | `daemon start/stop/restart/logs/probe-runtimes` | Human-local or daemon-managed; SDK exposes status/disk-usage/start/stop subset per existing contract |
-| `runtime profile set-path/unset-path` | Human-local |
+| `runtime profile create/list/update/delete/set-path/unset-path` | Human-local profile administration |
 | `attachment upload` (chat-task context) | Chat-task scoped; SDK attachment paths are issue-comment scoped |
 | `config *`, `update`, `version`, `user *` | Configuration/maintenance subset only (`configuration.*`, `maintenance.*`, `users.profile_*`) |
 | Hidden `x` maintenance | Hidden command |

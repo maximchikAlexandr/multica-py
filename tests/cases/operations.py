@@ -325,6 +325,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 "issues.properties.unset",
                 "plugins.init",
                 "projects.resources.remove",
+                "workspaces.mcp.remove",
             }:
 
                 def assert_action_none(result: object, _mt: MagicMock = MagicMock()) -> None:
@@ -772,14 +773,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             "squads.members.add",
             "squads.members.remove",
             "workspaces.switch",
-            "workspaces.watch",
-            "workspaces.unwatch",
+            "workspaces.mcp.remove",
         ),
         _assert_action_none,
     )
     action_assertions.update(
         {
-            "issues.deprioritize": _assert_action_str,
             "auth.login": _assert_action_str,
             "repositories.add": _assert_action_repository,
             "repositories.remove": _assert_action_repository,
@@ -1411,12 +1410,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:autopilots.create:variant:01",
         ),
         _c("configuration.show", ("config", "show"), id="manual:configuration.show:canonical"),
-        _c(
-            "configuration.get",
-            ("config", "get", "key"),
-            args=("key",),
-            id="manual:configuration.get:canonical",
-        ),
+        _c("configuration.get", ("config", "show"), id="manual:configuration.get:canonical"),
         _c(
             "configuration.set",
             ("config", "set", "key", "val"),
@@ -2193,7 +2187,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "auth.login",
-            ("auth", "login", "--token", "secret-token"),
+            ("login", "--token", "secret-token"),
             args=("secret-token",),
             stdout=b"Login successful",
             id="manual:auth.login:canonical",
@@ -2215,13 +2209,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("daemon", "status", "--output", "json"),
             stdout=_DS,
             id="manual:daemon.status:canonical",
-        ),
-        _c(
-            "issues.deprioritize",
-            ("issue", "deprioritize", "iss_001"),
-            args=("iss_001",),
-            stdout=b"Issue iss_001 deprioritized\n",
-            id="manual:issues.deprioritize:canonical",
         ),
         _c(
             "issues.set_status",
@@ -2639,18 +2626,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("workspace", "switch", "ws_001"),
             args=("ws_001",),
             id="manual:workspaces.switch:canonical",
-        ),
-        _c(
-            "workspaces.watch",
-            ("workspace", "watch", "ws_001"),
-            args=("ws_001",),
-            id="manual:workspaces.watch:canonical",
-        ),
-        _c(
-            "workspaces.unwatch",
-            ("workspace", "unwatch", "ws_001"),
-            args=("ws_001",),
-            id="manual:workspaces.unwatch:canonical",
         ),
         _c(
             "maintenance.version",
@@ -3576,6 +3551,46 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             source_ref="bound-resource-discovered",
             bound_target="agent",
             assert_result=_assert_action_none,
+        ),
+        _c(
+            "agents.Agent.add_mcp_server",
+            ("agent", "mcp", "add", "a1", "mcp_001", "--output", "json"),
+            args=("mcp_001",),
+            stdout=b'[{"id":"mcp_001","name":"linear","transport":"stdio","enabled":true}]',
+            id="manual:agents.mcp.add_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="agent",
+            contract_operation_id="agents.mcp.add_bound",
+        ),
+        _c(
+            "agents.Agent.enable_mcp_server",
+            ("agent", "mcp", "enable", "a1", "mcp_001", "--output", "json"),
+            args=("mcp_001",),
+            stdout=b'[{"id":"mcp_001","name":"linear","transport":"stdio","enabled":true}]',
+            id="manual:agents.mcp.enable_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="agent",
+            contract_operation_id="agents.mcp.enable_bound",
+        ),
+        _c(
+            "agents.Agent.disable_mcp_server",
+            ("agent", "mcp", "disable", "a1", "mcp_001", "--output", "json"),
+            args=("mcp_001",),
+            stdout=b'[{"id":"mcp_001","name":"linear","transport":"stdio","enabled":false}]',
+            id="manual:agents.mcp.disable_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="agent",
+            contract_operation_id="agents.mcp.disable_bound",
+        ),
+        _c(
+            "agents.Agent.remove_mcp_server",
+            ("agent", "mcp", "remove", "a1", "mcp_001", "--output", "json"),
+            args=("mcp_001",),
+            stdout=b"[]",
+            id="manual:agents.mcp.remove_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="agent",
+            contract_operation_id="agents.mcp.remove_bound",
         ),
         _c(
             "skills.Skill.upsert_file",

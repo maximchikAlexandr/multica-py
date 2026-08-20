@@ -505,6 +505,23 @@ def test_current_target_and_source_refs_are_pinned_to_v0428() -> None:
     )
 
 
+def test_approved_binding_command_paths_are_pinned_upstream_leaves() -> None:
+    """Every non-local approved binding must name a visible Cobra leaf."""
+    contract = validate_contract(APPROVED)
+    fixture = json.loads(
+        pathlib.Path("tests/fixtures/provenance/upstream_commands.json").read_text(encoding="utf-8")
+    )
+    assert fixture["_meta"]["pinned_sha"] == contract.target.commit
+    approved_bindings = cast("dict[str, object]", contract.raw["catalogs"])["bindings"]
+    command_paths = {
+        " ".join(cast("list[str]", binding["command"]))
+        for binding in cast("dict[str, dict[str, object]]", approved_bindings).values()
+        if cast("list[str]", binding["command"])
+    }
+    upstream_leaves = set(cast("list[str]", fixture["commands"]))
+    assert command_paths <= upstream_leaves
+
+
 def test_v0420_delta_source_refs_cover_copy_search_and_runtime_delete() -> None:
     contract = load_contract(APPROVED)
     refs = {ref.source_ref_id: ref for ref in contract.source_refs}

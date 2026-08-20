@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 import re
+from contextlib import ExitStack
 from copy import copy
 from dataclasses import dataclass
 
@@ -11,9 +12,13 @@ from multica_py._internal.compat import check_version_from_config, parse_cli_ver
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.decoders import decode_text
 from multica_py._internal.redaction import (
+    collect_diagnostic_secret_bytes,
     collect_diagnostic_secret_values,
+    iter_secret_file_arguments,
+    redact_bytes,
     redact_diagnostic_argv,
     redact_text,
+    snapshot_secret_files,
 )
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py.config import ClientConfig
@@ -206,8 +211,6 @@ class CliTransport:
         argv = self._build_full_argv(command_args)
         cwd = os.fspath(self._config.cwd) if self._config.cwd is not None else None
         environment = tuple(self._config.environment)
-        secret_values = collect_diagnostic_secret_values(argv, _effective_environment(self._config))
-        diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
         effective_timeout = timeout if timeout is not None else self._config.timeout
 
         sem_acquired = False
@@ -217,15 +220,27 @@ class CliTransport:
 
         t0 = datetime.datetime.now(tz=datetime.UTC)
         try:
-            completed = self._executor.run(
-                ExecutionRequest(
-                    argv=argv,
-                    cwd=cwd,
-                    environment=environment,
+            with ExitStack() as staging:
+                execution_argv, file_contents = self._prepare_secret_files(argv, staging)
+                secret_values = collect_diagnostic_secret_values(
+                    argv,
+                    _effective_environment(self._config),
                     stdin=stdin,
-                    timeout=effective_timeout,
+                    file_contents=file_contents,
                 )
-            )
+                secret_bytes = collect_diagnostic_secret_bytes(
+                    argv, stdin=stdin, file_contents=file_contents
+                )
+                diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
+                completed = self._executor.run(
+                    ExecutionRequest(
+                        argv=execution_argv,
+                        cwd=cwd,
+                        environment=environment,
+                        stdin=stdin,
+                        timeout=effective_timeout,
+                    )
+                )
 
             duration = datetime.datetime.now(tz=datetime.UTC) - t0
             return RawCommandResult(
@@ -235,6 +250,7 @@ class CliTransport:
                 stderr=completed.stderr,
                 duration=duration,
                 secret_values=secret_values,
+                secret_bytes=secret_bytes,
             )
         finally:
             if sem_acquired and self._semaphore is not None:
@@ -255,11 +271,25 @@ class CliTransport:
     def _raise_command_error(self, result: RawCommandResult) -> None:
         command = " ".join(result.argv)
         stdout_text = redact_text(
-            decode_text(result.stdout, command=command),
+            decode_text(
+                redact_bytes(
+                    result.stdout,
+                    secret_values=result.secret_values,
+                    secret_bytes=result.secret_bytes,
+                ),
+                command=command,
+            ),
             secret_values=result.secret_values,
         )
         stderr_text = redact_text(
-            decode_text(result.stderr, command=command),
+            decode_text(
+                redact_bytes(
+                    result.stderr,
+                    secret_values=result.secret_values,
+                    secret_bytes=result.secret_bytes,
+                ),
+                command=command,
+            ),
             secret_values=result.secret_values,
         )
         exc_class, reported_exit_code = classify_cli_failure(
@@ -285,24 +315,56 @@ class CliTransport:
         argv = self._build_full_argv(command_args)
         cwd = os.fspath(self._config.cwd) if self._config.cwd is not None else None
         environment = tuple(self._config.environment)
-        secret_values = collect_diagnostic_secret_values(argv, _effective_environment(self._config))
-        diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
 
         if self._semaphore is not None:
             self._semaphore.acquire()
 
+        staging = ExitStack()
         try:
+            execution_argv, file_contents = self._prepare_secret_files(argv, staging)
+            secret_values = collect_diagnostic_secret_values(
+                argv, _effective_environment(self._config), file_contents=file_contents
+            )
+            diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
             handle = self._executor.spawn(
                 ExecutionRequest(
-                    argv=argv,
+                    argv=execution_argv,
                     cwd=cwd,
                     environment=environment,
                     timeout=self._config.timeout,
                 )
             )
         except BaseException:
+            staging.close()
             if self._semaphore is not None:
                 self._semaphore.release()
             raise
 
-        return ManagedProcess(handle, argv=diagnostic_argv, semaphore=self._semaphore)
+        return ManagedProcess(
+            handle,
+            argv=diagnostic_argv,
+            semaphore=self._semaphore,
+            cleanup=staging.close,
+        )
+
+    def _prepare_secret_files(
+        self, argv: tuple[str, ...], staging: ExitStack
+    ) -> tuple[tuple[str, ...], dict[str, bytes]]:
+        source_argv, file_contents = staging.enter_context(snapshot_secret_files(argv))
+        rewritten = list(source_argv)
+        target_paths: dict[str, str] = {}
+        for argument in iter_secret_file_arguments(source_argv):
+            target_path = target_paths.get(argument.path)
+            if target_path is None:
+                target_path = staging.enter_context(
+                    self._executor.stage(
+                        f"secret-{len(target_paths)}.bin", file_contents[argument.path]
+                    )
+                )
+                target_paths[argument.path] = target_path
+            if argument.value_index is None:
+                name = source_argv[argument.option_index].partition("=")[0]
+                rewritten[argument.option_index] = f"{name}={target_path}"
+            else:
+                rewritten[argument.value_index] = target_path
+        return tuple(rewritten), dict(file_contents)

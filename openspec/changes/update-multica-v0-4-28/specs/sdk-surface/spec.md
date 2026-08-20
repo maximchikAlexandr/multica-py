@@ -63,6 +63,10 @@ only reviewed public fields and SHALL NOT claim to return stored server
 config or tokens. Agent MCP mutations SHALL take `agent_id` and `server_id`
 only. Workspace and agent MCP mutations SHALL emit `--output json` unless
 source proves a given command is non-JSON.
+`workspace mcp remove` is source-proven text output and SHALL return
+`ActionResult[None]` without JSON decoding. Bound Agent and Workspace MCP
+mutations SHALL invalidate an already-loaded `mcp_servers` relation after a
+successful run.
 
 #### Scenario: Workspace MCP list omits secrets
 - **WHEN** `workspace.mcp_servers.all()` loads
@@ -83,6 +87,14 @@ source proves a given command is non-JSON.
 #### Scenario: Agent MCP enable is a distinct command
 - **WHEN** `agents.mcp.enable(agent_id, server_id)` runs
 - **THEN** argv is `agent mcp enable <agent-id> <server-id> --output json` unless source proves enable is non-JSON, and is not implemented as add or update
+
+#### Scenario: Workspace MCP remove is a text action
+- **WHEN** `workspaces.mcp.remove(server_id)` succeeds
+- **THEN** the SDK consumes the tagged CLI text result as `ActionResult[None]` and does not attempt to decode an MCP-server JSON page
+
+#### Scenario: Bound MCP mutations invalidate loaded relations
+- **WHEN** a bound Agent or Workspace MCP mutation succeeds after `mcp_servers` has loaded
+- **THEN** the cached relation is invalidated and its next load observes the server-side state
 
 ### Requirement: Skill refresh is a governed operation
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast, get_type_hints
 from unittest.mock import MagicMock
@@ -19,11 +20,13 @@ from multica_py.entities.squads import Squad
 from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import (
     IssueListFilter,
     IssueListPage,
 )
-from multica_py.models.relations import OffsetLazyCollection
+from multica_py.models.relations import LazyCollection, OffsetLazyCollection
+from multica_py.models.workspaces import McpServer
 from multica_py.resources._base import BaseResource
 from multica_py.resources.projects import ProjectIssueCollection
 from multica_py.resources.workspaces import WorkspaceResource
@@ -54,6 +57,26 @@ _UNPAGED_RELATION_CASES = (
     WorkspaceUnpagedCase("plugins"),
     WorkspaceUnpagedCase("properties"),
     WorkspaceUnpagedCase("mcp_servers"),
+)
+
+
+@dataclass(frozen=True)
+class WorkspaceMcpMutationCase:
+    method: str
+    invoke: Callable[[Workspace], Command[Page[McpServer]]]
+
+
+def _add_mcp_server_command(workspace: Workspace) -> Command[Page[McpServer]]:
+    return workspace.add_mcp_server_command("server", server_config="{}")
+
+
+def _update_mcp_server_command(workspace: Workspace) -> Command[Page[McpServer]]:
+    return workspace.update_mcp_server_command("mcp_1", name="renamed")
+
+
+WORKSPACE_MCP_MUTATION_CASES = (
+    WorkspaceMcpMutationCase("add_mcp_server", _add_mcp_server_command),
+    WorkspaceMcpMutationCase("update_mcp_server", _update_mcp_server_command),
 )
 
 
@@ -95,6 +118,80 @@ def test_workspace_unpaged_relation_is_lazy_and_cached(case: WorkspaceUnpagedCas
     assert method.call_count == 1
     clients.origin.with_workspace.assert_called_once_with("ws_1")
     method.assert_called_once_with(*case.expected_args)
+
+
+@pytest.mark.parametrize("case", WORKSPACE_MCP_MUTATION_CASES, ids=lambda case: case.method)
+def test_workspace_mcp_mutation_command_invalidates_loaded_relation(
+    case: WorkspaceMcpMutationCase,
+) -> None:
+    origin = MagicMock()
+    scoped = MagicMock()
+    origin.with_workspace.return_value = scoped
+    resource = BaseResource(MagicMock(spec=CliTransport), ClientConfig())
+    result: Page[McpServer] = Page(items=())
+    command = resource._plan(steps=(), finalize=lambda _results: result)
+    mcp_method = getattr(
+        scoped.workspaces.mcp, f"{case.method.removesuffix('_mcp_server')}_command"
+    )
+    mcp_method.return_value = command
+    setattr(
+        scoped.workspaces,
+        f"_{case.method}_command",
+        lambda *args, invalidate, options, **kwargs: mcp_method(
+            *args, options=options, **kwargs
+        )._map(invalidate),
+    )
+    entity = Workspace(id="ws_1", name="Test WS", _client=origin)
+    entity._set_runtime("_mcp_servers", LazyCollection(lambda: ()))
+    assert entity.mcp_servers.all() == ()
+
+    bound_command = case.invoke(entity)
+
+    assert bound_command.run() is result
+    assert not entity.mcp_servers.loaded
+    origin.with_workspace.assert_called_once_with("ws_1")
+
+
+def test_workspace_mcp_remove_command_invalidates_loaded_relation() -> None:
+    origin = MagicMock()
+    scoped = MagicMock()
+    origin.with_workspace.return_value = scoped
+    resource = BaseResource(MagicMock(spec=CliTransport), ClientConfig())
+    result = ActionResult[None](value=None)
+    scoped.workspaces.mcp.remove_command.return_value = resource._plan(
+        steps=(), finalize=lambda _results: result
+    )
+    scoped.workspaces._remove_mcp_server_command = lambda server_id, *, invalidate, options: (
+        scoped.workspaces.mcp.remove_command(server_id, options=options)._map(invalidate)
+    )
+    entity = Workspace(id="ws_1", name="Test WS", _client=origin)
+    entity._set_runtime("_mcp_servers", LazyCollection(lambda: ()))
+    assert entity.mcp_servers.all() == ()
+
+    assert entity.remove_mcp_server_command("mcp_1").run() is result
+
+    assert not entity.mcp_servers.loaded
+
+
+def test_workspace_mcp_remove_failure_preserves_loaded_relation() -> None:
+    origin = MagicMock()
+    scoped = MagicMock()
+    origin.with_workspace.return_value = scoped
+    resource = BaseResource(MagicMock(spec=CliTransport), ClientConfig())
+    result = ActionResult[None](success=False, value=None)
+    scoped.workspaces.mcp.remove_command.return_value = resource._plan(
+        steps=(), finalize=lambda _results: result
+    )
+    scoped.workspaces._remove_mcp_server_command = lambda server_id, *, invalidate, options: (
+        scoped.workspaces.mcp.remove_command(server_id, options=options)._map(invalidate)
+    )
+    entity = Workspace(id="ws_1", name="Test WS", _client=origin)
+    entity._set_runtime("_mcp_servers", LazyCollection(lambda: ()))
+    assert entity.mcp_servers.all() == ()
+
+    assert entity.remove_mcp_server_command("mcp_1").run() is result
+
+    assert entity.mcp_servers.loaded
 
 
 def test_workspace_members_loader_preserves_bound_items() -> None:

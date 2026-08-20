@@ -911,16 +911,6 @@ class IssueResource(BaseResource):
     ) -> Issue:
         return self.set_status_command(issue_id, status, options=options).run()
 
-    def deprioritize_command(
-        self, issue_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[str]]:
-        return self._action_text_command(("issue", "deprioritize", issue_id), options=options)
-
-    def deprioritize(
-        self, issue_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[str]:
-        return self.deprioritize_command(issue_id, options=options).run()
-
     def reorder_command(
         self,
         issue_id: str,

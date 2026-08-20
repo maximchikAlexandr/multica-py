@@ -48,3 +48,13 @@
 - [x] 6.3 Run `uv run ruff format --check .`, `uv run ruff check .`, `uv run mypy src`, and `uv run mypy tests`; resolve every failure without suppressing new errors.
 - [x] 6.4 Run `uv run pytest -m "not live" --collect-only` and verify no `tests/live/*` node is collected, then run `uv run pytest -m "not live"`.
 - [x] 6.5 Run `uv build`, packaging tests, and `openspec validate update-multica-v0-4-28 --json`; confirm `git diff --check` is clean of secrets and unrelated files.
+
+## 7. Close Post-Implementation Migration Audit
+
+- [x] 7.1 Correct Plugin init/list/status and Remote MCP public-config argv against the pinned binary/source; add exact negative and positive vectors.
+- [x] 7.2 Correct Workspace MCP remove text semantics and add bound Agent/Workspace MCP mutation cache invalidation with focused tests.
+- [x] 7.3 Remap or remove retained SDK operations whose Cobra leaves are absent at `v0.4.28`, including root login, configuration get semantics, issue deprioritize, and workspace watch/unwatch.
+- [x] 7.4 Reconcile every affected contract signature, binding, destination, validator, source ref, response adapter, canonical vector, public-method count, generated runtime, and documentation.
+- [x] 7.5 Classify every remaining tagged Cobra leaf as approved, retained, or explicitly deferred; add a regression that compares approved command paths with the pinned command tree.
+- [x] 7.6 Run focused source/binary regressions, `collect → validate → render → check`, and the complete `make pr` gate without suppressions.
+- [x] 7.7 Push the remediation commit and verify all required GitHub checks are green at the pushed feature HEAD.

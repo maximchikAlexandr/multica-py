@@ -36,6 +36,14 @@ backend or network.
 - **WHEN** the change is ready for delivery
 - **THEN** contract `validate --source-checkout`, deterministic render/check, Ruff check, Ruff format check, `mypy src`, `mypy tests`, package validation, and `pytest -m "not live"` all pass
 
+#### Scenario: Audited binary mismatches have regressions
+- **WHEN** Plugin init, Workspace MCP remove, root login, configuration, issue prioritization, and workspace watch surfaces are verified
+- **THEN** exact argv/response tests agree with the pinned `v0.4.28` Cobra source and verified release binary rather than legacy fixture paths
+
+#### Scenario: GitHub final authority is green
+- **WHEN** the remediation commit is pushed to the feature branch
+- **THEN** every required GitHub check for the feature PR completes successfully at the pushed HEAD
+
 ## REMOVED Requirements
 
 ### Requirement: v0.4.20 compatibility delta is verified end to end

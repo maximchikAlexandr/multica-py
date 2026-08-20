@@ -263,6 +263,29 @@ method. Distinct secret-redaction, human-local refusal, and actor-value
 encoding stay as dedicated tests. Recompute
 `test_discovered_public_methods` expected sets from the final tables.
 
+### Decision 9: Release-binary truth overrides retained fixtures
+
+The post-implementation audit found self-consistent contract and canonical
+fixtures that described commands rejected by the verified `v0.4.28` binary.
+Resolve those cases from pinned Cobra source and binary behavior:
+
+- `plugin init` is a text/local operation and MUST NOT receive `--output`;
+- `workspace mcp remove` is a text mutation returning `ActionResult[None]`, not
+  a JSON `Page[McpServer]`;
+- Remote MCP configure exposes `--public-config-file`; its path is non-secret
+  and the upstream CLI reads its contents into `public_config`;
+- Plugin list/status expose the distinct optional `--workspace` override;
+- `auth.login` maps to root `login`; no SDK operation may retain `auth login`,
+  `config get`, `issue deprioritize`, or `workspace watch|unwatch` unless the
+  pinned source proves an equivalent command and response contract;
+- MCP bound mutations invalidate an already-loaded `mcp_servers` relation;
+- every remaining unapproved Cobra leaf receives an explicit deferred entry
+  with a source-backed rationale.
+
+Contract destination descriptors describe the value after CLI preprocessing,
+not merely the spelling of the flag. File/stdin content mapped into JSON is
+recorded as content-to-body; local manifest flags are local process control.
+
 ## Risks / Trade-offs
 
 - [Custom statuses are flagged-off] → Keep seven `IssueStatus` members;
@@ -278,6 +301,8 @@ encoding stay as dedicated tests. Recompute
 - [Relation count change breaks completeness] → Update inventory, tests,
   and docs in the same change.
 - [Evidence mistaken for approval] → Collect remains review-only.
+- [Contract tests repeat a false argv] → Exercise audited paths against the
+  verified command help/source and keep negative exact-argv regressions.
 
 ## Migration Plan
 

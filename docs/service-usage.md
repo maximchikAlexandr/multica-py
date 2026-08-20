@@ -127,17 +127,17 @@ public result.
 The raw boundary is path-specific. These forms are rejected locally with a
 typed replacement and no transport or spawn call:
 
-- `auth login` without the bounded `--token <token>` operand (including suffixes)
+- root `login` without the bounded `--token <token>` operand (including suffixes)
   → `client.auth.login()` for the `ManagedProcess` interactive flow;
-- `auth login --token` or an option-like operand → `client.auth.login(token)`;
+- `login --token` or an option-like operand → `client.auth.login(token)`;
 - `setup cloud` → `client.setup.cloud()`;
 - `setup self-host` → `client.setup.self_host(url)`;
 - `daemon start` → `client.daemon.start()`;
 - `daemon logs` → `client.daemon.logs()`;
 - top-level `update` with any suffix → `client.maintenance.update()`.
 
-The bounded `auth login --token <token>` form remains allowed with trailing
-options, as does `workspace watch`. Unknown bounded non-interactive argv also
+The bounded `login --token <token>` form remains allowed with trailing
+options. Unknown bounded non-interactive argv also
 remains available when it passes structured-argument validation. Rejection
 errors never include the token or raw argv; allowed previews and diagnostics
 use the redaction marker `***`.
@@ -177,7 +177,7 @@ for issue in matches.items:
 ```
 
 The command remains `issue search <query> --output json`; the SDK adapts both
-the v0.4.20 `{"issues": [...], "total": ...}` envelope and the legacy array
+the v0.4.28 `{"issues": [...], "total": ...}` envelope and the legacy array
 to `Page[Issue]`. `match_source` is an optional string and
 can be absent or a future upstream value.
 
@@ -465,6 +465,6 @@ except ValidationError as exc:
     print(f"upstream input rejected ({exc.exit_code}): {exc}")
 ```
 
-The pinned v0.4.20 API spelling is `autopilots.trigger`; there is no public
+The pinned v0.4.28 API spelling is `autopilots.trigger`; there is no public
 `autopilots.run` alias. `str(exc)`, `stderr`, and `stdout` contain redacted
 detail, and diagnostics never retain the actual subprocess argv.

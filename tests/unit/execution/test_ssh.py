@@ -4,6 +4,7 @@ import datetime
 import importlib
 import stat
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import pytest
@@ -79,9 +80,15 @@ class _RemoteFile:
     contents: bytes = b""
     closed: bool = False
     read_only: bool = False
+    write_error: Exception | None = None
+    write_partial: int | None = None
+    close_error: Exception | None = None
 
     def write(self, data: bytes) -> int:
-        self.contents += data
+        self.contents += data if self.write_partial is None else data[: self.write_partial]
+        self.files[self.path] = self.contents
+        if self.write_error is not None:
+            raise self.write_error
         return len(data)
 
     def read(self) -> bytes:
@@ -91,21 +98,46 @@ class _RemoteFile:
         self.closed = True
         if not self.read_only:
             self.files[self.path] = self.contents
+        if self.close_error is not None:
+            raise self.close_error
 
 
 @dataclass
 class _Sftp:
     files: dict[str, bytes] = field(default_factory=dict)
+    written: dict[str, bytes] = field(default_factory=dict)
     removed: list[str] = field(default_factory=list)
+    modes: dict[str, int] = field(default_factory=dict)
     closed: bool = False
+    open_error: Exception | None = None
+    write_error: Exception | None = None
+    write_partial: int | None = None
+    close_error: Exception | None = None
+    chmod_error: Exception | None = None
 
     def open(self, path: str, mode: str) -> _RemoteFile:
         assert mode in {"wb", "rb"}
-        return _RemoteFile(self.files, path, read_only=mode == "rb")
+        if self.open_error is not None:
+            raise self.open_error
+        return _RemoteFile(
+            self.files,
+            path,
+            read_only=mode == "rb",
+            write_error=self.write_error,
+            write_partial=self.write_partial,
+            close_error=self.close_error,
+        )
 
     def remove(self, path: str) -> None:
         self.removed.append(path)
-        del self.files[path]
+        if path in self.files:
+            self.written[path] = self.files[path]
+        self.files.pop(path, None)
+
+    def chmod(self, path: str, mode: int) -> None:
+        self.modes[path] = mode
+        if self.chmod_error is not None:
+            raise self.chmod_error
 
     def rmdir(self, path: str) -> None:
         self.removed.append(path)
@@ -125,6 +157,41 @@ class _Sftp:
         self.closed = True
 
 
+@dataclass(frozen=True)
+class _StageEntryFailureCase:
+    id: str
+    configure: Callable[[_Sftp], None]
+    expected_error: str
+    expected_written: bytes
+
+
+def _configure_open_failure(sftp: _Sftp) -> None:
+    sftp.open_error = RuntimeError("open failed")
+
+
+def _configure_partial_write_failure(sftp: _Sftp) -> None:
+    sftp.write_error = RuntimeError("write failed")
+    sftp.write_partial = 4
+
+
+def _configure_close_failure(sftp: _Sftp) -> None:
+    sftp.close_error = RuntimeError("close failed")
+
+
+def _configure_chmod_failure(sftp: _Sftp) -> None:
+    sftp.chmod_error = RuntimeError("chmod failed")
+
+
+_STAGE_ENTRY_FAILURE_CASES: tuple[_StageEntryFailureCase, ...] = (
+    _StageEntryFailureCase("open", _configure_open_failure, "open failed", b""),
+    _StageEntryFailureCase(
+        "partial-write", _configure_partial_write_failure, "write failed", b"secr"
+    ),
+    _StageEntryFailureCase("close", _configure_close_failure, "close failed", b"secret-bytes"),
+    _StageEntryFailureCase("chmod", _configure_chmod_failure, "chmod failed", b"secret-bytes"),
+)
+
+
 @dataclass
 class _Client:
     stdin: _Input = field(default_factory=_Input)
@@ -138,6 +205,7 @@ class _Client:
     error: Exception | None = None
     exec_error: Exception | None = None
     sftp_error: Exception | None = None
+    exec_exit_code: int | None = None
 
     def load_system_host_keys(self) -> None:
         self.host_keys_loaded = True
@@ -160,7 +228,10 @@ class _Client:
             "mktemp /tmp/multica-py.XXXXXXXX",
             "mktemp -d /tmp/multica-py-output.XXXXXXXX",
         }:
+            self.channel.exit_code = 0
             return self.stdin, _Output(b"/tmp/staged\n", self.channel), _Output(b"", self.channel)
+        if self.exec_exit_code is not None:
+            self.channel.exit_code = self.exec_exit_code
         return (
             self.stdin,
             _Output(b"stdout", self.channel, deque([b"one\n"])),
@@ -355,9 +426,32 @@ def test_sftp_stage_writes_exact_bytes_and_cleans_up() -> None:
     with executor.stage("payload.bin", b"exact\x00bytes") as path:
         assert path == "/tmp/staged"
         assert client.sftp.files[path] == b"exact\x00bytes"
+        assert client.sftp.modes[path] == 0o600
 
     assert client.sftp.removed == ["/tmp/staged"]
     assert client.sftp.closed is True
+    executor.close()
+
+
+@pytest.mark.parametrize("case", _STAGE_ENTRY_FAILURE_CASES, ids=lambda case: case.id)
+def test_sftp_stage_entry_failures_cleanup_once_and_preserve_primary_error(
+    case: _StageEntryFailureCase,
+) -> None:
+    client = _Client()
+    case.configure(client.sftp)
+    executor, _ = _executor(client)
+    payload = b"secret-bytes"
+
+    with (
+        pytest.raises(RuntimeError, match=case.expected_error),
+        executor.stage("payload.bin", payload),
+    ):
+        pass
+
+    path = "/tmp/staged"
+    assert client.sftp.removed == [path]
+    assert client.sftp.files == {}
+    assert client.sftp.written.get(path, b"") == case.expected_written
     executor.close()
 
 

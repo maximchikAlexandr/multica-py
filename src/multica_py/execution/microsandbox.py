@@ -318,8 +318,8 @@ class MicrosandboxExecutor:
     @contextlib.contextmanager
     def stage(self, label: str, content: bytes) -> Iterator[str]:
         path = f"/tmp/multica-py-{uuid.uuid4().hex}-{os.path.basename(label)}"
-        self._provider_call(self._sandbox.fs.write(path, content))
         with _cleanup_after(lambda: self._provider_call(self._sandbox.fs.remove(path))):
+            self._provider_call(self._sandbox.fs.write(path, content))
             yield path
 
     @contextlib.contextmanager

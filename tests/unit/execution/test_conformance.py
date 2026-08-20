@@ -13,7 +13,13 @@ import pytest
 
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
-from multica_py.exceptions import CommandExecutionError, ExecutableNotFoundError, MulticaError
+from multica_py.enums import CompatibilityPolicy
+from multica_py.exceptions import (
+    CommandExecutionError,
+    ExecutableNotFoundError,
+    MulticaError,
+    NetworkError,
+)
 from multica_py.execution import (
     CommandExecutor,
     ExecutionConnectionError,
@@ -31,6 +37,13 @@ from multica_py.execution.ssh import SshExecutor
 from tests.unit.execution.test_microsandbox import _bindings, _Event, _Factory, _Output
 from tests.unit.execution.test_ssh import _Client as _SshClient
 from tests.unit.execution.test_ssh import _Paramiko
+from tests.unit.resources.execution_cases import (
+    PROCESS_FILE_SECRET_CASES,
+    REMOTE_FILE_SECRET_CASES,
+    ProcessFileSecretCase,
+    RemoteFileSecretCase,
+    file_secret_args,
+)
 
 
 @dataclass(frozen=True)
@@ -54,6 +67,54 @@ class _ConformanceRuntime:
     missing_executable: Callable[[], object]
     write_output: Callable[[str, bytes], object]
     assert_spawn_request: Callable[[CommandExecutor], None]
+
+
+class _RecordingExecutor:
+    def __init__(self, inner: CommandExecutor) -> None:
+        self.inner = inner
+        self.requests: list[ExecutionRequest] = []
+
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        self.requests.append(request)
+        return self.inner.run(request)
+
+    def spawn(self, request: ExecutionRequest) -> ProcessHandle:
+        self.requests.append(request)
+        return self.inner.spawn(request)
+
+    def stage(self, label: str, content: bytes) -> AbstractContextManager[str]:
+        return self.inner.stage(label, content)
+
+    def capture_output(self, label: str) -> AbstractContextManager[OutputArtifact]:
+        return self.inner.capture_output(label)
+
+    def close(self) -> None:
+        self.inner.close()
+
+    def __enter__(self) -> _RecordingExecutor:
+        self.inner.__enter__()
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+
+@dataclass(frozen=True)
+class _RemoteStagingObservation:
+    executor: _RecordingExecutor
+    current_files: Callable[[], dict[str, bytes]]
+    written_files: Callable[[], dict[str, bytes]]
+    removed_paths: Callable[[], list[str]]
+
+
+@dataclass(frozen=True)
+class RemoteStageFailureCase:
+    id: str
+    file_secret: ProcessFileSecretCase
+    factory: Callable[[], _RemoteStagingObservation]
+    expected_error: type[Exception]
+    error_match: str
+    expected_written: bytes
 
 
 def _assert_local_spawn_request(executor: CommandExecutor) -> None:
@@ -286,6 +347,250 @@ def test_executor_conformance_staging_is_exact_and_cleaned(case: ExecutorFactory
     finally:
         runtime.executor.close()
     assert runtime.closed()
+
+
+def _ssh_remote_staging_factory(
+    exit_code: int = 0,
+    configure: Callable[[_SshClient], None] | None = None,
+) -> _RemoteStagingObservation:
+    client = _SshClient()
+    client.exec_exit_code = exit_code
+    if configure is not None:
+        configure(client)
+    inner = SshExecutor(host="vps.example", username="root", _paramiko_module=_Paramiko(client))
+    executor = _RecordingExecutor(inner)
+    return _RemoteStagingObservation(
+        executor,
+        lambda: dict(client.sftp.files),
+        lambda: dict(client.sftp.written),
+        lambda: list(client.sftp.removed),
+    )
+
+
+def _microsandbox_remote_staging_factory(
+    exit_code: int = 0,
+    configure: Callable[[_Factory], None] | None = None,
+) -> _RemoteStagingObservation:
+    factory = _Factory()
+    factory.sandbox.output = _Output(exit_code, b"stdout", b"stderr")
+    factory.sandbox.exec_handle.output = _Output(exit_code, b"stdout", b"stderr")
+    if configure is not None:
+        configure(factory)
+    inner = MicrosandboxExecutor("existing", _bindings=_bindings(factory))
+    executor = _RecordingExecutor(inner)
+    return _RemoteStagingObservation(
+        executor,
+        lambda: dict(factory.sandbox.fs.files),
+        lambda: dict(factory.sandbox.fs.written),
+        lambda: list(factory.sandbox.fs.removed),
+    )
+
+
+_REMOTE_FACTORY_BY_PROVIDER: dict[str, Callable[[int], _RemoteStagingObservation]] = {
+    "ssh": _ssh_remote_staging_factory,
+    "microsandbox": _microsandbox_remote_staging_factory,
+}
+
+
+def _run_remote_success(
+    observation: _RemoteStagingObservation,
+    transport: CliTransport,
+    args: tuple[str, ...],
+) -> str:
+    transport.run_bytes(args)
+    return observation.removed_paths()[0]
+
+
+def _spawn_remote_success(
+    observation: _RemoteStagingObservation,
+    transport: CliTransport,
+    args: tuple[str, ...],
+) -> str:
+    process = transport.spawn(args)
+    staged_path = next(iter(observation.current_files()))
+    assert process.result().exit_code == 0
+    assert observation.current_files() == {}
+    assert observation.removed_paths() == [staged_path]
+    process.close()
+    process.close()
+    assert observation.removed_paths() == [staged_path]
+    return staged_path
+
+
+def _run_remote_nonzero(
+    observation: _RemoteStagingObservation,
+    transport: CliTransport,
+    args: tuple[str, ...],
+) -> str:
+    with pytest.raises(NetworkError):
+        transport.run_bytes(args)
+    return observation.removed_paths()[0]
+
+
+def _spawn_remote_nonzero(
+    observation: _RemoteStagingObservation,
+    transport: CliTransport,
+    args: tuple[str, ...],
+) -> str:
+    process = transport.spawn(args)
+    staged_path = next(iter(observation.current_files()))
+    assert process.result().exit_code == 2
+    assert observation.current_files() == {}
+    assert observation.removed_paths() == [staged_path]
+    process.close()
+    process.close()
+    assert observation.removed_paths() == [staged_path]
+    return staged_path
+
+
+def _execute_remote_case(
+    case: RemoteFileSecretCase,
+    observation: _RemoteStagingObservation,
+    transport: CliTransport,
+    args: tuple[str, ...],
+) -> str:
+    action = {
+        "run-success": _run_remote_success,
+        "spawn-success": _spawn_remote_success,
+        "run-nonzero": _run_remote_nonzero,
+        "spawn-nonzero": _spawn_remote_nonzero,
+    }[case.phase]
+    return action(observation, transport, args)
+
+
+_PROCESS_FILE_SECRET_BY_ID = {case.id: case for case in PROCESS_FILE_SECRET_CASES}
+_CREDENTIAL_FILE = _PROCESS_FILE_SECRET_BY_ID["credential-file"]
+_SERVER_CONFIG_FILE = _PROCESS_FILE_SECRET_BY_ID["server-config-file"]
+_CREDENTIAL_FILE_EQUALS = _PROCESS_FILE_SECRET_BY_ID["credential-file-equals"]
+_SERVER_CONFIG_FILE_EQUALS = _PROCESS_FILE_SECRET_BY_ID["server-config-file-equals"]
+
+
+def _ssh_open_failure_factory() -> _RemoteStagingObservation:
+    def configure(client: _SshClient) -> None:
+        client.sftp.open_error = RuntimeError("open failed")
+
+    return _ssh_remote_staging_factory(configure=configure)
+
+
+def _ssh_write_failure_factory() -> _RemoteStagingObservation:
+    def configure(client: _SshClient) -> None:
+        client.sftp.write_error = RuntimeError("write failed")
+        client.sftp.write_partial = 4
+
+    return _ssh_remote_staging_factory(configure=configure)
+
+
+def _ssh_chmod_failure_factory() -> _RemoteStagingObservation:
+    def configure(client: _SshClient) -> None:
+        client.sftp.chmod_error = RuntimeError("chmod failed")
+
+    return _ssh_remote_staging_factory(configure=configure)
+
+
+def _microsandbox_write_failure_factory() -> _RemoteStagingObservation:
+    def configure(factory: _Factory) -> None:
+        factory.sandbox.fs.write_error = RuntimeError("write failed")
+        factory.sandbox.fs.write_partial = b"part"
+
+    return _microsandbox_remote_staging_factory(configure=configure)
+
+
+_REMOTE_STAGE_FAILURE_CASES: tuple[RemoteStageFailureCase, ...] = (
+    RemoteStageFailureCase(
+        "ssh-open-failure",
+        _CREDENTIAL_FILE,
+        _ssh_open_failure_factory,
+        RuntimeError,
+        "open failed",
+        b"",
+    ),
+    RemoteStageFailureCase(
+        "ssh-write-failure",
+        _CREDENTIAL_FILE,
+        _ssh_write_failure_factory,
+        RuntimeError,
+        "write failed",
+        _CREDENTIAL_FILE.payload[:4],
+    ),
+    RemoteStageFailureCase(
+        "ssh-chmod-failure",
+        _SERVER_CONFIG_FILE,
+        _ssh_chmod_failure_factory,
+        RuntimeError,
+        "chmod failed",
+        _SERVER_CONFIG_FILE.payload,
+    ),
+    RemoteStageFailureCase(
+        "microsandbox-write-failure",
+        _CREDENTIAL_FILE,
+        _microsandbox_write_failure_factory,
+        ExecutionUnavailableError,
+        "write failed",
+        b"part",
+    ),
+)
+
+
+@pytest.mark.parametrize("case", REMOTE_FILE_SECRET_CASES, ids=lambda case: case.id)
+def test_cli_transport_stages_file_secrets_on_remote_targets(
+    tmp_path: Path,
+    case: RemoteFileSecretCase,
+) -> None:
+    observation = _REMOTE_FACTORY_BY_PROVIDER[case.provider](case.expected_exit_code)
+    source = tmp_path / f"{case.file_secret.id}.bin"
+    source.write_bytes(case.file_secret.payload)
+    args = (
+        "workspace",
+        "mcp",
+        "add",
+        "server-1",
+        *file_secret_args(case.file_secret, source),
+    )
+    transport = CliTransport(
+        ClientConfig(executable="multica", compatibility=CompatibilityPolicy.ignore),
+        executor=observation.executor,
+    )
+    try:
+        staged_path = _execute_remote_case(case, observation, transport, args)
+        assert observation.executor.requests[0].argv == case.expected_argv(
+            staged_path, case.file_secret
+        )
+        assert observation.written_files() == {staged_path: case.file_secret.payload}
+        assert len(observation.current_files()) == case.expected_current_files
+        assert len(observation.removed_paths()) == case.expected_removed_paths
+        assert observation.removed_paths() == [staged_path] * case.expected_removed_paths
+    finally:
+        observation.executor.close()
+
+
+@pytest.mark.parametrize("case", _REMOTE_STAGE_FAILURE_CASES, ids=lambda case: case.id)
+def test_cli_transport_cleans_remote_file_staging_on_staging_failure(
+    tmp_path: Path,
+    case: RemoteStageFailureCase,
+) -> None:
+    observation = case.factory()
+    source = tmp_path / f"{case.file_secret.id}-failure.bin"
+    source.write_bytes(case.file_secret.payload)
+    args = (
+        "workspace",
+        "mcp",
+        "add",
+        "server-1",
+        *file_secret_args(case.file_secret, source),
+    )
+    transport = CliTransport(
+        ClientConfig(executable="multica", compatibility=CompatibilityPolicy.ignore),
+        executor=observation.executor,
+    )
+    try:
+        with pytest.raises(case.expected_error, match=case.error_match):
+            transport.run_bytes(args)
+        staged_path = observation.removed_paths()[0]
+        assert observation.current_files() == {}
+        assert observation.removed_paths() == [staged_path]
+        assert observation.written_files().get(staged_path, b"") == case.expected_written
+    finally:
+        observation.executor.close()
 
 
 @pytest.mark.parametrize("case", _EXECUTORS, ids=lambda case: case.id)

@@ -80,17 +80,32 @@ AGENT_LIST_BINDING = GeneratedBinding(
 
 AGENT_MCP_ADD_BINDING = GeneratedBinding(
     'agents.mcp.add', 'default', ('agent', 'mcp', 'add'),
-    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:issue_id'),
+    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'json_body:server_id'),), ('nonblank:agent_id', 'nonblank:server_id'),
+)
+
+AGENT_MCP_ADD_BOUND_BINDING = GeneratedBinding(
+    'agents.mcp.add_bound', 'default', ('agent', 'mcp', 'add'),
+    (GeneratedMapping('self.id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'json_body:server_id'),), ('nonblank:agent_id', 'nonblank:server_id'),
 )
 
 AGENT_MCP_DISABLE_BINDING = GeneratedBinding(
     'agents.mcp.disable', 'default', ('agent', 'mcp', 'disable'),
-    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:issue_id'),
+    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:server_id'),
+)
+
+AGENT_MCP_DISABLE_BOUND_BINDING = GeneratedBinding(
+    'agents.mcp.disable_bound', 'default', ('agent', 'mcp', 'disable'),
+    (GeneratedMapping('self.id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:server_id'),
 )
 
 AGENT_MCP_ENABLE_BINDING = GeneratedBinding(
     'agents.mcp.enable', 'default', ('agent', 'mcp', 'enable'),
-    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:issue_id'),
+    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:server_id'),
+)
+
+AGENT_MCP_ENABLE_BOUND_BINDING = GeneratedBinding(
+    'agents.mcp.enable_bound', 'default', ('agent', 'mcp', 'enable'),
+    (GeneratedMapping('self.id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:server_id'),
 )
 
 AGENT_MCP_LIST_BINDING = GeneratedBinding(
@@ -100,7 +115,12 @@ AGENT_MCP_LIST_BINDING = GeneratedBinding(
 
 AGENT_MCP_REMOVE_BINDING = GeneratedBinding(
     'agents.mcp.remove', 'default', ('agent', 'mcp', 'remove'),
-    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:issue_id'),
+    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:server_id'),
+)
+
+AGENT_MCP_REMOVE_BOUND_BINDING = GeneratedBinding(
+    'agents.mcp.remove_bound', 'default', ('agent', 'mcp', 'remove'),
+    (GeneratedMapping('self.id', 'pos:0', 'path:agent_id'), GeneratedMapping('server_id', 'pos:1', 'path:server_id'),), ('nonblank:agent_id', 'nonblank:server_id'),
 )
 
 AGENTS_RESTORE_MANUAL_BINDING = GeneratedBinding(
@@ -149,7 +169,7 @@ ATTACHMENTS_UPLOAD_BYTES_MANUAL_BINDING = GeneratedBinding(
 )
 
 AUTH_LOGIN_MANUAL_BINDING = GeneratedBinding(
-    'auth.login', 'default', ('auth', 'login'),
+    'auth.login', 'default', ('login',),
     (), (),
 )
 
@@ -219,7 +239,7 @@ CLI_COMMAND_BINDING = GeneratedBinding(
 )
 
 CONFIGURATION_GET_MANUAL_BINDING = GeneratedBinding(
-    'configuration.get', 'default', ('config', 'get'),
+    'configuration.get', 'default', ('config', 'show'),
     (), (),
 )
 
@@ -331,11 +351,6 @@ ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING = GeneratedBinding(
 ISSUE_CREATE_BINDING = GeneratedBinding(
     'issues.create', 'default', ('issue', 'create'),
     (GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'local_control:description'), GeneratedMapping('description_file', '--description-file', 'local_control:description'), GeneratedMapping('description_input', 'description-selector', 'local_control:description'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('project', '--project', 'json_body:project_id'), GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('parent_id', '--parent', 'json_body:parent_issue_id'), GeneratedMapping('label_ids', 'repeat:issue label add', 'json_body:label_id'),), ('nonblank:title', 'description_exactly_one'),
-)
-
-ISSUES_DEPRIORITIZE_MANUAL_BINDING = GeneratedBinding(
-    'issues.deprioritize', 'default', ('issue', 'deprioritize'),
-    (), (),
 )
 
 ISSUE_GET_BINDING = GeneratedBinding(
@@ -570,17 +585,17 @@ MAINTENANCE_VERSION_MANUAL_BINDING = GeneratedBinding(
 
 PLUGIN_INIT_BINDING = GeneratedBinding(
     'plugins.init', 'default', ('plugin', 'init'),
-    (GeneratedMapping('directory', 'pos:0', 'path:directory'), GeneratedMapping('key', '--key', 'json_body:key'), GeneratedMapping('name', '--name', 'json_body:name'), GeneratedMapping('publisher', '--publisher', 'json_body:publisher'), GeneratedMapping('contribution', '--contribution', 'json_body:contribution'), GeneratedMapping('endpoint_host', '--endpoint-host', 'json_body:endpoint_host'),), ('nonblank:path',),
+    (GeneratedMapping('directory', 'pos:0', 'local_control:directory'), GeneratedMapping('key', '--key', 'local_control:key'), GeneratedMapping('name', '--name', 'local_control:name'), GeneratedMapping('publisher', '--publisher', 'local_control:publisher'), GeneratedMapping('contribution', '--contribution', 'local_control:contribution'), GeneratedMapping('endpoint_host', '--endpoint-host', 'local_control:endpoint_host'),), ('nonblank:directory',),
 )
 
 PLUGIN_INSTALL_BINDING = GeneratedBinding(
     'plugins.install', 'default', ('plugin', 'install'),
-    (GeneratedMapping('source', 'pos:0', 'path:source'), GeneratedMapping('workspace', '--workspace', 'json_body:workspace'),), ('nonblank:path',),
+    (GeneratedMapping('source', 'pos:0', 'path:source'), GeneratedMapping('workspace', '--workspace', 'path:workspace_id'),), ('nonblank:path',),
 )
 
 PLUGIN_LIST_BINDING = GeneratedBinding(
     'plugins.list', 'default', ('plugin', 'list'),
-    (), (),
+    (GeneratedMapping('workspace', '--workspace', 'path:workspace_id'),), (),
 )
 
 PLUGIN_PACK_BINDING = GeneratedBinding(
@@ -590,32 +605,32 @@ PLUGIN_PACK_BINDING = GeneratedBinding(
 
 PLUGIN_REMOTE_MCP_APPROVE_BINDING = GeneratedBinding(
     'plugins.remote_mcp.approve', 'default', ('plugin', 'remote-mcp', 'approve'),
-    (GeneratedMapping('installation_id', 'pos:0', 'path:installation_id'), GeneratedMapping('contribution_key', 'pos:1', 'path:contribution_key'), GeneratedMapping('tools', 'repeat:--tool', 'json_body:tools'), GeneratedMapping('workspace', '--workspace', 'json_body:workspace'),), ('nonblank:issue_id', 'nonblank:issue_id'),
+    (GeneratedMapping('installation_id', 'pos:0', 'path:installation_id'), GeneratedMapping('contribution_key', 'pos:1', 'path:contribution_key'), GeneratedMapping('tools', 'repeat:--tool', 'json_body:tools'), GeneratedMapping('workspace', '--workspace', 'path:workspace_id'),), ('nonblank:installation_id', 'nonblank:contribution_key'),
 )
 
 PLUGIN_REMOTE_MCP_CONFIGURE_BINDING = GeneratedBinding(
     'plugins.remote_mcp.configure', 'default', ('plugin', 'remote-mcp', 'configure'),
-    (GeneratedMapping('installation_id', 'pos:0', 'path:installation_id'), GeneratedMapping('contribution_key', 'pos:1', 'path:contribution_key'), GeneratedMapping('endpoint', '--endpoint', 'json_body:endpoint'), GeneratedMapping('credential_file', '--credential-file', 'json_body:credential_file'), GeneratedMapping('credential_stdin', '--credential-stdin', 'json_body:credential_stdin'), GeneratedMapping('auth_type', '--auth-type', 'json_body:auth_type'), GeneratedMapping('auth_header', '--auth-header', 'json_body:auth_header'), GeneratedMapping('failure_policy', '--failure-policy', 'json_body:failure_policy'), GeneratedMapping('workspace', '--workspace', 'json_body:workspace'),), ('nonblank:issue_id', 'nonblank:issue_id', 'nonblank:name'),
+    (GeneratedMapping('installation_id', 'pos:0', 'path:installation_id'), GeneratedMapping('contribution_key', 'pos:1', 'path:contribution_key'), GeneratedMapping('endpoint', '--endpoint', 'json_body:endpoint'), GeneratedMapping('credential_file', '--credential-file', 'json_body:credential'), GeneratedMapping('credential_stdin', '--credential-stdin', 'json_body:credential'), GeneratedMapping('public_config_file', '--public-config-file', 'json_body:public_config'), GeneratedMapping('auth_type', '--auth-type', 'json_body:auth_type'), GeneratedMapping('auth_header', '--auth-header', 'json_body:auth_header'), GeneratedMapping('failure_policy', '--failure-policy', 'json_body:failure_policy'), GeneratedMapping('workspace', '--workspace', 'path:workspace_id'),), ('nonblank:installation_id', 'nonblank:contribution_key', 'nonblank:endpoint'),
 )
 
 PLUGIN_REMOTE_MCP_REVOKE_BINDING = GeneratedBinding(
     'plugins.remote_mcp.revoke', 'default', ('plugin', 'remote-mcp', 'revoke'),
-    (GeneratedMapping('installation_id', 'pos:0', 'path:installation_id'), GeneratedMapping('contribution_key', 'pos:1', 'path:contribution_key'), GeneratedMapping('workspace', '--workspace', 'json_body:workspace'),), ('nonblank:issue_id', 'nonblank:issue_id'),
+    (GeneratedMapping('installation_id', 'pos:0', 'path:installation_id'), GeneratedMapping('contribution_key', 'pos:1', 'path:contribution_key'), GeneratedMapping('workspace', '--workspace', 'path:workspace_id'),), ('nonblank:installation_id', 'nonblank:contribution_key'),
 )
 
 PLUGIN_REMOTE_MCP_TEST_BINDING = GeneratedBinding(
     'plugins.remote_mcp.test', 'default', ('plugin', 'remote-mcp', 'test'),
-    (GeneratedMapping('installation_id', 'pos:0', 'path:installation_id'), GeneratedMapping('contribution_key', 'pos:1', 'path:contribution_key'), GeneratedMapping('workspace', '--workspace', 'json_body:workspace'),), ('nonblank:issue_id', 'nonblank:issue_id'),
+    (GeneratedMapping('installation_id', 'pos:0', 'path:installation_id'), GeneratedMapping('contribution_key', 'pos:1', 'path:contribution_key'), GeneratedMapping('workspace', '--workspace', 'path:workspace_id'),), ('nonblank:installation_id', 'nonblank:contribution_key'),
 )
 
 PLUGIN_STATUS_BINDING = GeneratedBinding(
     'plugins.status', 'default', ('plugin', 'status'),
-    (GeneratedMapping('plugin_key_or_id', 'pos:0', 'path:plugin_key_or_id'),), (),
+    (GeneratedMapping('plugin_key_or_id', 'pos:0', 'path:plugin_key_or_id'), GeneratedMapping('workspace', '--workspace', 'path:workspace_id'),), (),
 )
 
 PLUGIN_VALIDATE_BINDING = GeneratedBinding(
     'plugins.validate', 'default', ('plugin', 'validate'),
-    (GeneratedMapping('source', 'pos:0', 'path:source'),), ('nonblank:path',),
+    (GeneratedMapping('source', 'pos:0', 'path:source'),), ('nonblank:directory',),
 )
 
 PROJECT_CREATE_BINDING = GeneratedBinding(
@@ -700,7 +715,7 @@ PROPERTY_GET_BINDING = GeneratedBinding(
 
 PROPERTY_LIST_BINDING = GeneratedBinding(
     'properties.list', 'default', ('property', 'list'),
-    (), (),
+    (GeneratedMapping('include_archived', '--include-archived', 'query:include_archived'),), (),
 )
 
 PROPERTY_UNARCHIVE_BINDING = GeneratedBinding(
@@ -870,7 +885,7 @@ WORKSPACE_LIST_BINDING = GeneratedBinding(
 
 WORKSPACE_MCP_ADD_BINDING = GeneratedBinding(
     'workspaces.mcp.add', 'default', ('workspace', 'mcp', 'add'),
-    (GeneratedMapping('server_name', 'pos:0', 'path:server_name'), GeneratedMapping('server_config_file', '--server-config-file', 'json_body:server_config_file'), GeneratedMapping('server_config_stdin', '--server-config-stdin', 'json_body:server_config_stdin'), GeneratedMapping('server_config', '--server-config', 'json_body:server_config'),), ('nonblank:name',),
+    (GeneratedMapping('server_name', 'pos:0', 'path:server_name'), GeneratedMapping('server_config_file', '--server-config-file', 'json_body:server_config'), GeneratedMapping('server_config_stdin', '--server-config-stdin', 'json_body:server_config'), GeneratedMapping('server_config', '--server-config', 'json_body:server_config'),), ('nonblank:name',),
 )
 
 WORKSPACE_MCP_LIST_BINDING = GeneratedBinding(
@@ -880,12 +895,12 @@ WORKSPACE_MCP_LIST_BINDING = GeneratedBinding(
 
 WORKSPACE_MCP_REMOVE_BINDING = GeneratedBinding(
     'workspaces.mcp.remove', 'default', ('workspace', 'mcp', 'remove'),
-    (GeneratedMapping('server_id', 'pos:0', 'path:server_id'),), ('nonblank:issue_id',),
+    (GeneratedMapping('server_id', 'pos:0', 'path:server_id'),), ('nonblank:server_id',),
 )
 
 WORKSPACE_MCP_UPDATE_BINDING = GeneratedBinding(
     'workspaces.mcp.update', 'default', ('workspace', 'mcp', 'update'),
-    (GeneratedMapping('server_id', 'pos:0', 'path:server_id'), GeneratedMapping('name', '--name', 'json_body:name'), GeneratedMapping('server_config_file', '--server-config-file', 'json_body:server_config_file'), GeneratedMapping('server_config_stdin', '--server-config-stdin', 'json_body:server_config_stdin'), GeneratedMapping('server_config', '--server-config', 'json_body:server_config'),), ('nonblank:issue_id',),
+    (GeneratedMapping('server_id', 'pos:0', 'path:server_id'), GeneratedMapping('name', '--name', 'json_body:name'), GeneratedMapping('server_config_file', '--server-config-file', 'json_body:server_config'), GeneratedMapping('server_config_stdin', '--server-config-stdin', 'json_body:server_config'), GeneratedMapping('server_config', '--server-config', 'json_body:server_config'),), ('nonblank:server_id',),
 )
 
 WORKSPACE_MEMBERS_LIST_BINDING = GeneratedBinding(
@@ -898,16 +913,6 @@ WORKSPACES_SWITCH_MANUAL_BINDING = GeneratedBinding(
     (), (),
 )
 
-WORKSPACES_UNWATCH_MANUAL_BINDING = GeneratedBinding(
-    'workspaces.unwatch', 'default', ('workspace', 'unwatch'),
-    (), (),
-)
-
-WORKSPACES_WATCH_MANUAL_BINDING = GeneratedBinding(
-    'workspaces.watch', 'default', ('workspace', 'watch'),
-    (), (),
-)
-
 OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     AGENTS_ARCHIVE_MANUAL_BINDING,
     AGENT_AVATAR_BINDING,
@@ -916,10 +921,14 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     AGENT_GET_BINDING,
     AGENT_LIST_BINDING,
     AGENT_MCP_ADD_BINDING,
+    AGENT_MCP_ADD_BOUND_BINDING,
     AGENT_MCP_DISABLE_BINDING,
+    AGENT_MCP_DISABLE_BOUND_BINDING,
     AGENT_MCP_ENABLE_BINDING,
+    AGENT_MCP_ENABLE_BOUND_BINDING,
     AGENT_MCP_LIST_BINDING,
     AGENT_MCP_REMOVE_BINDING,
+    AGENT_MCP_REMOVE_BOUND_BINDING,
     AGENTS_RESTORE_MANUAL_BINDING,
     AGENT_SKILLS_LIST_BINDING,
     AGENT_SKILLS_SET_BINDING,
@@ -966,7 +975,6 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     ISSUES_COMMENTS_RESOLVE_MANUAL_BINDING,
     ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING,
     ISSUE_CREATE_BINDING,
-    ISSUES_DEPRIORITIZE_MANUAL_BINDING,
     ISSUE_GET_BINDING,
     ISSUE_LABELS_ADD_BINDING,
     ISSUE_LABELS_LIST_BINDING,
@@ -1079,8 +1087,6 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     WORKSPACE_MCP_UPDATE_BINDING,
     WORKSPACE_MEMBERS_LIST_BINDING,
     WORKSPACES_SWITCH_MANUAL_BINDING,
-    WORKSPACES_UNWATCH_MANUAL_BINDING,
-    WORKSPACES_WATCH_MANUAL_BINDING,
 )
 
 OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
@@ -1127,16 +1133,34 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
         (), 'multica_py.resources.agent_mcp.AgentMcpResource.add_command',
     ),
     GeneratedConvention(
+        'agents.mcp.add_bound', 'default',
+        'collection', 'page_mcp_servers',
+        None, 'direct',
+        (), 'multica_py.entities.agents.Agent.add_mcp_server_command',
+    ),
+    GeneratedConvention(
         'agents.mcp.disable', 'default',
         'collection', 'page_mcp_servers',
         None, 'direct',
         (), 'multica_py.resources.agent_mcp.AgentMcpResource.disable_command',
     ),
     GeneratedConvention(
+        'agents.mcp.disable_bound', 'default',
+        'collection', 'page_mcp_servers',
+        None, 'direct',
+        (), 'multica_py.entities.agents.Agent.disable_mcp_server_command',
+    ),
+    GeneratedConvention(
         'agents.mcp.enable', 'default',
         'collection', 'page_mcp_servers',
         None, 'direct',
         (), 'multica_py.resources.agent_mcp.AgentMcpResource.enable_command',
+    ),
+    GeneratedConvention(
+        'agents.mcp.enable_bound', 'default',
+        'collection', 'page_mcp_servers',
+        None, 'direct',
+        (), 'multica_py.entities.agents.Agent.enable_mcp_server_command',
     ),
     GeneratedConvention(
         'agents.mcp.list', 'default',
@@ -1149,6 +1173,12 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
         'collection', 'page_mcp_servers',
         None, 'direct',
         (), 'multica_py.resources.agent_mcp.AgentMcpResource.remove_command',
+    ),
+    GeneratedConvention(
+        'agents.mcp.remove_bound', 'default',
+        'collection', 'page_mcp_servers',
+        None, 'direct',
+        (), 'multica_py.entities.agents.Agent.remove_mcp_server_command',
     ),
     GeneratedConvention(
         'agents.restore', 'default',
@@ -1425,12 +1455,6 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
         'create', 'issue',
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.create_command',
-    ),
-    GeneratedConvention(
-        'issues.deprioritize', 'default',
-        'action', 'action_result_str',
-        None, 'direct',
-        (), 'multica_py.resources.issues.IssueResource.deprioritize_command',
     ),
     GeneratedConvention(
         'issues.get', 'default',
@@ -2082,7 +2106,7 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     ),
     GeneratedConvention(
         'workspaces.mcp.remove', 'default',
-        'collection', 'page_mcp_servers',
+        'action', 'action_result_none',
         None, 'direct',
         (), 'multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove_command',
     ),
@@ -2103,18 +2127,6 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
         'action', 'action_result_none',
         None, 'direct',
         (), 'multica_py.resources.workspaces.WorkspaceResource.switch_command',
-    ),
-    GeneratedConvention(
-        'workspaces.unwatch', 'default',
-        'action', 'action_result_none',
-        None, 'direct',
-        (), 'multica_py.resources.workspaces.WorkspaceResource.unwatch_command',
-    ),
-    GeneratedConvention(
-        'workspaces.watch', 'default',
-        'action', 'action_result_none',
-        None, 'direct',
-        (), 'multica_py.resources.workspaces.WorkspaceResource.watch_command',
     ),
 )
 
@@ -2174,4 +2186,4 @@ def validate_thread_cursor_limit(value: object) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ValueError('value must be a positive integer')
 
-__all__ = ('AGENTS_ARCHIVE_MANUAL_BINDING', 'AGENTS_CREATE_MANUAL_BINDING', 'AGENTS_RESTORE_MANUAL_BINDING', 'AGENTS_UPDATE_MANUAL_BINDING', 'AGENT_AVATAR_BINDING', 'AGENT_COPY_BINDING', 'AGENT_GET_BINDING', 'AGENT_LIST_BINDING', 'AGENT_MCP_ADD_BINDING', 'AGENT_MCP_DISABLE_BINDING', 'AGENT_MCP_ENABLE_BINDING', 'AGENT_MCP_LIST_BINDING', 'AGENT_MCP_REMOVE_BINDING', 'AGENT_SKILLS_LIST_BINDING', 'AGENT_SKILLS_SET_BINDING', 'AGENT_TASKS_BINDING', 'ATTACHMENTS_DOWNLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENTS_UPLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENT_DOWNLOAD_BINDING', 'ATTACHMENT_UPLOAD_BINDING', 'AUTH_LOGIN_MANUAL_BINDING', 'AUTH_LOGOUT_MANUAL_BINDING', 'AUTH_STATUS_MANUAL_BINDING', 'AUTOPILOT_CREATE_BINDING', 'AUTOPILOT_DELETE_BINDING', 'AUTOPILOT_GET_BINDING', 'AUTOPILOT_HISTORY_BINDING', 'AUTOPILOT_LIST_BINDING', 'AUTOPILOT_TRIGGER_ADD_BINDING', 'AUTOPILOT_TRIGGER_BINDING', 'AUTOPILOT_TRIGGER_DELETE_BINDING', 'AUTOPILOT_TRIGGER_UPDATE_BINDING', 'AUTOPILOT_UPDATE_BINDING', 'CLI_COMMAND_BINDING', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'CONFIGURATION_GET_MANUAL_BINDING', 'CONFIGURATION_SET_MANUAL_BINDING', 'CONFIGURATION_SHOW_MANUAL_BINDING', 'DAEMON_DISK_USAGE_MANUAL_BINDING', 'DAEMON_LOGS_MANUAL_BINDING', 'DAEMON_RESTART_MANUAL_BINDING', 'DAEMON_START_MANUAL_BINDING', 'DAEMON_STATUS_MANUAL_BINDING', 'DAEMON_STOP_MANUAL_BINDING', 'ISSUES_ASSIGN_BOUND_BINDING', 'ISSUES_ASSIGN_MANUAL_BINDING', 'ISSUES_COMMENTS_REPLY_MANUAL_BINDING', 'ISSUES_COMMENTS_RESOLVE_MANUAL_BINDING', 'ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING', 'ISSUES_DEPRIORITIZE_MANUAL_BINDING', 'ISSUES_METADATA_QUERY_MANUAL_BINDING', 'ISSUES_METADATA_SET_TYPED_MANUAL_BINDING', 'ISSUES_MOVE_AFTER_BINDING', 'ISSUES_MOVE_AFTER_BOUND_BINDING', 'ISSUES_MOVE_BEFORE_BINDING', 'ISSUES_MOVE_BEFORE_BOUND_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BOUND_BINDING', 'ISSUES_MOVE_TO_TOP_BINDING', 'ISSUES_MOVE_TO_TOP_BOUND_BINDING', 'ISSUES_REFRESH_BINDING', 'ISSUES_REORDER_MANUAL_BINDING', 'ISSUES_SET_STATUS_BOUND_BINDING', 'ISSUES_UNASSIGN_BINDING', 'ISSUES_UNASSIGN_BOUND_BINDING', 'ISSUES_UPDATE_BOUND_BINDING', 'ISSUES_UPDATE_MANUAL_BINDING', 'ISSUES_USAGE_MANUAL_BINDING', 'ISSUE_CANCEL_TASK_BINDING', 'ISSUE_CHILDREN_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_GET_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_METADATA_DELETE_BINDING', 'ISSUE_METADATA_GET_BINDING', 'ISSUE_METADATA_LIST_BINDING', 'ISSUE_METADATA_SET_BINDING', 'ISSUE_PROPERTY_LIST_BINDING', 'ISSUE_PROPERTY_SET_BINDING', 'ISSUE_PROPERTY_UNSET_BINDING', 'ISSUE_PULL_REQUESTS_BINDING', 'ISSUE_RERUN_BINDING', 'ISSUE_RUNS_BINDING', 'ISSUE_RUN_MESSAGES_BINDING', 'ISSUE_SEARCH_BINDING', 'ISSUE_STATUS_BINDING', 'ISSUE_SUBSCRIBERS_ADD_BINDING', 'ISSUE_SUBSCRIBERS_LIST_BINDING', 'ISSUE_SUBSCRIBERS_REMOVE_BINDING', 'LABELS_CREATE_MANUAL_BINDING', 'LABELS_DELETE_MANUAL_BINDING', 'LABELS_UPDATE_MANUAL_BINDING', 'LABEL_GET_BINDING', 'LABEL_LIST_BINDING', 'MAINTENANCE_UPDATE_MANUAL_BINDING', 'MAINTENANCE_VERSION_MANUAL_BINDING', 'MAX_CLI_VERSION', 'MIN_CLI_VERSION', 'OPERATION_BINDINGS', 'OPERATION_CONVENTIONS', 'PLUGIN_INIT_BINDING', 'PLUGIN_INSTALL_BINDING', 'PLUGIN_LIST_BINDING', 'PLUGIN_PACK_BINDING', 'PLUGIN_REMOTE_MCP_APPROVE_BINDING', 'PLUGIN_REMOTE_MCP_CONFIGURE_BINDING', 'PLUGIN_REMOTE_MCP_REVOKE_BINDING', 'PLUGIN_REMOTE_MCP_TEST_BINDING', 'PLUGIN_STATUS_BINDING', 'PLUGIN_VALIDATE_BINDING', 'PROJECTS_DELETE_MANUAL_BINDING', 'PROJECTS_REFRESH_BINDING', 'PROJECTS_UPDATE_BOUND_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_GET_BINDING', 'PROJECT_ISSUE_CREATE_BINDING', 'PROJECT_LIST_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'PROPERTY_ARCHIVE_BINDING', 'PROPERTY_CREATE_BINDING', 'PROPERTY_GET_BINDING', 'PROPERTY_LIST_BINDING', 'PROPERTY_UNARCHIVE_BINDING', 'PROPERTY_UPDATE_BINDING', 'REPOSITORIES_ADD_BINDING', 'REPOSITORIES_LIST_BINDING', 'REPOSITORIES_REMOVE_BINDING', 'RUNTIME_ACTIVITY_BINDING', 'RUNTIME_DELETE_BINDING', 'RUNTIME_LIST_BINDING', 'RUNTIME_RENAME_BINDING', 'RUNTIME_UPDATE_BINDING', 'RUNTIME_USAGE_BINDING', 'SETUP_CLOUD_MANUAL_BINDING', 'SETUP_SELF_HOST_MANUAL_BINDING', 'SKILLS_CREATE_MANUAL_BINDING', 'SKILLS_DELETE_MANUAL_BINDING', 'SKILLS_IMPORT_FROM_URL_MANUAL_BINDING', 'SKILLS_UPDATE_MANUAL_BINDING', 'SKILL_FILES_DELETE_BINDING', 'SKILL_FILES_LIST_BINDING', 'SKILL_FILES_UPSERT_BINDING', 'SKILL_GET_BINDING', 'SKILL_LIST_BINDING', 'SKILL_REFRESH_BINDING', 'SKILL_SEARCH_BINDING', 'SQUAD_GET_BINDING', 'SQUAD_LIST_BINDING', 'SQUAD_MEMBERS_ADD_BINDING', 'SQUAD_MEMBERS_LIST_BINDING', 'SQUAD_MEMBERS_REMOVE_BINDING', 'TARGET_VERSION', 'USER_PROFILE_GET_BINDING', 'USER_PROFILE_UPDATE_BINDING', 'WORKSPACES_SWITCH_MANUAL_BINDING', 'WORKSPACES_UNWATCH_MANUAL_BINDING', 'WORKSPACES_WATCH_MANUAL_BINDING', 'WORKSPACE_GET_BINDING', 'WORKSPACE_LIST_BINDING', 'WORKSPACE_MCP_ADD_BINDING', 'WORKSPACE_MCP_LIST_BINDING', 'WORKSPACE_MCP_REMOVE_BINDING', 'WORKSPACE_MCP_UPDATE_BINDING', 'WORKSPACE_MEMBERS_LIST_BINDING', 'AutopilotExecutionMode', 'GeneratedBinding', 'GeneratedConvention', 'GeneratedMapping', 'IssueSort', 'SortDirection', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_limit', 'validate_positive_max_concurrent_tasks', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_thread_cursor_limit')
+__all__ = ('AGENTS_ARCHIVE_MANUAL_BINDING', 'AGENTS_CREATE_MANUAL_BINDING', 'AGENTS_RESTORE_MANUAL_BINDING', 'AGENTS_UPDATE_MANUAL_BINDING', 'AGENT_AVATAR_BINDING', 'AGENT_COPY_BINDING', 'AGENT_GET_BINDING', 'AGENT_LIST_BINDING', 'AGENT_MCP_ADD_BINDING', 'AGENT_MCP_ADD_BOUND_BINDING', 'AGENT_MCP_DISABLE_BINDING', 'AGENT_MCP_DISABLE_BOUND_BINDING', 'AGENT_MCP_ENABLE_BINDING', 'AGENT_MCP_ENABLE_BOUND_BINDING', 'AGENT_MCP_LIST_BINDING', 'AGENT_MCP_REMOVE_BINDING', 'AGENT_MCP_REMOVE_BOUND_BINDING', 'AGENT_SKILLS_LIST_BINDING', 'AGENT_SKILLS_SET_BINDING', 'AGENT_TASKS_BINDING', 'ATTACHMENTS_DOWNLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENTS_UPLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENT_DOWNLOAD_BINDING', 'ATTACHMENT_UPLOAD_BINDING', 'AUTH_LOGIN_MANUAL_BINDING', 'AUTH_LOGOUT_MANUAL_BINDING', 'AUTH_STATUS_MANUAL_BINDING', 'AUTOPILOT_CREATE_BINDING', 'AUTOPILOT_DELETE_BINDING', 'AUTOPILOT_GET_BINDING', 'AUTOPILOT_HISTORY_BINDING', 'AUTOPILOT_LIST_BINDING', 'AUTOPILOT_TRIGGER_ADD_BINDING', 'AUTOPILOT_TRIGGER_BINDING', 'AUTOPILOT_TRIGGER_DELETE_BINDING', 'AUTOPILOT_TRIGGER_UPDATE_BINDING', 'AUTOPILOT_UPDATE_BINDING', 'CLI_COMMAND_BINDING', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'CONFIGURATION_GET_MANUAL_BINDING', 'CONFIGURATION_SET_MANUAL_BINDING', 'CONFIGURATION_SHOW_MANUAL_BINDING', 'DAEMON_DISK_USAGE_MANUAL_BINDING', 'DAEMON_LOGS_MANUAL_BINDING', 'DAEMON_RESTART_MANUAL_BINDING', 'DAEMON_START_MANUAL_BINDING', 'DAEMON_STATUS_MANUAL_BINDING', 'DAEMON_STOP_MANUAL_BINDING', 'ISSUES_ASSIGN_BOUND_BINDING', 'ISSUES_ASSIGN_MANUAL_BINDING', 'ISSUES_COMMENTS_REPLY_MANUAL_BINDING', 'ISSUES_COMMENTS_RESOLVE_MANUAL_BINDING', 'ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING', 'ISSUES_METADATA_QUERY_MANUAL_BINDING', 'ISSUES_METADATA_SET_TYPED_MANUAL_BINDING', 'ISSUES_MOVE_AFTER_BINDING', 'ISSUES_MOVE_AFTER_BOUND_BINDING', 'ISSUES_MOVE_BEFORE_BINDING', 'ISSUES_MOVE_BEFORE_BOUND_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BOUND_BINDING', 'ISSUES_MOVE_TO_TOP_BINDING', 'ISSUES_MOVE_TO_TOP_BOUND_BINDING', 'ISSUES_REFRESH_BINDING', 'ISSUES_REORDER_MANUAL_BINDING', 'ISSUES_SET_STATUS_BOUND_BINDING', 'ISSUES_UNASSIGN_BINDING', 'ISSUES_UNASSIGN_BOUND_BINDING', 'ISSUES_UPDATE_BOUND_BINDING', 'ISSUES_UPDATE_MANUAL_BINDING', 'ISSUES_USAGE_MANUAL_BINDING', 'ISSUE_CANCEL_TASK_BINDING', 'ISSUE_CHILDREN_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_GET_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_METADATA_DELETE_BINDING', 'ISSUE_METADATA_GET_BINDING', 'ISSUE_METADATA_LIST_BINDING', 'ISSUE_METADATA_SET_BINDING', 'ISSUE_PROPERTY_LIST_BINDING', 'ISSUE_PROPERTY_SET_BINDING', 'ISSUE_PROPERTY_UNSET_BINDING', 'ISSUE_PULL_REQUESTS_BINDING', 'ISSUE_RERUN_BINDING', 'ISSUE_RUNS_BINDING', 'ISSUE_RUN_MESSAGES_BINDING', 'ISSUE_SEARCH_BINDING', 'ISSUE_STATUS_BINDING', 'ISSUE_SUBSCRIBERS_ADD_BINDING', 'ISSUE_SUBSCRIBERS_LIST_BINDING', 'ISSUE_SUBSCRIBERS_REMOVE_BINDING', 'LABELS_CREATE_MANUAL_BINDING', 'LABELS_DELETE_MANUAL_BINDING', 'LABELS_UPDATE_MANUAL_BINDING', 'LABEL_GET_BINDING', 'LABEL_LIST_BINDING', 'MAINTENANCE_UPDATE_MANUAL_BINDING', 'MAINTENANCE_VERSION_MANUAL_BINDING', 'MAX_CLI_VERSION', 'MIN_CLI_VERSION', 'OPERATION_BINDINGS', 'OPERATION_CONVENTIONS', 'PLUGIN_INIT_BINDING', 'PLUGIN_INSTALL_BINDING', 'PLUGIN_LIST_BINDING', 'PLUGIN_PACK_BINDING', 'PLUGIN_REMOTE_MCP_APPROVE_BINDING', 'PLUGIN_REMOTE_MCP_CONFIGURE_BINDING', 'PLUGIN_REMOTE_MCP_REVOKE_BINDING', 'PLUGIN_REMOTE_MCP_TEST_BINDING', 'PLUGIN_STATUS_BINDING', 'PLUGIN_VALIDATE_BINDING', 'PROJECTS_DELETE_MANUAL_BINDING', 'PROJECTS_REFRESH_BINDING', 'PROJECTS_UPDATE_BOUND_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_GET_BINDING', 'PROJECT_ISSUE_CREATE_BINDING', 'PROJECT_LIST_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'PROPERTY_ARCHIVE_BINDING', 'PROPERTY_CREATE_BINDING', 'PROPERTY_GET_BINDING', 'PROPERTY_LIST_BINDING', 'PROPERTY_UNARCHIVE_BINDING', 'PROPERTY_UPDATE_BINDING', 'REPOSITORIES_ADD_BINDING', 'REPOSITORIES_LIST_BINDING', 'REPOSITORIES_REMOVE_BINDING', 'RUNTIME_ACTIVITY_BINDING', 'RUNTIME_DELETE_BINDING', 'RUNTIME_LIST_BINDING', 'RUNTIME_RENAME_BINDING', 'RUNTIME_UPDATE_BINDING', 'RUNTIME_USAGE_BINDING', 'SETUP_CLOUD_MANUAL_BINDING', 'SETUP_SELF_HOST_MANUAL_BINDING', 'SKILLS_CREATE_MANUAL_BINDING', 'SKILLS_DELETE_MANUAL_BINDING', 'SKILLS_IMPORT_FROM_URL_MANUAL_BINDING', 'SKILLS_UPDATE_MANUAL_BINDING', 'SKILL_FILES_DELETE_BINDING', 'SKILL_FILES_LIST_BINDING', 'SKILL_FILES_UPSERT_BINDING', 'SKILL_GET_BINDING', 'SKILL_LIST_BINDING', 'SKILL_REFRESH_BINDING', 'SKILL_SEARCH_BINDING', 'SQUAD_GET_BINDING', 'SQUAD_LIST_BINDING', 'SQUAD_MEMBERS_ADD_BINDING', 'SQUAD_MEMBERS_LIST_BINDING', 'SQUAD_MEMBERS_REMOVE_BINDING', 'TARGET_VERSION', 'USER_PROFILE_GET_BINDING', 'USER_PROFILE_UPDATE_BINDING', 'WORKSPACES_SWITCH_MANUAL_BINDING', 'WORKSPACE_GET_BINDING', 'WORKSPACE_LIST_BINDING', 'WORKSPACE_MCP_ADD_BINDING', 'WORKSPACE_MCP_LIST_BINDING', 'WORKSPACE_MCP_REMOVE_BINDING', 'WORKSPACE_MCP_UPDATE_BINDING', 'WORKSPACE_MEMBERS_LIST_BINDING', 'AutopilotExecutionMode', 'GeneratedBinding', 'GeneratedConvention', 'GeneratedMapping', 'IssueSort', 'SortDirection', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_limit', 'validate_positive_max_concurrent_tasks', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_thread_cursor_limit')

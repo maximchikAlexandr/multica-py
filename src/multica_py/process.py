@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import msgspec
 
@@ -33,13 +33,16 @@ class ManagedProcess:
         handle: ProcessHandle,
         argv: tuple[str, ...] = (),
         semaphore: ProcessSemaphore | None = None,
+        cleanup: Callable[[], None] | None = None,
     ) -> None:
         self._handle = handle
         self._argv = argv
         self._semaphore = semaphore
+        self._cleanup = cleanup
         self._closed = False
         self._output = OutputOwnership()
         self._result: ProcessResult | None = None
+        self._active_streams: set[str] = set()
 
     def _claim_mode(self, mode: str, consumer: str) -> None:
         if self._output.mode is None:
@@ -67,9 +70,25 @@ class ManagedProcess:
         if self._closed:
             return
         self._closed = True
-        self._handle.close()
-        if self._semaphore is not None:
-            self._semaphore.release()
+        try:
+            self._handle.close()
+        finally:
+            try:
+                if self._cleanup is not None:
+                    cleanup = self._cleanup
+                    self._cleanup = None
+                    cleanup()
+            finally:
+                if self._semaphore is not None:
+                    self._semaphore.release()
+
+    def _maybe_finalize(self, *, exit_code: int | None = None) -> None:
+        if self._closed or self._output.mode != "streaming" or self._active_streams:
+            return
+        if exit_code is None:
+            exit_code = self._handle.poll()
+        if exit_code is not None:
+            self._finalize()
 
     @property
     def id(self) -> str | int | None:
@@ -85,7 +104,9 @@ class ManagedProcess:
         return self._argv
 
     def poll(self) -> int | None:
-        return self._handle.poll()
+        exit_code = self._handle.poll()
+        self._maybe_finalize(exit_code=exit_code)
+        return exit_code
 
     def wait(self, timeout: datetime.timedelta | None = None) -> int:
         return self.result(timeout).exit_code
@@ -119,21 +140,23 @@ class ManagedProcess:
 
     def stdout_lines(self) -> Iterator[str]:
         self._claim_streaming("stdout stream")
+        self._active_streams.add("stdout")
         try:
             for line in self._handle.stdout_lines():
                 yield line.rstrip("\n")
         finally:
-            if self._handle.poll() is not None:
-                self._finalize()
+            self._active_streams.discard("stdout")
+            self._maybe_finalize()
 
     def stderr_lines(self) -> Iterator[str]:
         self._claim_streaming("stderr stream")
+        self._active_streams.add("stderr")
         try:
             for line in self._handle.stderr_lines():
                 yield line.rstrip("\n")
         finally:
-            if self._handle.poll() is not None:
-                self._finalize()
+            self._active_streams.discard("stderr")
+            self._maybe_finalize()
 
     def __del__(self) -> None:
         self.close()

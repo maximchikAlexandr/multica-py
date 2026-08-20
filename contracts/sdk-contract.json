@@ -129,10 +129,10 @@
       "agent_avatar": "(agent_id: str, file: pathlib.Path, *, options: OperationOptions | None = None) -> ActionResult[None]",
       "agent_copy": "(source_agent_id: str, *, name: str | UnsetType = Unset, runtime_id: str | UnsetType = Unset, description: str | UnsetType = Unset, instructions: str | UnsetType = Unset, model: str | UnsetType = Unset, thinking_level: str | UnsetType = Unset, service_tier: str | UnsetType = Unset, custom_args: tuple[str, ...] | UnsetType = Unset, max_concurrent_tasks: int | UnsetType = Unset, permission_mode: str | UnsetType = Unset, public_to_workspace: bool | UnsetType = Unset, public_to_member_ids: tuple[str, ...] | UnsetType = Unset, copy_skills: bool = True, options: OperationOptions | None = None) -> Agent",
       "agent_get": "(agent_id: str, *, options: OperationOptions | None = None) -> Agent",
-      "agent_list": "(, *, options: OperationOptions | None = None) -> tuple[Agent, ...]",
-      "agent_skills_list": "(agent_id: str, *, options: OperationOptions | None = None) -> tuple[AgentSkill, ...]",
+      "agent_list": "(, *, options: OperationOptions | None = None) -> Page[Agent]",
+      "agent_skills_list": "(agent_id: str, *, options: OperationOptions | None = None) -> Page[AgentSkill]",
       "agent_skills_set": "(agent_id: str, skill_ids: tuple[str, ...], *, options: OperationOptions | None = None) -> ActionResult[None]",
-      "agent_tasks": "(agent_id: str, *, options: OperationOptions | None = None) -> tuple[AgentTask, ...]",
+      "agent_tasks": "(agent_id: str, *, options: OperationOptions | None = None) -> Page[AgentTask]",
       "agents_archive_manual": "multica_py.resources.agents.AgentResource.archive(*, options: OperationOptions | None = None): action_result_none",
       "agents_create_manual": "(*, name: str, description: str | None = None, runtime_id: str | None = None, model: str | None = None, options: OperationOptions | None = None) -> Agent",
       "agents_restore_manual": "multica_py.resources.agents.AgentResource.restore(*, options: OperationOptions | None = None): action_result_none",
@@ -149,7 +149,6 @@
       "autopilot_get": "(autopilot_id: str, *, options: OperationOptions | None = None) -> Autopilot",
       "autopilot_history": "(autopilot_id: str, *, limit: int | None, offset: int | None, options: OperationOptions | None = None) -> AutopilotRunListPage",
       "autopilot_list": "(, *, options: OperationOptions | None = None) -> AutopilotListPage",
-      "autopilot_run": "(autopilot_id: str, *, options: OperationOptions | None = None) -> AutopilotRun",
       "autopilot_trigger": "(autopilot_id: str, *, options: OperationOptions | None = None) -> AutopilotRun",
       "autopilot_trigger_add": "(autopilot_id: str, *, title: str, kind: str, options: OperationOptions | None = None) -> AutopilotTrigger",
       "autopilot_trigger_delete": "(autopilot_id: str, trigger_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
@@ -157,7 +156,7 @@
       "autopilot_update": "(autopilot_id: str, *, title: str | UnsetType = Unset, description: str | None | UnsetType = Unset, agent: str | UnsetType = Unset, priority: str | UnsetType = Unset, status: str | UnsetType = Unset, execution_mode: AutopilotExecutionMode | UnsetType = Unset, project_id: str | None | UnsetType = Unset, issue_title_template: str | None | UnsetType = Unset, subscribers: tuple[str, ...] | UnsetType = Unset, options: OperationOptions | None = None) -> Autopilot",
       "comment_add": "(issue_id: str, body: str, *, options: OperationOptions | None = None) -> Comment",
       "comment_delete": "(comment_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
-      "comment_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[Comment, ...]",
+      "comment_list": "(issue_id: str, *, options: OperationOptions | None = None) -> Page[Comment]",
       "comment_list_flat": "(*, issue_id: str, since: datetime.datetime | None = None, options: OperationOptions | None = None) -> Page[Comment]",
       "comment_list_recent": "(*, issue_id: str, cursor: CommentCursor | None = None, limit: int = 10, since: datetime.datetime | None = None, options: OperationOptions | None = None) -> Page[CommentThread]",
       "comment_list_thread": "(*, issue_id: str, thread_id: str, cursor: CommentCursor | None = None, limit: int | None = None, since: datetime.datetime | None = None, options: OperationOptions | None = None) -> Page[Comment]",
@@ -171,38 +170,37 @@
       "daemon_status_manual": "multica_py.resources.daemon.DaemonResource.status(*, options: OperationOptions | None = None): runtime_definition",
       "daemon_stop_manual": "multica_py.resources.daemon.DaemonResource.stop(*, options: OperationOptions | None = None): DaemonStatus",
       "issue_cancel_task": "(task_id: str, *, issue_id: str | None, options: OperationOptions | None = None) -> ActionResult[None]",
-      "issue_children": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[IssueChildStageGroup, ...]",
+      "issue_children": "(issue_id: str, *, options: OperationOptions | None = None) -> IssueChildrenResult",
       "issue_create": "(*, title: str, description: str | None = None, description_file: str | os.PathLike[str] | None = None, description_input: IssueDescriptionInput | None = None, priority: str | None = None, assignee_id: str | None = None, label_ids: tuple[str, ...] = (), project: str | Project | None = None, project_id: str | None = None, parent_id: str | None = None, options: OperationOptions | None = None) -> Issue",
       "issue_get": "(issue_id: str, *, options: OperationOptions | None = None) -> Issue",
-      "issue_labels_add": "(issue_id: str, label_id: str, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
-      "issue_labels_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
-      "issue_labels_remove": "(issue_id: str, label_id: str, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
+      "issue_labels_add": "(issue_id: str, label_id: str, *, options: OperationOptions | None = None) -> Page[Label]",
+      "issue_labels_list": "(issue_id: str, *, options: OperationOptions | None = None) -> Page[Label]",
+      "issue_labels_remove": "(issue_id: str, label_id: str, *, options: OperationOptions | None = None) -> Page[Label]",
       "issue_list": "(filter: IssueListFilter | None = None, *, options: OperationOptions | None = None) -> IssueListPage",
       "issue_metadata_delete": "(issue_id: str, key: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
       "issue_metadata_get": "(issue_id: str, key: str, *, options: OperationOptions | None = None) -> MetadataEntry",
-      "issue_metadata_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[MetadataEntry, ...]",
+      "issue_metadata_list": "(issue_id: str, *, options: OperationOptions | None = None) -> dict[str, str | int | float | bool | None]",
       "issue_metadata_set": "(issue_id: str, key: str, value: str, *, options: OperationOptions | None = None) -> MetadataEntry",
-      "issue_pull_requests": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[LinkedPullRequest, ...]",
+      "issue_pull_requests": "(issue_id: str, *, options: OperationOptions | None = None) -> Page[LinkedPullRequest]",
       "issue_rerun": "(issue_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
-      "issue_run_messages": "(task_run_id: str, *, issue_id: str | None, options: OperationOptions | None = None) -> tuple[RunMessage, ...]",
-      "issue_runs": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[TaskRun, ...]",
+      "issue_run_messages": "(task_run_id: str, *, issue_id: str | None, options: OperationOptions | None = None) -> Page[RunMessage]",
+      "issue_runs": "(issue_id: str, *, options: OperationOptions | None = None) -> Page[TaskRun]",
       "issue_search": "(query: str, *, options: OperationOptions | None = None) -> Page[Issue]",
       "issue_status": "(issue_id: str, status: IssueStatus | str, *, options: OperationOptions | None = None) -> Issue",
       "issue_subscribers_add": "(issue_id: str, user_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
-      "issue_subscribers_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[Subscriber, ...]",
+      "issue_subscribers_list": "(issue_id: str, *, options: OperationOptions | None = None) -> Page[Subscriber]",
       "issue_subscribers_remove": "(issue_id: str, user_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
       "issues_assign_manual": "(issue_id: str, assignee: AssignmentTarget, *, options: OperationOptions | None = None) -> Issue",
       "issues_comments_reply_manual": "multica_py.resources.issue_comments.IssueCommentResource.reply(*, options: OperationOptions | None = None): comment",
       "issues_comments_resolve_manual": "multica_py.resources.issue_comments.IssueCommentResource.resolve(*, options: OperationOptions | None = None): action_result_none",
       "issues_comments_unresolve_manual": "multica_py.resources.issue_comments.IssueCommentResource.unresolve(*, options: OperationOptions | None = None): action_result_none",
-      "issues_deprioritize_manual": "multica_py.resources.issues.IssueResource.deprioritize(*, options: OperationOptions | None = None): action_result_str",
       "issues_metadata_query_manual": "(*, issue_id: str, predicates: tuple[MetadataPredicate, ...] = (), cursor: str | None = None, limit: int | None = None, options: OperationOptions | None = None) -> MetadataPage",
       "issues_metadata_set_typed_manual": "(*, issue_id: str, key: str, value: MetadataValue, value_type: MetadataValueType | None = None, options: OperationOptions | None = None) -> MetadataEntry",
       "issues_reorder_manual": "(issue_id: str, *, before_id: str | None = None, after_id: str | None = None, top: bool = False, bottom: bool = False, options: OperationOptions | None = None) -> Issue",
       "issues_update_manual": "(issue_id: str, *, title: str | UnsetType = Unset, description: str | None | UnsetType = Unset, priority: str | UnsetType = Unset, assignee_id: str | None | UnsetType = Unset, project_id: str | None | UnsetType = Unset, parent_id: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> Issue",
-      "issues_usage_manual": "multica_py.resources.issues.IssueResource.usage(*, options: OperationOptions | None = None): page_issue_usage",
+      "issues_usage_manual": "multica_py.resources.issues.IssueResource.usage(*, options: OperationOptions | None = None): IssueUsage",
       "label_get": "(label_id: str, *, options: OperationOptions | None = None) -> Label",
-      "label_list": "(, *, options: OperationOptions | None = None) -> tuple[Label, ...]",
+      "label_list": "(, *, options: OperationOptions | None = None) -> Page[Label]",
       "labels_create_manual": "multica_py.resources.labels.LabelResource.create(*, options: OperationOptions | None = None): labels",
       "labels_delete_manual": "multica_py.resources.labels.LabelResource.delete(*, options: OperationOptions | None = None): action_result_none",
       "labels_update_manual": "(label_id: str, *, name: str | UnsetType = Unset, color: str | UnsetType = Unset, options: OperationOptions | None = None) -> Label",
@@ -210,47 +208,45 @@
       "maintenance_version_manual": "multica_py.resources.maintenance.MaintenanceResource.version(*, options: OperationOptions | None = None): scalar_str",
       "project_create": "(*, name: str, description: str | None = None, description_file: str | os.PathLike[str] | None = None, options: OperationOptions | None = None) -> Project",
       "project_get": "(project_id: str, *, options: OperationOptions | None = None) -> Project",
-      "project_list": "(, *, options: OperationOptions | None = None) -> tuple[Project, ...]",
+      "project_list": "(, *, options: OperationOptions | None = None) -> Page[Project]",
       "project_resource_add": "(project_id: str, *, local_path: str | pathlib.Path, daemon_id: str, label: str | None = None, options: OperationOptions | None = None) -> ProjectResourceRecord",
-      "project_resource_list": "(project_id: str, *, options: OperationOptions | None = None) -> tuple[ProjectResourceRecord, ...]",
+      "project_resource_list": "(project_id: str, *, options: OperationOptions | None = None) -> Page[ProjectResourceRecord]",
       "project_resource_remove": "(project_id: str, resource_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
       "project_resource_update": "(project_id: str, resource_id: str, *, local_path: str | pathlib.Path, options: OperationOptions | None = None) -> ProjectResourceRecord",
       "project_status": "(project_id: str, status: ProjectStatus | str, *, options: OperationOptions | None = None) -> Project",
       "project_update": "(project_id: str, *, name: str | UnsetType = Unset, description: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> Project",
       "projects_delete_manual": "multica_py.resources.projects.ProjectResource.delete(*, options: OperationOptions | None = None): action_result_none",
       "repositories_add": "(urls: tuple[str, ...], *, description: str | None = None, options: OperationOptions | None = None) -> ActionResult[RepositoryMutationResult]",
-      "repositories_list": "(, *, options: OperationOptions | None = None) -> tuple[RepositoryRecord, ...]",
+      "repositories_list": "(, *, options: OperationOptions | None = None) -> Page[RepositoryRecord]",
       "repositories_remove": "(urls: tuple[str, ...], *, options: OperationOptions | None = None) -> ActionResult[RepositoryMutationResult]",
-      "runtime_activity": "(runtime_id: str, *, options: OperationOptions | None = None) -> tuple[RuntimeActivity, ...]",
+      "runtime_activity": "(runtime_id: str, *, options: OperationOptions | None = None) -> Page[RuntimeActivity]",
       "runtime_delete": "(runtime_id: str, *, cascade: bool = False, options: OperationOptions | None = None) -> ActionResult[None]",
-      "runtime_list": "(, *, options: OperationOptions | None = None) -> tuple[RuntimeDefinition, ...]",
+      "runtime_list": "(, *, options: OperationOptions | None = None) -> Page[RuntimeDefinition]",
       "runtime_rename": "(runtime_id: str, name: str, *, machine: bool = False, options: OperationOptions | None = None) -> RuntimeDefinition",
       "runtime_update": "(runtime_id: str, *, target_version: str, wait: bool = False, options: OperationOptions | None = None) -> ActionResult[RuntimeUpdateResult]",
-      "runtime_usage": "(runtime_id: str, *, days: int = 90, options: OperationOptions | None = None) -> tuple[RuntimeUsage, ...]",
+      "runtime_usage": "(runtime_id: str, *, days: int = 90, options: OperationOptions | None = None) -> Page[RuntimeUsage]",
       "setup_cloud_manual": "multica_py.resources.setup.SetupResource.cloud(*, options: OperationOptions | None = None): process",
       "setup_self_host_manual": "multica_py.resources.setup.SetupResource.self_host(*, options: OperationOptions | None = None): process",
       "skill_files_delete": "(skill_id: str, file_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
-      "skill_files_list": "(skill_id: str, *, options: OperationOptions | None = None) -> tuple[SkillFile, ...]",
+      "skill_files_list": "(skill_id: str, *, options: OperationOptions | None = None) -> Page[SkillFile]",
       "skill_files_upsert": "(skill_id: str, path: str, content: str, *, options: OperationOptions | None = None) -> SkillFile",
       "skill_get": "(skill_id: str, *, options: OperationOptions | None = None) -> Skill",
-      "skill_list": "(, *, options: OperationOptions | None = None) -> tuple[Skill, ...]",
+      "skill_list": "(, *, options: OperationOptions | None = None) -> Page[Skill]",
       "skills_create_manual": "(*, name: str, description: str | None = None, options: OperationOptions | None = None) -> Skill",
       "skills_delete_manual": "multica_py.resources.skills.SkillResource.delete(*, options: OperationOptions | None = None): action_result_none",
       "skills_import_from_url_manual": "multica_py.resources.skills.SkillResource.import_from_url(*, options: OperationOptions | None = None): skill",
       "skills_update_manual": "(skill_id: str, *, name: str | UnsetType = Unset, description: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> Skill",
       "squad_get": "(squad_id: str, *, options: OperationOptions | None = None) -> Squad",
-      "squad_list": "(, *, options: OperationOptions | None = None) -> tuple[Squad, ...]",
+      "squad_list": "(, *, options: OperationOptions | None = None) -> Page[Squad]",
       "squad_members_add": "(squad_id: str, member_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
-      "squad_members_list": "(squad_id: str, *, options: OperationOptions | None = None) -> tuple[SquadMember, ...]",
+      "squad_members_list": "(squad_id: str, *, options: OperationOptions | None = None) -> Page[SquadMember]",
       "squad_members_remove": "(squad_id: str, member_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
       "user_profile_get": "(, *, options: OperationOptions | None = None) -> UserProfile",
       "user_profile_update": "(*, description: str | None | UnsetType = Unset, options: OperationOptions | None = None) -> UserProfile",
       "workspace_get": "(workspace_id: str, *, options: OperationOptions | None = None) -> Workspace",
-      "workspace_list": "(, *, options: OperationOptions | None = None) -> tuple[Workspace, ...]",
-      "workspace_members_list": "(workspace_id: str, *, options: OperationOptions | None = None) -> tuple[WorkspaceMember, ...]",
+      "workspace_list": "(, *, options: OperationOptions | None = None) -> Page[Workspace]",
+      "workspace_members_list": "(workspace_id: str, *, options: OperationOptions | None = None) -> Page[WorkspaceMember]",
       "workspaces_switch_manual": "multica_py.resources.workspaces.WorkspaceResource.switch(*, options: OperationOptions | None = None): action_result_none",
-      "workspaces_unwatch_manual": "multica_py.resources.workspaces.WorkspaceResource.unwatch(*, options: OperationOptions | None = None): action_result_none",
-      "workspaces_watch_manual": "multica_py.resources.workspaces.WorkspaceResource.watch(*, options: OperationOptions | None = None): action_result_none",
       "issues_unassign": "(*, options: OperationOptions | None = None) -> issue",
       "issues_move_to_top": "(*, options: OperationOptions | None = None) -> issue",
       "issues_move_to_bottom": "(*, options: OperationOptions | None = None) -> issue",
@@ -269,17 +265,17 @@
       "issues_move_to_bottom_bound": "(*, options: OperationOptions | None = None) -> Issue",
       "issues_move_before_bound": "(*, options: OperationOptions | None = None) -> Issue",
       "issues_move_after_bound": "(*, options: OperationOptions | None = None) -> Issue",
-      "plugin_list": "(, *, options: OperationOptions | None = None) -> tuple[Plugin, ...]",
-      "plugin_status": "(plugin_key_or_id: str | None = None, *, options: OperationOptions | None = None) -> tuple[Plugin, ...]",
+      "plugin_list": "(, *, workspace: str | UnsetType = Unset, options: OperationOptions | None = None) -> Page[Plugin]",
+      "plugin_status": "(plugin_key_or_id: str | None = None, *, workspace: str | UnsetType = Unset, options: OperationOptions | None = None) -> Page[Plugin]",
       "plugin_validate": "(source: str | os.PathLike[str], *, options: OperationOptions | None = None) -> PluginDigest",
       "plugin_pack": "(directory: str | os.PathLike[str], *, output: str | os.PathLike[str], options: OperationOptions | None = None) -> PluginDigest",
       "plugin_init": "(directory: str | os.PathLike[str], *, key: str | UnsetType = Unset, name: str | UnsetType = Unset, publisher: str | UnsetType = Unset, contribution: str | UnsetType = Unset, endpoint_host: str | UnsetType = Unset, options: OperationOptions | None = None) -> ActionResult[None]",
       "plugin_install": "(source: str | os.PathLike[str], *, workspace: str | UnsetType = Unset, options: OperationOptions | None = None) -> Plugin",
-      "plugin_remote_mcp_configure": "(installation_id: str, contribution_key: str, *, endpoint: str, credential_file: str | os.PathLike[str] | None = None, credential_stdin: bool = False, auth_type: str | UnsetType = Unset, auth_header: str | UnsetType = Unset, failure_policy: str | UnsetType = Unset, workspace: str | UnsetType = Unset, options: OperationOptions | None = None) -> dict[str, Any]",
+      "plugin_remote_mcp_configure": "(installation_id: str, contribution_key: str, *, endpoint: str, credential_file: str | os.PathLike[str] | None = None, credential_stdin: bytes | None = None, public_config_file: str | os.PathLike[str] | None = None, auth_type: str | UnsetType = Unset, auth_header: str | UnsetType = Unset, failure_policy: str | UnsetType = Unset, workspace: str | UnsetType = Unset, options: OperationOptions | None = None) -> dict[str, Any]",
       "plugin_remote_mcp_test": "(installation_id: str, contribution_key: str, *, workspace: str | UnsetType = Unset, options: OperationOptions | None = None) -> dict[str, Any]",
       "plugin_remote_mcp_approve": "(installation_id: str, contribution_key: str, *, tools: tuple[str, ...], workspace: str | UnsetType = Unset, options: OperationOptions | None = None) -> dict[str, Any]",
       "plugin_remote_mcp_revoke": "(installation_id: str, contribution_key: str, *, workspace: str | UnsetType = Unset, options: OperationOptions | None = None) -> dict[str, Any]",
-      "property_list": "(, *, include_archived: bool = False, options: OperationOptions | None = None) -> tuple[PropertyDefinition, ...]",
+      "property_list": "(, *, include_archived: bool = False, options: OperationOptions | None = None) -> Page[PropertyDefinition]",
       "property_get": "(property_ref: str, *, options: OperationOptions | None = None) -> PropertyDefinition",
       "property_create": "(*, name: str, property_type: str, description: str | UnsetType = Unset, icon: str | UnsetType = Unset, options_values: tuple[str, ...] | UnsetType = Unset, options: OperationOptions | None = None) -> PropertyDefinition",
       "property_update": "(property_ref: str, *, name: str | UnsetType = Unset, description: str | None | UnsetType = Unset, icon: str | UnsetType = Unset, options_values: tuple[str, ...] | UnsetType = Unset, options: OperationOptions | None = None) -> PropertyDefinition",
@@ -288,17 +284,21 @@
       "issue_property_list": "(issue_id: str, *, options: OperationOptions | None = None) -> tuple[PropertyValue, ...]",
       "issue_property_set": "(issue_id: str, *, name: str, value: str, options: OperationOptions | None = None) -> tuple[PropertyValue, ...]",
       "issue_property_unset": "(issue_id: str, *, name: str, options: OperationOptions | None = None) -> ActionResult[None]",
-      "workspace_mcp_list": "(, *, options: OperationOptions | None = None) -> tuple[McpServer, ...]",
-      "workspace_mcp_add": "(server_name: str, *, server_config_file: str | os.PathLike[str] | None = None, server_config_stdin: bool = False, server_config: str | None = None, options: OperationOptions | None = None) -> tuple[McpServer, ...]",
-      "workspace_mcp_update": "(server_id: str, *, name: str | UnsetType = Unset, server_config_file: str | os.PathLike[str] | None = None, server_config_stdin: bool = False, server_config: str | None = None, options: OperationOptions | None = None) -> tuple[McpServer, ...]",
-      "workspace_mcp_remove": "(server_id: str, *, options: OperationOptions | None = None) -> tuple[McpServer, ...]",
-      "agent_mcp_list": "(agent_id: str, *, options: OperationOptions | None = None) -> tuple[McpServer, ...]",
-      "agent_mcp_add": "(agent_id: str, server_id: str, *, options: OperationOptions | None = None) -> tuple[McpServer, ...]",
-      "agent_mcp_enable": "(agent_id: str, server_id: str, *, options: OperationOptions | None = None) -> tuple[McpServer, ...]",
-      "agent_mcp_disable": "(agent_id: str, server_id: str, *, options: OperationOptions | None = None) -> tuple[McpServer, ...]",
-      "agent_mcp_remove": "(agent_id: str, server_id: str, *, options: OperationOptions | None = None) -> tuple[McpServer, ...]",
+      "workspace_mcp_list": "(, *, options: OperationOptions | None = None) -> Page[McpServer]",
+      "workspace_mcp_add": "(server_name: str, *, server_config_file: str | os.PathLike[str] | None = None, server_config_stdin: bytes | None = None, server_config: str | None = None, options: OperationOptions | None = None) -> Page[McpServer]",
+      "workspace_mcp_update": "(server_id: str, *, name: str | UnsetType = Unset, server_config_file: str | os.PathLike[str] | None = None, server_config_stdin: bytes | None = None, server_config: str | None = None, options: OperationOptions | None = None) -> Page[McpServer]",
+      "workspace_mcp_remove": "(server_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "agent_mcp_list": "(agent_id: str, *, options: OperationOptions | None = None) -> Page[McpServer]",
+      "agent_mcp_add": "(agent_id: str, server_id: str, *, options: OperationOptions | None = None) -> Page[McpServer]",
+      "agent_mcp_enable": "(agent_id: str, server_id: str, *, options: OperationOptions | None = None) -> Page[McpServer]",
+      "agent_mcp_disable": "(agent_id: str, server_id: str, *, options: OperationOptions | None = None) -> Page[McpServer]",
+      "agent_mcp_remove": "(agent_id: str, server_id: str, *, options: OperationOptions | None = None) -> Page[McpServer]",
+      "agent_mcp_add_bound": "(server_id: str, *, options: OperationOptions | None = None) -> Page[McpServer]",
+      "agent_mcp_enable_bound": "(server_id: str, *, options: OperationOptions | None = None) -> Page[McpServer]",
+      "agent_mcp_disable_bound": "(server_id: str, *, options: OperationOptions | None = None) -> Page[McpServer]",
+      "agent_mcp_remove_bound": "(server_id: str, *, options: OperationOptions | None = None) -> Page[McpServer]",
       "skill_refresh": "(skill_id: str, *, options: OperationOptions | None = None) -> Skill",
-      "skill_search": "(query: str, *, options: OperationOptions | None = None) -> tuple[SkillSearchResult, ...]"
+      "skill_search": "(query: str, *, options: OperationOptions | None = None) -> Page[SkillSearchResult]"
     },
     "bindings": {
       "agent_avatar": {
@@ -596,10 +596,9 @@
       },
       "auth_login_manual": {
         "command": [
-          "auth",
           "login"
         ],
-        "output": "json",
+        "output": "text",
         "mappings": [],
         "constraints": []
       },
@@ -743,23 +742,6 @@
         "output": "json",
         "mappings": [],
         "constraints": []
-      },
-      "autopilot_run": {
-        "command": [
-          "autopilot",
-          "run"
-        ],
-        "output": "json",
-        "mappings": [
-          [
-            "autopilot_id",
-            "pos:0",
-            "path:autopilot_id"
-          ]
-        ],
-        "constraints": [
-          "nonblank:autopilot_id"
-        ]
       },
       "autopilot_trigger": {
         "command": [
@@ -1087,9 +1069,9 @@
       "configuration_get_manual": {
         "command": [
           "config",
-          "get"
+          "show"
         ],
-        "output": "json",
+        "output": "text",
         "mappings": [],
         "constraints": []
       },
@@ -1729,15 +1711,6 @@
           "issue",
           "comment",
           "unresolve"
-        ],
-        "output": "json",
-        "mappings": [],
-        "constraints": []
-      },
-      "issues_deprioritize_manual": {
-        "command": [
-          "issue",
-          "deprioritize"
         ],
         "output": "json",
         "mappings": [],
@@ -2592,24 +2565,6 @@
         "mappings": [],
         "constraints": []
       },
-      "workspaces_unwatch_manual": {
-        "command": [
-          "workspace",
-          "unwatch"
-        ],
-        "output": "json",
-        "mappings": [],
-        "constraints": []
-      },
-      "workspaces_watch_manual": {
-        "command": [
-          "workspace",
-          "watch"
-        ],
-        "output": "json",
-        "mappings": [],
-        "constraints": []
-      },
       "issues_unassign": {
         "command": [
           "issue",
@@ -2912,7 +2867,13 @@
           "list"
         ],
         "output": "json",
-        "mappings": [],
+        "mappings": [
+          [
+            "workspace",
+            "--workspace",
+            "path:workspace_id"
+          ]
+        ],
         "constraints": []
       },
       "plugin_status": {
@@ -2926,6 +2887,11 @@
             "plugin_key_or_id",
             "pos:0",
             "path:plugin_key_or_id"
+          ],
+          [
+            "workspace",
+            "--workspace",
+            "path:workspace_id"
           ]
         ],
         "constraints": []
@@ -2935,7 +2901,7 @@
           "plugin",
           "validate"
         ],
-        "output": "json",
+        "output": "text",
         "mappings": [
           [
             "source",
@@ -2957,7 +2923,7 @@
           [
             "directory",
             "pos:0",
-            "path:directory"
+            "local_control:directory"
           ],
           [
             "output",
@@ -2974,41 +2940,41 @@
           "plugin",
           "init"
         ],
-        "output": "json",
+        "output": "text",
         "mappings": [
           [
             "directory",
             "pos:0",
-            "path:directory"
+            "local_control:directory"
           ],
           [
             "key",
             "--key",
-            "json_body:key"
+            "local_control:key"
           ],
           [
             "name",
             "--name",
-            "json_body:name"
+            "local_control:name"
           ],
           [
             "publisher",
             "--publisher",
-            "json_body:publisher"
+            "local_control:publisher"
           ],
           [
             "contribution",
             "--contribution",
-            "json_body:contribution"
+            "local_control:contribution"
           ],
           [
             "endpoint_host",
             "--endpoint-host",
-            "json_body:endpoint_host"
+            "local_control:endpoint_host"
           ]
         ],
         "constraints": [
-          "nonblank:path"
+          "nonblank:directory"
         ]
       },
       "plugin_install": {
@@ -3026,7 +2992,7 @@
           [
             "workspace",
             "--workspace",
-            "json_body:workspace"
+            "path:workspace_id"
           ]
         ],
         "constraints": [
@@ -3059,12 +3025,17 @@
           [
             "credential_file",
             "--credential-file",
-            "json_body:credential_file"
+            "json_body:credential"
           ],
           [
             "credential_stdin",
             "--credential-stdin",
-            "json_body:credential_stdin"
+            "json_body:credential"
+          ],
+          [
+            "public_config_file",
+            "--public-config-file",
+            "json_body:public_config"
           ],
           [
             "auth_type",
@@ -3084,13 +3055,14 @@
           [
             "workspace",
             "--workspace",
-            "json_body:workspace"
+            "path:workspace_id"
           ]
         ],
         "constraints": [
-          "nonblank:issue_id",
-          "nonblank:issue_id",
-          "nonblank:name"
+          "nonblank:installation_id",
+          "nonblank:contribution_key",
+          "nonblank:endpoint",
+          "exclusive:credential_file,credential_stdin"
         ]
       },
       "plugin_remote_mcp_test": {
@@ -3114,12 +3086,12 @@
           [
             "workspace",
             "--workspace",
-            "json_body:workspace"
+            "path:workspace_id"
           ]
         ],
         "constraints": [
-          "nonblank:issue_id",
-          "nonblank:issue_id"
+          "nonblank:installation_id",
+          "nonblank:contribution_key"
         ]
       },
       "plugin_remote_mcp_approve": {
@@ -3148,13 +3120,13 @@
           [
             "workspace",
             "--workspace",
-            "json_body:workspace"
+            "path:workspace_id"
           ]
         ],
         "constraints": [
-          "nonblank:issue_id",
-          "nonblank:issue_id",
-          "nonempty:urls"
+          "nonblank:installation_id",
+          "nonblank:contribution_key",
+          "nonempty:tools"
         ]
       },
       "plugin_remote_mcp_revoke": {
@@ -3178,12 +3150,12 @@
           [
             "workspace",
             "--workspace",
-            "json_body:workspace"
+            "path:workspace_id"
           ]
         ],
         "constraints": [
-          "nonblank:issue_id",
-          "nonblank:issue_id"
+          "nonblank:installation_id",
+          "nonblank:contribution_key"
         ]
       },
       "property_list": {
@@ -3192,7 +3164,13 @@
           "list"
         ],
         "output": "json",
-        "mappings": [],
+        "mappings": [
+          [
+            "include_archived",
+            "--include-archived",
+            "query:include_archived"
+          ]
+        ],
         "constraints": []
       },
       "property_get": {
@@ -3419,12 +3397,12 @@
           [
             "server_config_file",
             "--server-config-file",
-            "json_body:server_config_file"
+            "json_body:server_config"
           ],
           [
             "server_config_stdin",
             "--server-config-stdin",
-            "json_body:server_config_stdin"
+            "json_body:server_config"
           ],
           [
             "server_config",
@@ -3457,12 +3435,12 @@
           [
             "server_config_file",
             "--server-config-file",
-            "json_body:server_config_file"
+            "json_body:server_config"
           ],
           [
             "server_config_stdin",
             "--server-config-stdin",
-            "json_body:server_config_stdin"
+            "json_body:server_config"
           ],
           [
             "server_config",
@@ -3471,7 +3449,7 @@
           ]
         ],
         "constraints": [
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       "workspace_mcp_remove": {
@@ -3480,7 +3458,7 @@
           "mcp",
           "remove"
         ],
-        "output": "json",
+        "output": "text",
         "mappings": [
           [
             "server_id",
@@ -3489,7 +3467,7 @@
           ]
         ],
         "constraints": [
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       "agent_mcp_list": {
@@ -3526,12 +3504,12 @@
           [
             "server_id",
             "pos:1",
-            "path:server_id"
+            "json_body:server_id"
           ]
         ],
         "constraints": [
           "nonblank:agent_id",
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       "agent_mcp_enable": {
@@ -3555,7 +3533,7 @@
         ],
         "constraints": [
           "nonblank:agent_id",
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       "agent_mcp_disable": {
@@ -3579,7 +3557,7 @@
         ],
         "constraints": [
           "nonblank:agent_id",
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       "agent_mcp_remove": {
@@ -3603,7 +3581,103 @@
         ],
         "constraints": [
           "nonblank:agent_id",
-          "nonblank:issue_id"
+          "nonblank:server_id"
+        ]
+      },
+      "agent_mcp_add_bound": {
+        "command": [
+          "agent",
+          "mcp",
+          "add"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "self.id",
+            "pos:0",
+            "path:agent_id"
+          ],
+          [
+            "server_id",
+            "pos:1",
+            "json_body:server_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id",
+          "nonblank:server_id"
+        ]
+      },
+      "agent_mcp_enable_bound": {
+        "command": [
+          "agent",
+          "mcp",
+          "enable"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "self.id",
+            "pos:0",
+            "path:agent_id"
+          ],
+          [
+            "server_id",
+            "pos:1",
+            "path:server_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id",
+          "nonblank:server_id"
+        ]
+      },
+      "agent_mcp_disable_bound": {
+        "command": [
+          "agent",
+          "mcp",
+          "disable"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "self.id",
+            "pos:0",
+            "path:agent_id"
+          ],
+          [
+            "server_id",
+            "pos:1",
+            "path:server_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id",
+          "nonblank:server_id"
+        ]
+      },
+      "agent_mcp_remove_bound": {
+        "command": [
+          "agent",
+          "mcp",
+          "remove"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "self.id",
+            "pos:0",
+            "path:agent_id"
+          ],
+          [
+            "server_id",
+            "pos:1",
+            "path:server_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id",
+          "nonblank:server_id"
         ]
       },
       "skill_refresh": {
@@ -3713,9 +3787,6 @@
         "S-AUTO"
       ],
       "autopilot_list": [
-        "S-AUTO"
-      ],
-      "autopilot_run": [
         "S-AUTO"
       ],
       "autopilot_trigger": [
@@ -3861,9 +3932,6 @@
         "S-ISSUE"
       ],
       "issues_comments_unresolve_manual": [
-        "S-ISSUE"
-      ],
-      "issues_deprioritize_manual": [
         "S-ISSUE"
       ],
       "issues_metadata_query_manual": [
@@ -4025,12 +4093,6 @@
       "workspaces_switch_manual": [
         "S-WORKSPACE"
       ],
-      "workspaces_unwatch_manual": [
-        "S-WORKSPACE"
-      ],
-      "workspaces_watch_manual": [
-        "S-WORKSPACE"
-      ],
       "issues_unassign": [
         "S-ISSUE"
       ],
@@ -4171,6 +4233,18 @@
       "agent_mcp_remove": [
         "S-AGENT-MCP"
       ],
+      "agent_mcp_add_bound": [
+        "S-AGENT-MCP"
+      ],
+      "agent_mcp_enable_bound": [
+        "S-AGENT-MCP"
+      ],
+      "agent_mcp_disable_bound": [
+        "S-AGENT-MCP"
+      ],
+      "agent_mcp_remove_bound": [
+        "S-AGENT-MCP"
+      ],
       "skill_refresh": [
         "S-SKILL-REFRESH"
       ],
@@ -4303,9 +4377,6 @@
         "zero_present"
       ],
       "autopilot_list": [],
-      "autopilot_run": [
-        "required_nonnull"
-      ],
       "autopilot_trigger": [
         "required_nonnull"
       ],
@@ -4471,7 +4542,6 @@
       "issues_comments_reply_manual": [],
       "issues_comments_resolve_manual": [],
       "issues_comments_unresolve_manual": [],
-      "issues_deprioritize_manual": [],
       "issues_metadata_query_manual": [],
       "issues_metadata_set_typed_manual": [],
       "issues_reorder_manual": [],
@@ -4603,8 +4673,6 @@
         "required_nonnull"
       ],
       "workspaces_switch_manual": [],
-      "workspaces_unwatch_manual": [],
-      "workspaces_watch_manual": [],
       "issues_unassign": [
         "required_nonnull",
         "required_nonnull"
@@ -4681,6 +4749,7 @@
         "omit",
         "omit",
         "omit",
+        "omit",
         "omit"
       ],
       "plugin_remote_mcp_approve": [
@@ -4721,9 +4790,12 @@
         "omit",
         "omit"
       ],
-      "plugin_list": [],
+      "plugin_list": [
+        "omit"
+      ],
       "plugin_status": [
-        "required_nonnull"
+        "omit",
+        "omit"
       ],
       "plugin_validate": [
         "required_nonnull"
@@ -4742,7 +4814,9 @@
         "required_nonnull",
         "required_nonnull"
       ],
-      "property_list": [],
+      "property_list": [
+        "false_present"
+      ],
       "property_get": [
         "required_nonnull"
       ],
@@ -4779,6 +4853,22 @@
         "required_nonnull"
       ],
       "agent_mcp_remove": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "agent_mcp_add_bound": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "agent_mcp_enable_bound": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "agent_mcp_disable_bound": [
+        "required_nonnull",
+        "required_nonnull"
+      ],
+      "agent_mcp_remove_bound": [
         "required_nonnull",
         "required_nonnull"
       ],
@@ -5619,7 +5709,10 @@
       "offset_nonnegative": "multica_py._generated.validators.validate_nonnegative_limit",
       "nonblank:body": "multica_py._generated.validators.validate_nonblank",
       "nonblank:comment_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:contribution_key": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:endpoint": "multica_py._generated.validators.validate_nonblank",
       "nonblank:issue_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:installation_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:label_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:project_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:query": "multica_py._generated.validators.validate_nonblank",
@@ -5639,10 +5732,12 @@
       "nonblank:member_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:name": "multica_py._generated.validators.validate_nonblank",
       "nonblank:runtime": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:server_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:source_agent_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:skill_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:squad_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:file_id": "multica_py._generated.validators.validate_nonblank",
+      "nonblank:directory": "multica_py._generated.validators.validate_nonblank",
       "nonblank:path": "multica_py._generated.validators.validate_nonblank",
       "nonblank:task_run_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:task_id": "multica_py._generated.validators.validate_nonblank",
@@ -5707,9 +5802,21 @@
         "positive_case_id": "nonblank-comment-id-valid",
         "negative_case_id": "nonblank-comment-id-invalid"
       },
+      "nonblank:contribution_key": {
+        "positive_case_id": "nonblank-contribution-key-valid",
+        "negative_case_id": "nonblank-contribution-key-invalid"
+      },
+      "nonblank:endpoint": {
+        "positive_case_id": "nonblank-endpoint-valid",
+        "negative_case_id": "nonblank-endpoint-invalid"
+      },
       "nonblank:issue_id": {
         "positive_case_id": "nonblank-issue-id-valid",
         "negative_case_id": "nonblank-issue-id-invalid"
+      },
+      "nonblank:installation_id": {
+        "positive_case_id": "nonblank-installation-id-valid",
+        "negative_case_id": "nonblank-installation-id-invalid"
       },
       "nonblank:label_id": {
         "positive_case_id": "nonblank-label-id-valid",
@@ -5787,6 +5894,10 @@
         "positive_case_id": "nonblank-runtime-valid",
         "negative_case_id": "nonblank-runtime-invalid"
       },
+      "nonblank:server_id": {
+        "positive_case_id": "nonblank-server-id-valid",
+        "negative_case_id": "nonblank-server-id-invalid"
+      },
       "nonblank:source_agent_id": {
         "positive_case_id": "nonblank-source-agent-id-valid",
         "negative_case_id": "nonblank-source-agent-id-invalid"
@@ -5802,6 +5913,10 @@
       "nonblank:file_id": {
         "positive_case_id": "nonblank-file_id-valid",
         "negative_case_id": "nonblank-file_id-invalid"
+      },
+      "nonblank:directory": {
+        "positive_case_id": "nonblank-directory-valid",
+        "negative_case_id": "nonblank-directory-invalid"
       },
       "nonblank:path": {
         "positive_case_id": "nonblank-path-valid",
@@ -5984,7 +6099,25 @@
         "body_kind": "nonblank"
       },
       {
+        "validator_id": "nonblank:contribution_key",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:endpoint",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
         "validator_id": "nonblank:issue_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:installation_id",
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
@@ -6116,6 +6249,12 @@
         "body_kind": "nonblank"
       },
       {
+        "validator_id": "nonblank:server_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
         "validator_id": "nonblank:source_agent_id",
         "name": "validate_nonblank",
         "parameter_name": "value",
@@ -6135,6 +6274,12 @@
       },
       {
         "validator_id": "nonblank:file_id",
+        "name": "validate_nonblank",
+        "parameter_name": "value",
+        "body_kind": "nonblank"
+      },
+      {
+        "validator_id": "nonblank:directory",
         "name": "validate_nonblank",
         "parameter_name": "value",
         "body_kind": "nonblank"
@@ -6509,7 +6654,6 @@
         "operation_id": "auth.login",
         "entrypoint_id": "default",
         "command": [
-          "auth",
           "login"
         ],
         "mappings": [],
@@ -6854,7 +6998,7 @@
         "entrypoint_id": "default",
         "command": [
           "config",
-          "get"
+          "show"
         ],
         "mappings": [],
         "validator_ids": []
@@ -7267,17 +7411,6 @@
           "nonblank:title",
           "description_exactly_one"
         ]
-      },
-      {
-        "descriptor_id": "issues_deprioritize_manual",
-        "operation_id": "issues.deprioritize",
-        "entrypoint_id": "default",
-        "command": [
-          "issue",
-          "deprioritize"
-        ],
-        "mappings": [],
-        "validator_ids": []
       },
       {
         "descriptor_id": "issue_get",
@@ -8670,28 +8803,6 @@
         "validator_ids": []
       },
       {
-        "descriptor_id": "workspaces_unwatch_manual",
-        "operation_id": "workspaces.unwatch",
-        "entrypoint_id": "default",
-        "command": [
-          "workspace",
-          "unwatch"
-        ],
-        "mappings": [],
-        "validator_ids": []
-      },
-      {
-        "descriptor_id": "workspaces_watch_manual",
-        "operation_id": "workspaces.watch",
-        "entrypoint_id": "default",
-        "command": [
-          "workspace",
-          "watch"
-        ],
-        "mappings": [],
-        "validator_ids": []
-      },
-      {
         "descriptor_id": "issues_unassign",
         "operation_id": "issues.unassign",
         "entrypoint_id": "default",
@@ -9018,7 +9129,13 @@
           "plugin",
           "list"
         ],
-        "mappings": [],
+        "mappings": [
+          {
+            "source": "workspace",
+            "binding": "--workspace",
+            "destination": "path:workspace_id"
+          }
+        ],
         "validator_ids": []
       },
       {
@@ -9034,6 +9151,11 @@
             "source": "plugin_key_or_id",
             "binding": "pos:0",
             "destination": "path:plugin_key_or_id"
+          },
+          {
+            "source": "workspace",
+            "binding": "--workspace",
+            "destination": "path:workspace_id"
           }
         ],
         "validator_ids": []
@@ -9054,7 +9176,7 @@
           }
         ],
         "validator_ids": [
-          "nonblank:path"
+          "nonblank:directory"
         ]
       },
       {
@@ -9093,36 +9215,36 @@
           {
             "source": "directory",
             "binding": "pos:0",
-            "destination": "path:directory"
+            "destination": "local_control:directory"
           },
           {
             "source": "key",
             "binding": "--key",
-            "destination": "json_body:key"
+            "destination": "local_control:key"
           },
           {
             "source": "name",
             "binding": "--name",
-            "destination": "json_body:name"
+            "destination": "local_control:name"
           },
           {
             "source": "publisher",
             "binding": "--publisher",
-            "destination": "json_body:publisher"
+            "destination": "local_control:publisher"
           },
           {
             "source": "contribution",
             "binding": "--contribution",
-            "destination": "json_body:contribution"
+            "destination": "local_control:contribution"
           },
           {
             "source": "endpoint_host",
             "binding": "--endpoint-host",
-            "destination": "json_body:endpoint_host"
+            "destination": "local_control:endpoint_host"
           }
         ],
         "validator_ids": [
-          "nonblank:path"
+          "nonblank:directory"
         ]
       },
       {
@@ -9142,7 +9264,7 @@
           {
             "source": "workspace",
             "binding": "--workspace",
-            "destination": "json_body:workspace"
+            "destination": "path:workspace_id"
           }
         ],
         "validator_ids": [
@@ -9177,12 +9299,17 @@
           {
             "source": "credential_file",
             "binding": "--credential-file",
-            "destination": "json_body:credential_file"
+            "destination": "json_body:credential"
           },
           {
             "source": "credential_stdin",
             "binding": "--credential-stdin",
-            "destination": "json_body:credential_stdin"
+            "destination": "json_body:credential"
+          },
+          {
+            "source": "public_config_file",
+            "binding": "--public-config-file",
+            "destination": "json_body:public_config"
           },
           {
             "source": "auth_type",
@@ -9202,13 +9329,13 @@
           {
             "source": "workspace",
             "binding": "--workspace",
-            "destination": "json_body:workspace"
+            "destination": "path:workspace_id"
           }
         ],
         "validator_ids": [
-          "nonblank:issue_id",
-          "nonblank:issue_id",
-          "nonblank:name"
+          "nonblank:installation_id",
+          "nonblank:contribution_key",
+          "nonblank:endpoint"
         ]
       },
       {
@@ -9234,12 +9361,12 @@
           {
             "source": "workspace",
             "binding": "--workspace",
-            "destination": "json_body:workspace"
+            "destination": "path:workspace_id"
           }
         ],
         "validator_ids": [
-          "nonblank:issue_id",
-          "nonblank:issue_id"
+          "nonblank:installation_id",
+          "nonblank:contribution_key"
         ]
       },
       {
@@ -9270,12 +9397,12 @@
           {
             "source": "workspace",
             "binding": "--workspace",
-            "destination": "json_body:workspace"
+            "destination": "path:workspace_id"
           }
         ],
         "validator_ids": [
-          "nonblank:issue_id",
-          "nonblank:issue_id"
+          "nonblank:installation_id",
+          "nonblank:contribution_key"
         ]
       },
       {
@@ -9301,12 +9428,12 @@
           {
             "source": "workspace",
             "binding": "--workspace",
-            "destination": "json_body:workspace"
+            "destination": "path:workspace_id"
           }
         ],
         "validator_ids": [
-          "nonblank:issue_id",
-          "nonblank:issue_id"
+          "nonblank:installation_id",
+          "nonblank:contribution_key"
         ]
       },
       {
@@ -9317,7 +9444,13 @@
           "property",
           "list"
         ],
-        "mappings": [],
+        "mappings": [
+          {
+            "source": "include_archived",
+            "binding": "--include-archived",
+            "destination": "query:include_archived"
+          }
+        ],
         "validator_ids": []
       },
       {
@@ -9564,12 +9697,12 @@
           {
             "source": "server_config_file",
             "binding": "--server-config-file",
-            "destination": "json_body:server_config_file"
+            "destination": "json_body:server_config"
           },
           {
             "source": "server_config_stdin",
             "binding": "--server-config-stdin",
-            "destination": "json_body:server_config_stdin"
+            "destination": "json_body:server_config"
           },
           {
             "source": "server_config",
@@ -9604,12 +9737,12 @@
           {
             "source": "server_config_file",
             "binding": "--server-config-file",
-            "destination": "json_body:server_config_file"
+            "destination": "json_body:server_config"
           },
           {
             "source": "server_config_stdin",
             "binding": "--server-config-stdin",
-            "destination": "json_body:server_config_stdin"
+            "destination": "json_body:server_config"
           },
           {
             "source": "server_config",
@@ -9618,7 +9751,7 @@
           }
         ],
         "validator_ids": [
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       {
@@ -9638,7 +9771,7 @@
           }
         ],
         "validator_ids": [
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       {
@@ -9679,12 +9812,12 @@
           {
             "source": "server_id",
             "binding": "pos:1",
-            "destination": "path:server_id"
+            "destination": "json_body:server_id"
           }
         ],
         "validator_ids": [
           "nonblank:agent_id",
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       {
@@ -9710,7 +9843,7 @@
         ],
         "validator_ids": [
           "nonblank:agent_id",
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       {
@@ -9736,7 +9869,7 @@
         ],
         "validator_ids": [
           "nonblank:agent_id",
-          "nonblank:issue_id"
+          "nonblank:server_id"
         ]
       },
       {
@@ -9762,7 +9895,111 @@
         ],
         "validator_ids": [
           "nonblank:agent_id",
-          "nonblank:issue_id"
+          "nonblank:server_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_mcp_add_bound",
+        "operation_id": "agents.mcp.add_bound",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "mcp",
+          "add"
+        ],
+        "mappings": [
+          {
+            "source": "self.id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          },
+          {
+            "source": "server_id",
+            "binding": "pos:1",
+            "destination": "json_body:server_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:agent_id",
+          "nonblank:server_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_mcp_enable_bound",
+        "operation_id": "agents.mcp.enable_bound",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "mcp",
+          "enable"
+        ],
+        "mappings": [
+          {
+            "source": "self.id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          },
+          {
+            "source": "server_id",
+            "binding": "pos:1",
+            "destination": "path:server_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:agent_id",
+          "nonblank:server_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_mcp_disable_bound",
+        "operation_id": "agents.mcp.disable_bound",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "mcp",
+          "disable"
+        ],
+        "mappings": [
+          {
+            "source": "self.id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          },
+          {
+            "source": "server_id",
+            "binding": "pos:1",
+            "destination": "path:server_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:agent_id",
+          "nonblank:server_id"
+        ]
+      },
+      {
+        "descriptor_id": "agent_mcp_remove_bound",
+        "operation_id": "agents.mcp.remove_bound",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "mcp",
+          "remove"
+        ],
+        "mappings": [
+          {
+            "source": "self.id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          },
+          {
+            "source": "server_id",
+            "binding": "pos:1",
+            "destination": "path:server_id"
+          }
+        ],
+        "validator_ids": [
+          "nonblank:agent_id",
+          "nonblank:server_id"
         ]
       },
       {
@@ -12135,7 +12372,15 @@
         "entrypoint_id": "default",
         "is_canonical": true,
         "args": [],
-        "kwargs": [],
+        "kwargs": [
+          [
+            "workspace",
+            {
+              "kind": "primitive",
+              "value": "ws_001"
+            }
+          ]
+        ],
         "stdout_base64": "W10=",
         "stderr": "",
         "exit_code": 0,
@@ -12143,6 +12388,8 @@
         "expected_argv": [
           "plugin",
           "list",
+          "--workspace",
+          "ws_001",
           "--output",
           "json"
         ],
@@ -12163,7 +12410,15 @@
         "entrypoint_id": "default",
         "is_canonical": true,
         "args": [],
-        "kwargs": [],
+        "kwargs": [
+          [
+            "workspace",
+            {
+              "kind": "primitive",
+              "value": "ws_001"
+            }
+          ]
+        ],
         "stdout_base64": "W10=",
         "stderr": "",
         "exit_code": 0,
@@ -12171,6 +12426,8 @@
         "expected_argv": [
           "plugin",
           "status",
+          "--workspace",
+          "ws_001",
           "--output",
           "json"
         ],
@@ -12282,9 +12539,7 @@
         "expected_argv": [
           "plugin",
           "init",
-          ".",
-          "--output",
-          "json"
+          "."
         ],
         "stdin_base64": null,
         "timeout": null,
@@ -12353,6 +12608,13 @@
               "kind": "primitive",
               "value": "https://mcp.example.com"
             }
+          ],
+          [
+            "public_config_file",
+            {
+              "kind": "path",
+              "value": "./public-config.json"
+            }
           ]
         ],
         "stdout_base64": "eyJjb25maWd1cmVkIjogdHJ1ZX0=",
@@ -12368,7 +12630,9 @@
           "--endpoint",
           "https://mcp.example.com",
           "--output",
-          "json"
+          "json",
+          "--public-config-file",
+          "./public-config.json"
         ],
         "stdin_base64": null,
         "timeout": null,
@@ -12522,7 +12786,15 @@
         "entrypoint_id": "default",
         "is_canonical": true,
         "args": [],
-        "kwargs": [],
+        "kwargs": [
+          [
+            "include_archived",
+            {
+              "kind": "primitive",
+              "value": true
+            }
+          ]
+        ],
         "stdout_base64": "W10=",
         "stderr": "",
         "exit_code": 0,
@@ -12530,6 +12802,7 @@
         "expected_argv": [
           "property",
           "list",
+          "--include-archived",
           "--output",
           "json"
         ],
@@ -13002,26 +13275,24 @@
           }
         ],
         "kwargs": [],
-        "stdout_base64": "W10=",
+        "stdout_base64": "UmVtb3ZlZCBNQ1Agc2VydmVyCg==",
         "stderr": "",
         "exit_code": 0,
-        "transport_method": "run_bytes",
+        "transport_method": "run_text",
         "expected_argv": [
           "workspace",
           "mcp",
           "remove",
-          "mcp_001",
-          "--output",
-          "json"
+          "mcp_001"
         ],
         "stdin_base64": null,
         "timeout": null,
         "assertion": {
           "id": "assert:generated:workspaces.mcp.remove:default:canonical",
-          "kind": "decoded_type",
+          "kind": "none",
           "expected": {
             "kind": "primitive",
-            "value": "multica_py.models.common.Page"
+            "value": null
           }
         }
       },
@@ -14788,7 +15059,6 @@
       "issues.comments.resolve",
       "issues.comments.unresolve",
       "issues.create",
-      "issues.deprioritize",
       "issues.get",
       "issues.labels.add",
       "issues.labels.list",
@@ -14901,8 +15171,10 @@
       "workspaces.mcp.update",
       "workspaces.members.list",
       "workspaces.switch",
-      "workspaces.unwatch",
-      "workspaces.watch"
+      "agents.mcp.add_bound",
+      "agents.mcp.enable_bound",
+      "agents.mcp.disable_bound",
+      "agents.mcp.remove_bound"
     ],
     "ungoverned_policy": "existing_unrelated_operations_unchanged",
     "source_authority_ref": "specs/007-upstream-v0-4-9-migration/contracts/source-authority.json",
@@ -16483,32 +16755,6 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issues.IssueResource.create_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.deprioritize",
-      "compatibility": "compatible",
-      "rationale": "Approved canonical public method retained with explicit v0.4.20 convention and test evidence.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.IssueResource.deprioritize",
-          "signature_id": "issues_deprioritize_manual",
-          "binding_id": "issues_deprioritize_manual",
-          "response_id": "action_result_str",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.IssueResource.deprioritize_command"
         }
       ]
     },
@@ -18410,58 +18656,6 @@
       ]
     },
     {
-      "operation_id": "workspaces.unwatch",
-      "compatibility": "compatible",
-      "rationale": "Approved canonical public method retained with explicit v0.4.20 convention and test evidence.",
-      "source_ref_ids": [
-        "S-WORKSPACE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.unwatch",
-          "signature_id": "workspaces_unwatch_manual",
-          "binding_id": "workspaces_unwatch_manual",
-          "response_id": "action_result_none",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.unwatch_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "workspaces.watch",
-      "compatibility": "compatible",
-      "rationale": "Approved canonical public method retained with explicit v0.4.20 convention and test evidence.",
-      "source_ref_ids": [
-        "S-WORKSPACE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.watch",
-          "signature_id": "workspaces_watch_manual",
-          "binding_id": "workspaces_watch_manual",
-          "response_id": "action_result_none",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.watch_command"
-        }
-      ]
-    },
-    {
       "operation_id": "issues.unassign",
       "compatibility": "intentionally_changed",
       "rationale": "Approved by simplify-public-sdk-experience public surface.",
@@ -19524,9 +19718,9 @@
           "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove",
           "signature_id": "workspace_mcp_remove",
           "binding_id": "workspace_mcp_remove",
-          "response_id": "page_mcp_servers",
+          "response_id": "action_result_none",
           "errors": "standard",
-          "category": "collection",
+          "category": "action",
           "typed_input_id": null,
           "input_mode": "direct",
           "presence_policy_ids": [],
@@ -19662,6 +19856,114 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.remove_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.add_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Bound Agent relation delegates MCP assignment to the reviewed agent command.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R37"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.entities.agents.Agent.add_mcp_server",
+          "signature_id": "agent_mcp_add_bound",
+          "binding_id": "agent_mcp_add_bound",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.entities.agents.Agent.add_mcp_server_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.enable_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Bound Agent relation enables an assigned MCP server.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R37"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.entities.agents.Agent.enable_mcp_server",
+          "signature_id": "agent_mcp_enable_bound",
+          "binding_id": "agent_mcp_enable_bound",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.entities.agents.Agent.enable_mcp_server_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.disable_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Bound Agent relation disables an assigned MCP server.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R37"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.entities.agents.Agent.disable_mcp_server",
+          "signature_id": "agent_mcp_disable_bound",
+          "binding_id": "agent_mcp_disable_bound",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.entities.agents.Agent.disable_mcp_server_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.remove_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Bound Agent relation removes an assigned MCP server.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R37"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.entities.agents.Agent.remove_mcp_server",
+          "signature_id": "agent_mcp_remove_bound",
+          "binding_id": "agent_mcp_remove_bound",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.entities.agents.Agent.remove_mcp_server_command"
         }
       ]
     },

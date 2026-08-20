@@ -60,27 +60,25 @@ class RawDeniedPathCase:
 
 
 RAW_EXECUTION_MODE_CASES: tuple[RawExecutionModeCase, ...] = (
-    RawExecutionModeCase("bounded token login", ("auth", "login", "--token", "raw-token"), True),
+    RawExecutionModeCase("bounded token login", ("login", "--token", "raw-token"), True),
     RawExecutionModeCase(
         "bounded token login with trailing options",
-        ("auth", "login", "--token", "raw-token", "--profile", "safe"),
+        ("login", "--token", "raw-token", "--profile", "safe"),
         True,
     ),
-    RawExecutionModeCase("bare auth login", ("auth", "login"), False, "ManagedProcess"),
+    RawExecutionModeCase("bare login", ("login",), False, "ManagedProcess"),
     RawExecutionModeCase(
-        "auth login trailing without token",
-        ("auth", "login", "--profile", "safe"),
+        "login trailing without token",
+        ("login", "--profile", "safe"),
         False,
         "--token",
     ),
+    RawExecutionModeCase("login missing token", ("login", "--token"), False, "--token"),
     RawExecutionModeCase(
-        "auth login missing token", ("auth", "login", "--token"), False, "--token"
+        "login option-like token", ("login", "--token", "--profile"), False, "--token"
     ),
     RawExecutionModeCase(
-        "auth login option-like token", ("auth", "login", "--token", "--profile"), False, "--token"
-    ),
-    RawExecutionModeCase(
-        "auth login equals token form", ("auth", "login", "--token=raw-token"), False, "--token"
+        "login equals token form", ("login", "--token=raw-token"), False, "--token"
     ),
     RawExecutionModeCase("setup cloud", ("setup", "cloud"), False, "client.setup.cloud"),
     RawExecutionModeCase(
@@ -145,7 +143,7 @@ RAW_GLOBAL_OPTION_CASES: tuple[RawGlobalOptionCase, ...] = (
 )
 
 RAW_DENIED_PATH_CASES: tuple[RawDeniedPathCase, ...] = (
-    RawDeniedPathCase("auth login", ("auth", "login"), "--token"),
+    RawDeniedPathCase("login", ("login",), "--token"),
     RawDeniedPathCase(
         "setup cloud suffix",
         ("setup", "cloud", "--region", "test"),
@@ -453,6 +451,27 @@ def test_cli_command_executes_original_argv_and_returns_safe_immutable_result(
     transport.run_bytes.assert_called_once_with(("issue", "get", "i1"), stdin=None, timeout=None)
 
 
+def test_cli_result_redacts_opaque_secret_bytes_at_public_boundary(
+    cli_resource_factory: Callable[..., tuple[CliResource, MagicMock]],
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    resource, transport = cli_resource_factory()
+    opaque = b"opaque-cli-secret\x00\xff"
+    transport.run_bytes.return_value = raw_result(
+        ("multica", "workspace", "mcp", "add"),
+        stdout=b"stdout " + opaque,
+        stderr=b"stderr " + opaque,
+        secret_bytes=(opaque,),
+    )
+
+    result = resource.command("workspace", "mcp", "add").run()
+
+    assert opaque not in result.stdout
+    assert opaque not in result.stderr
+    assert result.stdout == b"stdout ***"
+    assert result.stderr == b"stderr ***"
+
+
 @pytest.mark.parametrize("case", RAW_CLI_SECRET_CASES, ids=lambda case: case.name)
 def test_cli_command_redacts_secret_options_in_preview(case: RawCliSecretCase) -> None:
     client = MulticaClient(ClientConfig(executable=sys.executable))
@@ -675,7 +694,7 @@ def test_raw_execution_mode_matrix_is_shared_by_command_and_command_command(
             assert "raw-token" not in str(raised.value)
             if case.secret:
                 assert case.secret not in str(raised.value)
-            assert "auth login" not in str(raised.value) or "--token" in str(raised.value)
+            assert "login" not in str(raised.value) or "--token" in str(raised.value)
 
     if not case.allowed:
         transport.build_full_argv.assert_not_called()
@@ -690,14 +709,13 @@ def test_bounded_token_login_returns_redacted_cli_result_and_preserves_options(
     resource, transport = cli_resource_factory()
     token = "bounded-login-token"
     transport.run_bytes.return_value = raw_result(
-        ("multica", "auth", "login", "--token", token, "--profile", "safe"),
+        ("multica", "login", "--token", token, "--profile", "safe"),
         stdout=token.encode(),
         stderr=("stderr " + token).encode(),
         secret_values=(token,),
     )
 
     command = resource.command(
-        "auth",
         "login",
         "--token",
         token,
@@ -714,16 +732,13 @@ def test_bounded_token_login_returns_redacted_cli_result_and_preserves_options(
     assert token.encode() not in result.stdout
     assert token.encode() not in result.stderr
     transport.run_bytes.assert_called_once_with(
-        ("auth", "login", "--token", token, "--profile", "safe"), stdin=None, timeout=None
+        ("login", "--token", token, "--profile", "safe"), stdin=None, timeout=None
     )
 
 
 @pytest.mark.parametrize(
     "argv",
-    (
-        ("workspace", "watch", "ws1"),
-        ("plugin", "future", "--token", "future-token"),
-    ),
+    (("plugin", "future", "--token", "future-token"),),
 )
 def test_reviewed_and_unknown_bounded_raw_paths_remain_supported(
     argv: tuple[str, ...],
@@ -758,11 +773,11 @@ def test_bounded_raw_timeout_remains_typed_and_does_not_leak_token(
     transport.run_bytes.side_effect = CommandTimeoutError("timed out")
 
     with pytest.raises(CommandTimeoutError, match="timed out") as raised:
-        resource.command("auth", "login", "--token", token).run()
+        resource.command("login", "--token", token).run()
 
     assert token not in str(raised.value)
     transport.run_bytes.assert_called_once_with(
-        ("auth", "login", "--token", token), stdin=None, timeout=None
+        ("login", "--token", token), stdin=None, timeout=None
     )
 
 
@@ -776,4 +791,4 @@ def test_raw_execution_registry_covers_managed_process_operations_without_heuris
     }
     assert isinstance(cli_module._RAW_EXECUTION_MODE_REGISTRY, tuple)
     assert managed_process_paths <= registry_paths | reviewed_exceptions
-    assert ("workspace", "watch") in reviewed_exceptions
+    assert not reviewed_exceptions

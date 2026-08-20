@@ -43,7 +43,11 @@ installer.
 
 #### Scenario: Init does not invent a Python packer
 - **WHEN** `init(dir, contribution="skill")` runs
-- **THEN** argv contains `plugin init <dir>`, `--contribution skill`, and `--output json` unless source proves init is non-JSON, and no SDK helper writes a manifest except through that CLI invocation
+- **THEN** argv contains `plugin init <dir>` and `--contribution skill`, contains no `--output`, and no SDK helper writes a manifest except through that CLI invocation
+
+#### Scenario: Plugin workspace override is explicit
+- **WHEN** plugin list or status is called with an explicit workspace override
+- **THEN** argv contains `--workspace <value>` while omission continues to use client workspace scope
 
 #### Scenario: Human-local install is recorded
 - **WHEN** source shows `plugin install` calls `requireHumanLocalCommand`
@@ -65,6 +69,10 @@ one `--tool`. Revoke SHALL map to the reviewed DELETE credential path.
 #### Scenario: Configure rejects mixed credential channels
 - **WHEN** both credential file and stdin are present
 - **THEN** construction raises `ValueError` before transport
+
+#### Scenario: Configure carries public configuration by file path
+- **WHEN** configure is called with `public_config_file=path`
+- **THEN** argv contains `--public-config-file <path>`, SDK construction performs no file IO, and the path is not collected as a secret
 
 #### Scenario: Configure redacts credentials
 - **WHEN** configure runs with a credential file

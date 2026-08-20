@@ -49,3 +49,10 @@ historical context in archived OpenSpec material and earlier migration notes.
 Evidence and transient reports are not runtime inputs. Only a reviewed Git
 change to `contracts/sdk-contract.json` and the single generated runtime
 projection can promote a new compatibility interval.
+
+At v0.4.28, `client.auth.login()` maps to the root `login` Cobra command.
+`configuration.get()` is retained only as a no-argument compatibility alias of
+`configuration.show()` / `config show`; the removed `config get <key>` path is
+not part of the tagged CLI. The SDK also removes the former
+`issues.deprioritize` and `workspaces.watch/unwatch` methods because the pinned
+command tree contains no equivalent leaves.

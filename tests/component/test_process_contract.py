@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import datetime
 import json
 import os
@@ -13,7 +14,9 @@ import pytest
 
 from multica_py._internal.processes import CancellationToken, run_with_timeout
 from multica_py.client import MulticaClient
+from multica_py.config import ClientConfig
 from multica_py.entities import Issue
+from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import CommandTimeoutError, ProcessOutputModeError
 from multica_py.execution.local import LocalProcessHandle
 from multica_py.process import ManagedProcess, ProcessResult
@@ -289,3 +292,54 @@ def test_process_contract(contract_id: str, tmp_path: pathlib.Path) -> None:
         assert signal_log.read_text(encoding="utf-8") == "SIGTERM"
         ps.wait_absent(parent_pid, deadline=8)
         ps.wait_absent(child_pid, deadline=8)
+
+
+@pytest.mark.timeout(20)
+@pytest.mark.parametrize(
+    ("channel", "payload"),
+    (
+        ("credential", b"credential\x00\xff-bytes"),
+        ("server-config", b'{"headers":{"X-API-Key":"config-token"}}\x00\xff'),
+    ),
+    ids=("plugin-credential-stdin", "workspace-server-config-stdin"),
+)
+def test_public_stdin_channels_reach_real_execution_boundary(
+    channel: str,
+    payload: bytes,
+    tmp_path: pathlib.Path,
+) -> None:
+    record_path = tmp_path / "stdin.bin"
+    executable = tmp_path / "stdin_cli.py"
+    executable.write_text(
+        "#!/usr/bin/env python3\n"
+        "import base64, json, os, pathlib, sys\n"
+        "payload = sys.stdin.buffer.read()\n"
+        "pathlib.Path(os.environ['STDIN_RECORD']).write_bytes(payload)\n"
+        "sys.stderr.buffer.write(b'diagnostic ' + payload)\n"
+        "if 'plugin' in sys.argv:\n"
+        "    print(json.dumps({'received': base64.b64encode(payload).decode('ascii')}))\n"
+        "else:\n"
+        "    print(json.dumps([{'id':'mcp_001','name':'server-1','transport':'stdio'}]))\n",
+        encoding="utf-8",
+    )
+    executable.chmod(0o755)
+    client = MulticaClient(
+        ClientConfig(
+            executable=executable,
+            compatibility=CompatibilityPolicy.ignore,
+            environment=(("STDIN_RECORD", str(record_path)),),
+        )
+    )
+
+    if channel == "credential":
+        plugin_result = client.plugins.configure_remote_mcp(
+            "inst_001",
+            "remote-mcp",
+            endpoint="https://mcp.example.com",
+            credential_stdin=payload,
+        )
+        assert plugin_result["received"] == base64.b64encode(payload).decode("ascii")
+    else:
+        mcp_result = client.workspaces.mcp.add("server-1", server_config_stdin=payload)
+        assert mcp_result.items[0].id == "mcp_001"
+    assert record_path.read_bytes() == payload

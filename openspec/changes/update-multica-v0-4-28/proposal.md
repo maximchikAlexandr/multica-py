@@ -18,6 +18,9 @@ full-tree upgrade rather than a cherry-picked subset of changelog bullets.
   source and verified release binary: re-resolve every `source_refs` path,
   symbol, and line range, and update argv/response adapters wherever the tagged
   CLI drifted.
+- Remove or remap retained SDK entrypoints whose Cobra paths no longer exist at
+  `v0.4.28`; a passing contract fixture SHALL NOT preserve a command rejected by
+  the verified release binary.
 - Add a public Plugin resource for the tagged `plugin` command family, covering
   list/status plus the reviewed local pack/validate/init paths, with explicit
   policy for human-local install and secret-bearing Remote MCP configure.
@@ -38,6 +41,9 @@ full-tree upgrade rather than a cherry-picked subset of changelog bullets.
 - Update API, compatibility, migration, and maintainer documentation plus
   table-driven unit, contract, component, and command-preview coverage. Recompute
   canonical method/case counts from the final tables with no allowlist.
+- Close the post-implementation audit findings for non-JSON Plugin/Workspace MCP
+  commands, Remote MCP public configuration, relation-cache invalidation, exact
+  flag destinations, and every previously unclassified Cobra leaf before release.
 
 ## Capabilities
 
