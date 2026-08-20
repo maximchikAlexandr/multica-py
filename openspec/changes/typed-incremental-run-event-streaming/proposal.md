@@ -1,12 +1,12 @@
 ## Why
 
-Consumers can read a task run's messages only as a complete snapshot, so every live monitor must rebuild the same sequence cursor, polling, deduplication, event classification, and completion loop. Multica `v0.4.20` already exposes ordered messages and `run-messages --since`; the SDK should turn that existing contract into a small typed iterator.
+Consumers can read a task run's messages only as a complete snapshot, so every live monitor must rebuild the same sequence cursor, polling, deduplication, event classification, and completion loop. The reviewed Multica `v0.4.28` baseline already exposes ordered messages and `run-messages --since`; the SDK should turn that existing contract into a small typed iterator.
 
 ## What Changes
 
 - Add immutable semantic run-event models for text, thinking, tool start, tool finish, error, observed run-status changes, and unknown future message types.
 - Add `TaskRun.stream_events()` for ordered incremental consumption from a bound task run, including cursor management, duplicate suppression, terminal-state detection, a normal completed/failed tail drain, and a documented cancellation quiescence drain.
-- Add the governed `since` input to raw run-message reads and keep `TaskRun.messages` / `IssueResource.run_messages()` available for snapshot access.
+- Extend the already governed `v0.4.28` `issues.run_messages` operation with the currently unmodeled `since` input, and keep `TaskRun.messages` / `IssueResource.run_messages()` available for snapshot access.
 - Correct `RunMessage` to the pinned upstream payload (`task_id`, `issue_id`, `seq`, `type`, `tool`, `content`, `input`, `output`, `created_at`) so raw and typed views share one truthful source model.
 - Document that the iterator is polling-backed incremental delivery, not server push or a real-time guarantee, and that externally cancelled runs expose no SDK-visible flush acknowledgement so cancellation quiescence reduces but cannot eliminate a late-tail race.
 - Keep this change synchronous because the SDK has no asynchronous client or command execution model; an async stream is deferred until an SDK-wide async API exists.
