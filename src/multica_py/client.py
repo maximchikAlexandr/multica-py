@@ -38,14 +38,6 @@ TEntity = TypeVar("TEntity", bound=_BoundEntity)
 TRelationValue_co = TypeVar("TRelationValue_co", covariant=True)
 
 
-def _load_relation(relation: LazyLoadable[TRelationValue_co]) -> None:
-    _ = relation.all()
-
-
-def _load_job(relation: LazyLoadable[TRelationValue_co]) -> Callable[[], None]:
-    return lambda: _load_relation(relation)
-
-
 class MulticaClient:
     def __init__(
         self,
@@ -187,10 +179,9 @@ class MulticaClient:
             raise ValueError("max_parallel must be at least 1")
 
         entity_values = tuple(entities)
-        jobs: list[tuple[int, Callable[[], None]]] = []
-        job_specs: list[tuple[str, object]] = []
-        collection_jobs: dict[int, LazyLoadable[object]] = {}
-        singular_jobs: dict[tuple[object, ...], list[LazyRef[object]]] = {}
+        jobs: list[tuple[int, Callable[[], object]]] = []
+        job_specs: list[LazyLoadable[object] | list[LazyRef[object]]] = []
+        collection_ids: set[int] = set()
         for entity in entity_values:
             origin = entity._client
             semaphore = cast("object | None", getattr(origin, "_semaphore", None))
@@ -204,35 +195,31 @@ class MulticaClient:
             if isinstance(selected, LazyRef):
                 singular = selected
                 key = singular._prefetch_key()
-                destinations = singular_jobs.get(key)
-                if destinations is not None:
-                    if not any(destination is singular for destination in destinations):
-                        destinations.append(singular)
-                    continue
-                destinations = [singular]
-                singular_jobs[key] = destinations
-                job_specs.append(("singular", key))
+                for spec in job_specs:
+                    if isinstance(spec, list) and spec[0]._prefetch_key() == key:
+                        if not any(destination is singular for destination in spec):
+                            spec.append(singular)
+                        break
+                else:
+                    job_specs.append([singular])
                 continue
-            if not isinstance(selected, (LazyCollection, LazyMapping)):
-                raise AssertionError("validated relation type disappeared")
-            relation = selected
+            relation = cast("LazyLoadable[object]", selected)
             relation_id = id(relation)
-            if relation_id in collection_jobs:
+            if relation_id in collection_ids:
                 continue
-            collection_jobs[relation_id] = cast("LazyLoadable[object]", relation)
-            job_specs.append(("collection", relation_id))
+            collection_ids.add(relation_id)
+            job_specs.append(relation)
         failures: dict[int, Exception] = {}
-        futures: dict[Future[None], int] = {}
-        reserved_targets: dict[int, list[tuple[LazyRef[object], int | None]]] = {}
+        futures: dict[Future[object], int] = {}
+        reserved_targets: list[tuple[LazyRef[object], int | None]] = []
 
         try:
-            for index, (kind, raw_key) in enumerate(job_specs):
-                if kind == "singular":
-                    key = cast("tuple[object, ...]", raw_key)
+            for index, spec in enumerate(job_specs):
+                if isinstance(spec, list):
                     target_list: list[tuple[LazyRef[object], int | None]] = []
-                    reserved_targets[index] = target_list
-                    for destination in singular_jobs[key]:
+                    for destination in spec:
                         target_list.append((destination, destination._prefetch_reserve()))
+                    reserved_targets.extend(target_list)
                     targets = tuple(target_list)
                     primary, primary_generation = targets[0]
 
@@ -255,8 +242,7 @@ class MulticaClient:
                     jobs.append((index, load_singular))
                     continue
 
-                collection_relation = collection_jobs[cast("int", raw_key)]
-                jobs.append((index, _load_job(collection_relation)))
+                jobs.append((index, spec.all))
 
             with ThreadPoolExecutor(max_workers=max_parallel) as executor:
                 for index, load in jobs:
@@ -281,10 +267,9 @@ class MulticaClient:
                         failures.setdefault(index, error)
         finally:
             cancellation = RuntimeError("prefetch job did not execute")
-            for reserved_target_list in reserved_targets.values():
-                for target, generation in reserved_target_list:
-                    if generation is not None:
-                        target._prefetch_fail(generation, cancellation)
+            for target, generation in reserved_targets:
+                if generation is not None:
+                    target._prefetch_fail(generation, cancellation)
         if failures:
             raise failures[min(failures)]
 

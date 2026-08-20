@@ -204,29 +204,20 @@ class _GenerationState(Generic[R]):
             if self._state != self._LOADING or self._generation != generation:
                 return self._value
 
-        try:
-            loaded = load()
-        except Exception as error:
-            self.fail_reserved(generation, error)
-            raise
-
-        return loaded
-
-    def _complete_reserved(self, generation: int, loaded: R) -> bool:
-        with self._condition:
-            if self._state != self._LOADING or self._generation != generation:
-                return False
-            self._value = loaded
-            self._state = self._LOADED
-            waiters = self._waiters.pop(generation)
-            if waiters:
-                self._outcomes[generation] = _GenerationSuccess(value=loaded, waiters=waiters)
-            self._condition.notify_all()
-            return True
+        return load()
 
     def publish_reserved(self, generation: int, value: R) -> bool:
         """Publish only while the exact reserved destination generation lives."""
-        return self._complete_reserved(generation, value)
+        with self._condition:
+            if self._state != self._LOADING or self._generation != generation:
+                return False
+            self._value = value
+            self._state = self._LOADED
+            waiters = self._waiters.pop(generation)
+            if waiters:
+                self._outcomes[generation] = _GenerationSuccess(value=value, waiters=waiters)
+            self._condition.notify_all()
+            return True
 
     def fail_reserved(self, generation: int, error: Exception) -> bool:
         with self._condition:
