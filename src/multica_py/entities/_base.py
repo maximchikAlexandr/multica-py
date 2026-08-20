@@ -59,6 +59,20 @@ def _materialize_mappings(value: object) -> object:
     return value
 
 
+def _reference_presence(entity: _BoundEntity, field_name: str, value: object) -> str:
+    """Return decoded presence, conservatively classifying manual values."""
+    try:
+        seeds = cast(
+            "tuple[tuple[str, str], ...]", object.__getattribute__(entity, "_wire_presence")
+        )
+    except AttributeError:
+        seeds = ()
+    for name, seed in seeds:
+        if name == field_name:
+            return seed
+    return "missing" if value is None else "value"
+
+
 @dataclass(frozen=True)
 class _EntityPolicy:
     """Schema-derived names used by all bound-entity value operations."""

@@ -247,6 +247,19 @@ class Command(Generic[T_co]):
         return f"Command(commands={self.commands!r})"
 
 
+def _cached_value_command(value: Callable[[], T_result]) -> Command[T_result]:
+    """Build a no-step command for a value known without a client."""
+    config = ClientConfig()
+    return Command(
+        _CommandPlan(
+            config_snapshot=config,
+            transport=CliTransport(config),
+            steps=(),
+            finalize=lambda _results: value(),
+        )
+    )
+
+
 def _cached_result_command(
     command: Command[T_source], result: Callable[[], T_result]
 ) -> Command[T_result]:

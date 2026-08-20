@@ -8,13 +8,19 @@ from typing import TYPE_CHECKING, cast
 
 import msgspec
 
-from multica_py._internal.commands import Command
+from multica_py._internal.commands import Command, _cached_value_command
 from multica_py.config import OperationOptions
-from multica_py.entities._base import _BoundEntity, _is_mapping, _runtime_state
+from multica_py.entities._base import (
+    _BoundEntity,
+    _is_mapping,
+    _reference_presence,
+    _runtime_state,
+)
 from multica_py.exceptions import (
     DetachedEntityError,
     MissingRelationContextError,
     RelationPaginationError,
+    UnsupportedReferenceTargetError,
 )
 from multica_py.models.autopilots import (
     AutopilotSubscriber,
@@ -22,12 +28,22 @@ from multica_py.models.autopilots import (
 )
 from multica_py.models.common import ActionResult
 from multica_py.models.issue_activity import RunMessage
-from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
+from multica_py.models.relations import (
+    _GENERATION_UNSET,
+    LazyCollection,
+    LazyRef,
+    OffsetLazyCollection,
+    OffsetPage,
+)
 from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import JsonValue
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
+    from multica_py.entities.agents import Agent
+    from multica_py.entities.issues import Issue
+    from multica_py.entities.projects import Project
+    from multica_py.entities.squads import Squad
 
 
 def _coerce_json_value(value: object, *, field_name: str) -> JsonValue:
@@ -113,6 +129,80 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
     _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
 
     _messages: LazyCollection[RunMessage] | None = msgspec.field(default=None, name="_messages")
+    _autopilot: object | None = msgspec.field(default=None, name="_autopilot")
+    _issue: object | None = msgspec.field(default=None, name="_issue")
+
+    @property
+    def autopilot(self) -> LazyRef[Autopilot]:
+        if self._autopilot is None:
+            autopilot_id = self.autopilot_id
+            client = cast("MulticaClient | None", self._client)
+
+            def load() -> Autopilot:
+                if not autopilot_id:
+                    raise MissingRelationContextError(
+                        "AutopilotRun", self.id, "autopilot", "autopilot_id"
+                    )
+                if client is None:
+                    raise DetachedEntityError("AutopilotRun", self.id, "autopilot")
+                return client.autopilots.get(autopilot_id)
+
+            def command() -> Command[Autopilot]:
+                if not autopilot_id:
+                    raise MissingRelationContextError(
+                        "AutopilotRun", self.id, "autopilot", "autopilot_id"
+                    )
+                if client is None:
+                    raise DetachedEntityError("AutopilotRun", self.id, "autopilot")
+                return client.autopilots.get_command(autopilot_id)
+
+            self._set_runtime(
+                "_autopilot",
+                LazyRef(
+                    load,
+                    command_loader=command,
+                    entity_type="AutopilotRun",
+                    entity_id=self.id,
+                    relation_name="autopilot",
+                ),
+            )
+        return self._autopilot  # type: ignore[return-value]
+
+    @property
+    def issue(self) -> LazyRef[Issue | None]:
+        if self._issue is None:
+            issue_id = self.issue_id
+            client = cast("MulticaClient | None", self._client)
+            presence = _reference_presence(self, "issue_id", issue_id)
+
+            def load() -> Issue | None:
+                if presence == "missing" or not issue_id:
+                    raise MissingRelationContextError("AutopilotRun", self.id, "issue", "issue_id")
+                if client is None:
+                    raise DetachedEntityError("AutopilotRun", self.id, "issue")
+                return client.issues.get(issue_id)
+
+            def command() -> Command[Issue | None]:
+                if presence == "null" and issue_id is None:
+                    return _cached_value_command(lambda: None)
+                if presence == "missing" or not issue_id:
+                    raise MissingRelationContextError("AutopilotRun", self.id, "issue", "issue_id")
+                if client is None:
+                    raise DetachedEntityError("AutopilotRun", self.id, "issue")
+                return client.issues.get_command(issue_id)
+
+            self._set_runtime(
+                "_issue",
+                LazyRef(
+                    load,
+                    command_loader=command,
+                    initial=None if presence == "null" else _GENERATION_UNSET,
+                    entity_type="AutopilotRun",
+                    entity_id=self.id,
+                    relation_name="issue",
+                ),
+            )
+        return self._issue  # type: ignore[return-value]
 
     def __post_init__(self) -> None:
         # Frozen msgspec fields cannot be replaced from ``__post_init__`` on
@@ -239,6 +329,8 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
         default=None, name="_subscribers"
     )
     _runs: OffsetLazyCollection[AutopilotRun] | None = msgspec.field(default=None, name="_runs")
+    _project: object | None = msgspec.field(default=None, name="_project")
+    _assignee_ref: object | None = msgspec.field(default=None, name="_assignee_ref")
     if TYPE_CHECKING:
 
         @property
@@ -291,6 +383,92 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
                 ),
             )
             self._set_runtime("_subscribers", _subscribers)
+
+    @property
+    def project(self) -> LazyRef[Project | None]:
+        if self._project is None:
+            project_id = self.project_id
+            client = cast("MulticaClient | None", self._client)
+            presence = _reference_presence(self, "project_id", project_id)
+
+            def load() -> Project | None:
+                if presence == "missing" or not project_id:
+                    raise MissingRelationContextError("Autopilot", self.id, "project", "project_id")
+                if client is None:
+                    raise DetachedEntityError("Autopilot", self.id, "project")
+                return client.projects.get(project_id)
+
+            def command() -> Command[Project | None]:
+                if presence == "null" and project_id is None:
+                    return _cached_value_command(lambda: None)
+                if presence == "missing" or not project_id:
+                    raise MissingRelationContextError("Autopilot", self.id, "project", "project_id")
+                if client is None:
+                    raise DetachedEntityError("Autopilot", self.id, "project")
+                return client.projects.get_command(project_id)
+
+            self._set_runtime(
+                "_project",
+                LazyRef(
+                    load,
+                    command_loader=command,
+                    initial=None if presence == "null" else _GENERATION_UNSET,
+                    entity_type="Autopilot",
+                    entity_id=self.id,
+                    relation_name="project",
+                ),
+            )
+        return self._project  # type: ignore[return-value]
+
+    @property
+    def assignee(self) -> LazyRef[Agent | Squad]:
+        if self._assignee_ref is None:
+            discriminator = self.assignee_type
+            assignee_id = self.assignee_id
+            client = cast("MulticaClient | None", self._client)
+
+            def resolve() -> tuple[str, str]:
+                if not discriminator:
+                    raise MissingRelationContextError(
+                        "Autopilot", self.id, "assignee", "assignee_type"
+                    )
+                if not assignee_id:
+                    raise MissingRelationContextError(
+                        "Autopilot", self.id, "assignee", "assignee_id"
+                    )
+                if discriminator not in {"agent", "squad"}:
+                    raise UnsupportedReferenceTargetError(
+                        "Autopilot", self.id, "assignee", "assignee_type", discriminator
+                    )
+                return discriminator, assignee_id
+
+            def load() -> Agent | Squad:
+                kind, target_id = resolve()
+                if client is None:
+                    raise DetachedEntityError("Autopilot", self.id, "assignee")
+                if kind == "agent":
+                    return client.agents.get(target_id)
+                return client.squads.get(target_id)
+
+            def command() -> Command[Agent | Squad]:
+                kind, target_id = resolve()
+                if client is None:
+                    raise DetachedEntityError("Autopilot", self.id, "assignee")
+                if kind == "agent":
+                    return client.agents.get_command(target_id)
+                return client.squads.get_command(target_id)
+
+            self._set_runtime(
+                "_assignee_ref",
+                LazyRef(
+                    load,
+                    command_loader=command,
+                    entity_type="Autopilot",
+                    entity_id=self.id,
+                    relation_name="assignee",
+                ),
+            )
+        return self._assignee_ref  # type: ignore[return-value]
 
     def __getattribute__(self, name: str) -> object:
         if name == "triggers":

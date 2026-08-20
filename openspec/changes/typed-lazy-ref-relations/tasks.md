@@ -21,10 +21,10 @@
 
 ## 3. Exact bound-entity reference inventory
 
-- [ ] 3.1 Add passive `Issue.parent`, `Issue.project`, and `Issue.assignee_ref` handles; preserve `Issue.assignee` as `IssueAssignee | None`, dispatch only `agent`/`squad` through their typed `get_command()` services, and fail member/unknown kinds before I/O.
-- [ ] 3.2 Add passive `Autopilot.project` and discriminated `Autopilot.assignee` handles using typed project/agent/squad services and the source wrapper's exact client view.
-- [ ] 3.3 Add passive `AutopilotRun.autopilot`, `AutopilotRun.issue`, `TaskRun.issue`, and `TaskRun.agent` handles using only typed autopilot/issue/agent services and inherited source context.
-- [ ] 3.4 Ensure every handle is cached in its source wrapper's private runtime state, creates no I/O on property access, returns targets bound to its exact originating client/execution view, and raises detached/missing/unsupported errors in the specified order.
+- [x] 3.1 Add passive `Issue.parent`, `Issue.project`, and `Issue.assignee_ref` handles; preserve `Issue.assignee` as `IssueAssignee | None`, dispatch only `agent`/`squad` through their typed `get_command()` services, and fail member/unknown kinds before I/O.
+- [x] 3.2 Add passive `Autopilot.project` and discriminated `Autopilot.assignee` handles using typed project/agent/squad services and the source wrapper's exact client view.
+- [x] 3.3 Add passive `AutopilotRun.autopilot`, `AutopilotRun.issue`, `TaskRun.issue`, and `TaskRun.agent` handles using only typed autopilot/issue/agent services and inherited source context.
+- [x] 3.4 Ensure every handle is cached in its source wrapper's private runtime state, creates no I/O on property access, returns targets bound to its exact originating client/execution view, and raises detached/missing/unsupported errors in the specified order.
 - [ ] 3.5 Add one table-driven governed-dispatch suite covering all nine members, required/optional annotations, exact command argv, returned target type/binding, scalar/snapshot compatibility, and zero-I/O property access.
 - [ ] 3.6 Reconcile the exact nine-member inventory against the reviewed `[0.4.28, 0.4.29)` contract; add negative public-surface tests proving creator/member, trigger, task, squad-leader, comment-author, workspace-user, `PropertyValue.property_id`, `Plugin.uploader_id`, and MCP record lazy references are absent and no raw argv, list scan, or invented lookup backs them.
 - [ ] 3.7 Add table-driven changed/cleared-success and failure mutation rows for `update(parent_id=...)`, `update(project_id=...)`, `update(assignee_id=...)`, `assign(...)`, and `unassign()`: every success derives a coherent new wrapper and presence/handle state from the returned wire snapshot while every original scalar/snapshot and handle cache remains unchanged; every failure publishes no replacement and changes no original state.
