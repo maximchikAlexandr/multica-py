@@ -16,6 +16,7 @@ from multica_py._internal.processes import (
     close_process_pipes,
     create_process,
     kill_process,
+    kill_process_immediate,
     run_with_timeout,
     terminate_process,
 )
@@ -73,6 +74,9 @@ class LocalProcessHandle:
 
     def kill(self) -> None:
         kill_process(self._process)
+
+    def kill_immediate(self) -> None:
+        kill_process_immediate(self._process)
 
     def _pipe(self, name: str) -> BinaryIO | None:
         return cast("BinaryIO | None", cast("object", getattr(self._process, name)))

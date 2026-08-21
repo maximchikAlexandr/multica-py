@@ -17,6 +17,7 @@ from multica_py._internal.processes import (
     _child_pids,
     close_process_pipes,
     kill_process,
+    kill_process_immediate,
     run_with_timeout,
     terminate_process,
 )
@@ -119,6 +120,24 @@ def test_kill_process_ignores_an_exited_process() -> None:
     kill_group.assert_not_called()
 
 
+def test_kill_process_immediate_skips_descendant_discovery() -> None:
+    process = _process(poll=None)
+    with (
+        patch("multica_py._internal.processes._descendant_pids") as descendants,
+        patch("multica_py._internal.processes._signal_process_group") as signal_group,
+    ):
+        kill_process_immediate(process)
+    descendants.assert_not_called()
+    signal_group.assert_called_once_with(process, signal.SIGKILL)
+
+
+def test_kill_process_immediate_ignores_an_exited_process() -> None:
+    process = _process(poll=0)
+    with patch("multica_py._internal.processes._signal_process_group") as signal_group:
+        kill_process_immediate(process)
+    signal_group.assert_not_called()
+
+
 def test_run_with_timeout_rejects_pre_cancelled_call_without_starting_process() -> None:
     token = CancellationToken()
     token.cancel()
@@ -197,14 +216,18 @@ def test_managed_process_del_warns_and_kills_without_grace_for_live_process() ->
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), ("multica", "run"), semaphore)
     with (
-        patch("multica_py.execution.local.kill_process") as kill,
+        patch("multica_py.execution.local.kill_process_immediate") as kill,
+        patch("multica_py.execution.local.kill_process") as kill_full,
         patch("multica_py.execution.local.terminate_process") as terminate,
+        patch("multica_py._internal.processes._descendant_pids") as descendants,
         patch("multica_py.execution.local.close_process_pipes") as close_pipes,
         pytest.warns(ResourceWarning, match="never closed"),
     ):
         managed.__del__()
     kill.assert_called_once_with(process)
+    kill_full.assert_not_called()
     terminate.assert_not_called()
+    descendants.assert_not_called()
     close_pipes.assert_called_once_with(process)
     semaphore.release.assert_called_once_with()
 
@@ -213,9 +236,15 @@ def test_managed_process_del_finalizes_quietly_for_exited_process() -> None:
     process = _process(poll=0)
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), ("multica", "run"), semaphore)
-    with warnings.catch_warnings():
+    with (
+        patch("multica_py.execution.local.kill_process_immediate") as kill,
+        patch("multica_py.execution.local.terminate_process") as terminate,
+        warnings.catch_warnings(),
+    ):
         warnings.simplefilter("error")
         managed.__del__()
+    kill.assert_not_called()
+    terminate.assert_not_called()
     semaphore.release.assert_called_once_with()
 
 

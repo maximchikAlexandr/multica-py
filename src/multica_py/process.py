@@ -159,22 +159,25 @@ class ManagedProcess:
             self._active_streams.discard("stderr")
             self._maybe_finalize()
 
+    def _kill_immediate(self) -> None:
+        self._handle.kill_immediate()
+
     def __del__(self) -> None:
         if self._closed:
             return
-        if self._handle.poll() is None:
+        live = self._handle.poll() is None
+        if live:
             warnings.warn(
                 f"{type(self).__name__} for {self._argv} was never closed; killing process without grace period",
                 ResourceWarning,
                 stacklevel=2,
             )
-            # ponytail: cheap finalization backstop — SIGKILL without pgrep walk or timed wait; explicit close() keeps the graceful path
-            self._output.discard()
-            self._handle.kill()
-            self._finalize()
-            return
         self._output.discard()
-        self._finalize()
+        try:
+            if live:
+                self._kill_immediate()
+        finally:
+            self._finalize()
 
     def close(self) -> None:
         if self._closed:

@@ -213,6 +213,10 @@ class _MicrosandboxProcessHandle:
         """Send native SIGKILL to this command only; descendant cleanup is not guaranteed."""
         self._executor._provider_call(self._handle.kill())
 
+    def kill_immediate(self) -> None:
+        """Send native SIGKILL without extra provider-side cleanup work."""
+        self.kill()
+
     def stdout_lines(self) -> Iterator[str]:
         self._output.claim("streaming")
         yield from self._lines("stdout")
