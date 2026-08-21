@@ -88,7 +88,7 @@ class _GenerationSuccess(Generic[R]):
 
 @dataclass(slots=True)
 class _GenerationFailure:
-    error: Exception
+    error: BaseException
     waiters: int
 
 
@@ -149,7 +149,7 @@ class _GenerationState(Generic[R]):
 
         try:
             loaded = load()
-        except Exception as error:
+        except BaseException as error:
             with self._condition:
                 waiters = self._waiters.pop(generation)
                 if waiters:
