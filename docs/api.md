@@ -13,7 +13,7 @@ Migration details and removed/renamed surfaces are documented in
 - `MulticaClient.with_timeout(timeout)` — clone with a different default timeout
 - `MulticaClient.with_cwd(cwd)` — clone with a different working directory
 - `MulticaClient.with_environment(environment)` — clone with a replacement environment
-- `ClientConfig` — frozen `msgspec.Struct`: `executable`, `server_url`, independent `app_url` and `workspace_slug`, `workspace_id`, `profile`, `cwd`, `environment` (immutable tuple), `timeout`, `compatibility` (CompatibilityPolicy enum), `debug`, `encoding`, `max_processes`
+- `ClientConfig` — frozen `msgspec.Struct`: `executable`, `server_url`, independent `app_url` and `workspace_slug`, `workspace_id`, `profile`, `cwd`, `environment` (immutable tuple), `timeout`, `compatibility` (CompatibilityPolicy enum), `debug`, `max_processes`. CLI output is decoded as UTF-8; no encoding override is supported.
 
 ## Inspectable command plans
 
