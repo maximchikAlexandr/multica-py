@@ -49,4 +49,24 @@ def __getattr__(name: str) -> object:
     module_name = _MODULES.get(name)
     if module_name is None:
         raise AttributeError(name)
-    return cast("object", getattr(import_module(f"multica_py.entities.{module_name}"), name))
+    value = cast("object", getattr(import_module(f"multica_py.entities.{module_name}"), name))
+    _sync_relation_type_names()
+    return value
+
+
+def _sync_relation_type_names() -> None:
+    """Make circular relation annotations resolvable after lazy entity imports."""
+    import sys
+
+    modules = {
+        name: sys.modules.get(f"multica_py.entities.{module_name}")
+        for name, module_name in _MODULES.items()
+    }
+    for target_name in ("issues", "autopilots"):
+        target = sys.modules.get(f"multica_py.entities.{target_name}")
+        if target is None:
+            continue
+        target_vars = cast("dict[str, object]", vars(target))
+        for name, module in modules.items():
+            if module is not None and hasattr(module, name):
+                target_vars.setdefault(name, cast("object", getattr(module, name)))

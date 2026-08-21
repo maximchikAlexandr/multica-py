@@ -461,18 +461,58 @@ if issue.attachments:
 The SDK does not add an attachment list relation, a selector helper, or a
 second public attachment model.
 
-## Unsupported inverse and singular relations
+## Singular reference migration (`[0.4.28, 0.4.29)`)
 
 The following members intentionally do not exist: `Project.autopilots`,
 agent/squad autopilots, `Label.issues`, `Skill.agents`, `Runtime.agents`,
 `Repository.projects`, a lazy attachment relation on `Issue`, and
-`Workspace.users`. There is no
-hidden workspace scan, client-side filtering fallback, or per-child N+1 path.
+`Workspace.users`. There is no hidden workspace scan, client-side filtering
+fallback, or per-child N+1 path. The additive `LazyRef` handle is imported only
+from `multica_py.models.relations`; the exact inventory is shown below. The
+public import spelling is:
 
-Issue parent/project/assignee/creator and analogous autopilot/run references
-remain scalar IDs or snapshots in this change. They are not `ManyRelation`
-collections. A later `LazyRef` capability may define singular loading; this
-release does not invent that API.
+```python
+from multica_py.models.relations import LazyRef
+```
+
+These nine handles are not `ManyRelation` collections:
+
+| Public property | Type | Governed lookup |
+| --- | --- | --- |
+| `Issue.parent` | `LazyRef[Issue | None]` | `issues.get` |
+| `Issue.project` | `LazyRef[Project | None]` | `projects.get` |
+| `Issue.assignee_ref` | `LazyRef[Agent | Squad | None]` | `agents.get` / `squads.get` |
+| `Autopilot.project` | `LazyRef[Project | None]` | `projects.get` |
+| `Autopilot.assignee` | `LazyRef[Agent | Squad]` | `agents.get` / `squads.get` |
+| `AutopilotRun.autopilot` | `LazyRef[Autopilot]` | `autopilots.get` |
+| `AutopilotRun.issue` | `LazyRef[Issue | None]` | `issues.get` |
+| `TaskRun.issue` | `LazyRef[Issue]` | `issues.get` |
+| `TaskRun.agent` | `LazyRef[Agent | None]` | `agents.get` |
+
+Existing scalar IDs remain unchanged, including `Issue.parent_id`,
+`Issue.project_id`, and the run/autopilot/agent IDs. `Issue.assignee` remains
+the immutable `IssueAssignee | None` embedded snapshot. `Issue.assignee_ref` is
+the separate, passive handle and never replaces that snapshot.
+
+The unsupported singular edges remain absent: creator/member, autopilot
+trigger, task, squad leader, comment author, workspace user,
+`PropertyValue.property_id`, `Plugin.uploader_id`, and MCP record IDs. A
+workspace-member object or email accepted by v0.4.28 assignment likewise stays
+an embedded member snapshot; it does not imply a member lookup.
+
+Reference-changing Issue mutations (`update(parent_id=...)`,
+`update(project_id=...)`, `update(assignee_id=...)`, `assign(...)`, and
+`unassign()`) return an immutable replacement decoded from the complete response
+snapshot. The returned scalar/snapshot and presence-aware handles are
+authoritative; the original wrapper, its scalar fields, and its loaded or
+unloaded handle caches are never retargeted. Failed mutations publish no
+replacement. Serialize the replacement if it must cross an application
+boundary; serialization and manual construction do not invent explicit-null
+provenance.
+
+For the passive/explicit-I/O lifecycle, see
+[the API reference](api.md#singular-references) and the runnable
+[singular-reference example](../examples/singular_references.py).
 
 ## Bound data and lifecycle
 

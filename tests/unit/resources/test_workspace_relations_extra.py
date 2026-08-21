@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime
 import threading
-import types
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Protocol, cast
@@ -29,6 +28,7 @@ from multica_py.models.relations import (
     OffsetPage,
 )
 from multica_py.resources._base import BaseResource
+from tests.unit.resources._factories import bound_entity_factory
 from tests.unit.resources.workspace_cases import (
     make_workspace_clients,
     workspace_relation_method,
@@ -82,6 +82,54 @@ MISSING_RELATION_COMMAND_LOADER_CASES = (
         "mapping-refresh",
         lambda: LazyMapping[str, str](dict).refresh_command(),
     ),
+)
+
+
+@dataclass(frozen=True)
+class RelationNameCase:
+    name: str
+
+
+WORKSPACE_RELATION_CASES = (
+    RelationNameCase("members"),
+    RelationNameCase("agents"),
+    RelationNameCase("skills"),
+    RelationNameCase("projects"),
+    RelationNameCase("labels"),
+    RelationNameCase("repositories"),
+    RelationNameCase("runtimes"),
+    RelationNameCase("squads"),
+    RelationNameCase("autopilots"),
+)
+
+
+@dataclass(frozen=True)
+class GuardCase:
+    name: str
+
+
+OFFSET_GUARD_CASES = (
+    GuardCase("repeated-offset"),
+    GuardCase("item-budget"),
+    GuardCase("empty-page"),
+)
+
+CURSOR_GUARD_CASES = (
+    GuardCase("page-budget"),
+    GuardCase("item-budget"),
+    GuardCase("empty-page"),
+    GuardCase("repeated-cursor"),
+)
+
+
+@dataclass(frozen=True)
+class CursorPreviewCase:
+    argv: tuple[str, ...]
+
+
+CURSOR_PREVIEW_CASES = (
+    CursorPreviewCase(("comments", "--output", "json")),
+    CursorPreviewCase(("comments", "--before", "old", "--before-id", "old-id", "--output", "json")),
 )
 
 # ============================================================================
@@ -267,15 +315,16 @@ def test_relation_value_protocols_cover_empty_and_cached_paths() -> None:
     assert not mapping.loaded
 
 
-@pytest.mark.parametrize("case", ("repeated-offset", "item-budget", "empty-page"))
+@pytest.mark.parametrize("case", OFFSET_GUARD_CASES, ids=lambda case: case.name)
 def test_offset_command_guards_are_behavioral(
     monkeypatch: pytest.MonkeyPatch,
-    case: str,
+    case: GuardCase,
 ) -> None:
+    name = case.name
     transport = MagicMock(spec=CliTransport)
     resource = BaseResource(transport, ClientConfig())
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    if case == "repeated-offset":
+    if name == "repeated-offset":
         pages = iter(
             (
                 OffsetPage(("one",), 2, 1, 0, True),
@@ -283,7 +332,7 @@ def test_offset_command_guards_are_behavioral(
                 OffsetPage(("three",), 3, 1, 1, False),
             )
         )
-    elif case == "item-budget":
+    elif name == "item-budget":
         monkeypatch.setattr("multica_py.models.relations._MAX_RELATION_ITEMS", 1)
         pages = iter(
             (
@@ -370,15 +419,14 @@ def test_offset_command_empty_plan_falls_back_to_loader() -> None:
 
 
 @pytest.mark.parametrize(
-    "argv",
-    (
-        ("comments", "--output", "json"),
-        ("comments", "--before", "old", "--before-id", "old-id", "--output", "json"),
-    ),
+    "case",
+    CURSOR_PREVIEW_CASES,
+    ids=lambda case: " ".join(case.argv),
 )
 def test_cursor_command_preview_and_refresh_cover_cursor_bindings(
-    argv: tuple[str, ...],
+    case: CursorPreviewCase,
 ) -> None:
+    argv = case.argv
     transport = MagicMock(spec=CliTransport)
     resource = BaseResource(transport, ClientConfig())
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
@@ -462,16 +510,17 @@ def test_cursor_command_preserves_mixed_cursor_pair_insertion_and_replacement() 
     )
 
 
-@pytest.mark.parametrize("case", ("page-budget", "item-budget", "empty-page", "repeated-cursor"))
+@pytest.mark.parametrize("case", CURSOR_GUARD_CASES, ids=lambda case: case.name)
 def test_cursor_command_guards_are_behavioral(
     monkeypatch: pytest.MonkeyPatch,
-    case: str,
+    case: GuardCase,
 ) -> None:
+    name = case.name
     transport = MagicMock(spec=CliTransport)
     resource = BaseResource(transport, ClientConfig())
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     next_cursor = CommentCursor(before="next", before_id="next-id")
-    if case == "page-budget":
+    if name == "page-budget":
         monkeypatch.setattr("multica_py.models.relations._MAX_RELATION_PAGES", 1)
         pages = iter(
             (
@@ -480,7 +529,7 @@ def test_cursor_command_guards_are_behavioral(
                 CursorPage(("three",), None),
             )
         )
-    elif case == "item-budget":
+    elif name == "item-budget":
         monkeypatch.setattr("multica_py.models.relations._MAX_RELATION_ITEMS", 1)
         pages = iter(
             (
@@ -489,7 +538,7 @@ def test_cursor_command_guards_are_behavioral(
                 CursorPage(("three",), None),
             )
         )
-    elif case == "empty-page":
+    elif name == "empty-page":
         pages = iter(
             (
                 CursorPage(("one",), next_cursor),
@@ -636,8 +685,8 @@ def test_prefetch_routes_command_backed_mapping_through_all_command() -> None:
     )
     client = MulticaClient(ClientConfig())
     entities = (
-        types.SimpleNamespace(_client=client),
-        types.SimpleNamespace(_client=client),
+        bound_entity_factory(client, target_id="source-1"),
+        bound_entity_factory(client, target_id="source-2"),
     )
     selected = iter((relation, relation))
 
@@ -689,8 +738,8 @@ def test_prefetch_runs_command_backed_relations_concurrently() -> None:
     )
     client = MulticaClient(ClientConfig())
     entities = (
-        types.SimpleNamespace(_client=client),
-        types.SimpleNamespace(_client=client),
+        bound_entity_factory(client, target_id="source-1"),
+        bound_entity_factory(client, target_id="source-2"),
     )
     selected = iter(relations)
     errors: list[Exception] = []
@@ -732,21 +781,9 @@ def test_workspace_after_invalidate_reloads() -> None:
     assert r1[0].id != r2[0].id
 
 
-@pytest.mark.parametrize(
-    "relation_name",
-    [
-        "members",
-        "agents",
-        "skills",
-        "projects",
-        "labels",
-        "repositories",
-        "runtimes",
-        "squads",
-        "autopilots",
-    ],
-)
-def test_workspace_lazy_memoized_per_entity(relation_name: str) -> None:
+@pytest.mark.parametrize("case", WORKSPACE_RELATION_CASES, ids=lambda case: case.name)
+def test_workspace_lazy_memoized_per_entity(case: RelationNameCase) -> None:
+    relation_name = case.name
     clients = make_workspace_clients()
     entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
     r1 = getattr(entity, relation_name)
@@ -817,23 +854,11 @@ def test_workspace_relations_use_derived_view_transport() -> None:
     assert derived._config.workspace_id == "ws_42"
 
 
-@pytest.mark.parametrize(
-    "relation_name",
-    [
-        "members",
-        "agents",
-        "skills",
-        "projects",
-        "labels",
-        "repositories",
-        "runtimes",
-        "squads",
-        "autopilots",
-    ],
-)
+@pytest.mark.parametrize("case", WORKSPACE_RELATION_CASES, ids=lambda case: case.name)
 def test_workspace_each_relation_uses_scoped_client(
-    relation_name: str,
+    case: RelationNameCase,
 ) -> None:
+    relation_name = case.name
     clients = make_workspace_clients()
     entity = Workspace(id="ws_1", name="Test WS", _client=clients.origin)
     relation = getattr(entity, relation_name)

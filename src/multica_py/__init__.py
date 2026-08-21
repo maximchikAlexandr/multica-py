@@ -44,7 +44,9 @@ from multica_py.exceptions import (
     RelationError,
     RelationPaginationError,
     UnknownCommandError,
+    UnloadedReferenceError,
     UnsupportedCliVersionError,
+    UnsupportedReferenceTargetError,
     ValidationError,
 )
 from multica_py.models.common import ActionResult, Page
@@ -96,8 +98,10 @@ __all__ = [
     "Squad",
     "TaskRun",
     "UnknownCommandError",
+    "UnloadedReferenceError",
     "Unset",
     "UnsupportedCliVersionError",
+    "UnsupportedReferenceTargetError",
     "ValidationError",
     "Workspace",
     "WorkspaceMember",

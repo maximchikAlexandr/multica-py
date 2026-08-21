@@ -2,7 +2,9 @@
 
 Migration details and removed/renamed surfaces are documented in
 [docs/migration.md](migration.md). A complete bound-graph example is in
-[examples/resource_relations.py](../examples/resource_relations.py).
+[examples/resource_relations.py](../examples/resource_relations.py), and the
+singular-reference example is in
+[examples/singular_references.py](../examples/singular_references.py).
 
 ## Client
 
@@ -397,3 +399,60 @@ before transport access.
 
 The complete relation inventory and removed surfaces are documented in
 [docs/migration.md](migration.md).
+
+## Singular references
+
+The singular-reference contract is additive and pinned to the reviewed
+Multica compatibility interval `[0.4.28, 0.4.29)`. Import the handle only from
+its dedicated public module:
+
+```python
+from multica_py.models.relations import LazyRef
+```
+
+The first release contains exactly these nine passive properties. Scalar IDs
+and snapshots remain the established public fields; a handle is wrapper-local
+and does not alter serialization, equality, hashing, or representation.
+
+| Public property | Type | Explicit governed load |
+| --- | --- | --- |
+| `Issue.parent` | `LazyRef[Issue | None]` | `issues.get(parent_id)` |
+| `Issue.project` | `LazyRef[Project | None]` | `projects.get(project_id)` |
+| `Issue.assignee_ref` | `LazyRef[Agent | Squad | None]` | `agents.get` / `squads.get` |
+| `Autopilot.project` | `LazyRef[Project | None]` | `projects.get(project_id)` |
+| `Autopilot.assignee` | `LazyRef[Agent | Squad]` | `agents.get` / `squads.get` |
+| `AutopilotRun.autopilot` | `LazyRef[Autopilot]` | `autopilots.get(autopilot_id)` |
+| `AutopilotRun.issue` | `LazyRef[Issue | None]` | `issues.get(issue_id)` |
+| `TaskRun.issue` | `LazyRef[Issue]` | `issues.get(issue_id)` |
+| `TaskRun.agent` | `LazyRef[Agent | None]` | `agents.get(agent_id)` |
+
+Reading a property and inspecting `loaded` are passive. `value` is also
+passive: it returns the cached target (including a loaded optional `None`) and
+raises `UnloadedReferenceError` while unloaded. Transport occurs only at an
+explicit `get()`, `refresh()`, `get_command().run()`,
+`refresh_command().run()`, or `client.prefetch(...)` call. An omitted optional
+field is missing context and raises `MissingRelationContextError` at load
+time; an explicit JSON `null` is a loaded absence and needs no request.
+
+`refresh()` replaces a loaded target atomically and retains the prior value if
+the request fails. Refreshing an explicit-null optional handle returns cached
+`None` through a no-step `refresh_command()` with zero I/O. Unsupported
+discriminators (including workspace-member or email assignment snapshots)
+raise `UnsupportedReferenceTargetError` before transport; the SDK does not
+scan a workspace to resolve them. Detached wrappers raise
+`DetachedEntityError` before any load.
+
+For bounded duplicate-aware loading, select a handle explicitly and set the
+worker bound. Equal target IDs with the same complete execution scope coalesce
+into one lookup, while different scopes remain separate jobs; each source
+wrapper receives an independent target and nested relation state:
+
+```python
+issues = client.issues.list(limit=20).items
+client.prefetch(issues, lambda issue: issue.parent, max_parallel=4)
+parents = tuple(issue.parent.value for issue in issues if issue.parent.loaded)
+```
+
+The prefetch operation skips loaded handles, including explicit-null absence,
+preserves earliest-input failure behavior, and never performs implicit loading
+when a property is inspected.

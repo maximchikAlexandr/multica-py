@@ -4,13 +4,14 @@ import datetime
 import os
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import CancelledError, Future, ThreadPoolExecutor, as_completed
-from typing import Protocol, TypeVar
+from typing import TypeVar, cast
 
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions, _apply_operation_options
+from multica_py.entities._base import _BoundEntity
 from multica_py.execution import CommandExecutor, LocalExecutor
-from multica_py.models.relations import LazyLoadable
+from multica_py.models.relations import LazyCollection, LazyLoadable, LazyMapping, LazyRef
 from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
@@ -33,25 +34,8 @@ from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
 from multica_py.sentinels import Unset, UnsetType
 
-TEntity = TypeVar("TEntity", bound="_BoundEntity")
+TEntity = TypeVar("TEntity", bound=_BoundEntity)
 TRelationValue_co = TypeVar("TRelationValue_co", covariant=True)
-
-
-class _OriginClient(Protocol):
-    _semaphore: ProcessSemaphore
-
-
-class _BoundEntity(Protocol):
-    @property
-    def _client(self) -> _OriginClient | None: ...
-
-
-def _load_relation(relation: LazyLoadable[TRelationValue_co]) -> None:
-    _ = relation.all()
-
-
-def _load_job(relation: LazyLoadable[TRelationValue_co]) -> Callable[[], None]:
-    return lambda: _load_relation(relation)
 
 
 class MulticaClient:
@@ -162,10 +146,32 @@ class MulticaClient:
     ) -> MulticaClient:
         return self.with_options(environment=environment)
 
+    def _singular_scope_key(self, target_type: str, target_id: str) -> tuple[object, ...]:
+        config = self._config
+        cwd = None if config.cwd is None else os.fspath(config.cwd)
+        return (
+            os.fspath(config.executable),
+            config.server_url,
+            config.profile,
+            config.workspace_id,
+            cwd,
+            tuple(config.environment),
+            config.timeout,
+            config.debug,
+            config.encoding,
+            config.compatibility,
+            config.min_cli_version,
+            config.max_cli_version,
+            id(self._executor),
+            id(self._semaphore),
+            target_type,
+            target_id,
+        )
+
     def prefetch(
         self,
         entities: Iterable[TEntity],
-        selector: Callable[[TEntity], LazyLoadable[TRelationValue_co]],
+        selector: Callable[[TEntity], LazyLoadable[TRelationValue_co] | LazyRef[object]],
         *,
         max_parallel: int = 4,
     ) -> None:
@@ -173,41 +179,98 @@ class MulticaClient:
             raise ValueError("max_parallel must be at least 1")
 
         entity_values = tuple(entities)
-        jobs: list[tuple[int, Callable[[], None]]] = []
-        seen: set[int] = set()
+        jobs: list[tuple[int, Callable[[], object]]] = []
+        job_specs: list[LazyLoadable[object] | list[LazyRef[object]]] = []
+        collection_ids: set[int] = set()
+        singular_jobs: dict[tuple[object, ...], list[LazyRef[object]]] = {}
         for entity in entity_values:
             origin = entity._client
-            if origin is None or origin._semaphore is not self._semaphore:
+            semaphore = cast("object | None", getattr(origin, "_semaphore", None))
+            if origin is None or semaphore is not self._semaphore:
                 raise ValueError("entities must share an origin scope")
-            relation = selector(entity)
-            if relation.loaded or id(relation) in seen:
+            selected: object = selector(entity)
+            if not isinstance(selected, (LazyRef, LazyCollection, LazyMapping)):
+                raise ValueError("selector must return LazyRef, LazyCollection, or LazyMapping")
+            if selected.loaded:
                 continue
-            seen.add(id(relation))
-            index = len(jobs)
-            jobs.append((index, _load_job(relation)))
+            if isinstance(selected, LazyRef):
+                singular = selected
+                key = singular._prefetch_key()
+                destinations = singular_jobs.get(key)
+                if destinations is None:
+                    destinations = [singular]
+                    singular_jobs[key] = destinations
+                    job_specs.append(destinations)
+                elif not any(destination is singular for destination in destinations):
+                    destinations.append(singular)
+                continue
+            relation = cast("LazyLoadable[object]", selected)
+            relation_id = id(relation)
+            if relation_id in collection_ids:
+                continue
+            collection_ids.add(relation_id)
+            job_specs.append(relation)
         failures: dict[int, Exception] = {}
-        futures: dict[Future[None], int] = {}
-        with ThreadPoolExecutor(max_workers=max_parallel) as executor:
-            for index, load in jobs:
-                futures[executor.submit(load)] = index
-            for future in as_completed(futures):
-                index = futures[future]
-                try:
-                    future.result()
-                except CancelledError:
+        futures: dict[Future[object], int] = {}
+        reserved_targets: list[tuple[LazyRef[object], int | None]] = []
+
+        try:
+            for index, spec in enumerate(job_specs):
+                if isinstance(spec, list):
+                    target_list: list[tuple[LazyRef[object], int | None]] = []
+                    for destination in spec:
+                        target_list.append((destination, destination._prefetch_reserve()))
+                    reserved_targets.extend(target_list)
+                    targets = tuple(target_list)
+                    primary, primary_generation = targets[0]
+
+                    def load_singular(
+                        primary: LazyRef[object] = primary,
+                        primary_generation: int | None = primary_generation,
+                        targets: tuple[tuple[LazyRef[object], int | None], ...] = targets,
+                    ) -> None:
+                        try:
+                            value = primary._prefetch_load(primary_generation)
+                            for target, generation in targets:
+                                if generation is not None:
+                                    target._prefetch_publish(generation, value)
+                        except Exception as error:
+                            for target, generation in targets:
+                                if generation is not None:
+                                    target._prefetch_fail(generation, error)
+                            raise
+
+                    jobs.append((index, load_singular))
                     continue
-                except Exception as error:
-                    failures[index] = error
-                    for pending in futures:
-                        if not pending.done():
-                            pending.cancel()
-            for future, index in futures.items():
-                try:
-                    future.result()
-                except CancelledError:
-                    continue
-                except Exception as error:
-                    failures.setdefault(index, error)
+
+                jobs.append((index, spec.all))
+
+            with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+                for index, load in jobs:
+                    futures[executor.submit(load)] = index
+                for future in as_completed(futures):
+                    index = futures[future]
+                    try:
+                        future.result()
+                    except CancelledError:
+                        continue
+                    except Exception as error:
+                        failures[index] = error
+                        for pending in futures:
+                            if not pending.done():
+                                pending.cancel()
+                for future, index in futures.items():
+                    try:
+                        future.result()
+                    except CancelledError:
+                        continue
+                    except Exception as error:
+                        failures.setdefault(index, error)
+        finally:
+            cancellation = RuntimeError("prefetch job did not execute")
+            for target, generation in reserved_targets:
+                if generation is not None:
+                    target._prefetch_fail(generation, cancellation)
         if failures:
             raise failures[min(failures)]
 

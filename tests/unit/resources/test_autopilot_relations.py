@@ -5,7 +5,6 @@ import datetime
 import gc
 import inspect
 import threading
-import types
 import weakref
 from typing import Literal, cast, get_type_hints
 from unittest.mock import MagicMock
@@ -33,6 +32,7 @@ from multica_py.models.relations import LazyCollection, LazyMapping
 from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.issues import IssueResource
 from multica_py.sentinels import UnsetType
+from tests.unit.resources._factories import bound_entity_factory
 
 
 @dataclasses.dataclass(frozen=True)
@@ -274,12 +274,24 @@ def test_get_binds_autopilot_and_seeds_only_present_relations(
     assert transport.run_bytes.call_count == 1
 
 
+@dataclasses.dataclass(frozen=True)
+class SeededRelationsCase:
+    name: str
+    seeded: bool
+
+
+SEEDED_RELATIONS_CASES = (
+    SeededRelationsCase("lazy", False),
+    SeededRelationsCase("seeded", True),
+)
+
+
 @pytest.mark.compat
-@pytest.mark.parametrize("seeded", (False, True), ids=("lazy", "seeded"))
-def test_autopilot_relation_loaders_do_not_retain_entity(seeded: bool) -> None:
+@pytest.mark.parametrize("case", SEEDED_RELATIONS_CASES, ids=lambda case: case.name)
+def test_autopilot_relation_loaders_do_not_retain_entity(case: SeededRelationsCase) -> None:
     client = MagicMock()
     kwargs: dict[str, object] = {"_client": client}
-    if seeded:
+    if case.seeded:
         kwargs.update(
             {
                 "triggers": (AutopilotTrigger(id="tr1", type="webhook"),),
@@ -299,7 +311,7 @@ def test_autopilot_relation_loaders_do_not_retain_entity(seeded: bool) -> None:
         **kwargs,
     )
     relations = (entity.triggers, entity.subscribers)
-    assert all(relation.loaded is seeded for relation in relations)
+    assert all(relation.loaded is case.seeded for relation in relations)
     reference = weakref.ref(entity)
 
     del entity
@@ -726,87 +738,85 @@ def test_trigger_operations_reject_invalid_context_before_transport(
     transport.run_text.assert_not_called()
 
 
-@pytest.mark.parametrize(
-    ("method", "parameters", "return_annotation"),
-    (
+@dataclasses.dataclass(frozen=True)
+class TriggerSignatureCase:
+    method: str
+    parameters: tuple[tuple[str, inspect._ParameterKind, object], ...]
+    return_annotation: object
+
+
+TRIGGER_SIGNATURE_CASES = (
+    TriggerSignatureCase(
+        "trigger_add",
         (
-            "trigger_add",
-            (
-                ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-                (
-                    "title",
-                    inspect.Parameter.KEYWORD_ONLY,
-                    str,
-                ),
-                ("kind", inspect.Parameter.KEYWORD_ONLY, str),
-                (
-                    "options",
-                    inspect.Parameter.KEYWORD_ONLY,
-                    OperationOptions | None,
-                ),
-            ),
-            AutopilotTrigger,
+            ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
+            ("title", inspect.Parameter.KEYWORD_ONLY, str),
+            ("kind", inspect.Parameter.KEYWORD_ONLY, str),
+            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
         ),
+        AutopilotTrigger,
+    ),
+    TriggerSignatureCase(
+        "trigger_update",
         (
-            "trigger_update",
-            (
-                ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-                ("trigger_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-                (
-                    "title",
-                    inspect.Parameter.KEYWORD_ONLY,
-                    str | UnsetType,
-                ),
-                ("kind", inspect.Parameter.KEYWORD_ONLY, str | UnsetType),
-                (
-                    "options",
-                    inspect.Parameter.KEYWORD_ONLY,
-                    OperationOptions | None,
-                ),
-            ),
-            AutopilotTrigger,
+            ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
+            ("trigger_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
+            ("title", inspect.Parameter.KEYWORD_ONLY, str | UnsetType),
+            ("kind", inspect.Parameter.KEYWORD_ONLY, str | UnsetType),
+            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
         ),
+        AutopilotTrigger,
+    ),
+    TriggerSignatureCase(
+        "trigger_delete",
         (
-            "trigger_delete",
-            (
-                ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-                ("trigger_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-                (
-                    "options",
-                    inspect.Parameter.KEYWORD_ONLY,
-                    OperationOptions | None,
-                ),
-            ),
-            ActionResult[None],
+            ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
+            ("trigger_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
+            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
         ),
+        ActionResult[None],
     ),
 )
+
+
+@pytest.mark.parametrize("case", TRIGGER_SIGNATURE_CASES, ids=lambda case: case.method)
 def test_trigger_public_signatures(
-    method: str,
-    parameters: tuple[tuple[str, inspect._ParameterKind, object], ...],
-    return_annotation: object,
+    case: TriggerSignatureCase,
 ) -> None:
-    signature = inspect.signature(getattr(AutopilotResource, method), eval_str=True)
+    signature = inspect.signature(getattr(AutopilotResource, case.method), eval_str=True)
     actual = tuple(signature.parameters.values())[1:]
 
-    assert tuple((item.name, item.kind, item.annotation) for item in actual) == parameters
-    assert signature.return_annotation == return_annotation
+    assert tuple((item.name, item.kind, item.annotation) for item in actual) == case.parameters
+    assert signature.return_annotation == case.return_annotation
 
 
-@pytest.mark.parametrize("max_parallel", [0, -1])
-def test_prefetch_rejects_invalid_parallelism_before_io(max_parallel: int) -> None:
+@dataclasses.dataclass(frozen=True)
+class InvalidParallelismCase:
+    name: str
+    value: int
+
+
+INVALID_PARALLELISM_CASES = (
+    InvalidParallelismCase("zero", 0),
+    InvalidParallelismCase("negative", -1),
+)
+
+
+@pytest.mark.parametrize("case", INVALID_PARALLELISM_CASES, ids=lambda case: case.name)
+def test_prefetch_rejects_invalid_parallelism_before_io(case: InvalidParallelismCase) -> None:
     client = MulticaClient(ClientConfig())
     relation: LazyCollection[object] = LazyCollection(lambda: ())
+    entity = bound_entity_factory(client)
 
     with pytest.raises(ValueError, match="max_parallel"):
-        client.prefetch([], lambda _entity: relation, max_parallel=max_parallel)
+        client.prefetch((entity,), lambda _entity: relation, max_parallel=case.value)
 
 
 def test_prefetch_accepts_heterogeneous_lazy_types() -> None:
     client = MulticaClient(ClientConfig())
     entities = (
-        types.SimpleNamespace(_client=client),
-        types.SimpleNamespace(_client=client),
+        bound_entity_factory(client, target_id="source-1"),
+        bound_entity_factory(client, target_id="source-2"),
     )
     relations: tuple[LazyCollection[object] | LazyMapping[object, object], ...] = (
         LazyCollection(lambda: ()),
@@ -821,7 +831,7 @@ def test_prefetch_accepts_heterogeneous_lazy_types() -> None:
 
 def test_prefetch_deduplicates_and_skips_loaded_relations() -> None:
     client = MulticaClient(ClientConfig())
-    entity = types.SimpleNamespace(_client=client)
+    entity = bound_entity_factory(client)
     calls = {"shared": 0, "loaded": 0}
 
     def count_loader(key: str) -> tuple[object, ...]:
@@ -842,8 +852,8 @@ def test_prefetch_accepts_derived_views_with_common_semaphore() -> None:
     client = MulticaClient(ClientConfig())
     derived = client.with_workspace("w1")
     entities = (
-        types.SimpleNamespace(_client=client),
-        types.SimpleNamespace(_client=derived),
+        bound_entity_factory(client, target_id="source-1"),
+        bound_entity_factory(derived, target_id="source-2"),
     )
     relations: tuple[LazyCollection[object], ...] = (
         LazyCollection(lambda: ()),
@@ -858,8 +868,8 @@ def test_prefetch_rejects_mixed_origin_scopes_before_selector_io() -> None:
     client = MulticaClient(ClientConfig())
     other = MulticaClient(ClientConfig())
     entities = (
-        types.SimpleNamespace(_client=client),
-        types.SimpleNamespace(_client=other),
+        bound_entity_factory(client, target_id="source-1"),
+        bound_entity_factory(other, target_id="source-2"),
     )
     calls = {"selector": 0}
 
@@ -874,7 +884,7 @@ def test_prefetch_rejects_mixed_origin_scopes_before_selector_io() -> None:
 
 def test_prefetch_raises_lowest_failed_input_and_cancels_pending() -> None:
     client = MulticaClient(ClientConfig())
-    entity = types.SimpleNamespace(_client=client)
+    entity = bound_entity_factory(client)
     release_first = threading.Event()
     first_started = threading.Event()
     calls = {"first": 0, "second": 0, "pending": 0}

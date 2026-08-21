@@ -142,6 +142,39 @@ class MissingRelationContextError(RelationError):
         self.missing_field = missing_field
 
 
+class UnloadedReferenceError(RelationError):
+    def __init__(self, entity_type: str, entity_id: str, relation_name: str) -> None:
+        super().__init__(
+            f"Cannot access {entity_type}.{relation_name}.value: "
+            f"reference is unloaded for {entity_type} '{entity_id}'. "
+            "Call get() or prefetch() first."
+        )
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+        self.relation_name = relation_name
+
+
+class UnsupportedReferenceTargetError(RelationError):
+    def __init__(
+        self,
+        entity_type: str,
+        entity_id: str,
+        relation_name: str,
+        discriminator: str,
+        value: str,
+    ) -> None:
+        super().__init__(
+            f"Cannot access {entity_type}.{relation_name}: "
+            f"unsupported reference target {discriminator}={value!r} "
+            f"for {entity_type} '{entity_id}'."
+        )
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+        self.relation_name = relation_name
+        self.discriminator = discriminator
+        self.value = value
+
+
 class RelationPaginationError(RelationError):
     def __init__(self, relation_name: str, reason: str) -> None:
         super().__init__(f"Pagination error on {relation_name}: {reason}")

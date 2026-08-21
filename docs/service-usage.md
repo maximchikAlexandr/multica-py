@@ -356,6 +356,52 @@ client.prefetch(issues, lambda issue: issue.labels, max_parallel=4)
 `prefetch()` skips loaded relations, deduplicates repeated handles, respects
 the shared process semaphore, and reports the earliest input failure.
 
+## Use typed singular references explicitly
+
+The singular-reference API is available for the reviewed compatibility interval
+`[0.4.28, 0.4.29)`. Use the dedicated import; it is intentionally not a root
+or `multica_py.models` import:
+
+```python
+from multica_py.models.relations import LazyRef
+```
+
+Exactly nine passive handles are supported:
+
+| Property | Type | Governed service |
+| --- | --- | --- |
+| `Issue.parent` | `LazyRef[Issue | None]` | `issues.get` |
+| `Issue.project` | `LazyRef[Project | None]` | `projects.get` |
+| `Issue.assignee_ref` | `LazyRef[Agent | Squad | None]` | `agents.get` / `squads.get` |
+| `Autopilot.project` | `LazyRef[Project | None]` | `projects.get` |
+| `Autopilot.assignee` | `LazyRef[Agent | Squad]` | `agents.get` / `squads.get` |
+| `AutopilotRun.autopilot` | `LazyRef[Autopilot]` | `autopilots.get` |
+| `AutopilotRun.issue` | `LazyRef[Issue | None]` | `issues.get` |
+| `TaskRun.issue` | `LazyRef[Issue]` | `issues.get` |
+| `TaskRun.agent` | `LazyRef[Agent | None]` | `agents.get` |
+
+Property access, `loaded`, `value`, and command inspection are zero-I/O. Use
+`get()` or `get_command().run()` to load an unloaded target, and use
+`refresh()` or `refresh_command().run()` to replace a loaded target. A loaded
+optional `None` represents explicit absence: `get()` and `refresh()` return it
+without I/O and their commands are no-step plans. Omitted optional fields raise
+`MissingRelationContextError`; detached sources raise `DetachedEntityError`;
+unsupported assignee kinds, including v0.4.28 workspace-member/email results,
+raise `UnsupportedReferenceTargetError` before any transport call.
+
+For a bounded batch, prefetch the selected handle and then read `.value`:
+
+```python
+issues = client.issues.list(limit=20).items
+client.prefetch(issues, lambda issue: issue.project, max_parallel=2)
+projects = tuple(issue.project.value for issue in issues if issue.project.loaded)
+```
+
+`prefetch()` skips loaded absence, coalesces equal target and complete
+execution scopes, keeps different scopes separate and bounded, and publishes
+independent destination-bound targets. Inspecting a property never triggers a
+hidden lookup; explicit I/O remains at the operations listed above.
+
 ## Guard state transitions
 
 Read the current entity immediately before changing status. This does not make
