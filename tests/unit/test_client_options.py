@@ -175,7 +175,7 @@ def test_client_config_keeps_app_settings_independent_from_api_settings() -> Non
         workspace_slug="team",
     )
 
-    assert config.server_url == "https://api.example.test/"
+    assert config.server_url == "https://api.example.test"
     assert config.app_url == "https://multica.ai"
     assert config.workspace_slug == "team"
 

@@ -17,9 +17,10 @@ from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities._base import _BoundEntity
 from multica_py.entities.autopilots import Autopilot, AutopilotRun
 from multica_py.enums import AutopilotExecutionMode
-from multica_py.exceptions import MissingRelationContextError
+from multica_py.exceptions import DetachedEntityError, MissingRelationContextError
 from multica_py.models.autopilots import (
     AutopilotListPage,
     AutopilotRunListPage,
@@ -864,22 +865,65 @@ def test_prefetch_accepts_derived_views_with_common_semaphore() -> None:
     client.prefetch(entities, lambda _entity: next(relation_iter), max_parallel=2)
 
 
-def test_prefetch_rejects_mixed_origin_scopes_before_selector_io() -> None:
+@dataclasses.dataclass(frozen=True)
+class PrefetchOriginRejectCase:
+    name: str
+    error: type[BaseException]
+    match: str
+    selector_calls: int
+    detach_first: bool
+    entity_ids: tuple[str, ...]
+
+
+PREFETCH_ORIGIN_REJECT_CASES = (
+    PrefetchOriginRejectCase(
+        "mixed-origin",
+        ValueError,
+        "origin",
+        1,
+        False,
+        ("source-1", "source-2"),
+    ),
+    PrefetchOriginRejectCase(
+        "detached",
+        DetachedEntityError,
+        "detached",
+        0,
+        True,
+        ("ent-1",),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", PREFETCH_ORIGIN_REJECT_CASES, ids=lambda case: case.name)
+def test_prefetch_rejects_invalid_origin_before_selector_io(
+    case: PrefetchOriginRejectCase,
+) -> None:
     client = MulticaClient(ClientConfig())
-    other = MulticaClient(ClientConfig())
-    entities = (
-        bound_entity_factory(client, target_id="source-1"),
-        bound_entity_factory(other, target_id="source-2"),
-    )
+    entities: tuple[_BoundEntity, ...]
+    if case.detach_first:
+        entities = (bound_entity_factory(client, target_id=case.entity_ids[0]).detach(),)
+    else:
+        other = MulticaClient(ClientConfig())
+        entities = (
+            bound_entity_factory(client, target_id=case.entity_ids[0]),
+            bound_entity_factory(other, target_id=case.entity_ids[1]),
+        )
     calls = {"selector": 0}
 
     def selector(_entity: object) -> LazyCollection[object]:
         calls["selector"] += 1
         return LazyCollection(lambda: ())
 
-    with pytest.raises(ValueError, match="origin"):
+    with pytest.raises(case.error, match=case.match) as exc_info:
         client.prefetch(entities, selector, max_parallel=1)
-    assert calls["selector"] == 1
+    assert calls["selector"] == case.selector_calls
+    if case.error is DetachedEntityError:
+        error = exc_info.value
+        assert isinstance(error, DetachedEntityError)
+        assert error.entity_type == "Issue"
+        assert error.entity_id == case.entity_ids[0]
+        assert error.relation_name == "prefetch"
 
 
 def test_prefetch_raises_lowest_failed_input_and_cancels_pending() -> None:

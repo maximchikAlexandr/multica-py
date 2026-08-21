@@ -106,19 +106,20 @@ WORKSPACE_RELATION_CASES = (
 @dataclass(frozen=True)
 class GuardCase:
     name: str
+    reason: str
 
 
 OFFSET_GUARD_CASES = (
-    GuardCase("repeated-offset"),
-    GuardCase("item-budget"),
-    GuardCase("empty-page"),
+    GuardCase("repeated-offset", "repeated_offset"),
+    GuardCase("item-budget", "item_limit_exceeded"),
+    GuardCase("empty-page", "empty_page"),
 )
 
 CURSOR_GUARD_CASES = (
-    GuardCase("page-budget"),
-    GuardCase("item-budget"),
-    GuardCase("empty-page"),
-    GuardCase("repeated-cursor"),
+    GuardCase("page-budget", "page_limit_exceeded"),
+    GuardCase("item-budget", "item_limit_exceeded"),
+    GuardCase("empty-page", "empty_page"),
+    GuardCase("repeated-cursor", "repeated_cursor"),
 )
 
 
@@ -381,8 +382,9 @@ def test_offset_command_guards_are_behavioral(
         stderr=b"",
         duration=datetime.timedelta(),
     )
-    with pytest.raises(RelationPaginationError, match=r"repeated_offset|empty_page"):
+    with pytest.raises(RelationPaginationError) as exc_info:
         relation.all_command().run()
+    assert exc_info.value.reason == case.reason
 
 
 def test_offset_command_requires_offset_in_page_argv() -> None:
@@ -577,8 +579,9 @@ def test_cursor_command_guards_are_behavioral(
     relation = CursorLazyCollection(
         lambda *, cursor: CursorPage((), None), page_command_loader=page_command
     )
-    with pytest.raises(RelationPaginationError, match=r"repeated_cursor|empty_page"):
+    with pytest.raises(RelationPaginationError) as exc_info:
         relation.all_command().run()
+    assert exc_info.value.reason == case.reason
 
 
 def test_cursor_direct_loader_rejects_empty_progress_page() -> None:
