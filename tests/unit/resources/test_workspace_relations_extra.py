@@ -1156,8 +1156,14 @@ def test_generation_refresh_during_inflight_load_is_strict(case: _GenerationCase
     assert not refresh_thread.is_alive()
 
     assert calls == 2
-    assert first_values and refresh_values
-    assert first_values[0] != refresh_values[0]
+    if case.name == "mapping":
+        first_mapping = cast("Mapping[str, str]", first_values[0])
+        refresh_mapping = cast("Mapping[str, str]", refresh_values[0])
+        assert dict(first_mapping) == {"value": "value-1"}
+        assert dict(refresh_mapping) == {"value": "value-2"}
+    else:
+        assert first_values == [("value-1",)]
+        assert refresh_values == [("value-2",)]
 
 
 @pytest.mark.parametrize("case", _GENERATION_CASES, ids=lambda case: case.name)
