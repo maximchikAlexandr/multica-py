@@ -19,6 +19,7 @@ from multica_py.exceptions import (
     ExecutableNotFoundError,
     MulticaError,
     NetworkError,
+    ProcessTimeoutError,
 )
 from multica_py.execution import (
     CommandExecutor,
@@ -129,7 +130,7 @@ def _assert_local_spawn_request(executor: CommandExecutor) -> None:
             timeout=datetime.timedelta(milliseconds=1),
         )
     )
-    with pytest.raises(TimeoutError):
+    with pytest.raises(ProcessTimeoutError):
         timed.collect()
     timed.kill()
     assert timed.wait(datetime.timedelta(seconds=3)) != 0

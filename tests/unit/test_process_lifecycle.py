@@ -22,7 +22,10 @@ from multica_py._internal.processes import (
 from multica_py.exceptions import (
     CommandCancelledError,
     CommandTimeoutError,
+    EncodingError,
+    MulticaError,
     ProcessOutputModeError,
+    ProcessTimeoutError,
 )
 from multica_py.execution.local import LocalProcessHandle
 from multica_py.process import ManagedProcess, ProcessResult
@@ -58,6 +61,15 @@ class ResultCase:
     stdout: bytes
     stderr: bytes
     ok: bool
+
+
+@pytest.mark.parametrize(
+    "error_type",
+    (ProcessTimeoutError, EncodingError),
+    ids=("process-timeout", "encoding"),
+)
+def test_spawn_path_errors_are_multica_errors(error_type: type[Exception]) -> None:
+    assert issubclass(error_type, MulticaError)
 
 
 def test_cancellation_token_tracks_attached_process() -> None:
@@ -183,7 +195,7 @@ def test_managed_process_wait_timeout_preserves_semaphore() -> None:
     process.communicate.side_effect = subprocess.TimeoutExpired(("multica",), 1)
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), ("multica",), semaphore)
-    with pytest.raises(TimeoutError, match="wait timed out"):
+    with pytest.raises(ProcessTimeoutError, match="wait timed out"):
         managed.wait(datetime.timedelta(seconds=1))
     semaphore.release.assert_not_called()
     process.communicate.side_effect = None
@@ -390,7 +402,7 @@ def test_managed_process_result_timeout_is_retryable_without_cleanup_or_cache() 
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
-    with pytest.raises(TimeoutError, match="wait timed out"):
+    with pytest.raises(ProcessTimeoutError, match="wait timed out"):
         managed.result(datetime.timedelta(seconds=1))
     assert managed._result is None
     semaphore.release.assert_not_called()
@@ -414,7 +426,7 @@ def test_managed_process_result_zero_timeout_is_forwarded_and_retryable() -> Non
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
-    with pytest.raises(TimeoutError, match="wait timed out"):
+    with pytest.raises(ProcessTimeoutError, match="wait timed out"):
         managed.result(datetime.timedelta(0))
 
     assert managed._result is None
@@ -479,7 +491,7 @@ def test_managed_process_rejects_stream_after_buffered_collection_before_pipe_re
     process.communicate.side_effect = subprocess.TimeoutExpired(("multica",), 1)
     process.stdout = io.BytesIO(b"one\n")
     managed = ManagedProcess(LocalProcessHandle(process))
-    with pytest.raises(TimeoutError, match="wait timed out"):
+    with pytest.raises(ProcessTimeoutError, match="wait timed out"):
         managed.result(datetime.timedelta(seconds=1))
 
     stream = managed.stdout_lines()
@@ -513,7 +525,7 @@ def test_managed_process_decode_failure_finalizes_without_caching() -> None:
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
-    with pytest.raises(UnicodeDecodeError):
+    with pytest.raises(EncodingError):
         managed.result()
 
     assert managed._result is None
@@ -540,3 +552,14 @@ def test_managed_process_signals_without_finalizing_before_result() -> None:
     assert terminate.call_args_list.count(call(process)) == 1
     assert kill.call_args_list.count(call(process)) == 1
     semaphore.release.assert_called_once_with()
+
+
+@pytest.mark.parametrize("stream_name", ("stdout", "stderr"))
+def test_managed_process_stream_decode_failure_raises_encoding_error(stream_name: str) -> None:
+    process = _process(poll=0)
+    setattr(process, stream_name, io.BytesIO(b"\xff\xfe\n"))
+    managed = ManagedProcess(LocalProcessHandle(process))
+
+    stream = managed.stdout_lines() if stream_name == "stdout" else managed.stderr_lines()
+    with pytest.raises(EncodingError):
+        next(stream)
