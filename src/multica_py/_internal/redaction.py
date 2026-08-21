@@ -18,6 +18,7 @@ REDACTED = "***"
 # process.  The extra byte read is what makes the limit deterministic without
 # trusting a racy stat result.
 MAX_SECRET_FILE_BYTES = 1024 * 1024
+MIN_ENV_SECRET_VALUE_LEN = 8
 
 _token_pattern = re.compile(r"--token(?:[= ])(\S+)", re.IGNORECASE)
 _token_text_pattern = re.compile(
@@ -344,9 +345,18 @@ def _url_query_components(query: str, fragment: str) -> tuple[str, ...]:
 
 
 def collect_secret_values_from_environment(env: Mapping[str, str]) -> tuple[str, ...]:
-    """Collect values from environment keys that conventionally carry secrets."""
+    """Collect values from environment keys that conventionally carry secrets.
+
+    Values shorter than ``MIN_ENV_SECRET_VALUE_LEN`` are skipped: a one- or
+    two-character value would redact every occurrence of that character in
+    diagnostics, destroying error messages instead of protecting secrets.
+    Explicit ``--token`` / file / stdin channels are collected elsewhere and
+    are not filtered by this threshold.
+    """
     return normalize_secret_values(
-        value for key, value in env.items() if value and _is_secret_key(key)
+        value
+        for key, value in env.items()
+        if value and len(value) >= MIN_ENV_SECRET_VALUE_LEN and _is_secret_key(key)
     )
 
 

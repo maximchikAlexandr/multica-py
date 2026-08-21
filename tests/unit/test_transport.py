@@ -15,8 +15,10 @@ import pytest
 
 from multica_py._internal.redaction import (
     MAX_SECRET_FILE_BYTES,
+    MIN_ENV_SECRET_VALUE_LEN,
     collect_diagnostic_secret_bytes,
     collect_secret_values,
+    collect_secret_values_from_environment,
     redact_argv,
     redact_diagnostic_argv,
     redact_text,
@@ -87,6 +89,31 @@ class DetailCase:
 class EnvironmentSecretCase:
     id: str
     env_key: str
+
+
+@dataclass(frozen=True)
+class ShortEnvSecretCase:
+    """Secret values from env keys whose short value must NOT corrupt diagnostics."""
+
+    id: str
+    env_key: str
+    short_value: str
+    diagnostic: str
+
+
+@dataclass(frozen=True)
+class EnvSecretCollectCase:
+    id: str
+    env: tuple[tuple[str, str], ...]
+    expected: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ExplicitShortSecretCase:
+    id: str
+    argv: tuple[str, ...]
+    stdin: bytes | None
+    expected: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -571,6 +598,63 @@ _ENVIRONMENT_SECRET_CASES: tuple[EnvironmentSecretCase, ...] = (
     EnvironmentSecretCase("suffixed-passwd", "PASSWD_SUFFIX"),
     EnvironmentSecretCase("camel-client-secret", "clientSecret"),
     EnvironmentSecretCase("whitespace-api-key", "api key"),
+)
+
+_SHORT_ENV_SECRET_CASES: tuple[ShortEnvSecretCase, ...] = (
+    ShortEnvSecretCase(
+        "one-char-api-key",
+        "API_KEY",
+        "1",
+        "failed to open /home/1user/project: no such file",
+    ),
+    ShortEnvSecretCase(
+        "three-char-auth-token",
+        "AUTH_TOKEN",
+        "dev",
+        "failed to connect to dev-server.example.com: connection refused",
+    ),
+    ShortEnvSecretCase(
+        "seven-char-secret",
+        "MULTICA_SECRET",
+        "abcdefg",
+        "config path /tmp/abcdefg/config.yaml not found",
+    ),
+)
+
+_ENV_SECRET_COLLECT_CASES: tuple[EnvSecretCollectCase, ...] = (
+    EnvSecretCollectCase("one-char", (("API_KEY", "1"),), ()),
+    EnvSecretCollectCase("three-char", (("AUTH_TOKEN", "dev"),), ()),
+    EnvSecretCollectCase(
+        "below-threshold",
+        (("MULTICA_SECRET", "x" * (MIN_ENV_SECRET_VALUE_LEN - 1)),),
+        (),
+    ),
+    EnvSecretCollectCase(
+        "at-threshold",
+        (("API_KEY", "x" * MIN_ENV_SECRET_VALUE_LEN),),
+        ("x" * MIN_ENV_SECRET_VALUE_LEN,),
+    ),
+    EnvSecretCollectCase(
+        "non-secret-key",
+        (("HOME", "x" * MIN_ENV_SECRET_VALUE_LEN),),
+        (),
+    ),
+    EnvSecretCollectCase(
+        "mixed",
+        (("API_KEY", "1"), ("MULTICA_TOKEN", "x" * MIN_ENV_SECRET_VALUE_LEN)),
+        ("x" * MIN_ENV_SECRET_VALUE_LEN,),
+    ),
+)
+
+_EXPLICIT_SHORT_SECRET_CASES: tuple[ExplicitShortSecretCase, ...] = (
+    ExplicitShortSecretCase("token-one-char", ("--token", "1"), None, ("1",)),
+    ExplicitShortSecretCase("token-three-char", ("--token", "dev"), None, ("dev",)),
+    ExplicitShortSecretCase(
+        "credential-stdin-three-char",
+        ("--credential-stdin",),
+        b"dev",
+        ("dev",),
+    ),
 )
 
 _URL_SECRET_CASES: tuple[UrlSecretCase, ...] = (
@@ -1177,6 +1261,37 @@ def test_transport_redacts_inherited_environment_secret_with_empty_config(
         assert secret not in rendered
     assert exc.stdout == "***"
     assert exc.stderr == "***"
+
+
+@pytest.mark.parametrize("case", _ENV_SECRET_COLLECT_CASES, ids=lambda case: case.id)
+def test_collect_secret_values_from_environment_skips_short_values(
+    case: EnvSecretCollectCase,
+) -> None:
+    assert collect_secret_values_from_environment(dict(case.env)) == case.expected
+
+
+@pytest.mark.parametrize("case", _EXPLICIT_SHORT_SECRET_CASES, ids=lambda case: case.id)
+def test_collect_secret_values_keeps_short_explicit_channels(
+    case: ExplicitShortSecretCase,
+) -> None:
+    assert collect_secret_values(case.argv, stdin=case.stdin) == case.expected
+
+
+@pytest.mark.parametrize("case", _SHORT_ENV_SECRET_CASES, ids=lambda case: case.id)
+def test_transport_short_env_secret_does_not_corrupt_diagnostics(
+    case: ShortEnvSecretCase,
+) -> None:
+    config = ClientConfig(
+        executable=sys.executable,
+        environment=((case.env_key, case.short_value),),
+    )
+    transport = CliTransport(config)
+    code = f"import sys; sys.stderr.write({case.diagnostic!r}); sys.exit(1)"
+
+    with pytest.raises(CommandExecutionError) as excinfo:
+        transport.run_text(("-c", code))
+
+    assert excinfo.value.stderr == case.diagnostic
 
 
 @pytest.mark.parametrize(
