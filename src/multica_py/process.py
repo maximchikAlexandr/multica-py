@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import datetime
 from collections.abc import Callable, Iterator
 
@@ -172,9 +173,10 @@ class ManagedProcess:
             self.terminate()
             try:
                 self._handle.wait(datetime.timedelta(seconds=3))
-            except TimeoutError:
+            except ProcessTimeoutError:
                 self.kill()
-                self._handle.wait(datetime.timedelta(seconds=3))
+                with contextlib.suppress(ProcessTimeoutError):
+                    self._handle.wait(datetime.timedelta(seconds=3))
         self._finalize()
 
     def __enter__(self) -> ManagedProcess:

@@ -47,7 +47,7 @@ class CommandTimeoutError(MulticaError):
     pass
 
 
-class ProcessTimeoutError(CommandTimeoutError, TimeoutError):
+class ProcessTimeoutError(CommandTimeoutError):
     pass
 
 

@@ -369,8 +369,6 @@ class MicrosandboxExecutor:
             return future.result(timeout)
         except TimeoutError as error:
             future.cancel()
-            if isinstance(error, ProcessTimeoutError):
-                raise
             raise ProcessTimeoutError("Microsandbox operation timed out") from error
 
     def _provider_call(
