@@ -17,7 +17,7 @@ from multica_py._internal.commands import (
     _sequential_command,
     _Step,
 )
-from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig, OperationOptions
@@ -163,6 +163,29 @@ def test_composite_steps_retain_one_snapshot_and_semaphore() -> None:
     assert command._plan.transport._semaphore is transport._semaphore
     assert command._plan.steps[0].argv == ("first",)
     assert command._plan.steps[1].argv == ("second",)
+
+
+def test_run_text_decode_reencodes_non_ascii_as_utf8() -> None:
+    config = ClientConfig()
+    transport = CliTransport(config)
+    text = '{"title": "Задача — café"}'
+    transport.run_text = MagicMock(return_value=TextResult(text, "", 0))  # type: ignore[method-assign]
+    resource = BaseResource(transport, config)
+    seen: list[bytes] = []
+
+    def decode(data: bytes, _command: str) -> object:
+        seen.append(data)
+        return data.decode("utf-8")
+
+    result = resource._plan(
+        steps=(_Step(("issue", "get", "i1"), "run_text", decode=decode),),
+        finalize=lambda results: cast("str", results[0]),
+    ).run()
+
+    assert seen == [text.encode("utf-8")]
+    assert result == text
+    transport.run_text.assert_called_once_with(("issue", "get", "i1"))
+    transport.close()
 
 
 def test_mapped_and_cached_commands_retain_one_effective_snapshot() -> None:
