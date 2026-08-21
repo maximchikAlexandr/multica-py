@@ -18,12 +18,6 @@ REDACTED = "***"
 # process.  The extra byte read is what makes the limit deterministic without
 # trusting a racy stat result.
 MAX_SECRET_FILE_BYTES = 1024 * 1024
-
-# Minimum length for a secret value to be redacted as a bare substring.
-# Values shorter than this threshold are too likely to appear in unrelated
-# diagnostics (paths, common words, single characters) to be safely masked.
-# Explicit secret arguments/files bypass this threshold because the value is
-# known to be a real credential.
 MIN_ENV_SECRET_VALUE_LEN = 8
 
 _token_pattern = re.compile(r"--token(?:[= ])(\S+)", re.IGNORECASE)
@@ -356,6 +350,8 @@ def collect_secret_values_from_environment(env: Mapping[str, str]) -> tuple[str,
     Values shorter than ``MIN_ENV_SECRET_VALUE_LEN`` are skipped: a one- or
     two-character value would redact every occurrence of that character in
     diagnostics, destroying error messages instead of protecting secrets.
+    Explicit ``--token`` / file / stdin channels are collected elsewhere and
+    are not filtered by this threshold.
     """
     return normalize_secret_values(
         value
