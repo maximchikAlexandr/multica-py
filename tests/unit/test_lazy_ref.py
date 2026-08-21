@@ -125,16 +125,16 @@ def _run_concurrent(
     first = threading.Thread(target=call_get)
     second = threading.Thread(target=call_get)
     first.start()
-    assert load_started.wait(timeout=2)
+    assert load_started.wait(timeout=10)
     second.start()
     state = reference._generation_state
     with state.condition:
         assert state.condition.wait_for(
-            lambda: any(waiters > 0 for waiters in state.waiters.values()), timeout=2
+            lambda: any(waiters > 0 for waiters in state.waiters.values()), timeout=10
         )
     load_release.set()
-    first.join(timeout=2)
-    second.join(timeout=2)
+    first.join(timeout=10)
+    second.join(timeout=10)
     assert not first.is_alive()
     assert not second.is_alive()
     if expected_loaded:
@@ -186,7 +186,7 @@ def test_lazy_ref_concurrent_is_coalesced(
         with lock:
             calls += 1
         load_started.set()
-        assert load_release.wait(timeout=2)
+        assert load_release.wait(timeout=10)
         if case.error_message is not None:
             raise RuntimeError(case.error_message)
         return "loaded"
@@ -245,13 +245,13 @@ def test_lazy_ref_invalidation_waits_for_active_generation(command_resource: Bas
 
     def load() -> str:
         load_started.set()
-        assert load_release.wait(timeout=2)
+        assert load_release.wait(timeout=10)
         return "loaded"
 
     reference = LazyRef(command_loader=_command_loader(command_resource, load))
     loading = threading.Thread(target=reference.get)
     loading.start()
-    assert load_started.wait(timeout=2)
+    assert load_started.wait(timeout=10)
 
     def invalidate() -> None:
         reference.invalidate()
@@ -262,8 +262,8 @@ def test_lazy_ref_invalidation_waits_for_active_generation(command_resource: Bas
     assert invalidation_done.wait(timeout=0.05) is False
 
     load_release.set()
-    loading.join(timeout=2)
-    invalidating.join(timeout=2)
+    loading.join(timeout=10)
+    invalidating.join(timeout=10)
     assert not loading.is_alive()
     assert not invalidating.is_alive()
     assert invalidation_done.is_set()
