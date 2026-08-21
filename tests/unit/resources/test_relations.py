@@ -9,7 +9,7 @@ from multica_py.exceptions import (
     UnloadedReferenceError,
     UnsupportedReferenceTargetError,
 )
-from multica_py.models.relations import LazyCollection
+from multica_py.models.relations import LazyCollection, _GenerationState
 
 _PLANNED = ProjectStatus("planned")
 
@@ -88,3 +88,34 @@ def test_reference_errors_have_typed_fields_and_stable_messages() -> None:
         "Cannot access Issue.assignee_ref: unsupported reference target "
         "assignee_type='member' for Issue 'i1'."
     )
+
+
+class _Interrupt(BaseException):
+    pass
+
+
+@pytest.mark.parametrize(
+    ("exc", "exc_type"),
+    [(RuntimeError("interrupt"), RuntimeError), (_Interrupt("interrupt"), _Interrupt)],
+    ids=["exception", "base_exception"],
+)
+def test_generation_state_recovers_after_base_exception(
+    exc: Exception, exc_type: type[Exception]
+) -> None:
+    state: _GenerationState[str] = _GenerationState("")
+    attempts = 0
+
+    def load() -> str:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise exc
+        return "loaded"
+
+    with pytest.raises(exc_type, match="interrupt"):
+        state.run(force=False, load=load)
+    assert state.loaded is False
+
+    assert state.run(force=False, load=load) == "loaded"
+    assert state.loaded is True
+    assert attempts == 2  # type: ignore[unreachable]

@@ -137,9 +137,7 @@ class _CommandPlan(Generic[T_co]):
                 text_result = self.transport.run_text(argv, stdin=step.stdin, timeout=step.timeout)
             if step.decode is None:
                 return text_result
-            return step.decode(
-                text_result.text.encode(self.config_snapshot.encoding), " ".join(argv)
-            )
+            return step.decode(text_result.text.encode("utf-8"), " ".join(argv))
         return self.transport.spawn(argv)
 
     def _resolve_ref(

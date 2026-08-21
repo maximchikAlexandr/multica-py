@@ -70,6 +70,7 @@ before transport access.
 | operation-specific timeout/profile kwargs | `client.issues.list(limit=50, options=OperationOptions(timeout=30))` |
 | shell-string escape hatch | `client.cli.command("issue", "get", issue_id, options=options)` → `Command[CliResult]` |
 | API URL used as a frontend permalink origin | `ClientConfig(app_url=app_url, workspace_slug=slug)` then `issue.permalink()` or `project.permalink()` |
+| `ClientConfig(encoding=...)` | omit it; CLI stdout/stderr decoding is UTF-8 only |
 
 `Issue.permalink()` and `Project.permalink()` are local-only, URL-encode path
 segments, require a bound client and both routing values, and perform no I/O.

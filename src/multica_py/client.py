@@ -158,7 +158,6 @@ class MulticaClient:
             tuple(config.environment),
             config.timeout,
             config.debug,
-            config.encoding,
             config.compatibility,
             config.min_cli_version,
             config.max_cli_version,

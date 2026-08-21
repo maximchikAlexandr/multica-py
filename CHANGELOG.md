@@ -53,6 +53,7 @@ uses the four `move_*` verbs, and project issue creation is
 `attachments.upload(payload, filename=...)` (with `upload_bytes` as an exact
 alias), `client.cli.command(*argv, options=None)` for bounded raw argv, and
 `ClientConfig(app_url=..., workspace_slug=...)` for passive entity permalinks.
+`ClientConfig.encoding` is removed; CLI output is UTF-8 only.
 
 Advanced filters, pages, cursor/metadata/value types, relation implementations,
 resource outputs, and `CliResult` are imported from their dedicated modules;

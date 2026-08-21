@@ -384,7 +384,6 @@ SCOPE_COMPONENT_CASES = (
     ScopeComponentCase("environment", "environment", (("X", "b"), ("X", "a")), False),
     ScopeComponentCase("timeout", "timeout", datetime.timedelta(seconds=12), False),
     ScopeComponentCase("debug", "debug", True, False),
-    ScopeComponentCase("encoding", "encoding", "utf-16", False),
     ScopeComponentCase("compatibility", "compatibility", CompatibilityPolicy.strict, False),
     ScopeComponentCase("min-cli", "min_cli_version", "0.4.28", False),
     ScopeComponentCase("max-cli", "max_cli_version", "0.4.29", False),

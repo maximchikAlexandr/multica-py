@@ -166,7 +166,6 @@ class ClientConfig(msgspec.Struct, frozen=True, kw_only=True):
     min_cli_version: str | None = None
     max_cli_version: str | None = None
     debug: bool = False
-    encoding: str = "utf-8"
     max_processes: int = 4
 
     def __post_init__(self) -> None:
