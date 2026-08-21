@@ -160,7 +160,6 @@ type-check = ["mypy>=1.8"]
 source_paths = [
   "src/multica_py/_internal/transport.py",
   "src/multica_py/_internal/decoders.py",
-  "src/multica_py/exceptions.py",
   "src/multica_py/_internal/redaction.py",
   "src/multica_py/config.py",
 ]
