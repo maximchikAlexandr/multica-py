@@ -1112,6 +1112,7 @@ def test_generation_waiters_get_distinct_exception_instances(case: _GenerationCa
         assert not thread.is_alive()
 
     assert len(errors) == 3
+    assert sum(e is error for e in errors) == 1
     assert all(type(e) is type(error) for e in errors)
     assert all(e.args == error.args for e in errors)
     clones = [e for e in errors if e is not error]
@@ -1199,12 +1200,11 @@ def test_generation_outcomes_survive_a_three_party_later_generation(
     assert not retry.is_alive()
 
     assert len(owner_errors) == 1
-    assert type(owner_errors[0]) is type(first_error)
-    assert owner_errors[0].args == first_error.args
+    assert owner_errors[0] is first_error
     assert len(waiter_errors) == 1
     assert type(waiter_errors[0]) is type(first_error)
     assert waiter_errors[0].args == first_error.args
-    assert owner_errors[0] is not waiter_errors[0]
+    assert waiter_errors[0] is not first_error
     assert retry_values
     assert calls == 2
     assert not relation._generation_state.outcomes
