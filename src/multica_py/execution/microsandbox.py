@@ -17,11 +17,11 @@ from multica_py._internal.decoders import decode_text
 from multica_py.exceptions import (
     ExecutableNotFoundError,
     ExecutableNotRunnableError,
+    MulticaError,
     ProcessTimeoutError,
 )
 from multica_py.execution.base import (
     ExecutionConnectionError,
-    ExecutionError,
     ExecutionRequest,
     ExecutionResult,
     ExecutionTargetNotFoundError,
@@ -385,16 +385,7 @@ class MicrosandboxExecutor:
         self._loop.close()
 
     def _map_error(self, error: Exception) -> Exception:
-        if isinstance(
-            error,
-            (
-                ExecutableNotFoundError,
-                ExecutableNotRunnableError,
-                ExecutionError,
-                ImportError,
-                TimeoutError,
-            ),
-        ):
+        if isinstance(error, (MulticaError, ImportError, TimeoutError)):
             return error
         if isinstance(error, FileNotFoundError):
             return ExecutableNotFoundError(str(error))
