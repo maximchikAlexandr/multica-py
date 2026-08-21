@@ -47,3 +47,14 @@ def test_decode_text():
 def test_decode_text_invalid_utf8_raises_encoding_error():
     with pytest.raises(EncodingError, match="bad command"):
         decode_text(b"\xff", command="bad command")
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [b'{"name": "test", "value": 42}', '{"name": "test", "value": 42}'],
+    ids=["bytes", "str"],
+)
+def test_decode_json_accepts_str_and_bytes(payload: bytes | str) -> None:
+    result = decode_json(payload, SimpleModel)
+    assert result.name == "test"
+    assert result.value == 42
