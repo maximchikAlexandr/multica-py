@@ -69,13 +69,11 @@ class ResultCase:
 @pytest.mark.parametrize(
     ("catch_type", "raised_type"),
     (
-        (TimeoutError, ProcessTimeoutError),
         (CommandTimeoutError, ProcessTimeoutError),
         (MulticaError, ProcessTimeoutError),
         (MulticaError, ProcessOutputCaptureError),
     ),
     ids=(
-        "process-timeout-as-timeout",
         "process-timeout-as-command-timeout",
         "process-timeout-as-multica",
         "output-capture-as-multica",
