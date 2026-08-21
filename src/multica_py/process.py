@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import warnings
 from collections.abc import Callable, Iterator
 
 import msgspec
@@ -159,7 +160,21 @@ class ManagedProcess:
             self._maybe_finalize()
 
     def __del__(self) -> None:
-        self.close()
+        if self._closed:
+            return
+        if self._handle.poll() is None:
+            warnings.warn(
+                f"{type(self).__name__} for {self._argv} was never closed; killing process without grace period",
+                ResourceWarning,
+                stacklevel=2,
+            )
+            # ponytail: cheap finalization backstop — SIGKILL without pgrep walk or timed wait; explicit close() keeps the graceful path
+            self._output.discard()
+            self._handle.kill()
+            self._finalize()
+            return
+        self._output.discard()
+        self._finalize()
 
     def close(self) -> None:
         if self._closed:

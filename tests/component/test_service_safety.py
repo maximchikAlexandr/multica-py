@@ -4,6 +4,8 @@ import sys
 import threading
 import time
 
+import pytest
+
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
@@ -26,6 +28,12 @@ def test_semaphore_limits_concurrency():
     sem.release()
     t.join(timeout=1)
     assert len(blocked) == 1
+
+
+def test_semaphore_over_release_raises_immediately() -> None:
+    sem = ProcessSemaphore(max_processes=1)
+    with pytest.raises(ValueError):
+        sem.release()
 
 
 def test_transport_releases_semaphore_on_success():
