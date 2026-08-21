@@ -13,10 +13,15 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Protocol, TypeVar, cast
 
-from multica_py.exceptions import ExecutableNotFoundError, ExecutableNotRunnableError
+from multica_py._internal.decoders import decode_text
+from multica_py.exceptions import (
+    ExecutableNotFoundError,
+    ExecutableNotRunnableError,
+    MulticaError,
+    ProcessTimeoutError,
+)
 from multica_py.execution.base import (
     ExecutionConnectionError,
-    ExecutionError,
     ExecutionRequest,
     ExecutionResult,
     ExecutionTargetNotFoundError,
@@ -185,9 +190,12 @@ class _MicrosandboxProcessHandle:
                 self._handle.wait(),
                 timeout=_seconds(timeout if timeout is not None else self._default_timeout),
             )
-        except TimeoutError:
+        except ProcessTimeoutError:
             self.kill()
             raise
+        except TimeoutError as error:
+            self.kill()
+            raise ProcessTimeoutError("Microsandbox process wait timed out") from error
         self._exit_code = exit_code
         return exit_code
 
@@ -198,9 +206,12 @@ class _MicrosandboxProcessHandle:
                 self._handle.collect(),
                 timeout=_seconds(timeout if timeout is not None else self._default_timeout),
             )
-        except TimeoutError:
+        except ProcessTimeoutError:
             self.kill()
             raise
+        except TimeoutError as error:
+            self.kill()
+            raise ProcessTimeoutError("Microsandbox process collection timed out") from error
         result = _result(output)
         self._exit_code = result.exit_code
         return executable_result(result, self._argv)
@@ -227,7 +238,7 @@ class _MicrosandboxProcessHandle:
     def _lines(self, stream: str) -> Iterator[str]:
         queued = self._stdout if stream == "stdout" else self._stderr
         while queued:
-            yield queued.pop(0).decode("utf-8")
+            yield decode_text(queued.pop(0))
         while self._exit_code is None:
             event = self._executor._provider_call(_next_event(self._handle))
             if event is None:
@@ -239,7 +250,7 @@ class _MicrosandboxProcessHandle:
             elif event.event_type == "stderr":
                 self._stderr.append(event.data)
             while queued:
-                yield queued.pop(0).decode("utf-8")
+                yield decode_text(queued.pop(0))
 
 
 def _event_exit_code(event: _ExecEvent) -> int:
@@ -356,9 +367,9 @@ class MicrosandboxExecutor:
         future = asyncio.run_coroutine_threadsafe(coroutine, self._loop)
         try:
             return future.result(timeout)
-        except TimeoutError:
+        except TimeoutError as error:
             future.cancel()
-            raise TimeoutError("Microsandbox operation timed out") from None
+            raise ProcessTimeoutError("Microsandbox operation timed out") from error
 
     def _provider_call(
         self, coroutine: Coroutine[object, object, _T], *, timeout: float | None = None
@@ -374,16 +385,7 @@ class MicrosandboxExecutor:
         self._loop.close()
 
     def _map_error(self, error: Exception) -> Exception:
-        if isinstance(
-            error,
-            (
-                ExecutableNotFoundError,
-                ExecutableNotRunnableError,
-                ExecutionError,
-                ImportError,
-                TimeoutError,
-            ),
-        ):
+        if isinstance(error, (MulticaError, ImportError, TimeoutError)):
             return error
         if isinstance(error, FileNotFoundError):
             return ExecutableNotFoundError(str(error))

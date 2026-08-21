@@ -22,7 +22,11 @@ from multica_py._internal.processes import (
 from multica_py.exceptions import (
     CommandCancelledError,
     CommandTimeoutError,
+    EncodingError,
+    MulticaError,
+    ProcessOutputCaptureError,
     ProcessOutputModeError,
+    ProcessTimeoutError,
 )
 from multica_py.execution.local import LocalProcessHandle
 from multica_py.process import ManagedProcess, ProcessResult
@@ -58,6 +62,27 @@ class ResultCase:
     stdout: bytes
     stderr: bytes
     ok: bool
+
+
+@pytest.mark.parametrize(
+    ("catch_type", "raised_type"),
+    (
+        (CommandTimeoutError, ProcessTimeoutError),
+        (MulticaError, ProcessTimeoutError),
+        (MulticaError, ProcessOutputCaptureError),
+    ),
+    ids=(
+        "process-timeout-as-command-timeout",
+        "process-timeout-as-multica",
+        "output-capture-as-multica",
+    ),
+)
+def test_spawn_path_errors_remain_catchable(
+    catch_type: type[BaseException],
+    raised_type: type[Exception],
+) -> None:
+    with pytest.raises(catch_type):
+        raise raised_type("spawn failure")
 
 
 def test_cancellation_token_tracks_attached_process() -> None:
@@ -183,7 +208,7 @@ def test_managed_process_wait_timeout_preserves_semaphore() -> None:
     process.communicate.side_effect = subprocess.TimeoutExpired(("multica",), 1)
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), ("multica",), semaphore)
-    with pytest.raises(TimeoutError, match="wait timed out"):
+    with pytest.raises(ProcessTimeoutError, match="wait timed out"):
         managed.wait(datetime.timedelta(seconds=1))
     semaphore.release.assert_not_called()
     process.communicate.side_effect = None
@@ -390,8 +415,10 @@ def test_managed_process_result_timeout_is_retryable_without_cleanup_or_cache() 
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
-    with pytest.raises(TimeoutError, match="wait timed out"):
+    with pytest.raises(ProcessTimeoutError, match="wait timed out") as raised:
         managed.result(datetime.timedelta(seconds=1))
+    assert isinstance(raised.value.__cause__, subprocess.TimeoutExpired)
+    assert not isinstance(raised.value.__cause__, ProcessTimeoutError)
     assert managed._result is None
     semaphore.release.assert_not_called()
     process.stdout.close.assert_not_called()
@@ -414,7 +441,7 @@ def test_managed_process_result_zero_timeout_is_forwarded_and_retryable() -> Non
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
-    with pytest.raises(TimeoutError, match="wait timed out"):
+    with pytest.raises(ProcessTimeoutError, match="wait timed out"):
         managed.result(datetime.timedelta(0))
 
     assert managed._result is None
@@ -479,7 +506,7 @@ def test_managed_process_rejects_stream_after_buffered_collection_before_pipe_re
     process.communicate.side_effect = subprocess.TimeoutExpired(("multica",), 1)
     process.stdout = io.BytesIO(b"one\n")
     managed = ManagedProcess(LocalProcessHandle(process))
-    with pytest.raises(TimeoutError, match="wait timed out"):
+    with pytest.raises(ProcessTimeoutError, match="wait timed out"):
         managed.result(datetime.timedelta(seconds=1))
 
     stream = managed.stdout_lines()
@@ -513,7 +540,7 @@ def test_managed_process_decode_failure_finalizes_without_caching() -> None:
     semaphore = MagicMock()
     managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
 
-    with pytest.raises(UnicodeDecodeError):
+    with pytest.raises(EncodingError):
         managed.result()
 
     assert managed._result is None
@@ -540,3 +567,42 @@ def test_managed_process_signals_without_finalizing_before_result() -> None:
     assert terminate.call_args_list.count(call(process)) == 1
     assert kill.call_args_list.count(call(process)) == 1
     semaphore.release.assert_called_once_with()
+
+
+@pytest.mark.parametrize("stream_name", ("stdout", "stderr"))
+def test_managed_process_stream_decode_failure_raises_encoding_error(stream_name: str) -> None:
+    process = _process(poll=0)
+    setattr(process, stream_name, io.BytesIO(b"\xff\xfe\n"))
+    managed = ManagedProcess(LocalProcessHandle(process))
+
+    stream = managed.stdout_lines() if stream_name == "stdout" else managed.stderr_lines()
+    with pytest.raises(EncodingError):
+        next(stream)
+
+
+@pytest.mark.parametrize(
+    ("method_name", "pipe_name"),
+    (
+        ("stdout_lines", "stdout"),
+        ("stderr_lines", "stderr"),
+    ),
+)
+def test_managed_process_missing_stream_pipe_raises_capture_error(
+    method_name: str,
+    pipe_name: str,
+) -> None:
+    process = _process(poll=0)
+    setattr(process, pipe_name, None)
+    managed = ManagedProcess(LocalProcessHandle(process))
+    stream = getattr(managed, method_name)()
+    with pytest.raises(ProcessOutputCaptureError, match=f"{pipe_name} was not captured"):
+        next(stream)
+
+
+def test_managed_process_collect_missing_output_pipes_raises_capture_error() -> None:
+    process = _process()
+    process.communicate.return_value = (None, None)
+    process.returncode = 0
+    managed = ManagedProcess(LocalProcessHandle(process))
+    with pytest.raises(ProcessOutputCaptureError, match="output pipes were not captured"):
+        managed.result()

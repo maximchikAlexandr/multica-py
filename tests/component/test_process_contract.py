@@ -17,7 +17,11 @@ from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.entities import Issue
 from multica_py.enums import CompatibilityPolicy
-from multica_py.exceptions import CommandTimeoutError, ProcessOutputModeError
+from multica_py.exceptions import (
+    CommandTimeoutError,
+    ProcessOutputModeError,
+    ProcessTimeoutError,
+)
 from multica_py.execution.local import LocalProcessHandle
 from multica_py.process import ManagedProcess, ProcessResult
 from tests.fixtures.fake_multica import FakeMultica
@@ -150,7 +154,7 @@ def test_managed_process_real_timeout_retry_keeps_complete_output(tmp_path: path
     )
     _wait_for_file(ready)
 
-    with pytest.raises(TimeoutError, match="wait timed out"):
+    with pytest.raises(ProcessTimeoutError, match="wait timed out"):
         managed.result(datetime.timedelta(seconds=0.1))
     assert process.stdout is not None
     assert process.stderr is not None

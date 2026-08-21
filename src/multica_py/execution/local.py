@@ -9,6 +9,7 @@ import tempfile
 from collections.abc import Iterator
 from typing import BinaryIO, cast
 
+from multica_py._internal.decoders import decode_text
 from multica_py._internal.processes import (
     close_process_pipes,
     create_process,
@@ -16,7 +17,12 @@ from multica_py._internal.processes import (
     run_with_timeout,
     terminate_process,
 )
-from multica_py.exceptions import ExecutableNotFoundError, ExecutableNotRunnableError
+from multica_py.exceptions import (
+    ExecutableNotFoundError,
+    ExecutableNotRunnableError,
+    ProcessOutputCaptureError,
+    ProcessTimeoutError,
+)
 from multica_py.execution.base import ExecutionRequest, ExecutionResult, OutputOwnership
 
 
@@ -42,7 +48,7 @@ class LocalProcessHandle:
                 None if effective_timeout is None else effective_timeout.total_seconds()
             )
         except subprocess.TimeoutExpired as error:
-            raise TimeoutError("Process wait timed out") from error
+            raise ProcessTimeoutError("Process wait timed out") from error
 
     def collect(self, timeout: datetime.timedelta | None = None) -> ExecutionResult:
         self._output.claim("buffered")
@@ -52,14 +58,14 @@ class LocalProcessHandle:
                 timeout=None if effective_timeout is None else effective_timeout.total_seconds()
             )
         except subprocess.TimeoutExpired as error:
-            raise TimeoutError("Process wait timed out") from error
+            raise ProcessTimeoutError("Process wait timed out") from error
         exit_code = self._process.returncode
         if exit_code is None:
             exit_code = self._process.poll()
         if exit_code is None:
-            raise RuntimeError("Process completed without an exit code")
+            raise ProcessOutputCaptureError("Process completed without an exit code")
         if stdout is None or stderr is None:
-            raise RuntimeError("Process output pipes were not captured")
+            raise ProcessOutputCaptureError("Process output pipes were not captured")
         return ExecutionResult(exit_code, stdout, stderr)
 
     def terminate(self) -> None:
@@ -72,17 +78,17 @@ class LocalProcessHandle:
         self._output.claim("streaming")
         stdout = cast("BinaryIO | None", cast("object", self._process.stdout))
         if stdout is None:
-            raise RuntimeError("Process stdout was not captured")
+            raise ProcessOutputCaptureError("Process stdout was not captured")
         for line in stdout:
-            yield line.decode("utf-8")
+            yield decode_text(line)
 
     def stderr_lines(self) -> Iterator[str]:
         self._output.claim("streaming")
         stderr = cast("BinaryIO | None", cast("object", self._process.stderr))
         if stderr is None:
-            raise RuntimeError("Process stderr was not captured")
+            raise ProcessOutputCaptureError("Process stderr was not captured")
         for line in stderr:
-            yield line.decode("utf-8")
+            yield decode_text(line)
 
     def close(self) -> None:
         close_process_pipes(self._process)
@@ -114,7 +120,7 @@ class LocalExecutor:
             if request.stdin is not None:
                 stdin = cast("BinaryIO | None", cast("object", process.stdin))
                 if stdin is None:
-                    raise RuntimeError("Process stdin was not captured")
+                    raise ProcessOutputCaptureError("Process stdin was not captured")
                 stdin.write(request.stdin)
                 stdin.close()
                 process.stdin = None

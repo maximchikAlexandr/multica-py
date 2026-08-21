@@ -68,3 +68,4 @@ the exact before/after import table is maintained in the migration guide.
 - Complete Multica CLI coverage from pinned baseline `48b8dbf`
 - Library-only: install from GitHub via `uv add "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0.1.0"` (no PyPI publish yet)
 - Removed earlier in-tree CLI (`multica-py` console script); SDK is consumed as a Python library
+- Spawn/streaming timeouts raise `ProcessTimeoutError` (`CommandTimeoutError` / `MulticaError`) instead of bare `TimeoutError`; missing pipes raise `ProcessOutputCaptureError`; stream decode failures raise `EncodingError`
