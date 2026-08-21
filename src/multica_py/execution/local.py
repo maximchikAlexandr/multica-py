@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import io
 import os
 import stat
 import subprocess
 import tempfile
+import threading
 from collections.abc import Iterator
 from typing import BinaryIO, cast
 
@@ -27,6 +29,9 @@ class LocalProcessHandle:
         self._process = process
         self._default_timeout = default_timeout
         self._output = OutputOwnership()
+        self._drain_lock = threading.Lock()
+        self._drained: set[str] = set()
+        self._drain_thread: threading.Thread | None = None
 
     @property
     def id(self) -> int:
@@ -68,8 +73,32 @@ class LocalProcessHandle:
     def kill(self) -> None:
         kill_process(self._process)
 
+    def _drain_other(self, consumed: str) -> None:
+        other = "stderr" if consumed == "stdout" else "stdout"
+        with self._drain_lock:
+            if other in self._drained:
+                return
+            self._drained.add(other)
+        pipe = cast("BinaryIO | None", cast("object", getattr(self._process, other)))
+        if pipe is None or not isinstance(pipe, io.IOBase):
+            return
+        reader: BinaryIO = pipe
+
+        def _drain() -> None:
+            with contextlib.suppress(OSError, ValueError):
+                while True:
+                    chunk = reader.read(4096)
+                    if not chunk:
+                        break
+
+        thread = threading.Thread(target=_drain, name=f"multica-py-drain-{other}", daemon=True)
+        with self._drain_lock:
+            self._drain_thread = thread
+        thread.start()
+
     def stdout_lines(self) -> Iterator[str]:
         self._output.claim("streaming")
+        self._drain_other("stdout")
         stdout = cast("BinaryIO | None", cast("object", self._process.stdout))
         if stdout is None:
             raise RuntimeError("Process stdout was not captured")
@@ -78,6 +107,7 @@ class LocalProcessHandle:
 
     def stderr_lines(self) -> Iterator[str]:
         self._output.claim("streaming")
+        self._drain_other("stderr")
         stderr = cast("BinaryIO | None", cast("object", self._process.stderr))
         if stderr is None:
             raise RuntimeError("Process stderr was not captured")
@@ -85,6 +115,10 @@ class LocalProcessHandle:
             yield line.decode("utf-8")
 
     def close(self) -> None:
+        with self._drain_lock:
+            thread = self._drain_thread
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=5.0)
         close_process_pipes(self._process)
 
 

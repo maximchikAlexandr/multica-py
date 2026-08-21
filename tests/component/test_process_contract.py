@@ -208,6 +208,12 @@ def test_managed_process_real_streaming_remains_incremental() -> None:
     assert list(managed.stdout_lines()) == ["one", "two"]
 
 
+def test_managed_process_real_streaming_stdout_does_not_deadlock_on_full_stderr() -> None:
+    managed, _process = _managed_child({"MULTICA_CHILD_MODE": "stderr-heavy"})
+
+    assert list(managed.stdout_lines()) == ["done"]
+
+
 def test_resource_command_keeps_domain_result_type(
     client_factory: Callable[..., MulticaClient], tmp_path: pathlib.Path
 ) -> None:

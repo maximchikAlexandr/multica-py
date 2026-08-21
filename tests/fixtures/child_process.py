@@ -121,6 +121,18 @@ def _run_interleaved_mode() -> int:
     return _exit_code()
 
 
+def _run_stderr_heavy_mode() -> int:
+    stderr = cast("BinaryIO", sys.stderr.buffer)
+    stdout = cast("BinaryIO", sys.stdout.buffer)
+    chunk = b"e" * 4096
+    for _ in range(64):
+        stderr.write(chunk)
+        stderr.flush()
+    stdout.write(b"done\n")
+    stdout.flush()
+    return 0
+
+
 def _run_descendant_mode() -> int:
     pid_file = os.environ.get("MULTICA_CHILD_PID_FILE", "")
     if pid_file:
@@ -178,6 +190,8 @@ def main() -> int:
         return _run_delayed_output_mode()
     if mode == "interleaved":
         return _run_interleaved_mode()
+    if mode == "stderr-heavy":
+        return _run_stderr_heavy_mode()
     if mode == "descendant":
         return _run_descendant_mode()
     if mode == "stdin-echo":
