@@ -589,6 +589,11 @@ _MARKER_LOOKALIKE_CASES: tuple[MarkerCase, ...] = (
         "unreviewed-validation", "invalid request: not a pinned formatter", CommandExecutionError
     ),
     MarkerCase("unreviewed-word", "conflict happened while processing", CommandExecutionError),
+    MarkerCase("bare-http-status", "upstream payload: returned 404", CommandExecutionError),
+    MarkerCase("quoted-http-status", "issue body says returned 401 here", CommandExecutionError),
+    MarkerCase(
+        "misaligned-error-prefix", "Error: returned 404 (no method/path)", CommandExecutionError
+    ),
 )
 
 _ENVIRONMENT_SECRET_CASES: tuple[EnvironmentSecretCase, ...] = (
@@ -1348,6 +1353,27 @@ def test_classify_cli_failure_maps_http_status() -> None:
     )
     assert exc_class is NotFoundError
     assert reported == 4
+
+
+@pytest.mark.parametrize(
+    "stdout_payload",
+    [
+        "returned 404",
+        "Error: GET /api/x returned 404: missing",
+        "Request conflict: already exists",
+        "Invalid request: bad value",
+        "dial tcp: connection refused",
+    ],
+    ids=lambda payload: payload.split(":")[0][:24],
+)
+def test_classify_cli_failure_ignores_stdout_echoed_content(stdout_payload: str) -> None:
+    exc_class, reported = classify_cli_failure(
+        exit_code=1,
+        stdout=stdout_payload,
+        stderr="command failed for an unrelated reason",
+    )
+    assert exc_class is CommandExecutionError
+    assert reported == 1
 
 
 @pytest.mark.parametrize(

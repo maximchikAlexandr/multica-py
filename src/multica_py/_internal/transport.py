@@ -39,7 +39,11 @@ _EXIT_CODE_EXCEPTIONS: dict[int, type[CommandExecutionError]] = {
     4: NotFoundError,
     5: ValidationError,
 }
-_HTTP_STATUS_PATTERN = re.compile(r"returned (\d{3})\b")
+# ponytail: anchored to the CLI's pinned error-line prefix so echoed user
+# content (e.g. an upstream payload quoting "returned 404") cannot drive
+# classification. The CLI emits failures as "Error: <METHOD> <path>
+# returned <NNN>: ..."; matching the full prefix avoids false positives.
+_HTTP_STATUS_PATTERN = re.compile(r"(?:^|\n)Error: \S+ \S+ returned (\d{3})\b")
 _NETWORK_MARKERS = (
     "connection refused",
     "dial tcp",
@@ -95,14 +99,19 @@ def classify_cli_failure(
     stdout: str,
     stderr: str,
 ) -> tuple[type[CommandExecutionError], int]:
-    """Map CLI process failure to a public exception and reported exit code."""
+    """Map CLI process failure to a public exception and reported exit code.
+
+    Classification reads only ``stderr``: the CLI writes its diagnostic
+    lines there, while ``stdout`` may echo arbitrary upstream payloads (issue
+    bodies, quoted API responses) that must not influence the error type or
+    the reported exit code.
+    """
     exc_class = _EXIT_CODE_EXCEPTIONS.get(exit_code)
     reported_exit_code = exit_code
     if exc_class is not None:
         return exc_class, reported_exit_code
 
-    combined = f"{stdout}\n{stderr}"
-    status_match = _HTTP_STATUS_PATTERN.search(combined)
+    status_match = _HTTP_STATUS_PATTERN.search(stderr)
     if status_match is not None:
         status = int(status_match.group(1))
         if status == 409:
@@ -112,12 +121,12 @@ def classify_cli_failure(
             exc_class = _EXIT_CODE_EXCEPTIONS[semantic_exit]
             return exc_class, semantic_exit
 
-    if any(marker in combined for marker in _CONFLICT_MARKERS):
+    if any(marker in stderr for marker in _CONFLICT_MARKERS):
         return ConflictError, exit_code
-    if any(marker in combined for marker in _VALIDATION_MARKERS):
+    if any(marker in stderr for marker in _VALIDATION_MARKERS):
         return ValidationError, 5
 
-    lowered = combined.lower()
+    lowered = stderr.lower()
     if any(marker in lowered for marker in _NETWORK_MARKERS):
         return NetworkError, 2
 
