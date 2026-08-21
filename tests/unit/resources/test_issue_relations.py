@@ -649,7 +649,7 @@ def test_offset_pagination_has_a_hard_page_budget(monkeypatch: pytest.MonkeyPatc
         )
 
     relation: OffsetLazyCollection[str] = OffsetLazyCollection(loader, default_limit=1)
-    with pytest.raises(RelationPaginationError, match="repeated_offset"):
+    with pytest.raises(RelationPaginationError, match="page_limit_exceeded"):
         relation.all()
 
     assert calls == 2
@@ -669,7 +669,7 @@ def test_cursor_pagination_has_a_hard_page_budget(monkeypatch: pytest.MonkeyPatc
         )
 
     relation: CursorLazyCollection[str] = CursorLazyCollection(loader)
-    with pytest.raises(RelationPaginationError, match="repeated_cursor"):
+    with pytest.raises(RelationPaginationError, match="page_limit_exceeded"):
         relation.all()
 
     assert calls == 2
@@ -677,7 +677,7 @@ def test_cursor_pagination_has_a_hard_page_budget(monkeypatch: pytest.MonkeyPatc
 
 
 @pytest.mark.parametrize(
-    ("kind", "reason"), (("offset", "repeated_offset"), ("cursor", "repeated_cursor"))
+    ("kind", "reason"), (("offset", "item_limit_exceeded"), ("cursor", "item_limit_exceeded"))
 )
 def test_pagination_has_a_hard_item_budget(
     kind: str, reason: str, monkeypatch: pytest.MonkeyPatch

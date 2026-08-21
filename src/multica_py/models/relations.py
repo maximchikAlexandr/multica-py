@@ -548,12 +548,12 @@ class OffsetLazyCollection(LazyCollection[T], Generic[T]):
             if index == 0 or not results:
                 return True
             pages = tuple(cast("OffsetPage[T]", result) for result in results)
-            if len(pages) >= _MAX_RELATION_PAGES or len({page.offset for page in pages}) != len(
-                pages
-            ):
+            if len(pages) >= _MAX_RELATION_PAGES:
+                raise _pagination_error("OffsetLazyCollection", "page_limit_exceeded")
+            if len({page.offset for page in pages}) != len(pages):
                 raise _pagination_error("OffsetLazyCollection", "repeated_offset")
             if sum(len(page.items) for page in pages) > _MAX_RELATION_ITEMS:
-                raise _pagination_error("OffsetLazyCollection", "repeated_offset")
+                raise _pagination_error("OffsetLazyCollection", "item_limit_exceeded")
             page = pages[-1]
             if page.has_more and not page.items:
                 raise _pagination_error("OffsetLazyCollection", "empty_page")
@@ -593,7 +593,7 @@ class OffsetLazyCollection(LazyCollection[T], Generic[T]):
         total: int | None = None
         while True:
             if len(seen_offsets) >= _MAX_RELATION_PAGES:
-                raise RelationPaginationError(type(self).__name__, "repeated_offset")
+                raise RelationPaginationError(type(self).__name__, "page_limit_exceeded")
             if offset in seen_offsets:
                 raise RelationPaginationError(type(self).__name__, "repeated_offset")
             seen_offsets.add(offset)
@@ -601,7 +601,7 @@ class OffsetLazyCollection(LazyCollection[T], Generic[T]):
             total = page.total
             items.extend(page.items)
             if len(items) > _MAX_RELATION_ITEMS:
-                raise RelationPaginationError(type(self).__name__, "repeated_offset")
+                raise RelationPaginationError(type(self).__name__, "item_limit_exceeded")
             if not page.has_more:
                 break
             if not page.items:
@@ -677,9 +677,9 @@ class CursorLazyCollection(LazyCollection[T], Generic[T]):
                 return True
             pages = tuple(cast("CursorPage[T]", result) for result in results)
             if len(pages) >= _MAX_RELATION_PAGES:
-                raise _pagination_error("CursorLazyCollection", "repeated_cursor")
+                raise _pagination_error("CursorLazyCollection", "page_limit_exceeded")
             if sum(len(page.items) for page in pages) > _MAX_RELATION_ITEMS:
-                raise _pagination_error("CursorLazyCollection", "repeated_cursor")
+                raise _pagination_error("CursorLazyCollection", "item_limit_exceeded")
             used_cursors: set[CommentCursor | None] = {self._initial_cursor}
             for page in pages[:-1]:
                 if page.next_cursor is not None:
@@ -725,11 +725,11 @@ class CursorLazyCollection(LazyCollection[T], Generic[T]):
         seen: set[CommentCursor] = set()
         while True:
             if len(seen) >= _MAX_RELATION_PAGES:
-                raise RelationPaginationError(type(self).__name__, "repeated_cursor")
+                raise RelationPaginationError(type(self).__name__, "page_limit_exceeded")
             page = self._page_loader(cursor=cursor)
             items.extend(page.items)
             if len(items) > _MAX_RELATION_ITEMS:
-                raise RelationPaginationError(type(self).__name__, "repeated_cursor")
+                raise RelationPaginationError(type(self).__name__, "item_limit_exceeded")
             next_cursor = page.next_cursor
             if next_cursor is None:
                 return tuple(items)

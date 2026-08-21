@@ -10,6 +10,7 @@ from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions, _apply_operation_options
 from multica_py.entities._base import _BoundEntity
+from multica_py.exceptions import DetachedEntityError
 from multica_py.execution import CommandExecutor, LocalExecutor
 from multica_py.models.relations import LazyCollection, LazyLoadable, LazyMapping, LazyRef
 from multica_py.resources.agents import AgentResource
@@ -144,6 +145,12 @@ class MulticaClient:
         self,
         environment: Mapping[str, str] | tuple[tuple[str, str], ...],
     ) -> MulticaClient:
+        """Return a scoped client whose environment is **replaced**, not merged.
+
+        Pass the full set of variables you want the scoped client to use;
+        variables configured on the parent are dropped unless repeated here.
+        Use an empty mapping/tuple to explicitly clear the environment.
+        """
         return self.with_options(environment=environment)
 
     def _singular_scope_key(self, target_type: str, target_id: str) -> tuple[object, ...]:
@@ -174,6 +181,12 @@ class MulticaClient:
         *,
         max_parallel: int = 4,
     ) -> None:
+        """Load selected relations concurrently for the given entities.
+
+        Detached entities raise ``DetachedEntityError``. Concurrent load
+        failures raise only the lowest-index error; that single-exception
+        surface is the supported public contract.
+        """
         if max_parallel < 1:
             raise ValueError("max_parallel must be at least 1")
 
@@ -184,8 +197,11 @@ class MulticaClient:
         singular_jobs: dict[tuple[object, ...], list[LazyRef[object]]] = {}
         for entity in entity_values:
             origin = entity._client
-            semaphore = cast("object | None", getattr(origin, "_semaphore", None))
-            if origin is None or semaphore is not self._semaphore:
+            if origin is None:
+                raise DetachedEntityError(
+                    type(entity).__name__, cast("str", getattr(entity, "id")), "prefetch"
+                )
+            if cast("object | None", getattr(origin, "_semaphore", None)) is not self._semaphore:
                 raise ValueError("entities must share an origin scope")
             selected: object = selector(entity)
             if not isinstance(selected, (LazyRef, LazyCollection, LazyMapping)):

@@ -53,7 +53,7 @@ def _validate_origin_url(url: str, field_name: str, *, normalize_trailing_slash:
 
 
 def _validate_server_url(url: str) -> str:
-    return _validate_origin_url(url, "server_url", normalize_trailing_slash=False)
+    return _validate_origin_url(url, "server_url", normalize_trailing_slash=True)
 
 
 def _normalize_identifier(value: str | None | UnsetType, field_name: str) -> str | None | UnsetType:
