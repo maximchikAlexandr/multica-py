@@ -1355,6 +1355,21 @@ def test_classify_cli_failure_maps_http_status() -> None:
     assert reported == 4
 
 
+def test_classify_cli_failure_prefers_stderr_over_stdout_noise() -> None:
+    exc_class, reported = classify_cli_failure(
+        exit_code=1,
+        stdout=(
+            "returned 404\n"
+            "Request conflict: already exists\n"
+            "Invalid request: bad value\n"
+            "dial tcp: connection refused"
+        ),
+        stderr="Error: GET /api/workspaces returned 401: unauthorized",
+    )
+    assert exc_class is AuthenticationError
+    assert reported == 3
+
+
 @pytest.mark.parametrize(
     "stdout_payload",
     [
