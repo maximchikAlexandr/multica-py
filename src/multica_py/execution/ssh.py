@@ -229,6 +229,10 @@ class _SshProcessHandle:
         """Close the SSH channel; this does not guarantee a remote signal or cleanup."""
         self.close()
 
+    def kill_immediate(self) -> None:
+        """Close the SSH channel without extra remote cleanup work."""
+        self.close()
+
     def stdout_lines(self) -> Iterator[str]:
         self._output.claim("streaming")
         yield from (line.decode("utf-8") for line in self._stdout)

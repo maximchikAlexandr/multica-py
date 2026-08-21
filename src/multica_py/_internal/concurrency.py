@@ -5,7 +5,8 @@ import threading
 
 class ProcessSemaphore:
     def __init__(self, max_processes: int = 4) -> None:
-        self._sem = threading.Semaphore(max_processes)
+        # ponytail: BoundedSemaphore makes over-release fail loudly instead of silently raising the ceiling
+        self._sem = threading.BoundedSemaphore(max_processes)
         self._max = max_processes
 
     @property

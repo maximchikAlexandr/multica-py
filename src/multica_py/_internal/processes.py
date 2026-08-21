@@ -79,6 +79,15 @@ def _descendant_pids(pid: int) -> tuple[int, ...]:
     return tuple(descendants)
 
 
+def _signal_process_group(process: subprocess.Popen[bytes], sig: int) -> None:
+    """Signal a ``start_new_session`` process group without descendant discovery."""
+    pid = process.pid
+    with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+        os.killpg(pid, sig)
+    with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+        os.kill(pid, sig)
+
+
 def _killpg(process: subprocess.Popen[bytes], sig: int) -> None:
     """Signal a ``start_new_session`` process group and any descendants.
 
@@ -88,13 +97,10 @@ def _killpg(process: subprocess.Popen[bytes], sig: int) -> None:
     """
     pid = process.pid
     descendants = _descendant_pids(pid)
-    with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
-        os.killpg(pid, sig)
+    _signal_process_group(process, sig)
     for descendant_pid in reversed(descendants):
         with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
             os.kill(descendant_pid, sig)
-    with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
-        os.kill(pid, sig)
 
 
 def create_process(
@@ -130,6 +136,13 @@ def terminate_process(process: subprocess.Popen[bytes]) -> None:
     for descendant_pid in reversed(descendants):
         with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
             os.kill(descendant_pid, signal.SIGKILL)
+
+
+def kill_process_immediate(process: subprocess.Popen[bytes]) -> None:
+    """SIGKILL a process group without descendant discovery or grace waits."""
+    if process.poll() is not None:
+        return
+    _signal_process_group(process, signal.SIGKILL)
 
 
 def kill_process(process: subprocess.Popen[bytes]) -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import warnings
 from collections.abc import Callable, Iterator
 
 import msgspec
@@ -158,8 +159,25 @@ class ManagedProcess:
             self._active_streams.discard("stderr")
             self._maybe_finalize()
 
+    def _kill_immediate(self) -> None:
+        self._handle.kill_immediate()
+
     def __del__(self) -> None:
-        self.close()
+        if self._closed:
+            return
+        live = self._handle.poll() is None
+        if live:
+            warnings.warn(
+                f"{type(self).__name__} for {self._argv} was never closed; killing process without grace period",
+                ResourceWarning,
+                stacklevel=2,
+            )
+        self._output.discard()
+        try:
+            if live:
+                self._kill_immediate()
+        finally:
+            self._finalize()
 
     def close(self) -> None:
         if self._closed:

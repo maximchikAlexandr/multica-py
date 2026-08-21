@@ -4,6 +4,7 @@ import datetime
 import io
 import signal
 import subprocess
+import warnings
 from dataclasses import dataclass
 from unittest.mock import MagicMock, call, patch
 
@@ -16,6 +17,7 @@ from multica_py._internal.processes import (
     _child_pids,
     close_process_pipes,
     kill_process,
+    kill_process_immediate,
     run_with_timeout,
     terminate_process,
 )
@@ -118,6 +120,24 @@ def test_kill_process_ignores_an_exited_process() -> None:
     kill_group.assert_not_called()
 
 
+def test_kill_process_immediate_skips_descendant_discovery() -> None:
+    process = _process(poll=None)
+    with (
+        patch("multica_py._internal.processes._descendant_pids") as descendants,
+        patch("multica_py._internal.processes._signal_process_group") as signal_group,
+    ):
+        kill_process_immediate(process)
+    descendants.assert_not_called()
+    signal_group.assert_called_once_with(process, signal.SIGKILL)
+
+
+def test_kill_process_immediate_ignores_an_exited_process() -> None:
+    process = _process(poll=0)
+    with patch("multica_py._internal.processes._signal_process_group") as signal_group:
+        kill_process_immediate(process)
+    signal_group.assert_not_called()
+
+
 def test_run_with_timeout_rejects_pre_cancelled_call_without_starting_process() -> None:
     token = CancellationToken()
     token.cancel()
@@ -189,6 +209,53 @@ def test_managed_process_wait_timeout_preserves_semaphore() -> None:
     process.communicate.side_effect = None
     process.poll.return_value = 0
     managed.close()
+
+
+def test_managed_process_del_warns_and_kills_without_grace_for_live_process() -> None:
+    process = _process(poll=None)
+    semaphore = MagicMock()
+    managed = ManagedProcess(LocalProcessHandle(process), ("multica", "run"), semaphore)
+    with (
+        patch("multica_py.execution.local.kill_process_immediate") as kill,
+        patch("multica_py.execution.local.kill_process") as kill_full,
+        patch("multica_py.execution.local.terminate_process") as terminate,
+        patch("multica_py._internal.processes._descendant_pids") as descendants,
+        patch("multica_py.execution.local.close_process_pipes") as close_pipes,
+        pytest.warns(ResourceWarning, match="never closed"),
+    ):
+        managed.__del__()
+    kill.assert_called_once_with(process)
+    kill_full.assert_not_called()
+    terminate.assert_not_called()
+    descendants.assert_not_called()
+    close_pipes.assert_called_once_with(process)
+    semaphore.release.assert_called_once_with()
+
+
+def test_managed_process_del_finalizes_quietly_for_exited_process() -> None:
+    process = _process(poll=0)
+    semaphore = MagicMock()
+    managed = ManagedProcess(LocalProcessHandle(process), ("multica", "run"), semaphore)
+    with (
+        patch("multica_py.execution.local.kill_process_immediate") as kill,
+        patch("multica_py.execution.local.terminate_process") as terminate,
+        warnings.catch_warnings(),
+    ):
+        warnings.simplefilter("error")
+        managed.__del__()
+    kill.assert_not_called()
+    terminate.assert_not_called()
+    semaphore.release.assert_called_once_with()
+
+
+def test_managed_process_del_skips_already_closed() -> None:
+    process = _process(poll=0)
+    semaphore = MagicMock()
+    managed = ManagedProcess(LocalProcessHandle(process), semaphore=semaphore)
+    managed.close()
+    semaphore.reset_mock()
+    managed.__del__()
+    semaphore.release.assert_not_called()
 
 
 def test_managed_process_close_escalates_and_finalizes_once() -> None:
@@ -475,7 +542,7 @@ def test_managed_process_result_rejects_streaming_before_communicate() -> None:
 
 
 def test_managed_process_rejects_stream_after_buffered_collection_before_pipe_read() -> None:
-    process = _process()
+    process = _process(poll=0)
     process.communicate.side_effect = subprocess.TimeoutExpired(("multica",), 1)
     process.stdout = io.BytesIO(b"one\n")
     managed = ManagedProcess(LocalProcessHandle(process))
@@ -486,6 +553,7 @@ def test_managed_process_rejects_stream_after_buffered_collection_before_pipe_re
     with pytest.raises(ProcessOutputModeError, match="buffered"):
         next(stream)
     assert process.stdout.tell() == 0
+    managed.close()
 
 
 def test_managed_process_close_blocks_result_and_stream_without_refinalizing() -> None:
