@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import pytest
 
@@ -206,6 +207,45 @@ def test_managed_process_real_streaming_remains_incremental() -> None:
     managed, _process = _managed_child({"MULTICA_CHILD_STDOUT": "one\ntwo\n"})
 
     assert list(managed.stdout_lines()) == ["one", "two"]
+
+
+@dataclass(frozen=True)
+class UnreadPipeCase:
+    mode: str
+    consumed: str
+    unread: str
+    unread_text: str
+
+
+_HEAVY_PIPE = "e" * 4096 * 64
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        UnreadPipeCase("stderr-heavy", "stdout", "stderr", _HEAVY_PIPE),
+        UnreadPipeCase("stdout-heavy", "stderr", "stdout", _HEAVY_PIPE),
+    ),
+    ids=("unread-stderr", "unread-stdout"),
+)
+def test_managed_process_real_streaming_does_not_deadlock_on_unread_pipe(
+    case: UnreadPipeCase,
+) -> None:
+    managed, _process = _managed_child({"MULTICA_CHILD_MODE": case.mode})
+    consumed = managed.stdout_lines() if case.consumed == "stdout" else managed.stderr_lines()
+    unread = managed.stderr_lines() if case.unread == "stderr" else managed.stdout_lines()
+
+    assert list(consumed) == ["done"]
+    assert list(unread) == [case.unread_text]
+
+
+def test_managed_process_real_streaming_reads_both_pipes_sequentially() -> None:
+    managed, _process = _managed_child(
+        {"MULTICA_CHILD_STDOUT": "out\n", "MULTICA_CHILD_STDERR": "err\n"}
+    )
+
+    assert list(managed.stdout_lines()) == ["out"]
+    assert list(managed.stderr_lines()) == ["err"]
 
 
 def test_resource_command_keeps_domain_result_type(

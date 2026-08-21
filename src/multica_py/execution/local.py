@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import io
 import os
+import queue
 import stat
 import subprocess
 import tempfile
+import threading
 from collections.abc import Iterator
 from typing import BinaryIO, cast
 
@@ -27,6 +30,9 @@ class LocalProcessHandle:
         self._process = process
         self._default_timeout = default_timeout
         self._output = OutputOwnership()
+        self._stream_lock = threading.Lock()
+        self._stream_queues: dict[str, queue.SimpleQueue[bytes | None]] = {}
+        self._stream_threads: list[threading.Thread] = []
 
     @property
     def id(self) -> int:
@@ -68,24 +74,75 @@ class LocalProcessHandle:
     def kill(self) -> None:
         kill_process(self._process)
 
-    def stdout_lines(self) -> Iterator[str]:
+    def _pipe(self, name: str) -> BinaryIO | None:
+        return cast("BinaryIO | None", cast("object", getattr(self._process, name)))
+
+    def _pump_pipe(self, pipe: BinaryIO, chunks: queue.SimpleQueue[bytes | None]) -> None:
+        try:
+            while True:
+                chunk = pipe.read(4096)
+                if not chunk:
+                    break
+                chunks.put(chunk)
+        except (OSError, ValueError):
+            pass
+        finally:
+            chunks.put(None)
+
+    def _ensure_stream_pumps(self) -> None:
+        with self._stream_lock:
+            if self._stream_queues:
+                return
+            for name in ("stdout", "stderr"):
+                chunks: queue.SimpleQueue[bytes | None] = queue.SimpleQueue()
+                self._stream_queues[name] = chunks
+                pipe = self._pipe(name)
+                if pipe is None or not isinstance(pipe, io.IOBase):
+                    chunks.put(None)
+                    continue
+                thread = threading.Thread(
+                    target=self._pump_pipe,
+                    args=(pipe, chunks),
+                    name=f"multica-py-stream-{name}",
+                    daemon=True,
+                )
+                self._stream_threads.append(thread)
+                thread.start()
+
+    def _stream_lines(self, name: str) -> Iterator[str]:
         self._output.claim("streaming")
-        stdout = cast("BinaryIO | None", cast("object", self._process.stdout))
-        if stdout is None:
-            raise RuntimeError("Process stdout was not captured")
-        for line in stdout:
-            yield line.decode("utf-8")
+        pipe = self._pipe(name)
+        if pipe is None:
+            raise RuntimeError(f"Process {name} was not captured")
+        if not isinstance(pipe, io.IOBase):
+            for line in pipe:
+                yield line.decode("utf-8")
+            return
+        self._ensure_stream_pumps()
+        leftover = b""
+        while True:
+            chunk = self._stream_queues[name].get()
+            if chunk is None:
+                if leftover:
+                    yield leftover.decode("utf-8")
+                return
+            leftover += chunk
+            *lines, leftover = leftover.split(b"\n")
+            for line in lines:
+                yield line.decode("utf-8") + "\n"
+
+    def stdout_lines(self) -> Iterator[str]:
+        return self._stream_lines("stdout")
 
     def stderr_lines(self) -> Iterator[str]:
-        self._output.claim("streaming")
-        stderr = cast("BinaryIO | None", cast("object", self._process.stderr))
-        if stderr is None:
-            raise RuntimeError("Process stderr was not captured")
-        for line in stderr:
-            yield line.decode("utf-8")
+        return self._stream_lines("stderr")
 
     def close(self) -> None:
         close_process_pipes(self._process)
+        with self._stream_lock:
+            threads = list(self._stream_threads)
+        for thread in threads:
+            thread.join(timeout=5.0)
 
 
 class LocalExecutor:
