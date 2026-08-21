@@ -1066,7 +1066,10 @@ def test_generation_waiters_share_failure_then_later_retry(case: _GenerationCase
     for thread in threads:
         thread.join(timeout=2)
         assert not thread.is_alive()
-    assert errors == [error, error]
+    assert len(errors) == 2
+    assert {type(e) for e in errors} == {type(error)}
+    assert {e.args for e in errors} == {error.args}
+    assert len({id(e) for e in errors}) == 2
     assert relation.all()
     assert calls == 2
 
@@ -1104,6 +1107,44 @@ def test_generation_waiters_coalesce_success(case: _GenerationCase) -> None:
     assert calls == 1
     assert len(results) == 2
     assert results[0] == results[1]
+
+
+@pytest.mark.parametrize("case", _GENERATION_CASES, ids=lambda case: case.name)
+def test_generation_waiters_get_distinct_exception_instances(case: _GenerationCase) -> None:
+    started = threading.Event()
+    release = threading.Event()
+    calls = 0
+    error = RuntimeError("generation one")
+
+    def loader() -> tuple[str, ...]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            started.set()
+            release.wait(timeout=2)
+            raise error
+        return ("ok",)
+
+    relation = case.build(loader)
+    errors: list[Exception] = []
+    threads = [threading.Thread(target=lambda: _capture(relation, errors)) for _ in range(3)]
+    for thread in threads:
+        thread.start()
+    assert started.wait(timeout=2)
+    release.set()
+    for thread in threads:
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+
+    assert len(errors) == 3
+    assert sum(e is error for e in errors) == 1
+    assert all(type(e) is type(error) for e in errors)
+    assert all(e.args == error.args for e in errors)
+    clones = [e for e in errors if e is not error]
+    assert len(clones) == 2
+    assert len({id(e) for e in clones}) == 2
+    assert all(e.__traceback__ is not None for e in errors)
+    assert len({id(e.__traceback__) for e in clones}) == 2
 
 
 @pytest.mark.parametrize("case", _GENERATION_CASES, ids=lambda case: case.name)
@@ -1183,8 +1224,12 @@ def test_generation_outcomes_survive_a_three_party_later_generation(
     retry.join(timeout=2)
     assert not retry.is_alive()
 
-    assert owner_errors == [first_error]
-    assert waiter_errors == [first_error]
+    assert len(owner_errors) == 1
+    assert owner_errors[0] is first_error
+    assert len(waiter_errors) == 1
+    assert type(waiter_errors[0]) is type(first_error)
+    assert waiter_errors[0].args == first_error.args
+    assert waiter_errors[0] is not first_error
     assert retry_values
     assert calls == 2
     assert not relation._generation_state.outcomes
