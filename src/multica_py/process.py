@@ -124,6 +124,8 @@ class ManagedProcess:
 
         try:
             execution_result = self._handle.collect(timeout)
+        except ProcessTimeoutError:
+            raise
         except TimeoutError as error:
             raise ProcessTimeoutError("Process wait timed out") from error
         except ProcessOutputCaptureError:

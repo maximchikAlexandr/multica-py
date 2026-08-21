@@ -190,6 +190,9 @@ class _MicrosandboxProcessHandle:
                 self._handle.wait(),
                 timeout=_seconds(timeout if timeout is not None else self._default_timeout),
             )
+        except ProcessTimeoutError:
+            self.kill()
+            raise
         except TimeoutError as error:
             self.kill()
             raise ProcessTimeoutError("Microsandbox process wait timed out") from error
@@ -203,6 +206,9 @@ class _MicrosandboxProcessHandle:
                 self._handle.collect(),
                 timeout=_seconds(timeout if timeout is not None else self._default_timeout),
             )
+        except ProcessTimeoutError:
+            self.kill()
+            raise
         except TimeoutError as error:
             self.kill()
             raise ProcessTimeoutError("Microsandbox process collection timed out") from error
@@ -365,9 +371,11 @@ class MicrosandboxExecutor:
         future = asyncio.run_coroutine_threadsafe(coroutine, self._loop)
         try:
             return future.result(timeout)
-        except TimeoutError:
+        except TimeoutError as error:
             future.cancel()
-            raise ProcessTimeoutError("Microsandbox operation timed out") from None
+            if isinstance(error, ProcessTimeoutError):
+                raise
+            raise ProcessTimeoutError("Microsandbox operation timed out") from error
 
     def _provider_call(
         self, coroutine: Coroutine[object, object, _T], *, timeout: float | None = None
