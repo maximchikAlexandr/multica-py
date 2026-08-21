@@ -53,6 +53,14 @@ their established collection/mapping identity behavior under this extension.
 - **WHEN** prefetch selects any of the five plugin/property/MCP collection or mapping relations added for v0.4.28
 - **THEN** it uses the existing handle-identity job, loading, and cache behavior and never enters singular target-ID coalescing
 
+#### Scenario: Prefetch routes through relation command plans
+- **WHEN** `prefetch` loads a selected relation
+- **THEN** the load is performed through the relation's `all_command().run()` path and the same plan-derived argv reaches the transport as an eager `all()` would produce
+
+#### Scenario: No prefetch command
+- **WHEN** the public surface is inspected
+- **THEN** no `prefetch_command()` method exists on `MulticaClient`
+
 ### Requirement: Unsupported inverse and singular relations stay explicit
 The SDK MUST NOT expose a lazy collection when the pinned CLI lacks a
 server-side list/filter or would require a hidden workspace scan/N+1. Singular
@@ -71,3 +79,7 @@ snapshot MUST remain passive data.
 #### Scenario: Unsupported singular references remain data
 - **WHEN** a creator/member, trigger, task, leader, author, user, property-value, plugin-uploader, or MCP-record edge outside the nine-row singular inventory is inspected
 - **THEN** its scalar ID or embedded snapshot remains available and no lazy relation performs a scan or invented lookup
+
+#### Scenario: Singular references are deferred
+- **WHEN** issue, autopilot, or run parent/project/assignee/creator references are inspected
+- **THEN** they are not misrepresented as `ManyRelation` collections and only the nine-row inventory uses `LazyRef`
