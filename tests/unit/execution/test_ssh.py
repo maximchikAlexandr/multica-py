@@ -10,7 +10,11 @@ from dataclasses import dataclass, field
 import pytest
 
 import multica_py.execution.ssh as ssh_module
-from multica_py.exceptions import ExecutableNotFoundError, ExecutableNotRunnableError
+from multica_py.exceptions import (
+    ExecutableNotFoundError,
+    ExecutableNotRunnableError,
+    ProcessTimeoutError,
+)
 from multica_py.execution import (
     ExecutionConnectionError,
     ExecutionRequest,
@@ -391,7 +395,7 @@ def test_wait_timeout_polls_without_busy_spinning(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(ssh_module, "_sleep", sleep)
     executor, client = _executor()
 
-    with pytest.raises(TimeoutError, match="channel was closed"):
+    with pytest.raises(ProcessTimeoutError, match="channel was closed"):
         executor.spawn(_request()).wait(datetime.timedelta(seconds=0.02))
 
     assert waits == [0.01, 0.01]

@@ -7,7 +7,12 @@ from collections.abc import Callable, Iterator
 import msgspec
 
 from multica_py._internal.concurrency import ProcessSemaphore
-from multica_py.exceptions import ProcessOutputModeError
+from multica_py._internal.decoders import decode_text
+from multica_py.exceptions import (
+    ProcessOutputCaptureError,
+    ProcessOutputModeError,
+    ProcessTimeoutError,
+)
 from multica_py.execution import ExecutionResult, ProcessHandle
 from multica_py.execution.base import OutputOwnership
 
@@ -63,8 +68,8 @@ class ManagedProcess:
         return ProcessResult(
             self._argv,
             result.exit_code,
-            result.stdout.decode("utf-8"),
-            result.stderr.decode("utf-8"),
+            decode_text(result.stdout),
+            decode_text(result.stderr),
         )
 
     def _finalize(self) -> None:
@@ -119,8 +124,12 @@ class ManagedProcess:
 
         try:
             execution_result = self._handle.collect(timeout)
-        except TimeoutError:
-            raise TimeoutError("Process wait timed out")
+        except TimeoutError as error:
+            raise ProcessTimeoutError("Process wait timed out") from error
+        except ProcessOutputCaptureError:
+            self._output.discard()
+            self._finalize()
+            raise
 
         try:
             result = self._make_result(execution_result)

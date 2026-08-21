@@ -240,8 +240,10 @@ EXPECTED_ROOT_EXPORTS = (
     "OperationOptions",
     "OutputShapeError",
     "Page",
+    "ProcessOutputCaptureError",
     "ProcessOutputModeError",
     "ProcessResult",
+    "ProcessTimeoutError",
     "Project",
     "ProjectStatus",
     "ProtocolError",
@@ -316,9 +318,16 @@ def test_process_exports_are_exactly_the_new_process_root_surface() -> None:
     import multica_py
 
     process_exports = {name for name in multica_py.__all__ if name.startswith("Process")}
-    assert process_exports == {"ProcessOutputModeError", "ProcessResult"}
+    assert process_exports == {
+        "ProcessOutputCaptureError",
+        "ProcessOutputModeError",
+        "ProcessResult",
+        "ProcessTimeoutError",
+    }
     assert multica_py.ProcessResult.__module__ == "multica_py.process"
     assert multica_py.ProcessOutputModeError.__module__ == "multica_py.exceptions"
+    assert multica_py.ProcessOutputCaptureError.__module__ == "multica_py.exceptions"
+    assert multica_py.ProcessTimeoutError.__module__ == "multica_py.exceptions"
 
 
 def test_removed_request_flow_is_absent_from_package_sources() -> None:
