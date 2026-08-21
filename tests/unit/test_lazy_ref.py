@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import TypeVar, cast
@@ -128,10 +129,14 @@ def _run_concurrent(
     assert load_started.wait(timeout=10)
     second.start()
     state = reference._generation_state
-    with state.condition:
-        assert state.condition.wait_for(
-            lambda: any(waiters > 0 for waiters in state.waiters.values()), timeout=10
-        )
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        waiters = state.waiters
+        if any(waiters_count > 0 for waiters_count in waiters.values()):
+            break
+        time.sleep(0.001)
+    else:
+        assert False, "second thread never registered as waiter"
     load_release.set()
     first.join(timeout=10)
     second.join(timeout=10)
