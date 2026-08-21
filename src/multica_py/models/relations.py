@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import threading
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping
 from dataclasses import dataclass
@@ -92,6 +93,13 @@ class _GenerationFailure:
     waiters: int
 
 
+def _clone_exception(error: BaseException) -> BaseException:
+    clone = copy.copy(error)
+    clone.__cause__ = error.__cause__
+    clone.__context__ = error.__context__
+    return clone
+
+
 class _GenerationState(Generic[R]):
     """Private synchronization state shared by lazy relation containers."""
 
@@ -174,7 +182,7 @@ class _GenerationState(Generic[R]):
         if outcome.waiters == 0:
             del self._outcomes[generation]
         if isinstance(outcome, _GenerationFailure):
-            raise outcome.error
+            raise _clone_exception(outcome.error)
         return outcome.value
 
     def invalidate(self) -> None:
