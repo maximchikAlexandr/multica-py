@@ -1115,6 +1115,52 @@ def test_generation_refresh_is_atomic(case: _GenerationCase) -> None:
 
 
 @pytest.mark.parametrize("case", _GENERATION_CASES, ids=lambda case: case.name)
+def test_generation_refresh_during_inflight_load_is_strict(case: _GenerationCase) -> None:
+    first_started = threading.Event()
+    release_first = threading.Event()
+    second_started = threading.Event()
+    release_second = threading.Event()
+    calls = 0
+
+    def loader() -> tuple[str, ...]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            first_started.set()
+            release_first.wait(timeout=2)
+        if calls == 2:
+            second_started.set()
+            release_second.wait(timeout=2)
+        return (f"value-{calls}",)
+
+    relation = case.build(loader)
+    first_values: list[object] = []
+    refresh_values: list[object] = []
+
+    def _first() -> None:
+        first_values.append(relation.all())
+
+    first_thread = threading.Thread(target=_first)
+    first_thread.start()
+    assert first_started.wait(timeout=2)
+
+    refresh_thread = threading.Thread(target=lambda: refresh_values.append(relation.refresh()))
+    refresh_thread.start()
+    _wait_for_generation_waiter(relation, generation=1)
+    release_first.set()
+    first_thread.join(timeout=2)
+    assert not first_thread.is_alive()
+    assert second_started.wait(timeout=2)
+    release_second.set()
+    refresh_thread.join(timeout=2)
+    assert not refresh_thread.is_alive()
+
+    assert calls == 2
+    assert first_values and refresh_values
+    assert first_values[0] != refresh_values[0]
+
+
+@pytest.mark.parametrize("case", _GENERATION_CASES, ids=lambda case: case.name)
 def test_generation_outcomes_survive_a_three_party_later_generation(
     case: _GenerationCase,
 ) -> None:

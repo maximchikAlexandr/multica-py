@@ -139,7 +139,11 @@ class _GenerationState(Generic[R]):
                 self._waiters[waited_generation] = self._waiters.get(waited_generation, 0) + 1
                 while self._state == self._LOADING and self._generation == waited_generation:
                     self._condition.wait()
-                return self._consume_outcome(waited_generation)
+                outcome = self._consume_outcome(waited_generation)
+                if not force:
+                    return outcome
+                while self._state == self._LOADING:
+                    self._condition.wait()
 
             previous_value = self._value
             self._state = self._LOADING
