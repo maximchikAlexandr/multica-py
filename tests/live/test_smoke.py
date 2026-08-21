@@ -12,7 +12,7 @@ import pytest
 
 from multica_py.client import MulticaClient
 from multica_py.exceptions import NotFoundError, ValidationError
-from multica_py.models.relations import CursorLazyCollection, LazyCollection
+from multica_py.models.relations import CursorLazyCollection
 
 pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
 
@@ -138,8 +138,8 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
     assert first_workspace.id == second_workspace.id
     assert first_workspace.name == second_workspace.name
     prepared_client.prefetch(
-        (first_workspace, second_workspace),  # type: ignore[type-var]
-        lambda item: cast("LazyCollection[object]", item.members),
+        (first_workspace, second_workspace),
+        lambda item: item.members,
         max_parallel=2,
     )
     assert first_workspace.members.loaded

@@ -6,13 +6,18 @@ from typing import TYPE_CHECKING, TypeVar, cast
 
 import msgspec
 
-from multica_py._internal.commands import Command
+from multica_py._internal.commands import Command, _cached_value_command
 from multica_py._internal.permalinks import build_permalink
 from multica_py.config import OperationOptions
-from multica_py.entities._base import _BoundEntity
+from multica_py.entities._base import _BoundEntity, _reference_presence
 from multica_py.entities.comments import Comment, CommentThread, _bind_comment, _bind_thread
 from multica_py.entities.labels import Label
 from multica_py.enums import IssueStatus, _coerce_issue_status
+from multica_py.exceptions import (
+    DetachedEntityError,
+    MissingRelationContextError,
+    UnsupportedReferenceTargetError,
+)
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import (
     CommentCursor,
@@ -31,10 +36,12 @@ from multica_py.models.issues import (
 )
 from multica_py.models.properties import PropertyValue
 from multica_py.models.relations import (
+    _GENERATION_UNSET,
     CursorLazyCollection,
     CursorPage,
     LazyCollection,
     LazyMapping,
+    LazyRef,
     RelationMetadata,
     _RelationLoad,
 )
@@ -44,6 +51,9 @@ from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
+    from multica_py.entities.agents import Agent
+    from multica_py.entities.projects import Project
+    from multica_py.entities.squads import Squad
 
 
 S = TypeVar("S")
@@ -60,7 +70,66 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     started_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
     issue_id: str | None = msgspec.field(default=None, name="_issue_id")
+    _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
     _messages: LazyCollection[RunMessage] | None = msgspec.field(default=None, name="_messages")
+    _issue: object | None = msgspec.field(default=None, name="_issue")
+    _agent: object | None = msgspec.field(default=None, name="_agent")
+
+    @property
+    def issue(self) -> LazyRef[Issue]:
+        if self._issue is None:
+            issue_id = self.issue_id
+            client = cast("MulticaClient | None", self._client)
+
+            def command() -> Command[Issue]:
+                if not issue_id:
+                    raise MissingRelationContextError("TaskRun", self.id, "issue", "issue_id")
+                if client is None:
+                    raise DetachedEntityError("TaskRun", self.id, "issue")
+                return client.issues.get_command(issue_id)
+
+            self._set_runtime(
+                "_issue",
+                LazyRef(
+                    command_loader=command,
+                    _prefetch_target=lambda: ("Issue", issue_id),
+                    _origin_client=client,
+                    entity_type="TaskRun",
+                    entity_id=self.id,
+                    relation_name="issue",
+                ),
+            )
+        return self._issue  # type: ignore[return-value]
+
+    @property
+    def agent(self) -> LazyRef[Agent | None]:
+        if self._agent is None:
+            agent_id = self.agent_id
+            client = cast("MulticaClient | None", self._client)
+            presence = _reference_presence(self, "agent_id", agent_id)
+
+            def command() -> Command[Agent | None]:
+                if presence == "null" and agent_id is None:
+                    return _cached_value_command(lambda: None)
+                if presence == "missing" or not agent_id:
+                    raise MissingRelationContextError("TaskRun", self.id, "agent", "agent_id")
+                if client is None:
+                    raise DetachedEntityError("TaskRun", self.id, "agent")
+                return client.agents.get_command(agent_id)
+
+            self._set_runtime(
+                "_agent",
+                LazyRef(
+                    command_loader=command,
+                    initial=None if presence == "null" else _GENERATION_UNSET,
+                    _prefetch_target=lambda: ("Agent", agent_id),
+                    _origin_client=client,
+                    entity_type="TaskRun",
+                    entity_id=self.id,
+                    relation_name="agent",
+                ),
+            )
+        return self._agent  # type: ignore[return-value]
 
     @property
     def messages(self) -> LazyCollection[RunMessage]:
@@ -116,6 +185,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     creator_id: str | None = None
     creator_type: str | None = None
     match_source: str | None = None
+    _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
 
     _comments: LazyCollection[Comment] | None = msgspec.field(default=None, name="_comments")
     _recent_threads: dict[
@@ -136,6 +206,9 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     )
     _children: LazyCollection[Issue] | None = msgspec.field(default=None, name="_children")
     _runs: LazyCollection[TaskRun] | None = msgspec.field(default=None, name="_runs")
+    _parent: object | None = msgspec.field(default=None, name="_parent")
+    _project: object | None = msgspec.field(default=None, name="_project")
+    _assignee_ref: object | None = msgspec.field(default=None, name="_assignee_ref")
 
     @classmethod
     def _normalize_from_dict(cls, data: dict[str, object]) -> dict[str, object]:
@@ -153,6 +226,119 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             app_url=client.config.app_url if client is not None else None,
             workspace_slug=client.config.workspace_slug if client is not None else None,
         )
+
+    @property
+    def parent(self) -> LazyRef[Issue | None]:
+        if self._parent is None:
+            parent_id = self.parent_id
+            client = cast("MulticaClient | None", self._client)
+            presence = _reference_presence(self, "parent_id", parent_id)
+
+            def command() -> Command[Issue | None]:
+                if presence == "null" and parent_id is None:
+                    return _cached_value_command(lambda: None)
+                if presence == "missing" or not parent_id:
+                    raise MissingRelationContextError("Issue", self.id, "parent", "parent_id")
+                if client is None:
+                    raise DetachedEntityError("Issue", self.id, "parent")
+                return client.issues.get_command(parent_id)
+
+            self._set_runtime(
+                "_parent",
+                LazyRef(
+                    command_loader=command,
+                    initial=None if presence == "null" else _GENERATION_UNSET,
+                    _prefetch_target=lambda: ("Issue", parent_id),
+                    _origin_client=client,
+                    entity_type="Issue",
+                    entity_id=self.id,
+                    relation_name="parent",
+                ),
+            )
+        return self._parent  # type: ignore[return-value]
+
+    @property
+    def project(self) -> LazyRef[Project | None]:
+        if self._project is None:
+            project_id = self.project_id
+            client = cast("MulticaClient | None", self._client)
+            presence = _reference_presence(self, "project_id", project_id)
+
+            def command() -> Command[Project | None]:
+                if presence == "null" and project_id is None:
+                    return _cached_value_command(lambda: None)
+                if presence == "missing" or not project_id:
+                    raise MissingRelationContextError("Issue", self.id, "project", "project_id")
+                if client is None:
+                    raise DetachedEntityError("Issue", self.id, "project")
+                return client.projects.get_command(project_id)
+
+            self._set_runtime(
+                "_project",
+                LazyRef(
+                    command_loader=command,
+                    initial=None if presence == "null" else _GENERATION_UNSET,
+                    _prefetch_target=lambda: ("Project", project_id),
+                    _origin_client=client,
+                    entity_type="Issue",
+                    entity_id=self.id,
+                    relation_name="project",
+                ),
+            )
+        return self._project  # type: ignore[return-value]
+
+    @property
+    def assignee_ref(self) -> LazyRef[Agent | Squad | None]:
+        if self._assignee_ref is None:
+            assignee = self.assignee
+            client = cast("MulticaClient | None", self._client)
+            presence = _reference_presence(self, "assignee", assignee)
+
+            def target() -> tuple[str, str] | None:
+                if assignee is None:
+                    return None
+                if not assignee.id:
+                    raise MissingRelationContextError(
+                        "Issue", self.id, "assignee_ref", "assignee_id"
+                    )
+                if assignee.type not in {"agent", "squad"}:
+                    if assignee.type is None:
+                        return None
+                    raise UnsupportedReferenceTargetError(
+                        "Issue", self.id, "assignee_ref", "assignee_type", assignee.type
+                    )
+                return assignee.type, assignee.id
+
+            def command() -> Command[Agent | Squad | None]:
+                if presence == "null" and assignee is None:
+                    return _cached_value_command(lambda: None)
+                if presence == "missing" and assignee is None:
+                    raise MissingRelationContextError("Issue", self.id, "assignee_ref", "assignee")
+                resolved = target()
+                if resolved is None:
+                    raise MissingRelationContextError(
+                        "Issue", self.id, "assignee_ref", "assignee_type"
+                    )
+                discriminator, assignee_id = resolved
+                if client is None:
+                    raise DetachedEntityError("Issue", self.id, "assignee_ref")
+                if discriminator == "agent":
+                    return client.agents.get_command(assignee_id)
+                return client.squads.get_command(assignee_id)
+
+            self._set_runtime(
+                "_assignee_ref",
+                LazyRef(
+                    command_loader=command,
+                    initial=None if presence == "null" and assignee is None else _GENERATION_UNSET,
+                    _prefetch_target=target,
+                    _origin_client=client,
+                    entity_type="Issue",
+                    entity_id=self.id,
+                    relation_name="assignee_ref",
+                ),
+            )
+        return self._assignee_ref  # type: ignore[return-value]
 
     @property
     def comments(self) -> LazyCollection[Comment]:

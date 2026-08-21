@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import importlib
 import inspect
+from collections.abc import Callable
 from dataclasses import dataclass
 from types import ModuleType
-from typing import cast
+from typing import cast, get_origin, get_type_hints
 
 import pytest
 
@@ -29,13 +30,18 @@ from multica_py.exceptions import (
     MissingRelationContextError,
     RelationError,
     RelationPaginationError,
+    UnloadedReferenceError,
+    UnsupportedReferenceTargetError,
 )
 from multica_py.models.issues import IssueListFilter, IssueListPage, IssueMetadataItem
+from multica_py.models.plugins import Plugin
+from multica_py.models.properties import PropertyValue
 from multica_py.models.relations import (
     CursorLazyCollection,
     CursorPage,
     LazyCollection,
     LazyMapping,
+    LazyRef,
     OffsetLazyCollection,
     OffsetPage,
     RelationMetadata,
@@ -44,6 +50,7 @@ from multica_py.models.system import (
     RepositoryRecord,
     RuntimeDefinition,
 )
+from multica_py.models.workspaces import McpServer
 from multica_py.resources.projects import ProjectIssueCollection
 from tests.contract.test_public_invariants import assert_public_annotations_precise
 
@@ -118,10 +125,10 @@ class SingularRelationCase:
 
 
 SINGULAR_RELATION_CASES = (
-    SingularRelationCase(Issue, ("parent", "project", "assignee", "creator")),
-    SingularRelationCase(Autopilot, ("project", "assignee", "creator")),
+    SingularRelationCase(Issue, ("parent", "project", "assignee_ref")),
+    SingularRelationCase(Autopilot, ("project", "assignee")),
     SingularRelationCase(AutopilotRun, ("autopilot", "issue")),
-    SingularRelationCase(TaskRun, ("issue", "autopilot")),
+    SingularRelationCase(TaskRun, ("issue", "agent")),
 )
 
 
@@ -141,6 +148,92 @@ def test_singular_references_are_not_many_relations(case: SingularRelationCase) 
         if descriptor is None:
             continue
         assert not isinstance(descriptor, relation_types)
+
+
+EXPECTED_LAZY_REF_MEMBERS = {
+    Issue: {"parent", "project", "assignee_ref"},
+    Autopilot: {"project", "assignee"},
+    AutopilotRun: {"autopilot", "issue"},
+    TaskRun: {"issue", "agent"},
+}
+
+
+def _lazy_ref_members(owner: type[object]) -> set[str]:
+    members: set[str] = set()
+    for name in dir(owner):
+        descriptor = cast("object | None", inspect.getattr_static(owner, name, None))
+        getter = cast("Callable[[object], object] | None", getattr(descriptor, "fget", None))
+        if getter is None:
+            continue
+        annotation = cast("dict[str, object]", get_type_hints(getter))["return"]
+        if cast("object", get_origin(annotation)) is cast("object", LazyRef):
+            members.add(name)
+    return members
+
+
+def test_exact_nine_lazy_ref_members_are_public_and_inventory_bound() -> None:
+    discovered = {owner: _lazy_ref_members(owner) for owner in EXPECTED_LAZY_REF_MEMBERS}
+    assert discovered == EXPECTED_LAZY_REF_MEMBERS
+    assert sum(len(members) for members in discovered.values()) == 9
+
+
+@dataclass(frozen=True)
+class ExcludedSingularCase:
+    owner: type[object]
+    names: frozenset[str]
+
+
+UNSUPPORTED_SINGULAR_NAMES = (
+    ExcludedSingularCase(
+        Issue, frozenset({"creator", "member", "trigger", "task", "author", "users", "leader"})
+    ),
+    ExcludedSingularCase(
+        Autopilot,
+        frozenset({"creator", "member", "trigger", "task", "author", "users", "leader"}),
+    ),
+    ExcludedSingularCase(
+        AutopilotRun,
+        frozenset({"creator", "member", "trigger", "task", "author", "users", "agent"}),
+    ),
+    ExcludedSingularCase(
+        TaskRun,
+        frozenset({"autopilot", "creator", "member", "trigger", "task", "author", "users"}),
+    ),
+)
+
+
+def _excluded_singular_id(case: ExcludedSingularCase) -> str:
+    return case.owner.__name__
+
+
+@pytest.mark.parametrize(
+    "case",
+    UNSUPPORTED_SINGULAR_NAMES,
+    ids=_excluded_singular_id,
+)
+def test_excluded_singular_edges_have_no_lazy_ref_surface(case: ExcludedSingularCase) -> None:
+    assert _lazy_ref_members(case.owner).isdisjoint(case.names)
+
+
+def test_property_plugin_and_mcp_ids_remain_passive_values() -> None:
+    property_value = PropertyValue(
+        property_id="property-1", name="Priority", type="text", value="high"
+    )
+    plugin = Plugin(
+        plugin_key="plugin-1",
+        desired_version="1.0.0",
+        lifecycle_status="installed",
+        trust_tier="trusted",
+        uploader_id="agent-1",
+    )
+    mcp_server = McpServer(id="server-1", name="MCP", transport="stdio")
+
+    assert isinstance(property_value.property_id, str)
+    assert isinstance(plugin.uploader_id, str)
+    assert isinstance(mcp_server.id, str)
+    assert not _lazy_ref_members(type(property_value))
+    assert not _lazy_ref_members(type(plugin))
+    assert not _lazy_ref_members(type(mcp_server))
 
 
 @dataclass(frozen=True)
@@ -168,6 +261,10 @@ PUBLIC_EXPORT_CASES = (
     PublicExportCase(multica_py, "RelationError", RelationError),
     PublicExportCase(multica_py, "DetachedEntityError", DetachedEntityError),
     PublicExportCase(multica_py, "MissingRelationContextError", MissingRelationContextError),
+    PublicExportCase(
+        multica_py, "UnsupportedReferenceTargetError", UnsupportedReferenceTargetError
+    ),
+    PublicExportCase(multica_py, "UnloadedReferenceError", UnloadedReferenceError),
     PublicExportCase(multica_py, "MissingPermalinkContextError", MissingPermalinkContextError),
     PublicExportCase(multica_py, "RelationPaginationError", RelationPaginationError),
 )
@@ -312,11 +409,21 @@ def test_relation_module_exports_only_public_relation_types() -> None:
         "CursorPage",
         "LazyCollection",
         "LazyMapping",
+        "LazyRef",
         "OffsetLazyCollection",
         "OffsetPage",
         "RelationMetadata",
     )
     assert all(not name.startswith("_") for name in exports)
+
+
+def test_lazy_ref_is_only_exported_by_the_dedicated_relations_module() -> None:
+    assert LazyRef.__module__ == "multica_py.models.relations"
+    assert "LazyRef" in relations_pkg.__all__
+    assert not hasattr(multica_py, "LazyRef")
+    assert not hasattr(models_pkg, "LazyRef")
+    assert "LazyRef" not in multica_py.__all__
+    assert "LazyRef" not in models_pkg.__all__
 
 
 def test_models_package_exports_only_non_runtime_relation_types() -> None:

@@ -149,7 +149,7 @@ def test_operation_options_are_frozen_and_normalize_values() -> None:
     assert options.workspace_id == "ws_1"
     assert options.timeout == datetime.timedelta(seconds=30)
     assert options.cwd == "./repo"
-    assert options.environment == (("A", "1"), ("B", "2"))
+    assert options.environment == (("B", "2"), ("A", "1"))
     assert OperationOptions().profile is Unset
     with pytest.raises(AttributeError):
         options.profile = "other"  # type: ignore[misc]

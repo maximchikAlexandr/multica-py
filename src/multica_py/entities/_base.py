@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import cache
-from typing import TYPE_CHECKING, Self, TypeGuard, cast
+from typing import TYPE_CHECKING, Protocol, Self, TypeGuard, cast
 
 import msgspec
 
@@ -59,6 +59,20 @@ def _materialize_mappings(value: object) -> object:
     return value
 
 
+def _reference_presence(entity: _BoundEntity, field_name: str, value: object) -> str:
+    """Return decoded presence, conservatively classifying manual values."""
+    try:
+        seeds = cast(
+            "tuple[tuple[str, str], ...]", object.__getattribute__(entity, "_wire_presence")
+        )
+    except AttributeError:
+        seeds = ()
+    for name, seed in seeds:
+        if name == field_name:
+            return seed
+    return "missing" if value is None else "value"
+
+
 @dataclass(frozen=True)
 class _EntityPolicy:
     """Schema-derived names used by all bound-entity value operations."""
@@ -78,6 +92,13 @@ class _EntityPolicy:
             if python_name == field_name:
                 return encoded_name
         raise KeyError(field_name)
+
+
+class _DetachField(Protocol):
+    name: str
+    encode_name: str
+    default: object
+    default_factory: object
 
 
 _AUTOPILOT_RUN_RUNTIME_OVERLAYS = frozenset(("trigger_payload", "result"))
@@ -101,7 +122,21 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
         return cast("MulticaClient", self._client)
 
     def detach(self) -> Self:
-        return type(self).from_dict(self.to_dict())
+        replacements: dict[str, object] = {"_client": None}
+        fields = cast("tuple[_DetachField, ...]", msgspec.structs.fields(type(self)))
+        for field in fields:
+            if field.name in {"_client", "_wire_presence"}:
+                continue
+            if not field.name.startswith("_"):
+                if field.encode_name.startswith("_") and field.name in {"triggers", "subscribers"}:
+                    replacements[field.name] = msgspec.UNSET
+                continue
+            if field.default is not msgspec.NODEFAULT:
+                replacements[field.name] = field.default
+            elif callable(field.default_factory):
+                factory = cast("Callable[[], object]", field.default_factory)
+                replacements[field.name] = factory()
+        return msgspec.structs.replace(self, **replacements)
 
     @classmethod
     def _normalize_from_dict(cls, data: dict[str, object]) -> dict[str, object]:
@@ -120,6 +155,10 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
         )
         _runtime_state(result).update(_runtime_state(self))
         return result
+
+    def _clone_for_client(self, client: MulticaClient | None) -> Self:
+        """Clone immutable target data with fresh destination-local runtime state."""
+        return msgspec.structs.replace(self, _client=client)
 
     def _set_runtime(self, name: str, value: object) -> None:
         """Store relation state without mutating a frozen msgspec field.

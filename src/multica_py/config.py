@@ -25,7 +25,7 @@ def _to_env_tuple(
         if not isinstance(name, str) or not isinstance(value, str):
             raise TypeError("environment names and values must be strings")
         normalized.append((name, value))
-    return tuple(sorted(normalized))
+    return tuple(normalized)
 
 
 _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})

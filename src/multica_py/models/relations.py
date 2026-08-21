@@ -13,10 +13,13 @@ from multica_py._internal.commands import (
     _result_field_argument,
     _sequential_command,
 )
+from multica_py.entities._base import _BoundEntity
+from multica_py.exceptions import UnloadedReferenceError
 from multica_py.models.issue_activity import CommentCursor
 from multica_py.models.issues import IssueChildStageGroup
 
 if TYPE_CHECKING:
+    from multica_py.client import MulticaClient
     from multica_py.entities.issues import Issue
 
 T_co = TypeVar("T_co", covariant=True)
@@ -24,6 +27,13 @@ T = TypeVar("T")
 K = TypeVar("K")
 V = TypeVar("V")
 R = TypeVar("R")
+
+
+class _GenerationUnset:
+    __slots__ = ()
+
+
+_GENERATION_UNSET = _GenerationUnset()
 
 _MAX_RELATION_PAGES = 1_000
 _MAX_RELATION_ITEMS = 100_000
@@ -33,6 +43,7 @@ __all__ = (
     "CursorPage",
     "LazyCollection",
     "LazyMapping",
+    "LazyRef",
     "OffsetLazyCollection",
     "OffsetPage",
     "RelationMetadata",
@@ -99,10 +110,11 @@ class _GenerationState(Generic[R]):
     _LOADING = 1
     _LOADED = 2
 
-    def __init__(self, empty: R, *, initial: R | None = None) -> None:
+    def __init__(self, empty: R, *, initial: R | _GenerationUnset = _GENERATION_UNSET) -> None:
         self._condition = threading.Condition()
-        self._state = self._LOADED if initial is not None else self._UNLOADED
-        self._value = empty if initial is None else initial
+        has_initial = initial is not _GENERATION_UNSET
+        self._state = self._LOADED if has_initial else self._UNLOADED
+        self._value = empty if not has_initial else cast("R", initial)
         self._empty = empty
         self._generation = 0
         self._outcomes: dict[int, _GenerationSuccess[R] | _GenerationFailure] = {}
@@ -142,6 +154,7 @@ class _GenerationState(Generic[R]):
                 return self._consume_outcome(waited_generation)
 
             previous_value = self._value
+            previous_loaded = self._state == self._LOADED
             self._state = self._LOADING
             self._generation += 1
             generation = self._generation
@@ -155,7 +168,7 @@ class _GenerationState(Generic[R]):
                 if waiters:
                     self._outcomes[generation] = _GenerationFailure(error=error, waiters=waiters)
                 self._value = previous_value
-                self._state = self._LOADED if previous_value is not self._empty else self._UNLOADED
+                self._state = self._LOADED if previous_loaded else self._UNLOADED
                 self._condition.notify_all()
             raise
 
@@ -167,6 +180,56 @@ class _GenerationState(Generic[R]):
                 self._outcomes[generation] = _GenerationSuccess(value=loaded, waiters=waiters)
             self._condition.notify_all()
             return loaded
+
+    def reserve(self) -> int | None:
+        """Reserve an unloaded generation for a singular prefetch fan-out.
+
+        A pre-existing load owns its generation and is deliberately not
+        replaced: the fan-out must never publish over a destination operation
+        that won the race.  An unloaded state gets an exclusive token that
+        concurrent readers can join through :meth:`run`.
+        """
+        with self._condition:
+            if self._state != self._UNLOADED:
+                return None
+            self._state = self._LOADING
+            self._generation += 1
+            generation = self._generation
+            self._waiters[generation] = 0
+            return generation
+
+    def run_reserved(self, generation: int, load: Callable[[], R]) -> R:
+        """Execute the owner operation for a previously reserved generation."""
+        with self._condition:
+            if self._state != self._LOADING or self._generation != generation:
+                return self._value
+
+        return load()
+
+    def publish_reserved(self, generation: int, value: R) -> bool:
+        """Publish only while the exact reserved destination generation lives."""
+        with self._condition:
+            if self._state != self._LOADING or self._generation != generation:
+                return False
+            self._value = value
+            self._state = self._LOADED
+            waiters = self._waiters.pop(generation)
+            if waiters:
+                self._outcomes[generation] = _GenerationSuccess(value=value, waiters=waiters)
+            self._condition.notify_all()
+            return True
+
+    def fail_reserved(self, generation: int, error: Exception) -> bool:
+        with self._condition:
+            if self._state != self._LOADING or self._generation != generation:
+                return False
+            waiters = self._waiters.pop(generation)
+            if waiters:
+                self._outcomes[generation] = _GenerationFailure(error=error, waiters=waiters)
+            self._value = self._empty
+            self._state = self._UNLOADED
+            self._condition.notify_all()
+            return True
 
     def _consume_outcome(self, generation: int) -> R:
         outcome = self._outcomes[generation]
@@ -194,6 +257,120 @@ class _CursorLoader(Protocol[T]):
     def __call__(self, *, cursor: CommentCursor | None) -> CursorPage[T]: ...
 
 
+class LazyRef(Generic[T_co]):
+    """A passive, explicitly loaded singular relation."""
+
+    def __init__(
+        self,
+        *,
+        command_loader: Callable[[], Command[T_co]],
+        initial: T_co | _GenerationUnset = _GENERATION_UNSET,
+        entity_type: str = "Reference",
+        entity_id: str = "unknown",
+        relation_name: str = "reference",
+        _prefetch_target: Callable[[], tuple[str, str | None] | None] | None = None,
+        _origin_client: object | None = None,
+    ) -> None:
+        if not callable(command_loader):
+            raise TypeError("command_loader is required for LazyRef")
+        self._command_loader = command_loader
+        self._entity_type = entity_type
+        self._entity_id = entity_id
+        self._relation_name = relation_name
+        self._prefetch_target = _prefetch_target
+        self._origin_client = _origin_client
+        self._generation_state: _GenerationState[T_co] = _GenerationState(
+            cast("T_co", None), initial=initial
+        )
+
+    @property
+    def loaded(self) -> bool:
+        return self._generation_state.loaded
+
+    @property
+    def value(self) -> T_co:
+        if not self.loaded:
+            raise UnloadedReferenceError(self._entity_type, self._entity_id, self._relation_name)
+        return self._generation_state.value
+
+    def _run_command(self, command: Command[T_co], *, force: bool) -> T_co:
+        return self._generation_state.run(force=force, load=command.run)
+
+    def _command(self) -> Command[T_co]:
+        return self._command_loader()
+
+    def get(self) -> T_co:
+        if self.loaded:
+            return self._generation_state.value
+        return self.get_command().run()
+
+    def get_command(self) -> Command[T_co]:
+        command = self._command()
+        if self.loaded:
+            return _cached_result_command(command, lambda: self._generation_state.value)
+        return _coalesced_command(
+            command,
+            lambda: self._run_command(command, force=False),
+        )
+
+    def refresh(self) -> T_co:
+        if self.loaded and self._generation_state.value is None:
+            return self._generation_state.value
+        return self.refresh_command().run()
+
+    def refresh_command(self) -> Command[T_co]:
+        command = self._command()
+        if self.loaded and self._generation_state.value is None:
+            return _cached_result_command(command, lambda: self._generation_state.value)
+        return _coalesced_command(
+            command,
+            lambda: self._run_command(command, force=True),
+        )
+
+    def invalidate(self) -> None:
+        self._generation_state.invalidate()
+
+    def _prefetch_key(self) -> tuple[object, ...]:
+        prefetch_target = self._prefetch_target
+        if prefetch_target is None:
+            return ("lazy-ref-error", id(self))
+        try:
+            target = prefetch_target()
+        except Exception:
+            return ("lazy-ref-error", id(self))
+        if target is None:
+            return ("lazy-ref-error", id(self))
+        target_type, target_id = target
+        if not target_id:
+            return ("lazy-ref-error", id(self))
+        client = self._origin_client
+        if client is None:
+            return ("lazy-ref-error", id(self))
+        scope_key = cast(
+            "Callable[[str, str], tuple[object, ...]]",
+            getattr(client, "_singular_scope_key"),
+        )
+        return scope_key(target_type, target_id)
+
+    def _prefetch_reserve(self) -> int | None:
+        return self._generation_state.reserve()
+
+    def _prefetch_load(self, generation: int | None) -> T_co:
+        if generation is None:
+            return self.get()
+        return self._generation_state.run_reserved(generation, self._command().run)
+
+    def _prefetch_publish(self, generation: int, value: object) -> bool:
+        published = value
+        if isinstance(value, _BoundEntity):
+            client = cast("MulticaClient | None", self._origin_client)
+            published = value._clone_for_client(client)
+        return self._generation_state.publish_reserved(generation, cast("T_co", published))
+
+    def _prefetch_fail(self, generation: int, error: Exception) -> bool:
+        return self._generation_state.fail_reserved(generation, error)
+
+
 def _pagination_error(relation_name: str, reason: str) -> Exception:
     from multica_py.exceptions import RelationPaginationError
 
@@ -218,8 +395,10 @@ class LazyCollection(Collection[T], Generic[T]):
         snapshot: _RelationLoad[T] | None = (
             None if initial is None else _RelationLoad(tuple(initial), relation_metadata)
         )
-        self._generation_state: _GenerationState[_RelationLoad[T]] = _GenerationState(
-            empty, initial=snapshot
+        self._generation_state: _GenerationState[_RelationLoad[T]] = (
+            _GenerationState(empty)
+            if snapshot is None
+            else _GenerationState(empty, initial=snapshot)
         )
 
     @property

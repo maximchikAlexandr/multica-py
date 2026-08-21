@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import msgspec
 
@@ -33,7 +33,7 @@ from multica_py.types import MetadataValue
 if TYPE_CHECKING:
     from multica_py.entities.autopilots import Autopilot, AutopilotRun
     from multica_py.entities.comments import Comment, CommentThread
-    from multica_py.entities.issues import Issue
+    from multica_py.entities.issues import Issue, TaskRun
     from multica_py.entities.projects import Project
 
 
@@ -49,7 +49,7 @@ class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     description: str | None = None
     status: str
     priority: str | None = None
-    assignee: IssueAssignee | None = None
+    assignee: IssueAssignee | None | msgspec.UnsetType = msgspec.UNSET
     pull_requests: tuple[LinkedPullRequest, ...] | msgspec.UnsetType = msgspec.UNSET
     children: tuple[IssueChildStageGroup, ...] | msgspec.UnsetType = msgspec.UNSET
     labels: tuple[_LabelWire, ...] | msgspec.UnsetType = msgspec.UNSET
@@ -57,8 +57,8 @@ class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     attachments: tuple[AttachmentResult, ...] | msgspec.UnsetType = msgspec.UNSET
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
-    parent_issue_id: str | None = None
-    project_id: str | None = None
+    parent_issue_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    project_id: str | None | msgspec.UnsetType = msgspec.UNSET
     creator_id: str | None = None
     creator_type: str | None = (
         None  # ponytail: free string, no enum — upstream values not stabilised; add CreatorType enum when they are
@@ -95,6 +95,17 @@ def _attachments_from_wire(wire: _IssueWire) -> tuple[AttachmentResult, ...]:
     return () if wire.attachments is msgspec.UNSET else wire.attachments
 
 
+_PresenceSeed = Literal["missing", "null", "value"]
+
+
+def _presence_seed(value: object) -> _PresenceSeed:
+    if value is msgspec.UNSET:
+        return "missing"
+    if value is None:
+        return "null"
+    return "value"
+
+
 def _issue_from_wire(wire: _IssueWire) -> Issue:
     from multica_py.entities.issues import Issue
 
@@ -109,7 +120,7 @@ def _issue_from_wire(wire: _IssueWire) -> Issue:
         description=wire.description,
         status=_coerce_issue_status(wire.status),
         priority=wire.priority,
-        assignee=wire.assignee,
+        assignee=None if wire.assignee is msgspec.UNSET else wire.assignee,
         pull_request_snapshot=pull_requests,
         child_stages=children,
         label_names=tuple(label.name for label in labels),
@@ -119,11 +130,16 @@ def _issue_from_wire(wire: _IssueWire) -> Issue:
         attachments=attachments,
         created_at=wire.created_at,
         updated_at=wire.updated_at,
-        parent_id=wire.parent_issue_id,
-        project_id=wire.project_id,
+        parent_id=None if wire.parent_issue_id is msgspec.UNSET else wire.parent_issue_id,
+        project_id=None if wire.project_id is msgspec.UNSET else wire.project_id,
         creator_id=wire.creator_id,
         creator_type=wire.creator_type,
         match_source=wire.match_source,
+        _wire_presence=(
+            ("parent_id", _presence_seed(wire.parent_issue_id)),
+            ("project_id", _presence_seed(wire.project_id)),
+            ("assignee", _presence_seed(wire.assignee)),
+        ),
     )
 
 
@@ -256,7 +272,7 @@ class _AutopilotWire(msgspec.Struct, frozen=True, kw_only=True):
     workspace_id: str
     title: str
     description: str | None = None
-    project_id: str | None = None
+    project_id: str | None | msgspec.UnsetType = msgspec.UNSET
     assignee_type: str
     assignee_id: str
     status: str
@@ -283,7 +299,7 @@ def _autopilot_from_wire(wire: _AutopilotWire) -> Autopilot:
         workspace_id=wire.workspace_id,
         title=wire.title,
         description=wire.description,
-        project_id=wire.project_id,
+        project_id=None if wire.project_id is msgspec.UNSET else wire.project_id,
         assignee_type=wire.assignee_type,
         assignee_id=wire.assignee_id,
         status=wire.status,
@@ -307,6 +323,7 @@ def _autopilot_from_wire(wire: _AutopilotWire) -> Autopilot:
         ),
         can_write=wire.can_write,
         can_manage_access=wire.can_manage_access,
+        _wire_presence=(("project_id", _presence_seed(wire.project_id)),),
     )
 
 
@@ -361,7 +378,7 @@ class _AutopilotRunWire(msgspec.Struct, frozen=True, kw_only=True):
     trigger_id: str | None = None
     source: str
     status: str
-    issue_id: str | None = None
+    issue_id: str | None | msgspec.UnsetType = msgspec.UNSET
     task_id: str | None = None
     triggered_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
@@ -392,7 +409,7 @@ def _autopilot_run_from_wire(wire: _AutopilotRunWire) -> AutopilotRun:
         trigger_id=wire.trigger_id,
         source=wire.source,
         status=wire.status,
-        issue_id=wire.issue_id,
+        issue_id=None if wire.issue_id is msgspec.UNSET else wire.issue_id,
         task_id=wire.task_id,
         triggered_at=wire.triggered_at,
         completed_at=wire.completed_at,
@@ -401,6 +418,29 @@ def _autopilot_run_from_wire(wire: _AutopilotRunWire) -> AutopilotRun:
         trigger_payload=trigger_payload,
         result=result,
         created_at=wire.created_at,
+        _wire_presence=(("issue_id", _presence_seed(wire.issue_id)),),
+    )
+
+
+class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    status: str
+    agent_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    started_at: datetime.datetime | None = None
+    completed_at: datetime.datetime | None = None
+
+
+def _task_run_from_wire(wire: _TaskRunWire, *, issue_id: str) -> TaskRun:
+    from multica_py.entities.issues import TaskRun
+
+    return TaskRun(
+        id=wire.id,
+        status=wire.status,
+        agent_id=None if wire.agent_id is msgspec.UNSET else wire.agent_id,
+        started_at=wire.started_at,
+        completed_at=wire.completed_at,
+        issue_id=issue_id,
+        _wire_presence=(("agent_id", _presence_seed(wire.agent_id)),),
     )
 
 
