@@ -90,6 +90,16 @@ class EnvironmentSecretCase:
 
 
 @dataclass(frozen=True)
+class ShortEnvSecretCase:
+    """Secret values from env keys whose short value must NOT corrupt diagnostics."""
+
+    id: str
+    env_key: str
+    short_value: str
+    diagnostic: str
+
+
+@dataclass(frozen=True)
 class UrlSecretCase:
     id: str
     server_url: str
@@ -571,6 +581,27 @@ _ENVIRONMENT_SECRET_CASES: tuple[EnvironmentSecretCase, ...] = (
     EnvironmentSecretCase("suffixed-passwd", "PASSWD_SUFFIX"),
     EnvironmentSecretCase("camel-client-secret", "clientSecret"),
     EnvironmentSecretCase("whitespace-api-key", "api key"),
+)
+
+_SHORT_ENV_SECRET_CASES: tuple[ShortEnvSecretCase, ...] = (
+    ShortEnvSecretCase(
+        "one-char-api-key",
+        "API_KEY",
+        "1",
+        "failed to open /home/1user/project: no such file",
+    ),
+    ShortEnvSecretCase(
+        "three-char-auth-token",
+        "AUTH_TOKEN",
+        "dev",
+        "failed to connect to dev-server.example.com: connection refused",
+    ),
+    ShortEnvSecretCase(
+        "seven-char-secret",
+        "MULTICA_SECRET",
+        "abcdefg",
+        "config path /tmp/abcdefg/config.yaml not found",
+    ),
 )
 
 _URL_SECRET_CASES: tuple[UrlSecretCase, ...] = (
@@ -1177,6 +1208,24 @@ def test_transport_redacts_inherited_environment_secret_with_empty_config(
         assert secret not in rendered
     assert exc.stdout == "***"
     assert exc.stderr == "***"
+
+
+@pytest.mark.parametrize("case", _SHORT_ENV_SECRET_CASES, ids=lambda case: case.id)
+def test_transport_short_env_secret_does_not_corrupt_diagnostics(
+    monkeypatch: pytest.MonkeyPatch,
+    case: ShortEnvSecretCase,
+) -> None:
+    monkeypatch.setenv(case.env_key, case.short_value)
+    config = ClientConfig(executable=sys.executable)
+    transport = CliTransport(config)
+    code = f"import sys; sys.stderr.write({case.diagnostic!r}); sys.exit(1)"
+
+    with pytest.raises(CommandExecutionError) as excinfo:
+        transport.run_text(("-c", code))
+
+    exc = excinfo.value
+    assert exc.stderr == case.diagnostic
+    assert "***" not in exc.stderr
 
 
 @pytest.mark.parametrize(

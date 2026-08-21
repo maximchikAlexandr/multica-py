@@ -61,6 +61,10 @@ the exact before/after import table is maintained in the migration guide.
 - **Page and actions** — list results use immutable `Page[T]`; void actions use `ActionResult[None]` and payloads are in `.value`.
 - **Command execution** — every CLI-backed `*_command()` returns `Command[T]` matching eager `T`; previews are redacted and I/O-free, and `.run()` executes the same plan.
 
+### Fixed
+
+- Secret redaction now skips environment-derived values shorter than 8 characters, preventing short env values (e.g. `API_KEY=1`) from corrupting unrelated diagnostic text. Explicit `--token`/file/stdin secret channels are unaffected.
+
 ## 0.1.0 (unreleased)
 
 - Initial SDK release
