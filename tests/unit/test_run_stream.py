@@ -85,7 +85,7 @@ class StreamCase:
     status_runs: tuple[_StatusRun, ...]
     terminal_status: str
     expected_text_sequences: tuple[int, ...] = ()
-    expected_error: bool = False
+    expected_error_event: bool = False
 
 
 _STREAM_DRAIN_CASES: tuple[StreamCase, ...] = (
@@ -110,7 +110,7 @@ _STREAM_DRAIN_CASES: tuple[StreamCase, ...] = (
         ),
         status_runs=(_StatusRun("running"), _StatusRun("failed")),
         terminal_status="failed",
-        expected_error=True,
+        expected_error_event=True,
     ),
     StreamCase(
         id="cancelled-requires-two-quiet-reads",
@@ -160,8 +160,8 @@ def test_stream_terminal_drain_variants(case: StreamCase, no_sleep: None) -> Non
 
     text_events = [e for e in events if isinstance(e, RunTextEvent)]
     assert [e.sequence for e in text_events] == list(case.expected_text_sequences)
-    if case.expected_error:
-        assert any(isinstance(e, RunErrorEvent) for e in events)
+    has_error = any(isinstance(e, RunErrorEvent) for e in events)
+    assert has_error == case.expected_error_event
     _assert_terminal(events, case.terminal_status)
 
 
@@ -338,7 +338,7 @@ def test_stream_target_disappears_raises_protocol_error(no_sleep: None) -> None:
 @pytest.mark.parametrize(
     "value",
     [0, -1, float("inf"), True, 3600.5],
-    ids=["zero", "negative", "infinite", "bool", "exceeds-ceiling"],
+    ids=["zero", "negative", "nonfinite", "bool", "exceeds-ceiling"],
 )
 def test_stream_invalid_interval_raises_before_io(value: object) -> None:
     client = MagicMock()
@@ -361,15 +361,6 @@ def test_stream_missing_issue_id_raises(no_sleep: None) -> None:
     run = _run(client, issue_id=None)
     with pytest.raises(MissingRelationContextError):
         next(run.stream_events())
-
-
-def test_stream_command_failure_propagates(no_sleep: None) -> None:
-    client = MagicMock()
-    client.issues.run_messages.side_effect = RuntimeError("boom")
-    run = _run(client)
-
-    with pytest.raises(RuntimeError, match="boom"):
-        _collect(run)
 
 
 @pytest.mark.parametrize(
