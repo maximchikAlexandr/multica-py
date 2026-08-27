@@ -98,6 +98,9 @@ class StreamCase:
     expected_status_sequence: tuple[str, ...] | None = None
     expected_sleeps: int | None = None
     expected_text: str | None = None
+    expected_tool: str | None = None
+    expected_tool_input: MappingProxyType[str, str] | None = None
+    expected_tool_output: str | None = None
 
 
 _STREAM_CASES: tuple[StreamCase, ...] = (
@@ -289,6 +292,30 @@ _STREAM_CASES: tuple[StreamCase, ...] = (
         terminal_status="completed",
         expected_unknown_types=("tool-use",),
     ),
+    StreamCase(
+        id="tool-lifecycle-preserves-structured-data",
+        run_messages=(
+            _messages(
+                make_run_message(
+                    seq=1,
+                    type="tool_use",
+                    tool="bash",
+                    input=MappingProxyType({"cmd": "ls"}),
+                    content=None,
+                ),
+                make_run_message(
+                    seq=2, type="tool_result", tool="bash", output="done", content=None
+                ),
+            ),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(_StatusRun("running"), _StatusRun("completed")),
+        terminal_status="completed",
+        expected_tool="bash",
+        expected_tool_input=MappingProxyType({"cmd": "ls"}),
+        expected_tool_output="done",
+    ),
 )
 
 
@@ -325,6 +352,13 @@ def test_stream_poll_and_drain_variants(case: StreamCase, sleep_calls: list[floa
         assert len(sleep_calls) == case.expected_sleeps
     if case.expected_text is not None:
         assert text_events[0].text == case.expected_text
+    if case.expected_tool is not None:
+        started = next(e for e in events if isinstance(e, RunToolStartedEvent))
+        finished = next(e for e in events if isinstance(e, RunToolFinishedEvent))
+        assert started.tool == case.expected_tool
+        assert started.input == case.expected_tool_input
+        assert finished.tool == case.expected_tool
+        assert finished.output == case.expected_tool_output
 
 
 def test_stream_conflicting_repeated_sequence_raises(sleep_calls: list[float]) -> None:
@@ -346,6 +380,7 @@ def test_stream_conflict_within_batch_raises(sleep_calls: list[float]) -> None:
     client.issues.runs.return_value = _runs(client, _run(client, status="running"))
     with pytest.raises(OutputShapeError):
         _collect(_run(client))
+    client.issues.runs.assert_not_called()
 
 
 def test_stream_target_disappears_raises_protocol_error(sleep_calls: list[float]) -> None:
@@ -358,8 +393,8 @@ def test_stream_target_disappears_raises_protocol_error(sleep_calls: list[float]
 
 @pytest.mark.parametrize(
     "value",
-    [0, -1, float("inf"), float("nan"), True],
-    ids=["zero", "negative", "infinity", "nan", "bool"],
+    [0, -1, float("inf"), float("nan"), True, "1"],
+    ids=["zero", "negative", "infinity", "nan", "bool", "nonnumeric"],
 )
 def test_stream_invalid_interval_raises_before_io(value: object) -> None:
     client = MagicMock()
@@ -374,6 +409,8 @@ def test_stream_detached_run_raises() -> None:
     run = TaskRun(id="task_1", status="running", issue_id="iss_1")
     with pytest.raises(DetachedEntityError):
         next(run.stream_events())
+    with pytest.raises((TypeError, ValueError)):
+        next(run.stream_events(poll_interval=0))
 
 
 def test_stream_missing_issue_id_raises(sleep_calls: list[float]) -> None:
@@ -407,35 +444,48 @@ def test_stream_independent_of_raw_cache(sleep_calls: list[float]) -> None:
     ]
     run = _run(client)
     iterator = run.stream_events()
-    list(iterator)
+    events = list(iterator)
     assert run._messages is None or not run._messages.loaded
     assert inspect.getgeneratorstate(cast("Generator[object, None, None]", iterator)) == (
         inspect.GEN_CLOSED
     )
+    message_events = [event for event in events if not isinstance(event, RunStatusChangedEvent)]
+    assert len(message_events) == len({event.sequence for event in message_events})
 
 
-def test_stream_tool_lifecycle_preserves_structured_data(sleep_calls: list[float]) -> None:
+def test_stream_refresh_failure_propagates(sleep_calls: list[float]) -> None:
     client = MagicMock()
-    start_msg = RunMessage(
-        task_id="task_1", seq=1, type="tool_use", tool="bash", input={"cmd": "ls"}
+    client.issues.run_messages.return_value = _messages(make_run_message(seq=1, content="m"))
+    client.issues.runs.side_effect = NotFoundError("missing", exit_code=1)
+    with pytest.raises(NotFoundError):
+        _collect(_run(client))
+
+
+def test_stream_rejects_identity_mismatch(sleep_calls: list[float]) -> None:
+    client = MagicMock()
+    client.issues.run_messages.return_value = _messages(
+        make_run_message(seq=1, task_id="other", content="m")
     )
-    finish_msg = RunMessage(task_id="task_1", seq=2, type="tool_result", tool="bash", output="done")
+    client.issues.runs.return_value = _runs(client, _run(client, status="completed"))
+    with pytest.raises(OutputShapeError):
+        _collect(_run(client))
+
+
+def test_stream_terminal_drain_is_bounded(
+    sleep_calls: list[float], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("multica_py.entities.issues._TERMINAL_DRAIN_POLL_LIMIT", 3)
+    client = MagicMock()
     client.issues.run_messages.side_effect = [
-        _messages(start_msg, finish_msg),
         _empty(),
-        _empty(),
+        _messages(make_run_message(seq=1, content="m")),
+        _messages(make_run_message(seq=2, content="m")),
+        _messages(make_run_message(seq=3, content="m")),
+        _messages(make_run_message(seq=4, content="m")),
     ]
-    client.issues.runs.side_effect = [
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="completed")),
-    ]
-    events = _collect(_run(client))
-    started = next(e for e in events if isinstance(e, RunToolStartedEvent))
-    finished = next(e for e in events if isinstance(e, RunToolFinishedEvent))
-    assert started.tool == "bash"
-    assert started.input == MappingProxyType({"cmd": "ls"})
-    assert finished.tool == "bash"
-    assert finished.output == "done"
+    client.issues.runs.return_value = _runs(client, _run(client, status="completed"))
+    with pytest.raises(ProtocolError):
+        _collect(_run(client))
 
 
 def test_autopilot_run_has_no_stream_events() -> None:

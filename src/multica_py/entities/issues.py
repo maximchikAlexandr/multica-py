@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, TypeVar, cast
 
 import msgspec
 
+from multica_py._generated.approved_sdk import validate_since_cursor
 from multica_py._internal.commands import Command, _cached_value_command
 from multica_py._internal.permalinks import build_permalink
 from multica_py.config import OperationOptions
@@ -62,6 +63,7 @@ if TYPE_CHECKING:
 
 
 S = TypeVar("S")
+_TERMINAL_DRAIN_POLL_LIMIT = 1024
 
 
 def _page_items(page: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
@@ -104,10 +106,20 @@ def _emit_unseen(
     *,
     seen: dict[int, RunMessage],
     cursor: list[int],
+    task_id: str,
+    issue_id: str,
 ) -> Iterator[RunEvent]:
     """Yield semantic events for unseen messages, advancing the cursor in place."""
     for message in sorted(_page_items(page), key=_run_message_seq):
         seq = message.seq
+        try:
+            validate_since_cursor(seq)
+        except ValueError as exc:
+            raise OutputShapeError("run message seq must be a nonnegative int32") from exc
+        if message.task_id != task_id or (
+            message.issue_id is not None and message.issue_id != issue_id
+        ):
+            raise OutputShapeError("run message identity does not match the bound task run")
         stored = seen.get(seq)
         if stored is not None:
             if stored != message:
@@ -141,7 +153,7 @@ def _stream_task_run_events(
 
     while True:
         page = client.issues.run_messages(task_id, issue_id=issue_id, since=cursor[0])
-        yield from _emit_unseen(page, seen=seen, cursor=cursor)
+        yield from _emit_unseen(page, seen=seen, cursor=cursor, task_id=task_id, issue_id=issue_id)
 
         run = _refresh_run(client, issue_id=issue_id, task_id=task_id)
         status = run.status
@@ -152,9 +164,17 @@ def _stream_task_run_events(
             ordinary_terminal = status in {"completed", "failed"}
             quiet_needed = 1 if ordinary_terminal else 2
             quiet_reads = 0
+            drain_polls = 0
             while quiet_reads < quiet_needed:
+                drain_polls += 1
+                if drain_polls > _TERMINAL_DRAIN_POLL_LIMIT:
+                    raise ProtocolError("task run stream exceeded the terminal drain poll limit")
                 tail_page = client.issues.run_messages(task_id, issue_id=issue_id, since=cursor[0])
-                emitted = list(_emit_unseen(tail_page, seen=seen, cursor=cursor))
+                emitted = list(
+                    _emit_unseen(
+                        tail_page, seen=seen, cursor=cursor, task_id=task_id, issue_id=issue_id
+                    )
+                )
                 yield from emitted
                 quiet_reads = 0 if emitted else quiet_reads + 1
                 if quiet_reads < quiet_needed and not ordinary_terminal:
@@ -299,16 +319,16 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
         """Incrementally yield semantic :class:`RunEvent` objects for this task run.
 
         This is polling-backed incremental delivery, not server push or a
-        real-time/completeness guarantee.  See the change proposal for the
+        real-time/completeness guarantee.  See ``docs/api.md`` for the
         completion-aware termination contract.
         """
+        _validate_poll_interval(poll_interval)
         client = self._require_client(
             entity_type="TaskRun", entity_id=self.id, relation_name="stream_events"
         )
         issue_id = self.issue_id
         if not issue_id:
             raise MissingRelationContextError("TaskRun", self.id, "stream_events", "issue_id")
-        _validate_poll_interval(poll_interval)
         return _stream_task_run_events(
             client=client,
             task_id=self.id,

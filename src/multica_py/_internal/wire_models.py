@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import msgspec
 
+from multica_py._generated.approved_sdk import validate_since_cursor
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.json_values import _coerce_json_value
 from multica_py.enums import ProjectStatus, _coerce_issue_status
@@ -557,6 +558,10 @@ class _RunMessageWire(msgspec.Struct, frozen=True, kw_only=True):
 def _run_message_from_wire(wire: _RunMessageWire) -> RunMessage:
     from multica_py.models.issue_activity import RunMessage
 
+    try:
+        validate_since_cursor(wire.seq)
+    except ValueError as exc:
+        raise OutputShapeError("run message seq must be a nonnegative int32") from exc
     raw_input = wire.input
     if raw_input is None:
         converted_input = None

@@ -151,9 +151,31 @@ def test_run_events_are_immutable() -> None:
         object.__setattr__(event, "text", "changed")
 
 
-def test_decode_run_messages_complete_payload() -> None:
-    payload = msgspec.json.encode(
-        [
+def test_pattern_match_narrows_message_fields() -> None:
+    event = _convert_run_message(make_run_message(type="text", seq=1, content="hi"))
+    match event:
+        case RunTextEvent(sequence=sequence, raw_message=raw_message, text=text):
+            assert sequence == 1
+            assert text == "hi"
+            assert raw_message.seq == 1
+        case _:
+            raise AssertionError("expected RunTextEvent")
+
+
+@dataclass(frozen=True)
+class DecodeCase:
+    id: str
+    payload: object
+    expect_error: bool = False
+    expected_sparse: bool = False
+    expected_complete: bool = False
+    expected_blank_unknown: bool = False
+
+
+_DECODE_CASES: tuple[DecodeCase, ...] = (
+    DecodeCase(
+        id="complete",
+        payload=[
             {
                 "task_id": "run_1",
                 "seq": 1,
@@ -165,40 +187,61 @@ def test_decode_run_messages_complete_payload() -> None:
                 "output": None,
                 "created_at": "2026-01-01T00:00:00Z",
             }
-        ]
-    )
+        ],
+        expected_complete=True,
+    ),
+    DecodeCase(
+        id="sparse",
+        payload=[{"task_id": "run_1", "seq": 2, "type": "text", "content": "hi"}],
+        expected_sparse=True,
+    ),
+    DecodeCase(
+        id="blank",
+        payload=[{"task_id": "run_1", "seq": 3, "type": ""}],
+        expected_blank_unknown=True,
+    ),
+    DecodeCase(
+        id="malformed-input",
+        payload=[{"task_id": "r", "seq": 1, "type": "tool_use", "input": [1, 2]}],
+        expect_error=True,
+    ),
+    DecodeCase(
+        id="negative-seq",
+        payload=[{"task_id": "r", "seq": -1, "type": "text"}],
+        expect_error=True,
+    ),
+    DecodeCase(
+        id="seq-above-int32",
+        payload=[{"task_id": "r", "seq": 2_147_483_648, "type": "text"}],
+        expect_error=True,
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _DECODE_CASES, ids=[c.id for c in _DECODE_CASES])
+def test_decode_run_messages(case: DecodeCase) -> None:
+    payload = msgspec.json.encode(case.payload)
+    if case.expect_error:
+        with pytest.raises((msgspec.ValidationError, OutputShapeError)):
+            decode_run_messages(payload, "test")
+        return
     items = decode_run_messages(payload, "test")
-    assert len(items) == 1
     message = items[0]
-    assert message.task_id == "run_1"
-    assert message.seq == 1
-    assert message.type == "tool_use"
-    assert message.tool == "bash"
-    assert message.input == MappingProxyType({"cmd": "ls", "args": ("-l",)})
-    assert message.created_at == datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
-
-
-def test_decode_run_messages_sparse_payload() -> None:
-    payload = msgspec.json.encode([{"task_id": "run_1", "seq": 2, "type": "text", "content": "hi"}])
-    items = decode_run_messages(payload, "test")
-    message = items[0]
-    assert message.issue_id is None
-    assert message.tool is None
-    assert message.input is None
-    assert message.output is None
-    assert message.created_at is None
-
-
-def test_decode_run_messages_blank_type_preserved() -> None:
-    payload = msgspec.json.encode([{"task_id": "run_1", "seq": 3, "type": ""}])
-    items = decode_run_messages(payload, "test")
-    assert items[0].type == ""
-    event = _convert_run_message(items[0])
-    assert isinstance(event, RunUnknownEvent)
-    assert event.message_type == ""
-
-
-def test_decode_run_messages_malformed_input_raises() -> None:
-    payload = msgspec.json.encode([{"task_id": "r", "seq": 1, "type": "tool_use", "input": [1, 2]}])
-    with pytest.raises((msgspec.ValidationError, OutputShapeError)):
-        decode_run_messages(payload, "test")
+    if case.expected_complete:
+        assert message.task_id == "run_1"
+        assert message.seq == 1
+        assert message.type == "tool_use"
+        assert message.tool == "bash"
+        assert message.input == MappingProxyType({"cmd": "ls", "args": ("-l",)})
+        assert message.created_at == datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
+    if case.expected_sparse:
+        assert message.issue_id is None
+        assert message.tool is None
+        assert message.input is None
+        assert message.output is None
+        assert message.created_at is None
+    if case.expected_blank_unknown:
+        assert message.type == ""
+        event = _convert_run_message(message)
+        assert isinstance(event, RunUnknownEvent)
+        assert event.message_type == ""
