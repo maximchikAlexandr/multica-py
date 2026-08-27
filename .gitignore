@@ -59,6 +59,17 @@ reports/**
 # Mutation testing workspace
 mutants/
 
+# Local video projects and renders
+videos/
+
+# Local OpenSpec telemetry state (project config lives in openspec/config.yaml)
+.config/openspec/
+
+# Zeroshot local run databases (project settings remain tracked)
+.zeroshot/*.db
+.zeroshot/*.db-shm
+.zeroshot/*.db-wal
+
 # The approved runtime projection is intentionally committed.
 .multica/
 .agent_context/
