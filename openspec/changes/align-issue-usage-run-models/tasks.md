@@ -27,6 +27,7 @@ remaining `MULTICA_LIVE_*` environment were not configured. A direct CLI read
 also timed out before this implementation, so no live acceptance is claimed.
 
 PR-gate note: all lint, type, offline test/coverage, compatibility, contract,
-and packaging stages passed. The repository mutation stage is infrastructure
-blocked: `mutmut 3.x` reproducibly raises an internal child-accounting
-`KeyError` at `0/1443`, including with `--max-children 1`.
+and packaging stages passed. The mutation harness initially hit a `mutmut`
+child-accounting `KeyError`; the CI repair excludes the unrelated execution
+provider tests from mutation selection while retaining them in the complete
+offline/coverage gate, and a clean 1443-mutant run now completes.
