@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 import datetime
-import math
 from collections.abc import Callable
-from types import MappingProxyType
 from typing import TYPE_CHECKING, cast
 
 import msgspec
 
 from multica_py._internal.commands import Command, _cached_value_command
+from multica_py._internal.json_values import _coerce_json_value
 from multica_py.config import OperationOptions
 from multica_py.entities._base import (
     _BoundEntity,
-    _is_mapping,
     _reference_presence,
     _runtime_state,
 )
@@ -44,23 +42,6 @@ if TYPE_CHECKING:
     from multica_py.entities.issues import Issue
     from multica_py.entities.projects import Project
     from multica_py.entities.squads import Squad
-
-
-def _coerce_json_value(value: object, *, field_name: str) -> JsonValue:
-    if isinstance(value, float) and not math.isfinite(value):
-        raise msgspec.ValidationError(f"{field_name} must contain only finite JSON numbers")
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    if isinstance(value, (list, tuple)):
-        return tuple(_coerce_json_value(item, field_name=field_name) for item in value)
-    if _is_mapping(value):
-        result: dict[str, JsonValue] = {}
-        for key, item in value.items():
-            if not isinstance(key, str):
-                raise msgspec.ValidationError(f"{field_name} object keys must be strings")
-            result[key] = _coerce_json_value(item, field_name=field_name)
-        return MappingProxyType(result)
-    raise msgspec.ValidationError(f"{field_name} must contain only JSON values")
 
 
 def _make_triggers_loader(
@@ -255,14 +236,14 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
                 issues = client.issues
 
                 def loader() -> tuple[RunMessage, ...]:
-                    return issues.run_messages(task_id, issue_id=issue_id).items
+                    return issues.run_messages(task_id, issue_id=issue_id, since=0).items
 
                 self._set_runtime(
                     "_messages",
                     LazyCollection[RunMessage](
                         loader,
                         command_loader=lambda: issues._run_messages_relation_command(
-                            task_id, issue_id=issue_id
+                            task_id, issue_id=issue_id, since=0
                         ),
                     ),
                 )
@@ -279,7 +260,7 @@ class AutopilotRun(_BoundEntity):  # type: ignore[misc]
         task_id = self.task_id
         issue_id = self.issue_id
         return client.issues._run_messages_relation_command(
-            task_id, issue_id=issue_id, options=options
+            task_id, issue_id=issue_id, since=0, options=options
         )
 
 

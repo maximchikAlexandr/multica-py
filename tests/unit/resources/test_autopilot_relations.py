@@ -188,14 +188,18 @@ def test_direct_pages_have_exact_bound_item_annotations(case: BoundPageCase) -> 
         client.issues.run_messages_command.return_value = resource._plan(
             steps=(),
             finalize=lambda _results: (
-                RunMessage(id="m1", run_id="task_1", role="assistant", content="done"),
+                RunMessage(task_id="task_1", seq=1, type="text", issue_id="iss_1", content="done"),
             ),
         )
 
         def run_messages_adapter(
-            task_run_id: str, *, issue_id: str | None, options: object = None
+            task_run_id: str,
+            *,
+            issue_id: str | None,
+            since: int = 0,
+            options: object = None,
         ) -> Command[tuple[RunMessage, ...]]:
-            kwargs: dict[str, object] = {"issue_id": issue_id}
+            kwargs: dict[str, object] = {"issue_id": issue_id, "since": since}
             if options is not None:
                 kwargs["options"] = options
             command = client.issues.run_messages_command(task_run_id, **kwargs)
@@ -205,8 +209,10 @@ def test_direct_pages_have_exact_bound_item_annotations(case: BoundPageCase) -> 
 
         client.issues._run_messages_relation_command.side_effect = run_messages_adapter
         run = cast("AutopilotRun", items[0])
-        assert [message.id for message in run.messages.all()] == ["m1"]
-        client.issues.run_messages_command.assert_called_once_with("task_1", issue_id="iss_1")
+        assert [message.seq for message in run.messages.all()] == [1]
+        client.issues.run_messages_command.assert_called_once_with(
+            "task_1", issue_id="iss_1", since=0
+        )
 
 
 def test_direct_list_item_second_hop_uses_origin_client() -> None:
@@ -699,7 +705,9 @@ def test_autopilot_run_messages_relation_command_delegates_to_issue_resource() -
 
     command = run.messages.all_command()
 
-    assert command.commands == ("multica issue run-messages task1 --issue i1 --output json",)
+    assert command.commands == (
+        "multica issue run-messages task1 --issue i1 --since 0 --output json",
+    )
     transport.run_bytes.assert_not_called()
 
 

@@ -4,7 +4,13 @@ The IDs are placeholders for prepared resources. Reading a relation property
 is passive; all(), page(), iteration, and prefetch() may invoke the CLI.
 """
 
-from multica_py import ClientConfig, MulticaClient
+from multica_py import (
+    ClientConfig,
+    MulticaClient,
+    RunStatusChangedEvent,
+    RunTextEvent,
+    TaskRun,
+)
 
 
 def inspect_workspace(client: MulticaClient, workspace_id: str) -> None:
@@ -39,6 +45,19 @@ def inspect_execution_resources(
     print(f"squad members: {len(squad.members.all())}")
 
 
+def consume_run_events(run: TaskRun) -> None:
+    """Poll incremental semantic events until a terminal status is observed."""
+    for event in run.stream_events():
+        if isinstance(event, RunTextEvent) and event.text is not None:
+            print(event.text)
+        elif isinstance(event, RunStatusChangedEvent) and event.status in {
+            "completed",
+            "failed",
+            "cancelled",
+        }:
+            return
+
+
 def inspect_issue(client: MulticaClient, issue_id: str) -> None:
     issue = client.issues.get(issue_id)
     comments = issue.comments.all()
@@ -48,6 +67,7 @@ def inspect_issue(client: MulticaClient, issue_id: str) -> None:
         print(f"thread {thread.id}: {len(thread.comments.all())} comments")
     for run in issue.runs.all():
         print(f"run {run.id}: {len(run.messages.all())} messages")
+        consume_run_events(run)
 
     print(f"{issue.title}: {len(comments)} comments, metadata={tuple(metadata)}")
     _ = issue.to_dict()

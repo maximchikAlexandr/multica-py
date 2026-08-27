@@ -120,7 +120,7 @@ CURRENT_PAYLOAD_FINGERPRINTS: dict[str, str] = {
     "manual:issues.cancel_task:canonical": "578b5715c48a8dc914203fd90bcfe4ad20f489ee54ee64c21e79054230a475d3",
     "manual:issues.comments.reply:canonical": "70e7b9e70142d7efde8aa92b0d3dd302c9b8a0a2c0db9efd260e8a48e2a6df99",
     "manual:issues.rerun:canonical": "a3dfe595de07bc824ab207f62549b15d0f445f14e5cd6a89df5ede740f278ee6",
-    "manual:issues.run_messages:canonical": "93749e258f9852050c9f623651dc6c0dd3523b93003cce3fb59ddc00764bb5fc",
+    "manual:issues.run_messages:canonical": "03aa82f36cc4417f5dd0e3568c6437e216978e0670bbab060f21e54c79a1de7d",
     "manual:maintenance.update:canonical": "323564ddf2cb46b2bff8ad529df9871e575b104badeffc48117dddd01cce7663",
     "manual:setup.cloud:canonical": "5595d9445f8abb505d86e7bbcdcf523625ff2dae016d27c04d626961fd6bbbd1",
     "manual:setup.self_host:canonical": "61d723532bb36a8bfd8ac634d84dfe5e8e885c980776e093cd2967a9d82d2b5a",

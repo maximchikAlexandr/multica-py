@@ -387,7 +387,12 @@ memory; use streaming for unbounded output and do not mix the two modes.
   `runtime_id`, `workspace_id`, absolute and privacy-safe relative work dirs,
   durable work dirs, `branch_name`, immutable JSON `result`, `error`, and
   `failure_reason`. Prefer `relative_work_dir` or
-  `relative_durable_work_dir` for display.
+  `relative_durable_work_dir` for display. `TaskRun.stream_events()` yields
+  immutable semantic `RunEvent` objects incrementally (see streaming below).
+- `RunMessage` — the raw pinned upstream run-message model with required
+  `task_id`, `seq`, `type` and optional `issue_id`, `tool`, `content`, `input`,
+  `output`, `created_at`. The old `id`/`run_id`/`role` fields were removed
+  because they were not backed by the pinned CLI payload.
 - `multica_py.types.JsonValue` — closed recursive JSON union. Object nodes are immutable
   `Mapping[str, JsonValue]` snapshots and arrays are tuples; use
   `AutopilotRun.to_dict()` / `to_json()` to materialize standard JSON
@@ -466,3 +471,49 @@ parents = tuple(issue.parent.value for issue in issues if issue.parent.loaded)
 The prefetch operation skips loaded handles, including explicit-null absence,
 preserves earliest-input failure behavior, and never performs implicit loading
 when a property is inspected.
+
+## Incremental run-event streaming
+
+A bound `TaskRun` obtained from `Issue.runs` exposes
+`stream_events(*, poll_interval: float = 1.0)`, a synchronous iterator that
+yields immutable semantic `RunEvent` objects:
+
+```python
+from multica_py import RunTextEvent, RunToolStartedEvent, RunStatusChangedEvent
+
+issue = client.issues.get("iss_1")
+run = issue.runs.all()[0]
+for event in run.stream_events():
+    if isinstance(event, RunTextEvent):
+        print(event.text)
+    elif isinstance(event, RunToolStartedEvent):
+        print(event.tool, event.input)
+    elif isinstance(event, RunStatusChangedEvent):
+        print("status:", event.previous_status, "->", event.status)
+```
+
+The iterator manages the sequence cursor, suppresses identical replayed
+rows, raises `OutputShapeError` on a conflicting payload at the same sequence,
+and refreshes run status after each batch. For `completed`/`failed` it
+drains incremental reads until one quiet response and then yields the terminal
+status event last. For `cancelled` (and any future status terminal only via
+`completed_at`) it requires two consecutive quiet reads separated by
+`poll_interval`.
+
+This is polling-backed incremental delivery, not server push or a real-time
+guarantee. Upstream normally drains before its terminal callback, but its
+drain is bounded and a failed message report is discarded; a row upstream
+failed to persist cannot be recovered. A later raw `TaskRun.messages` snapshot
+is best-effort recovery only for rows upstream eventually persisted after the
+iterator's quiet window. Cancellation has no SDK-visible flush acknowledgement.
+
+Raw `TaskRun.messages` / `IssueResource.run_messages(task_id, issue_id=...,
+since=0)` remain available for snapshot access and are independent of the
+stream cache. `AutopilotRun.messages` remains raw-only; no
+`AutopilotRun.stream_events` is exposed because the autopilot relation does not
+own the issue-run status refresh contract.
+
+`RunEvent`, `RunTextEvent`, `RunThinkingEvent`, `RunToolStartedEvent`,
+`RunToolFinishedEvent`, `RunErrorEvent`, `RunStatusChangedEvent`, and
+`RunUnknownEvent` are exported from `multica_py`. Async streaming is deferred
+until the SDK adopts an end-to-end asynchronous command execution model.

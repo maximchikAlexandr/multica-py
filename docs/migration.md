@@ -478,6 +478,34 @@ remain readable. No new total adds cache reads to input and output.
 work-directory fields for UI; absolute fields are intended for explicit local
 tooling. Legacy run rows remain valid and leave the new fields as `None`.
 
+## Run-message model and incremental streaming (`v0.4.28`)
+
+`RunMessage` is **breaking**: the unsupported `id`, `run_id`, and `role`
+constructor fields were removed. The pinned upstream payload is now decoded
+truthfully:
+
+| Old field | Replacement |
+| --- | --- |
+| `run_id` | `task_id` |
+| ordering/`id` | `seq` |
+| `role` | `type` / event class |
+| fabricated `id` | none (upstream has no message ID) |
+
+`RunMessage` now has required `task_id: str`, `seq: int`, `type: str` and
+optional `issue_id`, `tool`, `content`, `input` (recursive immutable JSON),
+`output`, and `created_at`. A blank `type` decodes successfully and converts
+to `RunUnknownEvent(message_type="")`.
+
+`IssueResource.run_messages` gained `since: int = 0` (always rendered as
+`--since`) and validates an exact non-boolean integer in `0..2_147_483_647`.
+`TaskRun.messages` / `messages_command()` remain snapshot access with an
+explicit zero cursor.
+
+`TaskRun.stream_events(*, poll_interval=1.0)` is a new synchronous iterator
+yielding immutable `RunEvent` subclasses exported from `multica_py`. It is
+polling-backed incremental delivery, not server push. Async streaming waits
+for an SDK-wide asynchronous command execution model.
+
 ## Singular reference migration (`[0.4.28, 0.4.33)`)
 
 The following members intentionally do not exist: `Project.autopilots`,

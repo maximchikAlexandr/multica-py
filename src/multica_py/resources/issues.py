@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast, overload
 
-from multica_py._generated.approved_sdk import validate_nonblank
+from multica_py._generated.approved_sdk import validate_nonblank, validate_since_cursor
 from multica_py._internal.commands import Command, _replace_plan, _Step, _StepRef
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
@@ -23,6 +23,7 @@ from multica_py._internal.wire_models import (
     _LabelWire,
     _task_run_from_wire,
     _TaskRunWire,
+    decode_run_messages,
 )
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities._base import _normalize_entity_id
@@ -303,11 +304,12 @@ class IssueResource(BaseResource):
         task_run_id: str,
         *,
         issue_id: str | None,
+        since: int = 0,
         options: OperationOptions | None = None,
     ) -> Command[tuple[RunMessage, ...]]:
-        return self.run_messages_command(task_run_id, issue_id=issue_id, options=options)._map(
-            _page_items
-        )
+        return self.run_messages_command(
+            task_run_id, issue_id=issue_id, since=since, options=options
+        )._map(_page_items)
 
     def _add_comment_command(
         self,
@@ -1065,23 +1067,39 @@ class IssueResource(BaseResource):
         task_run_id: str,
         *,
         issue_id: str | None = None,
+        since: int = 0,
         options: OperationOptions | None = None,
     ) -> Command[Page[RunMessage]]:
         validate_nonblank(task_run_id)
+        validate_since_cursor(since)
         args = ["issue", "run-messages", task_run_id]
         if issue_id is not None:
             validate_nonblank(issue_id)
             args.extend(["--issue", issue_id])
-        return self._decoded_page_command(tuple(args), RunMessage, options=options)
+        args.extend(["--since", str(since)])
+        plan_args = (*args, "--output", "json")
+
+        def decode(stdout: bytes, command: str) -> object:
+            items = decode_run_messages(stdout, command)
+            return Page(items=items, total=len(items))
+
+        return self._plan(
+            steps=(_Step(plan_args, "run_bytes", decode=decode),),
+            finalize=lambda results: cast("Page[RunMessage]", results[0]),
+            options=options,
+        )
 
     def run_messages(
         self,
         task_run_id: str,
         *,
         issue_id: str | None = None,
+        since: int = 0,
         options: OperationOptions | None = None,
     ) -> Page[RunMessage]:
-        return self.run_messages_command(task_run_id, issue_id=issue_id, options=options).run()
+        return self.run_messages_command(
+            task_run_id, issue_id=issue_id, since=since, options=options
+        ).run()
 
     def usage_command(
         self, issue_id: str, *, options: OperationOptions | None = None

@@ -52,6 +52,16 @@ from multica_py.exceptions import (
     ValidationError,
 )
 from multica_py.models.common import ActionResult, Page
+from multica_py.models.run_events import (
+    RunErrorEvent,
+    RunEvent,
+    RunStatusChangedEvent,
+    RunTextEvent,
+    RunThinkingEvent,
+    RunToolFinishedEvent,
+    RunToolStartedEvent,
+    RunUnknownEvent,
+)
 from multica_py.process import ManagedProcess, ProcessResult
 from multica_py.sentinels import Unset
 
@@ -98,6 +108,14 @@ __all__ = [
     "ProtocolError",
     "RelationError",
     "RelationPaginationError",
+    "RunErrorEvent",
+    "RunEvent",
+    "RunStatusChangedEvent",
+    "RunTextEvent",
+    "RunThinkingEvent",
+    "RunToolFinishedEvent",
+    "RunToolStartedEvent",
+    "RunUnknownEvent",
     "Skill",
     "Squad",
     "TaskRun",

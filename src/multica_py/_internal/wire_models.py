@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import datetime
 import pathlib
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Literal, cast
 
 import msgspec
 
+from multica_py._generated.approved_sdk import validate_since_cursor
+from multica_py._internal.decoders import decode_json
+from multica_py._internal.json_values import _coerce_json_value
 from multica_py.enums import ProjectStatus, _coerce_issue_status
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.autopilots import (
@@ -28,13 +32,14 @@ from multica_py.models.plugins import Plugin, PluginDigest
 from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
 from multica_py.models.properties import PropertyDefinition
 from multica_py.models.system import AttachmentResult
-from multica_py.types import MetadataValue
+from multica_py.types import JsonValue, MetadataValue
 
 if TYPE_CHECKING:
     from multica_py.entities.autopilots import Autopilot, AutopilotRun
     from multica_py.entities.comments import Comment, CommentThread
     from multica_py.entities.issues import Issue, TaskRun
     from multica_py.entities.projects import Project
+    from multica_py.models.issue_activity import RunMessage
 
 
 class _LabelWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -432,7 +437,7 @@ class _AutopilotRunWire(msgspec.Struct, frozen=True, kw_only=True):
 
 
 def _autopilot_run_from_wire(wire: _AutopilotRunWire) -> AutopilotRun:
-    from multica_py.entities.autopilots import AutopilotRun, _coerce_json_value
+    from multica_py.entities.autopilots import AutopilotRun
 
     trigger_payload = (
         None
@@ -481,7 +486,6 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
 
 
 def _task_run_from_wire(wire: _TaskRunWire, *, issue_id: str) -> TaskRun:
-    from multica_py.entities.autopilots import _coerce_json_value
     from multica_py.entities.issues import TaskRun
 
     result = (
@@ -533,6 +537,58 @@ def _task_run_from_wire(wire: _TaskRunWire, *, issue_id: str) -> TaskRun:
             )
         ),
     )
+
+
+class _RunMessageWire(msgspec.Struct, frozen=True, kw_only=True):
+    task_id: str
+    seq: int
+    type: str
+    issue_id: str | None = None
+    tool: str | None = None
+    content: str | None = None
+    # The recursive public JsonValue alias cannot be compiled by msgspec's
+    # runtime schema builder.  This private wire boundary accepts the decoded
+    # tree as object; _run_message_from_wire applies the strict recursive
+    # JsonValue converter before constructing the public model.
+    input: object | None = None
+    output: str | None = None
+    created_at: datetime.datetime | None = None
+
+
+def _run_message_from_wire(wire: _RunMessageWire) -> RunMessage:
+    from multica_py.models.issue_activity import RunMessage
+
+    try:
+        validate_since_cursor(wire.seq)
+    except ValueError as exc:
+        raise OutputShapeError("run message seq must be a nonnegative int32") from exc
+    raw_input = wire.input
+    if raw_input is None:
+        converted_input = None
+    elif isinstance(raw_input, Mapping):
+        converted_input = cast(
+            "Mapping[str, JsonValue]", _coerce_json_value(raw_input, field_name="input")
+        )
+    else:
+        raise OutputShapeError("run message input must be a JSON object or null")
+    return RunMessage(
+        task_id=wire.task_id,
+        seq=wire.seq,
+        type=wire.type,
+        issue_id=wire.issue_id,
+        tool=wire.tool,
+        content=wire.content,
+        input=converted_input,
+        output=wire.output,
+        created_at=wire.created_at,
+    )
+
+
+def decode_run_messages(stdout: bytes, command: str) -> tuple[RunMessage, ...]:
+    """Decoder hook for the governed run-message collection response."""
+
+    wire_items = decode_json(stdout, list[_RunMessageWire], command=command)
+    return tuple(_run_message_from_wire(item) for item in wire_items)
 
 
 class _AutopilotRunListPageWire(msgspec.Struct, frozen=True, kw_only=True):
