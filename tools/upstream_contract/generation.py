@@ -79,8 +79,8 @@ def _runtime(catalog: ContractCatalog) -> bytes:
         "from enum import StrEnum",
         "",
         f"TARGET_VERSION = {catalog.target.version!r}",
-        "MIN_CLI_VERSION = TARGET_VERSION",
-        f"MAX_CLI_VERSION = {_next_patch(catalog.target.version)!r}",
+        f"MIN_CLI_VERSION = {catalog.compatibility.min_cli_version!r}",
+        f"MAX_CLI_VERSION = {catalog.compatibility.exclusive_max_cli_version!r}",
         "",
     ]
     for definition in sorted(enum_definitions, key=enum_key):

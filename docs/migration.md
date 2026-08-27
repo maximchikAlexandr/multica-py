@@ -462,7 +462,23 @@ if issue.attachments:
 The SDK does not add an attachment list relation, a selector helper, or a
 second public attachment model.
 
-## Singular reference migration (`[0.4.28, 0.4.29)`)
+## Issue activity models in CLI 0.4.32
+
+`Issue.assignee` now accepts both the legacy nested object and the current
+`assignee_id`/`assignee_type` pair. Matching dual projections are accepted;
+partial or contradictory pairs raise `OutputShapeError` instead of silently
+returning `None`.
+
+`IssueUsage` preserves input, output, cache-read, and cache-write totals as
+separate values, together with `task_count`, `cost_usd_ticks`, and matching
+uncosted categories. Legacy `total_runs`, `total_tokens`, and `cost_usd`
+remain readable. No new total adds cache reads to input and output.
+
+`TaskRun` now carries typed runtime/worktree/result context. Prefer relative
+work-directory fields for UI; absolute fields are intended for explicit local
+tooling. Legacy run rows remain valid and leave the new fields as `None`.
+
+## Singular reference migration (`[0.4.28, 0.4.33)`)
 
 The following members intentionally do not exist: `Project.autopilots`,
 agent/squad autopilots, `Label.issues`, `Skill.agents`, `Runtime.agents`,

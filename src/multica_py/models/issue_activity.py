@@ -56,3 +56,13 @@ class IssueUsage(msgspec.Struct, frozen=True, kw_only=True):
     cost_usd: float | None = None
     period_start: datetime.datetime | None = None
     period_end: datetime.datetime | None = None
+    task_count: int | None = None
+    total_input_tokens: int | None = None
+    total_output_tokens: int | None = None
+    total_cache_read_tokens: int | None = None
+    total_cache_write_tokens: int | None = None
+    cost_usd_ticks: int | None = None
+    uncosted_input_tokens: int | None = None
+    uncosted_output_tokens: int | None = None
+    uncosted_cache_read_tokens: int | None = None
+    uncosted_cache_write_tokens: int | None = None

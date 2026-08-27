@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 TARGET_VERSION = '0.4.28'
-MIN_CLI_VERSION = TARGET_VERSION
-MAX_CLI_VERSION = '0.4.29'
+MIN_CLI_VERSION = '0.4.28'
+MAX_CLI_VERSION = '0.4.33'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'

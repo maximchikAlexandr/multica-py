@@ -65,6 +65,11 @@ the exact before/after import table is maintained in the migration guide.
 ### Fixed
 
 - Secret redaction now skips environment-derived values shorter than 8 characters, preventing short env values (e.g. `API_KEY=1`) from corrupting unrelated diagnostic text. Explicit `--token`/file/stdin secret channels are unaffected.
+- Issue decoding preserves CLI 0.4.32 scalar assignees and rejects conflicting
+  nested/scalar projections. `IssueUsage` exposes exact token, cost-tick, and
+  uncosted categories, while `TaskRun` retains reviewed runtime, worktree,
+  result, and failure context. The approved compatibility interval is now
+  `[0.4.28, 0.4.33)`.
 
 ## 0.1.0 (unreleased)
 

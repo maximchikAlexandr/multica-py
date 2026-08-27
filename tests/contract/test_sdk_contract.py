@@ -42,7 +42,7 @@ def test_transient_output_rejects_tracked_paths(tmp_path: pathlib.Path) -> None:
 def test_runtime_projection_is_single_authoritative_output() -> None:
     files = render_files(APPROVED)
     runtime = files[0].content
-    assert runtime.count(b"TARGET_VERSION") == 3
+    assert runtime.count(b"TARGET_VERSION") == 2
     assert b"approved_contract" not in runtime
     assert b"source path" not in runtime
     assert b"OPERATION_BINDINGS" in runtime
@@ -53,7 +53,8 @@ def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
     assert b"TARGET_VERSION = '0.4.28'" in runtime
-    assert b"MAX_CLI_VERSION = '0.4.29'" in runtime
+    assert b"MIN_CLI_VERSION = '0.4.28'" in runtime
+    assert b"MAX_CLI_VERSION = '0.4.33'" in runtime
 
     descriptors = {
         item.operation_id: item

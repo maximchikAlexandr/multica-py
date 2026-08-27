@@ -210,15 +210,34 @@ def test_bound_relation_graph(prepared_client: MulticaClient) -> None:
         issue.children.all_command().run()
 
         prepared_run = None
+        prepared_issue_id = None
         for summary in workspace.issues.page_command(limit=50).run().items:
             candidate_runs = (
                 prepared_client.issues.get_command(summary.id).run().runs.all_command().run()
             )
             if candidate_runs:
                 prepared_run = candidate_runs[0]
+                prepared_issue_id = summary.id
                 break
         assert prepared_run is not None, "prepared workspace must contain an issue task run"
+        assert prepared_issue_id is not None
+        assert prepared_run.runtime_id is not None
+        assert prepared_run.workspace_id == workspace_id
+        assert any(
+            (
+                prepared_run.relative_work_dir,
+                prepared_run.relative_durable_work_dir,
+                prepared_run.branch_name,
+            )
+        ), "prepared run must contain privacy-safe worktree context"
         prepared_run.messages.all_command().run()
+
+        usage = prepared_client.issues.usage_command(prepared_issue_id).run()
+        assert usage.task_count is not None and usage.task_count >= 1
+        assert usage.total_input_tokens is not None
+        assert usage.total_output_tokens is not None
+        assert usage.total_cache_read_tokens is not None
+        assert usage.total_cache_write_tokens is not None
 
         print(
             json.dumps(

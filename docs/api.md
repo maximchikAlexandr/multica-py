@@ -377,7 +377,17 @@ memory; use streaming for unbounded output and do not mix the two modes.
   `multica_py.models.issue_activity.MetadataPage` — cursor/metadata types
 - `multica_py.models.project_resources.ProjectResourceRecord` and
   `LocalDirectoryResourceRef` — typed project-resource models
-- `multica_py.models.issue_activity.IssueUsage.cost_usd` — optional float decoded from `issue usage` JSON
+- `multica_py.models.issue_activity.IssueUsage` — retains legacy
+  `total_runs`/`total_tokens`/`cost_usd` fields and the 0.4.32 categories:
+  `task_count`, input/output/cache-read/cache-write totals, `cost_usd_ticks`,
+  and the four matching `uncosted_*_tokens` values. Current fields are `None`
+  only when absent from a legacy envelope; cache reads are not folded into
+  `total_tokens`.
+- `TaskRun` — in addition to IDs/status/timestamps, exposes reviewed
+  `runtime_id`, `workspace_id`, absolute and privacy-safe relative work dirs,
+  durable work dirs, `branch_name`, immutable JSON `result`, `error`, and
+  `failure_reason`. Prefer `relative_work_dir` or
+  `relative_durable_work_dir` for display.
 - `multica_py.types.JsonValue` — closed recursive JSON union. Object nodes are immutable
   `Mapping[str, JsonValue]` snapshots and arrays are tuples; use
   `AutopilotRun.to_dict()` / `to_json()` to materialize standard JSON
@@ -403,7 +413,7 @@ The complete relation inventory and removed surfaces are documented in
 ## Singular references
 
 The singular-reference contract is additive and pinned to the reviewed
-Multica compatibility interval `[0.4.28, 0.4.29)`. Import the handle only from
+Multica compatibility interval `[0.4.28, 0.4.33)`. Import the handle only from
 its dedicated public module:
 
 ```python

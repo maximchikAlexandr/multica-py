@@ -50,7 +50,7 @@ def _docs() -> tuple[str, str, str]:
 def test_singular_docs_pin_baseline_import_and_complete_inventory() -> None:
     api, service, migration = _docs()
     for document in (api, service, migration):
-        assert "[0.4.28, 0.4.29)" in document
+        assert "[0.4.28, 0.4.33)" in document
         assert "from multica_py.models.relations import LazyRef" in document
         assert all(member in document for member in INVENTORY)
 

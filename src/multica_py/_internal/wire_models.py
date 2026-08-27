@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 import msgspec
 
@@ -50,6 +50,8 @@ class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     status: str
     priority: str | None = None
     assignee: IssueAssignee | None | msgspec.UnsetType = msgspec.UNSET
+    assignee_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    assignee_type: str | None | msgspec.UnsetType = msgspec.UNSET
     pull_requests: tuple[LinkedPullRequest, ...] | msgspec.UnsetType = msgspec.UNSET
     children: tuple[IssueChildStageGroup, ...] | msgspec.UnsetType = msgspec.UNSET
     labels: tuple[_LabelWire, ...] | msgspec.UnsetType = msgspec.UNSET
@@ -109,6 +111,7 @@ def _presence_seed(value: object) -> _PresenceSeed:
 def _issue_from_wire(wire: _IssueWire) -> Issue:
     from multica_py.entities.issues import Issue
 
+    assignee, assignee_presence = _issue_assignee_from_wire(wire)
     pull_requests = () if wire.pull_requests is msgspec.UNSET else wire.pull_requests
     children = () if wire.children is msgspec.UNSET else wire.children
     labels = () if wire.labels is msgspec.UNSET else wire.labels
@@ -120,7 +123,7 @@ def _issue_from_wire(wire: _IssueWire) -> Issue:
         description=wire.description,
         status=_coerce_issue_status(wire.status),
         priority=wire.priority,
-        assignee=None if wire.assignee is msgspec.UNSET else wire.assignee,
+        assignee=assignee,
         pull_request_snapshot=pull_requests,
         child_stages=children,
         label_names=tuple(label.name for label in labels),
@@ -138,9 +141,44 @@ def _issue_from_wire(wire: _IssueWire) -> Issue:
         _wire_presence=(
             ("parent_id", _presence_seed(wire.parent_issue_id)),
             ("project_id", _presence_seed(wire.project_id)),
-            ("assignee", _presence_seed(wire.assignee)),
+            ("assignee", assignee_presence),
         ),
     )
+
+
+def _issue_assignee_from_wire(wire: _IssueWire) -> tuple[IssueAssignee | None, _PresenceSeed]:
+    scalar_id_present = wire.assignee_id is not msgspec.UNSET
+    scalar_type_present = wire.assignee_type is not msgspec.UNSET
+    if scalar_id_present != scalar_type_present:
+        raise OutputShapeError(
+            "issue assignee scalar projection must contain both assignee_id and assignee_type"
+        )
+
+    nested_present = wire.assignee is not msgspec.UNSET
+    scalar_present = scalar_id_present and scalar_type_present
+    scalar: IssueAssignee | None = None
+    if scalar_present:
+        if (wire.assignee_id is None) != (wire.assignee_type is None):
+            raise OutputShapeError(
+                "issue assignee scalar projection must contain two values or two nulls"
+            )
+        if wire.assignee_id is not None and wire.assignee_type is not None:
+            scalar = IssueAssignee(
+                id=cast("str", wire.assignee_id), type=cast("str", wire.assignee_type)
+            )
+
+    nested = None if wire.assignee is msgspec.UNSET else wire.assignee
+    if nested_present and scalar_present:
+        if nested is None and scalar is None:
+            return None, "null"
+        if nested is None or scalar is None or nested.id != scalar.id or nested.type != scalar.type:
+            raise OutputShapeError("issue assignee projections conflict")
+        return nested, "value"
+    if nested_present:
+        return nested, _presence_seed(wire.assignee)
+    if scalar_present:
+        return scalar, "null" if scalar is None else "value"
+    return None, "missing"
 
 
 class _IssueChildrenResultWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -426,21 +464,74 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     status: str
     agent_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    runtime_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    workspace_id: str | None | msgspec.UnsetType = msgspec.UNSET
     started_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
+    dispatched_at: datetime.datetime | None = None
+    created_at: datetime.datetime | None = None
+    work_dir: str | None | msgspec.UnsetType = msgspec.UNSET
+    relative_work_dir: str | None | msgspec.UnsetType = msgspec.UNSET
+    durable_work_dir: str | None | msgspec.UnsetType = msgspec.UNSET
+    relative_durable_work_dir: str | None | msgspec.UnsetType = msgspec.UNSET
+    branch_name: str | None | msgspec.UnsetType = msgspec.UNSET
+    result: object | None | msgspec.UnsetType = msgspec.UNSET
+    error: str | None | msgspec.UnsetType = msgspec.UNSET
+    failure_reason: str | None | msgspec.UnsetType = msgspec.UNSET
 
 
 def _task_run_from_wire(wire: _TaskRunWire, *, issue_id: str) -> TaskRun:
+    from multica_py.entities.autopilots import _coerce_json_value
     from multica_py.entities.issues import TaskRun
 
+    result = (
+        None
+        if wire.result is msgspec.UNSET or wire.result is None
+        else _coerce_json_value(wire.result, field_name="result")
+    )
     return TaskRun(
         id=wire.id,
         status=wire.status,
         agent_id=None if wire.agent_id is msgspec.UNSET else wire.agent_id,
+        runtime_id=None if wire.runtime_id is msgspec.UNSET else wire.runtime_id,
+        workspace_id=None if wire.workspace_id is msgspec.UNSET else wire.workspace_id,
         started_at=wire.started_at,
         completed_at=wire.completed_at,
+        dispatched_at=wire.dispatched_at,
+        created_at=wire.created_at,
+        work_dir=None if wire.work_dir is msgspec.UNSET else wire.work_dir,
+        relative_work_dir=(
+            None if wire.relative_work_dir is msgspec.UNSET else wire.relative_work_dir
+        ),
+        durable_work_dir=(
+            None if wire.durable_work_dir is msgspec.UNSET else wire.durable_work_dir
+        ),
+        relative_durable_work_dir=(
+            None
+            if wire.relative_durable_work_dir is msgspec.UNSET
+            else wire.relative_durable_work_dir
+        ),
+        branch_name=None if wire.branch_name is msgspec.UNSET else wire.branch_name,
+        result=result,
+        error=None if wire.error is msgspec.UNSET else wire.error,
+        failure_reason=(None if wire.failure_reason is msgspec.UNSET else wire.failure_reason),
         issue_id=issue_id,
-        _wire_presence=(("agent_id", _presence_seed(wire.agent_id)),),
+        _wire_presence=tuple(
+            (name, _presence_seed(value))
+            for name, value in (
+                ("agent_id", wire.agent_id),
+                ("runtime_id", wire.runtime_id),
+                ("workspace_id", wire.workspace_id),
+                ("work_dir", wire.work_dir),
+                ("relative_work_dir", wire.relative_work_dir),
+                ("durable_work_dir", wire.durable_work_dir),
+                ("relative_durable_work_dir", wire.relative_durable_work_dir),
+                ("branch_name", wire.branch_name),
+                ("result", wire.result),
+                ("error", wire.error),
+                ("failure_reason", wire.failure_reason),
+            )
+        ),
     )
 
 

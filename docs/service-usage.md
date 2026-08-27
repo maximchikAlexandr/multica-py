@@ -359,7 +359,7 @@ the shared process semaphore, and reports the earliest input failure.
 ## Use typed singular references explicitly
 
 The singular-reference API is available for the reviewed compatibility interval
-`[0.4.28, 0.4.29)`. Use the dedicated import; it is intentionally not a root
+`[0.4.28, 0.4.33)`. Use the dedicated import; it is intentionally not a root
 or `multica_py.models` import:
 
 ```python
