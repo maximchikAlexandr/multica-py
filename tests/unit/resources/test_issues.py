@@ -376,7 +376,9 @@ def test_task_run_messages_command_delegates_to_issue_resource(
 
     command = task_run.messages_command()
 
-    assert command.commands == ("multica issue run-messages run1 --issue i1 --output json",)
+    assert command.commands == (
+        "multica issue run-messages run1 --issue i1 --since 0 --output json",
+    )
     mock_transport.run_bytes.assert_not_called()
 
 
@@ -392,7 +394,9 @@ def test_task_run_messages_relation_command_delegates_to_issue_resource(
 
     command = task_run.messages.all_command()
 
-    assert command.commands == ("multica issue run-messages run1 --issue i1 --output json",)
+    assert command.commands == (
+        "multica issue run-messages run1 --issue i1 --since 0 --output json",
+    )
     mock_transport.run_bytes.assert_not_called()
 
 

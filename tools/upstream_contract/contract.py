@@ -243,7 +243,14 @@ _RESPONSE_CATALOG_IDS = frozenset(
 )
 _RESPONSE_ALIASES = frozenset({"issue_search"})
 _BODY_KINDS = frozenset(
-    {"nonblank", "nonnegative_int", "positive_int", "project_update", "resource_update"}
+    {
+        "nonblank",
+        "nonnegative_int",
+        "positive_int",
+        "project_update",
+        "resource_update",
+        "since_cursor_int32",
+    }
 )
 _VALIDATOR_ENUM_IDS = frozenset({"IssueStatus", "ProjectStatus", "AutopilotExecutionMode"})
 _AUXILIARY_CATALOG_KEYS = {
@@ -651,6 +658,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "position_forbids_direction",
             "positive_int:max_concurrent_tasks",
             "preserve_daemon_and_label",
+            "since_cursor_int32",
             "strict:IssueStatus",
             "strict:ProjectStatus",
             "unset_omits",

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Mapping
 
 import msgspec
 
 from multica_py.enums import MetadataValueType
 from multica_py.models.common import CommentCursor, Page
-from multica_py.types import MetadataValue
+from multica_py.types import JsonValue, MetadataValue
 
 __all__ = [
     "CommentCursor",
@@ -43,10 +44,14 @@ class MetadataPredicate(msgspec.Struct, frozen=True, kw_only=True):
 
 
 class RunMessage(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    run_id: str
-    role: str
-    content: str
+    task_id: str
+    seq: int
+    type: str
+    issue_id: str | None = None
+    tool: str | None = None
+    content: str | None = None
+    input: Mapping[str, JsonValue] | None = None
+    output: str | None = None
     created_at: datetime.datetime | None = None
 
 

@@ -202,6 +202,11 @@ def _validator_body(body_kind: str, parameter: str) -> str:
         return f"    if {parameter} is None:\n        raise ValueError('project update value cannot be None')"
     if body_kind == "resource_update":
         return f"    if not isinstance({parameter}, str) or not {parameter}.strip():\n        raise ValueError('resource update path must be nonblank')"
+    if body_kind == "since_cursor_int32":
+        return (
+            f"    if not isinstance({parameter}, int) or isinstance({parameter}, bool) or {parameter} < 0 or {parameter} > 2147483647:\n"
+            "        raise ValueError('value must be a nonnegative int32 sequence cursor')"
+        )
     raise ContractError(f"unsupported validator body kind: {body_kind}")
 
 

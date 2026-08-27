@@ -15,6 +15,7 @@ from multica_py._generated.approved_sdk import (
 )
 from multica_py._internal.commands import Command, _replace_plan, _Step
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.json_values import _coerce_json_value
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _autopilot_from_wire,
@@ -33,7 +34,6 @@ from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.autopilots import (
     Autopilot,
     AutopilotRun,
-    _coerce_json_value,
 )
 from multica_py.enums import AutopilotExecutionMode
 from multica_py.exceptions import OutputShapeError

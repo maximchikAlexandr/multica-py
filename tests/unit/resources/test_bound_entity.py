@@ -12,11 +12,12 @@ import msgspec
 import pytest
 
 from multica_py._internal.commands import _Step
+from multica_py._internal.json_values import _coerce_json_value
 from multica_py._internal.specs import TextResult
 from multica_py.config import ClientConfig
 from multica_py.entities._base import _BoundEntity, _entity_policy
 from multica_py.entities.agents import Agent
-from multica_py.entities.autopilots import Autopilot, AutopilotRun, _coerce_json_value
+from multica_py.entities.autopilots import Autopilot, AutopilotRun
 from multica_py.entities.comments import Comment, CommentThread
 from multica_py.entities.issues import Issue, TaskRun
 from multica_py.entities.labels import Label

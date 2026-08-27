@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Mapping
+import math
+import time
+from collections.abc import Iterator, Mapping
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import msgspec
@@ -16,6 +18,8 @@ from multica_py.enums import IssueStatus, _coerce_issue_status
 from multica_py.exceptions import (
     DetachedEntityError,
     MissingRelationContextError,
+    OutputShapeError,
+    ProtocolError,
     UnsupportedReferenceTargetError,
 )
 from multica_py.models.common import ActionResult, Page
@@ -45,6 +49,7 @@ from multica_py.models.relations import (
     RelationMetadata,
     _RelationLoad,
 )
+from multica_py.models.run_events import RunEvent, RunStatusChangedEvent
 from multica_py.models.system import AttachmentResult
 from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import JsonScalar, MetadataValue
@@ -61,6 +66,126 @@ S = TypeVar("S")
 
 def _page_items(page: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
     return page.items if isinstance(page, Page) else page
+
+
+def _validate_poll_interval(value: float) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError("poll_interval must be a positive finite real number")
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError("poll_interval must be a positive finite real number")
+
+
+def _run_message_seq(message: RunMessage) -> int:
+    return message.seq
+
+
+def _emit_unseen(
+    page: Page[RunMessage] | tuple[RunMessage, ...],
+    *,
+    seen: dict[int, RunMessage],
+    cursor: list[int],
+) -> Iterator[RunEvent]:
+    """Yield semantic events for unseen messages, advancing the cursor in place."""
+    from multica_py.models.run_events import _convert_run_message
+
+    for message in sorted(_page_items(page), key=_run_message_seq):
+        seq = message.seq
+        stored = seen.get(seq)
+        if stored is not None:
+            if stored != message:
+                raise OutputShapeError(f"run message sequence {seq} returned a conflicting payload")
+            continue
+        if seq <= cursor[0]:
+            seen[seq] = message
+            continue
+        seen[seq] = message
+        yield _convert_run_message(message)
+        if seq > cursor[0]:
+            cursor[0] = seq
+
+
+def _refresh_run(client: MulticaClient, issue_id: str, task_id: str) -> TaskRun:
+    runs = _page_items(client.issues.runs(issue_id))
+    for run in runs:
+        if run.id == task_id:
+            return run
+    raise ProtocolError(
+        f"task run {task_id!r} disappeared from issue {issue_id!r} during stream refresh"
+    )
+
+
+def _stream_task_run_events(
+    *,
+    client: MulticaClient,
+    task_id: str,
+    issue_id: str,
+    poll_interval: float,
+) -> Iterator[RunEvent]:
+    cursor = [0]
+    seen: dict[int, RunMessage] = {}
+    last_status: str | None = None
+
+    while True:
+        page = client.issues.run_messages(task_id, issue_id=issue_id, since=cursor[0])
+        yield from _emit_unseen(page, seen=seen, cursor=cursor)
+
+        run = _refresh_run(client, issue_id=issue_id, task_id=task_id)
+        status = run.status
+        is_terminal = status in {"completed", "failed", "cancelled"} or run.completed_at is not None
+
+        if is_terminal:
+            ordinary_terminal = status in {"completed", "failed"}
+            if ordinary_terminal:
+                while True:
+                    tail_page = client.issues.run_messages(
+                        task_id, issue_id=issue_id, since=cursor[0]
+                    )
+                    emitted = list(_emit_unseen(tail_page, seen=seen, cursor=cursor))
+                    yield from emitted
+                    if not emitted:
+                        break
+            else:
+                quiet_reads = 0
+                while quiet_reads < 2:
+                    tail_page = client.issues.run_messages(
+                        task_id, issue_id=issue_id, since=cursor[0]
+                    )
+                    emitted = list(_emit_unseen(tail_page, seen=seen, cursor=cursor))
+                    yield from emitted
+                    if emitted:
+                        quiet_reads = 0
+                    else:
+                        quiet_reads += 1
+                    if quiet_reads < 2:
+                        time.sleep(poll_interval)
+            observed_at = datetime.datetime.now(datetime.UTC)
+            yield RunStatusChangedEvent(
+                task_id=task_id,
+                issue_id=issue_id,
+                sequence=None,
+                created_at=None,
+                raw_message=None,
+                previous_status=last_status,
+                status=status,
+                observed_at=observed_at,
+            )
+            return
+
+        if status != last_status:
+            observed_at = datetime.datetime.now(datetime.UTC)
+            yield RunStatusChangedEvent(
+                task_id=task_id,
+                issue_id=issue_id,
+                sequence=None,
+                created_at=None,
+                raw_message=None,
+                previous_status=last_status,
+                status=status,
+                observed_at=observed_at,
+            )
+            last_status = status
+
+        time.sleep(poll_interval)
 
 
 class TaskRun(_BoundEntity):  # type: ignore[misc]
@@ -154,14 +279,14 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             issues = client.issues
 
             def loader() -> tuple[RunMessage, ...]:
-                return _page_items(issues.run_messages(task_run_id, issue_id=issue_id))
+                return _page_items(issues.run_messages(task_run_id, issue_id=issue_id, since=0))
 
             self._set_runtime(
                 "_messages",
                 LazyCollection[RunMessage](
                     loader,
                     command_loader=lambda: issues._run_messages_relation_command(
-                        task_run_id, issue_id=issue_id
+                        task_run_id, issue_id=issue_id, since=0
                     ),
                 ),
             )
@@ -174,7 +299,28 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             entity_type="TaskRun", entity_id=self.id, relation_name="messages"
         )
         return client.issues._run_messages_relation_command(
-            self.id, issue_id=self.issue_id, options=options
+            self.id, issue_id=self.issue_id, since=0, options=options
+        )
+
+    def stream_events(self, *, poll_interval: float = 1.0) -> Iterator[RunEvent]:
+        """Incrementally yield semantic :class:`RunEvent` objects for this task run.
+
+        This is polling-backed incremental delivery, not server push or a
+        real-time/completeness guarantee.  See the change proposal for the
+        completion-aware termination contract.
+        """
+        client = self._require_client(
+            entity_type="TaskRun", entity_id=self.id, relation_name="stream_events"
+        )
+        issue_id = self.issue_id
+        if not issue_id:
+            raise MissingRelationContextError("TaskRun", self.id, "stream_events", "issue_id")
+        _validate_poll_interval(poll_interval)
+        return _stream_task_run_events(
+            client=client,
+            task_id=self.id,
+            issue_id=issue_id,
+            poll_interval=poll_interval,
         )
 
 

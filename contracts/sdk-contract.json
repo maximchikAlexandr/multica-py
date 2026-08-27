@@ -262,7 +262,7 @@
       "issue_metadata_set": "(issue_id: str, key: str, value: str, *, options: OperationOptions | None = None) -> MetadataEntry",
       "issue_pull_requests": "(issue_id: str, *, options: OperationOptions | None = None) -> Page[LinkedPullRequest]",
       "issue_rerun": "(issue_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
-      "issue_run_messages": "(task_run_id: str, *, issue_id: str | None, options: OperationOptions | None = None) -> Page[RunMessage]",
+      "issue_run_messages": "(task_run_id: str, *, issue_id: str | None, since: int = 0, options: OperationOptions | None = None) -> Page[RunMessage]",
       "issue_runs": "(issue_id: str, *, options: OperationOptions | None = None) -> Page[TaskRun]",
       "issue_search": "(query: str, *, options: OperationOptions | None = None) -> Page[Issue]",
       "issue_status": "(issue_id: str, status: IssueStatus | str, *, options: OperationOptions | None = None) -> Issue",
@@ -1615,10 +1615,16 @@
             "issue_id",
             "--issue",
             "query:issue_id"
+          ],
+          [
+            "since",
+            "--since",
+            "query:since"
           ]
         ],
         "constraints": [
-          "nonblank:task_run_id"
+          "nonblank:task_run_id",
+          "since_cursor_int32"
         ]
       },
       "issue_runs": {
@@ -4591,7 +4597,8 @@
       ],
       "issue_run_messages": [
         "required_nonnull",
-        "omit"
+        "omit",
+        "zero_present"
       ],
       "issue_runs": [
         "required_nonnull"
@@ -5747,7 +5754,7 @@
       "decode_metadata_entries": "multica_py.resources.issue_metadata.IssueMetadataResource._decode_metadata_entries",
       "decode_repository_mutation_result": "multica_py.models.system.RepositoryMutationResult",
       "decode_repository_records": "multica_py.resources.repositories.RepositoryResource._decode_repository_records",
-      "decode_run_messages": "multica_py.resources.issues.IssueResource._decode_run_messages",
+      "decode_run_messages": "multica_py._internal.wire_models.decode_run_messages",
       "decode_runtime_activity": "multica_py.resources.runtimes.RuntimeResource._decode_runtime_activity",
       "decode_runtime_definition": "multica_py.resources.runtimes.RuntimeResource._decode_runtime_definition",
       "decode_runtime_definitions": "multica_py.resources.runtimes.RuntimeResource._decode_runtime_definitions",
@@ -5825,6 +5832,7 @@
       "nonblank:user_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:workspace_id": "multica_py._generated.validators.validate_nonblank",
       "positive_int:max_concurrent_tasks": "multica_py._generated.validators.validate_positive_max_concurrent_tasks",
+      "since_cursor_int32": "multica_py._generated.validators.validate_since_cursor",
       "nonblank:daemon_id": "multica_py._generated.validators.validate_nonblank",
       "nonblank:local_path": "multica_py._generated.validators.validate_nonblank"
     },
@@ -6028,6 +6036,10 @@
       "positive_int:max_concurrent_tasks": {
         "positive_case_id": "positive-max-concurrent-tasks-valid",
         "negative_case_id": "positive-max-concurrent-tasks-invalid"
+      },
+      "since_cursor_int32": {
+        "positive_case_id": "since-cursor-int32-valid",
+        "negative_case_id": "since-cursor-int32-invalid"
       },
       "nonblank:daemon_id": {
         "positive_case_id": "nonblank-request-daemon-id-valid",
@@ -6410,6 +6422,12 @@
         "name": "validate_positive_max_concurrent_tasks",
         "parameter_name": "value",
         "body_kind": "positive_int"
+      },
+      {
+        "validator_id": "since_cursor_int32",
+        "name": "validate_since_cursor",
+        "parameter_name": "value",
+        "body_kind": "since_cursor_int32"
       }
     ],
     "binding_descriptors": [
@@ -7837,10 +7855,16 @@
             "source": "issue_id",
             "binding": "--issue",
             "destination": "query:issue_id"
+          },
+          {
+            "source": "since",
+            "binding": "--since",
+            "destination": "query:since"
           }
         ],
         "validator_ids": [
-          "nonblank:task_run_id"
+          "nonblank:task_run_id",
+          "since_cursor_int32"
         ]
       },
       {
@@ -12282,6 +12306,8 @@
           "tr_1",
           "--issue",
           "iss_1",
+          "--since",
+          "0",
           "--output",
           "json"
         ],

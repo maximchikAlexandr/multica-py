@@ -614,9 +614,9 @@ def test_discovered_public_methods() -> None:
         governed.add((case.contract_operation_id, entrypoint_id))
     assert governed == set(contract_entrypoints)
     assert len(contract.operation_ids) == len(contract.operations)
-    assert len(OPERATION_CASES) == 321
-    assert len({c.id for c in OPERATION_CASES}) == 321
-    assert sum(not c.is_canonical for c in OPERATION_CASES) == 127
+    assert len(OPERATION_CASES) == 323
+    assert len({c.id for c in OPERATION_CASES}) == 323
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == 129
     presence_catalog = cast(
         "dict[str, object]",
         cast("dict[str, object]", contract.raw["catalogs"])["presence"],
@@ -651,7 +651,7 @@ def test_discovered_public_methods() -> None:
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
     assert len(generated) == 89
-    assert len(manual) == 232
+    assert len(manual) == 234
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)

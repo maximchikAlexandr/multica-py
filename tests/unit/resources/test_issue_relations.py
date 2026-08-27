@@ -490,11 +490,13 @@ def _client() -> MagicMock:
 
     client.issues.runs_command = runs_command
     client.issues._runs_relation_command = runs_command
-    client.issues.run_messages_command = lambda run_id, *, issue_id=None: empty_command(
-        lambda: client.issues.run_messages(run_id, issue_id=issue_id)
+    client.issues.run_messages_command = lambda run_id, *, issue_id=None, since=0, options=None: (
+        empty_command(lambda: client.issues.run_messages(run_id, issue_id=issue_id, since=since))
     )
-    client.issues._run_messages_relation_command = lambda run_id, *, issue_id=None, options=None: (
-        empty_command(lambda: client.issues.run_messages(run_id, issue_id=issue_id))
+    client.issues._run_messages_relation_command = (
+        lambda run_id, *, issue_id=None, since=0, options=None: empty_command(
+            lambda: client.issues.run_messages(run_id, issue_id=issue_id, since=since)
+        )
     )
     client.issues._add_comment_command = lambda issue_id, body, *, invalidate, options: (
         client.issues.comments.add_command(issue_id, body, options=options)._map(
@@ -599,13 +601,13 @@ def test_task_run_messages_preserve_issue_and_task_ids() -> None:
     client = _client()
     client.issues.runs.return_value = (TaskRun(id="run_1", status="done"),)
     client.issues.run_messages.return_value = (
-        RunMessage(id="m1", run_id="run_1", role="assistant", content="ok"),
+        RunMessage(task_id="run_1", seq=1, type="text", issue_id="iss_1", content="ok"),
     )
     entity = _issue(client)
 
     run = entity.runs.all()[0]
-    assert [message.id for message in run.messages.all()] == ["m1"]
-    client.issues.run_messages.assert_called_once_with("run_1", issue_id="iss_1")
+    assert [message.seq for message in run.messages.all()] == [1]
+    client.issues.run_messages.assert_called_once_with("run_1", issue_id="iss_1", since=0)
 
 
 def test_cursor_query_passes_complete_pair() -> None:
@@ -915,10 +917,10 @@ def test_direct_issue_activity_operations_bind_origin_and_context(case: DirectBo
         assert (request["issue_id"], request["thread_id"]) == ("iss_1", "th_1")
     if case.second_hop == "messages":
         client.issues.run_messages.return_value = (
-            RunMessage(id="m1", run_id="run_1", role="assistant", content="ok"),
+            RunMessage(task_id="run_1", seq=1, type="text", issue_id="iss_1", content="ok"),
         )
-        assert [message.id for message in cast("TaskRun", item).messages.all()] == ["m1"]
-        client.issues.run_messages.assert_called_once_with("run_1", issue_id="iss_1")
+        assert [message.seq for message in cast("TaskRun", item).messages.all()] == [1]
+        client.issues.run_messages.assert_called_once_with("run_1", issue_id="iss_1", since=0)
 
 
 @pytest.mark.parametrize(
@@ -981,6 +983,8 @@ def test_run_messages_uses_task_id_and_optional_issue_flag() -> None:
             "run_1",
             "--issue",
             "issue_1",
+            "--since",
+            "0",
             "--output",
             "json",
         ),
@@ -988,6 +992,21 @@ def test_run_messages_uses_task_id_and_optional_issue_flag() -> None:
         timeout=None,
     )
     transport.run_text.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "value",
+    [-1, True, False, "0", 2_147_483_648, 3.5, None],
+    ids=["negative", "bool-true", "bool-false", "string", "overflow", "float", "none"],
+)
+def test_run_messages_rejects_invalid_since_before_io(value: object) -> None:
+    transport = MagicMock()
+    resource = IssueResource(transport, ClientConfig())
+
+    with pytest.raises((TypeError, ValueError)):
+        resource.run_messages_command("run_1", issue_id="issue_1", since=value)  # type: ignore[arg-type]
+
+    transport.run_bytes.assert_not_called()
 
 
 @pytest.mark.parametrize("case", ADDRESSING_CASES, ids=lambda case: case.name)
