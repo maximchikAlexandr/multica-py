@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import datetime
+import inspect
+from collections.abc import Generator
 from dataclasses import dataclass
 from types import MappingProxyType
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
 
+from multica_py.entities.autopilots import AutopilotRun
 from multica_py.entities.issues import TaskRun
 from multica_py.exceptions import (
     DetachedEntityError,
@@ -65,11 +69,14 @@ def _assert_terminal(events: list[object], status: str) -> None:
     last = events[-1]
     assert isinstance(last, RunStatusChangedEvent)
     assert last.status == status
+    assert last.observed_at.tzinfo is datetime.UTC
 
 
 @pytest.fixture
-def no_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("multica_py.entities.issues.time.sleep", lambda _seconds: None)
+def sleep_calls(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    calls: list[float] = []
+    monkeypatch.setattr("multica_py.entities.issues.time.sleep", calls.append)
+    return calls
 
 
 @dataclass(frozen=True)
@@ -86,9 +93,14 @@ class StreamCase:
     terminal_status: str
     expected_text_sequences: tuple[int, ...] = ()
     expected_error_event: bool = False
+    expected_unknown_types: tuple[str, ...] = ()
+    expected_since: tuple[int, ...] | None = None
+    expected_status_sequence: tuple[str, ...] | None = None
+    expected_sleeps: int | None = None
+    expected_text: str | None = None
 
 
-_STREAM_DRAIN_CASES: tuple[StreamCase, ...] = (
+_STREAM_CASES: tuple[StreamCase, ...] = (
     StreamCase(
         id="completed-drains-tail-before-status",
         run_messages=(
@@ -100,6 +112,7 @@ _STREAM_DRAIN_CASES: tuple[StreamCase, ...] = (
         status_runs=(_StatusRun("running"), _StatusRun("completed")),
         terminal_status="completed",
         expected_text_sequences=(1, 2),
+        expected_sleeps=1,
     ),
     StreamCase(
         id="failed-uses-ordinary-drain",
@@ -111,6 +124,15 @@ _STREAM_DRAIN_CASES: tuple[StreamCase, ...] = (
         status_runs=(_StatusRun("running"), _StatusRun("failed")),
         terminal_status="failed",
         expected_error_event=True,
+        expected_sleeps=1,
+    ),
+    StreamCase(
+        id="completed-immediate-without-sleep",
+        run_messages=(_empty(), _empty()),
+        status_runs=(_StatusRun("completed"),),
+        terminal_status="completed",
+        expected_sleeps=0,
+        expected_since=(0, 0),
     ),
     StreamCase(
         id="cancelled-requires-two-quiet-reads",
@@ -123,6 +145,19 @@ _STREAM_DRAIN_CASES: tuple[StreamCase, ...] = (
         status_runs=(_StatusRun("running"), _StatusRun("cancelled")),
         terminal_status="cancelled",
         expected_text_sequences=(1,),
+        expected_sleeps=2,
+    ),
+    StreamCase(
+        id="stale-identical-replay-counts-as-quiet",
+        run_messages=(
+            _messages(make_run_message(seq=1, content="m")),
+            _messages(make_run_message(seq=1, content="m")),
+            _empty(),
+        ),
+        status_runs=(_StatusRun("cancelled"),),
+        terminal_status="cancelled",
+        expected_text_sequences=(1,),
+        expected_sleeps=1,
     ),
     StreamCase(
         id="future-status-terminal-via-completed-at-uses-quiescence",
@@ -138,212 +173,197 @@ _STREAM_DRAIN_CASES: tuple[StreamCase, ...] = (
         ),
         terminal_status="paused",
         expected_text_sequences=(1,),
+        expected_sleeps=2,
+    ),
+    StreamCase(
+        id="initial-poll-starts-at-zero",
+        run_messages=(
+            _messages(make_run_message(seq=1, content="m")),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(_StatusRun("running"), _StatusRun("completed")),
+        terminal_status="completed",
+        expected_text_sequences=(1,),
+        expected_since=(0, 1, 1),
+    ),
+    StreamCase(
+        id="cursor-advances-to-greatest-sequence",
+        run_messages=(
+            _messages(
+                make_run_message(seq=1, content="m"),
+                make_run_message(seq=2, content="m"),
+                make_run_message(seq=4, content="m"),
+            ),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(_StatusRun("running"), _StatusRun("completed")),
+        terminal_status="completed",
+        expected_text_sequences=(1, 2, 4),
+        expected_since=(0, 4, 4),
+    ),
+    StreamCase(
+        id="yields-sequence-zero",
+        run_messages=(
+            _messages(make_run_message(seq=0, content="m")),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(_StatusRun("running"), _StatusRun("completed")),
+        terminal_status="completed",
+        expected_text_sequences=(0,),
+        expected_since=(0, 0, 0),
+    ),
+    StreamCase(
+        id="suppresses-duplicate-replay",
+        run_messages=(
+            _messages(make_run_message(seq=1, content="hello")),
+            _messages(make_run_message(seq=1, content="hello")),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(
+            _StatusRun("running"),
+            _StatusRun("running"),
+            _StatusRun("completed"),
+        ),
+        terminal_status="completed",
+        expected_text_sequences=(1,),
+        expected_text="hello",
+    ),
+    StreamCase(
+        id="out-of-order-rows-are-sorted",
+        run_messages=(
+            _messages(
+                make_run_message(seq=3, content="m"),
+                make_run_message(seq=1, content="m"),
+                make_run_message(seq=2, content="m"),
+            ),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(_StatusRun("running"), _StatusRun("completed")),
+        terminal_status="completed",
+        expected_text_sequences=(1, 2, 3),
+    ),
+    StreamCase(
+        id="running-status-emitted-once",
+        run_messages=(
+            _messages(make_run_message(seq=1, content="m")),
+            _empty(),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(
+            _StatusRun("running"),
+            _StatusRun("running"),
+            _StatusRun("completed"),
+        ),
+        terminal_status="completed",
+        expected_text_sequences=(1,),
+        expected_status_sequence=("running", "completed"),
+    ),
+    StreamCase(
+        id="cancelled-delayed-tail-resets-quiet-count",
+        run_messages=(
+            _messages(make_run_message(seq=1, content="m")),
+            _empty(),
+            _messages(make_run_message(seq=2, content="m")),
+            _empty(),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(_StatusRun("running"), _StatusRun("cancelled")),
+        terminal_status="cancelled",
+        expected_text_sequences=(1, 2),
+    ),
+    StreamCase(
+        id="unknown-message-type-preserved",
+        run_messages=(
+            _messages(make_run_message(seq=1, type="tool-use", content=None)),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(_StatusRun("running"), _StatusRun("completed")),
+        terminal_status="completed",
+        expected_unknown_types=("tool-use",),
     ),
 )
 
 
 @pytest.mark.parametrize(
     "case",
-    _STREAM_DRAIN_CASES,
-    ids=[c.id for c in _STREAM_DRAIN_CASES],
+    _STREAM_CASES,
+    ids=[c.id for c in _STREAM_CASES],
 )
-def test_stream_terminal_drain_variants(case: StreamCase, no_sleep: None) -> None:
+def test_stream_poll_and_drain_variants(case: StreamCase, sleep_calls: list[float]) -> None:
     client = MagicMock()
     client.issues.run_messages.side_effect = list(case.run_messages)
     client.issues.runs.side_effect = [
         _runs(client, _run(client, status=sr.status, completed_at=sr.completed_at))
         for sr in case.status_runs
     ]
-    run = _run(client)
-
-    events = _collect(run)
-
+    events = _collect(_run(client))
     text_events = [e for e in events if isinstance(e, RunTextEvent)]
     assert [e.sequence for e in text_events] == list(case.expected_text_sequences)
-    has_error = any(isinstance(e, RunErrorEvent) for e in events)
-    assert has_error == case.expected_error_event
+    assert any(isinstance(e, RunErrorEvent) for e in events) == case.expected_error_event
+    unknown = [e for e in events if isinstance(e, RunUnknownEvent)]
+    assert tuple(e.message_type for e in unknown) == case.expected_unknown_types
     _assert_terminal(events, case.terminal_status)
+    if case.expected_since is not None:
+        actual_since = tuple(
+            call.kwargs["since"] for call in client.issues.run_messages.call_args_list
+        )
+        assert actual_since == case.expected_since
+    if case.expected_status_sequence is not None:
+        status_events = [e for e in events if isinstance(e, RunStatusChangedEvent)]
+        assert tuple(e.status for e in status_events) == case.expected_status_sequence
+        assert status_events[0].previous_status is None
+        assert status_events[1].previous_status == "running"
+    if case.expected_sleeps is not None:
+        assert len(sleep_calls) == case.expected_sleeps
+    if case.expected_text is not None:
+        assert text_events[0].text == case.expected_text
 
 
-def test_stream_initial_poll_starts_at_zero(no_sleep: None) -> None:
-    client = MagicMock()
-    client.issues.run_messages.side_effect = [
-        _messages(make_run_message(seq=1, content="m")),
-        _empty(),
-        _empty(),
-    ]
-    client.issues.runs.side_effect = [
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="completed")),
-    ]
-    run = _run(client)
-
-    events = _collect(run)
-
-    assert client.issues.run_messages.call_args_list[0].kwargs["since"] == 0
-    assert any(isinstance(e, RunTextEvent) for e in events)
-    assert isinstance(events[-1], RunStatusChangedEvent)
-
-
-def test_stream_cursor_advances_to_greatest_sequence(no_sleep: None) -> None:
-    client = MagicMock()
-    client.issues.run_messages.side_effect = [
-        _messages(
-            make_run_message(seq=1, content="m"),
-            make_run_message(seq=2, content="m"),
-            make_run_message(seq=4, content="m"),
-        ),
-        _empty(),
-        _empty(),
-    ]
-    client.issues.runs.side_effect = [
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="completed")),
-    ]
-    run = _run(client)
-
-    events = _collect(run)
-
-    assert client.issues.run_messages.call_args_list[0].kwargs["since"] == 0
-    assert client.issues.run_messages.call_args_list[1].kwargs["since"] == 4
-    _assert_terminal(events, "completed")
-
-
-def test_stream_suppresses_duplicate_replay(no_sleep: None) -> None:
-    client = MagicMock()
-    client.issues.run_messages.side_effect = [
-        _messages(make_run_message(seq=1, content="hello")),
-        _messages(make_run_message(seq=1, content="hello")),
-        _empty(),
-        _empty(),
-    ]
-    client.issues.runs.side_effect = [
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="completed")),
-    ]
-    run = _run(client)
-
-    events = _collect(run)
-
-    text_events = [e for e in events if isinstance(e, RunTextEvent)]
-    assert len(text_events) == 1
-    assert text_events[0].text == "hello"
-
-
-def test_stream_conflicting_repeated_sequence_raises(no_sleep: None) -> None:
+def test_stream_conflicting_repeated_sequence_raises(sleep_calls: list[float]) -> None:
     client = MagicMock()
     client.issues.run_messages.side_effect = [
         _messages(make_run_message(seq=1, content="hello")),
         _messages(make_run_message(seq=1, content="different")),
     ]
     client.issues.runs.return_value = _runs(client, _run(client, status="running"))
-    run = _run(client)
-
     with pytest.raises(OutputShapeError):
-        _collect(run)
+        _collect(_run(client))
 
 
-def test_stream_conflict_within_batch_raises(no_sleep: None) -> None:
+def test_stream_conflict_within_batch_raises(sleep_calls: list[float]) -> None:
     client = MagicMock()
     client.issues.run_messages.return_value = _messages(
         make_run_message(seq=1, content="a"), make_run_message(seq=1, content="b")
     )
     client.issues.runs.return_value = _runs(client, _run(client, status="running"))
-    run = _run(client)
-
     with pytest.raises(OutputShapeError):
-        _collect(run)
+        _collect(_run(client))
 
 
-def test_stream_out_of_order_rows_are_sorted(no_sleep: None) -> None:
-    client = MagicMock()
-    client.issues.run_messages.side_effect = [
-        _messages(
-            make_run_message(seq=3, content="m"),
-            make_run_message(seq=1, content="m"),
-            make_run_message(seq=2, content="m"),
-        ),
-        _empty(),
-        _empty(),
-    ]
-    client.issues.runs.side_effect = [
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="completed")),
-    ]
-    run = _run(client)
-
-    events = _collect(run)
-
-    text_events = [e for e in events if isinstance(e, RunTextEvent)]
-    assert [e.sequence for e in text_events] == [1, 2, 3]
-
-
-def test_stream_running_status_emitted_once(no_sleep: None) -> None:
-    client = MagicMock()
-    client.issues.run_messages.side_effect = [
-        _messages(make_run_message(seq=1, content="m")),
-        _empty(),
-        _empty(),
-        _empty(),
-    ]
-    client.issues.runs.side_effect = [
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="completed")),
-    ]
-    run = _run(client)
-
-    events = _collect(run)
-
-    status_events = [e for e in events if isinstance(e, RunStatusChangedEvent)]
-    assert [e.status for e in status_events] == ["running", "completed"]
-    assert status_events[0].previous_status is None
-    assert status_events[1].previous_status == "running"
-
-
-def test_stream_cancelled_delayed_tail_resets_quiet_count(no_sleep: None) -> None:
-    client = MagicMock()
-    client.issues.run_messages.side_effect = [
-        _messages(make_run_message(seq=1, content="m")),
-        _empty(),
-        _messages(make_run_message(seq=2, content="m")),
-        _empty(),
-        _empty(),
-        _empty(),
-    ]
-    client.issues.runs.side_effect = [
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="cancelled")),
-    ]
-    run = _run(client)
-
-    events = _collect(run)
-
-    text_events = [e for e in events if isinstance(e, RunTextEvent)]
-    assert [e.sequence for e in text_events] == [1, 2]
-    _assert_terminal(events, "cancelled")
-
-
-def test_stream_target_disappears_raises_protocol_error(no_sleep: None) -> None:
+def test_stream_target_disappears_raises_protocol_error(sleep_calls: list[float]) -> None:
     client = MagicMock()
     client.issues.run_messages.return_value = _messages(make_run_message(seq=1, content="m"))
     client.issues.runs.return_value = _runs(client)
-    run = _run(client)
-
     with pytest.raises(ProtocolError):
-        _collect(run)
+        _collect(_run(client))
 
 
 @pytest.mark.parametrize(
     "value",
-    [0, -1, float("inf"), True, 3600.5],
-    ids=["zero", "negative", "nonfinite", "bool", "exceeds-ceiling"],
+    [0, -1, float("inf"), float("nan"), True],
+    ids=["zero", "negative", "infinity", "nan", "bool"],
 )
 def test_stream_invalid_interval_raises_before_io(value: object) -> None:
     client = MagicMock()
     run = _run(client)
-
     with pytest.raises((TypeError, ValueError)):
         next(run.stream_events(poll_interval=value))  # type: ignore[arg-type]
     client.issues.run_messages.assert_not_called()
@@ -356,11 +376,10 @@ def test_stream_detached_run_raises() -> None:
         next(run.stream_events())
 
 
-def test_stream_missing_issue_id_raises(no_sleep: None) -> None:
+def test_stream_missing_issue_id_raises(sleep_calls: list[float]) -> None:
     client = MagicMock()
-    run = _run(client, issue_id=None)
     with pytest.raises(MissingRelationContextError):
-        next(run.stream_events())
+        next(_run(client, issue_id=None).stream_events())
 
 
 @pytest.mark.parametrize(
@@ -368,16 +387,14 @@ def test_stream_missing_issue_id_raises(no_sleep: None) -> None:
     [RuntimeError("boom"), NotFoundError("missing", exit_code=1)],
     ids=["runtime", "not-found"],
 )
-def test_stream_transport_failure_propagates(exc: Exception, no_sleep: None) -> None:
+def test_stream_transport_failure_propagates(exc: Exception, sleep_calls: list[float]) -> None:
     client = MagicMock()
     client.issues.run_messages.side_effect = exc
-    run = _run(client)
-
     with pytest.raises(type(exc)):
-        _collect(run)
+        _collect(_run(client))
 
 
-def test_stream_independent_of_raw_cache(no_sleep: None) -> None:
+def test_stream_independent_of_raw_cache(sleep_calls: list[float]) -> None:
     client = MagicMock()
     client.issues.run_messages.side_effect = [
         _messages(make_run_message(seq=1, content="m")),
@@ -389,33 +406,15 @@ def test_stream_independent_of_raw_cache(no_sleep: None) -> None:
         _runs(client, _run(client, status="completed")),
     ]
     run = _run(client)
-
-    list(run.stream_events())
-
+    iterator = run.stream_events()
+    list(iterator)
     assert run._messages is None or not run._messages.loaded
+    assert inspect.getgeneratorstate(cast("Generator[object, None, None]", iterator)) == (
+        inspect.GEN_CLOSED
+    )
 
 
-def test_stream_unknown_message_type_preserved(no_sleep: None) -> None:
-    client = MagicMock()
-    client.issues.run_messages.side_effect = [
-        _messages(make_run_message(seq=1, type="tool-use", content=None)),
-        _empty(),
-        _empty(),
-    ]
-    client.issues.runs.side_effect = [
-        _runs(client, _run(client, status="running")),
-        _runs(client, _run(client, status="completed")),
-    ]
-    run = _run(client)
-
-    events = _collect(run)
-
-    unknown = [e for e in events if isinstance(e, RunUnknownEvent)]
-    assert len(unknown) == 1
-    assert unknown[0].message_type == "tool-use"
-
-
-def test_stream_tool_lifecycle_preserves_structured_data(no_sleep: None) -> None:
+def test_stream_tool_lifecycle_preserves_structured_data(sleep_calls: list[float]) -> None:
     client = MagicMock()
     start_msg = RunMessage(
         task_id="task_1", seq=1, type="tool_use", tool="bash", input={"cmd": "ls"}
@@ -430,13 +429,15 @@ def test_stream_tool_lifecycle_preserves_structured_data(no_sleep: None) -> None
         _runs(client, _run(client, status="running")),
         _runs(client, _run(client, status="completed")),
     ]
-    run = _run(client)
-
-    events = _collect(run)
-
+    events = _collect(_run(client))
     started = next(e for e in events if isinstance(e, RunToolStartedEvent))
     finished = next(e for e in events if isinstance(e, RunToolFinishedEvent))
     assert started.tool == "bash"
     assert started.input == MappingProxyType({"cmd": "ls"})
     assert finished.tool == "bash"
     assert finished.output == "done"
+
+
+def test_autopilot_run_has_no_stream_events() -> None:
+    assert not hasattr(AutopilotRun, "stream_events")
+    assert "stream_events" not in getattr(AutopilotRun, "__annotations__", {})

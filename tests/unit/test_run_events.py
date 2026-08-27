@@ -113,19 +113,36 @@ def test_convert_run_message_maps_known_and_unknown_types(case: RunMessageCase) 
 
 
 @pytest.mark.parametrize(
-    "message",
+    ("message", "event_type", "fields"),
     [
-        make_run_message(type="text", seq=1, issue_id=None, content="m"),
-        make_run_message(type="thinking", seq=2, issue_id=None, content="m"),
-        make_run_message(type="tool_use", seq=3, issue_id=None, tool="bash"),
-        make_run_message(type="error", seq=4, issue_id=None, content="boom"),
+        (make_run_message(type="text", seq=1, content=None), RunTextEvent, {"text": None}),
+        (
+            make_run_message(type="thinking", seq=2, content=None),
+            RunThinkingEvent,
+            {"thinking": None},
+        ),
+        (
+            make_run_message(type="tool_use", seq=3, tool=None, input=None, content=None),
+            RunToolStartedEvent,
+            {"tool": None, "input": None},
+        ),
+        (
+            make_run_message(type="tool_result", seq=4, tool=None, output=None, content=None),
+            RunToolFinishedEvent,
+            {"tool": None, "output": None},
+        ),
+        (make_run_message(type="error", seq=5, content=None), RunErrorEvent, {"error": None}),
     ],
-    ids=["text-sparse", "thinking-sparse", "tool-use-sparse", "error-sparse"],
+    ids=["text", "thinking", "tool-use", "tool-result", "error"],
 )
-def test_sparse_known_payload_keeps_none(message: RunMessage) -> None:
+def test_sparse_known_payload_keeps_none(
+    message: RunMessage, event_type: type[RunEvent], fields: Mapping[str, object]
+) -> None:
     event = _convert_run_message(message)
-    assert isinstance(event, RunEvent)
+    assert isinstance(event, event_type)
     assert event.raw_message == message
+    for key, value in fields.items():
+        assert getattr(event, key) is value
 
 
 def test_run_events_are_immutable() -> None:

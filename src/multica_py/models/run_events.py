@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
+from typing import TypedDict
 
 import msgspec
 
@@ -38,29 +39,34 @@ class RunEvent(msgspec.Struct, frozen=True, kw_only=True):
     raw_message: RunMessage | None
 
 
-class RunTextEvent(RunEvent):  # type: ignore[misc]
+class _MessageBackedRunEvent(RunEvent):  # type: ignore[misc]
+    sequence: int
+    raw_message: RunMessage
+
+
+class RunTextEvent(_MessageBackedRunEvent):  # type: ignore[misc]
     text: str | None
 
 
-class RunThinkingEvent(RunEvent):  # type: ignore[misc]
+class RunThinkingEvent(_MessageBackedRunEvent):  # type: ignore[misc]
     thinking: str | None
 
 
-class RunToolStartedEvent(RunEvent):  # type: ignore[misc]
+class RunToolStartedEvent(_MessageBackedRunEvent):  # type: ignore[misc]
     tool: str | None
     input: Mapping[str, JsonValue] | None
 
 
-class RunToolFinishedEvent(RunEvent):  # type: ignore[misc]
+class RunToolFinishedEvent(_MessageBackedRunEvent):  # type: ignore[misc]
     tool: str | None
     output: str | None
 
 
-class RunErrorEvent(RunEvent):  # type: ignore[misc]
+class RunErrorEvent(_MessageBackedRunEvent):  # type: ignore[misc]
     error: str | None
 
 
-class RunUnknownEvent(RunEvent):  # type: ignore[misc]
+class RunUnknownEvent(_MessageBackedRunEvent):  # type: ignore[misc]
     message_type: str
 
 
@@ -73,6 +79,14 @@ class RunStatusChangedEvent(RunEvent):  # type: ignore[misc]
     observed_at: datetime.datetime
 
 
+class _MessageFields(TypedDict):
+    task_id: str
+    issue_id: str | None
+    sequence: int
+    created_at: datetime.datetime | None
+    raw_message: RunMessage
+
+
 def _convert_run_message(message: RunMessage) -> RunEvent:
     """Map one :class:`RunMessage` to exactly one :class:`RunEvent`.
 
@@ -82,59 +96,22 @@ def _convert_run_message(message: RunMessage) -> RunEvent:
     ``tool-result`` — maps losslessly to :class:`RunUnknownEvent`.
     """
 
+    shared: _MessageFields = {
+        "task_id": message.task_id,
+        "issue_id": message.issue_id,
+        "sequence": message.seq,
+        "created_at": message.created_at,
+        "raw_message": message,
+    }
     message_type = message.type
     if message_type == "text":
-        return RunTextEvent(
-            task_id=message.task_id,
-            issue_id=message.issue_id,
-            sequence=message.seq,
-            created_at=message.created_at,
-            raw_message=message,
-            text=message.content,
-        )
+        return RunTextEvent(**shared, text=message.content)
     if message_type == "thinking":
-        return RunThinkingEvent(
-            task_id=message.task_id,
-            issue_id=message.issue_id,
-            sequence=message.seq,
-            created_at=message.created_at,
-            raw_message=message,
-            thinking=message.content,
-        )
+        return RunThinkingEvent(**shared, thinking=message.content)
     if message_type == "tool_use":
-        return RunToolStartedEvent(
-            task_id=message.task_id,
-            issue_id=message.issue_id,
-            sequence=message.seq,
-            created_at=message.created_at,
-            raw_message=message,
-            tool=message.tool,
-            input=message.input,
-        )
+        return RunToolStartedEvent(**shared, tool=message.tool, input=message.input)
     if message_type == "tool_result":
-        return RunToolFinishedEvent(
-            task_id=message.task_id,
-            issue_id=message.issue_id,
-            sequence=message.seq,
-            created_at=message.created_at,
-            raw_message=message,
-            tool=message.tool,
-            output=message.output,
-        )
+        return RunToolFinishedEvent(**shared, tool=message.tool, output=message.output)
     if message_type == "error":
-        return RunErrorEvent(
-            task_id=message.task_id,
-            issue_id=message.issue_id,
-            sequence=message.seq,
-            created_at=message.created_at,
-            raw_message=message,
-            error=message.content,
-        )
-    return RunUnknownEvent(
-        task_id=message.task_id,
-        issue_id=message.issue_id,
-        sequence=message.seq,
-        created_at=message.created_at,
-        raw_message=message,
-        message_type=message_type,
-    )
+        return RunErrorEvent(**shared, error=message.content)
+    return RunUnknownEvent(**shared, message_type=message_type)

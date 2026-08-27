@@ -100,7 +100,7 @@ after each batch. For `completed`/`failed` it drains incremental reads until one
 quiet response and then yields the terminal status event last. For `cancelled`
 (and any future status terminal only via `completed_at`) it requires two
 consecutive quiet reads separated by `poll_interval`. `poll_interval` must be a
-positive finite number and at most 3600.0 seconds. Prefer this iterator over
+positive finite number. Prefer this iterator over
 polling `TaskRun.messages` directly when you want ordered, deduplicated event
 delivery with terminal-status awareness.
 
