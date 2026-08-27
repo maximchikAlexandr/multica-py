@@ -14449,6 +14449,60 @@
       "line_end": 331
     },
     {
+      "source_ref_id": "S-RUN-MESSAGES-SINCE-FLAG",
+      "repository": "multica-ai/multica",
+      "commit": "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueRunMessagesCmd",
+      "line_start": 575,
+      "line_end": 577
+    },
+    {
+      "source_ref_id": "S-RUN-MESSAGES-QUERY",
+      "repository": "multica-ai/multica",
+      "commit": "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "runIssueRunMessages",
+      "line_start": 2221,
+      "line_end": 2250
+    },
+    {
+      "source_ref_id": "S-RUN-MESSAGES-HANDLER-PARSE",
+      "repository": "multica-ai/multica",
+      "commit": "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
+      "path": "server/internal/handler/daemon.go",
+      "symbol": "handleTaskMessages",
+      "line_start": 4408,
+      "line_end": 4427
+    },
+    {
+      "source_ref_id": "S-RUN-MESSAGES-HANDLER-PAYLOAD",
+      "repository": "multica-ai/multica",
+      "commit": "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
+      "path": "server/internal/handler/daemon.go",
+      "symbol": "taskMessageToPayload",
+      "line_start": 4601,
+      "line_end": 4653
+    },
+    {
+      "source_ref_id": "S-RUN-MESSAGES-PAYLOAD",
+      "repository": "multica-ai/multica",
+      "commit": "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
+      "path": "server/pkg/protocol/messages.go",
+      "symbol": "TaskMessagePayload",
+      "line_start": 163,
+      "line_end": 174
+    },
+    {
+      "source_ref_id": "S-RUN-MESSAGES-SQL",
+      "repository": "multica-ai/multica",
+      "commit": "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
+      "path": "server/pkg/db/queries/task_message.sql",
+      "symbol": "ListTaskMessagesSince",
+      "line_start": 11,
+      "line_end": 14
+    },
+    {
       "source_ref_id": "D07",
       "repository": "multica-ai/multica",
       "commit": "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
@@ -17271,7 +17325,13 @@
       "compatibility": "intentionally_changed",
       "rationale": "Corrected from issue positional + --run-id to task_run_id + optional --issue (D06).",
       "source_ref_ids": [
-        "D06"
+        "D06",
+        "S-RUN-MESSAGES-SINCE-FLAG",
+        "S-RUN-MESSAGES-QUERY",
+        "S-RUN-MESSAGES-HANDLER-PARSE",
+        "S-RUN-MESSAGES-HANDLER-PAYLOAD",
+        "S-RUN-MESSAGES-PAYLOAD",
+        "S-RUN-MESSAGES-SQL"
       ],
       "test_ref_ids": [
         "T-OPERATION",

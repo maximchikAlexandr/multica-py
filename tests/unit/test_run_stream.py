@@ -1,11 +1,8 @@
 from __future__ import annotations
 
 import datetime
-import inspect
-from collections.abc import Generator
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -21,6 +18,7 @@ from multica_py.exceptions import (
 )
 from multica_py.models.common import Page
 from multica_py.models.issue_activity import RunMessage
+from multica_py.models.relations import LazyCollection
 from multica_py.models.run_events import (
     RunErrorEvent,
     RunStatusChangedEvent,
@@ -433,6 +431,7 @@ def test_stream_transport_failure_propagates(exc: Exception, sleep_calls: list[f
 
 def test_stream_independent_of_raw_cache(sleep_calls: list[float]) -> None:
     client = MagicMock()
+    cached = (make_run_message(seq=99, content="cached"),)
     client.issues.run_messages.side_effect = [
         _messages(make_run_message(seq=1, content="m")),
         _empty(),
@@ -443,14 +442,13 @@ def test_stream_independent_of_raw_cache(sleep_calls: list[float]) -> None:
         _runs(client, _run(client, status="completed")),
     ]
     run = _run(client)
-    iterator = run.stream_events()
-    events = list(iterator)
-    assert run._messages is None or not run._messages.loaded
-    assert inspect.getgeneratorstate(cast("Generator[object, None, None]", iterator)) == (
-        inspect.GEN_CLOSED
-    )
-    message_events = [event for event in events if not isinstance(event, RunStatusChangedEvent)]
-    assert len(message_events) == len({event.sequence for event in message_events})
+    run._set_runtime("_messages", LazyCollection(lambda: cached, initial=cached))
+    snapshot = run.messages.all()
+    events = _collect(run)
+    assert run.messages.loaded
+    assert run.messages.all() is snapshot or run.messages.all() == snapshot
+    assert client.issues.run_messages.call_args_list[0].kwargs["since"] == 0
+    assert [event.sequence for event in events if isinstance(event, RunTextEvent)] == [1]
 
 
 def test_stream_refresh_failure_propagates(sleep_calls: list[float]) -> None:
