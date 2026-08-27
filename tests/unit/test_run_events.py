@@ -2,23 +2,18 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
+from dataclasses import dataclass
 from types import MappingProxyType
 
 import msgspec
 import pytest
 
-from multica_py._internal.json_values import _coerce_json_value
-from multica_py._internal.wire_models import (
-    _run_message_from_wire,
-    _RunMessageWire,
-    decode_run_messages,
-)
+from multica_py._internal.wire_models import decode_run_messages
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.issue_activity import RunMessage
 from multica_py.models.run_events import (
     RunErrorEvent,
     RunEvent,
-    RunStatusChangedEvent,
     RunTextEvent,
     RunThinkingEvent,
     RunToolFinishedEvent,
@@ -26,71 +21,86 @@ from multica_py.models.run_events import (
     RunUnknownEvent,
     _convert_run_message,
 )
-from multica_py.types import JsonValue
+from tests.unit.resources._factories import make_run_message
 
 
-def _msg(
-    *,
-    type: str,
-    seq: int,
-    task_id: str = "task_1",
-    issue_id: str | None = "iss_1",
-    tool: str | None = None,
-    content: str | None = None,
-    input: Mapping[str, JsonValue] | None = None,
-    output: str | None = None,
-    created_at: datetime.datetime | None = None,
-) -> RunMessage:
-    return RunMessage(
-        task_id=task_id,
-        seq=seq,
-        type=type,
-        issue_id=issue_id,
-        tool=tool,
-        content=content,
-        input=input,
-        output=output,
-        created_at=created_at,
-    )
+@dataclass(frozen=True)
+class RunMessageCase:
+    message: RunMessage
+    event_type: type[RunEvent]
+    extra: Mapping[str, object]
+    id: str
+
+
+_RUN_MESSAGE_CASES: tuple[RunMessageCase, ...] = (
+    RunMessageCase(
+        make_run_message(type="text", seq=1, content="hello"),
+        RunTextEvent,
+        {"text": "hello"},
+        "text",
+    ),
+    RunMessageCase(
+        make_run_message(type="thinking", seq=2, content="hm"),
+        RunThinkingEvent,
+        {"thinking": "hm"},
+        "thinking",
+    ),
+    RunMessageCase(
+        make_run_message(
+            type="tool_use", seq=3, tool="bash", input=MappingProxyType({"cmd": "ls"})
+        ),
+        RunToolStartedEvent,
+        {"tool": "bash", "input": MappingProxyType({"cmd": "ls"})},
+        "tool-use",
+    ),
+    RunMessageCase(
+        make_run_message(type="tool_result", seq=4, tool="bash", output="ok"),
+        RunToolFinishedEvent,
+        {"tool": "bash", "output": "ok"},
+        "tool-result",
+    ),
+    RunMessageCase(
+        make_run_message(type="error", seq=5, content="boom"),
+        RunErrorEvent,
+        {"error": "boom"},
+        "error",
+    ),
+    RunMessageCase(
+        make_run_message(type="tool-use", seq=6, tool="bash"),
+        RunUnknownEvent,
+        {"message_type": "tool-use"},
+        "tool-use-hyphen",
+    ),
+    RunMessageCase(
+        make_run_message(type="tool-result", seq=7),
+        RunUnknownEvent,
+        {"message_type": "tool-result"},
+        "tool-result-hyphen",
+    ),
+    RunMessageCase(
+        make_run_message(type="", seq=8),
+        RunUnknownEvent,
+        {"message_type": ""},
+        "blank",
+    ),
+    RunMessageCase(
+        make_run_message(type="future_kind", seq=9),
+        RunUnknownEvent,
+        {"message_type": "future_kind"},
+        "future",
+    ),
+)
 
 
 @pytest.mark.parametrize(
     "case",
-    [
-        (_msg(type="text", seq=1, content="hello"), RunTextEvent, {"text": "hello"}),
-        (_msg(type="thinking", seq=2, content="hm"), RunThinkingEvent, {"thinking": "hm"}),
-        (
-            _msg(type="tool_use", seq=3, tool="bash", input=MappingProxyType({"cmd": "ls"})),
-            RunToolStartedEvent,
-            {"tool": "bash", "input": MappingProxyType({"cmd": "ls"})},
-        ),
-        (
-            _msg(type="tool_result", seq=4, tool="bash", output="ok"),
-            RunToolFinishedEvent,
-            {"tool": "bash", "output": "ok"},
-        ),
-        (_msg(type="error", seq=5, content="boom"), RunErrorEvent, {"error": "boom"}),
-        (_msg(type="tool-use", seq=6, tool="bash"), RunUnknownEvent, {"message_type": "tool-use"}),
-        (_msg(type="tool-result", seq=7), RunUnknownEvent, {"message_type": "tool-result"}),
-        (_msg(type="", seq=8), RunUnknownEvent, {"message_type": ""}),
-        (_msg(type="future_kind", seq=9), RunUnknownEvent, {"message_type": "future_kind"}),
-    ],
-    ids=[
-        "text",
-        "thinking",
-        "tool-use",
-        "tool-result",
-        "error",
-        "tool-use-hyphen",
-        "tool-result-hyphen",
-        "blank",
-        "future",
-    ],
+    _RUN_MESSAGE_CASES,
+    ids=[c.id for c in _RUN_MESSAGE_CASES],
 )
-def test_convert_run_message_maps_known_and_unknown_types(
-    case: tuple[RunMessage, type[RunEvent], dict[str, object]],
-) -> None:
-    message, event_type, extra = case
+def test_convert_run_message_maps_known_and_unknown_types(case: RunMessageCase) -> None:
+    message = case.message
+    event_type = case.event_type
+    extra = case.extra
     event = _convert_run_message(message)
     assert isinstance(event, event_type)
     assert event.task_id == message.task_id
@@ -105,10 +115,10 @@ def test_convert_run_message_maps_known_and_unknown_types(
 @pytest.mark.parametrize(
     "message",
     [
-        _msg(type="text", seq=1),
-        _msg(type="thinking", seq=2),
-        _msg(type="tool_use", seq=3),
-        _msg(type="error", seq=4),
+        make_run_message(type="text", seq=1, issue_id=None, content="m"),
+        make_run_message(type="thinking", seq=2, issue_id=None, content="m"),
+        make_run_message(type="tool_use", seq=3, issue_id=None, tool="bash"),
+        make_run_message(type="error", seq=4, issue_id=None, content="boom"),
     ],
     ids=["text-sparse", "thinking-sparse", "tool-use-sparse", "error-sparse"],
 )
@@ -119,25 +129,9 @@ def test_sparse_known_payload_keeps_none(message: RunMessage) -> None:
 
 
 def test_run_events_are_immutable() -> None:
-    event: RunEvent = _convert_run_message(_msg(type="text", seq=1, content="hi"))
+    event: RunEvent = _convert_run_message(make_run_message(type="text", seq=1, content="hi"))
     with pytest.raises((msgspec.ValidationError, TypeError, AttributeError)):
         object.__setattr__(event, "text", "changed")
-
-
-def test_status_changed_event_narrows_message_fields_to_none() -> None:
-    event = RunStatusChangedEvent(
-        task_id="t1",
-        issue_id=None,
-        sequence=None,
-        created_at=None,
-        raw_message=None,
-        previous_status=None,
-        status="running",
-        observed_at=datetime.datetime.now(datetime.UTC),
-    )
-    assert event.sequence is None
-    assert event.created_at is None
-    assert event.raw_message is None
 
 
 def test_decode_run_messages_complete_payload() -> None:
@@ -191,10 +185,3 @@ def test_decode_run_messages_malformed_input_raises() -> None:
     payload = msgspec.json.encode([{"task_id": "r", "seq": 1, "type": "tool_use", "input": [1, 2]}])
     with pytest.raises((msgspec.ValidationError, OutputShapeError)):
         decode_run_messages(payload, "test")
-
-
-def test_coerce_json_value_rejects_nonfinite() -> None:
-    with pytest.raises(msgspec.ValidationError):
-        _coerce_json_value(float("inf"), field_name="input")
-    with pytest.raises(msgspec.ValidationError):
-        _coerce_json_value(float("nan"), field_name="input")

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import datetime
+from collections.abc import Mapping
+
 from multica_py.client import MulticaClient
 from multica_py.entities._base import _BoundEntity
 from multica_py.entities.agents import Agent
@@ -8,6 +11,33 @@ from multica_py.entities.issues import Issue
 from multica_py.entities.projects import Project
 from multica_py.entities.squads import Squad
 from multica_py.enums import IssueStatus, ProjectStatus
+from multica_py.models.issue_activity import RunMessage
+from multica_py.types import JsonValue
+
+
+def make_run_message(
+    *,
+    seq: int,
+    type: str = "text",
+    task_id: str = "task_1",
+    issue_id: str | None = "iss_1",
+    tool: str | None = None,
+    content: str | None = "m",
+    input: Mapping[str, JsonValue] | None = None,
+    output: str | None = None,
+    created_at: datetime.datetime | None = None,
+) -> RunMessage:
+    return RunMessage(
+        task_id=task_id,
+        seq=seq,
+        type=type,
+        issue_id=issue_id,
+        tool=tool,
+        content=content,
+        input=input,
+        output=output,
+        created_at=created_at,
+    )
 
 
 def issue_factory(

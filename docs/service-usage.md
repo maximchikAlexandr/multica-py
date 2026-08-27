@@ -75,6 +75,35 @@ Streaming is captured on the first iteration and cannot be switched to
 `result()`/`wait()` afterward. `wait()` is buffered and retains stdout and stderr
 in memory, so prefer streaming for large output; the two modes must not be mixed.
 
+## Stream task-run events incrementally
+
+A bound `TaskRun` from `Issue.runs` exposes `stream_events(*, poll_interval=1.0)`,
+a synchronous iterator yielding immutable `RunEvent` objects. This is
+polling-backed incremental delivery, not server push or a real-time guarantee:
+
+```python
+from multica_py import RunStatusChangedEvent, RunTextEvent
+
+issue = client.issues.get("iss_1")
+run = issue.runs.all()[0]
+for event in run.stream_events(poll_interval=1.0):
+    if isinstance(event, RunTextEvent):
+        consume(event.text)
+    elif isinstance(event, RunStatusChangedEvent):
+        if event.status in {"completed", "failed", "cancelled"}:
+            break
+```
+
+The iterator manages the sequence cursor, suppresses identical replayed rows,
+raises `OutputShapeError` on a conflicting payload, and refreshes run status
+after each batch. For `completed`/`failed` it drains incremental reads until one
+quiet response and then yields the terminal status event last. For `cancelled`
+(and any future status terminal only via `completed_at`) it requires two
+consecutive quiet reads separated by `poll_interval`. `poll_interval` must be a
+positive finite number and at most 3600.0 seconds. Prefer this iterator over
+polling `TaskRun.messages` directly when you want ordered, deduplicated event
+delivery with terminal-status awareness.
+
 Web routing is configured independently when an application needs entity
 links. The API server URL is never used as a frontend fallback:
 

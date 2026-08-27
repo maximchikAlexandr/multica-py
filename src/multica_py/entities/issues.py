@@ -73,6 +73,28 @@ def _validate_poll_interval(value: float) -> None:
         raise TypeError("poll_interval must be a positive finite real number")
     if not math.isfinite(value) or value <= 0:
         raise ValueError("poll_interval must be a positive finite real number")
+    if value > 3600.0:
+        raise ValueError("poll_interval must be at most 3600.0 seconds")
+
+
+def _status_event(
+    *,
+    task_id: str,
+    issue_id: str,
+    previous_status: str | None,
+    status: str,
+    observed_at: datetime.datetime,
+) -> RunStatusChangedEvent:
+    return RunStatusChangedEvent(
+        task_id=task_id,
+        issue_id=issue_id,
+        sequence=None,
+        created_at=None,
+        raw_message=None,
+        previous_status=previous_status,
+        status=status,
+        observed_at=observed_at,
+    )
 
 
 def _run_message_seq(message: RunMessage) -> int:
@@ -100,8 +122,7 @@ def _emit_unseen(
             continue
         seen[seq] = message
         yield _convert_run_message(message)
-        if seq > cursor[0]:
-            cursor[0] = seq
+        cursor[0] = seq
 
 
 def _refresh_run(client: MulticaClient, issue_id: str, task_id: str) -> TaskRun:
@@ -131,6 +152,7 @@ def _stream_task_run_events(
 
         run = _refresh_run(client, issue_id=issue_id, task_id=task_id)
         status = run.status
+        observed_at = datetime.datetime.now(datetime.UTC)
         is_terminal = status in {"completed", "failed", "cancelled"} or run.completed_at is not None
 
         if is_terminal:
@@ -158,13 +180,9 @@ def _stream_task_run_events(
                         quiet_reads += 1
                     if quiet_reads < 2:
                         time.sleep(poll_interval)
-            observed_at = datetime.datetime.now(datetime.UTC)
-            yield RunStatusChangedEvent(
+            yield _status_event(
                 task_id=task_id,
                 issue_id=issue_id,
-                sequence=None,
-                created_at=None,
-                raw_message=None,
                 previous_status=last_status,
                 status=status,
                 observed_at=observed_at,
@@ -172,13 +190,9 @@ def _stream_task_run_events(
             return
 
         if status != last_status:
-            observed_at = datetime.datetime.now(datetime.UTC)
-            yield RunStatusChangedEvent(
+            yield _status_event(
                 task_id=task_id,
                 issue_id=issue_id,
-                sequence=None,
-                created_at=None,
-                raw_message=None,
                 previous_status=last_status,
                 status=status,
                 observed_at=observed_at,
