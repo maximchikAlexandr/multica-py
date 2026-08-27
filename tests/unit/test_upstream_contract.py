@@ -19,6 +19,7 @@ from multica_py.resources.squad_members import SquadMemberResource
 from tools.upstream_contract.contract import (
     ContractError,
     ResultAssertion,
+    VerifiedBinary,
     assert_result,
     load_contract,
     validate_contract,
@@ -503,6 +504,31 @@ def test_current_target_and_source_refs_are_pinned_to_v0428() -> None:
     assert all(
         ref.commit != "ecbdbda09e7b2be56cd9ccc55cee1ee360222d18" for ref in contract.source_refs
     )
+
+
+def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separate() -> None:
+    contract = load_contract(APPROVED)
+    compatibility = contract.compatibility
+    assert (
+        compatibility.min_cli_version,
+        compatibility.max_tested_cli_version,
+        compatibility.exclusive_max_cli_version,
+    ) == ("0.4.28", "0.4.32", "0.4.33")
+    assert compatibility.verified_binaries == (
+        VerifiedBinary(
+            version="0.4.32",
+            commit="d60775aa9394b911b18701a326f655465604e7d1",
+            build_date="2026-08-21T09:43:50Z",
+            go_version="go1.26.7",
+            os="darwin",
+            arch="arm64",
+        ),
+    )
+    assert {item.operation_id for item in compatibility.reviewed_responses} == {
+        "issues.get",
+        "issues.runs",
+        "issues.usage",
+    }
 
 
 def test_approved_binding_command_paths_are_pinned_upstream_leaves() -> None:

@@ -11,10 +11,15 @@ from collections.abc import Iterator, Sequence
 from pathlib import PurePosixPath
 from typing import Protocol, TypeGuard, cast
 
-from multica_py.exceptions import ExecutableNotFoundError, ExecutableNotRunnableError
+from multica_py._internal.decoders import decode_text
+from multica_py.exceptions import (
+    ExecutableNotFoundError,
+    ExecutableNotRunnableError,
+    MulticaError,
+    ProcessTimeoutError,
+)
 from multica_py.execution.base import (
     ExecutionConnectionError,
-    ExecutionError,
     ExecutionRequest,
     ExecutionResult,
     ExecutionTargetNotFoundError,
@@ -194,13 +199,13 @@ class _SshProcessHandle:
                 remaining = deadline - _monotonic()
                 if remaining <= 0:
                     self.close()
-                    raise TimeoutError("SSH process wait timed out; channel was closed")
+                    raise ProcessTimeoutError("SSH process wait timed out; channel was closed")
                 _sleep(min(0.01, remaining))
         try:
             self._exit_code = self._channel.recv_exit_status()
         except TimeoutError as error:
             self.close()
-            raise TimeoutError("SSH process wait timed out; channel was closed") from error
+            raise ProcessTimeoutError("SSH process wait timed out; channel was closed") from error
         except Exception as error:
             raise self._executor._map_error(error) from error
         else:
@@ -217,7 +222,9 @@ class _SshProcessHandle:
             return executable_result(ExecutionResult(self._exit_code, stdout, stderr), self._argv)
         except TimeoutError as error:
             self.close()
-            raise TimeoutError("SSH process collection timed out; channel was closed") from error
+            raise ProcessTimeoutError(
+                "SSH process collection timed out; channel was closed"
+            ) from error
         except Exception as error:
             raise self._executor._map_error(error) from error
 
@@ -235,11 +242,11 @@ class _SshProcessHandle:
 
     def stdout_lines(self) -> Iterator[str]:
         self._output.claim("streaming")
-        yield from (line.decode("utf-8") for line in self._stdout)
+        yield from (decode_text(line) for line in self._stdout)
 
     def stderr_lines(self) -> Iterator[str]:
         self._output.claim("streaming")
-        yield from (line.decode("utf-8") for line in self._stderr)
+        yield from (decode_text(line) for line in self._stderr)
 
     def close(self) -> None:
         self._stdin.close()
@@ -378,16 +385,7 @@ class SshExecutor:
         return path
 
     def _map_error(self, error: Exception) -> Exception:
-        if isinstance(
-            error,
-            (
-                ExecutableNotFoundError,
-                ExecutableNotRunnableError,
-                ExecutionError,
-                ImportError,
-                TimeoutError,
-            ),
-        ):
+        if isinstance(error, (MulticaError, ImportError, TimeoutError)):
             return error
         if isinstance(error, (FileNotFoundError, PermissionError)):
             return ExecutionConnectionError(str(error))

@@ -794,6 +794,34 @@ class Target:
 
 
 @dataclass(frozen=True)
+class VerifiedBinary:
+    version: str
+    commit: str
+    build_date: str
+    go_version: str
+    os: str
+    arch: str
+
+
+@dataclass(frozen=True)
+class ReviewedResponse:
+    operation_id: str
+    source_urls: tuple[str, ...]
+    fields: tuple[str, ...]
+    omission_policy: str
+    test_ref_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Compatibility:
+    min_cli_version: str
+    max_tested_cli_version: str
+    exclusive_max_cli_version: str
+    verified_binaries: tuple[VerifiedBinary, ...]
+    reviewed_responses: tuple[ReviewedResponse, ...]
+
+
+@dataclass(frozen=True)
 class SourceRef:
     source_ref_id: str
     repository: str
@@ -950,6 +978,7 @@ class TestVector:
 @dataclass(frozen=True)
 class ContractCatalog:
     target: Target
+    compatibility: Compatibility
     operations: tuple[Operation, ...]
     source_refs: tuple[SourceRef, ...]
     test_refs: tuple[TestRef, ...]
@@ -1852,6 +1881,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         {
             "schema_version",
             "target",
+            "compatibility",
             "catalogs",
             "source_refs",
             "test_refs",
@@ -1877,6 +1907,90 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     )
     if not _COMMIT.fullmatch(target.commit):
         raise ContractError("target.commit must be a full lowercase hexadecimal commit")
+    compatibility_raw = _dict(raw["compatibility"], "compatibility")
+    _exact_keys(
+        compatibility_raw,
+        frozenset(
+            {
+                "min_cli_version",
+                "max_tested_cli_version",
+                "exclusive_max_cli_version",
+                "verified_binaries",
+                "reviewed_responses",
+            }
+        ),
+        "compatibility",
+    )
+    bounds = tuple(
+        _str(compatibility_raw[key], f"compatibility.{key}")
+        for key in ("min_cli_version", "max_tested_cli_version", "exclusive_max_cli_version")
+    )
+    version_pattern = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+    if not all(version_pattern.fullmatch(value) for value in bounds):
+        raise ContractError("compatibility bounds must be semantic versions")
+    if tuple(int(part) for part in bounds[0].split(".")) > tuple(
+        int(part) for part in bounds[1].split(".")
+    ):
+        raise ContractError("compatibility minimum must not exceed maximum tested version")
+    if tuple(int(part) for part in bounds[1].split(".")) >= tuple(
+        int(part) for part in bounds[2].split(".")
+    ):
+        raise ContractError("compatibility exclusive maximum must exceed maximum tested version")
+    verified_binaries: list[VerifiedBinary] = []
+    for index, value in enumerate(
+        _list(compatibility_raw["verified_binaries"], "compatibility.verified_binaries")
+    ):
+        item = _dict(value, f"compatibility.verified_binaries[{index}]")
+        fields = ("version", "commit", "build_date", "go_version", "os", "arch")
+        _exact_keys(item, frozenset(fields), f"compatibility.verified_binaries[{index}]")
+        binary = VerifiedBinary(
+            *(
+                _str(item[field], f"compatibility.verified_binaries[{index}].{field}")
+                for field in fields
+            )
+        )
+        if not version_pattern.fullmatch(binary.version):
+            raise ContractError("verified binary version must be semantic")
+        if not _COMMIT.fullmatch(binary.commit):
+            raise ContractError(
+                "verified binary commit must be a full lowercase hexadecimal commit"
+            )
+        verified_binaries.append(binary)
+    reviewed_responses: list[ReviewedResponse] = []
+    for index, value in enumerate(
+        _list(compatibility_raw["reviewed_responses"], "compatibility.reviewed_responses")
+    ):
+        item = _dict(value, f"compatibility.reviewed_responses[{index}]")
+        _exact_keys(
+            item,
+            frozenset({"operation_id", "source_urls", "fields", "omission_policy", "test_ref_ids"}),
+            f"compatibility.reviewed_responses[{index}]",
+        )
+        reviewed_responses.append(
+            ReviewedResponse(
+                operation_id=_str(item["operation_id"], "reviewed response operation_id"),
+                source_urls=tuple(
+                    _str(source, "reviewed response source URL")
+                    for source in _list(item["source_urls"], "reviewed response source_urls")
+                ),
+                fields=tuple(
+                    _str(field, "reviewed response field")
+                    for field in _list(item["fields"], "reviewed response fields")
+                ),
+                omission_policy=_str(item["omission_policy"], "reviewed response omission_policy"),
+                test_ref_ids=tuple(
+                    _str(ref, "reviewed response test ref")
+                    for ref in _list(item["test_ref_ids"], "reviewed response test_ref_ids")
+                ),
+            )
+        )
+    compatibility = Compatibility(
+        min_cli_version=bounds[0],
+        max_tested_cli_version=bounds[1],
+        exclusive_max_cli_version=bounds[2],
+        verified_binaries=tuple(verified_binaries),
+        reviewed_responses=tuple(reviewed_responses),
+    )
     catalogs = _dict(raw["catalogs"], "catalogs")
     catalog_required = frozenset(
         {
@@ -1966,6 +2080,14 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         for value in _list(scope["operation_ids"], "scope.operation_ids")
     }:
         raise ContractError("scope.operation_ids must match operations")
+    unknown_reviewed_operations = {
+        item.operation_id for item in compatibility.reviewed_responses
+    } - operation_ids
+    if unknown_reviewed_operations:
+        raise ContractError(
+            "compatibility reviewed responses reference unknown operations: "
+            + ", ".join(sorted(unknown_reviewed_operations))
+        )
     for vector in vectors:
         if vector.operation_id not in operation_ids:
             raise ContractError(f"{vector.vector_id} references unknown operation")
@@ -1973,8 +2095,21 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     if any(item.commit != target.commit for item in source_refs):
         raise ContractError("every source_refs commit must match target.commit")
     test_refs = _test_refs(raw["test_refs"])
+    known_test_refs = {item.test_ref_id for item in test_refs}
+    unknown_reviewed_test_refs = {
+        test_ref
+        for response in compatibility.reviewed_responses
+        for test_ref in response.test_ref_ids
+        if test_ref not in known_test_refs
+    }
+    if unknown_reviewed_test_refs:
+        raise ContractError(
+            "compatibility reviewed responses reference unknown tests: "
+            + ", ".join(sorted(unknown_reviewed_test_refs))
+        )
     return ContractCatalog(
         target=target,
+        compatibility=compatibility,
         operations=operations,
         source_refs=source_refs,
         test_refs=test_refs,

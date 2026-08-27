@@ -7,6 +7,85 @@
     "release_id": "371790559",
     "release_provenance_ref": ".devlocal/upstream-contract/v0.4.20..v0.4.28/release/release-verification.json"
   },
+  "compatibility": {
+    "min_cli_version": "0.4.28",
+    "max_tested_cli_version": "0.4.32",
+    "exclusive_max_cli_version": "0.4.33",
+    "verified_binaries": [
+      {
+        "version": "0.4.32",
+        "commit": "d60775aa9394b911b18701a326f655465604e7d1",
+        "build_date": "2026-08-21T09:43:50Z",
+        "go_version": "go1.26.7",
+        "os": "darwin",
+        "arch": "arm64"
+      }
+    ],
+    "reviewed_responses": [
+      {
+        "operation_id": "issues.get",
+        "source_urls": [
+          "https://github.com/multica-ai/multica/blob/d60775aa9394b911b18701a326f655465604e7d1/server/internal/handler/issue.go#L35-L58"
+        ],
+        "fields": [
+          "assignee_id",
+          "assignee_type"
+        ],
+        "omission_policy": "The legacy nested assignee and current scalar pair are accepted; matching dual projections agree, while partial or conflicting projections fail closed.",
+        "test_ref_ids": [
+          "T-ISSUE-ASSIGNEE-V0432"
+        ]
+      },
+      {
+        "operation_id": "issues.usage",
+        "source_urls": [
+          "https://github.com/multica-ai/multica/blob/d60775aa9394b911b18701a326f655465604e7d1/server/internal/handler/daemon.go#L4897-L4923",
+          "https://github.com/multica-ai/multica/blob/d60775aa9394b911b18701a326f655465604e7d1/server/cmd/multica/cmd_issue.go#L2788-L2840"
+        ],
+        "fields": [
+          "task_count",
+          "total_input_tokens",
+          "total_output_tokens",
+          "total_cache_read_tokens",
+          "total_cache_write_tokens",
+          "cost_usd_ticks",
+          "uncosted_input_tokens",
+          "uncosted_output_tokens",
+          "uncosted_cache_read_tokens",
+          "uncosted_cache_write_tokens"
+        ],
+        "omission_policy": "Current category fields preserve exact integers; legacy payloads leave absent current fields as None and keep legacy totals separate.",
+        "test_ref_ids": [
+          "T-ISSUE-USAGE-V0432"
+        ]
+      },
+      {
+        "operation_id": "issues.runs",
+        "source_urls": [
+          "https://github.com/multica-ai/multica/blob/d60775aa9394b911b18701a326f655465604e7d1/server/internal/handler/agent.go#L311-L388",
+          "https://github.com/multica-ai/multica/blob/d60775aa9394b911b18701a326f655465604e7d1/server/internal/handler/daemon.go#L4771-L4795"
+        ],
+        "fields": [
+          "runtime_id",
+          "workspace_id",
+          "dispatched_at",
+          "created_at",
+          "work_dir",
+          "relative_work_dir",
+          "durable_work_dir",
+          "relative_durable_work_dir",
+          "branch_name",
+          "result",
+          "error",
+          "failure_reason"
+        ],
+        "omission_policy": "Reviewed optional fields default to None for legacy rows; present JSON result values are converted to immutable public JSON.",
+        "test_ref_ids": [
+          "T-TASK-RUN-V0432"
+        ]
+      }
+    ]
+  },
   "catalogs": {
     "types": {
       "autopilot": "Autopilot",
@@ -14813,6 +14892,21 @@
       "node_id": "test_issue_get_decodes_attachment_snapshots"
     },
     {
+      "test_ref_id": "T-ISSUE-ASSIGNEE-V0432",
+      "path": "tests/contract/test_issue_models.py",
+      "node_id": "test_issue_assignee_projection_matrix"
+    },
+    {
+      "test_ref_id": "T-ISSUE-USAGE-V0432",
+      "path": "tests/contract/test_issue_models.py",
+      "node_id": "test_v0432_issue_usage_preserves_token_and_cost_categories"
+    },
+    {
+      "test_ref_id": "T-TASK-RUN-V0432",
+      "path": "tests/contract/test_issue_models.py",
+      "node_id": "test_v0432_task_run_preserves_immutable_execution_context"
+    },
+    {
       "test_ref_id": "relation:R01",
       "path": "specs/bound-resource-relations/spec.md",
       "node_id": "# Workspace.members"
@@ -16761,7 +16855,7 @@
     {
       "operation_id": "issues.get",
       "compatibility": "compatible",
-      "rationale": "Issue get for detail view; embedded attachment snapshots reuse AttachmentResult and normalize omitted or empty upstream attachments to an empty tuple because the best-effort read may omit the field, so consumers can retry explicitly.",
+      "rationale": "Issue get preserves the reviewed nested and scalar assignee projections with fail-closed conflict handling; embedded attachment snapshots reuse AttachmentResult and normalize omitted or empty upstream attachments to an empty tuple because the best-effort read may omit the field, so consumers can retry explicitly.",
       "source_ref_ids": [
         "S-ISSUE",
         "S-ISSUE-RESPONSE",
@@ -16769,7 +16863,8 @@
       ],
       "test_ref_ids": [
         "T-OPERATION",
-        "T-ISSUE-GET-ATTACHMENTS"
+        "T-ISSUE-GET-ATTACHMENTS",
+        "T-ISSUE-ASSIGNEE-V0432"
       ],
       "entrypoints": [
         {
@@ -17176,13 +17271,14 @@
     {
       "operation_id": "issues.runs",
       "compatibility": "intentionally_changed",
-      "rationale": "Issue runs for issue runs relation (D06).",
+      "rationale": "Issue runs preserves the reviewed v0.4.32 runtime, worktree, result, and failure projection for relation R28 while legacy omissions remain optional.",
       "source_ref_ids": [
         "D06"
       ],
       "test_ref_ids": [
         "T-OPERATION",
-        "relation:R28"
+        "relation:R28",
+        "T-TASK-RUN-V0432"
       ],
       "entrypoints": [
         {
@@ -17368,12 +17464,13 @@
     {
       "operation_id": "issues.usage",
       "compatibility": "compatible",
-      "rationale": "Approved canonical public method retained with explicit v0.4.20 convention and test evidence.",
+      "rationale": "Issue usage preserves reviewed v0.4.32 token, cost-tick, uncosted, and task-count categories while retaining separate legacy summary fields.",
       "source_ref_ids": [
         "S-ISSUE"
       ],
       "test_ref_ids": [
-        "T-OPERATION"
+        "T-OPERATION",
+        "T-ISSUE-USAGE-V0432"
       ],
       "entrypoints": [
         {

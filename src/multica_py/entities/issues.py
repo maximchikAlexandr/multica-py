@@ -47,7 +47,7 @@ from multica_py.models.relations import (
 )
 from multica_py.models.system import AttachmentResult
 from multica_py.sentinels import Unset, UnsetType
-from multica_py.types import MetadataValue
+from multica_py.types import JsonScalar, MetadataValue
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
@@ -67,8 +67,20 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     id: str
     status: str
     agent_id: str | None = None
+    runtime_id: str | None = None
+    workspace_id: str | None = None
     started_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
+    dispatched_at: datetime.datetime | None = None
+    created_at: datetime.datetime | None = None
+    work_dir: str | None = None
+    relative_work_dir: str | None = None
+    durable_work_dir: str | None = None
+    relative_durable_work_dir: str | None = None
+    branch_name: str | None = None
+    result: JsonScalar | tuple[object, ...] | Mapping[str, object] = None
+    error: str | None = None
+    failure_reason: str | None = None
     issue_id: str | None = msgspec.field(default=None, name="_issue_id")
     _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
     _messages: LazyCollection[RunMessage] | None = msgspec.field(default=None, name="_messages")

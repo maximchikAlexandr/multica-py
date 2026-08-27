@@ -3,10 +3,13 @@
 The generated runtime constants in
 `src/multica_py/_generated/approved_sdk.py` define the reviewed CLI interval:
 
-- `MIN_CLI_VERSION` equals `TARGET_VERSION`;
-- `MAX_CLI_VERSION` is the exclusive next patch version.
+- `TARGET_VERSION` remains the exact source checkout pinned by every source reference;
+- `MIN_CLI_VERSION` and exclusive `MAX_CLI_VERSION` come from the approved compatibility block.
 
-The current reviewed interval is `[0.4.28, 0.4.29)`.
+The current reviewed interval is `[0.4.28, 0.4.33)`, covering CLI 0.4.28
+through 0.4.32. The 0.4.32 release binary is recorded separately at commit
+`d60775aa9394b911b18701a326f655465604e7d1`; it does not rewrite the pinned
+0.4.28 source references.
 
 `multica_py._internal.compat` imports these constants. Client configuration
 may override the bounds explicitly, while `strict`, `warn`, and `ignore`
@@ -49,6 +52,11 @@ historical context in archived OpenSpec material and earlier migration notes.
 Evidence and transient reports are not runtime inputs. Only a reviewed Git
 change to `contracts/sdk-contract.json` and the single generated runtime
 projection can promote a new compatibility interval.
+
+The 0.4.32 compatibility extension reviews the issue get/usage/runs response
+fields against the exact release source. It preserves scalar issue assignees,
+token/cost/uncosted categories, and bounded task-run worktree/runtime context.
+Unreviewed response additions remain ignored until a later contract review.
 
 At v0.4.28, `client.auth.login()` maps to the root `login` Cobra command.
 `configuration.get()` is retained only as a no-argument compatibility alias of

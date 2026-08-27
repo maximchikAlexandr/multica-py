@@ -55,12 +55,31 @@ jobs:
             coverage.json
           retention-days: 14
       - name: Mutation run
-        run: make mutation
+        run: |
+          mkdir -p .artifacts/mutation
+          set +e
+          NO_COLOR=1 uv run mutmut run > .artifacts/mutation/run.log 2>&1
+          status=$?
+          set -e
+          echo "mutmut_exit=${status}" | tee .artifacts/mutation/exit_code.txt
+          {
+            echo "## mutmut run (exit ${status})"
+            echo '```'
+            tail -n 300 .artifacts/mutation/run.log || true
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          tail -n 200 .artifacts/mutation/run.log || true
+          NO_COLOR=1 uv run mutmut results | tee .artifacts/mutation/results.txt || true
+          exit "${status}"
       - name: Upload mutation results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mutation-results
-          path: .artifacts/mutation/results.txt
+          path: |
+            .artifacts/mutation/results.txt
+            .artifacts/mutation/run.log
+            .artifacts/mutation/exit_code.txt
           retention-days: 14
 
   compatibility:
