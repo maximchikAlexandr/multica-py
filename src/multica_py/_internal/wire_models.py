@@ -485,10 +485,11 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     failure_reason: str | None = None
 
 
-def _task_run_from_wire(wire: _TaskRunWire, *, issue_id: str | None) -> TaskRun:
+def _task_run_from_wire(
+    wire: _TaskRunWire, *, issue_id: str | None, include_agent_presence: bool = True
+) -> TaskRun:
     from multica_py.entities.issues import TaskRun
 
-    result = None if wire.result is None else _coerce_json_value(wire.result, field_name="result")
     return TaskRun(
         id=wire.id,
         status=wire.status,
@@ -504,11 +505,13 @@ def _task_run_from_wire(wire: _TaskRunWire, *, issue_id: str | None) -> TaskRun:
         durable_work_dir=wire.durable_work_dir,
         relative_durable_work_dir=wire.relative_durable_work_dir,
         branch_name=wire.branch_name,
-        result=result,
+        result=cast("JsonValue | None", wire.result),
         error=wire.error,
         failure_reason=wire.failure_reason,
         issue_id=issue_id,
-        _wire_presence=(("agent_id", _presence_seed(wire.agent_id)),),
+        _wire_presence=(
+            (("agent_id", _presence_seed(wire.agent_id)),) if include_agent_presence else ()
+        ),
     )
 
 

@@ -94,14 +94,14 @@ ASSIGNEE_PROJECTION_CASES = (
 
 
 @dataclass(frozen=True)
-class UsageDecodeCase:
+class DecodeCase:
     id: str
     payload: dict[str, object]
     expected: dict[str, object]
 
 
 USAGE_DECODE_CASES = (
-    UsageDecodeCase(
+    DecodeCase(
         "current",
         _ACTIVITY_FIXTURE["usage"],
         {
@@ -122,7 +122,7 @@ USAGE_DECODE_CASES = (
             "total_tokens": None,
         },
     ),
-    UsageDecodeCase(
+    DecodeCase(
         "legacy",
         _ACTIVITY_FIXTURE["legacy_usage"],
         {
@@ -134,7 +134,7 @@ USAGE_DECODE_CASES = (
             "total_cache_read_tokens": None,
         },
     ),
-    UsageDecodeCase(
+    DecodeCase(
         "explicit-null-current",
         _ACTIVITY_FIXTURE["null_usage"],
         {
@@ -154,15 +154,8 @@ USAGE_DECODE_CASES = (
 )
 
 
-@dataclass(frozen=True)
-class TaskRunDecodeCase:
-    id: str
-    payload: dict[str, object]
-    expected: dict[str, object]
-
-
 TASK_RUN_DECODE_CASES = (
-    TaskRunDecodeCase(
+    DecodeCase(
         "current",
         _ACTIVITY_FIXTURE["task_run"],
         {
@@ -185,7 +178,7 @@ TASK_RUN_DECODE_CASES = (
             "failure_reason": "",
         },
     ),
-    TaskRunDecodeCase(
+    DecodeCase(
         "legacy-omitted",
         _ACTIVITY_FIXTURE["legacy_task_run"],
         {
@@ -208,7 +201,7 @@ TASK_RUN_DECODE_CASES = (
             "failure_reason": None,
         },
     ),
-    TaskRunDecodeCase(
+    DecodeCase(
         "explicit-null",
         _ACTIVITY_FIXTURE["null_task_run"],
         {
@@ -254,14 +247,14 @@ def test_v0432_provenance_fixture_matches_verified_release() -> None:
 
 
 @pytest.mark.parametrize("case", USAGE_DECODE_CASES, ids=lambda case: case.id)
-def test_issue_usage_decode_matrix(case: UsageDecodeCase) -> None:
+def test_issue_usage_decode_matrix(case: DecodeCase) -> None:
     usage = decode_json(json.dumps(case.payload).encode(), IssueUsage)
     for field, expected in case.expected.items():
         assert getattr(usage, field) == expected
 
 
 @pytest.mark.parametrize("case", TASK_RUN_DECODE_CASES, ids=lambda case: case.id)
-def test_task_run_decode_matrix(case: TaskRunDecodeCase) -> None:
+def test_task_run_decode_matrix(case: DecodeCase) -> None:
     wire = decode_json(json.dumps(case.payload).encode(), _TaskRunWire)
     run = _task_run_from_wire(wire, issue_id="issue-1")
     assert run.issue_id == "issue-1"
@@ -293,6 +286,7 @@ def test_task_run_decode_matrix(case: TaskRunDecodeCase) -> None:
 )
 def test_task_run_result_is_recursively_immutable(factory: Callable[[], TaskRun]) -> None:
     run = factory()
+    assert run._wire_presence == ()
     assert isinstance(run.result, MappingProxyType)
     assert run.result["files"] == ("before",)
     with pytest.raises(TypeError):

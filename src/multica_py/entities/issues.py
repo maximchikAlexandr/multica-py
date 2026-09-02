@@ -235,20 +235,11 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             self._set_runtime("result", _coerce_json_value(result, field_name="result"))
 
     @classmethod
-    def _normalize_from_dict(cls, data: dict[str, object]) -> dict[str, object]:
-        normalized = dict(data)
-        result = normalized.get("result")
-        if result is not None:
-            normalized["result"] = _coerce_json_value(result, field_name="result")
-        return normalized
-
-    @classmethod
     def _from_encoded_dict(cls, data: dict[str, object]) -> TaskRun:
         from multica_py._internal.wire_models import _task_run_from_wire, _TaskRunWire
 
         wire = msgspec.convert(data, type=_TaskRunWire, strict=True)
-        result = _task_run_from_wire(wire, issue_id=None)
-        return msgspec.structs.replace(result, _wire_presence=())
+        return _task_run_from_wire(wire, issue_id=None, include_agent_presence=False)
 
     @property
     def issue(self) -> LazyRef[Issue]:
