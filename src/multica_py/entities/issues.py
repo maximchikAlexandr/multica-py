@@ -10,9 +10,10 @@ import msgspec
 
 from multica_py._generated.approved_sdk import validate_since_cursor
 from multica_py._internal.commands import Command, _cached_value_command
+from multica_py._internal.json_values import _coerce_json_value
 from multica_py._internal.permalinks import build_permalink
 from multica_py.config import OperationOptions
-from multica_py.entities._base import _BoundEntity, _reference_presence
+from multica_py.entities._base import _BoundEntity, _reference_presence, _runtime_state
 from multica_py.entities.comments import Comment, CommentThread, _bind_comment, _bind_thread
 from multica_py.entities.labels import Label
 from multica_py.enums import IssueStatus, _coerce_issue_status
@@ -53,7 +54,7 @@ from multica_py.models.relations import (
 from multica_py.models.run_events import RunEvent, RunStatusChangedEvent, _convert_run_message
 from multica_py.models.system import AttachmentResult
 from multica_py.sentinels import Unset, UnsetType
-from multica_py.types import JsonScalar, MetadataValue
+from multica_py.types import JsonValue, MetadataValue
 
 if TYPE_CHECKING:
     from multica_py.client import MulticaClient
@@ -216,7 +217,7 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     durable_work_dir: str | None = None
     relative_durable_work_dir: str | None = None
     branch_name: str | None = None
-    result: JsonScalar | tuple[object, ...] | Mapping[str, object] = None
+    result: JsonValue | None = None
     error: str | None = None
     failure_reason: str | None = None
     issue_id: str | None = msgspec.field(default=None, name="_issue_id")
@@ -224,6 +225,21 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     _messages: LazyCollection[RunMessage] | None = msgspec.field(default=None, name="_messages")
     _issue: object | None = msgspec.field(default=None, name="_issue")
     _agent: object | None = msgspec.field(default=None, name="_agent")
+
+    def __post_init__(self) -> None:
+        # Frozen msgspec fields cannot be replaced from ``__post_init__`` on
+        # Python 3.12. Keep a normalized private snapshot for the public JSON
+        # result so direct construction is as snapshot-safe as wire decoding.
+        result = cast("object", object.__getattribute__(self, "result"))
+        if result is not None and "result" not in _runtime_state(self):
+            self._set_runtime("result", _coerce_json_value(result, field_name="result"))
+
+    @classmethod
+    def _from_encoded_dict(cls, data: dict[str, object]) -> TaskRun:
+        from multica_py._internal.wire_models import _task_run_from_wire, _TaskRunWire
+
+        wire = msgspec.convert(data, type=_TaskRunWire, strict=True)
+        return _task_run_from_wire(wire, issue_id=None, include_agent_presence=False)
 
     @property
     def issue(self) -> LazyRef[Issue]:
@@ -701,18 +717,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
 
             def loader() -> tuple[TaskRun, ...]:
                 runs = _page_items(client.issues.runs(issue_id))
-                return tuple(
-                    TaskRun(
-                        id=run.id,
-                        status=run.status,
-                        agent_id=run.agent_id,
-                        started_at=run.started_at,
-                        completed_at=run.completed_at,
-                        _client=client,
-                        issue_id=issue_id,
-                    )
-                    for run in runs
-                )
+                return tuple(run._with_client(client) for run in runs)
 
             def command_loader() -> Command[tuple[TaskRun, ...]]:
                 return client.issues._runs_relation_command(issue_id)

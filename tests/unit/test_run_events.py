@@ -44,7 +44,7 @@ def test_convert_run_message_maps_known_and_unknown_types(case: RunMessageCase) 
 def test_run_events_are_immutable() -> None:
     event: RunEvent = _convert_run_message(make_run_message(type="text", seq=1, content="hi"))
     with pytest.raises((msgspec.ValidationError, TypeError, AttributeError)):
-        object.__setattr__(event, "text", "changed")
+        event.text = "changed"  # type: ignore[attr-defined]
 
 
 def test_pattern_match_narrows_message_fields() -> None:

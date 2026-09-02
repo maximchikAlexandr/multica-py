@@ -10,7 +10,6 @@
   "compatibility": {
     "min_cli_version": "0.4.28",
     "max_tested_cli_version": "0.4.32",
-    "exclusive_max_cli_version": "0.4.33",
     "verified_binaries": [
       {
         "version": "0.4.32",
@@ -14979,12 +14978,12 @@
     {
       "test_ref_id": "T-ISSUE-USAGE-V0432",
       "path": "tests/contract/test_issue_models.py",
-      "node_id": "test_v0432_issue_usage_preserves_token_and_cost_categories"
+      "node_id": "test_issue_usage_decode_matrix"
     },
     {
       "test_ref_id": "T-TASK-RUN-V0432",
       "path": "tests/contract/test_issue_models.py",
-      "node_id": "test_v0432_task_run_preserves_immutable_execution_context"
+      "node_id": "test_task_run_decode_matrix"
     },
     {
       "test_ref_id": "relation:R01",

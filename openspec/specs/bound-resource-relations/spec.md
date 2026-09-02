@@ -2,9 +2,7 @@
 
 ## Purpose
 TBD - created by archiving change resource-relations-lazy-loading. Update Purpose after archive.
-
 ## Requirements
-
 ### Requirement: Bound entity data boundary
 Participating resource operations MUST return typed entities that privately
 retain their originating `MulticaClient` view, while scalar data remains available as an
@@ -56,6 +54,7 @@ immutable typed snapshot that excludes runtime context and relations.
 #### Scenario: Resource result is bound to the same executor
 - **WHEN** a participating list, get, create, update, or aggregate operation returns an entity under a non-local executor
 - **THEN** its relations use the exact configuration, the same executor, and the shared process semaphore of the originating client view
+
 ### Requirement: Relation load points are explicit
 Reading a relation property or query view MUST perform no I/O. I/O MAY begin
 only through iteration, length, containment, mapping lookup, `all()`, `page()`, `refresh()`, or explicit
@@ -74,6 +73,7 @@ only through iteration, length, containment, mapping lookup, `all()`, `page()`, 
 - **WHEN** a consumer stores `command = relation.all_command()`
 - **THEN** transport call count remains zero and `relation.loaded` is
   unchanged
+
 ### Requirement: Normative relation inventory
 The implementation MUST provide exactly the following 38 relation contracts. Operation IDs and public signatures in this table are normative; unlisted relations are outside this change. Issue-list relations return bound `Issue` entities constructed from their governed list rows and originating client without additional `issues.get` calls.
 
@@ -298,6 +298,7 @@ The SDK MUST NOT maintain an identity map or enrich an existing wrapper.
 - **THEN** they compare or encode `entity.to_dict()` / `entity.to_json()` (or
   use `entity.detach()`) rather than relying on instance identity, and
   `_client`/caches are excluded
+
 ### Requirement: Relation cache refresh and invalidation
 Each bound entity MUST memoize one lazy object per relation and normalized query parameters. The lazy object owns its state and lock; failed loads remain retryable, refresh swaps only on success, and successful nested mutations call `invalidate()` only on proven-stale memoized relations. Automatic invalidation is local only when the successful mutation signature contains the exact parent ID used by the memoized relation: rows 11, 14, 15, 18, scoped create on row 19, parent-addressed comment add in 20–22, 23–25, and 31–32. Parentless comment delete/resolve, workspace-wide and filtered relations, and unrelated top-level mutations remain stale until explicit `refresh()`; no reverse index or global scan is introduced.
 
@@ -331,6 +332,7 @@ Each bound entity MUST memoize one lazy object per relation and normalized query
 - **THEN** `command.commands` contains the loader plan argv and
   `command.run()` performs the load with `force=True` semantics, updates
   the cache on success, and preserves the prior value on failure
+
 ### Requirement: Lazy state transitions
 Every lazy object MUST use exactly `UNLOADED`, `LOADING`, and `LOADED` with one
 `threading.Lock`. `loaded` MUST be true only for LOADED; page calls MUST not
@@ -409,6 +411,7 @@ their established collection/mapping identity behavior under this extension.
 #### Scenario: No prefetch command
 - **WHEN** the public surface is inspected
 - **THEN** no `prefetch_command()` method exists on `MulticaClient`
+
 ### Requirement: Relation lifecycle errors
 Detached entities and missing inherited relation context MUST fail with typed
 errors before subprocess invocation. Client views otherwise retain existing
@@ -590,3 +593,14 @@ A bound `TaskRun` SHALL continue exposing cached snapshot access through `messag
 #### Scenario: Autopilot messages do not imply completion streaming
 - **WHEN** an `AutopilotRun` has task and issue context
 - **THEN** its raw `messages` and `messages_command()` APIs continue to work and no `stream_events()` method is advertised
+
+### Requirement: Issue run relations retain execution-location context
+`Issue.runs` SHALL return bound `TaskRun` entities that retain reviewed execution-location and runtime context from the issue-runs response. Relation binding, message loading, issue context inheritance, immutability, and refresh behavior SHALL remain unchanged.
+
+#### Scenario: Consumer identifies a run work directory
+- **WHEN** `Issue.runs` loads a task-run row with `work_dir` and `relative_work_dir`
+- **THEN** the bound `TaskRun` exposes both values and the caller can select the privacy-safe relative value without a follow-up raw CLI call
+
+#### Scenario: Legacy run omits new context
+- **WHEN** a supported legacy task-run row omits the added execution fields
+- **THEN** the bound `TaskRun` remains usable, exposes documented optional defaults, and retains its issue/messages relations

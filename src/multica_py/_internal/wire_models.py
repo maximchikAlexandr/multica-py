@@ -469,72 +469,48 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     status: str
     agent_id: str | None | msgspec.UnsetType = msgspec.UNSET
-    runtime_id: str | None | msgspec.UnsetType = msgspec.UNSET
-    workspace_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    runtime_id: str | None = None
+    workspace_id: str | None = None
     started_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
     dispatched_at: datetime.datetime | None = None
     created_at: datetime.datetime | None = None
-    work_dir: str | None | msgspec.UnsetType = msgspec.UNSET
-    relative_work_dir: str | None | msgspec.UnsetType = msgspec.UNSET
-    durable_work_dir: str | None | msgspec.UnsetType = msgspec.UNSET
-    relative_durable_work_dir: str | None | msgspec.UnsetType = msgspec.UNSET
-    branch_name: str | None | msgspec.UnsetType = msgspec.UNSET
-    result: object | None | msgspec.UnsetType = msgspec.UNSET
-    error: str | None | msgspec.UnsetType = msgspec.UNSET
-    failure_reason: str | None | msgspec.UnsetType = msgspec.UNSET
+    work_dir: str | None = None
+    relative_work_dir: str | None = None
+    durable_work_dir: str | None = None
+    relative_durable_work_dir: str | None = None
+    branch_name: str | None = None
+    result: object | None = None
+    error: str | None = None
+    failure_reason: str | None = None
 
 
-def _task_run_from_wire(wire: _TaskRunWire, *, issue_id: str) -> TaskRun:
+def _task_run_from_wire(
+    wire: _TaskRunWire, *, issue_id: str | None, include_agent_presence: bool = True
+) -> TaskRun:
     from multica_py.entities.issues import TaskRun
 
-    result = (
-        None
-        if wire.result is msgspec.UNSET or wire.result is None
-        else _coerce_json_value(wire.result, field_name="result")
-    )
     return TaskRun(
         id=wire.id,
         status=wire.status,
         agent_id=None if wire.agent_id is msgspec.UNSET else wire.agent_id,
-        runtime_id=None if wire.runtime_id is msgspec.UNSET else wire.runtime_id,
-        workspace_id=None if wire.workspace_id is msgspec.UNSET else wire.workspace_id,
+        runtime_id=wire.runtime_id,
+        workspace_id=wire.workspace_id,
         started_at=wire.started_at,
         completed_at=wire.completed_at,
         dispatched_at=wire.dispatched_at,
         created_at=wire.created_at,
-        work_dir=None if wire.work_dir is msgspec.UNSET else wire.work_dir,
-        relative_work_dir=(
-            None if wire.relative_work_dir is msgspec.UNSET else wire.relative_work_dir
-        ),
-        durable_work_dir=(
-            None if wire.durable_work_dir is msgspec.UNSET else wire.durable_work_dir
-        ),
-        relative_durable_work_dir=(
-            None
-            if wire.relative_durable_work_dir is msgspec.UNSET
-            else wire.relative_durable_work_dir
-        ),
-        branch_name=None if wire.branch_name is msgspec.UNSET else wire.branch_name,
-        result=result,
-        error=None if wire.error is msgspec.UNSET else wire.error,
-        failure_reason=(None if wire.failure_reason is msgspec.UNSET else wire.failure_reason),
+        work_dir=wire.work_dir,
+        relative_work_dir=wire.relative_work_dir,
+        durable_work_dir=wire.durable_work_dir,
+        relative_durable_work_dir=wire.relative_durable_work_dir,
+        branch_name=wire.branch_name,
+        result=cast("JsonValue | None", wire.result),
+        error=wire.error,
+        failure_reason=wire.failure_reason,
         issue_id=issue_id,
-        _wire_presence=tuple(
-            (name, _presence_seed(value))
-            for name, value in (
-                ("agent_id", wire.agent_id),
-                ("runtime_id", wire.runtime_id),
-                ("workspace_id", wire.workspace_id),
-                ("work_dir", wire.work_dir),
-                ("relative_work_dir", wire.relative_work_dir),
-                ("durable_work_dir", wire.durable_work_dir),
-                ("relative_durable_work_dir", wire.relative_durable_work_dir),
-                ("branch_name", wire.branch_name),
-                ("result", wire.result),
-                ("error", wire.error),
-                ("failure_reason", wire.failure_reason),
-            )
+        _wire_presence=(
+            (("agent_id", _presence_seed(wire.agent_id)),) if include_agent_presence else ()
         ),
     )
 
