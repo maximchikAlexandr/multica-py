@@ -21,16 +21,19 @@ def test_artifacts_export_public_contract(tmp_path: pathlib.Path) -> None:
         empty = tmp_path / artifact.suffixes[-1].lstrip(".")
         empty.mkdir()
         venv = tmp_path / f"venv-{artifact.suffixes[-1].lstrip('.')}"
-        subprocess.run(["uv", "venv", "--seed", str(venv)], cwd=root, check=True, env=_uv_env())
+        subprocess.run(["uv", "venv", str(venv)], cwd=root, check=True, env=_uv_env())
         python = venv / "bin" / "python"
         subprocess.run(
-            ["uv", "pip", "install", "--python", str(python), "msgspec"],
-            cwd=root,
-            check=True,
-            env=_uv_env(),
-        )
-        subprocess.run(
-            [str(python), "-m", "pip", "install", "--no-deps", str(artifact)],
+            [
+                "uv",
+                "pip",
+                "install",
+                "--python",
+                str(python),
+                "--no-deps",
+                "msgspec",
+                str(artifact),
+            ],
             cwd=root,
             check=True,
             env=_uv_env(),

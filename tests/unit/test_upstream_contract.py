@@ -512,8 +512,7 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
     assert (
         compatibility.min_cli_version,
         compatibility.max_tested_cli_version,
-        compatibility.exclusive_max_cli_version,
-    ) == ("0.4.28", "0.4.32", "0.4.33")
+    ) == ("0.4.28", "0.4.32")
     assert compatibility.verified_binaries == (
         VerifiedBinary(
             version="0.4.32",
@@ -528,6 +527,26 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
         "issues.get",
         "issues.runs",
         "issues.usage",
+    }
+
+
+def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
+    tmp_path: pathlib.Path,
+) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    document["compatibility"]["min_cli_version"] = "0.4.27"
+    document["compatibility"]["max_tested_cli_version"] = "0.4.35"
+    contract = tmp_path / "sdk-contract.json"
+    contract.write_text(json.dumps(document), encoding="utf-8")
+
+    files = render_files(contract)
+
+    assert b"MIN_CLI_VERSION = '0.4.27'" in files[0].content
+    assert b"MAX_CLI_VERSION = '0.4.36'" in files[0].content
+    assert json.loads(files[2].content) == {
+        "max_cli_version": "0.4.36",
+        "min_cli_version": "0.4.27",
+        "target_version": "0.4.28",
     }
 
 

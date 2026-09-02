@@ -824,7 +824,6 @@ class ReviewedResponse:
 class Compatibility:
     min_cli_version: str
     max_tested_cli_version: str
-    exclusive_max_cli_version: str
     verified_binaries: tuple[VerifiedBinary, ...]
     reviewed_responses: tuple[ReviewedResponse, ...]
 
@@ -1922,7 +1921,6 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             {
                 "min_cli_version",
                 "max_tested_cli_version",
-                "exclusive_max_cli_version",
                 "verified_binaries",
                 "reviewed_responses",
             }
@@ -1931,7 +1929,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     )
     bounds = tuple(
         _str(compatibility_raw[key], f"compatibility.{key}")
-        for key in ("min_cli_version", "max_tested_cli_version", "exclusive_max_cli_version")
+        for key in ("min_cli_version", "max_tested_cli_version")
     )
     version_pattern = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
     if not all(version_pattern.fullmatch(value) for value in bounds):
@@ -1940,10 +1938,6 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         int(part) for part in bounds[1].split(".")
     ):
         raise ContractError("compatibility minimum must not exceed maximum tested version")
-    if tuple(int(part) for part in bounds[1].split(".")) >= tuple(
-        int(part) for part in bounds[2].split(".")
-    ):
-        raise ContractError("compatibility exclusive maximum must exceed maximum tested version")
     verified_binaries: list[VerifiedBinary] = []
     for index, value in enumerate(
         _list(compatibility_raw["verified_binaries"], "compatibility.verified_binaries")
@@ -1995,7 +1989,6 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     compatibility = Compatibility(
         min_cli_version=bounds[0],
         max_tested_cli_version=bounds[1],
-        exclusive_max_cli_version=bounds[2],
         verified_binaries=tuple(verified_binaries),
         reviewed_responses=tuple(reviewed_responses),
     )

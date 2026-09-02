@@ -102,13 +102,19 @@ class _DetachField(Protocol):
 
 
 _AUTOPILOT_RUN_RUNTIME_OVERLAYS = frozenset(("trigger_payload", "result"))
+_TASK_RUN_RUNTIME_OVERLAYS = frozenset(("result",))
 
 
 def _overlay_names(entity_type: type[object]) -> frozenset[str]:
-    """Return overlays for the one concrete entity with runtime JSON fields."""
+    """Return overlays for concrete entities with runtime JSON fields."""
     from multica_py.entities.autopilots import AutopilotRun
+    from multica_py.entities.issues import TaskRun
 
-    return _AUTOPILOT_RUN_RUNTIME_OVERLAYS if entity_type is AutopilotRun else frozenset()
+    if entity_type is AutopilotRun:
+        return _AUTOPILOT_RUN_RUNTIME_OVERLAYS
+    if entity_type is TaskRun:
+        return _TASK_RUN_RUNTIME_OVERLAYS
+    return frozenset()
 
 
 class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, weakref=True):

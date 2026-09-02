@@ -28,6 +28,25 @@
     "uncosted_cache_write_tokens": 40,
     "task_count": 1
   },
+  "legacy_usage": {
+    "total_runs": 2,
+    "total_tokens": 15,
+    "cost_usd": 0.08
+  },
+  "null_usage": {
+    "period_start": null,
+    "period_end": null,
+    "task_count": null,
+    "total_input_tokens": null,
+    "total_output_tokens": null,
+    "total_cache_read_tokens": null,
+    "total_cache_write_tokens": null,
+    "cost_usd_ticks": null,
+    "uncosted_input_tokens": null,
+    "uncosted_output_tokens": null,
+    "uncosted_cache_read_tokens": null,
+    "uncosted_cache_write_tokens": null
+  },
   "task_run": {
     "id": "task-1",
     "status": "completed",
@@ -47,5 +66,24 @@
     "result": {"summary": "done", "files": ["src/example.py"]},
     "error": null,
     "failure_reason": ""
+  },
+  "legacy_task_run": {
+    "id": "task-legacy",
+    "status": "completed"
+  },
+  "null_task_run": {
+    "id": "task-null",
+    "status": "failed",
+    "agent_id": null,
+    "runtime_id": null,
+    "workspace_id": null,
+    "work_dir": null,
+    "relative_work_dir": null,
+    "durable_work_dir": null,
+    "relative_durable_work_dir": null,
+    "branch_name": null,
+    "result": null,
+    "error": null,
+    "failure_reason": null
   }
 }

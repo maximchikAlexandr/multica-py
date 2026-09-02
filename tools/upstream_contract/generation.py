@@ -46,6 +46,13 @@ class RenderedFile:
     content: bytes
 
 
+@dataclass(frozen=True)
+class _CompatibilityProjection:
+    min_cli_version: str
+    max_cli_version: str
+    target_version: str
+
+
 def _json_bytes(value: object) -> bytes:
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
 
@@ -53,11 +60,24 @@ def _json_bytes(value: object) -> bytes:
 def _next_patch(version: str) -> str:
     parts = version.split(".")
     if len(parts) != 3 or not all(part.isdigit() for part in parts):
-        raise ContractError(f"target.version is not a semantic version: {version!r}")
+        raise ContractError(f"version is not a semantic version: {version!r}")
     return f"{parts[0]}.{parts[1]}.{int(parts[2]) + 1}"
 
 
-def _runtime(catalog: ContractCatalog) -> bytes:
+def _compatibility_projection(catalog: ContractCatalog) -> _CompatibilityProjection:
+    compatibility = catalog.compatibility
+    return _CompatibilityProjection(
+        min_cli_version=compatibility.min_cli_version,
+        max_cli_version=_next_patch(compatibility.max_tested_cli_version),
+        target_version=catalog.target.version,
+    )
+
+
+def _runtime(
+    catalog: ContractCatalog,
+    compatibility: _CompatibilityProjection | None = None,
+) -> bytes:
+    compatibility = compatibility or _compatibility_projection(catalog)
     enum_definitions: tuple[EnumDefinition, ...] = catalog.enum_definitions
     binding_descriptors: tuple[BindingDescriptor, ...] = catalog.binding_descriptors
     operations: tuple[Operation, ...] = catalog.operations
@@ -78,9 +98,9 @@ def _runtime(catalog: ContractCatalog) -> bytes:
         "from dataclasses import dataclass",
         "from enum import StrEnum",
         "",
-        f"TARGET_VERSION = {catalog.target.version!r}",
-        f"MIN_CLI_VERSION = {catalog.compatibility.min_cli_version!r}",
-        f"MAX_CLI_VERSION = {catalog.compatibility.exclusive_max_cli_version!r}",
+        f"TARGET_VERSION = {compatibility.target_version!r}",
+        f"MIN_CLI_VERSION = {compatibility.min_cli_version!r}",
+        f"MAX_CLI_VERSION = {compatibility.max_cli_version!r}",
         "",
     ]
     for definition in sorted(enum_definitions, key=enum_key):
@@ -210,17 +230,21 @@ def _validator_body(body_kind: str, parameter: str) -> str:
     raise ContractError(f"unsupported validator body kind: {body_kind}")
 
 
-def _transient(catalog: ContractCatalog) -> tuple[RenderedFile, ...]:
+def _transient(
+    catalog: ContractCatalog,
+    compatibility_projection: _CompatibilityProjection | None = None,
+) -> tuple[RenderedFile, ...]:
+    compatibility = compatibility_projection or _compatibility_projection(catalog)
     operation_ids = sorted(catalog.operation_ids)
     markdown = (
         "# Approved SDK\n\n"
         + "\n".join(f"- `{operation_id}`" for operation_id in operation_ids)
         + "\n"
     )
-    compatibility = {
-        "max_cli_version": _next_patch(catalog.target.version),
-        "min_cli_version": catalog.target.version,
-        "target_version": catalog.target.version,
+    compatibility_output = {
+        "max_cli_version": compatibility.max_cli_version,
+        "min_cli_version": compatibility.min_cli_version,
+        "target_version": compatibility.target_version,
     }
     provenance = {
         "approved_contract_sha256": hashlib.sha256(_json_bytes(catalog.raw)).hexdigest(),
@@ -238,14 +262,18 @@ def _transient(catalog: ContractCatalog) -> tuple[RenderedFile, ...]:
     }
     return (
         RenderedFile(TRANSIENT_PATHS[0], markdown.encode()),
-        RenderedFile(TRANSIENT_PATHS[1], _json_bytes(compatibility)),
+        RenderedFile(TRANSIENT_PATHS[1], _json_bytes(compatibility_output)),
         RenderedFile(TRANSIENT_PATHS[2], _json_bytes(provenance)),
     )
 
 
 def render_files(contract_path: pathlib.Path) -> tuple[RenderedFile, ...]:
     catalog = validate_contract(contract_path)
-    return (RenderedFile(RUNTIME_PATH, _runtime(catalog)), *_transient(catalog))
+    compatibility = _compatibility_projection(catalog)
+    return (
+        RenderedFile(RUNTIME_PATH, _runtime(catalog, compatibility)),
+        *_transient(catalog, compatibility),
+    )
 
 
 def _ensure_transient_root(root: pathlib.Path) -> pathlib.Path:
@@ -302,10 +330,11 @@ def _validate_transient_projection(catalog: ContractCatalog, rendered: RenderedF
     if not isinstance(value, dict):
         raise ContractError(f"generated {rendered.path} must be a JSON object")
     if rendered.path == TRANSIENT_PATHS[1]:
+        compatibility = _compatibility_projection(catalog)
         expected = {
-            "max_cli_version": _next_patch(catalog.target.version),
-            "min_cli_version": catalog.target.version,
-            "target_version": catalog.target.version,
+            "max_cli_version": compatibility.max_cli_version,
+            "min_cli_version": compatibility.min_cli_version,
+            "target_version": compatibility.target_version,
         }
         if value != expected:
             raise ContractError("generated compatibility projection is invalid")

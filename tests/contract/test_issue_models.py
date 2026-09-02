@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import datetime
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -22,7 +24,7 @@ from multica_py._internal.wire_models import (
 )
 from multica_py.config import ClientConfig
 from multica_py.entities._base import _entity_policy
-from multica_py.entities.issues import Issue
+from multica_py.entities.issues import Issue, TaskRun
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.issue_activity import IssueUsage
@@ -33,6 +35,7 @@ from multica_py.models.issues import (
     LinkedPullRequest,
 )
 from multica_py.resources.issues import IssueResource
+from multica_py.types import JsonValue
 
 _ACTIVITY_FIXTURE = json.loads(
     (Path(__file__).parents[1] / "fixtures/provenance/issue_activity_v0432.json").read_text()
@@ -90,6 +93,147 @@ ASSIGNEE_PROJECTION_CASES = (
 )
 
 
+@dataclass(frozen=True)
+class UsageDecodeCase:
+    id: str
+    payload: dict[str, object]
+    expected: dict[str, object]
+
+
+USAGE_DECODE_CASES = (
+    UsageDecodeCase(
+        "current",
+        _ACTIVITY_FIXTURE["usage"],
+        {
+            "total_runs": 0,
+            "cost_usd": None,
+            "period_start": None,
+            "period_end": None,
+            "task_count": 1,
+            "total_input_tokens": 3800,
+            "total_output_tokens": 11700,
+            "total_cache_read_tokens": 537800,
+            "total_cache_write_tokens": 42400,
+            "cost_usd_ticks": 125000,
+            "uncosted_input_tokens": 10,
+            "uncosted_output_tokens": 20,
+            "uncosted_cache_read_tokens": 30,
+            "uncosted_cache_write_tokens": 40,
+            "total_tokens": None,
+        },
+    ),
+    UsageDecodeCase(
+        "legacy",
+        _ACTIVITY_FIXTURE["legacy_usage"],
+        {
+            "total_runs": 2,
+            "total_tokens": 15,
+            "cost_usd": 0.08,
+            "task_count": None,
+            "total_input_tokens": None,
+            "total_cache_read_tokens": None,
+        },
+    ),
+    UsageDecodeCase(
+        "explicit-null-current",
+        _ACTIVITY_FIXTURE["null_usage"],
+        {
+            "total_runs": 0,
+            "task_count": None,
+            "total_input_tokens": None,
+            "total_output_tokens": None,
+            "total_cache_read_tokens": None,
+            "total_cache_write_tokens": None,
+            "cost_usd_ticks": None,
+            "uncosted_input_tokens": None,
+            "uncosted_output_tokens": None,
+            "uncosted_cache_read_tokens": None,
+            "uncosted_cache_write_tokens": None,
+        },
+    ),
+)
+
+
+@dataclass(frozen=True)
+class TaskRunDecodeCase:
+    id: str
+    payload: dict[str, object]
+    expected: dict[str, object]
+
+
+TASK_RUN_DECODE_CASES = (
+    TaskRunDecodeCase(
+        "current",
+        _ACTIVITY_FIXTURE["task_run"],
+        {
+            "id": "task-1",
+            "status": "completed",
+            "agent_id": "agent-1",
+            "runtime_id": "runtime-1",
+            "workspace_id": "workspace-1",
+            "started_at": datetime.datetime(2026, 8, 21, 9, 0, 1, tzinfo=datetime.UTC),
+            "completed_at": datetime.datetime(2026, 8, 21, 9, 5, tzinfo=datetime.UTC),
+            "dispatched_at": datetime.datetime(2026, 8, 21, 9, tzinfo=datetime.UTC),
+            "created_at": datetime.datetime(2026, 8, 21, 8, 59, 59, tzinfo=datetime.UTC),
+            "work_dir": "/tmp/multica/workspace-1/task-1/workdir",
+            "relative_work_dir": "workspace-1/task-1/workdir",
+            "durable_work_dir": "/tmp/project",
+            "relative_durable_work_dir": "project",
+            "branch_name": "fix/issue-81",
+            "result": MappingProxyType({"summary": "done", "files": ("src/example.py",)}),
+            "error": None,
+            "failure_reason": "",
+        },
+    ),
+    TaskRunDecodeCase(
+        "legacy-omitted",
+        _ACTIVITY_FIXTURE["legacy_task_run"],
+        {
+            "id": "task-legacy",
+            "status": "completed",
+            "agent_id": None,
+            "runtime_id": None,
+            "workspace_id": None,
+            "started_at": None,
+            "completed_at": None,
+            "dispatched_at": None,
+            "created_at": None,
+            "work_dir": None,
+            "relative_work_dir": None,
+            "durable_work_dir": None,
+            "relative_durable_work_dir": None,
+            "branch_name": None,
+            "result": None,
+            "error": None,
+            "failure_reason": None,
+        },
+    ),
+    TaskRunDecodeCase(
+        "explicit-null",
+        _ACTIVITY_FIXTURE["null_task_run"],
+        {
+            "id": "task-null",
+            "status": "failed",
+            "agent_id": None,
+            "runtime_id": None,
+            "workspace_id": None,
+            "started_at": None,
+            "completed_at": None,
+            "dispatched_at": None,
+            "created_at": None,
+            "work_dir": None,
+            "relative_work_dir": None,
+            "durable_work_dir": None,
+            "relative_durable_work_dir": None,
+            "branch_name": None,
+            "result": None,
+            "error": None,
+            "failure_reason": None,
+        },
+    ),
+)
+
+
 @pytest.mark.parametrize("case", ASSIGNEE_PROJECTION_CASES, ids=lambda case: case.id)
 def test_issue_assignee_projection_matrix(case: AssigneeProjectionCase) -> None:
     payload = {"id": "issue-1", "title": "T", "status": "todo", **case.projection}
@@ -109,48 +253,52 @@ def test_v0432_provenance_fixture_matches_verified_release() -> None:
     assert issue.assignee == IssueAssignee(id="agent-1", type="agent")
 
 
-def test_v0432_issue_usage_preserves_token_and_cost_categories() -> None:
-    usage = decode_json(json.dumps(_ACTIVITY_FIXTURE["usage"]).encode(), IssueUsage)
-    assert usage.task_count == 1
-    assert usage.total_input_tokens == 3800
-    assert usage.total_output_tokens == 11700
-    assert usage.total_cache_read_tokens == 537800
-    assert usage.total_cache_write_tokens == 42400
-    assert usage.cost_usd_ticks == 125000
-    assert usage.uncosted_input_tokens == 10
-    assert usage.uncosted_output_tokens == 20
-    assert usage.uncosted_cache_read_tokens == 30
-    assert usage.uncosted_cache_write_tokens == 40
-    assert usage.total_tokens is None
+@pytest.mark.parametrize("case", USAGE_DECODE_CASES, ids=lambda case: case.id)
+def test_issue_usage_decode_matrix(case: UsageDecodeCase) -> None:
+    usage = decode_json(json.dumps(case.payload).encode(), IssueUsage)
+    for field, expected in case.expected.items():
+        assert getattr(usage, field) == expected
 
 
-def test_legacy_issue_usage_does_not_fabricate_current_counts() -> None:
-    usage = decode_json(b'{"total_runs":2,"total_tokens":15,"cost_usd":0.08}', IssueUsage)
-    assert (usage.total_runs, usage.total_tokens, usage.cost_usd) == (2, 15, 0.08)
-    assert usage.task_count is None
-    assert usage.total_input_tokens is None
-
-
-def test_v0432_task_run_preserves_immutable_execution_context() -> None:
-    wire = decode_json(json.dumps(_ACTIVITY_FIXTURE["task_run"]).encode(), _TaskRunWire)
+@pytest.mark.parametrize("case", TASK_RUN_DECODE_CASES, ids=lambda case: case.id)
+def test_task_run_decode_matrix(case: TaskRunDecodeCase) -> None:
+    wire = decode_json(json.dumps(case.payload).encode(), _TaskRunWire)
     run = _task_run_from_wire(wire, issue_id="issue-1")
-    assert run.runtime_id == "runtime-1"
-    assert run.workspace_id == "workspace-1"
-    assert run.work_dir == "/tmp/multica/workspace-1/task-1/workdir"
-    assert run.relative_work_dir == "workspace-1/task-1/workdir"
-    assert run.durable_work_dir == "/tmp/project"
-    assert run.relative_durable_work_dir == "project"
-    assert run.branch_name == "fix/issue-81"
+    assert run.issue_id == "issue-1"
+    expected_presence = {
+        "current": "value",
+        "legacy-omitted": "missing",
+        "explicit-null": "null",
+    }[case.id]
+    assert run._wire_presence == (("agent_id", expected_presence),)
+    for field, expected in case.expected.items():
+        assert getattr(run, field) == expected
+    if case.id == "current":
+        assert isinstance(run.result, MappingProxyType)
+
+
+@pytest.mark.parametrize(
+    "factory",
+    (
+        lambda: TaskRun(
+            id="task-1",
+            status="completed",
+            result=cast("JsonValue", {"files": ["before"]}),
+        ),
+        lambda: TaskRun.from_dict(
+            {"id": "task-1", "status": "completed", "result": {"files": ["before"]}}
+        ),
+    ),
+    ids=("constructor", "from-dict"),
+)
+def test_task_run_result_is_recursively_immutable(factory: Callable[[], TaskRun]) -> None:
+    run = factory()
     assert isinstance(run.result, MappingProxyType)
-    assert run.result["files"] == ("src/example.py",)
-
-
-def test_legacy_task_run_defaults_current_context_to_none() -> None:
-    wire = decode_json(b'{"id":"task-1","status":"completed"}', _TaskRunWire)
-    run = _task_run_from_wire(wire, issue_id="issue-1")
-    assert run.runtime_id is None
-    assert run.work_dir is None
-    assert run.result is None
+    assert run.result["files"] == ("before",)
+    with pytest.raises(TypeError):
+        run.result["files"] = ("after",)  # type: ignore[index]
+    with pytest.raises(AttributeError):
+        run.result["files"].append("after")
 
 
 def test_issue_summary_is_not_a_public_model() -> None:

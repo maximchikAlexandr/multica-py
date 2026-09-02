@@ -370,7 +370,7 @@ _ENTITY_POLICY_CASES: tuple[EntityPolicyCase, ...] = (
         ("_agent", "_client", "_issue", "_messages", "_wire_presence"),
         ("issue_id",),
         (("issue_id", "_issue_id"),),
-        (),
+        ("result",),
     ),
     EntityPolicyCase(
         Label,

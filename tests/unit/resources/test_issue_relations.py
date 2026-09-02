@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import datetime
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal, cast
 from unittest.mock import MagicMock
 
@@ -13,7 +15,12 @@ from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
-from multica_py._internal.wire_models import _issue_from_wire, _IssueWire
+from multica_py._internal.wire_models import (
+    _issue_from_wire,
+    _IssueWire,
+    _task_run_from_wire,
+    _TaskRunWire,
+)
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.entities.agents import Agent
@@ -48,6 +55,10 @@ from multica_py.models.relations import (
 )
 from multica_py.resources._base import BaseResource
 from multica_py.resources.issues import IssueResource
+
+_ACTIVITY_FIXTURE = json.loads(
+    (Path(__file__).parents[2] / "fixtures/provenance/issue_activity_v0432.json").read_text()
+)
 
 
 @dataclass(frozen=True)
@@ -473,18 +484,7 @@ def _client() -> MagicMock:
 
     def runs_command(issue_id):
         def loader():
-            return tuple(
-                TaskRun(
-                    id=run.id,
-                    status=run.status,
-                    agent_id=run.agent_id,
-                    started_at=run.started_at,
-                    completed_at=run.completed_at,
-                    _client=client,
-                    issue_id=issue_id,
-                )
-                for run in client.issues.runs(issue_id)
-            )
+            return tuple(run._with_client(client) for run in client.issues.runs(issue_id))
 
         return empty_command(loader)
 
@@ -599,7 +599,7 @@ def test_comment_thread_cursor_relation_inherits_issue_context() -> None:
 
 def test_task_run_messages_preserve_issue_and_task_ids() -> None:
     client = _client()
-    client.issues.runs.return_value = (TaskRun(id="run_1", status="done"),)
+    client.issues.runs.return_value = (TaskRun(id="run_1", status="done", issue_id="iss_1"),)
     client.issues.run_messages.return_value = (
         RunMessage(task_id="run_1", seq=1, type="text", issue_id="iss_1", content="ok"),
     )
@@ -608,6 +608,33 @@ def test_task_run_messages_preserve_issue_and_task_ids() -> None:
     run = entity.runs.all()[0]
     assert [message.seq for message in run.messages.all()] == [1]
     client.issues.run_messages.assert_called_once_with("run_1", issue_id="iss_1", since=0)
+
+
+def test_issue_runs_relation_preserves_current_fixture_context() -> None:
+    client = _client()
+    wire = decode_json(json.dumps(_ACTIVITY_FIXTURE["task_run"]).encode(), _TaskRunWire)
+    client.issues.runs.return_value = (_task_run_from_wire(wire, issue_id="issue-1"),)
+    entity = _issue(client)
+
+    run = entity.runs.all()[0]
+
+    assert run._client is client
+    assert run.issue_id == "issue-1"
+    assert run.agent_id == "agent-1"
+    assert run.runtime_id == "runtime-1"
+    assert run.workspace_id == "workspace-1"
+    assert run.dispatched_at == datetime.datetime(2026, 8, 21, 9, tzinfo=datetime.UTC)
+    assert run.started_at == datetime.datetime(2026, 8, 21, 9, 0, 1, tzinfo=datetime.UTC)
+    assert run.completed_at == datetime.datetime(2026, 8, 21, 9, 5, tzinfo=datetime.UTC)
+    assert run.created_at == datetime.datetime(2026, 8, 21, 8, 59, 59, tzinfo=datetime.UTC)
+    assert run.work_dir == "/tmp/multica/workspace-1/task-1/workdir"
+    assert run.relative_work_dir == "workspace-1/task-1/workdir"
+    assert run.durable_work_dir == "/tmp/project"
+    assert run.relative_durable_work_dir == "project"
+    assert run.branch_name == "fix/issue-81"
+    assert run.result == {"summary": "done", "files": ("src/example.py",)}
+    assert run.error is None
+    assert run.failure_reason == ""
 
 
 def test_cursor_query_passes_complete_pair() -> None:
