@@ -19,10 +19,10 @@ _WARNED_NEWER = False
 
 
 class _CliVersionPayload(msgspec.Struct, frozen=True):
-    version: str = "0.0.0"
+    version: str
     commit: str = ""
-    buildDate: str = ""
-    goVersion: str = ""
+    date: str = ""
+    go: str = ""
     os: str = ""
     arch: str = ""
 
@@ -32,13 +32,15 @@ def parse_cli_version(raw_output: str) -> CliVersion | None:
         data = msgspec.json.decode(
             raw_output.encode("utf-8"),
             type=_CliVersionPayload,
-            strict=False,
+            strict=True,
         )
+        if _parse_semver(data.version) is None:
+            return None
         return CliVersion(
             version=data.version,
             commit=data.commit,
-            build_date=data.buildDate,
-            go_version=data.goVersion,
+            build_date=data.date,
+            go_version=data.go,
             os=data.os,
             arch=data.arch,
             raw_output=raw_output,
