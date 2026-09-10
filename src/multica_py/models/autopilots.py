@@ -112,12 +112,15 @@ else:
             return self.items
 
 
-class TriggerConfigItem(msgspec.Struct, frozen=True, kw_only=True):
-    key: str
-    value: str
-
-
 class AutopilotTrigger(msgspec.Struct, frozen=True, kw_only=True):
     id: str
-    type: str
-    config: tuple[TriggerConfigItem, ...] = ()
+    autopilot_id: str
+    kind: str
+    enabled: bool
+    cron_expression: str | None = None
+    timezone: str | None = None
+    next_run_at: datetime.datetime | None = None
+    label: str | None = None
+    last_fired_at: datetime.datetime | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None

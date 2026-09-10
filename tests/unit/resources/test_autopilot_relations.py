@@ -94,7 +94,9 @@ _SEED_CASES = (
                     **_AUTOPILOT,
                     "subscribers": [{"user_type": "member", "user_id": "u2"}],
                 },
-                "triggers": [{"id": "tr1", "type": "webhook", "config": {}}],
+                "triggers": [
+                    {"id": "tr1", "autopilot_id": "a1", "kind": "webhook", "enabled": True}
+                ],
             }
         ),
         True,
@@ -301,7 +303,9 @@ def test_autopilot_relation_loaders_do_not_retain_entity(case: SeededRelationsCa
     if case.seeded:
         kwargs.update(
             {
-                "triggers": (AutopilotTrigger(id="tr1", type="webhook"),),
+                "triggers": (
+                    AutopilotTrigger(id="tr1", autopilot_id="a1", kind="webhook", enabled=True),
+                ),
                 "subscribers": (AutopilotSubscriber(user_type="member", user_id="u1"),),
             }
         )
@@ -395,14 +399,14 @@ def test_trigger_mutations_invalidate_relation() -> None:
     client = MagicMock()
     transport = MagicMock(spec=CliTransport)
     transport.run_bytes.side_effect = [
-        _result(b'{"id":"tr2","type":"cron","config":{}}'),
-        _result(b'{"id":"tr1","type":"cron","config":{}}'),
+        _result(b'{"id":"tr2","autopilot_id":"a1","kind":"schedule","enabled":true}'),
+        _result(b'{"id":"tr1","autopilot_id":"a1","kind":"schedule","enabled":true}'),
     ]
     transport.run_text.return_value = TextResult("", "", 0)
     resource = _resource(transport, client)
     client.autopilots = resource
     relation: LazyCollection[AutopilotTrigger] = LazyCollection(
-        lambda: (AutopilotTrigger(id="tr1", type="webhook"),)
+        lambda: (AutopilotTrigger(id="tr1", autopilot_id="a1", kind="webhook", enabled=True),)
     )
     entity = Autopilot(
         id="a1",
@@ -446,7 +450,9 @@ def test_autopilot_trigger_command_invalidates_only_after_success() -> None:
     client = MulticaClient(ClientConfig())
     transport = MagicMock(spec=CliTransport)
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.return_value = _result(b'{"id":"tr1","type":"webhook","config":{}}')
+    transport.run_bytes.return_value = _result(
+        b'{"id":"tr1","autopilot_id":"a1","kind":"webhook","enabled":true}'
+    )
     client.autopilots._transport = transport
     entity = Autopilot(
         id="a1",
@@ -460,7 +466,9 @@ def test_autopilot_trigger_command_invalidates_only_after_success() -> None:
         created_by_id="u1",
         _client=client,
     )
-    relation = LazyCollection(lambda: (AutopilotTrigger(id="tr0", type="webhook"),))
+    relation = LazyCollection(
+        lambda: (AutopilotTrigger(id="tr0", autopilot_id="a1", kind="webhook", enabled=True),)
+    )
     entity._set_runtime("_triggers", relation)
     relation.all()
 
@@ -517,7 +525,14 @@ def test_autopilot_relation_commands_preserve_preview_and_page_argv() -> None:
             msgspec.json.encode(
                 {
                     "autopilot": _AUTOPILOT,
-                    "triggers": [{"id": "tr1", "type": "webhook", "config": {}}],
+                    "triggers": [
+                        {
+                            "id": "tr1",
+                            "autopilot_id": "a1",
+                            "kind": "webhook",
+                            "enabled": True,
+                        }
+                    ],
                 }
             )
         ),
@@ -560,7 +575,14 @@ def test_autopilot_eager_and_dunder_relation_loads_use_command_plan() -> None:
                 "autopilot": {
                     **_AUTOPILOT,
                 },
-                "triggers": [{"id": "tr1", "type": "webhook", "config": {}}],
+                "triggers": [
+                    {
+                        "id": "tr1",
+                        "autopilot_id": "a1",
+                        "kind": "webhook",
+                        "enabled": True,
+                    }
+                ],
             }
         ),
         *argv,
@@ -615,7 +637,14 @@ def test_autopilot_relation_command_runs_coalesce_one_loader_sequence() -> None:
                     "autopilot": {
                         **_AUTOPILOT,
                     },
-                    "triggers": [{"id": "tr1", "type": "webhook", "config": {}}],
+                    "triggers": [
+                        {
+                            "id": "tr1",
+                            "autopilot_id": "a1",
+                            "kind": "webhook",
+                            "enabled": True,
+                        }
+                    ],
                 }
             ),
             *argv,

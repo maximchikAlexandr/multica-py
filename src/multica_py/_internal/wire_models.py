@@ -17,7 +17,6 @@ from multica_py.models.autopilots import (
     AutopilotRunListPage,
     AutopilotSubscriber,
     AutopilotTrigger,
-    TriggerConfigItem,
 )
 from multica_py.models.common import CommentCursor
 from multica_py.models.issues import (
@@ -222,15 +221,31 @@ def _issue_pull_requests_from_wire(
 
 class _AutopilotTriggerWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
-    type: str
-    config: dict[str, str] = msgspec.field(default_factory=dict)
+    autopilot_id: str
+    kind: str
+    enabled: bool
+    cron_expression: str | None = None
+    timezone: str | None = None
+    next_run_at: datetime.datetime | None = None
+    label: str | None = None
+    last_fired_at: datetime.datetime | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
 
 def trigger_from_wire(wire: _AutopilotTriggerWire) -> AutopilotTrigger:
     return AutopilotTrigger(
         id=wire.id,
-        type=wire.type,
-        config=tuple(TriggerConfigItem(key=key, value=value) for key, value in wire.config.items()),
+        autopilot_id=wire.autopilot_id,
+        kind=wire.kind,
+        enabled=wire.enabled,
+        cron_expression=wire.cron_expression,
+        timezone=wire.timezone,
+        next_run_at=wire.next_run_at,
+        label=wire.label,
+        last_fired_at=wire.last_fired_at,
+        created_at=wire.created_at,
+        updated_at=wire.updated_at,
     )
 
 

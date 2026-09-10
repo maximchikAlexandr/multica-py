@@ -44,7 +44,9 @@ def test_trigger_update_empty_request_reads_autopilot_and_extracts_trigger() -> 
                     "created_by_type": "member",
                     "created_by_id": "u1",
                 },
-                "triggers": [{"id": "tr1", "type": "webhook", "config": {}}],
+                "triggers": [
+                    {"id": "tr1", "autopilot_id": "a1", "kind": "webhook", "enabled": True}
+                ],
             }
         ),
         argv=("autopilot", "get", "a1", "--output", "json"),
