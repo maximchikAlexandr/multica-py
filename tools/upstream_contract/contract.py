@@ -147,7 +147,7 @@ _UPDATE_POLICY_FIELDS = {
             "subscribers",
         }
     ),
-    "autopilots.trigger_update": frozenset({"title", "kind"}),
+    "autopilots.trigger_update": frozenset({"cron_expression", "timezone", "label", "enabled"}),
     "labels.update": frozenset({"name", "color"}),
     "projects.resources.update_local_directory": frozenset({"local_path"}),
     "runtimes.update": frozenset({"target_version", "wait"}),
