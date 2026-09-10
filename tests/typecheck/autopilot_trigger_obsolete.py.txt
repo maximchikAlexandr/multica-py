@@ -1,0 +1,16 @@
+from typing import cast
+
+from multica_py.entities.autopilots import Autopilot
+from multica_py.resources.autopilots import AutopilotResource
+
+resource = cast(AutopilotResource, object())
+bound = cast(Autopilot, object())
+
+resource.trigger_add("a1", title="legacy", kind="webhook")
+resource.trigger_add_command("a1", title="legacy", kind="webhook")
+resource.trigger_update("a1", "tr1", kind="webhook")
+resource.trigger_update_command("a1", "tr1", kind="webhook")
+bound.trigger_add(title="legacy", kind="webhook")
+bound.trigger_add_command(title="legacy", kind="webhook")
+bound.trigger_update("tr1", kind="webhook")
+bound.trigger_update_command("tr1", kind="webhook")

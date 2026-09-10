@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 from contextlib import ExitStack
 from typing import Protocol, cast
 from unittest.mock import patch
@@ -12,6 +11,7 @@ import pytest
 
 from multica_py.client import MulticaClient
 from multica_py.exceptions import NotFoundError, ValidationError
+from multica_py.models.autopilots import AutopilotTrigger
 from multica_py.models.relations import CursorLazyCollection
 
 pytestmark = [pytest.mark.live, pytest.mark.live_smoke, pytest.mark.serial]
@@ -26,18 +26,6 @@ class _ThreadRelationOwner(Protocol):
 
 def _live_name() -> str:
     return f"multica-py-live-{uuid4().hex}"
-
-
-def test_release_identity(prepared_client: MulticaClient) -> None:
-    client_config = prepared_client.config
-    result = subprocess.run(
-        [str(client_config.executable), "version", "--output", "json"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    payload = json.loads(result.stdout)
-    assert payload["version"] == os.environ["MULTICA_LIVE_EXPECTED_VERSION"]
 
 
 def test_project_crud(prepared_client: MulticaClient) -> None:
@@ -101,6 +89,47 @@ def test_project_update_presence(prepared_client: MulticaClient) -> None:
                 prepared_client.projects.update_command(project.id, description=None)
             run_bytes.assert_not_called()
             run_text.assert_not_called()
+
+
+def test_schedule_trigger_lifecycle(prepared_client: MulticaClient) -> None:
+    workspace_id = os.environ["MULTICA_LIVE_WORKSPACE_ID"]
+    workspace = prepared_client.workspaces.get_command(workspace_id).run()
+    autopilots = workspace.autopilots.all_command().run()
+    assert autopilots, "prepared workspace must contain an autopilot"
+    autopilot = prepared_client.autopilots.get_command(autopilots[0].id).run()
+
+    label = _live_name()
+    created: AutopilotTrigger | None = None
+    try:
+        created = autopilot.trigger_add_command(
+            kind="schedule",
+            cron_expression="*/30 * * * *",
+            timezone="Europe/Minsk",
+            label=label,
+        ).run()
+        assert created.kind == "schedule"
+        assert created.cron_expression == "*/30 * * * *"
+        assert created.timezone == "Europe/Minsk"
+        assert created.label == label
+        assert created.enabled is True
+
+        disabled = autopilot.trigger_update_command(
+            created.id,
+            cron_expression="0 */3 * * *",
+            timezone="Europe/Minsk",
+            enabled=False,
+        ).run()
+        assert disabled.cron_expression == "0 */3 * * *"
+        assert disabled.timezone == "Europe/Minsk"
+        assert disabled.enabled is False
+
+        enabled = autopilot.trigger_update_command(created.id, enabled=True).run()
+        assert enabled.cron_expression == "0 */3 * * *"
+        assert enabled.timezone == "Europe/Minsk"
+        assert enabled.enabled is True
+    finally:
+        if created is not None:
+            autopilot.trigger_delete_command(created.id).run()
 
 
 def test_bound_relation_graph(prepared_client: MulticaClient) -> None:

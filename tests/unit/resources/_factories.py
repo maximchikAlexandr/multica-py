@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
+from typing import cast
+from unittest.mock import MagicMock
 
+from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
+from multica_py.config import ClientConfig
 from multica_py.entities._base import _BoundEntity
 from multica_py.entities.agents import Agent
 from multica_py.entities.autopilots import Autopilot
@@ -12,6 +17,7 @@ from multica_py.entities.projects import Project
 from multica_py.entities.squads import Squad
 from multica_py.enums import IssueStatus, ProjectStatus
 from multica_py.models.issue_activity import RunMessage
+from multica_py.resources.autopilots import AutopilotResource
 from multica_py.types import JsonValue
 
 
@@ -86,3 +92,21 @@ def bound_entity_factory(
             _client=client,
         )
     raise AssertionError(f"unsupported target type: {target_type!r}")
+
+
+def autopilot_resource(
+    transport: MagicMock, client: MulticaClient | None = None
+) -> AutopilotResource:
+    resource = AutopilotResource(cast("CliTransport", transport), ClientConfig())
+    resource._set_client(client if client is not None else MagicMock())
+    return resource
+
+
+def command_result(payload: bytes, *argv: str) -> RawCommandResult:
+    return RawCommandResult(
+        stdout=payload,
+        stderr=b"",
+        exit_code=0,
+        argv=argv,
+        duration=datetime.timedelta(),
+    )

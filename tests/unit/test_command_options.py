@@ -412,12 +412,12 @@ OPERATION_OPTIONS_CASES = (
     OperationOptionsCase(
         AutopilotResource,
         "trigger_add_command",
-        (("autopilot_id", "ap1"), ("title", "hook"), ("kind", "manual")),
+        (("autopilot_id", "ap1"), ("label", "hook"), ("kind", "webhook")),
     ),
     OperationOptionsCase(
         AutopilotResource,
         "trigger_update_command",
-        (("autopilot_id", "ap1"), ("trigger_id", "tr1"), ("title", "hook")),
+        (("autopilot_id", "ap1"), ("trigger_id", "tr1"), ("label", "hook")),
     ),
     OperationOptionsCase(LabelResource, "create_command", (("name", "bug"),)),
     OperationOptionsCase(LabelResource, "update_command", (("label_id", "l1"), ("name", "bug"))),

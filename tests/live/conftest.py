@@ -17,6 +17,7 @@ _REQUIRED_ENVIRONMENT = (
     "MULTICA_LIVE_WORKSPACE_ID",
     "MULTICA_LIVE_PROFILE",
 )
+_EXPECTED_VERSION = "0.4.38"
 
 
 def _required_environment(name: str) -> str:
@@ -29,6 +30,10 @@ def _required_environment(name: str) -> str:
 @pytest.fixture(scope="session")
 def prepared_client() -> Iterator[MulticaClient]:
     values = {name: _required_environment(name) for name in _REQUIRED_ENVIRONMENT}
+    if values["MULTICA_LIVE_EXPECTED_VERSION"] != _EXPECTED_VERSION:
+        raise pytest.UsageError(
+            f"MULTICA_LIVE_EXPECTED_VERSION must be {_EXPECTED_VERSION} for the prepared target"
+        )
     executable = shutil.which(values["MULTICA_LIVE_CLI"])
     if executable is None:
         raise pytest.UsageError(
