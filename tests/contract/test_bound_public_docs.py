@@ -781,19 +781,28 @@ AFTER_EXAMPLES = (
         _MIGRATION_AND_CHANGELOG,
     ),
     AfterExample(
-        'client.autopilots.trigger_add(autopilot_id, title="Daily", kind="schedule")',
+        'client.autopilots.trigger_add(autopilot_id, kind="schedule", cron_expression="*/30 * * * *", timezone="Europe/Minsk", label="Daily")',
         AutopilotResource.trigger_add,
         lambda client: client.autopilots,
         ("autopilot_id",),
-        (("title", "Daily"), ("kind", "schedule")),
+        (
+            ("kind", "schedule"),
+            ("cron_expression", "*/30 * * * *"),
+            ("timezone", "Europe/Minsk"),
+            ("label", "Daily"),
+        ),
         _MIGRATION_AND_CHANGELOG,
     ),
     AfterExample(
-        'client.autopilots.trigger_update(autopilot_id, trigger_id, kind="schedule")',
+        'client.autopilots.trigger_update(autopilot_id, trigger_id, cron_expression="0 */3 * * *", timezone="Europe/Minsk", enabled=False)',
         AutopilotResource.trigger_update,
         lambda client: client.autopilots,
         ("autopilot_id", "trigger_id"),
-        (("kind", "schedule"),),
+        (
+            ("cron_expression", "0 */3 * * *"),
+            ("timezone", "Europe/Minsk"),
+            ("enabled", False),
+        ),
         _MIGRATION_AND_CHANGELOG,
     ),
     AfterExample(

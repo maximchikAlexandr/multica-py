@@ -202,6 +202,46 @@ All resources accessed as attributes of `MulticaClient`:
 - **users**: `profile_get/profile_update`
 - **maintenance**: `version()` → `MaintenanceVersion`, `update()` → `ManagedProcess`
 
+### Schedule triggers
+
+Trigger mutations use explicit typed fields and have eager and command forms.
+The command form is useful when a caller needs to inspect the plan before
+running it; it returns the same `AutopilotTrigger` through
+`Command[AutopilotTrigger]`:
+
+```python
+from multica_py import MulticaClient
+
+client = MulticaClient()
+trigger = client.autopilots.trigger_add(
+    "autopilot_123",
+    kind="schedule",
+    cron_expression="*/30 * * * *",
+    timezone="Europe/Minsk",
+    label="half-hour",
+)
+update = client.autopilots.trigger_update_command(
+    "autopilot_123",
+    trigger.id,
+    cron_expression="0 */3 * * *",
+    timezone="Europe/Minsk",
+    enabled=False,
+)
+print(update.commands)
+trigger = update.run()
+trigger = client.autopilots.trigger_update(
+    "autopilot_123", trigger.id, enabled=True
+)
+```
+
+`kind` is a create-only field and accepts `"schedule"` or `"webhook"`.
+Schedule adds require a nonempty cron expression; webhook adds reject
+nonempty cron and timezone. Omitted, `None`, and empty timezone/label values
+are omitted on add. Updates use `Unset` for omission, reject explicit `None`,
+emit empty strings as explicit clears, and emit both boolean values rather than
+treating `False` as absent. These methods use only the governed typed SDK
+surface; no raw CLI invocation is needed.
+
 ## Agent copy and issue search
 
 `agents.copy` eagerly returns a bound `Agent`; `agents.copy_command` returns the

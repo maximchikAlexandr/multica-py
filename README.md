@@ -48,6 +48,37 @@ print(command.commands)
 issue = command.run()
 ```
 
+### Schedule triggers
+
+Create and update a schedule through the typed SDK. The bound form keeps the
+autopilot ID in the entity context, and its command sibling has the same
+parameters and result type:
+
+```python
+autopilot = client.autopilots.get("autopilot_123")
+trigger = autopilot.trigger_add(
+    kind="schedule",
+    cron_expression="*/30 * * * *",
+    timezone="Europe/Minsk",
+    label="half-hour",
+)
+preview = autopilot.trigger_update_command(
+    trigger.id,
+    cron_expression="0 */3 * * *",
+    timezone="Europe/Minsk",
+    enabled=False,
+)
+updated = preview.run()
+updated = autopilot.trigger_update(trigger.id, enabled=True)
+```
+
+Schedule creation requires a nonempty `cron_expression`. On add, omitted,
+`None`, and empty `timezone` or `label` values are omitted from the request;
+`kind="webhook"` likewise requires cron and timezone to be omitted, `None`, or
+empty. On update, `Unset` means omitted, explicit `None` is rejected, and an
+empty string is an explicit clear. Both `enabled=False` and `enabled=True` are
+sent as updates.
+
 The default client is suitable for a first local workflow. For an integration,
 configure one immutable `ClientConfig` at the composition boundary and pass a
 small adapter to application code. Derived views created by `with_options`
