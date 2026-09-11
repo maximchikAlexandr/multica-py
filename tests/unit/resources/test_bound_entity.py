@@ -881,7 +881,11 @@ class TestBoundEntityDetach:
             created_by_type="agent",
             created_by_id="agent-1",
             _client=client,
-            triggers=(AutopilotTrigger(id="trigger-1", type="schedule"),),
+            triggers=(
+                AutopilotTrigger(
+                    id="trigger-1", autopilot_id="autopilot-1", kind="schedule", enabled=True
+                ),
+            ),
             subscribers=(AutopilotSubscriber(user_type="member", user_id="member-1"),),
         )
         assert autopilot.triggers.loaded

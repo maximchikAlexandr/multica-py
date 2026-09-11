@@ -512,7 +512,7 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
     assert (
         compatibility.min_cli_version,
         compatibility.max_tested_cli_version,
-    ) == ("0.4.28", "0.4.32")
+    ) == ("0.4.28", "0.4.38")
     assert compatibility.verified_binaries == (
         VerifiedBinary(
             version="0.4.32",
@@ -522,11 +522,22 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
             os="darwin",
             arch="arm64",
         ),
+        VerifiedBinary(
+            version="0.4.38",
+            commit="47dc75741cd03127d32f1b78d04c644ccf690e7f",
+            build_date="2026-09-02T09:52:29Z",
+            go_version="go1.26.7",
+            os="darwin",
+            arch="arm64",
+        ),
     )
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
         "issues.get",
         "issues.runs",
         "issues.usage",
+        "autopilots.trigger_add",
+        "autopilots.trigger_update",
+        "maintenance.version",
     }
 
 

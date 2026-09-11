@@ -47,8 +47,8 @@ column so a migration can be completed mechanically.
 | `ProjectResourceAddLocalDirectoryRequest(local_path=path, daemon_id=daemon_id)` | `project.add_local_directory(local_path=path, daemon_id=daemon_id)` |
 | `ProjectResourceUpdateLocalDirectoryRequest(local_path=path)` | `client.projects.resources.update_local_directory(project_id, resource_id, local_path=path)` |
 | `AutopilotUpdateRequest(title="Nightly")` | `client.autopilots.update(autopilot_id, title="Nightly")` |
-| `AutopilotTriggerCreate(title="Daily", kind="schedule")` | `client.autopilots.trigger_add(autopilot_id, title="Daily", kind="schedule")` |
-| `AutopilotTriggerUpdate(kind="schedule")` | `client.autopilots.trigger_update(autopilot_id, trigger_id, kind="schedule")` |
+| `AutopilotTriggerCreate(title="Daily", kind="schedule")` | `client.autopilots.trigger_add(autopilot_id, kind="schedule", cron_expression="*/30 * * * *", timezone="Europe/Minsk", label="Daily")` |
+| `AutopilotTriggerUpdate(kind="schedule")` | `client.autopilots.trigger_update(autopilot_id, trigger_id, cron_expression="0 */3 * * *", timezone="Europe/Minsk", enabled=False)` |
 | `RuntimeUpdate(target_version="stable")` | `client.runtimes.update(runtime_id, target_version="stable")` |
 | `UserProfileUpdate(description="On call")` | `client.users.profile_update(description="On call")` |
 
@@ -56,6 +56,49 @@ Each `After` call also has a matching `*_command()` form with the same
 explicit inputs and a final keyword-only `options: OperationOptions | None`.
 `Unset` omits a field, approved nullable `None` clears it, and validation runs
 before transport access.
+
+### Schedule trigger migration
+
+The trigger surface is an intentional alpha breaking correction. Trigger
+creation no longer uses the obsolete `title` input: replace `title=value` with
+`label=value`. Trigger kind is immutable, so `kind` is a create-only input; an
+attempted kind change must delete the existing trigger and add a new one with
+the desired kind.
+
+Use the public typed SDK for the canonical schedule lifecycle:
+
+```python
+autopilot = client.autopilots.get("autopilot_123")
+trigger = autopilot.trigger_add(
+    kind="schedule",
+    cron_expression="*/30 * * * *",
+    timezone="Europe/Minsk",
+    label="half-hour",
+)
+trigger = autopilot.trigger_update(
+    trigger.id,
+    cron_expression="0 */3 * * *",
+    timezone="Europe/Minsk",
+    enabled=False,
+)
+trigger = autopilot.trigger_update(trigger.id, enabled=True)
+```
+
+To change kind, delete the immutable trigger and add a replacement rather than
+passing `kind` to update:
+
+```python
+autopilot.trigger_delete(trigger.id)
+replacement = autopilot.trigger_add(kind="webhook")
+```
+
+On add, a schedule requires a nonempty `cron_expression`. Omitted, `None`, or
+`""` for `timezone` and `label` means that flag is omitted. A webhook add
+accepts those same absent states for `cron_expression` and `timezone`, but
+rejects nonempty schedule-only values. On update, `Unset` omits a field,
+explicit `None` is invalid, and `""` is emitted as an explicit clear for
+string fields. Both `enabled=False` and `enabled=True` are explicit updates.
+Validation that can be decided locally happens before transport I/O.
 
 ### Read paths, domain verbs, uploads, and execution options
 

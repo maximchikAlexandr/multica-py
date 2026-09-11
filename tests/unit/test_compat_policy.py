@@ -50,15 +50,34 @@ def test_ignore_policy_never_raises():
     check_version(_make_ver("0.0.1"), CompatibilityPolicy.ignore, min_version="0.1.0")
 
 
-def test_parse_cli_version():
-    raw = '{"version":"0.1.0","commit":"abc123","buildDate":"2026-01-01","goVersion":"go1.22","os":"linux","arch":"amd64"}'
+def test_parse_cli_version_maps_current_json_envelope_and_ignores_additive_keys():
+    raw = '{"arch":"arm64","commit":"47dc75741","date":"2026-09-02T09:52:29Z","go":"go1.26.7","os":"darwin","version":"0.4.38","extra":true}'
     ver = parse_cli_version(raw)
     assert ver is not None
-    assert ver.version == "0.1.0"
+    assert ver.version == "0.4.38"
+    assert ver.commit == "47dc75741"
+    assert ver.build_date == "2026-09-02T09:52:29Z"
+    assert ver.go_version == "go1.26.7"
+    assert ver.os == "darwin"
+    assert ver.arch == "arm64"
 
 
 def test_parse_cli_version_invalid():
     assert parse_cli_version("not json") is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    (
+        "{}",
+        '{"version":""}',
+        '{"version":"not-semver"}',
+        '{"version":0}',
+        '{"version":null}',
+    ),
+)
+def test_parse_cli_version_rejects_invalid_version_envelopes(raw: str) -> None:
+    assert parse_cli_version(raw) is None
 
 
 def test_check_version_from_config():

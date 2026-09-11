@@ -13,8 +13,7 @@ from multica_py._generated.approved_sdk import (
     AUTOPILOT_TRIGGER_UPDATE_BINDING,
     validate_nonblank,
 )
-from multica_py._internal.commands import Command, _replace_plan, _Step
-from multica_py._internal.decoders import decode_json
+from multica_py._internal.commands import Command, _replace_plan
 from multica_py._internal.json_values import _coerce_json_value
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
@@ -36,7 +35,6 @@ from multica_py.entities.autopilots import (
     AutopilotRun,
 )
 from multica_py.enums import AutopilotExecutionMode
-from multica_py.exceptions import OutputShapeError
 from multica_py.models.autopilots import (
     AutopilotListPage,
     AutopilotRunListPage,
@@ -52,17 +50,6 @@ from multica_py.resources._base import BaseResource
 from multica_py.sentinels import Unset, UnsetType
 
 __all__ = ["Autopilot", "AutopilotResource", "AutopilotRun", "_coerce_json_value"]
-
-
-def _trigger_from_autopilot_get(stdout: bytes, command: str, trigger_id: str) -> AutopilotTrigger:
-    wire = decode_json(stdout, _AutopilotGetWire, command=command)
-    result = _autopilot_get_from_wire(wire)
-    if result.triggers is msgspec.UNSET:
-        raise OutputShapeError("Autopilot get response omitted triggers")
-    for trigger in result.triggers:
-        if trigger.id == trigger_id:
-            return trigger
-    raise OutputShapeError(f"Autopilot trigger {trigger_id!r} was not found")
 
 
 class AutopilotResource(BaseResource):
@@ -117,27 +104,42 @@ class AutopilotResource(BaseResource):
         self,
         autopilot_id: str,
         *,
-        title: str,
-        kind: str,
+        kind: str = "schedule",
+        cron_expression: str | None = None,
+        timezone: str | None = None,
+        label: str | None = None,
         invalidate: Callable[[AutopilotTrigger], AutopilotTrigger],
-        options: OperationOptions | None,
+        options: OperationOptions | None = None,
     ) -> Command[AutopilotTrigger]:
-        return self.trigger_add_command(autopilot_id, title=title, kind=kind, options=options)._map(
-            invalidate
-        )
+        return self.trigger_add_command(
+            autopilot_id,
+            kind=kind,
+            cron_expression=cron_expression,
+            timezone=timezone,
+            label=label,
+            options=options,
+        )._map(invalidate)
 
     def _trigger_update_command(
         self,
         autopilot_id: str,
         trigger_id: str,
         *,
-        title: str | UnsetType,
-        kind: str | UnsetType,
+        cron_expression: str | UnsetType = Unset,
+        timezone: str | UnsetType = Unset,
+        label: str | UnsetType = Unset,
+        enabled: bool | UnsetType = Unset,
         invalidate: Callable[[AutopilotTrigger], AutopilotTrigger],
-        options: OperationOptions | None,
+        options: OperationOptions | None = None,
     ) -> Command[AutopilotTrigger]:
         return self.trigger_update_command(
-            autopilot_id, trigger_id, title=title, kind=kind, options=options
+            autopilot_id,
+            trigger_id,
+            cron_expression=cron_expression,
+            timezone=timezone,
+            label=label,
+            enabled=enabled,
+            options=options,
         )._map(invalidate)
 
     def _trigger_delete_command(
@@ -421,23 +423,53 @@ class AutopilotResource(BaseResource):
         return self.history_command(autopilot_id, limit=limit, offset=offset, options=options).run()
 
     def trigger_add_command(
-        self, autopilot_id: str, *, title: str, kind: str, options: OperationOptions | None = None
+        self,
+        autopilot_id: str,
+        *,
+        kind: str = "schedule",
+        cron_expression: str | None = None,
+        timezone: str | None = None,
+        label: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[AutopilotTrigger]:
         _ = cast("object", AUTOPILOT_TRIGGER_ADD_BINDING)
         validate_nonblank(autopilot_id)
-        validate_nonblank(title)
-        if kind is None:
-            raise TypeError("kind must be non-null")
-        args = (
+        if not isinstance(kind, str):
+            raise TypeError("kind must be a string")
+        for field_name, value in (
+            ("cron_expression", cron_expression),
+            ("timezone", timezone),
+            ("label", label),
+        ):
+            if value is not None and not isinstance(value, str):
+                raise TypeError(f"{field_name} must be a string or None")
+
+        normalized_kind = "schedule" if kind == "" else kind
+        if normalized_kind not in {"schedule", "webhook"}:
+            raise ValueError("kind must be 'schedule' or 'webhook'")
+        has_cron = cron_expression not in (None, "")
+        has_timezone = timezone not in (None, "")
+        if normalized_kind == "schedule" and not has_cron:
+            raise ValueError("cron_expression is required for schedule triggers")
+        if normalized_kind == "webhook" and has_cron:
+            raise ValueError("cron_expression is not supported for webhook triggers")
+        if normalized_kind == "webhook" and has_timezone:
+            raise ValueError("timezone is not supported for webhook triggers")
+
+        args: list[str] = [
             "autopilot",
             "trigger-add",
             autopilot_id,
-            "--title",
-            title,
             "--kind",
-            kind,
-        )
-        return self._decoded_command(args, _AutopilotTriggerWire, options=options)._map(
+            normalized_kind,
+        ]
+        if has_cron:
+            args.extend(("--cron", cron_expression or ""))
+        if has_timezone:
+            args.extend(("--timezone", timezone or ""))
+        if label not in (None, ""):
+            args.extend(("--label", label or ""))
+        return self._decoded_command(tuple(args), _AutopilotTriggerWire, options=options)._map(
             trigger_from_wire
         )
 
@@ -445,48 +477,61 @@ class AutopilotResource(BaseResource):
         self,
         autopilot_id: str,
         *,
-        title: str,
-        kind: str,
+        kind: str = "schedule",
+        cron_expression: str | None = None,
+        timezone: str | None = None,
+        label: str | None = None,
         options: OperationOptions | None = None,
     ) -> AutopilotTrigger:
-        return self.trigger_add_command(autopilot_id, title=title, kind=kind, options=options).run()
+        return self.trigger_add_command(
+            autopilot_id,
+            kind=kind,
+            cron_expression=cron_expression,
+            timezone=timezone,
+            label=label,
+            options=options,
+        ).run()
 
     def trigger_update_command(
         self,
         autopilot_id: str,
         trigger_id: str,
         *,
-        title: str | UnsetType = Unset,
-        kind: str | UnsetType = Unset,
+        cron_expression: str | UnsetType = Unset,
+        timezone: str | UnsetType = Unset,
+        label: str | UnsetType = Unset,
+        enabled: bool | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[AutopilotTrigger]:
         _ = cast("object", AUTOPILOT_TRIGGER_UPDATE_BINDING)
         validate_nonblank(autopilot_id)
         validate_nonblank(trigger_id)
-        if title is None:
-            raise TypeError("title must be non-null")
-        if kind is None:
-            raise TypeError("kind must be non-null")
-        if title is Unset and kind is Unset:
-            get_args = ("autopilot", "get", autopilot_id, "--output", "json")
-            return self._plan(
-                steps=(
-                    _Step(
-                        get_args,
-                        "run_bytes",
-                        decode=lambda stdout, command: _trigger_from_autopilot_get(
-                            stdout, command, trigger_id
-                        ),
-                    ),
-                ),
-                finalize=lambda results: cast("AutopilotTrigger", results[0]),
-                options=options,
-            )
+
+        for field_name, value in (
+            ("cron_expression", cron_expression),
+            ("timezone", timezone),
+            ("label", label),
+        ):
+            if value is None:
+                raise TypeError(f"{field_name} must be non-null")
+            if value is not Unset and not isinstance(value, str):
+                raise TypeError(f"{field_name} must be a string or Unset")
+        if enabled is None:
+            raise TypeError("enabled must be non-null")
+        if enabled is not Unset and not isinstance(enabled, bool):
+            raise TypeError("enabled must be a bool or Unset")
+        if cron_expression is Unset and timezone is Unset and label is Unset and enabled is Unset:
+            raise ValueError("at least one trigger update field is required")
+
         args = ["autopilot", "trigger-update", autopilot_id, trigger_id]
-        if title is not msgspec.UNSET:
-            args.extend(["--title", title])
-        if kind is not msgspec.UNSET:
-            args.extend(["--kind", kind])
+        if cron_expression is not Unset:
+            args.extend(["--cron", cron_expression])
+        if timezone is not Unset:
+            args.extend(["--timezone", timezone])
+        if label is not Unset:
+            args.extend(["--label", label])
+        if enabled is not Unset:
+            args.append(f"--enabled={str(enabled).lower()}")
         return self._decoded_command(tuple(args), _AutopilotTriggerWire, options=options)._map(
             trigger_from_wire
         )
@@ -496,12 +541,20 @@ class AutopilotResource(BaseResource):
         autopilot_id: str,
         trigger_id: str,
         *,
-        title: str | UnsetType = Unset,
-        kind: str | UnsetType = Unset,
+        cron_expression: str | UnsetType = Unset,
+        timezone: str | UnsetType = Unset,
+        label: str | UnsetType = Unset,
+        enabled: bool | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> AutopilotTrigger:
         return self.trigger_update_command(
-            autopilot_id, trigger_id, title=title, kind=kind, options=options
+            autopilot_id,
+            trigger_id,
+            cron_expression=cron_expression,
+            timezone=timezone,
+            label=label,
+            enabled=enabled,
+            options=options,
         ).run()
 
     def trigger_delete_command(

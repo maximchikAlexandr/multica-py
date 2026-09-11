@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-import datetime
 import gc
-import inspect
 import threading
 import weakref
 from typing import Literal, cast, get_type_hints
@@ -16,7 +14,7 @@ from multica_py._internal.commands import Command
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
-from multica_py.config import ClientConfig, OperationOptions
+from multica_py.config import ClientConfig
 from multica_py.entities._base import _BoundEntity
 from multica_py.entities.autopilots import Autopilot, AutopilotRun
 from multica_py.enums import AutopilotExecutionMode
@@ -27,30 +25,11 @@ from multica_py.models.autopilots import (
     AutopilotSubscriber,
     AutopilotTrigger,
 )
-from multica_py.models.common import ActionResult
 from multica_py.models.issue_activity import RunMessage
 from multica_py.models.relations import LazyCollection, LazyMapping
 from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.issues import IssueResource
-from multica_py.sentinels import UnsetType
-from tests.unit.resources._factories import bound_entity_factory
-
-
-@dataclasses.dataclass(frozen=True)
-class TriggerValidationCase:
-    method: str
-    args: tuple[object, ...]
-    kwargs: tuple[tuple[str, object], ...] = ()
-
-
-TRIGGER_VALIDATION_CASES = (
-    TriggerValidationCase("trigger_add", ("",), (("title", "Webhook"), ("kind", "k"))),
-    TriggerValidationCase("trigger_add", ("ap_1",), (("title", ""), ("kind", "k"))),
-    TriggerValidationCase("trigger_update", ("", "tr_1"), (("title", "x"),)),
-    TriggerValidationCase("trigger_update", ("ap_1", ""), (("title", "x"),)),
-    TriggerValidationCase("trigger_delete", ("", "tr_1")),
-    TriggerValidationCase("trigger_delete", ("ap_1", "")),
-)
+from tests.unit.resources._factories import autopilot_resource, bound_entity_factory, command_result
 
 
 @dataclasses.dataclass(frozen=True)
@@ -94,7 +73,9 @@ _SEED_CASES = (
                     **_AUTOPILOT,
                     "subscribers": [{"user_type": "member", "user_id": "u2"}],
                 },
-                "triggers": [{"id": "tr1", "type": "webhook", "config": {}}],
+                "triggers": [
+                    {"id": "tr1", "autopilot_id": "a1", "kind": "webhook", "enabled": True}
+                ],
             }
         ),
         True,
@@ -152,28 +133,12 @@ BOUND_PAGE_CASES = (
 )
 
 
-def _resource(transport: MagicMock, client: MulticaClient | None = None) -> AutopilotResource:
-    resource = AutopilotResource(cast("CliTransport", transport), ClientConfig())
-    resource._set_client(client if client is not None else MagicMock())
-    return resource
-
-
-def _result(payload: bytes, *argv: str) -> RawCommandResult:
-    return RawCommandResult(
-        stdout=payload,
-        stderr=b"",
-        exit_code=0,
-        argv=argv,
-        duration=datetime.timedelta(),
-    )
-
-
 @pytest.mark.parametrize("case", BOUND_PAGE_CASES, ids=lambda case: case.name)
 def test_direct_pages_have_exact_bound_item_annotations(case: BoundPageCase) -> None:
     transport = MagicMock(spec=CliTransport)
-    transport.run_bytes.return_value = _result(case.stdout, *case.expected_argv)
+    transport.run_bytes.return_value = command_result(case.stdout, *case.expected_argv)
     client = MagicMock()
-    resource = _resource(transport, client)
+    resource = autopilot_resource(transport, client)
 
     page = getattr(resource, f"{case.method}_command")(*case.args).run()
     items = getattr(page, case.item_attribute)
@@ -218,17 +183,17 @@ def test_direct_pages_have_exact_bound_item_annotations(case: BoundPageCase) -> 
 def test_direct_list_item_second_hop_uses_origin_client() -> None:
     transport = MagicMock(spec=CliTransport)
     client = MagicMock()
-    resource = _resource(transport, client)
+    resource = autopilot_resource(transport, client)
     client.autopilots = resource
     transport.run_bytes.side_effect = (
-        _result(
+        command_result(
             msgspec.json.encode({"autopilots": [_AUTOPILOT], "total": 1}),
             "autopilot",
             "list",
             "--output",
             "json",
         ),
-        _result(
+        command_result(
             msgspec.json.encode(
                 {
                     "runs": [
@@ -270,10 +235,10 @@ def test_get_binds_autopilot_and_seeds_only_present_relations(
     case: SeedCase,
 ) -> None:
     transport = MagicMock(spec=CliTransport)
-    transport.run_bytes.return_value = _result(
+    transport.run_bytes.return_value = command_result(
         case.payload, "autopilot", "get", "a1", "--output", "json"
     )
-    entity = _resource(transport).get_command("a1").run()
+    entity = autopilot_resource(transport).get_command("a1").run()
 
     assert isinstance(entity, Autopilot)
     assert entity.triggers.loaded is case.triggers_loaded
@@ -301,7 +266,9 @@ def test_autopilot_relation_loaders_do_not_retain_entity(case: SeededRelationsCa
     if case.seeded:
         kwargs.update(
             {
-                "triggers": (AutopilotTrigger(id="tr1", type="webhook"),),
+                "triggers": (
+                    AutopilotTrigger(id="tr1", autopilot_id="a1", kind="webhook", enabled=True),
+                ),
                 "subscribers": (AutopilotSubscriber(user_type="member", user_id="u1"),),
             }
         )
@@ -330,7 +297,7 @@ def test_autopilot_relation_loaders_do_not_retain_entity(case: SeededRelationsCa
 def test_history_binds_runs_and_autopilot_runs_retains_total() -> None:
     transport = MagicMock(spec=CliTransport)
     transport.run_bytes.side_effect = [
-        _result(
+        command_result(
             msgspec.json.encode(
                 {
                     "runs": [
@@ -349,7 +316,7 @@ def test_history_binds_runs_and_autopilot_runs_retains_total() -> None:
             "--output",
             "json",
         ),
-        _result(
+        command_result(
             msgspec.json.encode(
                 {
                     "runs": [
@@ -370,7 +337,7 @@ def test_history_binds_runs_and_autopilot_runs_retains_total() -> None:
         ),
     ]
     client = MagicMock()
-    client.autopilots = _resource(transport, client)
+    client.autopilots = autopilot_resource(transport, client)
     entity = Autopilot(
         id="a1",
         workspace_id="w1",
@@ -395,14 +362,14 @@ def test_trigger_mutations_invalidate_relation() -> None:
     client = MagicMock()
     transport = MagicMock(spec=CliTransport)
     transport.run_bytes.side_effect = [
-        _result(b'{"id":"tr2","type":"cron","config":{}}'),
-        _result(b'{"id":"tr1","type":"cron","config":{}}'),
+        command_result(b'{"id":"tr2","autopilot_id":"a1","kind":"schedule","enabled":true}'),
+        command_result(b'{"id":"tr1","autopilot_id":"a1","kind":"schedule","enabled":true}'),
     ]
     transport.run_text.return_value = TextResult("", "", 0)
-    resource = _resource(transport, client)
+    resource = autopilot_resource(transport, client)
     client.autopilots = resource
     relation: LazyCollection[AutopilotTrigger] = LazyCollection(
-        lambda: (AutopilotTrigger(id="tr1", type="webhook"),)
+        lambda: (AutopilotTrigger(id="tr1", autopilot_id="a1", kind="webhook", enabled=True),)
     )
     entity = Autopilot(
         id="a1",
@@ -419,9 +386,9 @@ def test_trigger_mutations_invalidate_relation() -> None:
     entity._set_runtime("_triggers", relation)
     relation.all()
 
-    entity.trigger_add(title="new", kind="webhook")
+    entity.trigger_add(kind="webhook")
     assert not relation.loaded
-    entity.trigger_update("tr1", title="changed")
+    entity.trigger_update("tr1", label="changed")
     entity.trigger_delete("tr1")
     transport.run_text.assert_called_once_with(("autopilot", "trigger-delete", "a1", "tr1"))
 
@@ -446,7 +413,9 @@ def test_autopilot_trigger_command_invalidates_only_after_success() -> None:
     client = MulticaClient(ClientConfig())
     transport = MagicMock(spec=CliTransport)
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.return_value = _result(b'{"id":"tr1","type":"webhook","config":{}}')
+    transport.run_bytes.return_value = command_result(
+        b'{"id":"tr1","autopilot_id":"a1","kind":"webhook","enabled":true}'
+    )
     client.autopilots._transport = transport
     entity = Autopilot(
         id="a1",
@@ -460,52 +429,24 @@ def test_autopilot_trigger_command_invalidates_only_after_success() -> None:
         created_by_id="u1",
         _client=client,
     )
-    relation = LazyCollection(lambda: (AutopilotTrigger(id="tr0", type="webhook"),))
+    relation = LazyCollection(
+        lambda: (AutopilotTrigger(id="tr0", autopilot_id="a1", kind="webhook", enabled=True),)
+    )
     entity._set_runtime("_triggers", relation)
     relation.all()
 
-    command = entity.trigger_add_command(title="Webhook", kind="webhook")
-    assert command.commands == (
-        "multica autopilot trigger-add a1 --title Webhook --kind webhook --output json",
-    )
+    command = entity.trigger_add_command(kind="webhook")
+    assert command.commands == ("multica autopilot trigger-add a1 --kind webhook --output json",)
     assert transport.run_bytes.call_count == 0
     command.run()
     assert not relation.loaded
 
     relation.all()
     transport.run_bytes.side_effect = RuntimeError("transport failure")
-    failed = entity.trigger_update_command("tr0", title="Changed")
+    failed = entity.trigger_update_command("tr0", label="Changed")
     with pytest.raises(RuntimeError, match="transport failure"):
         failed.run()
     assert relation.loaded
-
-
-def test_autopilot_trigger_uses_only_supported_command_spelling() -> None:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.return_value = _result(
-        b'{"id":"run1","autopilot_id":"a1","source":"manual","status":"running"}',
-        "autopilot",
-        "trigger",
-        "a1",
-        "--output",
-        "json",
-    )
-    resource = _resource(transport)
-
-    command = resource.trigger_command("a1")
-
-    assert command.commands == ("multica autopilot trigger a1 --output json",)
-    assert "autopilot run" not in command.commands[0]
-    assert transport.run_bytes.call_count == 0
-    assert command.run().id == "run1"
-    assert transport.run_bytes.call_args.args[0] == (
-        "autopilot",
-        "trigger",
-        "a1",
-        "--output",
-        "json",
-    )
 
 
 def test_autopilot_relation_commands_preserve_preview_and_page_argv() -> None:
@@ -513,15 +454,22 @@ def test_autopilot_relation_commands_preserve_preview_and_page_argv() -> None:
     transport = MagicMock(spec=CliTransport)
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     transport.run_bytes.side_effect = (
-        _result(
+        command_result(
             msgspec.json.encode(
                 {
                     "autopilot": _AUTOPILOT,
-                    "triggers": [{"id": "tr1", "type": "webhook", "config": {}}],
+                    "triggers": [
+                        {
+                            "id": "tr1",
+                            "autopilot_id": "a1",
+                            "kind": "webhook",
+                            "enabled": True,
+                        }
+                    ],
                 }
             )
         ),
-        _result(msgspec.json.encode({"runs": [], "total": 0})),
+        command_result(msgspec.json.encode({"runs": [], "total": 0})),
     )
     client.autopilots._transport = transport
     entity = Autopilot(
@@ -554,13 +502,20 @@ def test_autopilot_eager_and_dunder_relation_loads_use_command_plan() -> None:
     client = MulticaClient(ClientConfig())
     transport = MagicMock(spec=CliTransport)
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.side_effect = lambda argv, **_kwargs: _result(
+    transport.run_bytes.side_effect = lambda argv, **_kwargs: command_result(
         msgspec.json.encode(
             {
                 "autopilot": {
                     **_AUTOPILOT,
                 },
-                "triggers": [{"id": "tr1", "type": "webhook", "config": {}}],
+                "triggers": [
+                    {
+                        "id": "tr1",
+                        "autopilot_id": "a1",
+                        "kind": "webhook",
+                        "enabled": True,
+                    }
+                ],
             }
         ),
         *argv,
@@ -609,13 +564,20 @@ def test_autopilot_relation_command_runs_coalesce_one_loader_sequence() -> None:
     def run_bytes(argv: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
         started.set()
         assert release.wait(timeout=2)
-        return _result(
+        return command_result(
             msgspec.json.encode(
                 {
                     "autopilot": {
                         **_AUTOPILOT,
                     },
-                    "triggers": [{"id": "tr1", "type": "webhook", "config": {}}],
+                    "triggers": [
+                        {
+                            "id": "tr1",
+                            "autopilot_id": "a1",
+                            "kind": "webhook",
+                            "enabled": True,
+                        }
+                    ],
                 }
             ),
             *argv,
@@ -724,79 +686,6 @@ def test_autopilot_run_messages_relation_command_rejects_missing_task_before_io(
     with pytest.raises(MissingRelationContextError):
         run.messages.all_command()
     client.issues.run_messages_command.assert_not_called()
-
-
-def test_legacy_autopilot_methods_are_absent() -> None:
-    assert not hasattr(AutopilotResource, "run")
-    assert not hasattr(AutopilotResource, "get_run")
-    assert not hasattr(AutopilotResource, "trigger_create")
-    assert not hasattr(AutopilotResource, "trigger_list")
-
-
-@pytest.mark.parametrize("case", TRIGGER_VALIDATION_CASES)
-def test_trigger_operations_reject_invalid_context_before_transport(
-    case: TriggerValidationCase,
-) -> None:
-    transport = MagicMock(spec=CliTransport)
-    resource = AutopilotResource(transport, ClientConfig())
-
-    with pytest.raises(ValueError):
-        getattr(resource, f"{case.method}_command")(*case.args, **dict(case.kwargs))
-
-    transport.run_bytes.assert_not_called()
-    transport.run_text.assert_not_called()
-
-
-@dataclasses.dataclass(frozen=True)
-class TriggerSignatureCase:
-    method: str
-    parameters: tuple[tuple[str, inspect._ParameterKind, object], ...]
-    return_annotation: object
-
-
-TRIGGER_SIGNATURE_CASES = (
-    TriggerSignatureCase(
-        "trigger_add",
-        (
-            ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-            ("title", inspect.Parameter.KEYWORD_ONLY, str),
-            ("kind", inspect.Parameter.KEYWORD_ONLY, str),
-            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
-        ),
-        AutopilotTrigger,
-    ),
-    TriggerSignatureCase(
-        "trigger_update",
-        (
-            ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-            ("trigger_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-            ("title", inspect.Parameter.KEYWORD_ONLY, str | UnsetType),
-            ("kind", inspect.Parameter.KEYWORD_ONLY, str | UnsetType),
-            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
-        ),
-        AutopilotTrigger,
-    ),
-    TriggerSignatureCase(
-        "trigger_delete",
-        (
-            ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-            ("trigger_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
-            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
-        ),
-        ActionResult[None],
-    ),
-)
-
-
-@pytest.mark.parametrize("case", TRIGGER_SIGNATURE_CASES, ids=lambda case: case.method)
-def test_trigger_public_signatures(
-    case: TriggerSignatureCase,
-) -> None:
-    signature = inspect.signature(getattr(AutopilotResource, case.method), eval_str=True)
-    actual = tuple(signature.parameters.values())[1:]
-
-    assert tuple((item.name, item.kind, item.annotation) for item in actual) == case.parameters
-    assert signature.return_annotation == case.return_annotation
 
 
 @dataclasses.dataclass(frozen=True)

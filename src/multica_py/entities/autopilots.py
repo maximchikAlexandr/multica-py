@@ -528,12 +528,30 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
         return self._runs  # type: ignore[return-value]
 
     def trigger_add(
-        self, *, title: str, kind: str, options: OperationOptions | None = None
+        self,
+        *,
+        kind: str = "schedule",
+        cron_expression: str | None = None,
+        timezone: str | None = None,
+        label: str | None = None,
+        options: OperationOptions | None = None,
     ) -> AutopilotTrigger:
-        return self.trigger_add_command(title=title, kind=kind, options=options).run()
+        return self.trigger_add_command(
+            kind=kind,
+            cron_expression=cron_expression,
+            timezone=timezone,
+            label=label,
+            options=options,
+        ).run()
 
     def trigger_add_command(
-        self, *, title: str, kind: str, options: OperationOptions | None = None
+        self,
+        *,
+        kind: str = "schedule",
+        cron_expression: str | None = None,
+        timezone: str | None = None,
+        label: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[AutopilotTrigger]:
         client = self._require_client(
             entity_type="Autopilot", entity_id=self.id, relation_name="triggers"
@@ -544,27 +562,42 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             return result
 
         return client.autopilots._trigger_add_command(
-            self.id, title=title, kind=kind, invalidate=invalidate, options=options
+            self.id,
+            kind=kind,
+            cron_expression=cron_expression,
+            timezone=timezone,
+            label=label,
+            invalidate=invalidate,
+            options=options,
         )
 
     def trigger_update(
         self,
         trigger_id: str,
         *,
-        title: str | UnsetType = Unset,
-        kind: str | UnsetType = Unset,
+        cron_expression: str | UnsetType = Unset,
+        timezone: str | UnsetType = Unset,
+        label: str | UnsetType = Unset,
+        enabled: bool | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> AutopilotTrigger:
         return self.trigger_update_command(
-            trigger_id, title=title, kind=kind, options=options
+            trigger_id,
+            cron_expression=cron_expression,
+            timezone=timezone,
+            label=label,
+            enabled=enabled,
+            options=options,
         ).run()
 
     def trigger_update_command(
         self,
         trigger_id: str,
         *,
-        title: str | UnsetType = Unset,
-        kind: str | UnsetType = Unset,
+        cron_expression: str | UnsetType = Unset,
+        timezone: str | UnsetType = Unset,
+        label: str | UnsetType = Unset,
+        enabled: bool | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[AutopilotTrigger]:
         client = self._require_client(
@@ -576,7 +609,14 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
             return result
 
         return client.autopilots._trigger_update_command(
-            self.id, trigger_id, title=title, kind=kind, invalidate=invalidate, options=options
+            self.id,
+            trigger_id,
+            cron_expression=cron_expression,
+            timezone=timezone,
+            label=label,
+            enabled=enabled,
+            invalidate=invalidate,
+            options=options,
         )
 
     def trigger_delete(

@@ -25,6 +25,7 @@ from multica_py._internal.redaction import (
 )
 from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport, classify_cli_failure
+from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import (
@@ -156,6 +157,23 @@ class ProcessLifecycleCase:
     expected_output: str | None
 
 
+_CLI_0438_ENVELOPE = (
+    b'{"arch":"arm64","commit":"47dc75741","date":"2026-09-02T09:52:29Z",'
+    b'"go":"go1.26.7","os":"darwin","version":"0.4.38"}'
+)
+
+
+_INVALID_VERSION_OUTPUTS = (
+    pytest.param(b"0.4.38", id="text-only"),
+    pytest.param(b"{", id="malformed-json"),
+    pytest.param(b"{}", id="missing-version"),
+    pytest.param(b'{"version":""}', id="blank-version"),
+    pytest.param(b'{"version":"not-semver"}', id="non-semantic-version"),
+    pytest.param(b'{"version":0}', id="wrong-typed-number"),
+    pytest.param(b'{"version":null}', id="wrong-typed-null"),
+)
+
+
 _SECRET_REDACTION_CASES: tuple[SecretRedactionCase, ...] = (
     SecretRedactionCase(
         "credential-stdin",
@@ -247,6 +265,18 @@ class _EchoExecutor(LocalExecutor):
         output = b"stdout " + self.echoed
         error = b"stderr " + self.echoed
         return ExecutionResult(self.exit_code, output, error)
+
+
+class _CompatibilityProbeExecutor(LocalExecutor):
+    def __init__(self, version_output: bytes) -> None:
+        self.version_output = version_output
+        self.requests: list[ExecutionRequest] = []
+
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        self.requests.append(request)
+        if request.argv[-3:] == ("version", "--output", "json"):
+            return ExecutionResult(0, self.version_output, b"")
+        return ExecutionResult(0, b"{}", b"")
 
 
 class _SnapshotExecutor(LocalExecutor):
@@ -1514,10 +1544,86 @@ def test_transport_redacts_secret_values_from_exception_streams():
 
 
 def test_transport_warn_policy_rejects_unparseable_version_output_from_check():
-    config = ClientConfig(executable=sys.executable, compatibility=CompatibilityPolicy.warn)
-    transport = CliTransport(config)
+    executor = _CompatibilityProbeExecutor(b"not json")
+    config = ClientConfig(compatibility=CompatibilityPolicy.warn)
+    transport = CliTransport(config, executor=executor)
     with pytest.warns(UserWarning, match="Failed to parse CLI version output"):
         transport._check_compat()
+
+
+def test_strict_preflight_is_lazy_uses_exact_json_argv_and_preserves_global_order() -> None:
+    executor = _CompatibilityProbeExecutor(_CLI_0438_ENVELOPE)
+    config = ClientConfig(
+        executable="/opt/multica",
+        server_url="https://example.test",
+        workspace_id="ws-1",
+        profile="dev",
+        debug=True,
+        compatibility=CompatibilityPolicy.strict,
+    )
+    transport = CliTransport(config, executor=executor)
+
+    assert executor.requests == []
+    transport.run_bytes(("auth", "status"))
+
+    assert [request.argv for request in executor.requests] == [
+        (
+            "/opt/multica",
+            "--server-url",
+            "https://example.test",
+            "--workspace-id",
+            "ws-1",
+            "--profile",
+            "dev",
+            "--debug",
+            "version",
+            "--output",
+            "json",
+        ),
+        (
+            "/opt/multica",
+            "--server-url",
+            "https://example.test",
+            "--workspace-id",
+            "ws-1",
+            "--profile",
+            "dev",
+            "--debug",
+            "auth",
+            "status",
+        ),
+    ]
+
+
+def test_strict_client_constructor_is_lazy_and_first_public_operation_succeeds() -> None:
+    executor = _CompatibilityProbeExecutor(_CLI_0438_ENVELOPE)
+    config = ClientConfig(compatibility=CompatibilityPolicy.strict)
+    client = MulticaClient(config, executor=executor)
+
+    assert executor.requests == []
+    try:
+        status = client.auth.status()
+    finally:
+        client.close()
+
+    assert status.authenticated is False
+    assert executor.requests[0].argv[-3:] == ("version", "--output", "json")
+    assert executor.requests[1].argv[-4:] == ("auth", "status", "--output", "json")
+
+
+@pytest.mark.parametrize("version_output", _INVALID_VERSION_OUTPUTS)
+def test_strict_invalid_version_does_not_execute_operation_or_cache_probe(
+    version_output: bytes,
+) -> None:
+    executor = _CompatibilityProbeExecutor(version_output)
+    transport = CliTransport(
+        ClientConfig(compatibility=CompatibilityPolicy.strict), executor=executor
+    )
+
+    with pytest.raises(UnsupportedCliVersionError):
+        transport.run_bytes(("auth", "status"))
+    assert len(executor.requests) == 1
+    assert transport._compatibility_state.checked is False
 
 
 @pytest.mark.parametrize("case", _POLICY_CASES, ids=lambda case: case.id)
@@ -1541,7 +1647,9 @@ def test_snapshot_transports_share_compatibility_preflight_cache(
             if check_compat:
                 self._check_compat()
             self.commands.append(command_args)
-            stdout = b'{"version":"1.0.0"}' if command_args == ("version",) else b"{}"
+            stdout = (
+                _CLI_0438_ENVELOPE if command_args == ("version", "--output", "json") else b"{}"
+            )
             return RawCommandResult(
                 argv=("multica", *command_args),
                 exit_code=0,
@@ -1559,19 +1667,22 @@ def test_snapshot_transports_share_compatibility_preflight_cache(
     from multica_py.resources.auth import AuthResource
 
     auth = AuthResource(transport, config)
+    snapshot = transport._snapshot(config)
+    snapshot_auth = AuthResource(snapshot, config)
     auth.status()
-    auth.logout()
+    snapshot_auth.logout()
 
     assert transport.commands == [
-        ("version",),
+        ("version", "--output", "json"),
         ("auth", "status", "--output", "json"),
         ("auth", "logout", "--output", "json"),
     ]
 
 
 def test_transport_strict_policy_rejects_unparseable_version_output_from_check():
-    config = ClientConfig(executable=sys.executable, compatibility=CompatibilityPolicy.strict)
-    transport = CliTransport(config)
+    executor = _CompatibilityProbeExecutor(b"not json")
+    config = ClientConfig(compatibility=CompatibilityPolicy.strict)
+    transport = CliTransport(config, executor=executor)
     with pytest.raises(UnsupportedCliVersionError, match="Failed to parse CLI version output"):
         transport._check_compat()
 

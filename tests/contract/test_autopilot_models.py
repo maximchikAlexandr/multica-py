@@ -8,6 +8,7 @@ import pytest
 
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
+from multica_py._internal.wire_models import _AutopilotTriggerWire, trigger_from_wire
 from multica_py.config import ClientConfig
 from multica_py.entities.autopilots import Autopilot, AutopilotRun
 from multica_py.enums import AutopilotExecutionMode
@@ -16,6 +17,7 @@ from multica_py.models.autopilots import (
     AutopilotListPage,
     AutopilotRunListPage,
     AutopilotSubscriber,
+    AutopilotTrigger,
 )
 from multica_py.resources.autopilots import AutopilotResource
 
@@ -36,6 +38,34 @@ def test_autopilot_list_rejects_legacy_fields() -> None:
     assert not hasattr(ap, "enabled")
     r = AutopilotRun(id="r1", autopilot_id="a1", source="web", status="running")
     assert not hasattr(r, "started_at")
+
+
+def test_autopilot_trigger_decodes_pinned_schedule_response() -> None:
+    wire = decode_json(
+        b'{"id":"tr1","autopilot_id":"a1","kind":"schedule","enabled":true,'
+        b'"cron_expression":"*/30 * * * *","timezone":"Europe/Minsk",'
+        b'"next_run_at":"2026-07-29T00:00:00Z","label":"half-hour",'
+        b'"last_fired_at":null,"created_at":"2026-07-28T10:00:00Z",'
+        b'"updated_at":"2026-07-28T11:00:00+00:00","additive":true}',
+        _AutopilotTriggerWire,
+        command="test",
+    )
+    trigger = trigger_from_wire(wire)
+
+    assert isinstance(trigger, AutopilotTrigger)
+    assert trigger.id == "tr1"
+    assert trigger.autopilot_id == "a1"
+    assert trigger.kind == "schedule"
+    assert trigger.enabled is True
+    assert trigger.cron_expression == "*/30 * * * *"
+    assert trigger.timezone == "Europe/Minsk"
+    assert trigger.next_run_at == datetime.datetime(2026, 7, 29, tzinfo=datetime.UTC)
+    assert trigger.label == "half-hour"
+    assert trigger.last_fired_at is None
+    assert trigger.created_at == datetime.datetime(2026, 7, 28, 10, tzinfo=datetime.UTC)
+    assert trigger.updated_at == datetime.datetime(2026, 7, 28, 11, tzinfo=datetime.UTC)
+    assert not hasattr(trigger, "type")
+    assert not hasattr(trigger, "config")
 
 
 _FULL_AP_JSON = (

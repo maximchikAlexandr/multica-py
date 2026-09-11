@@ -9,12 +9,20 @@
   },
   "compatibility": {
     "min_cli_version": "0.4.28",
-    "max_tested_cli_version": "0.4.32",
+    "max_tested_cli_version": "0.4.38",
     "verified_binaries": [
       {
         "version": "0.4.32",
         "commit": "d60775aa9394b911b18701a326f655465604e7d1",
         "build_date": "2026-08-21T09:43:50Z",
+        "go_version": "go1.26.7",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "version": "0.4.38",
+        "commit": "47dc75741cd03127d32f1b78d04c644ccf690e7f",
+        "build_date": "2026-09-02T09:52:29Z",
         "go_version": "go1.26.7",
         "os": "darwin",
         "arch": "arm64"
@@ -81,6 +89,72 @@
         "omission_policy": "Reviewed optional fields default to None for legacy rows; present JSON result values are converted to immutable public JSON.",
         "test_ref_ids": [
           "T-TASK-RUN-V0432"
+        ]
+      },
+      {
+        "operation_id": "autopilots.trigger_add",
+        "source_urls": [
+          "https://github.com/multica-ai/multica/blob/38c992ad0a757434fb51584fa34e3bc57d1b78e1/server/cmd/multica/cmd_autopilot.go"
+        ],
+        "fields": [
+          "id",
+          "autopilot_id",
+          "kind",
+          "enabled",
+          "cron_expression",
+          "timezone",
+          "next_run_at",
+          "label",
+          "last_fired_at",
+          "created_at",
+          "updated_at"
+        ],
+        "omission_policy": "Pinned trigger response fields are decoded through the shared AutopilotTrigger wire adapter; nullable schedule fields remain None and legacy type/config fields are not projected.",
+        "test_ref_ids": [
+          "T-CONTRACT",
+          "T-OPERATION"
+        ]
+      },
+      {
+        "operation_id": "autopilots.trigger_update",
+        "source_urls": [
+          "https://github.com/multica-ai/multica/blob/38c992ad0a757434fb51584fa34e3bc57d1b78e1/server/cmd/multica/cmd_autopilot.go"
+        ],
+        "fields": [
+          "id",
+          "autopilot_id",
+          "kind",
+          "enabled",
+          "cron_expression",
+          "timezone",
+          "next_run_at",
+          "label",
+          "last_fired_at",
+          "created_at",
+          "updated_at"
+        ],
+        "omission_policy": "PATCH presence follows Flags().Changed: Unset omits, explicit null is rejected, empty strings are emitted, and both boolean values are emitted inline.",
+        "test_ref_ids": [
+          "T-CONTRACT",
+          "T-OPERATION"
+        ]
+      },
+      {
+        "operation_id": "maintenance.version",
+        "source_urls": [
+          "https://github.com/multica-ai/multica/blob/47dc75741cd03127d32f1b78d04c644ccf690e7f/server/cmd/multica/cmd_version.go"
+        ],
+        "fields": [
+          "version",
+          "commit",
+          "date",
+          "go",
+          "os",
+          "arch"
+        ],
+        "omission_policy": "The reviewed JSON envelope is exact apart from additive keys; raw commit 47dc75741 prefixes the approved full release-source commit, and date/go map to CliVersion.build_date/go_version.",
+        "test_ref_ids": [
+          "T-CONTRACT"
         ]
       }
     ]
@@ -228,9 +302,9 @@
       "autopilot_history": "(autopilot_id: str, *, limit: int | None, offset: int | None, options: OperationOptions | None = None) -> AutopilotRunListPage",
       "autopilot_list": "(, *, options: OperationOptions | None = None) -> AutopilotListPage",
       "autopilot_trigger": "(autopilot_id: str, *, options: OperationOptions | None = None) -> AutopilotRun",
-      "autopilot_trigger_add": "(autopilot_id: str, *, title: str, kind: str, options: OperationOptions | None = None) -> AutopilotTrigger",
+      "autopilot_trigger_add": "(autopilot_id: str, *, kind: str = \"schedule\", cron_expression: str | None = None, timezone: str | None = None, label: str | None = None, options: OperationOptions | None = None) -> AutopilotTrigger",
       "autopilot_trigger_delete": "(autopilot_id: str, trigger_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
-      "autopilot_trigger_update": "(autopilot_id: str, trigger_id: str, *, title: str | UnsetType = Unset, kind: str | UnsetType = Unset, options: OperationOptions | None = None) -> AutopilotTrigger",
+      "autopilot_trigger_update": "(autopilot_id: str, trigger_id: str, *, cron_expression: str | UnsetType = Unset, timezone: str | UnsetType = Unset, label: str | UnsetType = Unset, enabled: bool | UnsetType = Unset, options: OperationOptions | None = None) -> AutopilotTrigger",
       "autopilot_update": "(autopilot_id: str, *, title: str | UnsetType = Unset, description: str | None | UnsetType = Unset, agent: str | UnsetType = Unset, priority: str | UnsetType = Unset, status: str | UnsetType = Unset, execution_mode: AutopilotExecutionMode | UnsetType = Unset, project_id: str | None | UnsetType = Unset, issue_title_template: str | None | UnsetType = Unset, subscribers: tuple[str, ...] | UnsetType = Unset, options: OperationOptions | None = None) -> Autopilot",
       "comment_add": "(issue_id: str, body: str, *, options: OperationOptions | None = None) -> Comment",
       "comment_delete": "(comment_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
@@ -851,19 +925,33 @@
             "path:autopilot_id"
           ],
           [
-            "title",
-            "--title",
-            "json_body:title"
-          ],
-          [
             "kind",
             "--kind",
-            "json_body:trigger_kind"
+            "json_body:kind"
+          ],
+          [
+            "cron_expression",
+            "--cron",
+            "json_body:cron_expression"
+          ],
+          [
+            "timezone",
+            "--timezone",
+            "json_body:timezone"
+          ],
+          [
+            "label",
+            "--label",
+            "json_body:label"
           ]
         ],
         "constraints": [
           "nonblank:autopilot_id",
-          "nonblank:title"
+          "kind_one_of:schedule,webhook",
+          "kind_empty_normalizes:schedule",
+          "required_if:kind=schedule:cron_expression",
+          "webhook_forbids_nonempty:cron_expression,timezone",
+          "blank_omits:timezone,label"
         ]
       },
       "autopilot_trigger_delete": {
@@ -907,19 +995,34 @@
             "path:trigger_id"
           ],
           [
-            "title",
-            "--title",
-            "json_body:title"
+            "cron_expression",
+            "--cron",
+            "json_body:cron_expression"
           ],
           [
-            "kind",
-            "--kind",
-            "json_body:trigger_kind"
+            "timezone",
+            "--timezone",
+            "json_body:timezone"
+          ],
+          [
+            "label",
+            "--label",
+            "json_body:label"
+          ],
+          [
+            "enabled",
+            "--enabled",
+            "json_body:enabled"
           ]
         ],
         "constraints": [
           "nonblank:autopilot_id",
-          "nonblank:trigger_id"
+          "nonblank:trigger_id",
+          "at_least_one:cron_expression,timezone,label,enabled",
+          "null_rejected:cron_expression,timezone,label,enabled",
+          "empty_emits:cron_expression,timezone,label",
+          "false_present:enabled",
+          "lowercase_bool:enabled"
         ]
       },
       "autopilot_update": {
@@ -3877,13 +3980,13 @@
         "S-AUTO"
       ],
       "autopilot_trigger_add": [
-        "S-AUTO"
+        "D13"
       ],
       "autopilot_trigger_delete": [
         "S-AUTO"
       ],
       "autopilot_trigger_update": [
-        "S-AUTO"
+        "D13"
       ],
       "autopilot_update": [
         "S-AUTO"
@@ -4466,8 +4569,10 @@
       ],
       "autopilot_trigger_add": [
         "required_nonnull",
-        "required_nonnull",
-        "required_nonnull"
+        "empty_present",
+        "omit",
+        "omit",
+        "omit"
       ],
       "autopilot_trigger_delete": [
         "required_nonnull",
@@ -4476,8 +4581,10 @@
       "autopilot_trigger_update": [
         "required_nonnull",
         "required_nonnull",
-        "omit",
-        "omit"
+        "empty_present",
+        "empty_present",
+        "empty_present",
+        "false_present"
       ],
       "autopilot_update": [
         "required_nonnull",
@@ -6944,19 +7051,28 @@
             "destination": "path:autopilot_id"
           },
           {
-            "source": "title",
-            "binding": "--title",
-            "destination": "json_body:title"
-          },
-          {
             "source": "kind",
             "binding": "--kind",
-            "destination": "json_body:trigger_kind"
+            "destination": "json_body:kind"
+          },
+          {
+            "source": "cron_expression",
+            "binding": "--cron",
+            "destination": "json_body:cron_expression"
+          },
+          {
+            "source": "timezone",
+            "binding": "--timezone",
+            "destination": "json_body:timezone"
+          },
+          {
+            "source": "label",
+            "binding": "--label",
+            "destination": "json_body:label"
           }
         ],
         "validator_ids": [
-          "nonblank:autopilot_id",
-          "nonblank:title"
+          "nonblank:autopilot_id"
         ]
       },
       {
@@ -7004,14 +7120,24 @@
             "destination": "path:trigger_id"
           },
           {
-            "source": "title",
-            "binding": "--title",
-            "destination": "json_body:title"
+            "source": "cron_expression",
+            "binding": "--cron",
+            "destination": "json_body:cron_expression"
           },
           {
-            "source": "kind",
-            "binding": "--kind",
-            "destination": "json_body:trigger_kind"
+            "source": "timezone",
+            "binding": "--timezone",
+            "destination": "json_body:timezone"
+          },
+          {
+            "source": "label",
+            "binding": "--label",
+            "destination": "json_body:label"
+          },
+          {
+            "source": "enabled",
+            "binding": "--enabled",
+            "destination": "json_body:enabled"
           }
         ],
         "validator_ids": [
@@ -14173,14 +14299,12 @@
       },
       "autopilots.trigger_update": {
         "source_ref_ids": [
-          "S-AUTO"
+          "D13"
         ],
         "fields": {
-          "title": {
+          "cron_expression": {
             "nullable": false,
-            "source_ref_ids": [
-              "S-AUTO"
-            ],
+            "source_ref_ids": ["D13"],
             "presence": {
               "omitted": "omit",
               "null": "reject",
@@ -14194,17 +14318,47 @@
               "mapping": []
             }
           },
-          "kind": {
+          "timezone": {
             "nullable": false,
-            "source_ref_ids": [
-              "S-AUTO"
-            ],
+            "source_ref_ids": ["D13"],
             "presence": {
               "omitted": "omit",
               "null": "reject",
               "empty": "emit",
               "zero": "not_applicable",
               "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "none",
+              "source_ref_ids": [],
+              "mapping": []
+            }
+          },
+          "label": {
+            "nullable": false,
+            "source_ref_ids": ["D13"],
+            "presence": {
+              "omitted": "omit",
+              "null": "reject",
+              "empty": "emit",
+              "zero": "not_applicable",
+              "false": "not_applicable"
+            },
+            "clear": {
+              "kind": "none",
+              "source_ref_ids": [],
+              "mapping": []
+            }
+          },
+          "enabled": {
+            "nullable": false,
+            "source_ref_ids": ["D13"],
+            "presence": {
+              "omitted": "omit",
+              "null": "reject",
+              "empty": "not_applicable",
+              "zero": "not_applicable",
+              "false": "emit"
             },
             "clear": {
               "kind": "none",
@@ -14470,7 +14624,7 @@
       "repository": "multica-ai/multica",
       "commit": "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
       "path": "server/internal/handler/daemon.go",
-      "symbol": "handleTaskMessages",
+      "symbol": "taskMessageToPayload",
       "line_start": 4408,
       "line_end": 4427
     },
@@ -16281,15 +16435,16 @@
         }
       ]
     },
-    {
-      "operation_id": "autopilots.trigger_add",
-      "compatibility": "intentionally_changed",
-      "rationale": "Replaced legacy nested trigger-create with upstream trigger-add (D13).",
-      "source_ref_ids": [
-        "D13"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
+      {
+        "operation_id": "autopilots.trigger_add",
+        "compatibility": "intentionally_changed",
+        "rationale": "Replaced legacy title/trigger-kind mapping with the pinned trigger-add schedule/webhook contract: kind, cron_expression, timezone, and label, including conditional schedule requirements and blank omission semantics (D13).",
+        "source_ref_ids": [
+          "D13"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-CONTRACT"
       ],
       "entrypoints": [
         {
@@ -16333,15 +16488,16 @@
         }
       ]
     },
-    {
-      "operation_id": "autopilots.trigger_update",
-      "compatibility": "intentionally_changed",
-      "rationale": "New upstream trigger-update command (D13).",
-      "source_ref_ids": [
-        "D13"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
+      {
+        "operation_id": "autopilots.trigger_update",
+        "compatibility": "intentionally_changed",
+        "rationale": "Replaced obsolete title/kind update inputs with the pinned trigger-update patch contract: cron_expression, timezone, label, and enabled, preserving explicit Unset/null/empty/boolean presence semantics (D13).",
+        "source_ref_ids": [
+          "D13"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-CONTRACT"
       ],
       "entrypoints": [
         {

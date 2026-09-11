@@ -200,10 +200,14 @@ class CliTransport:
         if state.checked or self._config.compatibility.value == "ignore":
             state.checked = True
             return
-        result = self._execute(("version",), check_compat=False)
+        result = self._execute(("version", "--output", "json"), check_compat=False)
+        if result.exit_code != 0:
+            self._raise_command_error(result)
         raw = decode_text(result.stdout, command=" ".join(result.argv))
         parsed = parse_cli_version(raw)
         check_version_from_config(parsed, self._config)
+        if parsed is None:
+            return
         state.checked = True
 
     def _execute(

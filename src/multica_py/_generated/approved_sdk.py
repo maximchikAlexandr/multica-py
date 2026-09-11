@@ -5,7 +5,7 @@ from enum import StrEnum
 
 TARGET_VERSION = '0.4.28'
 MIN_CLI_VERSION = '0.4.28'
-MAX_CLI_VERSION = '0.4.33'
+MAX_CLI_VERSION = '0.4.39'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'
@@ -215,7 +215,7 @@ AUTOPILOT_TRIGGER_BINDING = GeneratedBinding(
 
 AUTOPILOT_TRIGGER_ADD_BINDING = GeneratedBinding(
     'autopilots.trigger_add', 'default', ('autopilot', 'trigger-add'),
-    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('kind', '--kind', 'json_body:trigger_kind'),), ('nonblank:autopilot_id', 'nonblank:title'),
+    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('kind', '--kind', 'json_body:kind'), GeneratedMapping('cron_expression', '--cron', 'json_body:cron_expression'), GeneratedMapping('timezone', '--timezone', 'json_body:timezone'), GeneratedMapping('label', '--label', 'json_body:label'),), ('nonblank:autopilot_id',),
 )
 
 AUTOPILOT_TRIGGER_DELETE_BINDING = GeneratedBinding(
@@ -225,7 +225,7 @@ AUTOPILOT_TRIGGER_DELETE_BINDING = GeneratedBinding(
 
 AUTOPILOT_TRIGGER_UPDATE_BINDING = GeneratedBinding(
     'autopilots.trigger_update', 'default', ('autopilot', 'trigger-update'),
-    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('trigger_id', 'pos:1', 'path:trigger_id'), GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('kind', '--kind', 'json_body:trigger_kind'),), ('nonblank:autopilot_id', 'nonblank:trigger_id'),
+    (GeneratedMapping('autopilot_id', 'pos:0', 'path:autopilot_id'), GeneratedMapping('trigger_id', 'pos:1', 'path:trigger_id'), GeneratedMapping('cron_expression', '--cron', 'json_body:cron_expression'), GeneratedMapping('timezone', '--timezone', 'json_body:timezone'), GeneratedMapping('label', '--label', 'json_body:label'), GeneratedMapping('enabled', '--enabled', 'json_body:enabled'),), ('nonblank:autopilot_id', 'nonblank:trigger_id'),
 )
 
 AUTOPILOT_UPDATE_BINDING = GeneratedBinding(
