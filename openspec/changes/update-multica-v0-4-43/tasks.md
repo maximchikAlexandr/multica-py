@@ -7,9 +7,9 @@
 
 ## 2. Agent conversation-starter input
 
-- [ ] 2.1 Add the exact `conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset` keyword to agent create/update eager and command forms without changing other signatures or omission argv
-- [ ] 2.2 Validate tuple/item shape, maximum three entries, trim-nonblank label/prompt, and 80/4000 Unicode-code-point limits during command construction; encode an explicit ordered tuple once as deterministic JSON and preserve `()` as `[]`
-- [ ] 2.3 Extend existing frozen argv/command/component/type tables for omitted, empty, valid multi-entry, malformed/non-tuple, `None`, greater-than-three, blank, and 80/81 plus 4000/4001 cases, asserting complete argv and zero executor calls on failure
+- [x] 2.1 Add the exact `conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset` keyword to agent create/update eager and command forms without changing other signatures or omission argv
+- [x] 2.2 Validate tuple/item shape, maximum three entries, trim-nonblank label/prompt, and 80/4000 Unicode-code-point limits during command construction; encode an explicit ordered tuple once as deterministic JSON and preserve `()` as `[]`
+- [x] 2.3 Extend existing frozen argv/command/component/type tables for omitted, empty, valid multi-entry, malformed/non-tuple, `None`, greater-than-three, blank, and 80/81 plus 4000/4001 cases, asserting complete argv and zero executor calls on failure
 
 ## 3. Presence-aware task and usage responses
 

@@ -56,7 +56,9 @@ def _env_allowlisted(env: Mapping[str, str]) -> dict[str, str]:
 
 def _validate_record_path(record_path: str | os.PathLike[str]) -> pathlib.Path:
     resolved = pathlib.Path(os.fspath(record_path)).resolve()
-    record_root = (_PACKAGE_DIR.parent / RECORD_DIR_NAME).resolve()
+    record_root = pathlib.Path(
+        os.environ.get("MULTICA_FAKE_RECORD_ROOT", _PACKAGE_DIR.parent / RECORD_DIR_NAME)
+    ).resolve()
     if not resolved.is_relative_to(record_root):
         raise ValueError(f"MULTICA_FAKE_RECORD must stay under {record_root}")
     return resolved

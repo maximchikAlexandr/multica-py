@@ -11,7 +11,7 @@ from multica_py._internal.commands import Command
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.agents import Agent
-from multica_py.models.agents import AgentSkill, AgentTask
+from multica_py.models.agents import AgentConversationStarter, AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.workspaces import McpServer
 from multica_py.resources._base import BaseResource, _page_items, _validate_optional_string
@@ -23,6 +23,31 @@ if TYPE_CHECKING:
     from multica_py.client import MulticaClient
 
 __all__ = ["Agent", "AgentResource"]
+
+
+def _encode_conversation_starters(
+    value: tuple[AgentConversationStarter, ...] | UnsetType,
+) -> str | None:
+    if value is Unset:
+        return None
+    if not isinstance(value, tuple):
+        raise TypeError("conversation_starters must be a tuple of AgentConversationStarter")
+    if len(value) > 3:
+        raise ValueError("conversation_starters must contain at most three items")
+    for starter in value:
+        if not isinstance(starter, AgentConversationStarter):
+            raise TypeError("conversation_starters must contain AgentConversationStarter items")
+        if not isinstance(starter.label, str) or not isinstance(starter.prompt, str):
+            raise TypeError("conversation starter label and prompt must be strings")
+        if not starter.label.strip():
+            raise ValueError("conversation starter label must be nonblank")
+        if len(starter.label) > 80:
+            raise ValueError("conversation starter label must be at most 80 code points")
+        if not starter.prompt.strip():
+            raise ValueError("conversation starter prompt must be nonblank")
+        if len(starter.prompt) > 4000:
+            raise ValueError("conversation starter prompt must be at most 4000 code points")
+    return msgspec.json.encode(value).decode()
 
 
 class AgentResource(BaseResource):
@@ -260,12 +285,14 @@ class AgentResource(BaseResource):
         description: str | None = None,
         runtime_id: str | None = None,
         model: str | None = None,
+        conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[Agent]:
         validate_nonblank(name)
         _validate_optional_string(description, "description")
         _validate_optional_string(runtime_id, "runtime_id")
         _validate_optional_string(model, "model")
+        encoded_starters = _encode_conversation_starters(conversation_starters)
         args = ["agent", "create", "--name", name]
         if description is not None:
             args.extend(["--description", description])
@@ -273,6 +300,8 @@ class AgentResource(BaseResource):
             args.extend(["--runtime-id", runtime_id])
         if model is not None:
             args.extend(["--model", model])
+        if encoded_starters is not None:
+            args.extend(["--conversation-starters", encoded_starters])
         return self._decoded_command(tuple(args), Agent, options=options)._map(
             lambda agent: agent._with_client(self._client)
         )
@@ -284,6 +313,7 @@ class AgentResource(BaseResource):
         description: str | None = None,
         runtime_id: str | None = None,
         model: str | None = None,
+        conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Agent:
         return self.create_command(
@@ -291,6 +321,7 @@ class AgentResource(BaseResource):
             description=description,
             runtime_id=runtime_id,
             model=model,
+            conversation_starters=conversation_starters,
             options=options,
         ).run()
 
@@ -300,6 +331,7 @@ class AgentResource(BaseResource):
         *,
         name: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
+        conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[Agent]:
         validate_nonblank(agent_id)
@@ -307,7 +339,8 @@ class AgentResource(BaseResource):
             raise TypeError("name must be non-null")
         _validate_optional_string(name, "name")
         _validate_optional_string(description, "description")
-        if name is Unset and description is Unset:
+        encoded_starters = _encode_conversation_starters(conversation_starters)
+        if name is Unset and description is Unset and encoded_starters is None:
             return self._decoded_command(("agent", "get", agent_id), Agent, options=options)._map(
                 lambda agent: agent._with_client(self._client)
             )
@@ -316,6 +349,8 @@ class AgentResource(BaseResource):
             args.extend(["--name", name])
         if description is not Unset:
             args.extend(["--description", "" if description is None else description])
+        if encoded_starters is not None:
+            args.extend(["--conversation-starters", encoded_starters])
         return self._decoded_command(tuple(args), Agent, options=options)._map(
             lambda agent: agent._with_client(self._client)
         )
@@ -326,10 +361,15 @@ class AgentResource(BaseResource):
         *,
         name: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
+        conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Agent:
         return self.update_command(
-            agent_id, name=name, description=description, options=options
+            agent_id,
+            name=name,
+            description=description,
+            conversation_starters=conversation_starters,
+            options=options,
         ).run()
 
     def archive_command(
