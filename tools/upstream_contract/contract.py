@@ -31,6 +31,15 @@ _VECTOR_ID = re.compile(
     r"(?P<kind>canonical|variant:(?P<ordinal>[0-9]{2}))$"
 )
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_RESPONSE_SOURCE_URL = re.compile(
+    r"^https://github\.com/multica-ai/multica/blob/"
+    r"(?P<commit>[0-9a-f]{40})/(?P<path>[^#]+)#L"
+    r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
+    r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
+)
+_BASELINE_COMMIT = "38c992ad0a757434fb51584fa34e3bc57d1b78e1"
+_TARGET_COMMIT = "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7"
 _TAG_KINDS = frozenset(
     {
         "primitive",
@@ -69,8 +78,6 @@ _DECODED_TYPES = frozenset(
         "multica_py.models.issues.IssueChildStageGroup",
         "multica_py.models.issues.IssueChildrenResult",
         "multica_py.models.issues.IssueListPage",
-        "multica_py.models.plugins.Plugin",
-        "multica_py.models.plugins.PluginDigest",
         "multica_py.models.project_resources.ProjectResourceRecord",
         "multica_py.models.properties.PropertyDefinition",
         "multica_py.models.properties.PropertyValue",
@@ -139,7 +146,6 @@ _UPDATE_POLICY_FIELDS = {
             "title",
             "description",
             "agent",
-            "priority",
             "status",
             "execution_mode",
             "project_id",
@@ -192,7 +198,6 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "page_labels",
         "page_linked_pull_requests",
         "page_mcp_servers",
-        "page_plugin",
         "page_project",
         "page_project_resources",
         "page_property_definitions",
@@ -211,8 +216,6 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "page_workspace",
         "page_workspace_members",
         "path",
-        "plugin",
-        "plugin_digest",
         "process",
         "project",
         "project_resource",
@@ -290,6 +293,9 @@ _AUXILIARY_CATALOG_KEYS = {
             "issue_list_page_wire",
             "issue_pull_requests_result_wire",
             "issue_search_result_wire",
+            "issue_list_filter",
+            "property_filter",
+            "property_sort",
             "issue_wire",
             "labels",
             "labels_wire",
@@ -305,12 +311,6 @@ _AUXILIARY_CATALOG_KEYS = {
             "operation_options",
             "page_issues",
             "path",
-            "plugin",
-            "plugin_digest",
-            "plugin_digest_wire",
-            "plugin_wire",
-            "plugins",
-            "plugins_wire",
             "project",
             "project_resource",
             "project_resource_wire",
@@ -482,16 +482,6 @@ _AUXILIARY_CATALOG_KEYS = {
             "labels_update_manual",
             "maintenance_update_manual",
             "maintenance_version_manual",
-            "plugin_init",
-            "plugin_install",
-            "plugin_list",
-            "plugin_pack",
-            "plugin_remote_mcp_approve",
-            "plugin_remote_mcp_configure",
-            "plugin_remote_mcp_revoke",
-            "plugin_remote_mcp_test",
-            "plugin_status",
-            "plugin_validate",
             "project_create",
             "project_get",
             "project_issue_create",
@@ -576,9 +566,6 @@ _AUXILIARY_CATALOG_KEYS = {
             "decode_metadata_entries",
             "decode_none",
             "decode_path",
-            "decode_plugin",
-            "decode_plugin_digest",
-            "decode_plugins",
             "decode_project",
             "decode_project_resource",
             "decode_project_resources",
@@ -771,6 +758,24 @@ def _str(value: object, label: str) -> str:
     return value
 
 
+def _response_source_url(url: str, label: str) -> tuple[str, str, int, int]:
+    match = _RESPONSE_SOURCE_URL.fullmatch(url)
+    if match is None:
+        raise ContractError(f"{label} must be a pinned GitHub source range")
+    path = match.group("path")
+    if (
+        not path.endswith(".go")
+        or path.startswith("/")
+        or ".." in pathlib.PurePosixPath(path).parts
+    ):
+        raise ContractError(f"{label} must name a repository Go source path")
+    start = int(match.group("start"))
+    end = int(match.group("end"))
+    if start > end:
+        raise ContractError(f"{label} source range must be ordered")
+    return match.group("commit"), path, start, end
+
+
 def _bool(value: object, label: str) -> bool:
     if not isinstance(value, bool):
         raise ContractError(f"{label} must be a boolean")
@@ -812,6 +817,17 @@ class VerifiedBinary:
 
 
 @dataclass(frozen=True)
+class ReleaseArtifact:
+    version: str
+    tag: str
+    release_id: str
+    asset_name: str
+    archive_sha256: str
+    executable_sha256: str
+    version_output_sha256: str
+
+
+@dataclass(frozen=True)
 class ReviewedResponse:
     operation_id: str
     source_urls: tuple[str, ...]
@@ -821,11 +837,35 @@ class ReviewedResponse:
 
 
 @dataclass(frozen=True)
+class ResponseReview:
+    work_item_id: str
+    operation_id: str
+    disposition: str
+    source_urls: tuple[str, ...]
+    action: str
+
+
+@dataclass(frozen=True)
+class CommandInventory:
+    baseline_nodes: int
+    target_nodes: int
+    unchanged: int
+    changed: int
+    added: int
+    removed: int
+    hidden: tuple[str, ...]
+    test_only: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Compatibility:
     min_cli_version: str
     max_tested_cli_version: str
     verified_binaries: tuple[VerifiedBinary, ...]
+    release_artifacts: tuple[ReleaseArtifact, ...]
+    command_inventory: CommandInventory
     reviewed_responses: tuple[ReviewedResponse, ...]
+    response_registry: tuple[ResponseReview, ...]
 
 
 @dataclass(frozen=True)
@@ -1922,7 +1962,10 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 "min_cli_version",
                 "max_tested_cli_version",
                 "verified_binaries",
+                "release_artifacts",
+                "command_inventory",
                 "reviewed_responses",
+                "response_registry",
             }
         ),
         "compatibility",
@@ -1958,6 +2001,35 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 "verified binary commit must be a full lowercase hexadecimal commit"
             )
         verified_binaries.append(binary)
+    release_artifacts: list[ReleaseArtifact] = []
+    artifact_fields = (
+        "version",
+        "tag",
+        "release_id",
+        "asset_name",
+        "archive_sha256",
+        "executable_sha256",
+        "version_output_sha256",
+    )
+    for index, value in enumerate(
+        _list(compatibility_raw["release_artifacts"], "compatibility.release_artifacts")
+    ):
+        item = _dict(value, f"compatibility.release_artifacts[{index}]")
+        _exact_keys(item, frozenset(artifact_fields), f"compatibility.release_artifacts[{index}]")
+        artifact = ReleaseArtifact(
+            *(
+                _str(item[field], f"compatibility.release_artifacts[{index}].{field}")
+                for field in artifact_fields
+            )
+        )
+        if not version_pattern.fullmatch(artifact.version):
+            raise ContractError("release artifact version must be semantic")
+        for field in ("archive_sha256", "executable_sha256", "version_output_sha256"):
+            if not _SHA256.fullmatch(getattr(artifact, field)):
+                raise ContractError(f"release artifact {field} must be a SHA-256 digest")
+        if artifact.archive_sha256 == artifact.executable_sha256:
+            raise ContractError("release archive and executable digests must be distinct")
+        release_artifacts.append(artifact)
     reviewed_responses: list[ReviewedResponse] = []
     for index, value in enumerate(
         _list(compatibility_raw["reviewed_responses"], "compatibility.reviewed_responses")
@@ -1986,11 +2058,96 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 ),
             )
         )
+    inventory_raw = _dict(compatibility_raw["command_inventory"], "compatibility.command_inventory")
+    inventory_fields = (
+        "baseline_nodes",
+        "target_nodes",
+        "unchanged",
+        "changed",
+        "added",
+        "removed",
+        "hidden",
+        "test_only",
+    )
+    _exact_keys(inventory_raw, frozenset(inventory_fields), "compatibility.command_inventory")
+    inventory = CommandInventory(
+        baseline_nodes=_int(
+            inventory_raw["baseline_nodes"], "compatibility.command_inventory.baseline_nodes"
+        ),
+        target_nodes=_int(
+            inventory_raw["target_nodes"], "compatibility.command_inventory.target_nodes"
+        ),
+        unchanged=_int(inventory_raw["unchanged"], "compatibility.command_inventory.unchanged"),
+        changed=_int(inventory_raw["changed"], "compatibility.command_inventory.changed"),
+        added=_int(inventory_raw["added"], "compatibility.command_inventory.added"),
+        removed=_int(inventory_raw["removed"], "compatibility.command_inventory.removed"),
+        hidden=tuple(
+            _str(value, "compatibility.command_inventory.hidden")
+            for value in _list(inventory_raw["hidden"], "compatibility.command_inventory.hidden")
+        ),
+        test_only=tuple(
+            _str(value, "compatibility.command_inventory.test_only")
+            for value in _list(
+                inventory_raw["test_only"], "compatibility.command_inventory.test_only"
+            )
+        ),
+    )
+    response_registry: list[ResponseReview] = []
+    for index, value in enumerate(
+        _list(compatibility_raw["response_registry"], "compatibility.response_registry")
+    ):
+        item = _dict(value, f"compatibility.response_registry[{index}]")
+        registry_fields = ("work_item_id", "operation_id", "disposition", "source_urls", "action")
+        _exact_keys(item, frozenset(registry_fields), f"compatibility.response_registry[{index}]")
+        work_item_id = _str(item["work_item_id"], "response registry work_item_id")
+        operation_id = _str(item["operation_id"], "response registry operation_id")
+        response_disposition = _str(item["disposition"], "response registry disposition")
+        if response_disposition not in {"unchanged", "changed"}:
+            raise ContractError("response registry disposition must be unchanged or changed")
+        urls = tuple(
+            _str(url, "response registry source URL")
+            for url in _list(item["source_urls"], "response registry source_urls")
+        )
+        if not urls:
+            raise ContractError("response registry entries require source URLs")
+        source_commits = {
+            _response_source_url(url, "response registry source URL")[0] for url in urls
+        }
+        if source_commits != {_BASELINE_COMMIT, _TARGET_COMMIT}:
+            raise ContractError(
+                "response registry source URLs must cover both approved old and target commits"
+            )
+        action = _str(item["action"], "response registry action")
+        action_prefix = (
+            "removed:"
+            if operation_id.startswith("plugins.")
+            else ("changed:" if response_disposition == "changed" else "retained:")
+        )
+        if not action.startswith(action_prefix) or not all(
+            token in action for token in ("model=", "fixture=", "docs=")
+        ):
+            raise ContractError(
+                "response registry action must match disposition and record model, fixture, and docs"
+            )
+        if operation_id.startswith("plugins.") and response_disposition != "changed":
+            raise ContractError("removed Plugin response work items must be marked changed")
+        response_registry.append(
+            ResponseReview(
+                work_item_id=work_item_id,
+                operation_id=operation_id,
+                disposition=response_disposition,
+                source_urls=urls,
+                action=action,
+            )
+        )
     compatibility = Compatibility(
         min_cli_version=bounds[0],
         max_tested_cli_version=bounds[1],
         verified_binaries=tuple(verified_binaries),
+        release_artifacts=tuple(release_artifacts),
+        command_inventory=inventory,
         reviewed_responses=tuple(reviewed_responses),
+        response_registry=tuple(response_registry),
     )
     catalogs = _dict(raw["catalogs"], "catalogs")
     catalog_required = frozenset(
@@ -2020,8 +2177,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     binding_descriptors = _binding_descriptors(catalogs["binding_descriptors"])
     vectors_raw = _dict(catalogs["test_vectors"], "catalogs.test_vectors")
     vectors = tuple(_parse_vector(value, key) for key, value in vectors_raw.items())
-    if len(vectors) != 89:
-        raise ContractError(f"expected 86 test vectors, got {len(vectors)}")
+    if len(vectors) != 79:
+        raise ContractError(f"expected 79 test vectors, got {len(vectors)}")
     if len({vector.assertion.assertion_id for vector in vectors}) != len(vectors):
         raise ContractError("test vector assertion IDs must be unique")
     scope = _dict(raw["scope"], "scope")
@@ -2126,6 +2283,71 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
 
 def validate_contract(path: pathlib.Path) -> ContractCatalog:
     contract = load_contract(path)
+    if (
+        contract.target.version,
+        contract.target.tag,
+        contract.target.commit,
+        contract.target.release_id,
+    ) != (
+        "0.4.42",
+        "v0.4.42",
+        "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7",
+        "385445715",
+    ):
+        raise ContractError("approved contract must target Multica v0.4.42")
+    if contract.compatibility.command_inventory != CommandInventory(
+        baseline_nodes=199,
+        target_nodes=189,
+        unchanged=166,
+        changed=21,
+        added=2,
+        removed=12,
+        hidden=("probe-runtimes",),
+        test_only=("repo-test", "test", "x"),
+    ):
+        raise ContractError("command inventory does not match the approved 0.4.28/0.4.42 review")
+    expected_artifacts = {
+        "0.4.28": (
+            "v0.4.28",
+            "371790559",
+            "multica-cli-0.4.28-darwin-arm64.tar.gz",
+            "e42c1c6df05201d2d0feff1a9d8032a9ea11c6644721fd465496826124007acf",
+            "26a722384d8ef39a30cb83fec4e76f3185768369536d1f13a546b03e6c7fbeb9",
+        ),
+        "0.4.42": (
+            "v0.4.42",
+            "385445715",
+            "multica-cli-0.4.42-darwin-arm64.tar.gz",
+            "a3bb48baeeb757361686978210e6195aaf50bc69edf83bf3b9c52ca3efc12e41",
+            "22abcd910562e8800c0e9db561229731e19486ec94b4815d6b1a075dc92ef36c",
+        ),
+    }
+    actual_artifacts = {
+        item.version: (
+            item.tag,
+            item.release_id,
+            item.asset_name,
+            item.archive_sha256,
+            item.executable_sha256,
+        )
+        for item in contract.compatibility.release_artifacts
+    }
+    if actual_artifacts != expected_artifacts:
+        raise ContractError(
+            "release artifact provenance does not match the approved baseline/target"
+        )
+    if len(contract.compatibility.response_registry) != 173:
+        raise ContractError("response registry must contain exactly 173 work items")
+    if len({item.work_item_id for item in contract.compatibility.response_registry}) != 173:
+        raise ContractError("response registry work item IDs must be unique")
+    dispositions = {
+        disposition: sum(
+            item.disposition == disposition for item in contract.compatibility.response_registry
+        )
+        for disposition in ("unchanged", "changed")
+    }
+    if dispositions != {"unchanged": 122, "changed": 51}:
+        raise ContractError("response registry must split into 122 unchanged and 51 changed items")
     _validate_direct_bindings(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
         "issue_sort",
@@ -2270,6 +2492,26 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
     raw_bindings = _dict(raw_catalogs["bindings"], "catalogs.bindings")
     for vector in contract.test_vectors:
         descriptor = descriptors_by_pair[(vector.operation_id, vector.entrypoint_id)]
+        if vector.vector_id.endswith(":canonical"):
+            binding = _dict(
+                raw_bindings[descriptor.descriptor_id],
+                f"catalogs.bindings[{descriptor.descriptor_id!r}]",
+            )
+            approved_flags = {
+                _str(mapping[1], "binding mapping flag").removeprefix("repeat:")
+                for mapping in _list(binding["mappings"], "binding.mappings")
+                if isinstance(mapping, list)
+                and len(mapping) == 3
+                and isinstance(mapping[1], str)
+                and mapping[1].startswith("-")
+            }
+            vector_flags = {flag for flag in vector.expected_argv if flag.startswith("-")}
+            unexpected_flags = vector_flags - approved_flags - {"--output"}
+            if unexpected_flags:
+                raise ContractError(
+                    f"{vector.vector_id} contains argv flags absent from binding "
+                    f"{descriptor.descriptor_id!r}: {', '.join(sorted(unexpected_flags))}"
+                )
         command = tuple(vector.expected_argv[: len(descriptor.command)])
         if command != descriptor.command:
             binding = _dict(
@@ -2308,9 +2550,9 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
                 )
     base_count = sum(":canonical" in vector.vector_id for vector in contract.test_vectors)
     variant_count = len(contract.test_vectors) - base_count
-    if (base_count, variant_count) != (76, 13):
+    if (base_count, variant_count) != (66, 13):
         raise ContractError(
-            f"expected 76 entrypoint-base and 13 variant vectors, got {base_count}/{variant_count}"
+            f"expected 66 entrypoint-base and 13 variant vectors, got {base_count}/{variant_count}"
         )
     return contract
 

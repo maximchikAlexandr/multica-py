@@ -25,7 +25,7 @@ def test_sdk_contract() -> None:
     assert len(contract.binding_descriptors) == sum(
         len(operation.entrypoints) for operation in contract.operations
     )
-    assert len(contract.test_vectors) == 89
+    assert len(contract.test_vectors) == 79
     assert (
         tuple((item.operation_id, item.entrypoint_id) for item in contract.binding_descriptors)
         != ()
@@ -53,9 +53,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.4.28'" in runtime
-    assert b"MIN_CLI_VERSION = '0.4.28'" in runtime
-    assert b"MAX_CLI_VERSION = '0.4.39'" in runtime
+    assert b"TARGET_VERSION = '0.4.42'" in runtime
+    assert b"MIN_CLI_VERSION = '0.4.42'" in runtime
+    assert b"MAX_CLI_VERSION = '0.4.43'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -95,12 +95,12 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
     assert "kind" not in str(update_binding)
 
     binary = next(
-        item for item in contract.compatibility.verified_binaries if item.version == "0.4.38"
+        item for item in contract.compatibility.verified_binaries if item.version == "0.4.42"
     )
-    assert binary.commit.startswith("47dc75741")
+    assert binary.commit.startswith("76f59f5f1")
     assert (binary.build_date, binary.go_version, binary.os, binary.arch) == (
-        "2026-09-02T09:52:29Z",
-        "go1.26.7",
+        "2026-09-09T11:06:33Z",
+        "go1.26.8",
         "darwin",
         "arm64",
     )
@@ -110,4 +110,58 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
         if item.operation_id == "maintenance.version"
     )
     assert version_review.fields == ("version", "commit", "date", "go", "os", "arch")
-    assert "47dc75741" in version_review.omission_policy
+    assert "76f59f5f1" in version_review.omission_policy
+
+
+def test_removed_plugin_surface_and_autopilot_priority_are_absent() -> None:
+    import importlib
+    import inspect
+
+    from multica_py._internal.transport import CliTransport
+    from multica_py.client import MulticaClient
+    from multica_py.config import ClientConfig
+    from multica_py.entities.workspaces import Workspace
+    from multica_py.enums import AutopilotExecutionMode
+    from multica_py.resources.autopilots import AutopilotResource
+
+    contract = validate_contract(APPROVED)
+    assert not any(item.operation_id.startswith("plugins.") for item in contract.operations)
+    assert not hasattr(MulticaClient, "plugins")
+    assert not hasattr(Workspace, "plugins")
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("multica_py.resources.plugins")
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("multica_py.models.plugins")
+
+    resource = AutopilotResource(CliTransport(ClientConfig()), ClientConfig())
+    for method in (
+        resource.create,
+        resource.create_command,
+        resource.update,
+        resource.update_command,
+    ):
+        assert "priority" not in inspect.signature(method).parameters
+    create = resource.create_command(
+        "Nightly", agent="agent-1", execution_mode=AutopilotExecutionMode.create_issue
+    )
+    assert create._plan.steps[0].argv == (
+        "autopilot",
+        "create",
+        "--title",
+        "Nightly",
+        "--agent",
+        "agent-1",
+        "--mode",
+        "create_issue",
+        "--output",
+        "json",
+    )
+    with pytest.raises(TypeError):
+        resource.create_command(  # type: ignore[call-arg]
+            "Nightly",
+            agent="agent-1",
+            execution_mode=AutopilotExecutionMode.create_issue,
+            priority="none",
+        )
+    with pytest.raises(TypeError):
+        resource.update_command("ap-1", priority="none")  # type: ignore[call-arg]

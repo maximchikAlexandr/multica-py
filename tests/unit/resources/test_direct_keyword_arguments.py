@@ -184,8 +184,11 @@ def test_migrated_updates_preserve_unset_empty_and_nullable_presence(
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     resource = resource_cls(transport, ClientConfig())
 
+    get_args: tuple[str, ...] = ("multica", command_name, "get", target)
+    if resource_cls is SkillResource:
+        get_args += ("--with-content",)
     assert resource.update_command(target).commands == (
-        shlex.join(("multica", command_name, "get", target, "--output", "json")),
+        shlex.join(get_args + ("--output", "json")),
     )
     assert resource.update_command(target, name="").commands == (
         shlex.join(("multica", command_name, "update", target, name_flag, "", "--output", "json")),

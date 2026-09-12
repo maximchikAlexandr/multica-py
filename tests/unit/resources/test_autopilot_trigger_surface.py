@@ -562,6 +562,7 @@ def test_trigger_public_signatures(
     assert signature.return_annotation == case.return_annotation
 
 
+@pytest.mark.timeout(120)
 def test_autopilot_trigger_typecheck_fixtures() -> None:
     fixture_root = pathlib.Path(__file__).parents[2] / "typecheck"
     positive_stdout, positive_stderr, positive_status = mypy_api.run(

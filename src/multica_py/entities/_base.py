@@ -133,6 +133,8 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
         for field in fields:
             if field.name in {"_client", "_wire_presence"}:
                 continue
+            if field.name == "_projection":
+                continue
             if not field.name.startswith("_"):
                 if field.encode_name.startswith("_") and field.name in {"triggers", "subscribers"}:
                     replacements[field.name] = msgspec.UNSET
@@ -204,13 +206,33 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
         return f"{type(self).__name__}({fields})"
 
     def to_dict(self) -> dict[str, object]:
-        policy = _entity_policy(type(self))
-        data = {field: _get(self, field) for field in policy.public_fields}
+        projection_loader = cast(
+            "Callable[[], Mapping[str, object] | None] | None",
+            getattr(self, "_serialized_projection", None),
+        )
+        projection = projection_loader() if callable(projection_loader) else None
+        if projection:
+            data = {name: value for name, value in projection.items() if value is not msgspec.UNSET}
+        else:
+            policy = _entity_policy(type(self))
+            data = {
+                field: value
+                for field in policy.public_fields
+                if (value := _get(self, field)) is not msgspec.UNSET
+            }
         materialized = _materialize_mappings(data)
         return cast("dict[str, object]", msgspec.to_builtins(materialized))
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> Self:
+        projection_loader = cast(
+            "Callable[[dict[str, object]], object | None] | None",
+            getattr(cls, "_from_dict_projection", None),
+        )
+        if callable(projection_loader):
+            projected = projection_loader(data)
+            if projected is not None:
+                return cast("Self", projected)
         policy = _entity_policy(cls)
         unknown = set(data).difference(policy.public_fields)
         if unknown:

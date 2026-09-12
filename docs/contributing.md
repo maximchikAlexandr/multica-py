@@ -22,7 +22,7 @@ uv run python scripts/upstream_contract.py collect \
   --source-checkout /absolute/pinned/source \
   --binary /absolute/verified/multica \
   --tag vX.Y.Z --version X.Y.Z --commit <40-hex> --release-id <id> \
-  --asset-name <name> --sha256 <64-hex> --os <os> --arch <arch> \
+  --asset-name <name> --sha256 <extracted-executable-sha256> --os <os> --arch <arch> \
   --version-output /absolute/version.json --output-dir /absolute/evidence
 uv run python scripts/upstream_contract.py validate \
   --approved contracts/sdk-contract.json \
@@ -38,6 +38,18 @@ uv run python scripts/upstream_contract.py check --approved contracts/sdk-contra
 It never edits the approved contract or repository runtime code. Review and Git
 merge are the sole promotion decision; candidate state, journals, upgrade
 bundles, and golden generated copies are not used.
+
+For the current direct `0.4.28` → `0.4.42` review, the target source is pinned
+to `76f59f5f1cd9b6e779d0d34c603407d5d4001bf7` and the compatibility interval
+is `[0.4.42, 0.4.43)`. Verify the `0.4.28` and `0.4.42` release archives
+against the official manifests before hashing their extracted executables;
+pass only the executable digest to `collect --sha256`. Run the source-link
+audit after validation:
+
+```bash
+uv run python scripts/audit_source_links.py \
+  --source-checkout .devlocal/upstream-contract/v0.4.20..v0.4.42/source
+```
 
 The generated runtime projection is
 `src/multica_py/_generated/approved_sdk.py`. Documentation, compatibility, and

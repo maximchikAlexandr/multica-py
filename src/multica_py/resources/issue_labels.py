@@ -8,8 +8,8 @@ from multica_py._generated.approved_sdk import (
     ISSUE_LABELS_REMOVE_BINDING,
 )
 from multica_py._internal.commands import Command
+from multica_py._internal.issue_wires import _LabelWire
 from multica_py._internal.transport import CliTransport
-from multica_py._internal.wire_models import _LabelWire
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.labels import Label
 from multica_py.models.common import Page

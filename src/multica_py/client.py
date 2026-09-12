@@ -23,7 +23,6 @@ from multica_py.resources.daemon import DaemonResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.labels import LabelResource
 from multica_py.resources.maintenance import MaintenanceResource
-from multica_py.resources.plugins import PluginResource
 from multica_py.resources.projects import ProjectResource
 from multica_py.resources.properties import PropertyResource
 from multica_py.resources.repositories import RepositoryResource
@@ -74,7 +73,6 @@ class MulticaClient:
         self.squads = SquadResource(self._transport, config)
         self.users = UserResource(self._transport, config)
         self.maintenance = MaintenanceResource(self._transport, config)
-        self.plugins = PluginResource(self._transport, config)
         self.properties = PropertyResource(self._transport, config)
         for r in (
             self.auth,
@@ -95,7 +93,6 @@ class MulticaClient:
             self.squads,
             self.users,
             self.maintenance,
-            self.plugins,
             self.properties,
         ):
             r._set_client(self)

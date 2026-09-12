@@ -24,6 +24,7 @@ from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py.config import ClientConfig
 from multica_py.exceptions import (
     AuthenticationError,
+    AuthorizationError,
     CommandExecutionError,
     ConflictError,
     NetworkError,
@@ -70,6 +71,11 @@ _VALIDATION_MARKERS = (
     "请求无效。请检查所填写的参数；可用 --help 查看期望的格式。",  # noqa: RUF001
     "--max-concurrent-tasks must be between 1 and 50",
 )
+_AUTHORIZATION_DIAGNOSTICS = (
+    "You do not have permission to access this resource. Check that you are in the right "
+    "workspace, or ask an administrator to grant access.",
+    "无权访问该资源。请确认当前 workspace 是否正确，或联系管理员授予权限。",  # noqa: RUF001
+)
 
 
 @dataclass(slots=True)
@@ -106,6 +112,13 @@ def classify_cli_failure(
     bodies, quoted API responses) that must not influence the error type or
     the reported exit code.
     """
+    # The target deliberately shares exit 3 between 401 and 403.  Its
+    # localized formatter is the only reviewed distinction available to the
+    # SDK, so recognize the exact permission diagnostics before falling back
+    # to the stable authentication mapping.
+    if exit_code == 3 and any(stderr.startswith(marker) for marker in _AUTHORIZATION_DIAGNOSTICS):
+        return AuthorizationError, 3
+
     exc_class = _EXIT_CODE_EXCEPTIONS.get(exit_code)
     reported_exit_code = exit_code
     if exc_class is not None:
@@ -116,6 +129,8 @@ def classify_cli_failure(
         status = int(status_match.group(1))
         if status == 409:
             return ConflictError, exit_code
+        if status == 403:
+            return AuthorizationError, 3
         semantic_exit = _semantic_exit_code_for_http_status(status)
         if semantic_exit is not None:
             exc_class = _EXIT_CODE_EXCEPTIONS[semantic_exit]

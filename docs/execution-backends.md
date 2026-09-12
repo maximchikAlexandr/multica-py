@@ -1,7 +1,7 @@
 # Execution backends
 
 `MulticaClient` runs commands locally by default. To use another target, create
-an executor explicitly and inject it into the client. There is no plugin
+an executor explicitly and inject it into the client. There is no provider
 registry, entry-point discovery, automatic provider activation, or runtime
 package installation.
 

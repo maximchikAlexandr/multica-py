@@ -10,6 +10,7 @@ import pytest
 
 
 @pytest.mark.packaging
+@pytest.mark.timeout(120)
 def test_artifacts_export_public_contract(tmp_path: pathlib.Path) -> None:
     root = pathlib.Path(__file__).parents[2]
     subprocess.run(["uv", "build"], cwd=root, check=True, env=_uv_env())
@@ -54,9 +55,13 @@ def test_artifacts_export_public_contract(tmp_path: pathlib.Path) -> None:
             "assert not hasattr(multica_py, 'CliResult') and CliResult; "
             "assert (pathlib.Path(multica_py.__file__).parent / 'py.typed').is_file(); "
             "assert generated.IssueSort and generated.SortDirection; "
-            "assert generated.TARGET_VERSION == generated.MIN_CLI_VERSION; "
-            "assert generated.MAX_CLI_VERSION; "
+            "assert generated.TARGET_VERSION == '0.4.42'; "
+            "assert generated.MIN_CLI_VERSION == '0.4.42'; "
+            "assert generated.MAX_CLI_VERSION == '0.4.43'; "
             "assert generated.OPERATION_BINDINGS; "
+            "assert not any(name.startswith('PLUGIN_') for name in generated.__all__); "
+            "assert all(mapping.python_path != 'priority' for binding in generated.OPERATION_BINDINGS "
+            "for mapping in binding.mappings if binding.operation_id.startswith('autopilots.')); "
             "assert all(hasattr(generated, name) for name in generated.__all__)"
         )
         subprocess.run(

@@ -212,7 +212,6 @@ RESOURCE_ADAPTERS = {
         "_squads_relation_command",
         "_issues_page_command",
         "_autopilots_relation_command",
-        "_plugins_relation_command",
         "_properties_relation_command",
         "_mcp_servers_relation_command",
     ),

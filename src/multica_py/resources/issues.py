@@ -9,8 +9,7 @@ from typing import TYPE_CHECKING, cast, overload
 from multica_py._generated.approved_sdk import validate_nonblank, validate_since_cursor
 from multica_py._internal.commands import Command, _replace_plan, _Step, _StepRef
 from multica_py._internal.decoders import decode_json
-from multica_py._internal.transport import CliTransport
-from multica_py._internal.wire_models import (
+from multica_py._internal.issue_wires import (
     _issue_children_result_from_wire,
     _issue_from_wire,
     _issue_list_page_from_wire,
@@ -21,16 +20,15 @@ from multica_py._internal.wire_models import (
     _IssueSearchResultWire,
     _IssueWire,
     _LabelWire,
-    _task_run_from_wire,
-    _TaskRunWire,
-    decode_run_messages,
 )
+from multica_py._internal.transport import CliTransport
+from multica_py._internal.wire_models import _task_run_from_wire, _TaskRunWire, decode_run_messages
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities._base import _normalize_entity_id
 from multica_py.entities.comments import Comment, CommentThread
 from multica_py.entities.issues import Issue, TaskRun
 from multica_py.entities.labels import Label
-from multica_py.enums import IssueSort, IssueStatus, SortDirection
+from multica_py.enums import IssueStatus
 from multica_py.exceptions import JsonOutputError, OutputShapeError
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import (
@@ -79,6 +77,112 @@ __all__ = ["Issue", "IssueResource", "TaskRun"]
 
 _NO_DESCRIPTION_TYPE: type[object] = type(NoDescription())
 _STDIN_DESCRIPTION_TYPE: type[object] = type(StdinDescription())
+
+_VALID_ISSUE_FIELDS = frozenset(
+    {
+        "id",
+        "workspace_id",
+        "number",
+        "identifier",
+        "title",
+        "description",
+        "status",
+        "status_category",
+        "status_name",
+        "priority",
+        "assignee_type",
+        "assignee_id",
+        "creator_type",
+        "creator_id",
+        "parent_issue_id",
+        "project_id",
+        "position",
+        "stage",
+        "start_date",
+        "due_date",
+        "created_at",
+        "updated_at",
+        "revision",
+        "last_activity_at",
+        "metadata",
+        "properties",
+        "labels",
+    }
+)
+_VALID_ISSUE_SORTS = frozenset(
+    {"position", "title", "created_at", "start_date", "due_date", "priority"}
+)
+_PROPERTY_OPERATORS = (">=", "<=", "!=")
+
+
+def _normalize_issue_fields(fields: tuple[str, ...]) -> tuple[str, ...]:
+    if not isinstance(fields, tuple):
+        raise TypeError("fields must be a tuple of strings")
+    normalized: list[str] = []
+    for raw_field in fields:
+        if type(raw_field) is not str:
+            raise TypeError("fields must contain only strings")
+        field = raw_field.strip()
+        if not field or field not in _VALID_ISSUE_FIELDS:
+            raise ValueError(f"IssueResource.list: invalid field {field!r}")
+        if field in normalized:
+            raise ValueError(f"IssueResource.list: duplicate field {field!r}")
+        normalized.append(field)
+    return tuple(normalized)
+
+
+def _normalize_property_filters(filters: tuple[str, ...]) -> tuple[str, ...]:
+    if not isinstance(filters, tuple):
+        raise TypeError("property_filters must be a tuple of strings")
+    normalized: list[str] = []
+    for raw_expression in filters:
+        if type(raw_expression) is not str:
+            raise TypeError("property_filters must contain only strings")
+        expression = raw_expression.strip()
+        if not expression or "=" not in expression:
+            raise ValueError("IssueResource.list: property filters must use Name=Value")
+        if any(operator in expression for operator in _PROPERTY_OPERATORS):
+            raise ValueError(
+                "IssueResource.list: property comparisons >=, <=, and != are unsupported"
+            )
+        name, value = expression.split("=", 1)
+        if not name.strip() or not value.strip():
+            raise ValueError("IssueResource.list: property filters must use Name=Value")
+        normalized.append(expression)
+    return tuple(normalized)
+
+
+def _normalize_issue_sort(sort: object) -> str | None:
+    if sort is None:
+        return None
+    if not isinstance(sort, str):
+        raise TypeError("sort must be a sort string")
+    if sort in _VALID_ISSUE_SORTS:
+        return sort
+    if sort.startswith("property:") and sort.removeprefix("property:").strip():
+        return sort
+    raise ValueError(f"IssueResource.list: invalid sort {sort!r}")
+
+
+def _normalize_issue_direction(direction: object) -> str | None:
+    if direction is None:
+        return None
+    if not isinstance(direction, str):
+        raise TypeError("direction must be a sort direction string")
+    if direction not in {"asc", "desc"}:
+        raise ValueError(f"IssueResource.list: invalid direction {direction!r}")
+    return direction
+
+
+def _validate_issue_query_options(
+    *, limit: int | None, offset: int | None, resolve_properties: bool
+) -> None:
+    if limit is not None and (type(limit) is not int or not 1 <= limit <= 100):
+        raise ValueError("IssueResource.list: limit must be between 1 and 100")
+    if offset is not None and (type(offset) is not int or offset < 0):
+        raise ValueError("IssueResource.list: offset must be nonnegative (offset_nonnegative)")
+    if type(resolve_properties) is not bool:
+        raise TypeError("resolve_properties must be a bool")
 
 
 def _issue_status_token(value: IssueStatus | str) -> str:
@@ -177,9 +281,12 @@ def _normalize_issue_filter(
     limit: int | None,
     offset: int | None,
     project_id: str | None,
-    sort: IssueSort | None,
-    direction: SortDirection | None,
+    sort: str | None,
+    direction: str | None,
     metadata: tuple[IssueMetadataItem, ...],
+    fields: tuple[str, ...],
+    property_filters: tuple[str, ...],
+    resolve_properties: bool,
 ) -> IssueListFilter:
     direct_values = (
         status,
@@ -189,8 +296,11 @@ def _normalize_issue_filter(
         offset,
         project_id,
         sort,
-        direction,
+        cast("object", direction),
         metadata,
+        fields,
+        property_filters,
+        resolve_properties if resolve_properties else None,
     )
     if filter is not None:
         if any(value is not None and value != () for value in direct_values):
@@ -208,6 +318,9 @@ def _normalize_issue_filter(
         sort=sort,
         direction=direction,
         metadata=metadata,
+        fields=fields,
+        property_filters=property_filters,
+        resolve_properties=resolve_properties,
     )
 
 
@@ -220,9 +333,44 @@ def _decode_issue_search(stdout: bytes, command: str) -> Page[Issue]:
         except (OutputShapeError, JsonOutputError):
             raise envelope_error
         items = tuple(_issue_from_wire(row) for row in rows)
-        return Page(items=items, total=len(items))
+        return Page(items=items)
     items = tuple(_issue_from_wire(row) for row in envelope.issues)
-    return Page(items=items, total=envelope.total if envelope.total is not None else len(items))
+    if envelope.total is not None and envelope.total < 0:
+        raise OutputShapeError("issue search total must be nonnegative")
+    if envelope.has_more and not items:
+        raise OutputShapeError("issue search cannot continue after an empty page")
+    total = None if envelope.total == 0 and items else envelope.total
+    return Page(
+        items=items,
+        total=total,
+        limit=envelope.limit,
+        offset=envelope.offset,
+        has_more=envelope.has_more,
+        next_cursor=envelope.next_cursor,
+    )
+
+
+def _offset_page_from_issue_page(
+    page: IssueListPage, *, default_limit: int, default_offset: int
+) -> OffsetPage[Issue]:
+    limit = page.limit if page.limit is not None else default_limit
+    offset = page.offset if page.offset is not None else default_offset
+    if not 1 <= limit <= 100:
+        raise OutputShapeError("issue list page limit must be between 1 and 100")
+    if offset < 0:
+        raise OutputShapeError("issue list page offset must be nonnegative")
+    if page.total is not None and page.total < 0:
+        raise OutputShapeError("issue list page total must be nonnegative")
+    if page.has_more and not page.items:
+        raise OutputShapeError("issue list page cannot continue after an empty page")
+    total = None if page.total == 0 and page.items else page.total
+    return OffsetPage(
+        items=page.items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_more=page.has_more,
+    )
 
 
 class IssueResource(BaseResource):
@@ -432,12 +580,10 @@ class IssueResource(BaseResource):
 
     def _offset_page(self, issue_filter: IssueListFilter) -> OffsetPage[Issue]:
         page = self.list(issue_filter)
-        return OffsetPage(
-            items=page.items,
-            total=page.total or 0,
-            limit=page.limit or 50,
-            offset=page.offset or 0,
-            has_more=page.has_more,
+        return _offset_page_from_issue_page(
+            page,
+            default_limit=50 if issue_filter.limit is None else issue_filter.limit,
+            default_offset=0 if issue_filter.offset is None else issue_filter.offset,
         )
 
     def _offset_page_command(self, issue_filter: IssueListFilter) -> Command[OffsetPage[Issue]]:
@@ -452,18 +598,16 @@ class IssueResource(BaseResource):
                 raise RuntimeError("issue list command has no decoder")
             decoded = source_step.decode(stdout, command_text)
             if isinstance(decoded, _IssueListPageWire):
-                page = _issue_list_page_from_wire(decoded)
+                page = _issue_list_page_from_wire(decoded, fields=issue_filter.fields or None)
             elif isinstance(decoded, IssueListPage):
                 page = decoded
             else:
                 raise TypeError("issue list command decoder returned an unexpected page")
             page = self._bind_issue_list_page(page)
-            return OffsetPage(
-                items=page.items,
-                total=page.total or 0,
-                limit=page.limit or default_limit,
-                offset=page.offset if page.offset is not None else default_offset,
-                has_more=page.has_more,
+            return _offset_page_from_issue_page(
+                page,
+                default_limit=default_limit,
+                default_offset=default_offset,
             )
 
         return Command(
@@ -489,9 +633,12 @@ class IssueResource(BaseResource):
         limit: int | None = None,
         offset: int | None = None,
         project_id: str | None = None,
-        sort: IssueSort | None = None,
-        direction: SortDirection | None = None,
+        sort: str | None = None,
+        direction: str | None = None,
         metadata: tuple[IssueMetadataItem, ...] = (),
+        fields: tuple[str, ...] = (),
+        property_filters: tuple[str, ...] = (),
+        resolve_properties: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[IssueListPage]: ...
 
@@ -506,9 +653,12 @@ class IssueResource(BaseResource):
         limit: int | None = None,
         offset: int | None = None,
         project_id: str | None = None,
-        sort: IssueSort | None = None,
-        direction: SortDirection | None = None,
+        sort: str | None = None,
+        direction: str | None = None,
         metadata: tuple[IssueMetadataItem, ...] = (),
+        fields: tuple[str, ...] = (),
+        property_filters: tuple[str, ...] = (),
+        resolve_properties: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[IssueListPage]:
         filter = _normalize_issue_filter(
@@ -522,6 +672,9 @@ class IssueResource(BaseResource):
             sort=sort,
             direction=direction,
             metadata=metadata,
+            fields=fields,
+            property_filters=property_filters,
+            resolve_properties=resolve_properties,
         )
         args = ["issue", "list"]
         status = _issue_status_token(filter.status) if filter.status is not None else None
@@ -531,13 +684,25 @@ class IssueResource(BaseResource):
         offset = filter.offset
         project_id = filter.project_id
         metadata = filter.metadata
-        resolved_sort = filter.sort
-        resolved_direction = filter.direction
-        if offset is not None and offset < 0:
-            raise ValueError("IssueResource.list: offset must be nonnegative (offset_nonnegative)")
+        resolved_sort = _normalize_issue_sort(cast("object", filter.sort))
+        resolved_direction = _normalize_issue_direction(cast("object", filter.direction))
+        fields = _normalize_issue_fields(filter.fields)
+        property_filters = _normalize_property_filters(filter.property_filters)
+        if fields and "id" not in fields:
+            raise ValueError("IssueResource.list: fields must include id (identity_required)")
+        _validate_issue_query_options(
+            limit=limit, offset=offset, resolve_properties=filter.resolve_properties
+        )
+        if filter.resolve_properties and fields and "properties" not in fields:
+            raise ValueError("IssueResource.list: resolve_properties requires properties in fields")
         if resolved_direction is not None and resolved_sort is None:
             raise ValueError(
                 "IssueResource.list: direction requires sort (direction_requires_sort)"
+            )
+        if resolved_direction is not None and resolved_sort == "position":
+            raise ValueError(
+                "IssueResource.list: direction cannot be used with position sort "
+                "(position_forbids_direction)"
             )
         if status is not None:
             args.extend(["--status", status])
@@ -569,9 +734,15 @@ class IssueResource(BaseResource):
             args.extend(["--sort", resolved_sort])
         if resolved_direction is not None:
             args.extend(["--direction", resolved_direction])
+        for expression in property_filters:
+            args.extend(["--property", expression])
+        if fields:
+            args.extend(["--fields", ",".join(fields)])
+        if filter.resolve_properties:
+            args.append("--resolve-properties")
         return (
             self._decoded_command(tuple(args), _IssueListPageWire, options=options)
-            ._map(_issue_list_page_from_wire)
+            ._map(lambda wire: _issue_list_page_from_wire(wire, fields=fields or None))
             ._map(self._bind_issue_list_page)
         )
 
@@ -590,9 +761,12 @@ class IssueResource(BaseResource):
         limit: int | None = None,
         offset: int | None = None,
         project_id: str | None = None,
-        sort: IssueSort | None = None,
-        direction: SortDirection | None = None,
+        sort: str | None = None,
+        direction: str | None = None,
         metadata: tuple[IssueMetadataItem, ...] = (),
+        fields: tuple[str, ...] = (),
+        property_filters: tuple[str, ...] = (),
+        resolve_properties: bool = False,
         options: OperationOptions | None = None,
     ) -> IssueListPage: ...
 
@@ -607,9 +781,12 @@ class IssueResource(BaseResource):
         limit: int | None = None,
         offset: int | None = None,
         project_id: str | None = None,
-        sort: IssueSort | None = None,
-        direction: SortDirection | None = None,
+        sort: str | None = None,
+        direction: str | None = None,
         metadata: tuple[IssueMetadataItem, ...] = (),
+        fields: tuple[str, ...] = (),
+        property_filters: tuple[str, ...] = (),
+        resolve_properties: bool = False,
         options: OperationOptions | None = None,
     ) -> IssueListPage:
         normalized = _normalize_issue_filter(
@@ -623,19 +800,39 @@ class IssueResource(BaseResource):
             sort=sort,
             direction=direction,
             metadata=metadata,
+            fields=fields,
+            property_filters=property_filters,
+            resolve_properties=resolve_properties,
         )
         return self.list_command(normalized, options=options).run()
 
     def get_command(
-        self, issue_id: str, *, options: OperationOptions | None = None
+        self,
+        issue_id: str,
+        *,
+        resolve_properties: bool = False,
+        options: OperationOptions | None = None,
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
-        return self._decoded_command(("issue", "get", issue_id), _IssueWire, options=options)._map(
+        if type(resolve_properties) is not bool:
+            raise TypeError("resolve_properties must be a bool")
+        args = ["issue", "get", issue_id]
+        if resolve_properties:
+            args.append("--resolve-properties")
+        return self._decoded_command(tuple(args), _IssueWire, options=options)._map(
             self._bind_issue
         )
 
-    def get(self, issue_id: str, *, options: OperationOptions | None = None) -> Issue:
-        return self.get_command(issue_id, options=options).run()
+    def get(
+        self,
+        issue_id: str,
+        *,
+        resolve_properties: bool = False,
+        options: OperationOptions | None = None,
+    ) -> Issue:
+        return self.get_command(
+            issue_id, resolve_properties=resolve_properties, options=options
+        ).run()
 
     def pull_requests_command(
         self, issue_id: str, *, options: OperationOptions | None = None

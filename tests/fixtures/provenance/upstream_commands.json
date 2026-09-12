@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "pinned_sha": "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
-    "tag": "v0.4.28",
-    "visible_leaf_count": 163
+    "pinned_sha": "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7",
+    "tag": "v0.4.42",
+    "visible_leaf_count": 153
   },
   "commands": [
     "agent archive",
@@ -88,16 +88,6 @@
     "label list",
     "label update",
     "login",
-    "plugin init",
-    "plugin install",
-    "plugin list",
-    "plugin pack",
-    "plugin remote-mcp approve",
-    "plugin remote-mcp configure",
-    "plugin remote-mcp revoke",
-    "plugin remote-mcp test",
-    "plugin status",
-    "plugin validate",
     "project create",
     "project delete",
     "project get",

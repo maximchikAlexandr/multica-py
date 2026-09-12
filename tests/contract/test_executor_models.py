@@ -7,7 +7,8 @@ import pytest
 from multica_py._internal.decoders import decode_json
 from multica_py.entities.agents import Agent
 from multica_py.entities.squads import Squad
-from multica_py.models.agents import AgentSkill
+from multica_py.exceptions import OutputShapeError
+from multica_py.models.agents import AgentConversationStarter, AgentSkill
 from multica_py.models.system import SquadMember
 
 
@@ -31,6 +32,12 @@ from multica_py.models.system import SquadMember
             b'{"id":"a1","name":"n","archived_at":"2026-07-28T11:47:17Z"}',
             "archived_at",
             datetime.datetime(2026, 7, 28, 11, 47, 17, tzinfo=datetime.UTC),
+        ),
+        (
+            Agent,
+            b'{"id":"a1","name":"n","conversation_starters":[{"label":"Review","prompt":"Review this"}],"runtime_availability":"available"}',
+            "conversation_starters",
+            (AgentConversationStarter(label="Review", prompt="Review this"),),
         ),
         (
             Agent,
@@ -119,3 +126,16 @@ def test_squad_member_decoding(json_bytes: bytes, expected: tuple[SquadMember, .
 def test_agent_skill_list_decoding(json_bytes: bytes, expected: tuple[AgentSkill, ...]) -> None:
     skills = decode_json(json_bytes, list[AgentSkill], command="test")
     assert tuple(skills) == expected
+
+
+@pytest.mark.parametrize(
+    "json_bytes",
+    [
+        b'{"id":"a1","name":"n","conversation_starters":[{"label":"Review"}]}',
+        b'{"id":"a1","name":"n","conversation_starters":[{"prompt":"Review this"}]}',
+    ],
+    ids=("missing-prompt", "missing-label"),
+)
+def test_agent_conversation_starter_shape_is_rejected(json_bytes: bytes) -> None:
+    with pytest.raises(OutputShapeError):
+        decode_json(json_bytes, Agent, command="test")

@@ -41,6 +41,7 @@ compat:
 
 contract:
 	uv run python scripts/upstream_contract.py check --approved contracts/sdk-contract.json
+	uv run python scripts/audit_source_links.py
 
 package:
 	uv build

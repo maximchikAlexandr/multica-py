@@ -16,9 +16,16 @@ runtime, and run the deterministic check:
 collect → validate --source-checkout → render → check
 ```
 
-The current approved target is `v0.4.28` with compatibility interval
-`[0.4.28, 0.4.29)`. The pinned commit, release asset/checksum, and exact
+The current approved target is `v0.4.42` with compatibility interval
+`[0.4.42, 0.4.43)`. The pinned commit, release asset/checksum, and exact
 commands for this review are maintained in [docs/compatibility.md](compatibility.md).
+The target source commit is
+`76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`; the old `0.4.28` source commit
+`38c992ad0a757434fb51584fa34e3bc57d1b78e1` is comparison provenance only.
+Release archive SHA-256 values must be checked against official manifests
+separately from extracted executable SHA-256 values. Run
+`scripts/audit_source_links.py` and the contract `validate -> render -> check`
+sequence before packaging.
 
 Git review and merge are the only promotion action. The repository keeps one
 committed generated runtime projection; transient documentation, compatibility,

@@ -156,8 +156,8 @@ add data rows before you add functions; add functions before you add files.
 
 `tests/unit/resources/test_operations.py::test_discovered_public_methods`
 asserts `discovered_public_methods == {case.sdk_method for case in
-OPERATION_CASES if case.is_canonical}` with 194 unique canonical methods,
-323 unique case IDs (194 canonical rows), 129 noncanonical variants, 89 generated rows, and 234 manual rows; 148 legacy payload rows are a migration subset. No allowlist is accepted.
+OPERATION_CASES if case.is_canonical}` with 184 unique canonical methods,
+316 unique case IDs (184 canonical rows), 132 noncanonical variants, 79 generated rows, and 237 manual rows; 143 legacy payload rows are a migration subset. No allowlist is accepted.
 
 ### Layers and markers
 

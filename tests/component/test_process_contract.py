@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import datetime
 import json
 import os
@@ -340,15 +339,11 @@ def test_process_contract(contract_id: str, tmp_path: pathlib.Path) -> None:
 
 @pytest.mark.timeout(20)
 @pytest.mark.parametrize(
-    ("channel", "payload"),
-    (
-        ("credential", b"credential\x00\xff-bytes"),
-        ("server-config", b'{"headers":{"X-API-Key":"config-token"}}\x00\xff'),
-    ),
-    ids=("plugin-credential-stdin", "workspace-server-config-stdin"),
+    ("payload",),
+    ((b'{"headers":{"X-API-Key":"config-token"}}\x00\xff',),),
+    ids=("workspace-server-config-stdin",),
 )
 def test_public_stdin_channels_reach_real_execution_boundary(
-    channel: str,
     payload: bytes,
     tmp_path: pathlib.Path,
 ) -> None:
@@ -356,14 +351,11 @@ def test_public_stdin_channels_reach_real_execution_boundary(
     executable = tmp_path / "stdin_cli.py"
     executable.write_text(
         "#!/usr/bin/env python3\n"
-        "import base64, json, os, pathlib, sys\n"
+        "import json, os, pathlib, sys\n"
         "payload = sys.stdin.buffer.read()\n"
         "pathlib.Path(os.environ['STDIN_RECORD']).write_bytes(payload)\n"
         "sys.stderr.buffer.write(b'diagnostic ' + payload)\n"
-        "if 'plugin' in sys.argv:\n"
-        "    print(json.dumps({'received': base64.b64encode(payload).decode('ascii')}))\n"
-        "else:\n"
-        "    print(json.dumps([{'id':'mcp_001','name':'server-1','transport':'stdio'}]))\n",
+        "print(json.dumps([{'id':'mcp_001','name':'server-1','transport':'stdio'}]))\n",
         encoding="utf-8",
     )
     executable.chmod(0o755)
@@ -375,15 +367,6 @@ def test_public_stdin_channels_reach_real_execution_boundary(
         )
     )
 
-    if channel == "credential":
-        plugin_result = client.plugins.configure_remote_mcp(
-            "inst_001",
-            "remote-mcp",
-            endpoint="https://mcp.example.com",
-            credential_stdin=payload,
-        )
-        assert plugin_result["received"] == base64.b64encode(payload).decode("ascii")
-    else:
-        mcp_result = client.workspaces.mcp.add("server-1", server_config_stdin=payload)
-        assert mcp_result.items[0].id == "mcp_001"
+    mcp_result = client.workspaces.mcp.add("server-1", server_config_stdin=payload)
+    assert mcp_result.items[0].id == "mcp_001"
     assert record_path.read_bytes() == payload

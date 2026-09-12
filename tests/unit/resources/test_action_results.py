@@ -48,7 +48,6 @@ APPROVED_ACTION_METHODS = frozenset(
         "issues.metadata.delete",
         "issues.properties.unset",
         "issues.rerun",
-        "plugins.init",
         "issues.subscribers.add",
         "issues.subscribers.remove",
         "labels.delete",

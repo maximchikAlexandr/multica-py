@@ -25,7 +25,6 @@ FORBIDDEN_LAZY_PROPERTIES = (
     "Squad.leader_ref",
     "Comment.author_ref",
     "Workspace.user_ref",
-    "Plugin.uploader_ref",
 )
 RESOLVED_INVENTORY = (
     (Issue, "parent"),

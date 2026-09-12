@@ -9,6 +9,7 @@ class SkillFile(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     path: str
     content: str | None = None
+    size: int | None = None
 
 
 class SkillSearchResult(msgspec.Struct, frozen=True, kw_only=True):

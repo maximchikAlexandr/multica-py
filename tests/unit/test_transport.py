@@ -30,6 +30,7 @@ from multica_py.config import ClientConfig
 from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import (
     AuthenticationError,
+    AuthorizationError,
     CommandExecutionError,
     CommandTimeoutError,
     ConflictError,
@@ -157,9 +158,9 @@ class ProcessLifecycleCase:
     expected_output: str | None
 
 
-_CLI_0438_ENVELOPE = (
-    b'{"arch":"arm64","commit":"47dc75741","date":"2026-09-02T09:52:29Z",'
-    b'"go":"go1.26.7","os":"darwin","version":"0.4.38"}'
+_CLI_0442_ENVELOPE = (
+    b'{"arch":"arm64","commit":"76f59f5f1","date":"2026-09-09T11:06:33Z",'
+    b'"go":"go1.26.8","os":"darwin","version":"0.4.42"}'
 )
 
 
@@ -510,6 +511,15 @@ _TRANSPORT_ERROR_CASES: tuple[TransportErrorCase, ...] = (
         exit_code=3, stderr=b"error", expected_exc=AuthenticationError, id="exit-3-auth"
     ),
     TransportErrorCase(
+        exit_code=3,
+        stderr=(
+            b"You do not have permission to access this resource. Check that you are in the "
+            b"right workspace, or ask an administrator to grant access."
+        ),
+        expected_exc=AuthorizationError,
+        id="exit-3-authorization",
+    ),
+    TransportErrorCase(
         exit_code=4, stderr=b"error", expected_exc=NotFoundError, id="exit-4-notfound"
     ),
     TransportErrorCase(
@@ -532,6 +542,13 @@ _LEGACY_ERROR_CASES: tuple[LegacyErrorCase, ...] = (
         1,
         b"Error: GET /api/workspaces returned 401: unauthorized",
         AuthenticationError,
+        3,
+    ),
+    LegacyErrorCase(
+        "http-403",
+        1,
+        b"Error: GET /api/workspaces returned 403: forbidden",
+        AuthorizationError,
         3,
     ),
     LegacyErrorCase(
@@ -607,6 +624,21 @@ _LEGACY_ERROR_CASES: tuple[LegacyErrorCase, ...] = (
     ),
     LegacyErrorCase(
         "unrelated", 1, b"command failed for an unrelated reason", CommandExecutionError, 1
+    ),
+    LegacyErrorCase(
+        "target-rate-limit",
+        1,
+        b"Too many requests. Please wait a moment and try again; if this keeps happening, "
+        b"reduce how frequently you call the API.",
+        CommandExecutionError,
+        1,
+    ),
+    LegacyErrorCase(
+        "target-unknown",
+        1,
+        b"An unexpected error occurred.",
+        CommandExecutionError,
+        1,
     ),
 )
 
@@ -1552,7 +1584,7 @@ def test_transport_warn_policy_rejects_unparseable_version_output_from_check():
 
 
 def test_strict_preflight_is_lazy_uses_exact_json_argv_and_preserves_global_order() -> None:
-    executor = _CompatibilityProbeExecutor(_CLI_0438_ENVELOPE)
+    executor = _CompatibilityProbeExecutor(_CLI_0442_ENVELOPE)
     config = ClientConfig(
         executable="/opt/multica",
         server_url="https://example.test",
@@ -1596,7 +1628,7 @@ def test_strict_preflight_is_lazy_uses_exact_json_argv_and_preserves_global_orde
 
 
 def test_strict_client_constructor_is_lazy_and_first_public_operation_succeeds() -> None:
-    executor = _CompatibilityProbeExecutor(_CLI_0438_ENVELOPE)
+    executor = _CompatibilityProbeExecutor(_CLI_0442_ENVELOPE)
     config = ClientConfig(compatibility=CompatibilityPolicy.strict)
     client = MulticaClient(config, executor=executor)
 
@@ -1648,7 +1680,7 @@ def test_snapshot_transports_share_compatibility_preflight_cache(
                 self._check_compat()
             self.commands.append(command_args)
             stdout = (
-                _CLI_0438_ENVELOPE if command_args == ("version", "--output", "json") else b"{}"
+                _CLI_0442_ENVELOPE if command_args == ("version", "--output", "json") else b"{}"
             )
             return RawCommandResult(
                 argv=("multica", *command_args),
