@@ -10,7 +10,7 @@ and relations load only at explicit load points such as `all()`, `page()`,
 Local subprocess execution remains the default. Remote execution is explicit:
 install the chosen optional extra, import its executor from
 `multica_py.execution.<provider>`, and pass it to `MulticaClient(executor=...)`.
-There is no plugin registry or automatic provider discovery. See
+There is no provider registry or automatic provider discovery. See
 [execution backends](execution-backends.md) for installation commands,
 target-path/environment/staging rules, process-control guarantees, and the
 provider-adapter contract.
@@ -259,17 +259,48 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
-## v0.4.28 SDK additions and behavior
+## v0.4.42 SDK additions and behavior
 
-### Plugins and Remote MCP
+### Direct 0.4.28 → 0.4.42 migration
 
-`client.plugins` covers `plugin list|status|validate|pack|init|install` and
-`plugin remote-mcp configure|test|approve|revoke`. List/status rows decode to
-frozen `Plugin`. Validate/pack decode `PluginDigest`. `install()` and all
-Remote MCP mutations are human-local guarded upstream; the SDK builds exact
-argv and does not fake success in offline contexts. Remote MCP configure
-requires `--endpoint` and accepts credentials only through file or
-`credential_stdin: bytes | None` channels. Plugin list/status return `Page[Plugin]`.
+The approved compatibility interval is `[0.4.42, 0.4.43)` and is pinned to
+target source commit `76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`. Consumers
+migrate directly from CLI/SDK `0.4.28`; versions `0.4.29` through `0.4.41`
+are not delivery targets. If a target gate fails, revert the contract,
+generated runtime, public API, tests, and documentation together so a mixed
+compatibility claim is never published.
+
+### Plugin API removal
+
+Multica CLI `0.4.42` no longer exposes the `plugin` command tree. The SDK
+therefore removes `client.plugins`, Plugin models/resources, and the
+`Workspace.plugins` relation. There is no compatible replacement in this SDK;
+consumers must remove these calls or intentionally remain on an older
+SDK/CLI pair.
+
+Autopilot create/update no longer accepts `priority` and never emits a
+`--priority` flag. Remove that argument from callers; there is no ignored
+compatibility alias.
+
+### Skill projections and issue query options
+
+`skills.get(skill_id)` requests `--with-content` to preserve the full Skill
+contract. `skills.list()` accepts metadata-only rows, while
+`skills.files.list(skill_id, with_content=False)` keeps file bodies opt-in;
+missing content remains distinct from present empty content.
+
+`issues.get(..., resolve_properties=True)` and `issues.list(...,
+resolve_properties=True)` opt into the reviewed resolved-property projection.
+The default remains the raw UUID-keyed property map. Issue lists additionally
+accept ordered `fields`, repeatable `property_filters`, and property sorting;
+same-name predicates are ORed and different names are ANDed. `__none__`
+represents an unset property. The target allows limits from `1` through `100`
+and rejects `>=`, `<=`, and `!=` predicate operators locally.
+
+`issue timeline`, `autopilot trigger-list`, and compact
+`issue runs --active/--siblings` response envelopes are explicitly deferred.
+The existing default `issue runs` operation and `Issue.runs` relation retain
+the full history envelope.
 
 ### Workspace property catalog and issue properties
 
@@ -305,15 +336,15 @@ Issue status inputs (list filters, `set_status`, bound `Issue.set_status`) accep
 the seven `IssueStatus` members or any upstream string without local membership
 rejection. Email assignees map to `--assignee` when provided as strings.
 
-### Bound relations R34–R38
+### Bound relations R35–R38
 
-`Workspace.plugins`, `Workspace.properties`, `Workspace.mcp_servers`,
-`Agent.mcp_servers`, and `Issue.properties` are lazy relations with explicit
-load points. The relation inventory now contains 38 rows.
+`Workspace.properties`, `Workspace.mcp_servers`, `Agent.mcp_servers`, and
+`Issue.properties` are lazy relations with explicit load points. The relation
+inventory now contains 37 rows; removed `Workspace.plugins` is not remapped.
 Successful bound MCP mutations invalidate an already-loaded MCP relation.
 `workspace mcp remove` is a text action returning `ActionResult[None]`, not a
-JSON page. Plugin init likewise has no `--output`; Remote MCP configure accepts
-`public_config_file` without SDK-side file reads.
+JSON page. Remote MCP configure accepts `public_config_file` without SDK-side
+file reads.
 
 ## v0.4.20 SDK additions and behavior (historical)
 
@@ -584,7 +615,7 @@ the separate, passive handle and never replaces that snapshot.
 
 The unsupported singular edges remain absent: creator/member, autopilot
 trigger, task, squad leader, comment author, workspace user,
-`PropertyValue.property_id`, `Plugin.uploader_id`, and MCP record IDs. A
+`PropertyValue.property_id` and MCP record IDs. A
 workspace-member object or email accepted by v0.4.28 assignment likewise stays
 an embedded member snapshot; it does not imply a member lookup.
 

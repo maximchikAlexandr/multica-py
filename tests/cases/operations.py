@@ -35,7 +35,6 @@ from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.labels import LabelResource
 from multica_py.resources.maintenance import MaintenanceResource
-from multica_py.resources.plugins import PluginResource
 from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
 from multica_py.resources.properties import PropertyResource
@@ -149,7 +148,6 @@ RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("issues", IssueResource),
     ("labels", LabelResource),
     ("maintenance", MaintenanceResource),
-    ("plugins", PluginResource),
     ("project_resources", ProjectResourceCollection),
     ("projects", ProjectResource),
     ("properties", PropertyResource),
@@ -323,7 +321,6 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 "autopilots.delete",
                 "issues.comments.delete",
                 "issues.properties.unset",
-                "plugins.init",
                 "projects.resources.remove",
                 "workspaces.mcp.remove",
             }:
@@ -1266,8 +1263,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "ag1",
                 "--mode",
                 "create_issue",
-                "--priority",
-                "none",
                 "--output",
                 "json",
             ),
@@ -1381,8 +1376,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
                 "ag1",
                 "--mode",
                 "create_issue",
-                "--priority",
-                "none",
                 "--description",
                 "desc",
                 "--project",
@@ -1743,11 +1736,52 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:issues.list:variant:03",
         ),
         _c(
+            "issues.list",
+            (
+                "issue",
+                "list",
+                "--limit",
+                "1",
+                "--sort",
+                "property:Impact",
+                "--property",
+                "Impact=High",
+                "--property",
+                "Impact=Medium",
+                "--property",
+                "Environment=prod",
+                "--fields",
+                "id,properties",
+                "--resolve-properties",
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("limit", 1),
+                ("sort", "property:Impact"),
+                ("property_filters", ("Impact=High", "Impact=Medium", "Environment=prod")),
+                ("fields", ("id", "properties")),
+                ("resolve_properties", True),
+            ),
+            stdout=b'{"issues":[{"id":"i1","properties":{"impact":"High"}}],"has_more":false}',
+            id="manual:issues.list:query-projection:variant",
+            source_ref="S-ISSUE-LIST-QUERY-PROJECTION",
+        ),
+        _c(
             "issues.get",
             ("issue", "get", "iss_1", "--output", "json"),
             args=("iss_1",),
             stdout=b'{"id":"iss_1","title":"Test","status":"todo"}',
             id="manual:issues.get:canonical",
+        ),
+        _c(
+            "issues.get",
+            ("issue", "get", "iss_1", "--resolve-properties", "--output", "json"),
+            args=("iss_1",),
+            kwargs=(("resolve_properties", True),),
+            stdout=b'{"id":"iss_1","title":"Test","status":"todo","properties":{"p1":"x"}}',
+            id="manual:issues.get:resolved-properties:variant",
+            source_ref="S-ISSUE-GET-RESOLVED-PROPERTIES",
         ),
         _c(
             "issues.create",
@@ -2088,7 +2122,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "skills.get",
-            ("skill", "get", "s1", "--output", "json"),
+            ("skill", "get", "s1", "--with-content", "--output", "json"),
             args=("s1",),
             stdout=_SK,
             id="manual:skills.get:canonical",
@@ -2109,7 +2143,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "skills.update",
-            ("skill", "get", "s1", "--output", "json"),
+            ("skill", "get", "s1", "--with-content", "--output", "json"),
             args=("s1",),
             stdout=_SK,
             id="manual:skills.update:canonical",
@@ -2466,6 +2500,16 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             args=("sk_1",),
             stdout=msgspec.json.encode([SkillFile(id="f_1", path="SKILL.md")]),
             id="manual:skills.files.list:canonical",
+            public_route=True,
+        ),
+        _c(
+            "skills.files.list",
+            ("skill", "files", "list", "sk_1", "--with-content", "--output", "json"),
+            args=("sk_1",),
+            kwargs=(("with_content", True),),
+            stdout=b'[{"id":"f_1","path":"SKILL.md","content":"body","size":4}]',
+            id="manual:skills.files.list:with-content:variant",
+            source_ref="S-SKILL-FILE-PROJECTION",
             public_route=True,
         ),
         _c(

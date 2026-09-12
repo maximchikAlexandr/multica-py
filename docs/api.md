@@ -6,6 +6,15 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
+## Approved v0.4.42 target
+
+This SDK contract supports Multica CLI `0.4.42` at commit
+`76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`, with the tested interval
+`[0.4.42, 0.4.43)`. The migration is direct from `0.4.28`; no intermediate
+SDK release is required. The target removes the Plugin command family and
+autopilot `priority` inputs, so this SDK exposes neither compatibility shim nor
+replacement API.
+
 ## Client
 
 - `MulticaClient(config: ClientConfig | None = None)` — construct with immutable configuration; `None` uses `ClientConfig()`
@@ -186,7 +195,6 @@ All resources accessed as attributes of `MulticaClient`:
 - **agents.mcp**: `list/add/enable/disable/remove`
 - **skills**: `list/get/create/update/delete/import_from_url/refresh/search`
 - **skills.files**: `list/upsert/delete`
-- **plugins**: `list/status/validate/pack/init/install` and Remote MCP `configure/test/approve/revoke`
 - **properties**: `list/get/create/update/archive/unarchive` for the workspace property catalog
 - **workspaces.mcp**: `list/add/update/remove` for workspace MCP servers
 - **autopilots**: `list/get/create/update/delete/trigger/history/trigger_add/trigger_update/trigger_delete`
@@ -201,6 +209,25 @@ All resources accessed as attributes of `MulticaClient`:
 - **squads**: `list/get`
 - **users**: `profile_get/profile_update`
 - **maintenance**: `version()` → `MaintenanceVersion`, `update()` → `ManagedProcess`
+
+Issue list/get query additions are opt-in. `issues.get(...,
+resolve_properties=True)` and `issues.list(..., resolve_properties=True)` add
+the resolved property projection; without that flag, the raw UUID-keyed
+property map remains the default. Issue lists also accept ordered `fields`,
+repeatable `property_filters`, and property sorting. Repeated predicates for
+one property are ORed, predicates for different properties are ANDed, and
+`Name=__none__` selects an unset property. Fields and limits are validated
+locally (`limit` is `1..100`), and reserved `>=`, `<=`, and `!=` predicate
+spellings are rejected before transport.
+
+Skill bodies are projections: `skills.get()` explicitly requests full content,
+`skills.list()` remains metadata-only, and `skills.files.list(...,
+with_content=True)` opts into file bodies. Omitted content is not fabricated as
+an empty string.
+
+The target's `issue timeline`, `autopilot trigger-list`, and compact
+`issue runs --active/--siblings` envelopes remain deferred. Existing default
+issue run history continues to return the full TaskRun page.
 
 ### Schedule triggers
 
@@ -287,23 +314,7 @@ string `match_source` (`"title"`, `"description"`, `"comment"`, or a future
 upstream value). It defaults to `None` when omitted; the envelope's `total`
 is preserved as page metadata.
 
-## Plugins, properties, MCP, and skill refresh
-
-`client.plugins` exposes workspace-private plugin installations plus local
-validate/pack/init flows. `list()` and `status()` decode frozen `Plugin` rows;
-both accept an optional explicit `workspace` override. `init()` is a tagged
-text/local action and never appends an `--output` flag.
-`validate()` and `pack()` decode a distinct `PluginDigest`. `install()` emits
-`plugin install <path>`; upstream human-local guards apply at the CLI rather
-than in Python. Remote MCP configure accepts credentials only through
-`--credential-file` or `--credential-stdin` (mutually exclusive), plus optional
-non-secret `public_config_file` mapped to `--public-config-file`; credential
-bytes are supplied as `credential_stdin: bytes | None` and are redacted from
-preview and diagnostics. File-channel paths remain visible in preview without
-reading the file; `run()` reads them as bytes immediately before execution.
-Text/JSON secret extraction is best-effort for diagnostics, typed decoders
-receive original successful stdout/stderr bytes, and only public raw `CliResult`
-applies success-path redaction.
+## Properties, MCP, and skill refresh
 
 `client.properties` manages the workspace property catalog. Create/update use
 `Unset` for omitted fields; actor and multi-actor types reject option tuples.

@@ -27,6 +27,16 @@ def run_workflow(client: MulticaClient, project_id: str, issue_id: str) -> None:
     raw = scoped.cli.command("issue", "get", issue_id, options=options)
     print(raw.run().stdout)
 
+    projected = scoped.issues.list(
+        fields=("id", "title", "properties"),
+        property_filters=("Environment=prod",),
+        resolve_properties=True,
+        options=options,
+    )
+    print(tuple(item.id for item in projected.items))
+    skill = scoped.skills.get("skill_123")
+    print(scoped.skills.files.list(skill.id, with_content=True).items)
+
     upload = scoped.attachments.upload_command(
         Path("artifact.zip"), task_id=issue.id, options=options
     )

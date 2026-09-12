@@ -1,6 +1,10 @@
 # CLI Coverage
 
-Pinned upstream: `multica-ai/multica@38c992ad0a757434fb51584fa34e3bc57d1b78e1` (tag `v0.4.28`)
+Pinned target upstream: `multica-ai/multica@76f59f5f1cd9b6e779d0d34c603407d5d4001bf7` (tag `v0.4.42`)
+
+The reviewed baseline is `v0.4.28` at
+`38c992ad0a757434fb51584fa34e3bc57d1b78e1`; it is retained only for the
+direct migration comparison.
 
 ## Coverage authority
 

@@ -595,7 +595,7 @@ def test_discovered_public_methods() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
-    assert len(canonical) == 194
+    assert len(canonical) == 184
     assert len(canonical_cases) == len(canonical)
     contract_entrypoints = {
         (operation.operation_id, entrypoint.entrypoint_id): entrypoint
@@ -614,9 +614,9 @@ def test_discovered_public_methods() -> None:
         governed.add((case.contract_operation_id, entrypoint_id))
     assert governed == set(contract_entrypoints)
     assert len(contract.operation_ids) == len(contract.operations)
-    assert len(OPERATION_CASES) == 323
-    assert len({c.id for c in OPERATION_CASES}) == 323
-    assert sum(not c.is_canonical for c in OPERATION_CASES) == 129
+    assert len(OPERATION_CASES) == 316
+    assert len({c.id for c in OPERATION_CASES}) == 316
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == 132
     presence_catalog = cast(
         "dict[str, object]",
         cast("dict[str, object]", contract.raw["catalogs"])["presence"],
@@ -650,8 +650,8 @@ def test_discovered_public_methods() -> None:
             ), case.sdk_method
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
-    assert len(generated) == 89
-    assert len(manual) == 234
+    assert len(generated) == 79
+    assert len(manual) == 237
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
@@ -868,7 +868,6 @@ def test_approved_result_categories_are_closed() -> None:
         "issues.metadata.delete",
         "issues.properties.unset",
         "issues.rerun",
-        "plugins.init",
         "issues.subscribers.add",
         "issues.subscribers.remove",
         "labels.delete",
@@ -907,18 +906,6 @@ def test_approved_result_categories_are_closed() -> None:
         "issues.Issue.move_after",
         "projects.Project.update",
         "projects.Project.refresh",
-        "plugins.init",
-        "plugins.validate",
-        "plugins.pack",
-        "plugins.install",
-        "plugins.remote_mcp.configure",
-        "plugins.remote_mcp.test",
-        "plugins.remote_mcp.approve",
-        "plugins.remote_mcp.revoke",
-        "plugins.configure_remote_mcp",
-        "plugins.test_remote_mcp",
-        "plugins.approve_remote_mcp",
-        "plugins.revoke_remote_mcp",
         "properties.get",
         "properties.create",
         "properties.update",

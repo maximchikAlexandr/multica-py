@@ -31,6 +31,13 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
+The approved SDK target is Multica CLI `0.4.42` at commit
+`76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`, with compatibility interval
+`[0.4.42, 0.4.43)`. Upgrade directly from `0.4.28`. The target removes the
+Plugin API and autopilot `priority`; it adds opt-in skill-file content and
+issue property projections. See [the migration guide](docs/migration.md) for
+the complete breaking surface and rollback guidance.
+
 ## Usage
 
 ```python
@@ -46,6 +53,15 @@ for item in page:
 command = client.issues.get_command("issue_123")
 print(command.commands)
 issue = command.run()
+
+# Reviewed v0.4.42 issue projection options are opt-in.
+page = client.issues.list(
+    fields=("id", "title", "properties"),
+    property_filters=("Environment=prod",),
+    resolve_properties=True,
+)
+skill = client.skills.get("skill_123")  # get requests full content
+files = client.skills.files.list(skill.id, with_content=True)
 ```
 
 ### Schedule triggers
