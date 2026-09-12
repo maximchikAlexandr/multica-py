@@ -112,6 +112,37 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
     }
 
 
+def test_retained_inventory_and_fresh_checkout_remain_outside_typed_surface() -> None:
+    from multica_py.resources.repositories import RepositoryResource
+
+    contract = validate_contract(APPROVED)
+    operation_ids = {operation.operation_id for operation in contract.operations}
+    scope = cast("dict[str, object]", contract.raw["scope"])
+    scoped_operation_ids = set(cast("list[str]", scope["operation_ids"]))
+    relation_ids = tuple(
+        test_ref.test_ref_id
+        for test_ref in contract.test_refs
+        if test_ref.test_ref_id.startswith("relation:")
+    )
+
+    assert len(operation_ids) == 160
+    assert operation_ids == scoped_operation_ids
+    assert len(contract.responses) == 81
+    assert len(contract.compatibility.response_registry) == 163
+    assert (
+        sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
+        == 159
+    )
+    assert (
+        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 4
+    )
+    assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
+
+    assert any("repoCheckoutCmd" in source_ref.symbol for source_ref in contract.source_refs)
+    assert not any("checkout" in operation_id for operation_id in operation_ids)
+    assert not hasattr(RepositoryResource, "checkout")
+
+
 def test_removed_plugin_surface_and_autopilot_priority_are_absent() -> None:
     import importlib
     import inspect

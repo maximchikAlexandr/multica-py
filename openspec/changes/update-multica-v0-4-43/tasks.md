@@ -20,9 +20,9 @@
 
 ## 4. Retained semantic compatibility
 
-- [ ] 4.1 Add target-backed status-sort fixtures for canonical/custom effective-category ordering and direction while proving exact existing status/property/manual sort argv and no client-side reordering
-- [ ] 4.2 Add run-message target fixtures that distinguish task/workspace 404 from non-not-found lookup 500 through the centralized redacted classifier and distinguish malformed successful payloads from HTTP failures
-- [ ] 4.3 Prove all unchanged operations, envelopes, relation IDs, and public symbols remain exact, and add negative contract/discovery coverage that `repo checkout --fresh` creates no typed SDK surface
+- [x] 4.1 Add target-backed status-sort fixtures for canonical/custom effective-category ordering and direction while proving exact existing status/property/manual sort argv and no client-side reordering
+- [x] 4.2 Add run-message target fixtures that distinguish task/workspace 404 from non-not-found lookup 500 through the centralized redacted classifier and distinguish malformed successful payloads from HTTP failures
+- [x] 4.3 Prove all unchanged operations, envelopes, relation IDs, and public symbols remain exact, and add negative contract/discovery coverage that `repo checkout --fresh` creates no typed SDK surface
 
 ## 5. Generation, documentation, and integration
 

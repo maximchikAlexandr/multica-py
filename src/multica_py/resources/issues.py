@@ -110,7 +110,7 @@ _VALID_ISSUE_FIELDS = frozenset(
     }
 )
 _VALID_ISSUE_SORTS = frozenset(
-    {"position", "title", "created_at", "start_date", "due_date", "priority"}
+    {"position", "title", "created_at", "start_date", "due_date", "priority", "status"}
 )
 _PROPERTY_OPERATORS = (">=", "<=", "!=")
 
