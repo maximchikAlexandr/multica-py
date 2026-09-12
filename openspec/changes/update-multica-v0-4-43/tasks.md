@@ -1,9 +1,9 @@
 ## 1. Provenance and approved contract foundation
 
-- [ ] 1.1 Refresh `origin/main`, record the exact implementation base, confirm it contains the approved `0.4.42` contract, and stop for a planning revision if public scope, contract dependencies, or delivery topology changed
-- [ ] 1.2 Reproduce ignored `0.4.42`/`0.4.43` provenance and independently verify tag commits, release IDs, official archive manifests/digests, extracted executable SHA-256 values, and version JSON
-- [ ] 1.3 Reconcile the 189/189 command trees with three changed help nodes and no additions/removals/renames/moves, then reconcile all 160 approved operations and 163 unique response entrypoints to four changed and 159 unchanged rows with exact old/target source URLs
-- [ ] 1.4 Human-review and atomically update `contracts/sdk-contract.json` for exact target `0.4.43`, interval `[0.4.42,0.4.44)`, starter mappings/constraints/presence, changed response schemas, status/error semantics, retained operations, and non-SDK fresh checkout; pass strict pinned-source validation before rendering
+- [x] 1.1 Refresh `origin/main`, record the exact implementation base, confirm it contains the approved `0.4.42` contract, and stop for a planning revision if public scope, contract dependencies, or delivery topology changed
+- [x] 1.2 Reproduce ignored `0.4.42`/`0.4.43` provenance and independently verify tag commits, release IDs, official archive manifests/digests, extracted executable SHA-256 values, and version JSON
+- [x] 1.3 Reconcile the 189/189 command trees with three changed help nodes and no additions/removals/renames/moves, then reconcile all 160 approved operations and 163 unique response entrypoints to four changed and 159 unchanged rows with exact old/target source URLs
+- [x] 1.4 Human-review and atomically update `contracts/sdk-contract.json` for exact target `0.4.43`, interval `[0.4.42,0.4.44)`, starter mappings/constraints/presence, changed response schemas, status/error semantics, retained operations, and non-SDK fresh checkout; pass strict pinned-source validation before rendering
 
 ## 2. Agent conversation-starter input
 

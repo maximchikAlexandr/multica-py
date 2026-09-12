@@ -53,9 +53,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.4.42'" in runtime
+    assert b"TARGET_VERSION = '0.4.43'" in runtime
     assert b"MIN_CLI_VERSION = '0.4.42'" in runtime
-    assert b"MAX_CLI_VERSION = '0.4.43'" in runtime
+    assert b"MAX_CLI_VERSION = '0.4.44'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -104,13 +104,12 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
         "darwin",
         "arm64",
     )
-    version_review = next(
-        item
-        for item in contract.compatibility.reviewed_responses
-        if item.operation_id == "maintenance.version"
-    )
-    assert version_review.fields == ("version", "commit", "date", "go", "os", "arch")
-    assert "76f59f5f1" in version_review.omission_policy
+    assert {item.operation_id for item in contract.compatibility.reviewed_responses} == {
+        "agents.tasks",
+        "issues.runs",
+        "issues.run_messages",
+        "issues.usage",
+    }
 
 
 def test_removed_plugin_surface_and_autopilot_priority_are_absent() -> None:
