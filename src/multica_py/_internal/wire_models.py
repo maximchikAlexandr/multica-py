@@ -10,7 +10,7 @@ import msgspec
 from multica_py._generated.approved_sdk import validate_since_cursor
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.json_values import _coerce_json_value
-from multica_py.enums import ProjectStatus, _coerce_issue_status
+from multica_py.enums import ProjectStatus
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.autopilots import (
     AutopilotListPage,
@@ -18,88 +18,60 @@ from multica_py.models.autopilots import (
     AutopilotSubscriber,
     AutopilotTrigger,
 )
-from multica_py.models.common import CommentCursor
-from multica_py.models.issues import (
-    IssueAssignee,
-    IssueChildrenResult,
-    IssueChildStageGroup,
-    IssueListPage,
-    IssueMetadataItem,
-    LinkedPullRequest,
+from multica_py.models.issue_activity import (
+    RunMessage,
+    TaskIssueStatusData,
+    TaskPluginHookTool,
+    TaskProjectResourceData,
+    TaskUsageData,
 )
-from multica_py.models.plugins import Plugin, PluginDigest
 from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
 from multica_py.models.properties import PropertyDefinition
-from multica_py.models.system import AttachmentResult
-from multica_py.types import JsonValue, MetadataValue
+from multica_py.types import JsonValue
 
 if TYPE_CHECKING:
     from multica_py.entities.autopilots import Autopilot, AutopilotRun
     from multica_py.entities.comments import Comment, CommentThread
-    from multica_py.entities.issues import Issue, TaskRun
+    from multica_py.entities.issues import TaskRun
     from multica_py.entities.projects import Project
-    from multica_py.models.issue_activity import RunMessage
 
+from multica_py._internal.agent_wires import (
+    _agent_from_wire,
+    _AgentConversationStarterWire,
+    _AgentWire,
+)
+from multica_py._internal.issue_wires import (
+    _issue_assignee_from_wire,
+    _issue_children_result_from_wire,
+    _issue_from_wire,
+    _issue_list_page_from_wire,
+    _issue_pull_requests_from_wire,
+    _issue_row_from_wire,
+    _IssueChildrenResultWire,
+    _IssueListPageWire,
+    _IssuePullRequestsResultWire,
+    _IssueSearchResultWire,
+    _IssueWire,
+    _LabelWire,
+)
 
-class _LabelWire(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    name: str
-    color: str | None = None
-
-
-class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    title: str
-    description: str | None = None
-    status: str
-    priority: str | None = None
-    assignee: IssueAssignee | None | msgspec.UnsetType = msgspec.UNSET
-    assignee_id: str | None | msgspec.UnsetType = msgspec.UNSET
-    assignee_type: str | None | msgspec.UnsetType = msgspec.UNSET
-    pull_requests: tuple[LinkedPullRequest, ...] | msgspec.UnsetType = msgspec.UNSET
-    children: tuple[IssueChildStageGroup, ...] | msgspec.UnsetType = msgspec.UNSET
-    labels: tuple[_LabelWire, ...] | msgspec.UnsetType = msgspec.UNSET
-    metadata: dict[str, MetadataValue] | msgspec.UnsetType = msgspec.UNSET
-    attachments: tuple[AttachmentResult, ...] | msgspec.UnsetType = msgspec.UNSET
-    created_at: datetime.datetime | None = None
-    updated_at: datetime.datetime | None = None
-    parent_issue_id: str | None | msgspec.UnsetType = msgspec.UNSET
-    project_id: str | None | msgspec.UnsetType = msgspec.UNSET
-    creator_id: str | None = None
-    creator_type: str | None = (
-        None  # ponytail: free string, no enum — upstream values not stabilised; add CreatorType enum when they are
-    )
-    match_source: str | None = None
-
-
-class _IssueListPageWire(msgspec.Struct, frozen=True, kw_only=True):
-    issues: tuple[_IssueWire, ...] = ()
-    has_more: bool = False
-    limit: int | None = None
-    offset: int | None = None
-    total: int | None = None
-    next_cursor: str | CommentCursor | None = None
-
-
-class _IssueSearchResultWire(msgspec.Struct, frozen=True, kw_only=True):
-    issues: tuple[_IssueWire, ...]
-    total: int | None = None
-
-
-def _issue_list_page_from_wire(wire: _IssueListPageWire) -> IssueListPage:
-    return IssueListPage(
-        items=tuple(_issue_from_wire(item) for item in wire.issues),
-        has_more=wire.has_more,
-        limit=wire.limit,
-        offset=wire.offset,
-        total=wire.total,
-        next_cursor=wire.next_cursor,
-    )
-
-
-def _attachments_from_wire(wire: _IssueWire) -> tuple[AttachmentResult, ...]:
-    return () if wire.attachments is msgspec.UNSET else wire.attachments
-
+__all__ = [
+    "_AgentConversationStarterWire",
+    "_AgentWire",
+    "_IssueChildrenResultWire",
+    "_IssueListPageWire",
+    "_IssuePullRequestsResultWire",
+    "_IssueSearchResultWire",
+    "_IssueWire",
+    "_LabelWire",
+    "_agent_from_wire",
+    "_issue_assignee_from_wire",
+    "_issue_children_result_from_wire",
+    "_issue_from_wire",
+    "_issue_list_page_from_wire",
+    "_issue_pull_requests_from_wire",
+    "_issue_row_from_wire",
+]
 
 _PresenceSeed = Literal["missing", "null", "value"]
 
@@ -110,113 +82,6 @@ def _presence_seed(value: object) -> _PresenceSeed:
     if value is None:
         return "null"
     return "value"
-
-
-def _issue_from_wire(wire: _IssueWire) -> Issue:
-    from multica_py.entities.issues import Issue
-
-    assignee, assignee_presence = _issue_assignee_from_wire(wire)
-    pull_requests = () if wire.pull_requests is msgspec.UNSET else wire.pull_requests
-    children = () if wire.children is msgspec.UNSET else wire.children
-    labels = () if wire.labels is msgspec.UNSET else wire.labels
-    metadata = {} if wire.metadata is msgspec.UNSET else wire.metadata
-    attachments = _attachments_from_wire(wire)
-    return Issue(
-        id=wire.id,
-        title=wire.title,
-        description=wire.description,
-        status=_coerce_issue_status(wire.status),
-        priority=wire.priority,
-        assignee=assignee,
-        pull_request_snapshot=pull_requests,
-        child_stages=children,
-        label_names=tuple(label.name for label in labels),
-        metadata_snapshot=tuple(
-            IssueMetadataItem(key=key, value=value) for key, value in metadata.items()
-        ),
-        attachments=attachments,
-        created_at=wire.created_at,
-        updated_at=wire.updated_at,
-        parent_id=None if wire.parent_issue_id is msgspec.UNSET else wire.parent_issue_id,
-        project_id=None if wire.project_id is msgspec.UNSET else wire.project_id,
-        creator_id=wire.creator_id,
-        creator_type=wire.creator_type,
-        match_source=wire.match_source,
-        _wire_presence=(
-            ("parent_id", _presence_seed(wire.parent_issue_id)),
-            ("project_id", _presence_seed(wire.project_id)),
-            ("assignee", assignee_presence),
-        ),
-    )
-
-
-def _issue_assignee_from_wire(wire: _IssueWire) -> tuple[IssueAssignee | None, _PresenceSeed]:
-    scalar_id_present = wire.assignee_id is not msgspec.UNSET
-    scalar_type_present = wire.assignee_type is not msgspec.UNSET
-    if scalar_id_present != scalar_type_present:
-        raise OutputShapeError(
-            "issue assignee scalar projection must contain both assignee_id and assignee_type"
-        )
-
-    nested_present = wire.assignee is not msgspec.UNSET
-    scalar_present = scalar_id_present and scalar_type_present
-    scalar: IssueAssignee | None = None
-    if scalar_present:
-        if (wire.assignee_id is None) != (wire.assignee_type is None):
-            raise OutputShapeError(
-                "issue assignee scalar projection must contain two values or two nulls"
-            )
-        if wire.assignee_id is not None and wire.assignee_type is not None:
-            scalar = IssueAssignee(
-                id=cast("str", wire.assignee_id), type=cast("str", wire.assignee_type)
-            )
-
-    nested = None if wire.assignee is msgspec.UNSET else wire.assignee
-    if nested_present and scalar_present:
-        if nested is None and scalar is None:
-            return None, "null"
-        if nested is None or scalar is None or nested.id != scalar.id or nested.type != scalar.type:
-            raise OutputShapeError("issue assignee projections conflict")
-        return nested, "value"
-    if nested_present:
-        return nested, _presence_seed(wire.assignee)
-    if scalar_present:
-        return scalar, "null" if scalar is None else "value"
-    return None, "missing"
-
-
-class _IssueChildrenResultWire(msgspec.Struct, frozen=True, kw_only=True):
-    children: tuple[_IssueWire, ...] = ()
-    total: int = 0
-    child_stages: tuple[IssueChildStageGroup, ...] = ()
-    unstaged: tuple[_IssueWire, ...] = ()
-    limit: int | None = None
-    offset: int | None = None
-    has_more: bool = False
-    next_cursor: str | CommentCursor | None = None
-
-
-def _issue_children_result_from_wire(wire: _IssueChildrenResultWire) -> IssueChildrenResult:
-    return IssueChildrenResult(
-        items=tuple(_issue_from_wire(item) for item in wire.children),
-        total=wire.total,
-        child_stages=wire.child_stages,
-        unstaged=tuple(_issue_from_wire(item) for item in wire.unstaged),
-        limit=wire.limit,
-        offset=wire.offset,
-        has_more=wire.has_more,
-        next_cursor=wire.next_cursor,
-    )
-
-
-class _IssuePullRequestsResultWire(msgspec.Struct, frozen=True, kw_only=True):
-    pull_requests: tuple[LinkedPullRequest, ...] = ()
-
-
-def _issue_pull_requests_from_wire(
-    wire: _IssuePullRequestsResultWire,
-) -> tuple[LinkedPullRequest, ...]:
-    return wire.pull_requests
 
 
 class _AutopilotTriggerWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -274,6 +139,8 @@ class _CommentWire(msgspec.Struct, frozen=True, kw_only=True):
     author_id: str | None = None
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
+    revision: int | msgspec.UnsetType = msgspec.UNSET
+    issue_revision: int | msgspec.UnsetType = msgspec.UNSET
 
 
 def comment_from_wire(wire: _CommentWire) -> Comment:
@@ -286,6 +153,8 @@ def comment_from_wire(wire: _CommentWire) -> Comment:
         author_id=wire.author_id,
         created_at=wire.created_at,
         updated_at=wire.updated_at,
+        revision=None if wire.revision is msgspec.UNSET else wire.revision,
+        issue_revision=(None if wire.issue_revision is msgspec.UNSET else wire.issue_revision),
     )
 
 
@@ -480,9 +349,52 @@ def _autopilot_run_from_wire(wire: _AutopilotRunWire) -> AutopilotRun:
     )
 
 
+class _TaskIssueStatusWire(msgspec.Struct, frozen=True, kw_only=True):
+    key: str
+    name: str
+    category: str
+    description: str = ""
+
+
+class _TaskPluginHookToolWire(msgspec.Struct, frozen=True, kw_only=True):
+    installation_id: str
+    hook_key: str
+    name: str
+    description: str
+    input_schema: object | None = None
+
+
+class _TaskProjectResourceWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    resource_type: str
+    resource_ref: object
+    label: str = ""
+
+
+class _TaskUsageWire(msgspec.Struct, frozen=True, kw_only=True):
+    provider: str
+    model: str
+    input_tokens: int
+    output_tokens: int
+    cache_read_tokens: int
+    cache_write_tokens: int
+    cost_usd_ticks: int | None = None
+
+
 class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     status: str
+    workspace_slug: str | None | msgspec.UnsetType = msgspec.UNSET
+    issue_identifier: str | None | msgspec.UnsetType = msgspec.UNSET
+    workspace_context: str | None | msgspec.UnsetType = msgspec.UNSET
+    issue_statuses: tuple[_TaskIssueStatusWire, ...] | None | msgspec.UnsetType = msgspec.UNSET
+    issue_statuses_omitted: int | None | msgspec.UnsetType = msgspec.UNSET
+    project_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    project_title: str | None | msgspec.UnsetType = msgspec.UNSET
+    project_description: str | None | msgspec.UnsetType = msgspec.UNSET
+    project_resources: tuple[_TaskProjectResourceWire, ...] | None | msgspec.UnsetType = (
+        msgspec.UNSET
+    )
     agent_id: str | None | msgspec.UnsetType = msgspec.UNSET
     runtime_id: str | None = None
     workspace_id: str | None = None
@@ -495,19 +407,126 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     durable_work_dir: str | None = None
     relative_durable_work_dir: str | None = None
     branch_name: str | None = None
+    trigger_comment_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    coalesced_comment_ids: tuple[str, ...] | None | msgspec.UnsetType = msgspec.UNSET
+    delivered_comment_ids: tuple[str, ...] | None | msgspec.UnsetType = msgspec.UNSET
+    trigger_thread_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    trigger_comment_content: str | None | msgspec.UnsetType = msgspec.UNSET
+    trigger_summary: str | None | msgspec.UnsetType = msgspec.UNSET
+    trigger_author_type: str | None | msgspec.UnsetType = msgspec.UNSET
+    trigger_author_name: str | None | msgspec.UnsetType = msgspec.UNSET
+    new_comment_count: int | None | msgspec.UnsetType = msgspec.UNSET
+    new_comments_since: datetime.datetime | None | msgspec.UnsetType = msgspec.UNSET
+    new_comments_delta_known: bool | None | msgspec.UnsetType = msgspec.UNSET
+    quick_create_prompt: str | None | msgspec.UnsetType = msgspec.UNSET
+    quick_create_priority: str | None | msgspec.UnsetType = msgspec.UNSET
+    quick_create_due_date: str | None | msgspec.UnsetType = msgspec.UNSET
+    quick_create_attachment_ids: tuple[str, ...] | None | msgspec.UnsetType = msgspec.UNSET
+    quick_create_source_context: object | None | msgspec.UnsetType = msgspec.UNSET
+    plugin_hook_tools: tuple[_TaskPluginHookToolWire, ...] | None | msgspec.UnsetType = (
+        msgspec.UNSET
+    )
+    usage: tuple[_TaskUsageWire, ...] | None | msgspec.UnsetType = msgspec.UNSET
     result: object | None = None
     error: str | None = None
     failure_reason: str | None = None
 
 
 def _task_run_from_wire(
-    wire: _TaskRunWire, *, issue_id: str | None, include_agent_presence: bool = True
+    wire: _TaskRunWire,
+    *,
+    issue_id: str | None,
+    include_agent_presence: bool = True,
+    include_wire_presence: bool = True,
 ) -> TaskRun:
     from multica_py.entities.issues import TaskRun
+
+    issue_statuses = (
+        ()
+        if wire.issue_statuses in (msgspec.UNSET, None)
+        else tuple(
+            TaskIssueStatusData(
+                key=item.key,
+                name=item.name,
+                category=item.category,
+                description=item.description,
+            )
+            for item in wire.issue_statuses
+        )
+    )
+    project_resources = (
+        ()
+        if wire.project_resources in (msgspec.UNSET, None)
+        else tuple(
+            TaskProjectResourceData(
+                id=item.id,
+                resource_type=item.resource_type,
+                resource_ref=_coerce_json_value(item.resource_ref, field_name="resource_ref"),
+                label=item.label,
+            )
+            for item in wire.project_resources
+        )
+    )
+    plugin_hook_tools = (
+        ()
+        if wire.plugin_hook_tools in (msgspec.UNSET, None)
+        else tuple(
+            TaskPluginHookTool(
+                installation_id=item.installation_id,
+                hook_key=item.hook_key,
+                name=item.name,
+                description=item.description,
+                input_schema=(
+                    None
+                    if item.input_schema is None
+                    else _coerce_json_value(item.input_schema, field_name="input_schema")
+                ),
+            )
+            for item in wire.plugin_hook_tools
+        )
+    )
+    usage = (
+        ()
+        if wire.usage in (msgspec.UNSET, None)
+        else tuple(
+            TaskUsageData(
+                provider=item.provider,
+                model=item.model,
+                input_tokens=item.input_tokens,
+                output_tokens=item.output_tokens,
+                cache_read_tokens=item.cache_read_tokens,
+                cache_write_tokens=item.cache_write_tokens,
+                cost_usd_ticks=item.cost_usd_ticks,
+            )
+            for item in wire.usage
+        )
+    )
+    result = (
+        None
+        if wire.result is msgspec.UNSET or wire.result is None
+        else _coerce_json_value(wire.result, field_name="result")
+    )
 
     return TaskRun(
         id=wire.id,
         status=wire.status,
+        workspace_slug=None if wire.workspace_slug is msgspec.UNSET else wire.workspace_slug,
+        issue_identifier=(
+            None if wire.issue_identifier is msgspec.UNSET else wire.issue_identifier
+        ),
+        workspace_context=(
+            None if wire.workspace_context is msgspec.UNSET else wire.workspace_context
+        ),
+        issue_statuses=issue_statuses,
+        issue_statuses_omitted=(
+            None if wire.issue_statuses_omitted is msgspec.UNSET else wire.issue_statuses_omitted
+        ),
+        project_id=None if wire.project_id is msgspec.UNSET else wire.project_id,
+        project_title=None if wire.project_title is msgspec.UNSET else wire.project_title,
+        project_description=(
+            None if wire.project_description is msgspec.UNSET else wire.project_description
+        ),
+        project_resources=project_resources,
         agent_id=None if wire.agent_id is msgspec.UNSET else wire.agent_id,
         runtime_id=wire.runtime_id,
         workspace_id=wire.workspace_id,
@@ -520,12 +539,111 @@ def _task_run_from_wire(
         durable_work_dir=wire.durable_work_dir,
         relative_durable_work_dir=wire.relative_durable_work_dir,
         branch_name=wire.branch_name,
-        result=cast("JsonValue | None", wire.result),
+        trigger_comment_id=(
+            None if wire.trigger_comment_id is msgspec.UNSET else wire.trigger_comment_id
+        ),
+        coalesced_comment_ids=(
+            ()
+            if wire.coalesced_comment_ids in (msgspec.UNSET, None)
+            else wire.coalesced_comment_ids
+        ),
+        delivered_comment_ids=(
+            ()
+            if wire.delivered_comment_ids in (msgspec.UNSET, None)
+            else wire.delivered_comment_ids
+        ),
+        trigger_thread_id=(
+            None if wire.trigger_thread_id is msgspec.UNSET else wire.trigger_thread_id
+        ),
+        trigger_comment_content=(
+            None if wire.trigger_comment_content is msgspec.UNSET else wire.trigger_comment_content
+        ),
+        trigger_summary=None if wire.trigger_summary is msgspec.UNSET else wire.trigger_summary,
+        trigger_author_type=(
+            None if wire.trigger_author_type is msgspec.UNSET else wire.trigger_author_type
+        ),
+        trigger_author_name=(
+            None if wire.trigger_author_name is msgspec.UNSET else wire.trigger_author_name
+        ),
+        new_comment_count=(
+            None if wire.new_comment_count is msgspec.UNSET else wire.new_comment_count
+        ),
+        new_comments_since=(
+            None if wire.new_comments_since is msgspec.UNSET else wire.new_comments_since
+        ),
+        new_comments_delta_known=(
+            None
+            if wire.new_comments_delta_known is msgspec.UNSET
+            else wire.new_comments_delta_known
+        ),
+        quick_create_prompt=(
+            None if wire.quick_create_prompt is msgspec.UNSET else wire.quick_create_prompt
+        ),
+        quick_create_priority=(
+            None if wire.quick_create_priority is msgspec.UNSET else wire.quick_create_priority
+        ),
+        quick_create_due_date=(
+            None if wire.quick_create_due_date is msgspec.UNSET else wire.quick_create_due_date
+        ),
+        quick_create_attachment_ids=(
+            ()
+            if wire.quick_create_attachment_ids in (msgspec.UNSET, None)
+            else wire.quick_create_attachment_ids
+        ),
+        quick_create_source_context=(
+            None
+            if wire.quick_create_source_context in (msgspec.UNSET, None)
+            else _coerce_json_value(
+                wire.quick_create_source_context, field_name="quick_create_source_context"
+            )
+        ),
+        plugin_hook_tools=plugin_hook_tools,
+        usage=usage,
+        result=result,
         error=wire.error,
         failure_reason=wire.failure_reason,
         issue_id=issue_id,
         _wire_presence=(
-            (("agent_id", _presence_seed(wire.agent_id)),) if include_agent_presence else ()
+            (
+                ((("agent_id", _presence_seed(wire.agent_id)),) if include_agent_presence else ())
+                + (
+                    ("workspace_slug", _presence_seed(wire.workspace_slug)),
+                    ("issue_identifier", _presence_seed(wire.issue_identifier)),
+                    ("workspace_context", _presence_seed(wire.workspace_context)),
+                    ("issue_statuses", _presence_seed(wire.issue_statuses)),
+                    ("issue_statuses_omitted", _presence_seed(wire.issue_statuses_omitted)),
+                    ("project_id", _presence_seed(wire.project_id)),
+                    ("project_title", _presence_seed(wire.project_title)),
+                    ("project_description", _presence_seed(wire.project_description)),
+                    ("project_resources", _presence_seed(wire.project_resources)),
+                    ("trigger_comment_id", _presence_seed(wire.trigger_comment_id)),
+                    ("coalesced_comment_ids", _presence_seed(wire.coalesced_comment_ids)),
+                    ("delivered_comment_ids", _presence_seed(wire.delivered_comment_ids)),
+                    ("trigger_thread_id", _presence_seed(wire.trigger_thread_id)),
+                    ("trigger_comment_content", _presence_seed(wire.trigger_comment_content)),
+                    ("trigger_summary", _presence_seed(wire.trigger_summary)),
+                    ("trigger_author_type", _presence_seed(wire.trigger_author_type)),
+                    ("trigger_author_name", _presence_seed(wire.trigger_author_name)),
+                    ("new_comment_count", _presence_seed(wire.new_comment_count)),
+                    ("new_comments_since", _presence_seed(wire.new_comments_since)),
+                    ("new_comments_delta_known", _presence_seed(wire.new_comments_delta_known)),
+                    ("quick_create_prompt", _presence_seed(wire.quick_create_prompt)),
+                    ("quick_create_priority", _presence_seed(wire.quick_create_priority)),
+                    ("quick_create_due_date", _presence_seed(wire.quick_create_due_date)),
+                    (
+                        "quick_create_attachment_ids",
+                        _presence_seed(wire.quick_create_attachment_ids),
+                    ),
+                    (
+                        "quick_create_source_context",
+                        _presence_seed(wire.quick_create_source_context),
+                    ),
+                    ("plugin_hook_tools", _presence_seed(wire.plugin_hook_tools)),
+                    ("usage", _presence_seed(wire.usage)),
+                )
+            )
+            if include_wire_presence
+            else ()
         ),
     )
 
@@ -657,50 +775,6 @@ class _PropertyDefinitionWire(msgspec.Struct, frozen=True, kw_only=True):
     usage_count: int = 0
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
-
-
-class _PluginWire(msgspec.Struct, frozen=True, kw_only=True):
-    plugin_key: str
-    desired_version: str
-    lifecycle_status: str
-    trust_tier: str
-    uploader_id: str = ""
-
-
-class _PluginDigestWire(msgspec.Struct, frozen=True, kw_only=True):
-    plugin_key: str
-    version: str
-    manifest_digest: str
-    archive_digest: str
-    artifact_digest: str
-    size_bytes: int
-    file_count: int
-
-
-def plugin_from_wire(wire: _PluginWire) -> Plugin:
-    from multica_py.models.plugins import Plugin
-
-    return Plugin(
-        plugin_key=wire.plugin_key,
-        desired_version=wire.desired_version,
-        lifecycle_status=wire.lifecycle_status,
-        trust_tier=wire.trust_tier,
-        uploader_id=wire.uploader_id,
-    )
-
-
-def plugin_digest_from_wire(wire: _PluginDigestWire) -> PluginDigest:
-    from multica_py.models.plugins import PluginDigest
-
-    return PluginDigest(
-        plugin_key=wire.plugin_key,
-        version=wire.version,
-        manifest_digest=wire.manifest_digest,
-        archive_digest=wire.archive_digest,
-        artifact_digest=wire.artifact_digest,
-        size_bytes=wire.size_bytes,
-        file_count=wire.file_count,
-    )
 
 
 def property_definition_from_wire(wire: _PropertyDefinitionWire) -> PropertyDefinition:

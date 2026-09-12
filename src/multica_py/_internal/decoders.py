@@ -46,11 +46,27 @@ def _decode_with_private_autopilot_wire(
     return None
 
 
+def _decode_with_private_agent_wire(
+    data: bytes, model_type: object, *, command: str = ""
+) -> object | None:
+    from multica_py._internal.agent_wires import _agent_from_wire, _AgentWire
+    from multica_py.entities.agents import Agent
+
+    if model_type is Agent:
+        return _agent_from_wire(decode_json(data, _AgentWire, command=command))
+    if model_type == list[Agent]:
+        wires = decode_json(data, list[_AgentWire], command=command)
+        return [_agent_from_wire(wire) for wire in wires]
+    return None
+
+
 def decode_json(data: bytes | str, model_type: type[T], *, command: str = "") -> T:
     if isinstance(data, str):
         data = data.encode("utf-8")
     try:
         private_decoded = _decode_with_private_autopilot_wire(data, model_type, command=command)
+        if private_decoded is None:
+            private_decoded = _decode_with_private_agent_wire(data, model_type, command=command)
         if private_decoded is None:
             decoded = msgspec.json.decode(data, type=model_type, strict=True)
         else:

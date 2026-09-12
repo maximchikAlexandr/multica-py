@@ -13,7 +13,11 @@ from multica_py._internal.commands import Command, _cached_value_command
 from multica_py._internal.json_values import _coerce_json_value
 from multica_py._internal.permalinks import build_permalink
 from multica_py.config import OperationOptions
-from multica_py.entities._base import _BoundEntity, _reference_presence, _runtime_state
+from multica_py.entities._base import (
+    _BoundEntity,
+    _reference_presence,
+    _runtime_state,
+)
 from multica_py.entities.comments import Comment, CommentThread, _bind_comment, _bind_thread
 from multica_py.entities.labels import Label
 from multica_py.enums import IssueStatus, _coerce_issue_status
@@ -30,6 +34,10 @@ from multica_py.models.issue_activity import (
     MetadataEntry,
     RunMessage,
     Subscriber,
+    TaskIssueStatusData,
+    TaskPluginHookTool,
+    TaskProjectResourceData,
+    TaskUsageData,
 )
 from multica_py.models.issues import (
     AssignmentTarget,
@@ -69,6 +77,60 @@ _TERMINAL_DRAIN_POLL_LIMIT = 1024
 
 def _page_items(page: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
     return page.items if isinstance(page, Page) else page
+
+
+def _property_relation_initial(
+    value: object | None,
+) -> Mapping[str, PropertyValue] | None:
+    # Raw issue projections are UUID-keyed JSON maps. Keep them as the
+    # already-loaded relation snapshot; resolved rows continue through the
+    # reviewed property resource projection.
+    if isinstance(value, Mapping):
+        if all(isinstance(row, Mapping) for row in value.values()):
+            resolved: dict[str, PropertyValue] = {}
+            for row in value.values():
+                assert isinstance(row, Mapping)
+                property_id = row.get("property_id", row.get("id"))
+                name = row.get("name")
+                property_type = row.get("type")
+                if not all(isinstance(item, str) for item in (property_id, name, property_type)):
+                    return cast("Mapping[str, PropertyValue]", value)
+                property_id = cast("str", property_id)
+                name = cast("str", name)
+                property_type = cast("str", property_type)
+                resolved[name] = PropertyValue(
+                    property_id=property_id,
+                    name=name,
+                    type=property_type,
+                    value=cast("MetadataValue", row.get("value")),
+                    display=cast("str", row.get("display", "")),
+                    archived=cast("bool", row.get("archived", False)),
+                )
+            return resolved
+        return cast("Mapping[str, PropertyValue]", value)
+    if isinstance(value, tuple):
+        resolved = {}
+        for row in value:
+            if not isinstance(row, Mapping):
+                return None
+            property_id = row.get("property_id", row.get("id"))
+            name = row.get("name")
+            property_type = row.get("type")
+            if not all(isinstance(item, str) for item in (property_id, name, property_type)):
+                return None
+            property_id = cast("str", property_id)
+            name = cast("str", name)
+            property_type = cast("str", property_type)
+            resolved[name] = PropertyValue(
+                property_id=property_id,
+                name=name,
+                type=property_type,
+                value=cast("MetadataValue", row.get("value")),
+                display=cast("str", row.get("display", "")),
+                archived=cast("bool", row.get("archived", False)),
+            )
+        return resolved
+    return None
 
 
 def _validate_poll_interval(value: float) -> None:
@@ -205,6 +267,15 @@ def _stream_task_run_events(
 class TaskRun(_BoundEntity):  # type: ignore[misc]
     id: str
     status: str
+    workspace_slug: str | None = None
+    issue_identifier: str | None = None
+    workspace_context: str | None = None
+    issue_statuses: tuple[TaskIssueStatusData, ...] = ()
+    issue_statuses_omitted: int | None = None
+    project_id: str | None = None
+    project_title: str | None = None
+    project_description: str | None = None
+    project_resources: tuple[TaskProjectResourceData, ...] = ()
     agent_id: str | None = None
     runtime_id: str | None = None
     workspace_id: str | None = None
@@ -217,6 +288,24 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     durable_work_dir: str | None = None
     relative_durable_work_dir: str | None = None
     branch_name: str | None = None
+    trigger_comment_id: str | None = None
+    coalesced_comment_ids: tuple[str, ...] = ()
+    delivered_comment_ids: tuple[str, ...] = ()
+    trigger_thread_id: str | None = None
+    trigger_comment_content: str | None = None
+    trigger_summary: str | None = None
+    trigger_author_type: str | None = None
+    trigger_author_name: str | None = None
+    new_comment_count: int | None = None
+    new_comments_since: datetime.datetime | None = None
+    new_comments_delta_known: bool | None = None
+    quick_create_prompt: str | None = None
+    quick_create_priority: str | None = None
+    quick_create_due_date: str | None = None
+    quick_create_attachment_ids: tuple[str, ...] = ()
+    quick_create_source_context: JsonValue | None = None
+    plugin_hook_tools: tuple[TaskPluginHookTool, ...] = ()
+    usage: tuple[TaskUsageData, ...] = ()
     result: JsonValue | None = None
     error: str | None = None
     failure_reason: str | None = None
@@ -239,7 +328,12 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
         from multica_py._internal.wire_models import _task_run_from_wire, _TaskRunWire
 
         wire = msgspec.convert(data, type=_TaskRunWire, strict=True)
-        return _task_run_from_wire(wire, issue_id=None, include_agent_presence=False)
+        return _task_run_from_wire(
+            wire,
+            issue_id=None,
+            include_agent_presence=False,
+            include_wire_presence=False,
+        )
 
     @property
     def issue(self) -> LazyRef[Issue]:
@@ -357,6 +451,10 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     id: str
     title: str
     status: str
+    status_name: str | None = None
+    revision: int | None = None
+    last_activity_at: datetime.datetime | None = None
+    source_context: JsonValue | None = None
     description: str | None = None
     priority: str | None = None
     assignee: IssueAssignee | None = None
@@ -372,6 +470,8 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     creator_id: str | None = None
     creator_type: str | None = None
     match_source: str | None = None
+    _property_projection: object | None = msgspec.field(default=None, name="_property_projection")
+    _projection: Mapping[str, object] = msgspec.field(default_factory=dict, name="_projection")
     _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
 
     _comments: LazyCollection[Comment] | None = msgspec.field(default=None, name="_comments")
@@ -397,12 +497,138 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     _project: object | None = msgspec.field(default=None, name="_project")
     _assignee_ref: object | None = msgspec.field(default=None, name="_assignee_ref")
 
+    def __getattribute__(self, name: str) -> object:
+        # Partial list rows are still Issue values (the approved page type),
+        # while this private immutable projection retains omitted-vs-null state
+        # for fields outside the stable Issue declaration.
+        if name in {
+            "workspace_id",
+            "number",
+            "identifier",
+            "title",
+            "description",
+            "status",
+            "status_category",
+            "status_name",
+            "priority",
+            "assignee_type",
+            "assignee_id",
+            "creator_type",
+            "creator_id",
+            "parent_id",
+            "project_id",
+            "position",
+            "stage",
+            "start_date",
+            "due_date",
+            "created_at",
+            "updated_at",
+            "revision",
+            "last_activity_at",
+        }:
+            projection = cast("Mapping[str, object]", object.__getattribute__(self, "_projection"))
+            if name in projection:
+                return projection[name]
+            if projection:
+                return msgspec.UNSET
+        return super().__getattribute__(name)
+
+    def __getattr__(self, name: str) -> object:
+        projection = cast("Mapping[str, object]", object.__getattribute__(self, "_projection"))
+        if isinstance(projection, Mapping) and name in projection:
+            return projection[name]
+        raise AttributeError(name)
+
+    def _serialized_projection(self) -> Mapping[str, object] | None:
+        return self._projection or None
+
+    @classmethod
+    def _from_dict_projection(cls, data: dict[str, object]) -> Issue | None:
+        projection_input_names = {
+            "id",
+            "workspace_id",
+            "number",
+            "identifier",
+            "title",
+            "description",
+            "status",
+            "status_category",
+            "status_name",
+            "priority",
+            "assignee_type",
+            "assignee_id",
+            "creator_type",
+            "creator_id",
+            "parent_id",
+            "parent_issue_id",
+            "project_id",
+            "position",
+            "stage",
+            "start_date",
+            "due_date",
+            "created_at",
+            "updated_at",
+            "revision",
+            "last_activity_at",
+            "metadata",
+            "properties",
+            "labels",
+        }
+        if "id" not in data or not set(data).issubset(projection_input_names):
+            return None
+        from multica_py._internal.issue_wires import _issue_from_wire, _IssueWire
+
+        wire_data = dict(data)
+        if "parent_id" in wire_data and "parent_issue_id" not in wire_data:
+            wire_data["parent_issue_id"] = wire_data["parent_id"]
+        wire = msgspec.convert(wire_data, type=_IssueWire, strict=True)
+        return _issue_from_wire(wire, allow_partial=True, force_projection=True)
+
     @classmethod
     def _normalize_from_dict(cls, data: dict[str, object]) -> dict[str, object]:
         status = data.get("status")
         if isinstance(status, str):
             return {**data, "status": _coerce_issue_status(status)}
         return data
+
+    @classmethod
+    def _from_encoded_dict(cls, data: dict[str, object]) -> Issue:
+        from multica_py._internal.issue_wires import _issue_from_wire, _IssueWire
+
+        wire_data = dict(data)
+        status = wire_data.get("status")
+        if isinstance(status, IssueStatus):
+            wire_data["status"] = status.value
+        if "parent_id" in wire_data:
+            wire_data["parent_issue_id"] = wire_data.pop("parent_id")
+        if "pull_request_snapshot" in wire_data:
+            wire_data["pull_requests"] = wire_data.pop("pull_request_snapshot")
+        if "child_stages" in wire_data:
+            wire_data["children"] = wire_data.pop("child_stages")
+        if "label_names" in wire_data:
+            label_names = cast("tuple[str, ...] | list[str]", wire_data.pop("label_names"))
+            wire_data["labels"] = tuple(
+                {"id": f"label-{index}", "name": name} for index, name in enumerate(label_names)
+            )
+        if "metadata_snapshot" in wire_data:
+            metadata_snapshot = cast(
+                "tuple[IssueMetadataItem, ...] | list[IssueMetadataItem | Mapping[str, object]]",
+                wire_data.pop("metadata_snapshot"),
+            )
+            wire_data["metadata"] = {
+                item.key: item.value
+                for item in (
+                    item
+                    if isinstance(item, IssueMetadataItem)
+                    else msgspec.convert(item, type=IssueMetadataItem, strict=True)
+                    for item in metadata_snapshot
+                )
+            }
+        for field_name in ("status_name", "revision"):
+            if wire_data.get(field_name) is None:
+                wire_data.pop(field_name, None)
+        wire = msgspec.convert(wire_data, type=_IssueWire, strict=True)
+        return _issue_from_wire(wire, include_wire_presence=False)
 
     def permalink(self) -> str:
         client = cast("MulticaClient | None", self._client)
@@ -656,11 +882,18 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             def loader() -> Mapping[str, PropertyValue]:
                 return {row.name: row for row in properties_resource.list(issue_id)}
 
+            initial = _property_relation_initial(self._property_projection)
+            command_loader = (
+                None
+                if initial is not None
+                else lambda: client.issues._properties_relation_command(issue_id)
+            )
             self._set_runtime(
                 "_properties",
                 LazyMapping[str, PropertyValue](
                     loader,
-                    command_loader=lambda: client.issues._properties_relation_command(issue_id),
+                    command_loader=command_loader,
+                    initial=initial,
                 ),
             )
         return self._properties  # type: ignore[return-value]

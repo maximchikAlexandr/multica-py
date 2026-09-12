@@ -9,7 +9,7 @@ from multica_py._internal.commands import Command
 from multica_py.config import OperationOptions
 from multica_py.entities._base import _BoundEntity
 from multica_py.entities.issues import Issue
-from multica_py.models.agents import AgentSkill, AgentTask
+from multica_py.models.agents import AgentConversationStarter, AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
 from multica_py.models.workspaces import McpServer
@@ -27,6 +27,8 @@ class Agent(_BoundEntity):  # type: ignore[misc]
     description: str | None = None
     skill_refs: tuple[AgentSkill, ...] = msgspec.field(default_factory=tuple, name="skills")
     archived_at: datetime.datetime | None = None
+    conversation_starters: tuple[AgentConversationStarter, ...] = ()
+    runtime_availability: str | None = None
 
     _skills: LazyCollection[AgentSkill] | None = msgspec.field(default=None, name="_skills")
     _tasks: LazyCollection[AgentTask] | None = msgspec.field(default=None, name="_tasks")

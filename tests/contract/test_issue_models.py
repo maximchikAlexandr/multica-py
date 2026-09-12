@@ -15,19 +15,28 @@ import multica_py
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
+    _CommentWire,
     _issue_from_wire,
     _issue_list_page_from_wire,
     _IssueListPageWire,
     _IssueWire,
     _task_run_from_wire,
     _TaskRunWire,
+    comment_from_wire,
 )
 from multica_py.config import ClientConfig
 from multica_py.entities._base import _entity_policy
+from multica_py.entities.agents import Agent
 from multica_py.entities.issues import Issue, TaskRun
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import OutputShapeError
-from multica_py.models.issue_activity import IssueUsage
+from multica_py.models.issue_activity import (
+    IssueUsage,
+    TaskIssueStatusData,
+    TaskPluginHookTool,
+    TaskProjectResourceData,
+    TaskUsageData,
+)
 from multica_py.models.issues import (
     IssueAssignee,
     IssueListFilter,
@@ -157,7 +166,63 @@ USAGE_DECODE_CASES = (
 TASK_RUN_DECODE_CASES = (
     DecodeCase(
         "current",
-        _ACTIVITY_FIXTURE["task_run"],
+        {
+            **_ACTIVITY_FIXTURE["task_run"],
+            "workspace_slug": "acme",
+            "issue_identifier": "ACME-1",
+            "workspace_context": "repo context",
+            "issue_statuses": [
+                {"key": "todo", "name": "Todo", "category": "open", "description": ""}
+            ],
+            "issue_statuses_omitted": 0,
+            "project_id": "project-1",
+            "project_title": "Project",
+            "project_description": "Description",
+            "project_resources": [
+                {
+                    "id": "resource-1",
+                    "resource_type": "github_repo",
+                    "resource_ref": {"owner": "acme", "repo": "sdk"},
+                    "label": "SDK",
+                }
+            ],
+            "trigger_comment_id": "comment-1",
+            "coalesced_comment_ids": [],
+            "delivered_comment_ids": ["comment-1"],
+            "trigger_thread_id": "thread-1",
+            "trigger_comment_content": "Please review",
+            "trigger_summary": "Review request",
+            "trigger_author_type": "member",
+            "trigger_author_name": "Alice",
+            "new_comment_count": 0,
+            "new_comments_since": "2026-08-21T08:59:00Z",
+            "new_comments_delta_known": True,
+            "quick_create_prompt": None,
+            "quick_create_priority": "high",
+            "quick_create_due_date": "2026-08-22",
+            "quick_create_attachment_ids": [],
+            "quick_create_source_context": {"source": "modal"},
+            "plugin_hook_tools": [
+                {
+                    "installation_id": "install-1",
+                    "hook_key": "review",
+                    "name": "Review",
+                    "description": "Review changes",
+                    "input_schema": {"required": ["path"]},
+                }
+            ],
+            "usage": [
+                {
+                    "provider": "openai",
+                    "model": "gpt-5",
+                    "input_tokens": 1,
+                    "output_tokens": 2,
+                    "cache_read_tokens": 0,
+                    "cache_write_tokens": 0,
+                    "cost_usd_ticks": 0,
+                }
+            ],
+        },
         {
             "id": "task-1",
             "status": "completed",
@@ -173,6 +238,60 @@ TASK_RUN_DECODE_CASES = (
             "durable_work_dir": "/tmp/project",
             "relative_durable_work_dir": "project",
             "branch_name": "fix/issue-81",
+            "workspace_slug": "acme",
+            "issue_identifier": "ACME-1",
+            "workspace_context": "repo context",
+            "issue_statuses": (
+                TaskIssueStatusData(key="todo", name="Todo", category="open", description=""),
+            ),
+            "issue_statuses_omitted": 0,
+            "project_id": "project-1",
+            "project_title": "Project",
+            "project_description": "Description",
+            "project_resources": (
+                TaskProjectResourceData(
+                    id="resource-1",
+                    resource_type="github_repo",
+                    resource_ref=MappingProxyType({"owner": "acme", "repo": "sdk"}),
+                    label="SDK",
+                ),
+            ),
+            "trigger_comment_id": "comment-1",
+            "coalesced_comment_ids": (),
+            "delivered_comment_ids": ("comment-1",),
+            "trigger_thread_id": "thread-1",
+            "trigger_comment_content": "Please review",
+            "trigger_summary": "Review request",
+            "trigger_author_type": "member",
+            "trigger_author_name": "Alice",
+            "new_comment_count": 0,
+            "new_comments_since": datetime.datetime(2026, 8, 21, 8, 59, tzinfo=datetime.UTC),
+            "new_comments_delta_known": True,
+            "quick_create_prompt": None,
+            "quick_create_priority": "high",
+            "quick_create_due_date": "2026-08-22",
+            "quick_create_attachment_ids": (),
+            "quick_create_source_context": MappingProxyType({"source": "modal"}),
+            "plugin_hook_tools": (
+                TaskPluginHookTool(
+                    installation_id="install-1",
+                    hook_key="review",
+                    name="Review",
+                    description="Review changes",
+                    input_schema=MappingProxyType({"required": ("path",)}),
+                ),
+            ),
+            "usage": (
+                TaskUsageData(
+                    provider="openai",
+                    model="gpt-5",
+                    input_tokens=1,
+                    output_tokens=2,
+                    cache_read_tokens=0,
+                    cache_write_tokens=0,
+                    cost_usd_ticks=0,
+                ),
+            ),
             "result": MappingProxyType({"summary": "done", "files": ("src/example.py",)}),
             "error": None,
             "failure_reason": "",
@@ -199,11 +318,38 @@ TASK_RUN_DECODE_CASES = (
             "result": None,
             "error": None,
             "failure_reason": None,
+            "workspace_slug": None,
+            "issue_identifier": None,
+            "workspace_context": None,
+            "issue_statuses": (),
+            "issue_statuses_omitted": None,
+            "project_id": None,
+            "project_title": None,
+            "project_description": None,
+            "project_resources": (),
+            "trigger_comment_id": None,
+            "coalesced_comment_ids": (),
+            "delivered_comment_ids": (),
+            "trigger_thread_id": None,
+            "trigger_comment_content": None,
+            "trigger_summary": None,
+            "trigger_author_type": None,
+            "trigger_author_name": None,
+            "new_comment_count": None,
+            "new_comments_since": None,
+            "new_comments_delta_known": None,
+            "quick_create_prompt": None,
+            "quick_create_priority": None,
+            "quick_create_due_date": None,
+            "quick_create_attachment_ids": (),
+            "quick_create_source_context": None,
+            "plugin_hook_tools": (),
+            "usage": (),
         },
     ),
     DecodeCase(
         "explicit-null",
-        _ACTIVITY_FIXTURE["null_task_run"],
+        {**_ACTIVITY_FIXTURE["null_task_run"], "new_comments_delta_known": False},
         {
             "id": "task-null",
             "status": "failed",
@@ -222,6 +368,133 @@ TASK_RUN_DECODE_CASES = (
             "result": None,
             "error": None,
             "failure_reason": None,
+            "workspace_slug": None,
+            "issue_identifier": None,
+            "workspace_context": None,
+            "issue_statuses": (),
+            "issue_statuses_omitted": None,
+            "project_id": None,
+            "project_title": None,
+            "project_description": None,
+            "project_resources": (),
+            "trigger_comment_id": None,
+            "coalesced_comment_ids": (),
+            "delivered_comment_ids": (),
+            "trigger_thread_id": None,
+            "trigger_comment_content": None,
+            "trigger_summary": None,
+            "trigger_author_type": None,
+            "trigger_author_name": None,
+            "new_comment_count": None,
+            "new_comments_since": None,
+            "new_comments_delta_known": False,
+            "quick_create_prompt": None,
+            "quick_create_priority": None,
+            "quick_create_due_date": None,
+            "quick_create_attachment_ids": (),
+            "quick_create_source_context": None,
+            "plugin_hook_tools": (),
+            "usage": (),
+        },
+    ),
+)
+
+
+ISSUE_TARGET_DECODE_CASES = (
+    DecodeCase(
+        "current",
+        {
+            "id": "issue-1",
+            "title": "Issue",
+            "status": "in_progress",
+            "status_name": "Working",
+            "revision": 0,
+            "last_activity_at": "2026-09-11T12:34:56.123456Z",
+            "source_context": {"nested": [{"key": "value"}]},
+        },
+        {
+            "status_name": "Working",
+            "revision": 0,
+            "last_activity_at": datetime.datetime(
+                2026, 9, 11, 12, 34, 56, 123456, tzinfo=datetime.UTC
+            ),
+        },
+    ),
+    DecodeCase(
+        "legacy-omitted",
+        {"id": "issue-1", "title": "Issue", "status": "todo"},
+        {
+            "status_name": None,
+            "revision": None,
+            "last_activity_at": None,
+            "source_context": None,
+        },
+    ),
+)
+
+
+COMMENT_REVISION_DECODE_CASES = (
+    DecodeCase(
+        "missing",
+        {"id": "comment-1", "content": "body"},
+        {"revision": None, "issue_revision": None},
+    ),
+    DecodeCase(
+        "zero",
+        {"id": "comment-1", "content": "body", "revision": 0, "issue_revision": 0},
+        {"revision": 0, "issue_revision": 0},
+    ),
+    DecodeCase(
+        "values",
+        {"id": "comment-1", "content": "body", "revision": 17, "issue_revision": 42},
+        {"revision": 17, "issue_revision": 42},
+    ),
+)
+
+
+@dataclass(frozen=True)
+class MalformedModelDecodeCase:
+    id: str
+    model_type: object
+    payload: dict[str, object]
+
+
+MALFORMED_MODEL_DECODE_CASES = (
+    MalformedModelDecodeCase(
+        "issue-status-name-null",
+        _IssueWire,
+        {"id": "issue-1", "title": "Issue", "status": "todo", "status_name": None},
+    ),
+    MalformedModelDecodeCase(
+        "issue-revision-null",
+        _IssueWire,
+        {"id": "issue-1", "title": "Issue", "status": "todo", "revision": None},
+    ),
+    MalformedModelDecodeCase(
+        "comment-revision-null",
+        _CommentWire,
+        {"id": "comment-1", "content": "body", "revision": None},
+    ),
+    MalformedModelDecodeCase(
+        "agent-starters-null",
+        Agent,
+        {"id": "agent-1", "name": "Agent", "conversation_starters": None},
+    ),
+    MalformedModelDecodeCase(
+        "usage-provider-missing",
+        _TaskRunWire,
+        {
+            "id": "task-1",
+            "status": "completed",
+            "usage": [
+                {
+                    "model": "gpt-5",
+                    "input_tokens": 1,
+                    "output_tokens": 1,
+                    "cache_read_tokens": 0,
+                    "cache_write_tokens": 0,
+                }
+            ],
         },
     ),
 )
@@ -263,11 +536,44 @@ def test_task_run_decode_matrix(case: DecodeCase) -> None:
         "legacy-omitted": "missing",
         "explicit-null": "null",
     }[case.id]
-    assert run._wire_presence == (("agent_id", expected_presence),)
+    assert ("agent_id", expected_presence) in run._wire_presence
+    expected_delta_presence = {
+        "current": "value",
+        "legacy-omitted": "missing",
+        "explicit-null": "value",
+    }[case.id]
+    assert ("new_comments_delta_known", expected_delta_presence) in run._wire_presence
     for field, expected in case.expected.items():
         assert getattr(run, field) == expected
     if case.id == "current":
         assert isinstance(run.result, MappingProxyType)
+        assert not hasattr(wire, "plugin_execution_manifest")
+        assert not hasattr(wire, "active_sibling_runs")
+
+
+@pytest.mark.parametrize("case", ISSUE_TARGET_DECODE_CASES, ids=lambda case: case.id)
+def test_issue_target_projection_decode_matrix(case: DecodeCase) -> None:
+    issue = _issue_from_wire(decode_json(json.dumps(case.payload).encode(), _IssueWire))
+    for field, expected in case.expected.items():
+        assert getattr(issue, field) == expected
+    if case.id == "current":
+        assert isinstance(issue.source_context, MappingProxyType)
+        assert issue.source_context["nested"][0]["key"] == "value"
+        with pytest.raises(TypeError):
+            issue.source_context["new"] = True  # type: ignore[index]
+
+
+@pytest.mark.parametrize("case", COMMENT_REVISION_DECODE_CASES, ids=lambda case: case.id)
+def test_comment_revision_decode_matrix(case: DecodeCase) -> None:
+    comment = comment_from_wire(decode_json(json.dumps(case.payload).encode(), _CommentWire))
+    for field, expected in case.expected.items():
+        assert getattr(comment, field) == expected
+
+
+@pytest.mark.parametrize("case", MALFORMED_MODEL_DECODE_CASES, ids=lambda case: case.id)
+def test_malformed_target_model_shapes_are_rejected(case: MalformedModelDecodeCase) -> None:
+    with pytest.raises(OutputShapeError):
+        decode_json(json.dumps(case.payload).encode(), case.model_type)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(

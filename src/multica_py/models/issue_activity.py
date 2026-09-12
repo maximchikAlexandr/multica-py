@@ -18,6 +18,10 @@ __all__ = [
     "Page",
     "RunMessage",
     "Subscriber",
+    "TaskIssueStatusData",
+    "TaskPluginHookTool",
+    "TaskProjectResourceData",
+    "TaskUsageData",
 ]
 
 
@@ -53,6 +57,38 @@ class RunMessage(msgspec.Struct, frozen=True, kw_only=True):
     input: Mapping[str, JsonValue] | None = None
     output: str | None = None
     created_at: datetime.datetime | None = None
+
+
+class TaskIssueStatusData(msgspec.Struct, frozen=True, kw_only=True):
+    key: str
+    name: str
+    category: str
+    description: str = ""
+
+
+class TaskPluginHookTool(msgspec.Struct, frozen=True, kw_only=True):
+    installation_id: str
+    hook_key: str
+    name: str
+    description: str
+    input_schema: JsonValue | None = None
+
+
+class TaskProjectResourceData(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    resource_type: str
+    resource_ref: JsonValue
+    label: str = ""
+
+
+class TaskUsageData(msgspec.Struct, frozen=True, kw_only=True):
+    provider: str
+    model: str
+    input_tokens: int
+    output_tokens: int
+    cache_read_tokens: int
+    cache_write_tokens: int
+    cost_usd_ticks: int | None = None
 
 
 class IssueUsage(msgspec.Struct, frozen=True, kw_only=True):

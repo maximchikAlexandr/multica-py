@@ -22,6 +22,8 @@ class Comment(_BoundEntity):  # type: ignore[misc]
     author_id: str | None = None
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
+    revision: int | None = None
+    issue_revision: int | None = None
 
 
 class CommentThread(_BoundEntity):  # type: ignore[misc]
