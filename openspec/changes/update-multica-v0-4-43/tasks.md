@@ -13,10 +13,10 @@
 
 ## 3. Presence-aware task and usage responses
 
-- [ ] 3.1 Add immutable open-string `TaskCancellationActor`, optional `TaskRun.cancelled_by`, and private omission/object wire adaptation shared by `agents.tasks` and `issues.runs`; reject null and malformed actor shapes
-- [ ] 3.2 Add `RunMessage.output_truncated` through an unset-aware private wire and public tri-state model, preserve received timestamps, and prove semantic events retain the value through complete `raw_message` and duplicate comparison
-- [ ] 3.3 Add optional nonnegative exact-integer terminal/metered/unreported counts to `IssueUsage` while retaining independent legacy `task_count`, token, cost, and uncosted fields
-- [ ] 3.4 Extend existing frozen decoder, relation, streaming, contract, component, and type tables for legacy/current/malformed actor, truncation, timestamp, exact-integer, immutable-input, and divergent-count cases without changing the 37-relation topology or call counts
+- [x] 3.1 Add immutable open-string `TaskCancellationActor`, optional `TaskRun.cancelled_by`, and private omission/object wire adaptation shared by `agents.tasks` and `issues.runs`; reject null and malformed actor shapes
+- [x] 3.2 Add `RunMessage.output_truncated` through an unset-aware private wire and public tri-state model, preserve received timestamps, and prove semantic events retain the value through complete `raw_message` and duplicate comparison
+- [x] 3.3 Add optional nonnegative exact-integer terminal/metered/unreported counts to `IssueUsage` while retaining independent legacy `task_count`, token, cost, and uncosted fields
+- [x] 3.4 Extend existing frozen decoder, relation, streaming, contract, component, and type tables for legacy/current/malformed actor, truncation, timestamp, exact-integer, immutable-input, and divergent-count cases without changing the 37-relation topology or call counts
 
 ## 4. Retained semantic compatibility
 

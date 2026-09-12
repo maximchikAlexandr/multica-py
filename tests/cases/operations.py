@@ -487,7 +487,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         IssueUsage,
         MetadataEntry,
         MetadataPredicate,
-        RunMessage,
     )
     from multica_py.models.issues import (
         FileDescription,
@@ -598,7 +597,15 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
     _SK_FILE = msgspec.json.encode(SkillFile(id="f_1", path="SKILL.md"))
     _PR_LINK = msgspec.json.encode([LinkedPullRequest(url="https://example.com/pr/1")])
     _TASK_RUN = msgspec.json.encode([TaskRun(id="run_1", status="done")])
+    _TASK_RUN_ROWS = msgspec.json.decode(_TASK_RUN)
+    for row in _TASK_RUN_ROWS:
+        row.pop("cancelled_by", None)
+    _TASK_RUN = msgspec.json.encode(_TASK_RUN_ROWS)
     _USAGE = msgspec.json.encode(IssueUsage(total_runs=3))
+    _USAGE_FIELDS = msgspec.json.decode(_USAGE)
+    for field in ("terminal_task_count", "metered_task_count", "unreported_task_count"):
+        _USAGE_FIELDS.pop(field, None)
+    _USAGE = msgspec.json.encode(_USAGE_FIELDS)
     _DS_STOP = msgspec.json.encode(DaemonStatus(running=False))
     _DS = msgspec.json.encode(DaemonStatus(running=True, pid=12345, uptime=3600.0))
     _DS_RESTART = msgspec.json.encode(DaemonStatus(running=True, pid=12345))
@@ -3033,13 +3040,17 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             kwargs=(("issue_id", "iss_001"),),
             stdout=msgspec.json.encode(
                 [
-                    RunMessage(
-                        task_id="run_001",
-                        seq=1,
-                        type="text",
-                        issue_id="iss_001",
-                        content="hello",
-                    )
+                    {
+                        "task_id": "run_001",
+                        "seq": 1,
+                        "type": "text",
+                        "issue_id": "iss_001",
+                        "tool": None,
+                        "content": "hello",
+                        "input": None,
+                        "output": None,
+                        "created_at": None,
+                    }
                 ]
             ),
             id="manual:issues.run_messages:canonical",

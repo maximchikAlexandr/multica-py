@@ -4,6 +4,8 @@ import datetime
 
 import msgspec
 
+from multica_py.models.issue_activity import TaskCancellationActor
+
 
 class AgentSkill(msgspec.Struct, frozen=True, kw_only=True):
     id: str
@@ -17,6 +19,7 @@ class AgentTask(msgspec.Struct, frozen=True, kw_only=True):
     issue_id: str
     started_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
+    cancelled_by: TaskCancellationActor | None = None
 
 
 class AgentConversationStarter(msgspec.Struct, frozen=True, kw_only=True):

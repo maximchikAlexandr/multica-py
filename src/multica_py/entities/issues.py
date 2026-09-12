@@ -34,6 +34,7 @@ from multica_py.models.issue_activity import (
     MetadataEntry,
     RunMessage,
     Subscriber,
+    TaskCancellationActor,
     TaskIssueStatusData,
     TaskPluginHookTool,
     TaskProjectResourceData,
@@ -267,6 +268,7 @@ def _stream_task_run_events(
 class TaskRun(_BoundEntity):  # type: ignore[misc]
     id: str
     status: str
+    cancelled_by: TaskCancellationActor | None = None
     workspace_slug: str | None = None
     issue_identifier: str | None = None
     workspace_context: str | None = None
@@ -322,6 +324,13 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
         result = cast("object", object.__getattribute__(self, "result"))
         if result is not None and "result" not in _runtime_state(self):
             self._set_runtime("result", _coerce_json_value(result, field_name="result"))
+
+    def _normalize_to_dict(self, data: dict[str, object]) -> dict[str, object]:
+        # ``cancelled_by`` is absence-aware on the wire: a manually-created
+        # entity with no actor must serialize as the legacy omitted shape.
+        if self.cancelled_by is None:
+            data.pop("cancelled_by", None)
+        return data
 
     @classmethod
     def _from_encoded_dict(cls, data: dict[str, object]) -> TaskRun:

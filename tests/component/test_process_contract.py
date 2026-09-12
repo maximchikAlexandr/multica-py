@@ -272,6 +272,40 @@ def test_resource_command_keeps_domain_result_type(
     assert not isinstance(result, ProcessResult)
 
 
+def test_issue_run_messages_component_decodes_truncation(
+    client_factory: Callable[..., MulticaClient], tmp_path: pathlib.Path
+) -> None:
+    responses_dir = tmp_path / "responses"
+    responses_dir.mkdir()
+    response = FakeMultica(responses_dir=responses_dir).build_response(
+        stdout=(
+            '[{"task_id":"run1","seq":1,"type":"tool_result",'
+            '"output":"partial","output_truncated":true}]'
+        ),
+        argv=(
+            "fake_multica",
+            "issue",
+            "run-messages",
+            "run1",
+            "--issue",
+            "i1",
+            "--since",
+            "0",
+            "--output",
+            "json",
+        ),
+    )
+    (responses_dir / "issue.json").write_text(
+        json.dumps(response.to_dict()),
+        encoding="utf-8",
+    )
+    client = client_factory(environment=(("MULTICA_FAKE_RESPONSES", str(responses_dir)),))
+
+    page = client.issues.run_messages("run1", issue_id="i1")
+
+    assert page.items[0].output_truncated is True
+
+
 @pytest.mark.timeout(20)
 @pytest.mark.parametrize(
     "contract_id",

@@ -373,6 +373,7 @@ _ENTITY_POLICY_CASES: tuple[EntityPolicyCase, ...] = (
         (
             "id",
             "status",
+            "cancelled_by",
             "workspace_slug",
             "issue_identifier",
             "workspace_context",
@@ -534,7 +535,10 @@ def test_every_bound_entity_round_trips_all_public_fields(entity: _BoundEntity) 
 
     assert restored == entity.detach()
     snapshot = restored.to_dict()
-    assert tuple(snapshot) == _entity_policy(type(entity)).public_fields
+    expected_fields = _entity_policy(type(entity)).public_fields
+    if type(entity) is TaskRun and entity.cancelled_by is None:
+        expected_fields = tuple(field for field in expected_fields if field != "cancelled_by")
+    assert tuple(snapshot) == expected_fields
     assert all(not field.startswith("_") for field in snapshot)
 
 

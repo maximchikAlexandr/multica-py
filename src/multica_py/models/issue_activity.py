@@ -18,6 +18,7 @@ __all__ = [
     "Page",
     "RunMessage",
     "Subscriber",
+    "TaskCancellationActor",
     "TaskIssueStatusData",
     "TaskPluginHookTool",
     "TaskProjectResourceData",
@@ -47,6 +48,12 @@ class MetadataPredicate(msgspec.Struct, frozen=True, kw_only=True):
     value_type: MetadataValueType | None = None
 
 
+class TaskCancellationActor(msgspec.Struct, frozen=True, kw_only=True):
+    type: str
+    id: str | None = None
+    name: str | None = None
+
+
 class RunMessage(msgspec.Struct, frozen=True, kw_only=True):
     task_id: str
     seq: int
@@ -57,6 +64,7 @@ class RunMessage(msgspec.Struct, frozen=True, kw_only=True):
     input: Mapping[str, JsonValue] | None = None
     output: str | None = None
     created_at: datetime.datetime | None = None
+    output_truncated: bool | None = None
 
 
 class TaskIssueStatusData(msgspec.Struct, frozen=True, kw_only=True):
@@ -107,3 +115,6 @@ class IssueUsage(msgspec.Struct, frozen=True, kw_only=True):
     uncosted_output_tokens: int | None = None
     uncosted_cache_read_tokens: int | None = None
     uncosted_cache_write_tokens: int | None = None
+    terminal_task_count: int | None = None
+    metered_task_count: int | None = None
+    unreported_task_count: int | None = None

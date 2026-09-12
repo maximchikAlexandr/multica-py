@@ -21,6 +21,7 @@ from multica_py.models.issue_activity import RunMessage
 from multica_py.models.relations import LazyCollection
 from multica_py.models.run_events import (
     RunErrorEvent,
+    RunEvent,
     RunStatusChangedEvent,
     RunTextEvent,
     RunToolFinishedEvent,
@@ -99,6 +100,7 @@ class StreamCase:
     expected_tool: str | None = None
     expected_tool_input: MappingProxyType[str, str] | None = None
     expected_tool_output: str | None = None
+    expected_raw_output_truncated: bool | None = None
 
 
 _STREAM_CASES: tuple[StreamCase, ...] = (
@@ -291,6 +293,25 @@ _STREAM_CASES: tuple[StreamCase, ...] = (
         expected_unknown_types=("tool-use",),
     ),
     StreamCase(
+        id="streamed-truncation-retains-raw-message",
+        run_messages=(
+            _messages(
+                make_run_message(
+                    seq=1,
+                    type="tool_result",
+                    output="partial",
+                    content=None,
+                    output_truncated=True,
+                )
+            ),
+            _empty(),
+            _empty(),
+        ),
+        status_runs=(_StatusRun("running"), _StatusRun("completed")),
+        terminal_status="completed",
+        expected_raw_output_truncated=True,
+    ),
+    StreamCase(
         id="tool-lifecycle-preserves-structured-data",
         run_messages=(
             _messages(
@@ -357,6 +378,13 @@ def test_stream_poll_and_drain_variants(case: StreamCase, sleep_calls: list[floa
         assert started.input == case.expected_tool_input
         assert finished.tool == case.expected_tool
         assert finished.output == case.expected_tool_output
+    if case.expected_raw_output_truncated is not None:
+        raw_messages = [
+            event.raw_message
+            for event in events
+            if isinstance(event, RunEvent) and event.raw_message is not None
+        ]
+        assert raw_messages[0].output_truncated is case.expected_raw_output_truncated
 
 
 def test_stream_conflicting_repeated_sequence_raises(sleep_calls: list[float]) -> None:
@@ -364,6 +392,17 @@ def test_stream_conflicting_repeated_sequence_raises(sleep_calls: list[float]) -
     client.issues.run_messages.side_effect = [
         _messages(make_run_message(seq=1, content="hello")),
         _messages(make_run_message(seq=1, content="different")),
+    ]
+    client.issues.runs.return_value = _runs(client, _run(client, status="running"))
+    with pytest.raises(OutputShapeError):
+        _collect(_run(client))
+
+
+def test_stream_conflicting_truncation_state_raises(sleep_calls: list[float]) -> None:
+    client = MagicMock()
+    client.issues.run_messages.side_effect = [
+        _messages(make_run_message(seq=1, content="same", output_truncated=False)),
+        _messages(make_run_message(seq=1, content="same", output_truncated=True)),
     ]
     client.issues.runs.return_value = _runs(client, _run(client, status="running"))
     with pytest.raises(OutputShapeError):

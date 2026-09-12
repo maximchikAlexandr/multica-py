@@ -60,6 +60,34 @@ def _decode_with_private_agent_wire(
     return None
 
 
+def _decode_with_private_issue_activity_wire(
+    data: bytes, model_type: object, *, command: str = ""
+) -> object | None:
+    from multica_py._internal.agent_wires import _agent_task_from_wire, _AgentTaskWire
+    from multica_py._internal.wire_models import (
+        _issue_usage_from_wire,
+        _IssueUsageWire,
+        _run_message_from_wire,
+        _RunMessageWire,
+    )
+    from multica_py.models.agents import AgentTask
+    from multica_py.models.issue_activity import IssueUsage, RunMessage
+
+    if model_type is AgentTask:
+        return _agent_task_from_wire(decode_json(data, _AgentTaskWire, command=command))
+    if model_type == list[AgentTask]:
+        task_wires = decode_json(data, list[_AgentTaskWire], command=command)
+        return [_agent_task_from_wire(wire) for wire in task_wires]
+    if model_type is IssueUsage:
+        return _issue_usage_from_wire(decode_json(data, _IssueUsageWire, command=command))
+    if model_type is RunMessage:
+        return _run_message_from_wire(decode_json(data, _RunMessageWire, command=command))
+    if model_type == list[RunMessage]:
+        message_wires = decode_json(data, list[_RunMessageWire], command=command)
+        return [_run_message_from_wire(wire) for wire in message_wires]
+    return None
+
+
 def decode_json(data: bytes | str, model_type: type[T], *, command: str = "") -> T:
     if isinstance(data, str):
         data = data.encode("utf-8")
@@ -67,6 +95,10 @@ def decode_json(data: bytes | str, model_type: type[T], *, command: str = "") ->
         private_decoded = _decode_with_private_autopilot_wire(data, model_type, command=command)
         if private_decoded is None:
             private_decoded = _decode_with_private_agent_wire(data, model_type, command=command)
+        if private_decoded is None:
+            private_decoded = _decode_with_private_issue_activity_wire(
+                data, model_type, command=command
+            )
         if private_decoded is None:
             decoded = msgspec.json.decode(data, type=model_type, strict=True)
         else:

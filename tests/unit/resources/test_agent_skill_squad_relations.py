@@ -40,6 +40,7 @@ from multica_py.enums import IssueStatus
 from multica_py.exceptions import DetachedEntityError
 from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
+from multica_py.models.issue_activity import TaskCancellationActor
 from multica_py.models.issues import (
     IssueListFilter,
     IssueListPage,
@@ -370,11 +371,21 @@ def test_agent_skills_detached_raises() -> None:
 
 
 def test_agent_tasks_loads_once() -> None:
-    tasks = (AgentTask(id="t1", status="todo", issue_id="i1", started_at=None, completed_at=None),)
+    tasks = (
+        AgentTask(
+            id="t1",
+            status="cancelled",
+            issue_id="i1",
+            started_at=None,
+            completed_at=None,
+            cancelled_by=TaskCancellationActor(type="system"),
+        ),
+    )
     client = _make_client(tasks=tasks)
     entity = _agent(client=client)
     items = entity.tasks.all()
     assert len(items) == 1
+    assert items[0].cancelled_by == TaskCancellationActor(type="system")
     client.agents.tasks.assert_called_once_with("ag_1")
 
 
