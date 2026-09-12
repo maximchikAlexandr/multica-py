@@ -305,50 +305,6 @@ After Phases 2 through 4, the implementer SHALL remeasure private entity-to-reso
 - **WHEN** material duplication remains and one complex relation can test the hypothesis
 - **THEN** implementation stops at a documented follow-up proposal rather than adding the pilot or a universal relation framework to this change
 
-### Requirement: v0.4.28 compatibility delta is verified end to end
-
-Offline verification SHALL cover the pinned `v0.4.28` baseline, full command-tree
-reconciliation, Plugin and Property resources, Workspace/Agent MCP operations,
-skill refresh, issue status/assignee decoding, secret redaction for MCP and
-plugin credentials, bound relations R34–R38, command preview, and documentation.
-Repeated operation and decoding cases SHALL extend the repository's existing
-frozen dataclass tables and shared fixtures. The full acceptance gate SHALL run
-Ruff check and format check, `mypy src`, `mypy tests`, contract validation and
-check, package validation, and `pytest -m "not live"` without requiring a
-backend or network.
-
-#### Scenario: Compatibility constants and provenance agree
-- **WHEN** contract, generated runtime, compatibility policy, docs, and provenance fixtures are checked
-- **THEN** tracked baseline values consistently identify `v0.4.28` and `[0.4.28, 0.4.29)`, with no stale `v0.4.20` expectation outside historical/archive material
-
-#### Scenario: Plugin and property operations have table-driven coverage
-- **WHEN** canonical and variant operation cases run
-- **THEN** they cover plugin list/status/validate/pack/init/install, property catalog CRUD/archive, issue property list/set/unset, exact command preview, and zero-I/O validation failures
-
-#### Scenario: MCP secret channels are negative-tested
-- **WHEN** workspace MCP add is constructed with a config file
-- **THEN** tests prove `--server-config` is absent, file/stdin exclusivity is enforced, and tokens never appear in preview or diagnostics
-
-#### Scenario: Skill refresh and agent MCP are covered
-- **WHEN** canonical operation cases run
-- **THEN** they include `skill refresh <id>` and `agent mcp list|add|enable|disable|remove` with exact argv
-
-#### Scenario: Canonical discovery includes new command methods
-- **WHEN** public method discovery is compared with canonical operation cases
-- **THEN** every eager CLI method still has exactly one canonical row, stored counts equal computed table partitions, and no allowlist is accepted
-
-#### Scenario: Complete offline gate is green
-- **WHEN** the change is ready for delivery
-- **THEN** contract `validate --source-checkout`, deterministic render/check, Ruff check, Ruff format check, `mypy src`, `mypy tests`, package validation, and `pytest -m "not live"` all pass
-
-#### Scenario: Audited binary mismatches have regressions
-- **WHEN** Plugin init, Workspace MCP remove, root login, configuration, issue prioritization, and workspace watch surfaces are verified
-- **THEN** exact argv/response tests agree with the pinned `v0.4.28` Cobra source and verified release binary rather than legacy fixture paths
-
-#### Scenario: GitHub final authority is green
-- **WHEN** the remediation commit is pushed to the feature branch
-- **THEN** every required GitHub check for the feature PR completes successfully at the pushed HEAD
-
 ### Requirement: Command preview focused coverage
 
 Offline verification MUST cover focused command-preview cases using
@@ -631,3 +587,63 @@ The gated live-smoke suite SHALL use only public SDK methods, the prepared profi
 #### Scenario: Live cleanup runs after failure
 - **WHEN** any assertion after trigger creation fails
 - **THEN** `finally` still calls the public SDK trigger-delete method for the recorded trigger ID before propagating the failure
+
+### Requirement: Multica 0.4.42 compatibility is verified end to end
+
+Offline verification SHALL cover exact release/source/binary provenance, the
+complete command and response inventories, removed Plugin and autopilot
+priority surfaces, Issue/Comment/Agent/TaskRun fields, skill projections,
+issue property queries, presence semantics, pagination, error mappings, docs,
+packaging, and compatibility bounds. Repeated cases SHALL extend existing
+frozen dataclass tables and shared fixtures. No offline gate SHALL require a
+backend or network.
+
+#### Scenario: Inventory and provenance gates are exact
+- **WHEN** strict validation and source-link audit run
+- **THEN** command totals are 199/189 with 166 unchanged, 21 changed, 2 added, and 12 removed; all 173 response work items are unique and pinned; and archive/binary hashes are not conflated
+
+#### Scenario: Model and projection coverage is adversarial
+- **WHEN** response fixtures exercise Issue, Comment, Agent, TaskRun, skills, and resolved properties
+- **THEN** name, type, nesting, timestamp, integer precision, missing, null, empty, zero, and false behavior match the approved contract
+
+#### Scenario: Removed surfaces have negative proof
+- **WHEN** public discovery, imports, generated operations, type-check fixtures, docs, and command cases run
+- **THEN** Plugin symbols and autopilot priority inputs are absent and no compatibility alias or fabricated replacement remains
+
+#### Scenario: Query and pagination cases are complete
+- **WHEN** issue-list cases exercise fields, properties, resolution, sort, limits, `__none__`, reserved operators, truncation, repeats, malformed pages, and unavailable totals
+- **THEN** valid cases preserve exact argv/results and invalid/no-progress cases fail deterministically without partial completion
+
+#### Scenario: Failure matrix is complete
+- **WHEN** success and validation, auth, not-found, conflict/revision, rate, transport, malformed-output, timeout, and local-process fixtures run
+- **THEN** every case has the approved payload/exit mapping and secret-safe diagnostic behavior
+
+#### Scenario: Full offline and packaging gate passes
+- **WHEN** the implementation is ready for delivery
+- **THEN** strict OpenSpec, contract validate against pinned source, deterministic transient render comparison, contract check, source-link audit, Ruff, format, mypy for source/tests/scripts, non-live pytest/coverage, build, and package validation all pass
+
+#### Scenario: Git tree contains no transient evidence
+- **WHEN** repository tracked files and status are audited
+- **THEN** no `.devlocal`, collector evidence, downloads, response-review, gap-audit, or transient render output is tracked
+
+### Requirement: Direct migration and release policy is explicit
+
+Documentation SHALL describe one direct SDK migration from CLI `0.4.28` to
+`0.4.42`; it SHALL not require delivery releases for intervening versions.
+The changelog/API/migration/compatibility documentation SHALL identify all
+breaking removals, projection choices, opt-in additions, exact bounds, and
+rollback. A gated live-negative suite SHALL use an authorized prepared
+`0.4.42` target only and SHALL not weaken offline acceptance when credentials
+are absent.
+
+#### Scenario: Migration describes consumer action
+- **WHEN** a consumer upgrades directly from the old baseline
+- **THEN** docs identify Plugin and autopilot priority removals, skill projection behavior, issue query additions, and the exact `0.4.42` compatibility requirement
+
+#### Scenario: Rollback is contract-atomic
+- **WHEN** implementation cannot satisfy target gates
+- **THEN** contract, generated runtime, public surface, tests, and docs are reverted together rather than publishing a mixed compatibility claim
+
+#### Scenario: Live checks remain gated
+- **WHEN** authorized `0.4.42` credentials and target are unavailable
+- **THEN** live status is reported separately and all offline/source-backed gates remain mandatory

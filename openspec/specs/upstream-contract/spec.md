@@ -178,70 +178,6 @@ After the pilot, expansion to another marker-only family SHALL occur only when a
 - **WHEN** a marker-only binding lies outside an explicitly recorded passing expansion decision
 - **THEN** its current handwritten resource implementation and generated descriptor remain unchanged
 
-### Requirement: Multica v0.4.28 is the reviewed compatibility baseline
-
-The approved SDK contract SHALL target tag `v0.4.28`, version `0.4.28`, release
-ID `371790559`, and commit
-`38c992ad0a757434fb51584fa34e3bc57d1b78e1`. Every retained or added source
-reference SHALL point to that exact commit and a reviewed path, symbol, and line
-range. Release evidence SHALL be collected from a verified `v0.4.28` CLI asset
-whose name, operating system, architecture, SHA-256, and `version --output
-json` bytes agree with release metadata. Evidence and transient projections
-SHALL remain outside version control and SHALL NOT directly promote public SDK
-behavior.
-
-#### Scenario: Baseline metadata is exact
-- **WHEN** `contracts/sdk-contract.json` and the generated runtime projection are inspected
-- **THEN** they identify `v0.4.28` at commit `38c992ad0a757434fb51584fa34e3bc57d1b78e1`, release ID `371790559`, and no retained `v0.4.20` target or source commit remains except in historical/archive material
-
-#### Scenario: Compatibility interval advances one patch
-- **WHEN** default compatibility policy is generated from the approved target
-- **THEN** its minimum is `0.4.28` and its exclusive maximum is `0.4.29`
-
-#### Scenario: Promotion uses the complete workflow
-- **WHEN** maintainers prepare the baseline upgrade
-- **THEN** they run `collect` with pinned source and verified binary evidence, `validate --source-checkout` against the approved contract, deterministic `render`, and `check` in that order before offline release verification
-
-#### Scenario: Unreleased main commands stay excluded
-- **WHEN** upstream `main` contains commands or behavior absent from tag `v0.4.28`
-- **THEN** those candidates do not enter the approved contract, generated runtime, public SDK, or canonical operation inventory through this change
-
-### Requirement: v0.4.28 command tree is reconciled before promotion
-
-The approved contract SHALL classify every tagged `v0.4.28` Cobra command as
-retained, newly approved, or explicitly deferred with rationale. Newly approved
-families SHALL include plugins, properties, issue properties, workspace MCP,
-agent MCP, and skill refresh unless source proves a command is hidden,
-interactive, or otherwise unsafe. Every exposed positional argument and flag
-SHALL record its CLI binding, actual landing destination or local-control role,
-presence policy, normalized constraint, response/adapter policy, exact source
-references, and positive/negative test references. Name similarity SHALL NOT
-prove mapping.
-
-#### Scenario: Plugin operations are source-governed
-- **WHEN** `plugins.list` and `plugins.install` are inspected
-- **THEN** list traces to `/api/workspaces/{id}/plugins/private` and install traces to the private install upload path, with human-local guards recorded from `requireHumanLocalCommand`
-
-#### Scenario: Property actor types are source-governed
-- **WHEN** `properties.create` and `issues.properties.set` are inspected
-- **THEN** `actor` / `multi_actor` types, option rejection, and `--value` encoding are traced through `cmd_property.go` rather than inferred from flag names
-
-#### Scenario: MCP config channels are source-governed
-- **WHEN** `workspaces.mcp.add` is inspected
-- **THEN** exactly-one config input among inline JSON, file, and stdin is recorded from `resolveMcpJSONObject`, and list decoding cites the write-only public fields
-
-#### Scenario: Deferred commands are explicit
-- **WHEN** a tagged command is not approved
-- **THEN** contract compatibility metadata names the command and the deferral rationale, and generated public SDK behavior does not include it
-
-#### Scenario: Retained command paths exist in the pinned tree
-- **WHEN** every approved operation command path is compared with the tagged Cobra tree
-- **THEN** the exact leaf exists or the operation is remapped/removed; canonical fixtures cannot approve `auth login`, `config get`, `issue deprioritize`, or `workspace watch|unwatch` when those leaves are absent
-
-#### Scenario: Destination mappings follow CLI preprocessing
-- **WHEN** a flag or stdin/file channel is transformed before the API call
-- **THEN** traceability records the transformed local-control or request-body destination, including file contents rather than falsely recording the path as the JSON value
-
 ### Requirement: Incremental run-message input is contract-approved
 The approved `v0.4.28` `issues.run_messages` operation SHALL add `since: int = 0` to its eager and command signatures, map the value to the Cobra `--since <sequence>` integer flag and, for a positive value, its `since` query parameter, and require an exact non-boolean integer in the inclusive DB/server-safe range `0..2_147_483_647`. The canonical vector SHALL include `--since 0`; positive and negative vectors SHALL prove boundary mapping and pre-I/O rejection. Source references SHALL pin the tagged Cobra flag and `runIssueRunMessages` query construction, the user-authenticated handler's `strconv.Atoi` and subsequent `int32(sinceSeq)` query argument, and the server strict-greater-than sequence query. The SDK SHALL enforce the `int32` upper bound even on a 64-bit CLI host so the handler cast cannot wrap to an incorrect SQL cursor. Rendering zero is the deterministic SDK argv form; the tagged CLI omits the query parameter when zero and therefore requests full history.
 
@@ -324,14 +260,86 @@ The approved contract SHALL remain the only input that generates trigger runtime
 - **WHEN** a generated trigger binding differs from a deterministic render of the approved contract
 - **THEN** `scripts/upstream_contract.py check` fails without modifying tracked files
 
-### Requirement: CLI 0.4.38 version evidence is exact
+### Requirement: Multica 0.4.42 is the exact reviewed authority
 
-The approved compatibility block SHALL record maximum-tested CLI `0.4.38`. Following its existing verified-binary schema, the record SHALL store resolved full release-source `commit=47dc75741cd03127d32f1b78d04c644ccf690e7f`, `build_date=2026-09-02T09:52:29Z`, `go_version=go1.26.7`, `os=darwin`, and `arch=arm64`. The record's named test reference SHALL use exact raw envelope values `version=0.4.38`, `commit=47dc75741`, `date=2026-09-02T09:52:29Z`, `go=go1.26.7`, `os=darwin`, and `arch=arm64`, SHALL assert that the raw short commit prefixes the stored full SHA, and SHALL govern the mappings `date -> CliVersion.build_date` and `go -> CliVersion.go_version` in addition to the same-name fields. Source provenance SHALL cite the `version --output json` command definition at the full SHA. Rendering SHALL produce `MIN_CLI_VERSION = "0.4.28"` and exclusive `MAX_CLI_VERSION = "0.4.39"`.
+The approved SDK contract SHALL target tag `v0.4.42`, version `0.4.42`, release
+ID `385445715`, and commit
+`76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`. The compatibility interval SHALL
+have minimum and maximum-tested version `0.4.42` and SHALL render the exclusive
+upper bound `0.4.43`. Every retained, changed, or removed operation SHALL cite
+exact source URLs pinned to either the approved old commit
+`38c992ad0a757434fb51584fa34e3bc57d1b78e1` or the target commit.
 
-#### Scenario: Exact binary envelope matches the approved record
-- **WHEN** the reviewed CLI `0.4.38` binary runs `version --output json`
-- **THEN** its six-key envelope contains the exact short commit and remaining values above, the provenance resolves that commit to the approved full source SHA, and decoding populates all six corresponding public `CliVersion` fields regardless of object-key order
+#### Scenario: Target and generated interval agree
+- **WHEN** the approved contract, generated runtime, and compatibility docs are inspected
+- **THEN** they identify `v0.4.42` at the exact target commit and generated bounds `[0.4.42, 0.4.43)`
 
-#### Scenario: Generated strict interval includes 0.4.38
-- **WHEN** default strict compatibility checks the decoded version `0.4.38`
-- **THEN** generated bounds `[0.4.28, 0.4.39)` accept it without a warning-policy or local-bound override
+#### Scenario: Moving source references fail
+- **WHEN** a changed or retained mapping cites a branch, tag URL, abbreviated object, or any commit other than its reviewed old/target SHA
+- **THEN** strict validation or the source-link audit fails before promotion
+
+### Requirement: Release archive and executable identities remain distinct
+
+The review SHALL record the `multica-cli-0.4.28-darwin-arm64.tar.gz` archive
+SHA-256 `e42c1c6df05201d2d0feff1a9d8032a9ea11c6644721fd465496826124007acf`
+and extracted executable SHA-256
+`26a722384d8ef39a30cb83fec4e76f3185768369536d1f13a546b03e6c7fbeb9` as
+separate baseline values. It SHALL likewise record the `0.4.42` archive SHA-256
+`a3bb48baeeb757361686978210e6195aaf50bc69edf83bf3b9c52ca3efc12e41`
+and executable SHA-256
+`22abcd910562e8800c0e9db561229731e19486ec94b4815d6b1a075dc92ef36c`
+as separate target values. Collector binary identity validation SHALL receive
+the executable digest, while release verification SHALL verify the archive
+against the official manifest and asset digest.
+
+#### Scenario: Archive digest is not passed as binary digest
+- **WHEN** a maintainer follows the compatibility collection example
+- **THEN** the archive is verified with its archive SHA-256 and collector `--sha256` receives the extracted executable SHA-256
+
+#### Scenario: Binary version envelope is exact
+- **WHEN** the target executable runs `version --output json`
+- **THEN** it reports version `0.4.42`, commit prefix `76f59f5f1`, date `2026-09-09T11:06:33Z`, Go `1.26.8`, and `darwin/arm64`, and the prefix resolves to the approved full SHA
+
+### Requirement: Complete 0.4.28 to 0.4.42 command and response reconciliation
+
+The approved review SHALL account for all `199` baseline and `189` target
+Cobra nodes as `166` unchanged, `21` changed, `2` added, and `12` removed.
+It SHALL classify `multica` as the root, `probe-runtimes` as hidden, and
+`repo-test`, `test`, and `x` as test-only/unattached. It SHALL also account for
+all `173` exact SDK response work items exactly once, with `51` changed and
+`122` unchanged, without duplicate IDs or missing target source URLs.
+
+#### Scenario: Inventory totals are exact
+- **WHEN** strict validation reconciles baseline and target inventories
+- **THEN** every command node and response entrypoint appears exactly once and the required totals match
+
+#### Scenario: Retained mappings are fully traced
+- **WHEN** a retained or changed command is approved
+- **THEN** every positional validator, local and inherited flag, default, alias, required flag, enum/range, `Flags().Changed` branch, destination, encoding, conflict, and secret channel is traced through `RunE` and helpers
+
+#### Scenario: Extractor output cannot approve behavior
+- **WHEN** evidence or a generated suggestion contains a new command, enum, mapping, or response field
+- **THEN** generated public behavior remains unchanged until the reviewed fact exists in `contracts/sdk-contract.json`
+
+### Requirement: Target command dispositions are explicit
+
+The approved contract SHALL remove all Plugin operations and autopilot priority
+inputs because the target CLI lacks them. It SHALL retain the default
+`issues.runs` history operation and safe redacted autopilot reads. It SHALL
+defer `issue timeline`, `autopilot trigger-list`, and compact
+`issues.runs --active/--siblings` until separate typed response contracts are
+approved. It SHALL approve opt-in `issue get --resolve-properties` and issue
+list `--fields`, repeatable `--property`, `--resolve-properties`, and property
+sort while preserving existing defaults.
+
+#### Scenario: Removed Plugin tree cannot remain approved
+- **WHEN** approved operation paths are compared with target root registration
+- **THEN** no `plugins.*` operation, binding, response adapter, or canonical vector remains
+
+#### Scenario: Deferred commands do not become public methods
+- **WHEN** target evidence contains timeline, trigger-list, active, or sibling command facts
+- **THEN** the review records the stated deferral and generation creates no public method or alternate response adapter for them
+
+#### Scenario: Issue query additions are opt-in
+- **WHEN** no new issue projection or property option is supplied
+- **THEN** approved argv and default response adapters remain compatible with the existing issue get/list behavior

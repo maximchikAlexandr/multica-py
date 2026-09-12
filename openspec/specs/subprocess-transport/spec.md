@@ -1,9 +1,7 @@
 ## Purpose
 
 Define the controlled subprocess boundary used for all Multica CLI operations.
-
 ## Requirements
-
 ### Requirement: CLI-only transport
 The SDK MUST invoke Multica through one shell-free controlled subprocess transport.
 #### Scenario: Resource calls use the controlled subprocess
@@ -35,6 +33,7 @@ The SDK MUST invoke Multica through one shell-free controlled subprocess transpo
 #### Scenario: Compatibility preflight runs in the target
 - **WHEN** a non-local executor is configured and compatibility checks are enabled
 - **THEN** the `multica version` preflight command executes in the configured target through the executor, not on the controller host
+
 ### Requirement: Managed process lifecycle
 The SDK MUST expose managed processes with bounded concurrency, timeout
 cancellation, escalation, and descendant cleanup. A root client and views
@@ -100,6 +99,7 @@ transport, services, and close behavior.
 #### Scenario: Derived configuration reaches the executor
 - **WHEN** a relation loads from an entity returned by a derived client view
 - **THEN** exact cwd, profile, workspace, environment overrides, stdin, and timeout from that view reach its executor as an `ExecutionRequest`
+
 ### Requirement: Decode and diagnostics
 The SDK MUST decode supported structured output, map reliable failures to typed errors, and redact secrets from diagnostics.
 Classified failures MUST preserve actionable upstream detail. A raw HTTP `409`,
@@ -185,6 +185,7 @@ diagnostic redaction.
 - **THEN** the secret value is redacted and only `***` (or the
   equivalent redacted form) appears in `commands`, `repr(command)`, and
   exception messages, while `run()` receives the real secret value
+
 ### Requirement: Effective operation configuration is snapshotted once
 Every public CLI-backed command method that accepts `OperationOptions` SHALL resolve the effective `ClientConfig` before constructing its private plan. One private config-level overlay function SHALL copy the base/scoped config, apply each present operation field, and preserve the normalization already performed by `OperationOptions`; both `MulticaClient.with_options` and `BaseResource._effective_config` SHALL use that function rather than enumerate overlay fields independently. The function SHALL preserve omitted `Unset`, explicit `None`, and an explicitly empty environment. Command construction SHALL create the transport snapshot from the effective config and store that effective config in `_CommandPlan.config_snapshot`. Preview and execution SHALL derive global argv, cwd, environment, timeout, compatibility, and redaction context from that one snapshot. Existing resources and clients SHALL not be mutated.
 
@@ -246,6 +247,7 @@ Unified attachment uploads from bytes or binary streams SHALL use the existing p
 #### Scenario: Path source uses the common staging path
 - **WHEN** an upload source is a controller-local path under any executor
 - **THEN** the SDK reads its bytes, stages them through `executor.stage`, and introduces no local/provider branch in the command plan
+
 ### Requirement: Raw commands preserve the controlled transport boundary
 The raw CLI escape hatch SHALL build one ordinary `run_bytes` step through `BaseResource._plan` and `CliTransport`; it SHALL reuse full-argv construction, compatibility checks, semaphore, timeout, cwd/environment, error classification, and redaction. It SHALL not use `subprocess` directly, invoke a shell, spawn a managed process, or bypass the SDK executable/global configuration.
 
@@ -283,3 +285,45 @@ The SDK SHALL use `ClientConfig.executable` directly when building command argv 
 #### Scenario: Missing target is not a missing executable
 - **WHEN** a non-local executor reports the sandbox, microVM, or host is missing or unreachable
 - **THEN** `ExecutionTargetNotFoundError` or `ExecutionConnectionError` is re-raised as-is and `ExecutableNotFoundError` is not raised for that failure
+
+### Requirement: Target CLI failures retain exact typed mappings
+
+Against the exact `0.4.42` source and binary, the transport SHALL preserve
+reviewed success, validation, authentication, not-found, conflict/revision,
+rate-limit, transport, and local-process failure mappings. Classification SHALL
+use stable exit codes, HTTP diagnostics, and reviewed localized prefixes only;
+it SHALL preserve the actual reported exit code and actionable redacted detail.
+Unknown diagnostics SHALL remain `CommandExecutionError` rather than being
+guessed into a semantic class.
+
+#### Scenario: Validation and conflict remain distinct
+- **WHEN** target CLI validation or revision-conflict fixtures fail
+- **THEN** they raise the approved distinct exception types with exact exit/payload behavior and no retry advice replaces upstream detail
+
+#### Scenario: Authentication not-found and rate limits are classified
+- **WHEN** reviewed target diagnostics represent authentication failure, missing resources, or rate limiting
+- **THEN** each maps to its approved SDK exception and retains safe actionable detail
+
+#### Scenario: Transport and local-process failures are not response errors
+- **WHEN** executable absence, timeout, malformed structured output, or local process-control failure occurs
+- **THEN** each follows its existing transport/output/process exception contract rather than an HTTP semantic mapping
+
+#### Scenario: Removed and secret-bearing paths stay safe
+- **WHEN** obsolete Plugin commands are absent or retained agent/autopilot secret channels fail
+- **THEN** Plugin errors are not exposed as supported operations and all retained secrets remain absent from preview, exception strings, streams, attributes, and reprs
+
+### Requirement: Presence-sensitive target argv is preserved byte-for-byte
+
+Command construction SHALL preserve the target distinction among omitted,
+null/None, empty string, zero, and false for every reviewed update operation.
+It SHALL enforce mutually exclusive inline/file/stdin content, custom-env, MCP
+config, and secret channels before transport. New target flags SHALL use the
+existing shell-free plan and immutable config snapshot.
+
+#### Scenario: Omission matrix is exact
+- **WHEN** table-driven update cases exercise omitted, null, empty, zero, and false values
+- **THEN** complete expected argv and transport calls match the target mapping without truthiness collapse
+
+#### Scenario: Exclusive channels fail before I/O
+- **WHEN** more than one reviewed content, config, or secret channel is present
+- **THEN** construction raises the documented validation error and performs zero executor calls
