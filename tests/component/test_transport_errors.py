@@ -102,6 +102,32 @@ _COMMAND_CASES: tuple[CommandCase, ...] = (
         ),
         expected_starters=(),
     ),
+    CommandCase(
+        id="issue-run-messages-truncation",
+        stderr="",
+        expected_error=None,
+        expected_exit_code=0,
+        response_exit_code=0,
+        expected_argv=(
+            "issue",
+            "run-messages",
+            "run1",
+            "--issue",
+            "i1",
+            "--since",
+            "0",
+            "--output",
+            "json",
+        ),
+        method="run_messages",
+        args=("run1",),
+        kwargs=(("issue_id", "i1"),),
+        stdout=(
+            '[{"task_id":"run1","seq":1,"type":"tool_result",'
+            '"output":"partial","output_truncated":true}]'
+        ),
+        expected_output_truncated=True,
+    ),
 )
 
 
@@ -144,7 +170,10 @@ def test_public_commands_preserve_typed_fake_cli_detail(
         assert case.stderr in exc.stderr
     else:
         result = operation(*case.args, **dict(case.kwargs))
-        assert tuple(getattr(result, "conversation_starters")) == case.expected_starters
+        if case.expected_starters is not None:
+            assert tuple(getattr(result, "conversation_starters")) == case.expected_starters
+        if case.expected_output_truncated is not None:
+            assert result.items[0].output_truncated is case.expected_output_truncated
         records = [
             json.loads(line) for line in record_path.read_text(encoding="utf-8").splitlines()
         ]

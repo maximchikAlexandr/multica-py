@@ -123,6 +123,12 @@ RUN_MESSAGE_CASES: tuple[RunMessageCase, ...] = (
         {"error": None},
         "error-sparse",
     ),
+    RunMessageCase(
+        make_run_message(type="text", seq=15, content="partial", output_truncated=True),
+        RunTextEvent,
+        {"text": "partial"},
+        "text-truncated",
+    ),
 )
 
 

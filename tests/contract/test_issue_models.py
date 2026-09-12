@@ -900,9 +900,13 @@ def test_issue_usage_counts_preserve_large_integers_independently() -> None:
     assert (usage.metered_task_count, usage.unreported_task_count) == (0, 7)
 
 
+@pytest.mark.parametrize(
+    "field",
+    ("terminal_task_count", "metered_task_count", "unreported_task_count"),
+)
 @pytest.mark.parametrize("value", (-1, True, 1.5, "1", None))
-def test_issue_usage_counts_reject_invalid_values(value: object) -> None:
-    payload = json.dumps({"terminal_task_count": value}).encode()
+def test_issue_usage_counts_reject_invalid_values(field: str, value: object) -> None:
+    payload = json.dumps({field: value}).encode()
     with pytest.raises(OutputShapeError):
         decode_json(payload, IssueUsage)
 

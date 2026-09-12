@@ -118,6 +118,40 @@ class _IssueStatusSortCase:
     expected_statuses: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class _IssueRunMessagesCase:
+    name: str
+    payload: bytes
+    expected_output_truncated: bool
+    expected_created_at: datetime.datetime
+    expected_argv: tuple[str, ...]
+
+
+_ISSUE_RUN_MESSAGES_CASES = (
+    _IssueRunMessagesCase(
+        name="truncation-and-timestamp",
+        payload=(
+            b'[{"task_id":"run1","seq":1,"type":"tool_result",'
+            b'"output":"partial","output_truncated":true,'
+            b'"created_at":"2026-09-12T12:34:56.123456Z"}]'
+        ),
+        expected_output_truncated=True,
+        expected_created_at=datetime.datetime(2026, 9, 12, 12, 34, 56, 123456, tzinfo=datetime.UTC),
+        expected_argv=(
+            "issue",
+            "run-messages",
+            "run1",
+            "--issue",
+            "i1",
+            "--since",
+            "0",
+            "--output",
+            "json",
+        ),
+    ),
+)
+
+
 _ISSUE_STATUS_SORT_CASES = (
     _IssueStatusSortCase(
         direction="asc",
@@ -957,18 +991,15 @@ def test_task_run_messages_relation_command_delegates_to_issue_resource(
     mock_transport.run_bytes.assert_not_called()
 
 
-def test_issue_run_messages_command_decodes_truncation_and_timestamp(
-    mock_transport: MagicMock,
+@pytest.mark.parametrize("case", _ISSUE_RUN_MESSAGES_CASES, ids=lambda case: case.name)
+def test_issue_run_messages_command_decodes_response(
+    case: _IssueRunMessagesCase, mock_transport: MagicMock
 ) -> None:
     mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     mock_transport.run_bytes.return_value = RawCommandResult(
-        argv=("issue", "run-messages", "run1", "--issue", "i1", "--since", "0", "--output", "json"),
+        argv=case.expected_argv,
         exit_code=0,
-        stdout=(
-            b'[{"task_id":"run1","seq":1,"type":"tool_result",'
-            b'"output":"partial","output_truncated":true,'
-            b'"created_at":"2026-09-12T12:34:56.123456Z"}]'
-        ),
+        stdout=case.payload,
         stderr=b"",
         duration=datetime.timedelta(),
     )
@@ -976,10 +1007,9 @@ def test_issue_run_messages_command_decodes_truncation_and_timestamp(
 
     page = resource.run_messages("run1", issue_id="i1")
 
-    assert page.items[0].output_truncated is True
-    assert page.items[0].created_at == datetime.datetime(
-        2026, 9, 12, 12, 34, 56, 123456, tzinfo=datetime.UTC
-    )
+    assert page.items[0].output_truncated is case.expected_output_truncated
+    assert page.items[0].created_at == case.expected_created_at
+    mock_transport.run_bytes.assert_called_once_with(case.expected_argv, stdin=None, timeout=None)
 
 
 @pytest.mark.parametrize(

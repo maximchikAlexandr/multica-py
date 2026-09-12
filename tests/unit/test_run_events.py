@@ -58,14 +58,6 @@ def test_pattern_match_narrows_message_fields() -> None:
             raise AssertionError("expected RunTextEvent")
 
 
-def test_message_backed_event_retains_truncation_state_in_raw_message() -> None:
-    message = make_run_message(seq=1, output="partial", output_truncated=True)
-    event = _convert_run_message(message)
-    assert isinstance(event, RunEvent)
-    assert event.raw_message is not None
-    assert event.raw_message.output_truncated is True
-
-
 @pytest.mark.parametrize("case", DECODE_CASES, ids=[c.id for c in DECODE_CASES])
 def test_decode_run_messages(case: DecodeCase) -> None:
     payload = msgspec.json.encode(case.payload)

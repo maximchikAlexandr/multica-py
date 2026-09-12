@@ -103,6 +103,27 @@ class StreamCase:
     expected_raw_output_truncated: bool | None = None
 
 
+@dataclass(frozen=True)
+class _SequenceConflictCase:
+    id: str
+    first: RunMessage
+    second: RunMessage
+
+
+_SEQUENCE_CONFLICT_CASES = (
+    _SequenceConflictCase(
+        id="different-content",
+        first=make_run_message(seq=1, content="hello"),
+        second=make_run_message(seq=1, content="different"),
+    ),
+    _SequenceConflictCase(
+        id="different-truncation",
+        first=make_run_message(seq=1, content="same", output_truncated=False),
+        second=make_run_message(seq=1, content="same", output_truncated=True),
+    ),
+)
+
+
 _STREAM_CASES: tuple[StreamCase, ...] = (
     StreamCase(
         id="completed-drains-tail-before-status",
@@ -387,22 +408,14 @@ def test_stream_poll_and_drain_variants(case: StreamCase, sleep_calls: list[floa
         assert raw_messages[0].output_truncated is case.expected_raw_output_truncated
 
 
-def test_stream_conflicting_repeated_sequence_raises(sleep_calls: list[float]) -> None:
+@pytest.mark.parametrize("case", _SEQUENCE_CONFLICT_CASES, ids=lambda case: case.id)
+def test_stream_conflicting_repeated_sequence_raises(
+    case: _SequenceConflictCase, sleep_calls: list[float]
+) -> None:
     client = MagicMock()
     client.issues.run_messages.side_effect = [
-        _messages(make_run_message(seq=1, content="hello")),
-        _messages(make_run_message(seq=1, content="different")),
-    ]
-    client.issues.runs.return_value = _runs(client, _run(client, status="running"))
-    with pytest.raises(OutputShapeError):
-        _collect(_run(client))
-
-
-def test_stream_conflicting_truncation_state_raises(sleep_calls: list[float]) -> None:
-    client = MagicMock()
-    client.issues.run_messages.side_effect = [
-        _messages(make_run_message(seq=1, content="same", output_truncated=False)),
-        _messages(make_run_message(seq=1, content="same", output_truncated=True)),
+        _messages(case.first),
+        _messages(case.second),
     ]
     client.issues.runs.return_value = _runs(client, _run(client, status="running"))
     with pytest.raises(OutputShapeError):

@@ -19,3 +19,4 @@ class CommandCase:
     args: tuple[object, ...] = ()
     kwargs: tuple[tuple[str, object], ...] = ()
     expected_starters: tuple[object, ...] | None = None
+    expected_output_truncated: bool | None = None
