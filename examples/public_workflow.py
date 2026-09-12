@@ -11,6 +11,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from multica_py import ClientConfig, MulticaClient, OperationOptions
+from multica_py.models.agents import AgentConversationStarter
 
 
 def run_workflow(client: MulticaClient, project_id: str, issue_id: str) -> None:
@@ -26,6 +27,15 @@ def run_workflow(client: MulticaClient, project_id: str, issue_id: str) -> None:
 
     raw = scoped.cli.command("issue", "get", issue_id, options=options)
     print(raw.run().stdout)
+
+    starter_preview = scoped.agents.create_command(
+        name="Release helper",
+        conversation_starters=(
+            AgentConversationStarter(label="Deploy", prompt="Deploy the release."),
+        ),
+        options=options,
+    )
+    print(starter_preview.commands)
 
     projected = scoped.issues.list(
         fields=("id", "title", "properties"),

@@ -259,12 +259,52 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
-## v0.4.42 SDK additions and behavior
+## v0.4.43 SDK additions and behavior
+
+### Direct 0.4.42 → 0.4.43 migration
+
+The approved compatibility interval is `[0.4.42, 0.4.44)` and is pinned to
+target source commit `2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c`. Migrate
+directly from CLI/SDK `0.4.42`; there is no intermediate SDK release, and
+`0.4.44` is the exclusive upper bound. Retained calls continue to support
+`0.4.42`, but an explicit `conversation_starters` mutation requires CLI
+`0.4.43`. If acceptance fails, revert the approved contract, generated
+runtime, public models/resources, tests, and docs together.
+
+### Agent conversation starters
+
+Agent create/update eager and command forms accept
+`tuple[AgentConversationStarter, ...] | UnsetType`. `Unset` omits the field;
+an explicit empty tuple emits `--conversation-starters []` and sets or clears
+the list. At most three entries are allowed; labels and prompts must be
+nonblank after trimming and are limited to 80 and 4000 Unicode code points.
+Invalid shapes, `None`, and invalid entries fail before transport.
+
+### Presence-aware task, message, and usage data
+
+Task runs expose immutable `TaskCancellationActor(type, id, name)` values when
+present; omitted actors remain `None` and actor types remain open strings.
+`RunMessage.output_truncated` is tri-state: omission is unknown (`None`), while
+`False` and `True` are preserved. `IssueUsage` adds optional exact integer
+`terminal_task_count`, `metered_task_count`, and `unreported_task_count`;
+these remain independent from legacy `task_count`. Received timestamps and raw
+messages are preserved through task, issue, and streaming relations.
+
+### Status, errors, and non-SDK commands
+
+Issue status sorting remains a server-side pass-through; canonical and custom
+statuses use the target's effective category order and requested direction.
+Run-message task/workspace 404 responses map to `NotFoundError`, while reviewed
+non-not-found 500 responses remain internal command failures. `repo checkout
+--fresh` is intentionally outside the typed SDK surface.
+
+## Historical v0.4.42 SDK additions and behavior
 
 ### Direct 0.4.28 → 0.4.42 migration
 
-The approved compatibility interval is `[0.4.42, 0.4.43)` and is pinned to
-target source commit `76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`. Consumers
+The historical v0.4.42 compatibility interval was `[0.4.42, 0.4.43)` and was
+pinned to target source commit `76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`.
+The current v0.4.43 interval is `[0.4.42, 0.4.44)`; consumers
 migrate directly from CLI/SDK `0.4.28`; versions `0.4.29` through `0.4.41`
 are not delivery targets. If a target gate fails, revert the contract,
 generated runtime, public API, tests, and documentation together so a mixed

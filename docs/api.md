@@ -6,14 +6,22 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
-## Approved v0.4.42 target
+## Approved v0.4.43 target
 
-This SDK contract supports Multica CLI `0.4.42` at commit
-`76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`, with the tested interval
-`[0.4.42, 0.4.43)`. The migration is direct from `0.4.28`; no intermediate
-SDK release is required. The target removes the Plugin command family and
-autopilot `priority` inputs, so this SDK exposes neither compatibility shim nor
-replacement API.
+This SDK contract supports Multica CLI `0.4.43` at commit
+`2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c`, with the tested interval
+`[0.4.42, 0.4.44)`. Migrate directly from `0.4.42`; no intermediate SDK
+release is required. The retained surface remains compatible with `0.4.42`,
+while explicit `conversation_starters` mutations require CLI `0.4.43`.
+
+Agent starters accept a tuple of up to three
+`AgentConversationStarter(label, prompt)` values. `Unset` omits the flag;
+`()` emits `--conversation-starters []` to set or clear the list. Labels and
+prompts are trimmed for nonblank validation and limited to 80 and 4000 Unicode
+code points. `None`, malformed values, and invalid items fail before transport.
+The additive response fields are presence-aware: omitted cancellation and usage
+values remain `None`, and omitted `RunMessage.output_truncated` means unknown
+rather than false. `false` and `true` remain distinct.
 
 ## Client
 

@@ -26,15 +26,15 @@
 
 ## 5. Generation, documentation, and integration
 
-- [ ] 5.1 Render the committed runtime only from the reviewed contract and prove a second ignored render has identical relative paths and bytes
-- [ ] 5.2 Reconcile generated/manual operation bindings, public signatures/exports, response adapters, canonical/variant/legacy case counts, source links, compatibility constants, and relation inventory by exact equality without allowlists
-- [ ] 5.3 Update API, compatibility, migration, maintainer, release, README, example, and changelog material for direct `0.4.42 -> 0.4.43`, explicit-starter CLI availability, actor/truncation/usage semantics, status/error behavior, checksum roles, non-SDK checkout, and atomic rollback
-- [ ] 5.4 Update packaging/release assertions for target `0.4.43` and exclusive `0.4.44`, then confirm Git tracks no `.devlocal`, archives, binaries, downloads, collector evidence, gap/response audits, or transient renders
+- [x] 5.1 Render the committed runtime only from the reviewed contract and prove a second ignored render has identical relative paths and bytes
+- [x] 5.2 Reconcile generated/manual operation bindings, public signatures/exports, response adapters, canonical/variant/legacy case counts, source links, compatibility constants, and relation inventory by exact equality without allowlists
+- [x] 5.3 Update API, compatibility, migration, maintainer, release, README, example, and changelog material for direct `0.4.42 -> 0.4.43`, explicit-starter CLI availability, actor/truncation/usage semantics, status/error behavior, checksum roles, non-SDK checkout, and atomic rollback
+- [x] 5.4 Update packaging/release assertions for target `0.4.43` and exclusive `0.4.44`, then confirm Git tracks no `.devlocal`, archives, binaries, downloads, collector evidence, gap/response audits, or transient renders
 
 ## 6. Acceptance gates and delivery proof
 
-- [ ] 6.1 Run strict OpenSpec validation, pinned-source contract validate, two-render byte equality, contract check, and exact source-link audit
-- [ ] 6.2 Run focused starter/model/relation/streaming/usage/status/error/compatibility suites, then Ruff format/check and mypy for source, tests, scripts, and tools
-- [ ] 6.3 Run full non-live pytest with coverage, confirm offline collection excludes every live node, and pass build plus package validation
-- [ ] 6.4 Run authorized prepared-target `0.4.43` live-negative coverage when configured and report missing authorization separately without weakening offline acceptance
-- [ ] 6.5 Audit the final diff and clean tree for exact target/bounds, no unapproved or non-SDK API, no transient artifacts, and atomic contract/generated/public/docs agreement; record every command exit code and exact delivery SHA
+- [x] 6.1 Run strict OpenSpec validation, pinned-source contract validate, two-render byte equality, contract check, and exact source-link audit
+- [x] 6.2 Run focused starter/model/relation/streaming/usage/status/error/compatibility suites, then Ruff format/check and mypy for source, tests, scripts, and tools
+- [x] 6.3 Run full non-live pytest with coverage, confirm offline collection excludes every live node, and pass build plus package validation
+- [x] 6.4 Run authorized prepared-target `0.4.43` live-negative coverage when configured and report missing authorization separately without weakening offline acceptance
+- [x] 6.5 Audit the final diff and clean tree for exact target/bounds, no unapproved or non-SDK API, no transient artifacts, and atomic contract/generated/public/docs agreement; record every command exit code and exact delivery SHA

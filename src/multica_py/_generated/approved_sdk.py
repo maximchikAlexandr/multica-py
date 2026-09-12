@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-TARGET_VERSION = '0.4.42'
+TARGET_VERSION = '0.4.43'
 MIN_CLI_VERSION = '0.4.42'
-MAX_CLI_VERSION = '0.4.43'
+MAX_CLI_VERSION = '0.4.44'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'
@@ -65,7 +65,7 @@ AGENT_COPY_BINDING = GeneratedBinding(
 
 AGENTS_CREATE_MANUAL_BINDING = GeneratedBinding(
     'agents.create', 'default', ('agent', 'create'),
-    (), (),
+    (GeneratedMapping('conversation_starters', '--conversation-starters', 'json_body:conversation_starters'),), (),
 )
 
 AGENT_GET_BINDING = GeneratedBinding(
@@ -145,7 +145,7 @@ AGENT_TASKS_BINDING = GeneratedBinding(
 
 AGENTS_UPDATE_MANUAL_BINDING = GeneratedBinding(
     'agents.update', 'default', ('agent', 'update'),
-    (), (),
+    (GeneratedMapping('conversation_starters', '--conversation-starters', 'json_body:conversation_starters'),), (),
 )
 
 ATTACHMENT_DOWNLOAD_BINDING = GeneratedBinding(
