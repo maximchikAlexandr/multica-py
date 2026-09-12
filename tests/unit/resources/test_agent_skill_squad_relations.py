@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import datetime
 import inspect
+import json
 import pathlib
 import shlex
 from collections.abc import Callable
@@ -1093,6 +1094,74 @@ def test_skill_files_use_authoritative_argv(case: SkillFileArgvCase) -> None:
         assert transport.run_bytes.call_args.args == (case.expected_argv,)
         assert transport.run_bytes.call_args.kwargs == {"stdin": None, "timeout": None}
         transport.run_text.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_content", "expected_size"),
+    (
+        (b'[{"id":"f1","path":"SKILL.md"}]', None, None),
+        (b'[{"id":"f1","path":"SKILL.md","content":"" ,"size":0}]', "", 0),
+        (b'[{"id":"f1","path":"SKILL.md","content":"body","size":4}]', "body", 4),
+    ),
+    ids=("file-omitted", "file-empty", "file-body"),
+)
+def test_skill_projection_table_preserves_content_and_size(
+    payload: bytes, expected_content: str | None, expected_size: int | None
+) -> None:
+    transport = MagicMock()
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(), exit_code=0, stdout=payload, stderr=b"", duration=datetime.timedelta()
+    )
+    resource = SkillFileResource(transport, ClientConfig())
+
+    file = resource.list("sk_1").items[0]
+    assert file.content == expected_content
+    assert file.size == expected_size
+
+
+def test_skill_list_projection_accepts_metadata_only_rows() -> None:
+    transport = MagicMock()
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(),
+        exit_code=0,
+        stdout=b'[{"id":"sk_1","name":"Skill"}]',
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+
+    skill = SkillResource(transport, ClientConfig()).list().items[0]
+
+    assert skill.content is None
+    assert skill.description is None
+
+
+@pytest.mark.parametrize(
+    ("content", "presence"),
+    ((None, "missing"), ("", "value"), ("body", "value")),
+    ids=("omitted", "empty", "body"),
+)
+def test_skill_content_presence_table(content: str | None, presence: str) -> None:
+    transport = MagicMock()
+    encoded = '{"id":"sk_1","name":"Skill"'
+    if content is not None:
+        encoded += f',"content":{json.dumps(content)}'
+    encoded += "}"
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(), exit_code=0, stdout=encoded.encode(), stderr=b"", duration=datetime.timedelta()
+    )
+
+    skill = SkillResource(transport, ClientConfig()).get("sk_1")
+
+    assert skill.content == content
+    assert skill._wire_presence == (("content", presence),)
+
+
+def test_bound_skill_files_use_explicit_metadata_default() -> None:
+    entity = Skill(id="sk_1", name="Skill", _client=MagicMock())
+    client = cast("MagicMock", entity._client)
+    client.skills.files.list.return_value = Page(items=())
+    entity.files._loader()
+    client.skills.files.list.assert_called_once_with("sk_1", with_content=False)
 
 
 @pytest.mark.parametrize("case", SKILL_FILE_VALIDATION_CASES)

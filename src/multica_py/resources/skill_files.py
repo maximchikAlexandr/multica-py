@@ -17,16 +17,29 @@ from multica_py.resources._base import BaseResource
 
 class SkillFileResource(BaseResource):
     def list_command(
-        self, skill_id: str, *, options: OperationOptions | None = None
+        self,
+        skill_id: str,
+        *,
+        with_content: bool = False,
+        options: OperationOptions | None = None,
     ) -> Command[Page[SkillFile]]:
         _ = cast("object", SKILL_FILES_LIST_BINDING)
         validate_nonblank(skill_id)
-        return self._decoded_page_command(
-            ("skill", "files", "list", skill_id), SkillFile, options=options
-        )
+        if type(with_content) is not bool:
+            raise TypeError("with_content must be a bool")
+        args = ["skill", "files", "list", skill_id]
+        if with_content:
+            args.append("--with-content")
+        return self._decoded_page_command(tuple(args), SkillFile, options=options)
 
-    def list(self, skill_id: str, *, options: OperationOptions | None = None) -> Page[SkillFile]:
-        return self.list_command(skill_id, options=options).run()
+    def list(
+        self,
+        skill_id: str,
+        *,
+        with_content: bool = False,
+        options: OperationOptions | None = None,
+    ) -> Page[SkillFile]:
+        return self.list_command(skill_id, with_content=with_content, options=options).run()
 
     def upsert_command(
         self,

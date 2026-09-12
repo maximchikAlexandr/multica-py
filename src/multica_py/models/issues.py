@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, cast, overload
 
 import msgspec
 
-from multica_py.enums import IssueSort, IssueStatus, SortDirection
+from multica_py.enums import IssueStatus
 from multica_py.models.common import CommentCursor, Page
 from multica_py.types import MetadataValue
 
@@ -112,9 +112,12 @@ class IssueListFilter(msgspec.Struct, frozen=True, kw_only=True):
     limit: int | None = None
     offset: int | None = None
     project_id: str | None = None
-    sort: IssueSort | None = None
-    direction: SortDirection | None = None
+    sort: str | None = None
+    direction: str | None = None
     metadata: tuple[IssueMetadataItem, ...] = ()
+    fields: tuple[str, ...] = ()
+    property_filters: tuple[str, ...] = ()
+    resolve_properties: bool = False
 
 
 if TYPE_CHECKING:

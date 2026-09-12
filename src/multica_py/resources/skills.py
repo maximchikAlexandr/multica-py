@@ -28,13 +28,35 @@ class _SkillSearchResultWire(msgspec.Struct, frozen=True, kw_only=True):
     description: str = ""
 
 
+class _SkillWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    name: str
+    description: str | None = None
+    file_count: int = 0
+    content: str | None | msgspec.UnsetType = msgspec.UNSET
+
+
+def _skill_from_wire(wire: _SkillWire) -> Skill:
+    presence = (
+        "missing" if wire.content is msgspec.UNSET else "null" if wire.content is None else "value"
+    )
+    return Skill(
+        id=wire.id,
+        name=wire.name,
+        description=wire.description,
+        file_count=wire.file_count,
+        content=None if wire.content is msgspec.UNSET else wire.content,
+        _wire_presence=(("content", presence),),
+    )
+
+
 class SkillResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
         self.files = SkillFileResource(transport, config)
 
     def _files_relation_command(self, skill_id: str) -> Command[tuple[SkillFile, ...]]:
-        return self.files.list_command(skill_id)._map(_page_items)
+        return self.files.list_command(skill_id, with_content=False)._map(_page_items)
 
     def _upsert_file_command(
         self,
@@ -58,9 +80,11 @@ class SkillResource(BaseResource):
         return self.files.delete_command(skill_id, file_id, options=options)._map(invalidate)
 
     def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Skill]]:
-        return self._decoded_page_command(("skill", "list"), Skill, options=options)._map(
+        return self._decoded_page_command(("skill", "list"), _SkillWire, options=options)._map(
             lambda page: Page(
-                items=tuple(skill._with_client(self._client) for skill in page.items),
+                items=tuple(
+                    _skill_from_wire(skill)._with_client(self._client) for skill in page.items
+                ),
                 limit=page.limit,
                 offset=page.offset,
                 total=page.total,
@@ -76,8 +100,10 @@ class SkillResource(BaseResource):
         self, skill_id: str, *, options: OperationOptions | None = None
     ) -> Command[Skill]:
         validate_nonblank(skill_id)
-        return self._decoded_command(("skill", "get", skill_id), Skill, options=options)._map(
-            lambda skill: skill._with_client(self._client)
+        args = ["skill", "get", skill_id]
+        args.append("--with-content")
+        return self._decoded_command(tuple(args), _SkillWire, options=options)._map(
+            lambda skill: _skill_from_wire(skill)._with_client(self._client)
         )
 
     def get(self, skill_id: str, *, options: OperationOptions | None = None) -> Skill:
@@ -95,8 +121,8 @@ class SkillResource(BaseResource):
         args = ["skill", "create", "--name", name]
         if description is not None:
             args.extend(["--description", description])
-        return self._decoded_command(tuple(args), Skill, options=options)._map(
-            lambda skill: skill._with_client(self._client)
+        return self._decoded_command(tuple(args), _SkillWire, options=options)._map(
+            lambda skill: _skill_from_wire(skill)._with_client(self._client)
         )
 
     def create(
@@ -122,16 +148,14 @@ class SkillResource(BaseResource):
         _validate_optional_string(name, "name")
         _validate_optional_string(description, "description")
         if name is Unset and description is Unset:
-            return self._decoded_command(("skill", "get", skill_id), Skill, options=options)._map(
-                lambda skill: skill._with_client(self._client)
-            )
+            return self.get_command(skill_id, options=options)
         args = ["skill", "update", skill_id]
         if name is not Unset:
             args.extend(["--name", name])
         if description is not Unset:
             args.extend(["--description", "" if description is None else description])
-        return self._decoded_command(tuple(args), Skill, options=options)._map(
-            lambda skill: skill._with_client(self._client)
+        return self._decoded_command(tuple(args), _SkillWire, options=options)._map(
+            lambda skill: _skill_from_wire(skill)._with_client(self._client)
         )
 
     def update(
@@ -150,9 +174,9 @@ class SkillResource(BaseResource):
         self, skill_id: str, *, options: OperationOptions | None = None
     ) -> Command[Skill]:
         validate_nonblank(skill_id)
-        return self._decoded_command(("skill", "refresh", skill_id), Skill, options=options)._map(
-            lambda skill: skill._with_client(self._client)
-        )
+        return self._decoded_command(
+            ("skill", "refresh", skill_id), _SkillWire, options=options
+        )._map(lambda skill: _skill_from_wire(skill)._with_client(self._client))
 
     def refresh(self, skill_id: str, *, options: OperationOptions | None = None) -> Skill:
         return self.refresh_command(skill_id, options=options).run()
@@ -223,8 +247,8 @@ class SkillResource(BaseResource):
         self, url: str, *, options: OperationOptions | None = None
     ) -> Command[Skill]:
         return self._decoded_command(
-            ("skill", "import", "--url", url), Skill, options=options
-        )._map(lambda skill: skill._with_client(self._client))
+            ("skill", "import", "--url", url), _SkillWire, options=options
+        )._map(lambda skill: _skill_from_wire(skill)._with_client(self._client))
 
     def import_from_url(self, url: str, *, options: OperationOptions | None = None) -> Skill:
         return self.import_from_url_command(url, options=options).run()

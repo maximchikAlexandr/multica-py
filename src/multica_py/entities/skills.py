@@ -23,6 +23,8 @@ class Skill(_BoundEntity):  # type: ignore[misc]
     name: str
     description: str | None = None
     file_count: int = 0
+    content: str | None = None
+    _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
 
     _files: LazyCollection[SkillFile] | None = msgspec.field(default=None, name="_files")
 
@@ -36,7 +38,7 @@ class Skill(_BoundEntity):  # type: ignore[misc]
             files = client.skills.files
 
             def loader() -> tuple[SkillFile, ...]:
-                return _page_items(files.list(sid))
+                return _page_items(files.list(sid, with_content=False))
 
             self._set_runtime(
                 "_files",

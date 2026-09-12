@@ -67,7 +67,7 @@ class _RelationLoad(Generic[T]):
 @dataclass(frozen=True, slots=True)
 class OffsetPage(Generic[T]):
     items: tuple[T, ...]
-    total: int
+    total: int | None
     limit: int
     offset: int
     has_more: bool
@@ -564,6 +564,9 @@ class OffsetLazyCollection(LazyCollection[T], Generic[T]):
                 raise _pagination_error("OffsetLazyCollection", "page_limit_exceeded")
             if len({page.offset for page in pages}) != len(pages):
                 raise _pagination_error("OffsetLazyCollection", "repeated_offset")
+            page = pages[-1]
+            if any(page.items == earlier.items for earlier in pages[:-1]) and page.items:
+                raise _pagination_error("OffsetLazyCollection", "no_progress")
             if sum(len(page.items) for page in pages) > _MAX_RELATION_ITEMS:
                 raise _pagination_error("OffsetLazyCollection", "item_limit_exceeded")
             page = pages[-1]
@@ -600,6 +603,7 @@ class OffsetLazyCollection(LazyCollection[T], Generic[T]):
         from multica_py.exceptions import RelationPaginationError
 
         items: list[T] = []
+        pages: list[OffsetPage[T]] = []
         offset = 0
         seen_offsets: set[int] = set()
         total: int | None = None
@@ -610,6 +614,9 @@ class OffsetLazyCollection(LazyCollection[T], Generic[T]):
                 raise RelationPaginationError(type(self).__name__, "repeated_offset")
             seen_offsets.add(offset)
             page = self._page_loader(limit=self._default_limit, offset=offset)
+            if page.items and any(page.items == earlier.items for earlier in pages):
+                raise RelationPaginationError(type(self).__name__, "no_progress")
+            pages.append(page)
             total = page.total
             items.extend(page.items)
             if len(items) > _MAX_RELATION_ITEMS:
@@ -759,12 +766,18 @@ class LazyMapping(Mapping[K, V], Generic[K, V]):
         loader: Callable[[], Mapping[K, V]],
         *,
         command_loader: Callable[[], Command[Mapping[K, V]]] | None = None,
+        initial: Mapping[K, V] | None = None,
     ) -> None:
         self._loader = loader
         self._command_loader = command_loader
         empty_values: dict[K, V] = {}
         empty: Mapping[K, V] = MappingProxyType(empty_values)
-        self._generation_state: _GenerationState[Mapping[K, V]] = _GenerationState(empty)
+        snapshot = None if initial is None else MappingProxyType(dict(initial))
+        self._generation_state: _GenerationState[Mapping[K, V]] = (
+            _GenerationState(empty)
+            if snapshot is None
+            else _GenerationState(empty, initial=snapshot)
+        )
 
     @property
     def loaded(self) -> bool:

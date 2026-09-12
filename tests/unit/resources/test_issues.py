@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import datetime
+import json
 import math
 from dataclasses import dataclass
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
+import msgspec
 import pytest
 
 from multica_py._internal.argv import build_global_args
@@ -23,7 +25,7 @@ from multica_py.config import ClientConfig
 from multica_py.entities.agents import Agent
 from multica_py.entities.issues import Issue, TaskRun
 from multica_py.enums import IssueStatus
-from multica_py.exceptions import DetachedEntityError
+from multica_py.exceptions import DetachedEntityError, OutputShapeError
 from multica_py.models.issues import (
     InlineDescription,
     IssueChildrenResult,
@@ -33,12 +35,13 @@ from multica_py.models.issues import (
     IssueMetadataItem,
     NoDescription,
 )
+from multica_py.models.properties import PropertyValue
 from multica_py.models.system import AttachmentResult
 from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
-from multica_py.resources.issues import IssueResource
+from multica_py.resources.issues import IssueResource, _decode_issue_search
 
 _DESCRIPTION_INPUT_IMPOSTORS = (
     type("NoDescription", (), {})(),
@@ -77,6 +80,28 @@ class _IssueCreateArgvCase:
     description_input: IssueDescriptionInput
     label_ids: tuple[str, ...]
     expected_steps: tuple[tuple[str, ...], ...]
+
+
+@dataclass(frozen=True)
+class _IssueQueryValidationCase:
+    kwargs: dict[str, object]
+    message: str
+
+
+@dataclass(frozen=True)
+class _IssuePropertyProjectionCase:
+    name: str
+    payload: bytes
+    expected: tuple[PropertyValue, ...]
+    partial: bool = False
+
+
+@dataclass(frozen=True)
+class _IssuePartialSerializationCase:
+    name: str
+    payload: bytes
+    expected: dict[str, object]
+    fields: tuple[str, ...] = ()
 
 
 _ISSUE_CREATE_ARGV_CASES = (
@@ -278,11 +303,413 @@ def test_issue_list_finalizer_binds_partial_rows_without_extra_get(
     mock_transport.run_bytes.assert_called_once()
     client.issues.get.assert_not_called()
 
-    client.issues = resource
-    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    action = issue.add_comment_command("ready")
-    assert action.commands == ("multica issue comment add i1 --content ready --output json",)
-    mock_transport.run_bytes.assert_called_once()
+
+def test_issue_list_projection_preserves_absence_and_properties_without_get(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=(),
+        exit_code=0,
+        stdout=b'{"issues":[{"id":"i1","properties":{"prop-1":"raw",'
+        b'"prop-2":{"value":1}}}],"has_more":true,"total":0}',
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    client = MagicMock()
+    resource = IssueResource(mock_transport, ClientConfig())
+    resource._set_client(client)
+
+    row = resource.list(fields=("id", "properties")).items[0]
+
+    assert row.id == "i1"
+    assert cast("object", row.title) is msgspec.UNSET
+    assert cast("object", row.status) is msgspec.UNSET
+    assert cast("object", row.properties) == {"prop-1": "raw", "prop-2": {"value": 1}}
+    assert client.issues.get.call_count == 0
+
+
+def test_issue_list_fields_preserve_core_and_dynamic_projection_without_get(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=(),
+        exit_code=0,
+        stdout=(
+            b'{"issues":[{"id":"i1","title":"Title","status":"todo",'
+            b'"identifier":"ABC-1","revision":0,"workspace_id":"ws",'
+            b'"number":1,"status_name":"Todo","position":3}]}'
+        ),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    client = MagicMock()
+    resource = IssueResource(mock_transport, ClientConfig())
+    resource._set_client(client)
+
+    page = resource.list(
+        fields=(
+            "id",
+            "title",
+            "status",
+            "identifier",
+            "revision",
+            "workspace_id",
+            "number",
+            "status_name",
+            "position",
+        )
+    )
+    issue = page.items[0]
+
+    assert issue.to_dict() == {
+        "id": "i1",
+        "title": "Title",
+        "status": "todo",
+        "identifier": "ABC-1",
+        "revision": 0,
+        "workspace_id": "ws",
+        "number": 1,
+        "status_name": "Todo",
+        "position": 3,
+    }
+    assert issue.detach().to_dict() == issue.to_dict()
+    assert Issue.from_dict(issue.to_dict()).to_dict() == issue.to_dict()
+    client.issues.get.assert_not_called()
+
+
+_ISSUE_PROPERTY_PROJECTION_CASES = (
+    _IssuePropertyProjectionCase(
+        name="full-resolved-rows",
+        payload=(
+            b'{"issues":[{"id":"i1","title":"Issue","status":"todo",'
+            b'"properties":[{"property_id":"p1","name":"Impact",'
+            b'"type":"select","value":"high","display":"High",'
+            b'"archived":false}]}]}'
+        ),
+        expected=(
+            PropertyValue(
+                property_id="p1",
+                name="Impact",
+                type="select",
+                value="high",
+                display="High",
+                archived=False,
+            ),
+        ),
+    ),
+    _IssuePropertyProjectionCase(
+        name="partial-resolved-rows",
+        payload=(
+            b'{"issues":[{"id":"i1","properties":[{"property_id":"p1",'
+            b'"name":"Impact","type":"select","value":"high",'
+            b'"display":"High"}]}]}'
+        ),
+        expected=(
+            PropertyValue(
+                property_id="p1",
+                name="Impact",
+                type="select",
+                value="high",
+                display="High",
+            ),
+        ),
+        partial=True,
+    ),
+    _IssuePropertyProjectionCase(
+        name="raw-uuid-map",
+        payload=b'{"issues":[{"id":"i1","title":"Issue","status":"todo",'
+        b'"properties":{"p1":"high"}}]}',
+        expected=(),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _ISSUE_PROPERTY_PROJECTION_CASES, ids=lambda case: case.name)
+def test_issue_property_projection_decodes_full_and_partial_target_rows(
+    case: _IssuePropertyProjectionCase,
+) -> None:
+    page = _issue_list_page_from_wire(decode_json(case.payload, _IssueListPageWire))
+    issue = page.items[0]._with_client(MagicMock())
+
+    assert isinstance(issue, Issue)
+    if case.partial:
+        assert cast("object", issue.title) is msgspec.UNSET
+        assert cast("object", issue.status) is msgspec.UNSET
+    if case.expected:
+        assert tuple(issue.properties.all().values()) == case.expected
+    else:
+        assert cast("object", dict(issue.properties.all())) == {"p1": "high"}
+
+
+def test_issue_projection_preserves_full_allowlist_and_omitted_vs_null() -> None:
+    payload = (
+        b'{"issues":[{"id":"i1","workspace_id":"ws","number":7,'
+        b'"identifier":"ABC-7","description":null,"status_category":"started",'
+        b'"status_name":"Todo","priority":"high","assignee_type":null,'
+        b'"assignee_id":null,"creator_type":"member","creator_id":"u1",'
+        b'"parent_issue_id":null,"project_id":"p1","position":3,"stage":0,'
+        b'"start_date":null,"due_date":"2026-02-01","created_at":null,'
+        b'"updated_at":"2026-01-02T00:00:00Z","revision":0,'
+        b'"last_activity_at":null,"metadata":{},"properties":{},'
+        b'"labels":[{"id":"l1","name":"bug","color":"red"}]}]}'
+    )
+    issue = _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire)).items[0]
+
+    assert isinstance(issue, Issue)
+    assert issue.id == "i1"
+    assert issue.workspace_id == "ws"
+    assert issue.number == 7
+    assert issue.identifier == "ABC-7"
+    assert issue.description is None
+    assert issue.status_category == "started"
+    assert issue.status_name == "Todo"
+    assert issue.priority == "high"
+    assert issue.assignee_type is None
+    assert issue.assignee_id is None
+    assert issue.creator_type == "member"
+    assert issue.creator_id == "u1"
+    assert issue.parent_id is None
+    assert issue.project_id == "p1"
+    assert issue.position == 3
+    assert issue.stage == 0
+    assert issue.start_date is None
+    assert issue.due_date == "2026-02-01"
+    assert issue.created_at is None
+    assert issue.updated_at == datetime.datetime(2026, 1, 2, tzinfo=datetime.UTC)
+    assert issue.revision == 0
+    assert issue.last_activity_at is None
+    assert tuple(label.name for label in issue.labels.all()) == ("bug",)
+    serialized = issue.to_dict()
+    assert serialized["workspace_id"] == "ws"
+    assert serialized["number"] == 7
+    assert serialized["identifier"] == "ABC-7"
+    assert serialized["description"] is None
+    assert serialized["parent_id"] is None
+    assert serialized["revision"] == 0
+
+    detached = issue.detach()
+    restored = Issue.from_dict(issue.to_dict())
+    assert detached.identifier == "ABC-7"
+    assert detached.revision == 0
+    assert restored.identifier == "ABC-7"
+    assert restored.revision == 0
+
+    omitted = _issue_list_page_from_wire(
+        decode_json(b'{"issues":[{"id":"i2"}]}', _IssueListPageWire)
+    ).items[0]
+    for field in (
+        "workspace_id",
+        "number",
+        "identifier",
+        "status_category",
+        "status_name",
+        "revision",
+        "last_activity_at",
+    ):
+        assert cast("object", getattr(omitted, field)) is msgspec.UNSET
+    assert cast("object", omitted.description) is msgspec.UNSET
+    assert cast("object", omitted.parent_id) is msgspec.UNSET
+    assert cast("object", omitted.created_at) is msgspec.UNSET
+    assert "description" not in omitted.to_dict()
+
+
+_ISSUE_PARTIAL_SERIALIZATION_CASES = (
+    _IssuePartialSerializationCase(
+        name="id-only",
+        payload=b'{"issues":[{"id":"i1"}]}',
+        expected={"id": "i1"},
+    ),
+    _IssuePartialSerializationCase(
+        name="title-with-identity",
+        payload=b'{"issues":[{"id":"i2","title":"Title"}]}',
+        expected={"id": "i2", "title": "Title"},
+    ),
+    _IssuePartialSerializationCase(
+        name="explicit-null-description",
+        payload=b'{"issues":[{"id":"i3","description":null}]}',
+        expected={"id": "i3", "description": None},
+    ),
+    _IssuePartialSerializationCase(
+        name="explicit-null-parent",
+        payload=b'{"issues":[{"id":"i4","parent_issue_id":null}]}',
+        expected={"id": "i4", "parent_id": None},
+    ),
+    _IssuePartialSerializationCase(
+        name="explicit-null-created-at",
+        payload=b'{"issues":[{"id":"i5","created_at":null}]}',
+        expected={"id": "i5", "created_at": None},
+    ),
+    _IssuePartialSerializationCase(
+        name="priority",
+        payload=b'{"issues":[{"id":"i6","priority":"high"}]}',
+        expected={"id": "i6", "priority": "high"},
+    ),
+    _IssuePartialSerializationCase(
+        name="creator-id",
+        payload=b'{"issues":[{"id":"i7","creator_id":"u1"}]}',
+        expected={"id": "i7", "creator_id": "u1"},
+    ),
+    _IssuePartialSerializationCase(
+        name="creator-type",
+        payload=b'{"issues":[{"id":"i8","creator_type":"member"}]}',
+        expected={"id": "i8", "creator_type": "member"},
+    ),
+    _IssuePartialSerializationCase(
+        name="assignee-id-only",
+        payload=b'{"issues":[{"id":"i9","assignee_id":"a1"}]}',
+        expected={"id": "i9", "assignee_id": "a1"},
+    ),
+    _IssuePartialSerializationCase(
+        name="assignee-type-only",
+        payload=b'{"issues":[{"id":"i10","assignee_type":"agent"}]}',
+        expected={"id": "i10", "assignee_type": "agent"},
+    ),
+    _IssuePartialSerializationCase(
+        name="core-triple",
+        payload=b'{"issues":[{"id":"i11","title":"Title","status":"todo"}]}',
+        expected={"id": "i11", "title": "Title", "status": "todo"},
+        fields=("id", "title", "status"),
+    ),
+    _IssuePartialSerializationCase(
+        name="core-and-dynamic-allowlist",
+        payload=(
+            b'{"issues":[{"id":"i12","title":"Title","status":"todo",'
+            b'"identifier":"ABC-12","revision":0,"workspace_id":"ws",'
+            b'"number":12,"status_name":"Todo","position":3}]}'
+        ),
+        expected={
+            "id": "i12",
+            "title": "Title",
+            "status": "todo",
+            "identifier": "ABC-12",
+            "revision": 0,
+            "workspace_id": "ws",
+            "number": 12,
+            "status_name": "Todo",
+            "position": 3,
+        },
+        fields=(
+            "id",
+            "title",
+            "status",
+            "identifier",
+            "revision",
+            "workspace_id",
+            "number",
+            "status_name",
+            "position",
+        ),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _ISSUE_PARTIAL_SERIALIZATION_CASES, ids=lambda case: case.name)
+def test_issue_partial_projection_serialization_preserves_exact_presence(
+    case: _IssuePartialSerializationCase,
+) -> None:
+    issue = _issue_list_page_from_wire(
+        decode_json(case.payload, _IssueListPageWire), fields=case.fields or None
+    ).items[0]
+
+    assert issue.to_dict() == case.expected
+    for field in case.fields:
+        public_name = "parent_id" if field == "parent_issue_id" else field
+        assert getattr(issue, public_name) == case.expected[public_name]
+    assert issue.detach().to_dict() == case.expected
+    assert issue._clone_for_client(MagicMock()).to_dict() == case.expected
+    assert Issue.from_dict(issue.to_dict()).to_dict() == case.expected
+    assert Issue.from_json(issue.to_json()).to_dict() == case.expected
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (("assignee_id", "agent-1"), ("assignee_type", "agent")),
+    ids=("id-only", "type-only"),
+)
+def test_issue_partial_assignee_scalars_do_not_fabricate_relation(field: str, value: str) -> None:
+    payload = json.dumps({"issues": [{"id": "i1", field: value}]}).encode()
+    issue = _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire)).items[0]
+
+    assert getattr(issue, field) == value
+    assert issue.assignee is None
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        _IssueQueryValidationCase({"limit": 0}, "between 1 and 100"),
+        _IssueQueryValidationCase({"limit": 101}, "between 1 and 100"),
+        _IssueQueryValidationCase({"fields": ("unknown",)}, "invalid field"),
+        _IssueQueryValidationCase({"fields": ("id", "id")}, "duplicate field"),
+        _IssueQueryValidationCase({"fields": ("title",)}, "identity_required"),
+        _IssueQueryValidationCase({"property_filters": ("Owner>=me",)}, ">="),
+        _IssueQueryValidationCase({"property_filters": ("Owner<=me",)}, "<="),
+        _IssueQueryValidationCase({"property_filters": ("Owner!=me",)}, "!="),
+        _IssueQueryValidationCase({"property_filters": ("Owner",)}, "Name=Value"),
+        _IssueQueryValidationCase({"sort": "property:"}, "invalid sort"),
+        _IssueQueryValidationCase(
+            {"fields": ("id",), "resolve_properties": True}, "requires properties"
+        ),
+    ),
+    ids=lambda case: next(iter(case.kwargs)),
+)
+def test_issue_query_validation_table_is_zero_io(
+    case: _IssueQueryValidationCase,
+) -> None:
+    transport = MagicMock()
+    resource = IssueResource(transport, ClientConfig())
+
+    with pytest.raises((TypeError, ValueError), match=case.message):
+        resource.list_command(**cast("Any", case.kwargs))
+
+    transport.run_bytes.assert_not_called()
+
+
+def test_issue_query_accepts_none_property_sentinel() -> None:
+    resource = IssueResource(MagicMock(), ClientConfig())
+
+    command = resource.list_command(property_filters=("Name=__none__",))
+
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "list",
+        "--property",
+        "Name=__none__",
+        "--output",
+        "json",
+    )
+
+
+def test_issue_search_envelope_preserves_unavailable_total() -> None:
+    page = _decode_issue_search(
+        b'{"issues":[{"id":"i1","title":"t","status":"todo"}],"has_more":true,"total":0}',
+        "issue search",
+    )
+
+    assert page.total is None
+    assert page.has_more is True
+
+
+@pytest.mark.parametrize(
+    "payload",
+    (
+        b"{}",
+        b'{"issues":[],"has_more":true}',
+        b'{"issues":[],"total":-1}',
+    ),
+    ids=("missing-items", "empty-continuation", "negative-total"),
+)
+def test_issue_page_decoder_rejects_bounded_malformed_pages(payload: bytes) -> None:
+    with pytest.raises((OutputShapeError, msgspec.DecodeError, msgspec.ValidationError)):
+        _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire))
+
+
+def test_deferred_issue_query_surfaces_remain_absent() -> None:
+    import inspect
+
+    assert not hasattr(IssueResource, "timeline")
+    assert "active" not in inspect.signature(IssueResource.runs).parameters
+    assert "siblings" not in inspect.signature(IssueResource.runs).parameters
 
 
 def test_issue_entity_commands_route_relations_and_mutations_lazily(
