@@ -3,16 +3,27 @@
 
 from __future__ import annotations
 
+import argparse
+import io
 import re
+import subprocess
 import sys
+import tarfile
 from collections.abc import Iterator
+from functools import cache
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tools.upstream_contract.contract import ContractError, validate_contract
+from tools.upstream_contract.contract import (
+    ContractCatalog,
+    ContractError,
+    _response_source_url,
+    validate_contract,
+)
 
 APPROVED_FILE = Path("contracts/sdk-contract.json")
+DEFAULT_SOURCE_CHECKOUT = Path(".devlocal/upstream-contract/v0.4.20..v0.4.42/source")
 BASELINE_FILES = (
     "openspec/specs/sdk-surface/spec.md",
     "openspec/specs/subprocess-transport/spec.md",
@@ -53,8 +64,61 @@ def _source_ids(value: object) -> Iterator[str]:
             yield from _source_ids(item)
 
 
-def check_contract_source_links(approved: Path = APPROVED_FILE) -> list[str]:
-    """Check contract source IDs, repository identity, and pinned commits."""
+@cache
+def _git_sources(checkout: str, commit: str) -> dict[str, list[str]]:
+    try:
+        result = subprocess.run(
+            ["git", "-C", checkout, "archive", "--format=tar", commit, "--", "*.go"],
+            check=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return {}
+    sources: dict[str, list[str]] = {}
+    with tarfile.open(fileobj=io.BytesIO(result.stdout), mode="r:") as archive:
+        for member in archive.getmembers():
+            if not member.isfile() or not member.name.endswith(".go"):
+                continue
+            content = archive.extractfile(member)
+            if content is not None:
+                sources[member.name] = content.read().decode("utf-8", errors="replace").splitlines()
+    return sources
+
+
+def _git_source(checkout: str, commit: str, path: str) -> list[str] | None:
+    return _git_sources(checkout, commit).get(path)
+
+
+def check_registry_source_links(catalog: ContractCatalog, source_checkout: Path) -> list[str]:
+    """Check every response registry URL against both pinned repository trees."""
+    errors: list[str] = []
+    registry = catalog.compatibility.response_registry
+    for item in registry:
+        for url in item.source_urls:
+            commit, path, start, end = _response_source_url(url, "response registry source URL")
+            lines = _git_source(str(source_checkout), commit, path)
+            if lines is None:
+                errors.append(
+                    f"Response registry {item.work_item_id} references missing {commit}:{path}"
+                )
+                continue
+            if end > len(lines):
+                errors.append(
+                    f"Response registry {item.work_item_id} range exceeds {commit}:{path} ({end}>{len(lines)})"
+                )
+                continue
+            selected = [line.strip() for line in lines[start - 1 : end] if line.strip()]
+            if not selected or all(line == "package main" for line in selected):
+                errors.append(
+                    f"Response registry {item.work_item_id} has a non-substantive source range: {url}"
+                )
+    return errors
+
+
+def check_contract_source_links(
+    approved: Path = APPROVED_FILE, source_checkout: Path | None = None
+) -> list[str]:
+    """Check contract source IDs and every pinned registry range."""
     try:
         catalog = validate_contract(approved)
     except (ContractError, OSError) as exc:
@@ -82,11 +146,23 @@ def check_contract_source_links(approved: Path = APPROVED_FILE) -> list[str]:
             f"[OK] {len(catalog.source_refs)} contract source links target "
             f"multica-ai/multica@{catalog.target.commit}"
         )
+        if source_checkout is not None:
+            errors.extend(check_registry_source_links(catalog, source_checkout))
+        print(
+            f"[OK] {len(catalog.compatibility.response_registry)} response registry items are pinned"
+        )
     return errors
 
 
 def main() -> int:
-    errors = [*check_baseline_sources(), *check_contract_source_links()]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source-checkout", type=Path, default=DEFAULT_SOURCE_CHECKOUT)
+    args = parser.parse_args()
+    source_checkout = args.source_checkout if args.source_checkout.exists() else None
+    errors = [
+        *check_baseline_sources(),
+        *check_contract_source_links(source_checkout=source_checkout),
+    ]
     if errors:
         print("\nErrors:")
         for error in errors:

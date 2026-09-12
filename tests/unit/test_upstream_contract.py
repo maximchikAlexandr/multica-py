@@ -16,6 +16,7 @@ from multica_py._generated import approved_sdk
 from multica_py.entities.comments import Comment
 from multica_py.models.common import Page
 from multica_py.resources.squad_members import SquadMemberResource
+from scripts.audit_source_links import check_registry_source_links
 from tools.upstream_contract.contract import (
     ContractError,
     ResultAssertion,
@@ -28,6 +29,7 @@ from tools.upstream_contract.evidence import ReleaseIdentity, collect
 from tools.upstream_contract.generation import _validate_transient_projection, render_files
 
 APPROVED = pathlib.Path("contracts/sdk-contract.json")
+PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.4.20..v0.4.42/source")
 
 _SQUAD_MEMBER_OPERATION_IDS = (
     "squads.members.add",
@@ -96,6 +98,7 @@ INVALID_CONTRACT_CASES = (
     InvalidContractCase("update-source-ref", "update_source_ref"),
     InvalidContractCase("mapping-presence-length", "mapping_presence_length"),
     InvalidContractCase("mapping-presence-unknown", "mapping_presence_unknown"),
+    InvalidContractCase("canonical-removed-argv", "canonical_removed_argv"),
     InvalidContractCase("duplicate-entrypoint", "duplicate_entrypoint"),
     InvalidContractCase("non-bijective-surface", "non_bijective_surface"),
 )
@@ -247,6 +250,12 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
         document["catalogs"]["mapping_presence"]["project_update"].pop()
     elif mutation == "mapping_presence_unknown":
         document["catalogs"]["mapping_presence"]["project_update"][0] = "unknown-policy"
+    elif mutation == "canonical_removed_argv":
+        vector = document["catalogs"]["test_vectors"][
+            "generated:autopilots.create:default:canonical"
+        ]
+        output_index = vector["expected_argv"].index("--output")
+        vector["expected_argv"][output_index:output_index] = ["--priority", "none"]
     elif mutation == "duplicate_entrypoint":
         operation = next(item for item in document["operations"] if len(item["entrypoints"]) > 1)
         operation["entrypoints"][1]["entrypoint_id"] = operation["entrypoints"][0]["entrypoint_id"]
@@ -267,8 +276,8 @@ def test_closed_contract_rejects_invalid_rows(
 
 def test_v3_catalogs_are_closed() -> None:
     contract = validate_contract(APPROVED)
-    assert len(contract.test_vectors) == 89
-    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 76
+    assert len(contract.test_vectors) == 79
+    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 66
     assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 13
     assert {item.public_name for item in contract.enum_definitions} == {
         "IssueSort",
@@ -276,6 +285,98 @@ def test_v3_catalogs_are_closed() -> None:
         "AutopilotExecutionMode",
     }
     assert all(item.parameter_name.isidentifier() for item in contract.validator_definitions)
+
+
+def test_autopilot_create_canonical_vector_uses_approved_flags() -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    vector = document["catalogs"]["test_vectors"]["generated:autopilots.create:default:canonical"]
+    rationale = next(
+        item["rationale"]
+        for item in document["operations"]
+        if item["operation_id"] == "autopilots.create"
+    )
+
+    assert "--priority" not in vector["expected_argv"]
+    assert "--priority" not in rationale
+
+
+def test_response_registry_has_old_target_ranges_and_explicit_removals() -> None:
+    contract = validate_contract(APPROVED)
+    registry = contract.compatibility.response_registry
+    assert len(registry) == 173
+    assert {item.disposition for item in registry} == {"changed", "unchanged"}
+    assert {
+        url.split("/blob/")[1].split("/")[0] for item in registry for url in item.source_urls
+    } == {
+        "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
+        "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7",
+    }
+    assert all("#L1-L1" not in url for item in registry for url in item.source_urls)
+    plugin_rows = [item for item in registry if item.operation_id.startswith("plugins.")]
+    assert len(plugin_rows) == 10
+    assert all(item.disposition == "changed" for item in plugin_rows)
+    assert all(item.action.startswith("removed:") for item in plugin_rows)
+    assert all(
+        all(token in item.action for token in ("model=", "fixture=", "docs=")) for item in registry
+    )
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        "registry_placeholder",
+        "registry_missing_baseline",
+        "registry_path_traversal",
+        "registry_action_mismatch",
+        "registry_plugin_retained",
+    ),
+)
+def test_registry_mutations_are_rejected(mutation: str, tmp_path: pathlib.Path) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    row = document["compatibility"]["response_registry"][0]
+    if mutation == "registry_placeholder":
+        row["source_urls"][0] = row["source_urls"][0].replace("#L72-L79", "#L1-L1")
+    elif mutation == "registry_missing_baseline":
+        row["source_urls"] = [row["source_urls"][1]]
+    else:
+        if mutation == "registry_path_traversal":
+            row["source_urls"][1] = row["source_urls"][1].replace(
+                "/server/cmd/multica/cmd_agent.go", "/../outside.go"
+            )
+        elif mutation == "registry_action_mismatch":
+            row["action"] = "retained: model=wrong; fixture=wrong; docs=wrong"
+        else:
+            row = next(
+                item
+                for item in document["compatibility"]["response_registry"]
+                if item["operation_id"].startswith("plugins.")
+            )
+            row["disposition"] = "unchanged"
+            row["action"] = "retained: model=Plugin; fixture=wrong; docs=wrong"
+    path = tmp_path / f"{mutation}.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(ContractError):
+        validate_contract(path)
+
+
+@pytest.mark.skipif(not PINNED_SOURCE.exists(), reason="ignored pinned source checkout unavailable")
+def test_registry_ranges_resolve_in_both_pinned_source_trees() -> None:
+    catalog = validate_contract(APPROVED)
+    assert check_registry_source_links(catalog, PINNED_SOURCE) == []
+
+
+@pytest.mark.skipif(not PINNED_SOURCE.exists(), reason="ignored pinned source checkout unavailable")
+def test_registry_audit_rejects_bogus_repository_path(tmp_path: pathlib.Path) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    row = document["compatibility"]["response_registry"][0]
+    row["source_urls"][1] = row["source_urls"][1].replace(
+        "/server/cmd/multica/cmd_agent.go", "/server/cmd/multica/not-a-source.go"
+    )
+    path = tmp_path / "bogus-registry.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    catalog = validate_contract(path)
+    errors = check_registry_source_links(catalog, PINNED_SOURCE)
+    assert any("missing" in error for error in errors)
 
 
 def test_failed_pilot_rollback_binds_descriptors_to_manual_resource() -> None:
@@ -487,15 +588,15 @@ def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     )
 
 
-def test_current_target_and_source_refs_are_pinned_to_v0428() -> None:
+def test_current_target_and_source_refs_are_pinned_to_v0442() -> None:
     contract = load_contract(APPROVED)
-    assert contract.target.version == "0.4.28"
-    assert contract.target.tag == "v0.4.28"
-    assert contract.target.commit == "38c992ad0a757434fb51584fa34e3bc57d1b78e1"
-    assert contract.target.release_id == "371790559"
+    assert contract.target.version == "0.4.42"
+    assert contract.target.tag == "v0.4.42"
+    assert contract.target.commit == "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7"
+    assert contract.target.release_id == "385445715"
     assert (
         contract.target.release_provenance_ref
-        == ".devlocal/upstream-contract/v0.4.20..v0.4.28/release/release-verification.json"
+        == ".devlocal/upstream-contract/v0.4.20..v0.4.42/release/release-verification.json"
     )
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
     stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
@@ -512,24 +613,44 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
     assert (
         compatibility.min_cli_version,
         compatibility.max_tested_cli_version,
-    ) == ("0.4.28", "0.4.38")
+    ) == ("0.4.42", "0.4.42")
     assert compatibility.verified_binaries == (
         VerifiedBinary(
-            version="0.4.32",
-            commit="d60775aa9394b911b18701a326f655465604e7d1",
-            build_date="2026-08-21T09:43:50Z",
-            go_version="go1.26.7",
+            version="0.4.28",
+            commit="38c992ad0a757434fb51584fa34e3bc57d1b78e1",
+            build_date="2026-08-17T14:18:33Z",
+            go_version="go1.26.6",
             os="darwin",
             arch="arm64",
         ),
         VerifiedBinary(
-            version="0.4.38",
-            commit="47dc75741cd03127d32f1b78d04c644ccf690e7f",
-            build_date="2026-09-02T09:52:29Z",
-            go_version="go1.26.7",
+            version="0.4.42",
+            commit="76f59f5f1cd9b6e779d0d34c603407d5d4001bf7",
+            build_date="2026-09-09T11:06:33Z",
+            go_version="go1.26.8",
             os="darwin",
             arch="arm64",
         ),
+    )
+    assert [item.version for item in compatibility.release_artifacts] == ["0.4.28", "0.4.42"]
+    assert (
+        compatibility.release_artifacts[0].archive_sha256
+        != compatibility.release_artifacts[0].executable_sha256
+    )
+    assert (
+        compatibility.release_artifacts[1].archive_sha256
+        != compatibility.release_artifacts[1].executable_sha256
+    )
+    assert compatibility.command_inventory == replace(
+        compatibility.command_inventory,
+        baseline_nodes=199,
+        target_nodes=189,
+        unchanged=166,
+        changed=21,
+        added=2,
+        removed=12,
+        hidden=("probe-runtimes",),
+        test_only=("repo-test", "test", "x"),
     )
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
         "issues.get",
@@ -557,7 +678,7 @@ def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     assert json.loads(files[2].content) == {
         "max_cli_version": "0.4.36",
         "min_cli_version": "0.4.27",
-        "target_version": "0.4.28",
+        "target_version": "0.4.42",
     }
 
 

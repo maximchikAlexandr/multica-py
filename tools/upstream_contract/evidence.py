@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import pathlib
 import re
 import subprocess
+import tarfile
 from dataclasses import dataclass
 from typing import cast
 
@@ -137,26 +139,20 @@ def _without_go_comments(content: str) -> tuple[str, ...]:
 def _git_go_sources(source_checkout: pathlib.Path, commit: str) -> tuple[tuple[str, str], ...]:
     """Read only tracked Go blobs from the pinned commit, never worktree files."""
 
-    listing = subprocess.run(
-        ["git", "-C", str(source_checkout), "ls-tree", "-r", "-z", commit, "--"],
+    archive = subprocess.run(
+        ["git", "-C", str(source_checkout), "archive", "--format=tar", commit, "--", "*.go"],
         check=True,
         capture_output=True,
     ).stdout
     sources: list[tuple[str, str]] = []
-    for entry in listing.split(b"\0"):
-        if not entry:
-            continue
-        metadata, raw_path = entry.split(b"\t", 1)
-        mode, kind, _object_id = metadata.decode("ascii").split()
-        path = raw_path.decode("utf-8", errors="surrogateescape")
-        if kind != "blob" or mode not in {"100644", "100755"} or not path.endswith(".go"):
-            continue
-        content = subprocess.run(
-            ["git", "-C", str(source_checkout), "show", f"{commit}:{path}"],
-            check=True,
-            capture_output=True,
-        ).stdout.decode("utf-8", errors="replace")
-        sources.append((path, content))
+    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:") as stream:
+        for member in sorted(stream.getmembers(), key=lambda item: item.name):
+            if not member.isfile() or not member.name.endswith(".go"):
+                continue
+            extracted = stream.extractfile(member)
+            if extracted is None:
+                continue
+            sources.append((member.name, extracted.read().decode("utf-8", errors="replace")))
     return tuple(sources)
 
 
