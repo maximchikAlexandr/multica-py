@@ -3,9 +3,7 @@
 ## Purpose
 
 Define synchronous incremental semantic streaming of bound task-run messages.
-
 ## Requirements
-
 ### Requirement: Persisted messages map to semantic events
 The SDK SHALL map each persisted run message to exactly one immutable keyword-only semantic event while retaining the complete `RunMessage` as `raw_message`. Every message-backed event SHALL have `task_id: str`, `issue_id: str | None`, `sequence: int` copied from `seq`, `created_at: datetime | None`, and `raw_message: RunMessage`. `RunTextEvent` SHALL add `text: str | None` from `content`; `RunThinkingEvent` SHALL add `thinking: str | None` from `content`; `RunToolStartedEvent` SHALL add `tool: str | None` and `input: Mapping[str, JsonValue] | None`; `RunToolFinishedEvent` SHALL add `tool: str | None` and `output: str | None`; and `RunErrorEvent` SHALL add `error: str | None` from `content`. A missing optional source field SHALL map to `None`, never an empty or fabricated value, and SHALL NOT prevent yielding the semantic event. The known mapping SHALL be exactly `text`, `thinking`, `tool_use`, `tool_result`, and `error` respectively. Every other type string, including blank and hyphenated `tool-use`/`tool-result`, SHALL produce `RunUnknownEvent` with the shared message fields plus `message_type: str` equal to `RunMessage.type`; sparse unknown payload fields SHALL remain available through `raw_message`.
 
@@ -109,3 +107,22 @@ Streaming SHALL require the same bound client and inherited issue ID used by `Ta
 #### Scenario: Command failure propagates
 - **WHEN** an incremental message read or run-status refresh raises a typed SDK command error
 - **THEN** the same failure escapes the iterator and no later polling occurs
+
+### Requirement: Streaming preserves run-message truncation metadata
+Semantic streaming SHALL retain the complete immutable `RunMessage`, including
+tri-state `output_truncated`, as every message-backed event's `raw_message`.
+Event classification and semantic `output`/`content` fields SHALL remain
+unchanged; the SDK SHALL NOT infer completeness from message type, terminal run
+status, quiet reads, or absence of the field.
+
+#### Scenario: Truncated output remains inspectable
+- **WHEN** a streamed tool-result row has `output_truncated=true`
+- **THEN** the semantic event retains its existing output projection and its `raw_message.output_truncated` is `True`
+
+#### Scenario: Legacy unknown remains unknown
+- **WHEN** a streamed legacy row omits `output_truncated`
+- **THEN** its `raw_message.output_truncated` is `None` and streaming does not describe the output as complete
+
+#### Scenario: Duplicate detection includes truncation state
+- **WHEN** the same sequence is observed again with a different `output_truncated` value
+- **THEN** the existing complete-message duplicate check raises `OutputShapeError`

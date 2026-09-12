@@ -1,8 +1,8 @@
 ## MODIFIED Requirements
 
 ### Requirement: Generated compatibility
-The generated runtime module SHALL expose the human-reviewed CLI interval from
-the approved contract. For the Multica `0.4.43` target, the interval SHALL be
+The generated runtime module MUST provide the tested CLI interval from the approved target version.
+For the Multica `0.4.43` target, the interval MUST be
 `[0.4.42,0.4.44)`: `0.4.42` remains the minimum compatible CLI for the retained
 surface, `0.4.43` is the maximum tested CLI and is required when
 `conversation_starters` is explicitly supplied, and `0.4.44` is the exclusive
@@ -11,6 +11,10 @@ upper bound.
 #### Scenario: Compatibility uses the reviewed direct-patch interval
 - **WHEN** a client reads the generated default policy after the `0.4.43` contract is rendered
 - **THEN** it accepts `0.4.42` and `0.4.43`, rejects or warns at `0.4.44` according to policy, and documentation states that explicit conversation-starter mutations require `0.4.43`
+
+#### Scenario: Compatibility uses the generated interval
+- **WHEN** a client reads default policy
+- **THEN** it uses generated minimum and exclusive next-patch maximum versions.
 <!-- Source IDs: 002:FR-025,FR-033 -->
 
 ## ADDED Requirements
