@@ -54,7 +54,6 @@ _UNPAGED_RELATION_CASES = (
     WorkspaceUnpagedCase("runtimes"),
     WorkspaceUnpagedCase("squads"),
     WorkspaceUnpagedCase("autopilots"),
-    WorkspaceUnpagedCase("plugins"),
     WorkspaceUnpagedCase("properties"),
     WorkspaceUnpagedCase("mcp_servers"),
 )
@@ -507,7 +506,6 @@ NORMATIVE_RELATION_MEMBERS: frozenset[str] = frozenset(
         "Workspace.repositories",
         "Workspace.runtimes",
         "Workspace.squads",
-        "Workspace.plugins",
         "Workspace.properties",
         "Workspace.mcp_servers",
         "Agent.skills",
@@ -559,7 +557,6 @@ def test_normative_relation_inventory_matches_public_surface() -> None:
         (Workspace, "repositories"),
         (Workspace, "runtimes"),
         (Workspace, "squads"),
-        (Workspace, "plugins"),
         (Workspace, "properties"),
         (Workspace, "mcp_servers"),
         (Agent, "skills"),
@@ -590,7 +587,7 @@ def test_normative_relation_inventory_matches_public_surface() -> None:
     discovered = {f"{owner.__name__}.{member}" for owner, member in inventory}
     discovered.add("Issue.recent_comment_threads")
     assert discovered == NORMATIVE_RELATION_MEMBERS
-    assert len(discovered) == 38
+    assert len(discovered) == 37
     for owner, member in inventory:
         assert hasattr(owner, member)
     assert callable(Issue.recent_comment_threads)

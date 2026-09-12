@@ -34,7 +34,6 @@ from multica_py.exceptions import (
     UnsupportedReferenceTargetError,
 )
 from multica_py.models.issues import IssueListFilter, IssueListPage, IssueMetadataItem
-from multica_py.models.plugins import Plugin
 from multica_py.models.properties import PropertyValue
 from multica_py.models.relations import (
     CursorLazyCollection,
@@ -215,24 +214,15 @@ def test_excluded_singular_edges_have_no_lazy_ref_surface(case: ExcludedSingular
     assert _lazy_ref_members(case.owner).isdisjoint(case.names)
 
 
-def test_property_plugin_and_mcp_ids_remain_passive_values() -> None:
+def test_property_and_mcp_ids_remain_passive_values() -> None:
     property_value = PropertyValue(
         property_id="property-1", name="Priority", type="text", value="high"
-    )
-    plugin = Plugin(
-        plugin_key="plugin-1",
-        desired_version="1.0.0",
-        lifecycle_status="installed",
-        trust_tier="trusted",
-        uploader_id="agent-1",
     )
     mcp_server = McpServer(id="server-1", name="MCP", transport="stdio")
 
     assert isinstance(property_value.property_id, str)
-    assert isinstance(plugin.uploader_id, str)
     assert isinstance(mcp_server.id, str)
     assert not _lazy_ref_members(type(property_value))
-    assert not _lazy_ref_members(type(plugin))
     assert not _lazy_ref_members(type(mcp_server))
 
 

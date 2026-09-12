@@ -69,11 +69,9 @@ def make_workspace_clients(
     else:
         scoped.issues.list.side_effect = issues
     scoped.autopilots.list.return_value = autopilots or AutopilotListPage(items=(), total=0)
-    scoped.plugins.list.return_value = Page(items=(), total=0)
     scoped.properties.list.return_value = Page(items=(), total=0)
     scoped.workspaces.mcp.list.return_value = Page(items=(), total=0)
 
-    scoped.plugins.list_command = direct_list_command(scoped.plugins.list)
     scoped.properties.list_command = direct_list_command(scoped.properties.list)
     scoped.workspaces.mcp.list_command = direct_list_command(scoped.workspaces.mcp.list)
 
@@ -173,7 +171,6 @@ def make_workspace_clients(
 
         return lambda: empty_command(loader)
 
-    scoped.workspaces._plugins_relation_command = page_items_command(scoped.plugins.list)
     scoped.workspaces._properties_relation_command = page_items_command(scoped.properties.list)
     scoped.workspaces._mcp_servers_relation_command = page_items_command(scoped.workspaces.mcp.list)
 
@@ -195,7 +192,6 @@ def workspace_relation_method(client: MagicMock, relation_name: str) -> MagicMoc
         "runtimes": "runtimes.list",
         "squads": "squads.list",
         "autopilots": "autopilots.list",
-        "plugins": "plugins.list",
         "properties": "properties.list",
         "mcp_servers": "workspaces.mcp.list",
     }[relation_name]

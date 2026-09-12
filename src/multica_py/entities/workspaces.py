@@ -17,7 +17,6 @@ from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
 from multica_py.models.autopilots import AutopilotListPage
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.plugins import Plugin
 from multica_py.models.properties import PropertyDefinition
 from multica_py.models.relations import (
     LazyCollection,
@@ -97,7 +96,6 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
     _mcp_servers: LazyCollection[McpServer] | None = msgspec.field(
         default=None, name="_mcp_servers"
     )
-    _plugins: LazyCollection[Plugin] | None = msgspec.field(default=None, name="_plugins")
     _properties: LazyCollection[PropertyDefinition] | None = msgspec.field(
         default=None, name="_properties"
     )
@@ -385,20 +383,6 @@ class Workspace(_BoundEntity):  # type: ignore[misc]
         return client.workspaces._remove_mcp_server_command(
             server_id, invalidate=invalidate, options=options
         )
-
-    @property
-    def plugins(self) -> LazyCollection[Plugin]:
-        if self._plugins is None:
-            client = self._check_client("plugins")
-
-            self._set_runtime(
-                "_plugins",
-                LazyCollection[Plugin](
-                    lambda: _page_items(client.plugins.list()),
-                    command_loader=client.workspaces._plugins_relation_command,
-                ),
-            )
-        return self._plugins  # type: ignore[return-value]
 
     @property
     def properties(self) -> LazyCollection[PropertyDefinition]:

@@ -199,7 +199,6 @@ class AutopilotResource(BaseResource):
         description: str | None = None,
         agent: str,
         execution_mode: AutopilotExecutionMode,
-        priority: str = "none",
         project_id: str | None = None,
         issue_title_template: str | None = None,
         subscribers: tuple[str, ...] = (),
@@ -214,8 +213,6 @@ class AutopilotResource(BaseResource):
             agent,
             "--mode",
             execution_mode.value,
-            "--priority",
-            priority,
         ]
         if description is not None:
             args.extend(["--description", description])
@@ -238,7 +235,6 @@ class AutopilotResource(BaseResource):
         description: str | None = None,
         agent: str,
         execution_mode: AutopilotExecutionMode,
-        priority: str = "none",
         project_id: str | None = None,
         issue_title_template: str | None = None,
         subscribers: tuple[str, ...] = (),
@@ -249,7 +245,6 @@ class AutopilotResource(BaseResource):
             description=description,
             agent=agent,
             execution_mode=execution_mode,
-            priority=priority,
             project_id=project_id,
             issue_title_template=issue_title_template,
             subscribers=subscribers,
@@ -262,7 +257,6 @@ class AutopilotResource(BaseResource):
         *,
         title: str | UnsetType = Unset,
         agent: str | UnsetType = Unset,
-        priority: str | UnsetType = Unset,
         status: str | UnsetType = Unset,
         execution_mode: AutopilotExecutionMode | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
@@ -275,7 +269,6 @@ class AutopilotResource(BaseResource):
         if (
             title is Unset
             and agent is Unset
-            and priority is Unset
             and status is Unset
             and execution_mode is Unset
             and description is Unset
@@ -287,7 +280,6 @@ class AutopilotResource(BaseResource):
         for field_name, value in (
             ("title", title),
             ("agent", agent),
-            ("priority", priority),
             ("status", status),
             ("execution_mode", execution_mode),
             ("subscribers", subscribers),
@@ -305,8 +297,6 @@ class AutopilotResource(BaseResource):
             args.extend(["--agent", agent])
         if project_id is not Unset:
             args.extend(["--project", "" if project_id is None else project_id])
-        if priority is not Unset:
-            args.extend(["--priority", priority])
         if status is not Unset:
             args.extend(["--status", status])
         if execution_mode is not Unset:
@@ -334,7 +324,6 @@ class AutopilotResource(BaseResource):
         *,
         title: str | UnsetType = Unset,
         agent: str | UnsetType = Unset,
-        priority: str | UnsetType = Unset,
         status: str | UnsetType = Unset,
         execution_mode: AutopilotExecutionMode | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
@@ -347,7 +336,6 @@ class AutopilotResource(BaseResource):
             autopilot_id,
             title=title,
             agent=agent,
-            priority=priority,
             status=status,
             execution_mode=execution_mode,
             description=description,

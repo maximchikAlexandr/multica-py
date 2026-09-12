@@ -18,7 +18,6 @@ from multica_py.entities.squads import Squad
 from multica_py.entities.workspaces import Workspace, WorkspaceMember
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter
-from multica_py.models.plugins import Plugin
 from multica_py.models.properties import PropertyDefinition
 from multica_py.models.relations import (
     OffsetPage,
@@ -107,9 +106,6 @@ class WorkspaceResource(BaseResource):
             .workspaces.mcp.remove_command(server_id, options=options)
             ._map(invalidate)
         )
-
-    def _plugins_relation_command(self) -> Command[tuple[Plugin, ...]]:
-        return self._bound_client().plugins.list_command()._map(lambda page: tuple(page.items))
 
     def _properties_relation_command(self) -> Command[tuple[PropertyDefinition, ...]]:
         return self._bound_client().properties.list_command()._map(lambda page: tuple(page.items))

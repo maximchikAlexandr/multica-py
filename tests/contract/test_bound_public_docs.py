@@ -435,7 +435,6 @@ MIGRATION_INVENTORY = (
         (
             "title",
             "agent",
-            "priority",
             "status",
             "execution_mode",
             "description",

@@ -583,7 +583,6 @@ PREFETCH_RELATION_CASES = (
     RelationInventoryCase("Workspace.repositories", _build_collection),
     RelationInventoryCase("Workspace.runtimes", _build_collection),
     RelationInventoryCase("Workspace.squads", _build_collection),
-    RelationInventoryCase("Workspace.plugins", _build_collection),
     RelationInventoryCase("Workspace.properties", _build_collection),
     RelationInventoryCase("Workspace.mcp_servers", _build_collection),
     RelationInventoryCase("Agent.skills", _build_collection),
