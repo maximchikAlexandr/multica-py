@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING
 
 import msgspec
 
-from multica_py.models.agents import AgentConversationStarter, AgentSkill
+from multica_py.exceptions import OutputShapeError
+from multica_py.models.agents import AgentConversationStarter, AgentSkill, AgentTask
+from multica_py.models.issue_activity import TaskCancellationActor
 
 if TYPE_CHECKING:
     from multica_py.entities.agents import Agent
@@ -14,6 +16,48 @@ if TYPE_CHECKING:
 class _AgentConversationStarterWire(msgspec.Struct, frozen=True, kw_only=True):
     label: str
     prompt: str
+
+
+class _TaskCancellationActorWire(msgspec.Struct, frozen=True, kw_only=True):
+    type: str
+    id: str | None | msgspec.UnsetType = msgspec.UNSET
+    name: str | None | msgspec.UnsetType = msgspec.UNSET
+
+
+def _task_cancellation_actor_from_wire(
+    wire: _TaskCancellationActorWire,
+) -> TaskCancellationActor:
+    if not wire.type.strip():
+        raise OutputShapeError("cancelled_by.type must be nonblank")
+    return TaskCancellationActor(
+        type=wire.type,
+        id=None if wire.id is msgspec.UNSET else wire.id,
+        name=None if wire.name is msgspec.UNSET else wire.name,
+    )
+
+
+class _AgentTaskWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    status: str
+    issue_id: str
+    started_at: datetime.datetime | None = None
+    completed_at: datetime.datetime | None = None
+    cancelled_by: _TaskCancellationActorWire | msgspec.UnsetType = msgspec.UNSET
+
+
+def _agent_task_from_wire(wire: _AgentTaskWire) -> AgentTask:
+    return AgentTask(
+        id=wire.id,
+        status=wire.status,
+        issue_id=wire.issue_id,
+        started_at=wire.started_at,
+        completed_at=wire.completed_at,
+        cancelled_by=(
+            None
+            if wire.cancelled_by is msgspec.UNSET
+            else _task_cancellation_actor_from_wire(wire.cancelled_by)
+        ),
+    )
 
 
 class _AgentWire(msgspec.Struct, frozen=True, kw_only=True):

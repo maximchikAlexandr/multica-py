@@ -33,6 +33,7 @@ class DecodeCase:
     expected_sparse: bool = False
     expected_complete: bool = False
     expected_blank_unknown: bool = False
+    expected_output_truncated: bool | None = None
 
 
 RUN_MESSAGE_CASES: tuple[RunMessageCase, ...] = (
@@ -122,6 +123,12 @@ RUN_MESSAGE_CASES: tuple[RunMessageCase, ...] = (
         {"error": None},
         "error-sparse",
     ),
+    RunMessageCase(
+        make_run_message(type="text", seq=15, content="partial", output_truncated=True),
+        RunTextEvent,
+        {"text": "partial"},
+        "text-truncated",
+    ),
 )
 
 
@@ -139,9 +146,11 @@ DECODE_CASES: tuple[DecodeCase, ...] = (
                 "input": {"cmd": "ls", "args": ["-l"]},
                 "output": None,
                 "created_at": "2026-01-01T00:00:00Z",
+                "output_truncated": True,
             }
         ],
         expected_complete=True,
+        expected_output_truncated=True,
     ),
     DecodeCase(
         id="sparse",
@@ -152,6 +161,26 @@ DECODE_CASES: tuple[DecodeCase, ...] = (
         id="blank",
         payload=[{"task_id": "run_1", "seq": 3, "type": ""}],
         expected_blank_unknown=True,
+    ),
+    DecodeCase(
+        id="explicit-false",
+        payload=[{"task_id": "run_1", "seq": 4, "type": "text", "output_truncated": False}],
+        expected_output_truncated=False,
+    ),
+    DecodeCase(
+        id="explicit-true",
+        payload=[{"task_id": "run_1", "seq": 5, "type": "text", "output_truncated": True}],
+        expected_output_truncated=True,
+    ),
+    DecodeCase(
+        id="explicit-null-truncation",
+        payload=[{"task_id": "run_1", "seq": 6, "type": "text", "output_truncated": None}],
+        expect_error=True,
+    ),
+    DecodeCase(
+        id="wrong-type-truncation",
+        payload=[{"task_id": "run_1", "seq": 7, "type": "text", "output_truncated": 1}],
+        expect_error=True,
     ),
     DecodeCase(
         id="malformed-input",

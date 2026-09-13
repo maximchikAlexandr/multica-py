@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 import pathlib
 from collections.abc import Callable
+from typing import cast
 
 import pytest
 
 from multica_py.client import MulticaClient
 from multica_py.exceptions import ConflictError, ValidationError
+from multica_py.models.agents import AgentConversationStarter
 from tests.component.resources.cases import CommandCase
 from tests.fixtures.fake_multica import FakeMultica
 
@@ -29,33 +31,151 @@ _COMMAND_CASES: tuple[CommandCase, ...] = (
         expected_error=ValidationError,
         expected_exit_code=5,
     ),
+    CommandCase(
+        id="agent-create-conversation-starters",
+        stderr="",
+        expected_error=None,
+        expected_exit_code=0,
+        response_exit_code=0,
+        expected_argv=(
+            "agent",
+            "create",
+            "--name",
+            "agent",
+            "--conversation-starters",
+            '[{"label":"Review","prompt":"Review this"},{"label":"Plan","prompt":"Plan this"}]',
+            "--output",
+            "json",
+        ),
+        resource_attr="agents",
+        method="create",
+        kwargs=(
+            ("name", "agent"),
+            (
+                "conversation_starters",
+                (
+                    AgentConversationStarter(label="Review", prompt="Review this"),
+                    AgentConversationStarter(label="Plan", prompt="Plan this"),
+                ),
+            ),
+        ),
+        stdout=json.dumps(
+            {
+                "id": "a1",
+                "name": "Agent",
+                "conversation_starters": [
+                    {"label": "Review", "prompt": "Review this"},
+                    {"label": "Plan", "prompt": "Plan this"},
+                ],
+            }
+        ),
+        expected_starters=(
+            AgentConversationStarter(label="Review", prompt="Review this"),
+            AgentConversationStarter(label="Plan", prompt="Plan this"),
+        ),
+    ),
+    CommandCase(
+        id="agent-update-conversation-starters-clear",
+        stderr="",
+        expected_error=None,
+        expected_exit_code=0,
+        response_exit_code=0,
+        expected_argv=(
+            "agent",
+            "update",
+            "a1",
+            "--conversation-starters",
+            "[]",
+            "--output",
+            "json",
+        ),
+        resource_attr="agents",
+        method="update",
+        args=("a1",),
+        kwargs=(("conversation_starters", ()),),
+        stdout=json.dumps(
+            {
+                "id": "a1",
+                "name": "Agent",
+                "conversation_starters": [],
+            }
+        ),
+        expected_starters=(),
+    ),
+    CommandCase(
+        id="issue-run-messages-truncation",
+        stderr="",
+        expected_error=None,
+        expected_exit_code=0,
+        response_exit_code=0,
+        expected_argv=(
+            "issue",
+            "run-messages",
+            "run1",
+            "--issue",
+            "i1",
+            "--since",
+            "0",
+            "--output",
+            "json",
+        ),
+        method="run_messages",
+        args=("run1",),
+        kwargs=(("issue_id", "i1"),),
+        stdout=(
+            '[{"task_id":"run1","seq":1,"type":"tool_result",'
+            '"output":"partial","output_truncated":true}]'
+        ),
+        expected_output_truncated=True,
+    ),
 )
 
 
 @pytest.mark.parametrize("case", _COMMAND_CASES, ids=lambda case: case.id)
-def test_public_issue_command_preserves_typed_fake_cli_detail(
+def test_public_commands_preserve_typed_fake_cli_detail(
     client_factory: Callable[..., MulticaClient],
     tmp_path: pathlib.Path,
     case: CommandCase,
 ) -> None:
-    """The public eager command path maps real fake-CLI failures and detail."""
+    """Public eager command paths map fake-CLI responses and typed detail."""
     responses_dir = tmp_path / "responses"
     responses_dir.mkdir()
     response = FakeMultica(responses_dir=responses_dir).build_response(
+        stdout=case.stdout,
         stderr=case.stderr,
-        exit_code=1,
-        argv=("fake_multica", "issue", "list", "--output", "json"),
+        exit_code=case.response_exit_code,
+        argv=("fake_multica", *case.expected_argv),
     )
-    (responses_dir / "issue.json").write_text(
+    (responses_dir / f"{case.expected_argv[0]}.json").write_text(
         json.dumps(response.to_dict()),
         encoding="utf-8",
     )
-    client = client_factory(environment=(("MULTICA_FAKE_RESPONSES", str(responses_dir)),))
+    record_path = tmp_path / "record.jsonl"
+    client = client_factory(
+        environment=(
+            ("MULTICA_FAKE_RESPONSES", str(responses_dir)),
+            ("MULTICA_FAKE_RECORD", str(record_path)),
+            ("MULTICA_FAKE_RECORD_ROOT", str(tmp_path)),
+        )
+    )
 
-    with pytest.raises(case.expected_error) as excinfo:
-        client.issues.list()
+    operation = getattr(getattr(client, case.resource_attr), case.method)
+    if case.expected_error is not None:
+        with pytest.raises(case.expected_error) as excinfo:
+            operation(*case.args, **dict(case.kwargs))
 
-    exc = excinfo.value
-    assert exc.exit_code == case.expected_exit_code
-    assert case.stderr in str(exc)
-    assert case.stderr in exc.stderr
+        exc = excinfo.value
+        assert exc.exit_code == case.expected_exit_code
+        assert case.stderr in str(exc)
+        assert case.stderr in exc.stderr
+    else:
+        result = operation(*case.args, **dict(case.kwargs))
+        if case.expected_starters is not None:
+            assert tuple(getattr(result, "conversation_starters")) == case.expected_starters
+        if case.expected_output_truncated is not None:
+            assert result.items[0].output_truncated is case.expected_output_truncated
+        records = [
+            json.loads(line) for line in record_path.read_text(encoding="utf-8").splitlines()
+        ]
+        recorded_argv = cast("list[str]", records[-1]["argv"])
+        assert tuple(recorded_argv[1:]) == case.expected_argv

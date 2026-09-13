@@ -9,5 +9,14 @@ from multica_py.exceptions import CommandExecutionError
 class CommandCase:
     id: str
     stderr: str
-    expected_error: type[CommandExecutionError]
+    expected_error: type[CommandExecutionError] | None
     expected_exit_code: int
+    stdout: str = ""
+    response_exit_code: int = 1
+    expected_argv: tuple[str, ...] = ("issue", "list", "--output", "json")
+    resource_attr: str = "issues"
+    method: str = "list"
+    args: tuple[object, ...] = ()
+    kwargs: tuple[tuple[str, object], ...] = ()
+    expected_starters: tuple[object, ...] | None = None
+    expected_output_truncated: bool | None = None

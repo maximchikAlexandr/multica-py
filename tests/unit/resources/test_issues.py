@@ -13,6 +13,7 @@ import pytest
 from multica_py._internal.argv import build_global_args
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _issue_children_result_from_wire,
     _issue_from_wire,
@@ -25,7 +26,12 @@ from multica_py.config import ClientConfig
 from multica_py.entities.agents import Agent
 from multica_py.entities.issues import Issue, TaskRun
 from multica_py.enums import IssueStatus
-from multica_py.exceptions import DetachedEntityError, OutputShapeError
+from multica_py.exceptions import (
+    CommandExecutionError,
+    DetachedEntityError,
+    NotFoundError,
+    OutputShapeError,
+)
 from multica_py.models.issues import (
     InlineDescription,
     IssueChildrenResult,
@@ -102,6 +108,84 @@ class _IssuePartialSerializationCase:
     payload: bytes
     expected: dict[str, object]
     fields: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class _IssueStatusSortCase:
+    direction: str
+    payload: bytes
+    expected_ids: tuple[str, ...]
+    expected_statuses: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _IssueRunMessagesCase:
+    name: str
+    payload: bytes
+    expected_output_truncated: bool
+    expected_created_at: datetime.datetime
+    expected_argv: tuple[str, ...]
+
+
+_ISSUE_RUN_MESSAGES_CASES = (
+    _IssueRunMessagesCase(
+        name="truncation-and-timestamp",
+        payload=(
+            b'[{"task_id":"run1","seq":1,"type":"tool_result",'
+            b'"output":"partial","output_truncated":true,'
+            b'"created_at":"2026-09-12T12:34:56.123456Z"}]'
+        ),
+        expected_output_truncated=True,
+        expected_created_at=datetime.datetime(2026, 9, 12, 12, 34, 56, 123456, tzinfo=datetime.UTC),
+        expected_argv=(
+            "issue",
+            "run-messages",
+            "run1",
+            "--issue",
+            "i1",
+            "--since",
+            "0",
+            "--output",
+            "json",
+        ),
+    ),
+)
+
+
+_ISSUE_STATUS_SORT_CASES = (
+    _IssueStatusSortCase(
+        direction="asc",
+        payload=(
+            b'{"issues":['
+            b'{"id":"i-intake","title":"Intake","status":"z-intake",'
+            b'"status_category":"backlog"},'
+            b'{"id":"i-active","title":"Active","status":"todo",'
+            b'"status_category":"started"},'
+            b'{"id":"i-finished","title":"Finished","status":"a-finished",'
+            b'"status_category":"completed"},'
+            b'{"id":"i-archived","title":"Archived","status":"archived",'
+            b'"status_category":"cancelled"}]} '
+        ),
+        expected_ids=("i-intake", "i-active", "i-finished", "i-archived"),
+        expected_statuses=("z-intake", "todo", "a-finished", "archived"),
+    ),
+    _IssueStatusSortCase(
+        direction="desc",
+        payload=(
+            b'{"issues":['
+            b'{"id":"i-archived","title":"Archived","status":"archived",'
+            b'"status_category":"cancelled"},'
+            b'{"id":"i-finished","title":"Finished","status":"a-finished",'
+            b'"status_category":"completed"},'
+            b'{"id":"i-active","title":"Active","status":"todo",'
+            b'"status_category":"started"},'
+            b'{"id":"i-intake","title":"Intake","status":"z-intake",'
+            b'"status_category":"backlog"}]} '
+        ),
+        expected_ids=("i-archived", "i-finished", "i-active", "i-intake"),
+        expected_statuses=("archived", "a-finished", "todo", "z-intake"),
+    ),
+)
 
 
 _ISSUE_CREATE_ARGV_CASES = (
@@ -690,6 +774,86 @@ def test_issue_search_envelope_preserves_unavailable_total() -> None:
     assert page.has_more is True
 
 
+@pytest.mark.parametrize("case", _ISSUE_STATUS_SORT_CASES, ids=lambda case: case.direction)
+def test_issue_status_sort_preserves_target_category_order_and_direction(
+    case: _IssueStatusSortCase,
+    mock_transport: MagicMock,
+) -> None:
+    """Target ordering is consumed as-is; status categories are not SDK-sorted."""
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=("issue", "list", "--sort", "status", "--direction", case.direction),
+        exit_code=0,
+        stdout=case.payload,
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    resource = IssueResource(mock_transport, ClientConfig())
+
+    page = resource.list(sort="status", direction=case.direction)
+
+    assert tuple(issue.id for issue in page.items) == case.expected_ids
+    assert tuple(issue.status for issue in page.items) == case.expected_statuses
+    mock_transport.run_bytes.assert_called_once_with(
+        (
+            "issue",
+            "list",
+            "--sort",
+            "status",
+            "--direction",
+            case.direction,
+            "--output",
+            "json",
+        ),
+        stdin=None,
+        timeout=None,
+    )
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected_argv"),
+    (
+        (
+            {"sort": "title", "direction": "desc"},
+            ("issue", "list", "--sort", "title", "--direction", "desc", "--output", "json"),
+        ),
+        (
+            {"sort": "property:Impact", "property_filters": ("Impact=High",)},
+            (
+                "issue",
+                "list",
+                "--sort",
+                "property:Impact",
+                "--property",
+                "Impact=High",
+                "--output",
+                "json",
+            ),
+        ),
+    ),
+    ids=("manual-sort", "property-sort"),
+)
+def test_issue_non_status_sorts_remain_server_passthrough(
+    kwargs: dict[str, object],
+    expected_argv: tuple[str, ...],
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=expected_argv,
+        exit_code=0,
+        stdout=b'{"issues":[{"id":"server-order","title":"z","status":"todo"}]}',
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    resource = IssueResource(mock_transport, ClientConfig())
+
+    page = resource.list(**cast("Any", kwargs))
+
+    assert tuple(issue.id for issue in page.items) == ("server-order",)
+    mock_transport.run_bytes.assert_called_once_with(expected_argv, stdin=None, timeout=None)
+
+
 @pytest.mark.parametrize(
     "payload",
     (
@@ -825,6 +989,87 @@ def test_task_run_messages_relation_command_delegates_to_issue_resource(
         "multica issue run-messages run1 --issue i1 --since 0 --output json",
     )
     mock_transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize("case", _ISSUE_RUN_MESSAGES_CASES, ids=lambda case: case.name)
+def test_issue_run_messages_command_decodes_response(
+    case: _IssueRunMessagesCase, mock_transport: MagicMock
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=case.expected_argv,
+        exit_code=0,
+        stdout=case.payload,
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    resource = IssueResource(mock_transport, ClientConfig())
+
+    page = resource.run_messages("run1", issue_id="i1")
+
+    assert page.items[0].output_truncated is case.expected_output_truncated
+    assert page.items[0].created_at == case.expected_created_at
+    mock_transport.run_bytes.assert_called_once_with(case.expected_argv, stdin=None, timeout=None)
+
+
+@pytest.mark.parametrize(
+    ("stderr", "expected_error", "expected_exit_code"),
+    (
+        (
+            "Error: GET /api/tasks/run-missing returned 404: task not found",
+            NotFoundError,
+            4,
+        ),
+        (
+            "Error: GET /api/tasks/run-broken returned 500: task lookup failed",
+            CommandExecutionError,
+            1,
+        ),
+        (
+            "Error: GET /api/workspaces/ws-mismatch/tasks/run-1 returned 404: workspace mismatch",
+            NotFoundError,
+            4,
+        ),
+    ),
+    ids=("task-not-found", "internal-lookup-failure", "workspace-mismatch-404"),
+)
+def test_issue_run_messages_target_http_failures_use_central_classifier(
+    stderr: str,
+    expected_error: type[CommandExecutionError],
+    expected_exit_code: int,
+) -> None:
+    config = ClientConfig()
+    transport = CliTransport(config)
+    transport._execute = lambda *args, **kwargs: RawCommandResult(  # type: ignore[method-assign]
+        argv=("multica", "issue", "run-messages", "run-1", "--output", "json"),
+        exit_code=1,
+        stdout=b"",
+        stderr=stderr.encode(),
+        duration=datetime.timedelta(),
+    )
+    resource = IssueResource(transport, config)
+
+    with pytest.raises(expected_error) as excinfo:
+        resource.run_messages("run-1")
+
+    assert excinfo.value.exit_code == expected_exit_code
+    assert str(excinfo.value) == stderr
+
+
+def test_issue_run_messages_malformed_success_is_not_http_failure() -> None:
+    config = ClientConfig()
+    transport = CliTransport(config)
+    transport._execute = lambda *args, **kwargs: RawCommandResult(  # type: ignore[method-assign]
+        argv=("multica", "issue", "run-messages", "run-1", "--output", "json"),
+        exit_code=0,
+        stdout=b'{"items":[]}',
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    resource = IssueResource(transport, config)
+
+    with pytest.raises(OutputShapeError):
+        resource.run_messages("run-1")
 
 
 @pytest.mark.parametrize(

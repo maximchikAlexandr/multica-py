@@ -17,7 +17,7 @@ _REQUIRED_ENVIRONMENT = (
     "MULTICA_LIVE_WORKSPACE_ID",
     "MULTICA_LIVE_PROFILE",
 )
-_EXPECTED_VERSION = "0.4.42"
+_EXPECTED_VERSION = "0.4.43"
 
 
 def _required_environment(name: str) -> str:

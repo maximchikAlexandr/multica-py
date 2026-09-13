@@ -53,9 +53,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.4.42'" in runtime
+    assert b"TARGET_VERSION = '0.4.43'" in runtime
     assert b"MIN_CLI_VERSION = '0.4.42'" in runtime
-    assert b"MAX_CLI_VERSION = '0.4.43'" in runtime
+    assert b"MAX_CLI_VERSION = '0.4.44'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -104,13 +104,43 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
         "darwin",
         "arm64",
     )
-    version_review = next(
-        item
-        for item in contract.compatibility.reviewed_responses
-        if item.operation_id == "maintenance.version"
+    assert {item.operation_id for item in contract.compatibility.reviewed_responses} == {
+        "agents.tasks",
+        "issues.runs",
+        "issues.run_messages",
+        "issues.usage",
+    }
+
+
+def test_retained_inventory_and_fresh_checkout_remain_outside_typed_surface() -> None:
+    from multica_py.resources.repositories import RepositoryResource
+
+    contract = validate_contract(APPROVED)
+    operation_ids = {operation.operation_id for operation in contract.operations}
+    scope = cast("dict[str, object]", contract.raw["scope"])
+    scoped_operation_ids = set(cast("list[str]", scope["operation_ids"]))
+    relation_ids = tuple(
+        test_ref.test_ref_id
+        for test_ref in contract.test_refs
+        if test_ref.test_ref_id.startswith("relation:")
     )
-    assert version_review.fields == ("version", "commit", "date", "go", "os", "arch")
-    assert "76f59f5f1" in version_review.omission_policy
+
+    assert len(operation_ids) == 160
+    assert operation_ids == scoped_operation_ids
+    assert len(contract.responses) == 81
+    assert len(contract.compatibility.response_registry) == 163
+    assert (
+        sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
+        == 159
+    )
+    assert (
+        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 4
+    )
+    assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
+
+    assert any("repoCheckoutCmd" in source_ref.symbol for source_ref in contract.source_refs)
+    assert not any("checkout" in operation_id for operation_id in operation_ids)
+    assert not hasattr(RepositoryResource, "checkout")
 
 
 def test_removed_plugin_surface_and_autopilot_priority_are_absent() -> None:

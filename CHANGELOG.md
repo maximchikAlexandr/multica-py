@@ -7,11 +7,24 @@ one inspectable command contract canonical. Relation `.all()` tuple snapshots
 remain unchanged. The complete compiling migration table is in
 [docs/migration.md](docs/migration.md).
 
-### Multica 0.4.42 compatibility migration
+### Multica 0.4.43 compatibility migration
 
-- Directly targets CLI `0.4.42` at
+- Targets CLI `0.4.43` at
+  `2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c`, with bounds
+  `[0.4.42, 0.4.44)`; the retained surface remains compatible with `0.4.42`.
+- Adds validated `conversation_starters` to agent create/update; explicit
+  starter mutations require CLI `0.4.43`, while omission preserves old argv.
+- Preserves cancellation actors, tri-state message truncation, and independent
+  exact usage coverage counts without fabricating absent values.
+- Pins server-side status sorting, run-message 404/500 classification, source
+  and checksum roles, non-SDK `repo checkout --fresh`, and atomic rollback.
+
+### Historical Multica 0.4.42 compatibility migration
+
+- Historically targeted CLI `0.4.42` at
   `76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`, with bounds
-  `[0.4.42, 0.4.43)`; no intermediate SDK release is supported.
+  `[0.4.42, 0.4.43)`; this interval is superseded by the current `0.4.43`
+  target and `[0.4.42, 0.4.44)` bounds.
 - Removes Plugin operations, models, exports, and `Workspace.plugins`; there
   is no replacement API. Autopilot create/update no longer accept `priority`.
 - Makes Skill get content explicit, keeps Skill lists metadata-only, and adds
@@ -83,7 +96,7 @@ the exact before/after import table is maintained in the migration guide.
   uncosted categories, while `TaskRun` retains reviewed runtime, worktree,
   result, and failure context. Historical notes for CLI 0.4.32 retain the
   superseded interval `[0.4.28, 0.4.33)`; the current approved compatibility
-  interval is `[0.4.42, 0.4.43)`.
+  interval is `[0.4.42, 0.4.44)`.
 
 ## 0.1.0 (unreleased)
 

@@ -29,7 +29,10 @@ from tools.upstream_contract.evidence import ReleaseIdentity, collect
 from tools.upstream_contract.generation import _validate_transient_projection, render_files
 
 APPROVED = pathlib.Path("contracts/sdk-contract.json")
-PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.4.20..v0.4.42/source")
+PINNED_SOURCE = pathlib.Path(
+    ".devlocal/upstream-contract/v0.4.42..v0.4.43/source-repo/"
+    ".devlocal/upstream-contract/v0.4.42..v0.4.43/source-0.4.43"
+)
 
 _SQUAD_MEMBER_OPERATION_IDS = (
     "squads.members.add",
@@ -303,19 +306,17 @@ def test_autopilot_create_canonical_vector_uses_approved_flags() -> None:
 def test_response_registry_has_old_target_ranges_and_explicit_removals() -> None:
     contract = validate_contract(APPROVED)
     registry = contract.compatibility.response_registry
-    assert len(registry) == 173
+    assert len(registry) == 163
     assert {item.disposition for item in registry} == {"changed", "unchanged"}
     assert {
         url.split("/blob/")[1].split("/")[0] for item in registry for url in item.source_urls
     } == {
-        "38c992ad0a757434fb51584fa34e3bc57d1b78e1",
         "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7",
+        "2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c",
     }
     assert all("#L1-L1" not in url for item in registry for url in item.source_urls)
-    plugin_rows = [item for item in registry if item.operation_id.startswith("plugins.")]
-    assert len(plugin_rows) == 10
-    assert all(item.disposition == "changed" for item in plugin_rows)
-    assert all(item.action.startswith("removed:") for item in plugin_rows)
+    assert not any(item.operation_id.startswith("plugins.") for item in registry)
+    assert sum(item.disposition == "changed" for item in registry) == 4
     assert all(
         all(token in item.action for token in ("model=", "fixture=", "docs=")) for item in registry
     )
@@ -328,7 +329,6 @@ def test_response_registry_has_old_target_ranges_and_explicit_removals() -> None
         "registry_missing_baseline",
         "registry_path_traversal",
         "registry_action_mismatch",
-        "registry_plugin_retained",
     ),
 )
 def test_registry_mutations_are_rejected(mutation: str, tmp_path: pathlib.Path) -> None:
@@ -344,15 +344,7 @@ def test_registry_mutations_are_rejected(mutation: str, tmp_path: pathlib.Path) 
                 "/server/cmd/multica/cmd_agent.go", "/../outside.go"
             )
         elif mutation == "registry_action_mismatch":
-            row["action"] = "retained: model=wrong; fixture=wrong; docs=wrong"
-        else:
-            row = next(
-                item
-                for item in document["compatibility"]["response_registry"]
-                if item["operation_id"].startswith("plugins.")
-            )
-            row["disposition"] = "unchanged"
-            row["action"] = "retained: model=Plugin; fixture=wrong; docs=wrong"
+            row["action"] = "changed: model=wrong; fixture=wrong; docs=wrong"
     path = tmp_path / f"{mutation}.json"
     path.write_text(json.dumps(document), encoding="utf-8")
     with pytest.raises(ContractError):
@@ -588,15 +580,15 @@ def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     )
 
 
-def test_current_target_and_source_refs_are_pinned_to_v0442() -> None:
+def test_current_target_and_source_refs_are_pinned_to_v0443() -> None:
     contract = load_contract(APPROVED)
-    assert contract.target.version == "0.4.42"
-    assert contract.target.tag == "v0.4.42"
-    assert contract.target.commit == "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7"
-    assert contract.target.release_id == "385445715"
+    assert contract.target.version == "0.4.43"
+    assert contract.target.tag == "v0.4.43"
+    assert contract.target.commit == "2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c"
+    assert contract.target.release_id == "387217464"
     assert (
         contract.target.release_provenance_ref
-        == ".devlocal/upstream-contract/v0.4.20..v0.4.42/release/release-verification.json"
+        == ".devlocal/upstream-contract/v0.4.42..v0.4.43/release/release-verification.json"
     )
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
     stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
@@ -613,16 +605,8 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
     assert (
         compatibility.min_cli_version,
         compatibility.max_tested_cli_version,
-    ) == ("0.4.42", "0.4.42")
+    ) == ("0.4.42", "0.4.43")
     assert compatibility.verified_binaries == (
-        VerifiedBinary(
-            version="0.4.28",
-            commit="38c992ad0a757434fb51584fa34e3bc57d1b78e1",
-            build_date="2026-08-17T14:18:33Z",
-            go_version="go1.26.6",
-            os="darwin",
-            arch="arm64",
-        ),
         VerifiedBinary(
             version="0.4.42",
             commit="76f59f5f1cd9b6e779d0d34c603407d5d4001bf7",
@@ -631,8 +615,16 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
             os="darwin",
             arch="arm64",
         ),
+        VerifiedBinary(
+            version="0.4.43",
+            commit="2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c",
+            build_date="2026-09-11T17:19:51Z",
+            go_version="go1.26.8",
+            os="darwin",
+            arch="arm64",
+        ),
     )
-    assert [item.version for item in compatibility.release_artifacts] == ["0.4.28", "0.4.42"]
+    assert [item.version for item in compatibility.release_artifacts] == ["0.4.42", "0.4.43"]
     assert (
         compatibility.release_artifacts[0].archive_sha256
         != compatibility.release_artifacts[0].executable_sha256
@@ -643,23 +635,40 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
     )
     assert compatibility.command_inventory == replace(
         compatibility.command_inventory,
-        baseline_nodes=199,
+        baseline_nodes=189,
         target_nodes=189,
-        unchanged=166,
-        changed=21,
-        added=2,
-        removed=12,
+        unchanged=186,
+        changed=3,
+        added=0,
+        removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
     )
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
-        "issues.get",
+        "agents.tasks",
         "issues.runs",
+        "issues.run_messages",
         "issues.usage",
-        "autopilots.trigger_add",
-        "autopilots.trigger_update",
-        "maintenance.version",
     }
+
+
+@pytest.mark.parametrize(
+    ("field", "expected_message"),
+    (
+        ("baseline_nodes", "baseline_nodes"),
+        ("target_nodes", "target_nodes"),
+    ),
+)
+def test_command_inventory_rejects_non_reconciling_totals(
+    field: str, expected_message: str, tmp_path: pathlib.Path
+) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    document["compatibility"]["command_inventory"][field] = 188
+    path = tmp_path / f"inventory-{field}.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ContractError, match=expected_message):
+        load_contract(path)
 
 
 def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
@@ -678,7 +687,7 @@ def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     assert json.loads(files[2].content) == {
         "max_cli_version": "0.4.36",
         "min_cli_version": "0.4.27",
-        "target_version": "0.4.42",
+        "target_version": "0.4.43",
     }
 
 

@@ -221,7 +221,11 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
                 if (value := _get(self, field)) is not msgspec.UNSET
             }
         materialized = _materialize_mappings(data)
-        return cast("dict[str, object]", msgspec.to_builtins(materialized))
+        builtins = cast("dict[str, object]", msgspec.to_builtins(materialized))
+        return self._normalize_to_dict(builtins)
+
+    def _normalize_to_dict(self, data: dict[str, object]) -> dict[str, object]:
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> Self:

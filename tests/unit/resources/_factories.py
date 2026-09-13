@@ -32,6 +32,7 @@ def make_run_message(
     input: Mapping[str, JsonValue] | None = None,
     output: str | None = None,
     created_at: datetime.datetime | None = None,
+    output_truncated: bool | None = None,
 ) -> RunMessage:
     return RunMessage(
         task_id=task_id,
@@ -43,6 +44,7 @@ def make_run_message(
         input=input,
         output=output,
         created_at=created_at,
+        output_truncated=output_truncated,
     )
 
 

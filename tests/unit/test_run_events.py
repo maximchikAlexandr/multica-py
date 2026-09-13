@@ -67,6 +67,7 @@ def test_decode_run_messages(case: DecodeCase) -> None:
         return
     items = decode_run_messages(payload, "test")
     message = items[0]
+    assert message.output_truncated is case.expected_output_truncated
     if case.expected_complete:
         assert message.task_id == "run_1"
         assert message.seq == 1

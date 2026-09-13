@@ -35,6 +35,7 @@ from multica_py.models.common import Page
 from multica_py.models.issue_activity import (
     CommentCursor,
     RunMessage,
+    TaskCancellationActor,
 )
 from multica_py.models.issues import (
     IssueChildrenResult,
@@ -601,18 +602,28 @@ def test_task_run_messages_preserve_issue_and_task_ids() -> None:
     client = _client()
     client.issues.runs.return_value = (TaskRun(id="run_1", status="done", issue_id="iss_1"),)
     client.issues.run_messages.return_value = (
-        RunMessage(task_id="run_1", seq=1, type="text", issue_id="iss_1", content="ok"),
+        RunMessage(
+            task_id="run_1",
+            seq=1,
+            type="text",
+            issue_id="iss_1",
+            content="ok",
+            output_truncated=True,
+        ),
     )
     entity = _issue(client)
 
     run = entity.runs.all()[0]
-    assert [message.seq for message in run.messages.all()] == [1]
+    messages = run.messages.all()
+    assert [message.seq for message in messages] == [1]
+    assert messages[0].output_truncated is True
     client.issues.run_messages.assert_called_once_with("run_1", issue_id="iss_1", since=0)
 
 
 def test_issue_runs_relation_preserves_current_fixture_context() -> None:
     client = _client()
-    wire = decode_json(json.dumps(_ACTIVITY_FIXTURE["task_run"]).encode(), _TaskRunWire)
+    payload = {**_ACTIVITY_FIXTURE["task_run"], "cancelled_by": {"type": "system"}}
+    wire = decode_json(json.dumps(payload).encode(), _TaskRunWire)
     client.issues.runs.return_value = (_task_run_from_wire(wire, issue_id="issue-1"),)
     entity = _issue(client)
 
@@ -621,6 +632,7 @@ def test_issue_runs_relation_preserves_current_fixture_context() -> None:
     assert run._client is client
     assert run.issue_id == "issue-1"
     assert run.agent_id == "agent-1"
+    assert run.cancelled_by == TaskCancellationActor(type="system")
     assert run.runtime_id == "runtime-1"
     assert run.workspace_id == "workspace-1"
     assert run.dispatched_at == datetime.datetime(2026, 8, 21, 9, tzinfo=datetime.UTC)

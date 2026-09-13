@@ -19,6 +19,7 @@ from multica_py.models.autopilots import (
     AutopilotTrigger,
 )
 from multica_py.models.issue_activity import (
+    IssueUsage,
     RunMessage,
     TaskIssueStatusData,
     TaskPluginHookTool,
@@ -39,6 +40,8 @@ from multica_py._internal.agent_wires import (
     _agent_from_wire,
     _AgentConversationStarterWire,
     _AgentWire,
+    _task_cancellation_actor_from_wire,
+    _TaskCancellationActorWire,
 )
 from multica_py._internal.issue_wires import (
     _issue_assignee_from_wire,
@@ -384,6 +387,7 @@ class _TaskUsageWire(msgspec.Struct, frozen=True, kw_only=True):
 class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     status: str
+    cancelled_by: _TaskCancellationActorWire | msgspec.UnsetType = msgspec.UNSET
     workspace_slug: str | None | msgspec.UnsetType = msgspec.UNSET
     issue_identifier: str | None | msgspec.UnsetType = msgspec.UNSET
     workspace_context: str | None | msgspec.UnsetType = msgspec.UNSET
@@ -506,10 +510,16 @@ def _task_run_from_wire(
         if wire.result is msgspec.UNSET or wire.result is None
         else _coerce_json_value(wire.result, field_name="result")
     )
+    cancelled_by = (
+        None
+        if wire.cancelled_by is msgspec.UNSET
+        else _task_cancellation_actor_from_wire(wire.cancelled_by)
+    )
 
     return TaskRun(
         id=wire.id,
         status=wire.status,
+        cancelled_by=cancelled_by,
         workspace_slug=None if wire.workspace_slug is msgspec.UNSET else wire.workspace_slug,
         issue_identifier=(
             None if wire.issue_identifier is msgspec.UNSET else wire.issue_identifier
@@ -640,6 +650,7 @@ def _task_run_from_wire(
                     ),
                     ("plugin_hook_tools", _presence_seed(wire.plugin_hook_tools)),
                     ("usage", _presence_seed(wire.usage)),
+                    ("cancelled_by", _presence_seed(wire.cancelled_by)),
                 )
             )
             if include_wire_presence
@@ -662,6 +673,7 @@ class _RunMessageWire(msgspec.Struct, frozen=True, kw_only=True):
     input: object | None = None
     output: str | None = None
     created_at: datetime.datetime | None = None
+    output_truncated: bool | msgspec.UnsetType = msgspec.UNSET
 
 
 def _run_message_from_wire(wire: _RunMessageWire) -> RunMessage:
@@ -690,6 +702,62 @@ def _run_message_from_wire(wire: _RunMessageWire) -> RunMessage:
         input=converted_input,
         output=wire.output,
         created_at=wire.created_at,
+        output_truncated=(
+            None if wire.output_truncated is msgspec.UNSET else wire.output_truncated
+        ),
+    )
+
+
+class _IssueUsageWire(msgspec.Struct, frozen=True, kw_only=True):
+    total_runs: int = 0
+    total_tokens: int | None = None
+    cost_usd: float | None = None
+    period_start: datetime.datetime | None = None
+    period_end: datetime.datetime | None = None
+    task_count: int | None = None
+    total_input_tokens: int | None = None
+    total_output_tokens: int | None = None
+    total_cache_read_tokens: int | None = None
+    total_cache_write_tokens: int | None = None
+    cost_usd_ticks: int | None = None
+    uncosted_input_tokens: int | None = None
+    uncosted_output_tokens: int | None = None
+    uncosted_cache_read_tokens: int | None = None
+    uncosted_cache_write_tokens: int | None = None
+    terminal_task_count: int | msgspec.UnsetType = msgspec.UNSET
+    metered_task_count: int | msgspec.UnsetType = msgspec.UNSET
+    unreported_task_count: int | msgspec.UnsetType = msgspec.UNSET
+
+
+def _issue_usage_from_wire(wire: _IssueUsageWire) -> IssueUsage:
+    counts = (wire.terminal_task_count, wire.metered_task_count, wire.unreported_task_count)
+    if any(value is not msgspec.UNSET and value < 0 for value in counts):
+        raise OutputShapeError("issue usage coverage counts must be nonnegative integers")
+    return IssueUsage(
+        total_runs=wire.total_runs,
+        total_tokens=wire.total_tokens,
+        cost_usd=wire.cost_usd,
+        period_start=wire.period_start,
+        period_end=wire.period_end,
+        task_count=wire.task_count,
+        total_input_tokens=wire.total_input_tokens,
+        total_output_tokens=wire.total_output_tokens,
+        total_cache_read_tokens=wire.total_cache_read_tokens,
+        total_cache_write_tokens=wire.total_cache_write_tokens,
+        cost_usd_ticks=wire.cost_usd_ticks,
+        uncosted_input_tokens=wire.uncosted_input_tokens,
+        uncosted_output_tokens=wire.uncosted_output_tokens,
+        uncosted_cache_read_tokens=wire.uncosted_cache_read_tokens,
+        uncosted_cache_write_tokens=wire.uncosted_cache_write_tokens,
+        terminal_task_count=(
+            None if wire.terminal_task_count is msgspec.UNSET else wire.terminal_task_count
+        ),
+        metered_task_count=(
+            None if wire.metered_task_count is msgspec.UNSET else wire.metered_task_count
+        ),
+        unreported_task_count=(
+            None if wire.unreported_task_count is msgspec.UNSET else wire.unreported_task_count
+        ),
     )
 
 

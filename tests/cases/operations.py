@@ -474,7 +474,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ProjectStatus,
     )
     from multica_py.exceptions import NetworkError
-    from multica_py.models.agents import AgentSkill
+    from multica_py.models.agents import AgentConversationStarter, AgentSkill
     from multica_py.models.autopilots import (
         AutopilotListPage,
         AutopilotRunListPage,
@@ -487,7 +487,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         IssueUsage,
         MetadataEntry,
         MetadataPredicate,
-        RunMessage,
     )
     from multica_py.models.issues import (
         FileDescription,
@@ -523,6 +522,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
 
     # Pre-encode common payloads to match legacy ARGV_CASES
     _AG = msgspec.json.encode(Agent(id="a1", name="n"))
+    _STARTER = AgentConversationStarter(label="Review", prompt="Review this")
+    _STARTERS = (_STARTER, AgentConversationStarter(label="Plan", prompt="Plan this"))
+    _UNICODE_LABEL_80 = "é" * 80
+    _UNICODE_LABEL_81 = "é" * 81
+    _UNICODE_PROMPT_4000 = "😀" * 4000
+    _UNICODE_PROMPT_4001 = "😀" * 4001
     _AP = msgspec.json.encode(
         Autopilot(
             id="a1",
@@ -592,7 +597,15 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
     _SK_FILE = msgspec.json.encode(SkillFile(id="f_1", path="SKILL.md"))
     _PR_LINK = msgspec.json.encode([LinkedPullRequest(url="https://example.com/pr/1")])
     _TASK_RUN = msgspec.json.encode([TaskRun(id="run_1", status="done")])
+    _TASK_RUN_ROWS = msgspec.json.decode(_TASK_RUN)
+    for row in _TASK_RUN_ROWS:
+        row.pop("cancelled_by", None)
+    _TASK_RUN = msgspec.json.encode(_TASK_RUN_ROWS)
     _USAGE = msgspec.json.encode(IssueUsage(total_runs=3))
+    _USAGE_FIELDS = msgspec.json.decode(_USAGE)
+    for field in ("terminal_task_count", "metered_task_count", "unreported_task_count"):
+        _USAGE_FIELDS.pop(field, None)
+    _USAGE = msgspec.json.encode(_USAGE_FIELDS)
     _DS_STOP = msgspec.json.encode(DaemonStatus(running=False))
     _DS = msgspec.json.encode(DaemonStatus(running=True, pid=12345, uptime=3600.0))
     _DS_RESTART = msgspec.json.encode(DaemonStatus(running=True, pid=12345))
@@ -951,6 +964,291 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:agents.create:variant:03",
         ),
         _c(
+            "agents.create",
+            (
+                "agent",
+                "create",
+                "--name",
+                "my-agent",
+                "--conversation-starters",
+                '[{"label":"Review","prompt":"Review this"},{"label":"Plan","prompt":"Plan this"}]',
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("name", "my-agent"),
+                ("conversation_starters", _STARTERS),
+            ),
+            stdout=_AG,
+            id="manual:agents.create:conversation-starters:valid",
+        ),
+        _c(
+            "agents.create",
+            (
+                "agent",
+                "create",
+                "--name",
+                "my-agent",
+                "--conversation-starters",
+                "[]",
+                "--output",
+                "json",
+            ),
+            kwargs=(("name", "my-agent"), ("conversation_starters", ())),
+            stdout=_AG,
+            id="manual:agents.create:conversation-starters:empty",
+        ),
+        _c(
+            "agents.create",
+            ("agent", "create", "--name", "my-agent", "--output", "json"),
+            kwargs=(("name", "my-agent"), ("conversation_starters", Unset)),
+            stdout=_AG,
+            id="manual:agents.create:conversation-starters:unset",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(("name", "my-agent"), ("conversation_starters", None)),
+            expected_exception=TypeError,
+            id="manual:agents.create:conversation-starters:none",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(("name", "my-agent"), ("conversation_starters", [_STARTER])),
+            expected_exception=TypeError,
+            id="manual:agents.create:conversation-starters:non-tuple",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                ("name", "my-agent"),
+                ("conversation_starters", (object(),)),
+            ),
+            expected_exception=TypeError,
+            id="manual:agents.create:conversation-starters:non-starter-item",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label=cast("str", 1), prompt="p"),),
+                ),
+                ("name", "my-agent"),
+            ),
+            expected_exception=TypeError,
+            id="manual:agents.create:conversation-starters:bad-label-type",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label="l", prompt=cast("str", 1)),),
+                ),
+                ("name", "my-agent"),
+            ),
+            expected_exception=TypeError,
+            id="manual:agents.create:conversation-starters:bad-prompt-type",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(("name", "my-agent"), ("conversation_starters", "malformed")),
+            expected_exception=TypeError,
+            id="manual:agents.create:conversation-starters:raw-json",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                ("name", "my-agent"),
+                ("conversation_starters", "null"),
+            ),
+            expected_exception=TypeError,
+            id="manual:agents.create:conversation-starters:raw-null",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                (
+                    "name",
+                    "my-agent",
+                ),
+                (
+                    "conversation_starters",
+                    tuple(AgentConversationStarter(label="l", prompt="p") for _ in range(4)),
+                ),
+            ),
+            expected_exception=ValueError,
+            id="manual:agents.create:conversation-starters:too-many",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                ("name", "my-agent"),
+                ("conversation_starters", (AgentConversationStarter(label=" ", prompt="p"),)),
+            ),
+            expected_exception=ValueError,
+            id="manual:agents.create:conversation-starters:blank-label",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                ("name", "my-agent"),
+                ("conversation_starters", (AgentConversationStarter(label="l", prompt="\t"),)),
+            ),
+            expected_exception=ValueError,
+            id="manual:agents.create:conversation-starters:blank-prompt",
+        ),
+        _c(
+            "agents.create",
+            (
+                "agent",
+                "create",
+                "--name",
+                "my-agent",
+                "--conversation-starters",
+                '[{"label":"llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll","prompt":"p"}]',
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("name", "my-agent"),
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label="l" * 80, prompt="p"),),
+                ),
+            ),
+            stdout=_AG,
+            id="manual:agents.create:conversation-starters:label-80",
+        ),
+        _c(
+            "agents.create",
+            (
+                "agent",
+                "create",
+                "--name",
+                "my-agent",
+                "--conversation-starters",
+                '[{"label":"' + _UNICODE_LABEL_80 + '","prompt":"p"}]',
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("name", "my-agent"),
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label=_UNICODE_LABEL_80, prompt="p"),),
+                ),
+            ),
+            stdout=_AG,
+            id="manual:agents.create:conversation-starters:unicode-label-80",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                ("name", "my-agent"),
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label="l" * 81, prompt="p"),),
+                ),
+            ),
+            expected_exception=ValueError,
+            id="manual:agents.create:conversation-starters:label-81",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                ("name", "my-agent"),
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label=_UNICODE_LABEL_81, prompt="p"),),
+                ),
+            ),
+            expected_exception=ValueError,
+            id="manual:agents.create:conversation-starters:unicode-label-81",
+        ),
+        _c(
+            "agents.create",
+            (
+                "agent",
+                "create",
+                "--name",
+                "my-agent",
+                "--conversation-starters",
+                '[{"label":"l","prompt":"' + "p" * 4000 + '"}]',
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("name", "my-agent"),
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label="l", prompt="p" * 4000),),
+                ),
+            ),
+            stdout=_AG,
+            id="manual:agents.create:conversation-starters:prompt-4000",
+        ),
+        _c(
+            "agents.create",
+            (
+                "agent",
+                "create",
+                "--name",
+                "my-agent",
+                "--conversation-starters",
+                '[{"label":"l","prompt":"' + _UNICODE_PROMPT_4000 + '"}]',
+                "--output",
+                "json",
+            ),
+            kwargs=(
+                ("name", "my-agent"),
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label="l", prompt=_UNICODE_PROMPT_4000),),
+                ),
+            ),
+            stdout=_AG,
+            id="manual:agents.create:conversation-starters:unicode-prompt-4000",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                ("name", "my-agent"),
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label="l", prompt="p" * 4001),),
+                ),
+            ),
+            expected_exception=ValueError,
+            id="manual:agents.create:conversation-starters:prompt-4001",
+        ),
+        _c(
+            "agents.create",
+            (),
+            kwargs=(
+                ("name", "my-agent"),
+                (
+                    "conversation_starters",
+                    (AgentConversationStarter(label="l", prompt=_UNICODE_PROMPT_4001),),
+                ),
+            ),
+            expected_exception=ValueError,
+            id="manual:agents.create:conversation-starters:unicode-prompt-4001",
+        ),
+        _c(
             "agents.update",
             ("agent", "get", "a1", "--output", "json"),
             args=("a1",),
@@ -964,6 +1262,67 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             kwargs=(("name", "new"),),
             stdout=_AG,
             id="manual:agents.update:variant:01",
+        ),
+        _c(
+            "agents.update",
+            (
+                "agent",
+                "update",
+                "a1",
+                "--conversation-starters",
+                '[{"label":"Review","prompt":"Review this"},{"label":"Plan","prompt":"Plan this"}]',
+                "--output",
+                "json",
+            ),
+            args=("a1",),
+            kwargs=(("conversation_starters", _STARTERS),),
+            stdout=_AG,
+            id="manual:agents.update:conversation-starters:valid",
+        ),
+        _c(
+            "agents.update",
+            ("agent", "update", "a1", "--conversation-starters", "[]", "--output", "json"),
+            args=("a1",),
+            kwargs=(("conversation_starters", ()),),
+            stdout=_AG,
+            id="manual:agents.update:conversation-starters:empty",
+        ),
+        _c(
+            "agents.update",
+            ("agent", "get", "a1", "--output", "json"),
+            args=("a1",),
+            kwargs=(("conversation_starters", Unset),),
+            stdout=_AG,
+            id="manual:agents.update:conversation-starters:unset",
+        ),
+        _c(
+            "agents.update",
+            (),
+            args=("a1",),
+            kwargs=(("conversation_starters", None),),
+            expected_exception=TypeError,
+            id="manual:agents.update:conversation-starters:none",
+        ),
+        _c(
+            "agents.update",
+            (),
+            args=("a1",),
+            kwargs=(("conversation_starters", [_STARTER]),),
+            expected_exception=TypeError,
+            id="manual:agents.update:conversation-starters:non-tuple",
+        ),
+        _c(
+            "agents.update",
+            (),
+            args=("a1",),
+            kwargs=(
+                (
+                    "conversation_starters",
+                    tuple(AgentConversationStarter(label="l", prompt="p") for _ in range(4)),
+                ),
+            ),
+            expected_exception=ValueError,
+            id="manual:agents.update:conversation-starters:too-many",
         ),
         _c(
             "agents.copy",
@@ -2681,13 +3040,17 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             kwargs=(("issue_id", "iss_001"),),
             stdout=msgspec.json.encode(
                 [
-                    RunMessage(
-                        task_id="run_001",
-                        seq=1,
-                        type="text",
-                        issue_id="iss_001",
-                        content="hello",
-                    )
+                    {
+                        "task_id": "run_001",
+                        "seq": 1,
+                        "type": "text",
+                        "issue_id": "iss_001",
+                        "tool": None,
+                        "content": "hello",
+                        "input": None,
+                        "output": None,
+                        "created_at": None,
+                    }
                 ]
             ),
             id="manual:issues.run_messages:canonical",

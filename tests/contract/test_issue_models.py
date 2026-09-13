@@ -9,6 +9,7 @@ from types import MappingProxyType
 from typing import cast
 from unittest.mock import MagicMock
 
+import msgspec
 import pytest
 
 import multica_py
@@ -23,6 +24,7 @@ from multica_py._internal.wire_models import (
     _task_run_from_wire,
     _TaskRunWire,
     comment_from_wire,
+    decode_run_messages,
 )
 from multica_py.config import ClientConfig
 from multica_py.entities._base import _entity_policy
@@ -30,8 +32,10 @@ from multica_py.entities.agents import Agent
 from multica_py.entities.issues import Issue, TaskRun
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import OutputShapeError
+from multica_py.models.agents import AgentTask
 from multica_py.models.issue_activity import (
     IssueUsage,
+    TaskCancellationActor,
     TaskIssueStatusData,
     TaskPluginHookTool,
     TaskProjectResourceData,
@@ -107,6 +111,7 @@ class DecodeCase:
     id: str
     payload: dict[str, object]
     expected: dict[str, object]
+    error: str | None = None
 
 
 USAGE_DECODE_CASES = (
@@ -160,6 +165,25 @@ USAGE_DECODE_CASES = (
             "uncosted_cache_write_tokens": None,
         },
     ),
+    DecodeCase(
+        "divergent-exact-counts",
+        {
+            "total_runs": 2,
+            "task_count": 3,
+            "terminal_task_count": 9007199254740993,
+            "metered_task_count": 0,
+            "unreported_task_count": 7,
+        },
+        {
+            "total_runs": 2,
+            "task_count": 3,
+            "terminal_task_count": 9007199254740993,
+            "metered_task_count": 0,
+            "unreported_task_count": 7,
+        },
+    ),
+    DecodeCase("negative-exact-count", {"terminal_task_count": -1}, {}, "negative"),
+    DecodeCase("null-exact-count", {"terminal_task_count": None}, {}, "null"),
 )
 
 
@@ -168,6 +192,7 @@ TASK_RUN_DECODE_CASES = (
         "current",
         {
             **_ACTIVITY_FIXTURE["task_run"],
+            "cancelled_by": {"type": "system", "id": "actor-1", "name": "System"},
             "workspace_slug": "acme",
             "issue_identifier": "ACME-1",
             "workspace_context": "repo context",
@@ -226,6 +251,7 @@ TASK_RUN_DECODE_CASES = (
         {
             "id": "task-1",
             "status": "completed",
+            "cancelled_by": TaskCancellationActor(type="system", id="actor-1", name="System"),
             "agent_id": "agent-1",
             "runtime_id": "runtime-1",
             "workspace_id": "workspace-1",
@@ -397,6 +423,52 @@ TASK_RUN_DECODE_CASES = (
             "usage": (),
         },
     ),
+    DecodeCase(
+        "future-actor",
+        {
+            "id": "task-future",
+            "status": "cancelled",
+            "issue_id": "issue-future",
+            "cancelled_by": {"type": "future_actor", "id": "future-1"},
+        },
+        {
+            "id": "task-future",
+            "status": "cancelled",
+            "cancelled_by": TaskCancellationActor(type="future_actor", id="future-1"),
+        },
+    ),
+    DecodeCase(
+        "malformed-null-actor",
+        {"id": "task-malformed", "status": "cancelled", "cancelled_by": None},
+        {},
+        "null",
+    ),
+    DecodeCase(
+        "malformed-missing-actor-type",
+        {"id": "task-malformed", "status": "cancelled", "cancelled_by": {}},
+        {},
+        "type",
+    ),
+    DecodeCase(
+        "malformed-blank-actor-type",
+        {
+            "id": "task-malformed",
+            "status": "cancelled",
+            "cancelled_by": {"type": ""},
+        },
+        {},
+        "nonblank",
+    ),
+    DecodeCase(
+        "malformed-wrong-actor-id",
+        {
+            "id": "task-malformed",
+            "status": "cancelled",
+            "cancelled_by": {"type": "system", "id": 1},
+        },
+        {},
+        "id",
+    ),
 )
 
 
@@ -521,6 +593,10 @@ def test_v0432_provenance_fixture_matches_verified_release() -> None:
 
 @pytest.mark.parametrize("case", USAGE_DECODE_CASES, ids=lambda case: case.id)
 def test_issue_usage_decode_matrix(case: DecodeCase) -> None:
+    if case.error is not None:
+        with pytest.raises(OutputShapeError, match=case.error):
+            decode_json(json.dumps(case.payload).encode(), IssueUsage)
+        return
     usage = decode_json(json.dumps(case.payload).encode(), IssueUsage)
     for field, expected in case.expected.items():
         assert getattr(usage, field) == expected
@@ -528,6 +604,11 @@ def test_issue_usage_decode_matrix(case: DecodeCase) -> None:
 
 @pytest.mark.parametrize("case", TASK_RUN_DECODE_CASES, ids=lambda case: case.id)
 def test_task_run_decode_matrix(case: DecodeCase) -> None:
+    if case.error is not None:
+        with pytest.raises(OutputShapeError, match=case.error):
+            wire = decode_json(json.dumps(case.payload).encode(), _TaskRunWire)
+            _task_run_from_wire(wire, issue_id="issue-1")
+        return
     wire = decode_json(json.dumps(case.payload).encode(), _TaskRunWire)
     run = _task_run_from_wire(wire, issue_id="issue-1")
     assert run.issue_id == "issue-1"
@@ -535,12 +616,14 @@ def test_task_run_decode_matrix(case: DecodeCase) -> None:
         "current": "value",
         "legacy-omitted": "missing",
         "explicit-null": "null",
+        "future-actor": "missing",
     }[case.id]
     assert ("agent_id", expected_presence) in run._wire_presence
     expected_delta_presence = {
         "current": "value",
         "legacy-omitted": "missing",
         "explicit-null": "value",
+        "future-actor": "missing",
     }[case.id]
     assert ("new_comments_delta_known", expected_delta_presence) in run._wire_presence
     for field, expected in case.expected.items():
@@ -679,6 +762,153 @@ def test_issue_list_decoding() -> None:
 def test_issue_usage_decodes_cost_usd() -> None:
     usage = decode_json(b'{"total_runs": 2, "cost_usd": 0.08}', IssueUsage)
     assert usage.cost_usd == 0.08
+
+
+def test_task_cancellation_actor_is_shared_by_agent_and_issue_task_paths() -> None:
+    payload = {
+        "id": "task-1",
+        "status": "cancelled",
+        "issue_id": "issue-1",
+        "cancelled_by": {"type": "future_actor", "id": "actor-1", "name": "System"},
+    }
+    issue_run = _task_run_from_wire(
+        decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+    )
+    agent_task = decode_json(json.dumps([payload]).encode(), list[AgentTask])[0]
+    expected = TaskCancellationActor(type="future_actor", id="actor-1", name="System")
+    assert issue_run.cancelled_by == expected
+    assert agent_task.cancelled_by == expected
+
+
+@pytest.mark.parametrize(
+    "payload",
+    (
+        {"id": "task-1", "status": "cancelled", "issue_id": "issue-1"},
+        {
+            "id": "task-1",
+            "status": "cancelled",
+            "issue_id": "issue-1",
+            "cancelled_by": {"type": "system"},
+        },
+        {
+            "id": "task-1",
+            "status": "cancelled",
+            "issue_id": "issue-1",
+            "cancelled_by": {"type": "future_actor", "name": "Future"},
+        },
+    ),
+    ids=("legacy-omitted", "current", "future"),
+)
+def test_task_cancellation_actor_decodes_on_both_task_paths(payload: dict[str, object]) -> None:
+    issue_run = _task_run_from_wire(
+        decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+    )
+    agent_task = decode_json(json.dumps([payload]).encode(), list[AgentTask])[0]
+    assert issue_run.cancelled_by == agent_task.cancelled_by
+
+
+@pytest.mark.parametrize(
+    "payload",
+    (
+        {"id": "task-1", "status": "cancelled", "issue_id": "issue-1", "cancelled_by": None},
+        {"id": "task-1", "status": "cancelled", "issue_id": "issue-1", "cancelled_by": {}},
+        {
+            "id": "task-1",
+            "status": "cancelled",
+            "issue_id": "issue-1",
+            "cancelled_by": {"type": ""},
+        },
+        {
+            "id": "task-1",
+            "status": "cancelled",
+            "issue_id": "issue-1",
+            "cancelled_by": {"type": "system", "id": 1},
+        },
+    ),
+    ids=("null", "missing-type", "blank-type", "wrong-id"),
+)
+def test_task_cancellation_actor_malformed_on_both_task_paths(
+    payload: dict[str, object],
+) -> None:
+    with pytest.raises(OutputShapeError):
+        _task_run_from_wire(
+            decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+        )
+    with pytest.raises(OutputShapeError):
+        decode_json(json.dumps([payload]).encode(), list[AgentTask])
+
+
+def test_task_run_from_dict_rejects_explicit_null_actor() -> None:
+    with pytest.raises((OutputShapeError, msgspec.ValidationError)):
+        TaskRun.from_dict({"id": "t", "status": "cancelled", "cancelled_by": None})
+
+
+@pytest.mark.parametrize(
+    "payload",
+    (
+        {"id": "task-1", "status": "cancelled", "cancelled_by": None},
+        {"id": "task-1", "status": "cancelled", "cancelled_by": {}},
+        {
+            "id": "task-1",
+            "status": "cancelled",
+            "cancelled_by": {"type": "system", "id": 1},
+        },
+    ),
+    ids=("null", "missing-type", "wrong-optional-type"),
+)
+def test_task_cancellation_actor_malformed_shapes_fail_closed(payload: dict[str, object]) -> None:
+    with pytest.raises(OutputShapeError):
+        _task_run_from_wire(
+            decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+        )
+
+
+@pytest.mark.parametrize("value", (None, False, True), ids=("legacy", "complete", "truncated"))
+def test_run_message_output_truncated_is_tri_state(value: bool | None) -> None:
+    payload: dict[str, object] = {"task_id": "task-1", "seq": 1, "type": "tool_result"}
+    if value is not None:
+        payload["output_truncated"] = value
+    message = decode_run_messages(json.dumps([payload]).encode(), "issue run-messages")[0]
+    assert message.output_truncated is value
+
+
+def test_run_message_preserves_timestamp_and_rejects_null_truncation() -> None:
+    payload = {
+        "task_id": "task-1",
+        "seq": 1,
+        "type": "text",
+        "created_at": "2026-09-12T12:34:56.123456Z",
+    }
+    message = decode_run_messages(json.dumps([payload]).encode(), "issue run-messages")[0]
+    assert message.created_at == datetime.datetime(
+        2026, 9, 12, 12, 34, 56, 123456, tzinfo=datetime.UTC
+    )
+    with pytest.raises(OutputShapeError):
+        decode_run_messages(
+            b'[{"task_id":"task-1","seq":1,"type":"text","output_truncated":null}]',
+            "issue run-messages",
+        )
+
+
+def test_issue_usage_counts_preserve_large_integers_independently() -> None:
+    usage = decode_json(
+        b'{"task_count":2,"terminal_task_count":9007199254740993,'
+        b'"metered_task_count":0,"unreported_task_count":7}',
+        IssueUsage,
+    )
+    assert (usage.task_count, usage.terminal_task_count) == (2, 9007199254740993)
+    assert (usage.metered_task_count, usage.unreported_task_count) == (0, 7)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ("terminal_task_count", "metered_task_count", "unreported_task_count"),
+)
+@pytest.mark.parametrize("value", (-1, True, 1.5, "1", None))
+def test_issue_usage_counts_reject_invalid_values(field: str, value: object) -> None:
+    payload = json.dumps({field: value}).encode()
+    with pytest.raises(OutputShapeError):
+        decode_json(payload, IssueUsage)
 
 
 def test_issue_scalar_relation_fields_decoding() -> None:

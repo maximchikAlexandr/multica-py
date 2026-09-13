@@ -38,8 +38,8 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "38c992ad0a757434fb51584fa34e3bc57d1b78e1"
-_TARGET_COMMIT = "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7"
+_BASELINE_COMMIT = "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7"
+_TARGET_COMMIT = "2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c"
 _TAG_KINDS = frozenset(
     {
         "primitive",
@@ -136,7 +136,7 @@ _UPDATE_PRESENCE_VALUES = frozenset({"omit", "reject", "emit", "not_applicable"}
 _UPDATE_CLEAR_KINDS = frozenset({"none", "flag", "dedicated_flag", "composite", "empty_collection"})
 _UPDATE_POLICY_FIELDS = {
     "projects.update": frozenset({"name", "description"}),
-    "agents.update": frozenset({"name", "description"}),
+    "agents.update": frozenset({"name", "description", "conversation_starters"}),
     "skills.update": frozenset({"name", "description"}),
     "issues.update": frozenset(
         {"title", "description", "priority", "assignee_id", "project_id", "parent_id"}
@@ -2092,6 +2092,12 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             )
         ),
     )
+    if inventory.baseline_nodes != inventory.unchanged + inventory.changed + inventory.removed:
+        raise ContractError(
+            "command inventory baseline_nodes must equal unchanged + changed + removed"
+        )
+    if inventory.target_nodes != inventory.unchanged + inventory.changed + inventory.added:
+        raise ContractError("command inventory target_nodes must equal unchanged + changed + added")
     response_registry: list[ResponseReview] = []
     for index, value in enumerate(
         _list(compatibility_raw["response_registry"], "compatibility.response_registry")
@@ -2289,37 +2295,37 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.commit,
         contract.target.release_id,
     ) != (
-        "0.4.42",
-        "v0.4.42",
-        "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7",
-        "385445715",
+        "0.4.43",
+        "v0.4.43",
+        "2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c",
+        "387217464",
     ):
-        raise ContractError("approved contract must target Multica v0.4.42")
+        raise ContractError("approved contract must target Multica v0.4.43")
     if contract.compatibility.command_inventory != CommandInventory(
-        baseline_nodes=199,
+        baseline_nodes=189,
         target_nodes=189,
-        unchanged=166,
-        changed=21,
-        added=2,
-        removed=12,
+        unchanged=186,
+        changed=3,
+        added=0,
+        removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
     ):
-        raise ContractError("command inventory does not match the approved 0.4.28/0.4.42 review")
+        raise ContractError("command inventory does not match the approved 0.4.42/0.4.43 review")
     expected_artifacts = {
-        "0.4.28": (
-            "v0.4.28",
-            "371790559",
-            "multica-cli-0.4.28-darwin-arm64.tar.gz",
-            "e42c1c6df05201d2d0feff1a9d8032a9ea11c6644721fd465496826124007acf",
-            "26a722384d8ef39a30cb83fec4e76f3185768369536d1f13a546b03e6c7fbeb9",
-        ),
         "0.4.42": (
             "v0.4.42",
             "385445715",
             "multica-cli-0.4.42-darwin-arm64.tar.gz",
             "a3bb48baeeb757361686978210e6195aaf50bc69edf83bf3b9c52ca3efc12e41",
             "22abcd910562e8800c0e9db561229731e19486ec94b4815d6b1a075dc92ef36c",
+        ),
+        "0.4.43": (
+            "v0.4.43",
+            "387217464",
+            "multica-cli-0.4.43-darwin-arm64.tar.gz",
+            "7d31b12d2ae94eab780cfcfdcfb7a9f43c6327c4ae54813d886410305cd26261",
+            "b67ad1196dd62c6f59c29837db392a55a0e78a8ae2ac514ef861805eb2e19885",
         ),
     }
     actual_artifacts = {
@@ -2336,9 +2342,9 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         raise ContractError(
             "release artifact provenance does not match the approved baseline/target"
         )
-    if len(contract.compatibility.response_registry) != 173:
-        raise ContractError("response registry must contain exactly 173 work items")
-    if len({item.work_item_id for item in contract.compatibility.response_registry}) != 173:
+    if len(contract.compatibility.response_registry) != 163:
+        raise ContractError("response registry must contain exactly 163 response entrypoints")
+    if len({item.work_item_id for item in contract.compatibility.response_registry}) != 163:
         raise ContractError("response registry work item IDs must be unique")
     dispositions = {
         disposition: sum(
@@ -2346,8 +2352,8 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
         for disposition in ("unchanged", "changed")
     }
-    if dispositions != {"unchanged": 122, "changed": 51}:
-        raise ContractError("response registry must split into 122 unchanged and 51 changed items")
+    if dispositions != {"unchanged": 159, "changed": 4}:
+        raise ContractError("response registry must split into 159 unchanged and 4 changed items")
     _validate_direct_bindings(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
         "issue_sort",

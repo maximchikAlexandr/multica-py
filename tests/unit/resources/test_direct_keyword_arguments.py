@@ -11,6 +11,7 @@ import pytest
 
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.models.agents import AgentConversationStarter
 from multica_py.models.issues import (
     IssueListFilter,
 )
@@ -19,6 +20,7 @@ from multica_py.resources.issues import IssueResource
 from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
 from multica_py.resources.skills import SkillResource
+from multica_py.sentinels import Unset, UnsetType
 
 _OPTIONAL_DIRECT_CASES = (
     (IssueResource, "list", IssueListFilter),
@@ -69,12 +71,20 @@ def test_issue_list_object_and_direct_forms_have_identical_empty_and_filtered_pl
         (
             AgentResource,
             "create_command",
-            ("self", "name", "description", "runtime_id", "model", "options"),
+            (
+                "self",
+                "name",
+                "description",
+                "runtime_id",
+                "model",
+                "conversation_starters",
+                "options",
+            ),
         ),
         (
             AgentResource,
             "update_command",
-            ("self", "agent_id", "name", "description", "options"),
+            ("self", "agent_id", "name", "description", "conversation_starters", "options"),
         ),
         (
             IssueResource,
@@ -140,6 +150,16 @@ def test_migrated_operations_have_one_explicit_signature(
     assert all(
         parameter.name not in {"request", "kwargs"} for parameter in signature.parameters.values()
     )
+
+
+@pytest.mark.parametrize("method_name", ("create", "create_command", "update", "update_command"))
+def test_agent_starter_signatures_have_exact_type_and_default(method_name: str) -> None:
+    signature = inspect.signature(getattr(AgentResource, method_name), eval_str=True)
+    parameter = signature.parameters["conversation_starters"]
+
+    assert parameter.kind == inspect.Parameter.KEYWORD_ONLY
+    assert parameter.annotation == tuple[AgentConversationStarter, ...] | UnsetType
+    assert parameter.default is Unset
 
 
 @pytest.mark.parametrize(
