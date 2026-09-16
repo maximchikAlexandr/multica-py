@@ -66,7 +66,7 @@ class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     workspace_id: object | msgspec.UnsetType = msgspec.UNSET
     number: object | msgspec.UnsetType = msgspec.UNSET
     identifier: object | msgspec.UnsetType = msgspec.UNSET
-    status_category: object | msgspec.UnsetType = msgspec.UNSET
+    status_category: str | msgspec.UnsetType = msgspec.UNSET
     position: object | msgspec.UnsetType = msgspec.UNSET
     stage: object | msgspec.UnsetType = msgspec.UNSET
     start_date: object | msgspec.UnsetType = msgspec.UNSET
@@ -168,6 +168,23 @@ def _projection_value(value: object, *, field_name: str) -> object:
     return value
 
 
+_CUSTOM_STATUS_CATEGORY_PROJECTION = {
+    "unstarted": "todo",
+    "started": "in_progress",
+    "done": "done",
+    "closed": "closed",
+}
+
+
+def _issue_status_category_from_wire(wire: _IssueWire) -> str | msgspec.UnsetType:
+    category = wire.status_category
+    if category is msgspec.UNSET or wire.status is msgspec.UNSET:
+        return category
+    if type(_coerce_issue_status(wire.status)) is str:
+        return _CUSTOM_STATUS_CATEGORY_PROJECTION.get(category, category)
+    return category
+
+
 def _issue_projection_from_wire(
     wire: _IssueWire, *, fields: tuple[str, ...] | None = None
 ) -> Mapping[str, object]:
@@ -176,7 +193,11 @@ def _issue_projection_from_wire(
     for wire_name, public_name in _ISSUE_PROJECTION_FIELDS:
         if selected is not None and wire_name not in selected and public_name not in selected:
             continue
-        value = cast("object", getattr(wire, wire_name))
+        value = (
+            _issue_status_category_from_wire(wire)
+            if wire_name == "status_category"
+            else cast("object", getattr(wire, wire_name))
+        )
         if value is not msgspec.UNSET:
             values[public_name] = _projection_value(value, field_name=wire_name)
     return MappingProxyType(values)
@@ -204,6 +225,10 @@ def _issue_from_wire(
     partial = (
         force_projection
         or projection_fields is not None
+        or (
+            allow_partial
+            and (wire.status_category is not msgspec.UNSET or wire.status_name is not msgspec.UNSET)
+        )
         or wire.title is msgspec.UNSET
         or wire.status is msgspec.UNSET
     )

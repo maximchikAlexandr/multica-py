@@ -16,12 +16,12 @@ runtime, and run the deterministic check:
 collect → validate --source-checkout → render → check
 ```
 
-The current approved target is `v0.4.43` with compatibility interval
-`[0.4.42, 0.4.44)`. The pinned commit, release asset/checksum, and exact
+The current approved target is `v0.4.44` with compatibility interval
+`[0.4.42, 0.4.45)`. The pinned commit, release asset/checksum, and exact
 commands for this review are maintained in [docs/compatibility.md](compatibility.md).
 The target source commit is
-`2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c`; the `0.4.42` source commit
-`76f59f5f1cd9b6e779d0d34c603407d5d4001bf7` is comparison provenance only.
+`c7f259c70a60bff30011c403fada79ab382f608a`; the `0.4.43` source commit
+`2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c` is comparison provenance only.
 Release archive SHA-256 values must be checked against official manifests
 separately from extracted executable SHA-256 values. Run
 `scripts/audit_source_links.py` and the contract `validate -> render -> check`

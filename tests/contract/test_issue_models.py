@@ -524,6 +524,41 @@ COMMENT_REVISION_DECODE_CASES = (
 )
 
 
+COMMENT_TOMBSTONE_DECODE_CASES = (
+    DecodeCase(
+        "live-omitted",
+        {"id": "comment-1", "content": "body"},
+        {"body": "body", "deleted_at": None},
+    ),
+    DecodeCase(
+        "empty-live-content",
+        {"id": "comment-1", "content": ""},
+        {"body": "", "deleted_at": None},
+    ),
+    DecodeCase(
+        "tombstone",
+        {"id": "comment-1", "content": "", "deleted_at": "2026-09-16T05:00:00Z"},
+        {
+            "body": "",
+            "deleted_at": datetime.datetime(2026, 9, 16, 5, 0, tzinfo=datetime.UTC),
+        },
+    ),
+    DecodeCase(
+        "explicit-null", {"id": "comment-1", "content": "", "deleted_at": None}, {}, "Expected"
+    ),
+    DecodeCase(
+        "malformed",
+        {"id": "comment-1", "content": "", "deleted_at": "not-a-timestamp"},
+        {},
+        "Expected",
+    ),
+    DecodeCase("numeric", {"id": "comment-1", "content": "", "deleted_at": 0}, {}, "Expected"),
+    DecodeCase("boolean", {"id": "comment-1", "content": "", "deleted_at": True}, {}, "Expected"),
+    DecodeCase("array", {"id": "comment-1", "content": "", "deleted_at": []}, {}, "Expected"),
+    DecodeCase("object", {"id": "comment-1", "content": "", "deleted_at": {}}, {}, "Expected"),
+)
+
+
 @dataclass(frozen=True)
 class MalformedModelDecodeCase:
     id: str
@@ -648,6 +683,17 @@ def test_issue_target_projection_decode_matrix(case: DecodeCase) -> None:
 
 @pytest.mark.parametrize("case", COMMENT_REVISION_DECODE_CASES, ids=lambda case: case.id)
 def test_comment_revision_decode_matrix(case: DecodeCase) -> None:
+    comment = comment_from_wire(decode_json(json.dumps(case.payload).encode(), _CommentWire))
+    for field, expected in case.expected.items():
+        assert getattr(comment, field) == expected
+
+
+@pytest.mark.parametrize("case", COMMENT_TOMBSTONE_DECODE_CASES, ids=lambda case: case.id)
+def test_comment_tombstone_decode_matrix(case: DecodeCase) -> None:
+    if case.error is not None:
+        with pytest.raises(OutputShapeError):
+            decode_json(json.dumps(case.payload).encode(), _CommentWire)
+        return
     comment = comment_from_wire(decode_json(json.dumps(case.payload).encode(), _CommentWire))
     for field, expected in case.expected.items():
         assert getattr(comment, field) == expected

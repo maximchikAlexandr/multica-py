@@ -25,10 +25,12 @@ from multica_py.entities.projects import Project
 from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
 from multica_py.enums import IssueStatus, ProjectStatus
+from multica_py.exceptions import NotFoundError
 from multica_py.execution import LocalExecutor
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import IssueListFilter
 from multica_py.process import ManagedProcess
+from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
 from tests.cases.operations import (
@@ -836,6 +838,30 @@ def test_changed_public_surface_is_explicit_and_command_parity(
             assert _signature_parameters(function)[-1].name == "options"
 
     assert not hasattr(Project, "set_status")
+
+
+def test_comment_delete_keep_replies_contract() -> None:
+    transport = CliTransport(ClientConfig())
+    calls: list[tuple[str, ...]] = []
+
+    def execute(command_args: tuple[str, ...], **_kwargs: object) -> RawCommandResult:
+        calls.append(command_args)
+        return RawCommandResult(
+            argv=("multica", *command_args),
+            exit_code=1,
+            stdout=b"",
+            stderr=b"Error: DELETE /api/comments/cmt_1/keep-replies returned 404: missing",
+            duration=datetime.timedelta(),
+        )
+
+    transport._execute = execute  # type: ignore[method-assign]
+    resource = IssueCommentResource(transport, ClientConfig())
+    command = resource.delete_command("cmt_1")
+
+    assert command.commands == ("multica issue comment delete cmt_1",)
+    with pytest.raises(NotFoundError, match="keep-replies"):
+        command.run()
+    assert calls == [("issue", "comment", "delete", "cmt_1")]
 
 
 def test_approved_result_categories_are_closed() -> None:

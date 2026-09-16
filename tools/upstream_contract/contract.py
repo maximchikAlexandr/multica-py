@@ -38,8 +38,42 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "76f59f5f1cd9b6e779d0d34c603407d5d4001bf7"
-_TARGET_COMMIT = "2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c"
+_BASELINE_COMMIT = "2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c"
+_TARGET_COMMIT = "c7f259c70a60bff30011c403fada79ab382f608a"
+_V0444_CHANGED_RESPONSE_WORK_ITEMS = frozenset(
+    {
+        "comment_add",
+        "comment_delete",
+        "comment_list",
+        "comment_list_flat",
+        "comment_list_recent",
+        "comment_list_thread",
+        "issue_children",
+        "issue_create",
+        "issue_get",
+        "issue_list",
+        "issue_search",
+        "issue_status",
+        "issues_assign_bound",
+        "issues_assign_manual",
+        "issues_comments_reply_manual",
+        "issues_move_after",
+        "issues_move_after_bound",
+        "issues_move_before",
+        "issues_move_before_bound",
+        "issues_move_to_bottom",
+        "issues_move_to_bottom_bound",
+        "issues_move_to_top",
+        "issues_move_to_top_bound",
+        "issues_refresh",
+        "issues_set_status_bound",
+        "issues_unassign",
+        "issues_unassign_bound",
+        "issues_update_bound",
+        "issues_update_manual",
+        "project_issue_create",
+    }
+)
 _TAG_KINDS = frozenset(
     {
         "primitive",
@@ -2295,37 +2329,37 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.commit,
         contract.target.release_id,
     ) != (
-        "0.4.43",
-        "v0.4.43",
-        "2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c",
-        "387217464",
+        "0.4.44",
+        "v0.4.44",
+        "c7f259c70a60bff30011c403fada79ab382f608a",
+        "389061637",
     ):
-        raise ContractError("approved contract must target Multica v0.4.43")
+        raise ContractError("approved contract must target Multica v0.4.44")
     if contract.compatibility.command_inventory != CommandInventory(
         baseline_nodes=189,
         target_nodes=189,
-        unchanged=186,
-        changed=3,
+        unchanged=188,
+        changed=1,
         added=0,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
     ):
-        raise ContractError("command inventory does not match the approved 0.4.42/0.4.43 review")
+        raise ContractError("command inventory does not match the approved 0.4.43/0.4.44 review")
     expected_artifacts = {
-        "0.4.42": (
-            "v0.4.42",
-            "385445715",
-            "multica-cli-0.4.42-darwin-arm64.tar.gz",
-            "a3bb48baeeb757361686978210e6195aaf50bc69edf83bf3b9c52ca3efc12e41",
-            "22abcd910562e8800c0e9db561229731e19486ec94b4815d6b1a075dc92ef36c",
-        ),
         "0.4.43": (
             "v0.4.43",
             "387217464",
             "multica-cli-0.4.43-darwin-arm64.tar.gz",
             "7d31b12d2ae94eab780cfcfdcfb7a9f43c6327c4ae54813d886410305cd26261",
             "b67ad1196dd62c6f59c29837db392a55a0e78a8ae2ac514ef861805eb2e19885",
+        ),
+        "0.4.44": (
+            "v0.4.44",
+            "389061637",
+            "multica-cli-0.4.44-darwin-arm64.tar.gz",
+            "f300cf8036b1f596466acde35f67d986f1f75a657f77e6e0e9de1134563a76aa",
+            "ac26860e3f60ab6eafd4e7066d43d0fad2b0691adfefac339c4921e1dd68f774",
         ),
     }
     actual_artifacts = {
@@ -2352,8 +2386,17 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
         for disposition in ("unchanged", "changed")
     }
-    if dispositions != {"unchanged": 159, "changed": 4}:
-        raise ContractError("response registry must split into 159 unchanged and 4 changed items")
+    if dispositions != {"unchanged": 133, "changed": 30}:
+        raise ContractError("response registry must split into 133 unchanged and 30 changed items")
+    changed_work_items = {
+        item.work_item_id
+        for item in contract.compatibility.response_registry
+        if item.disposition == "changed"
+    }
+    if changed_work_items != _V0444_CHANGED_RESPONSE_WORK_ITEMS:
+        raise ContractError(
+            "response registry changed work items do not match the approved 0.4.44 review"
+        )
     _validate_direct_bindings(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
         "issue_sort",
@@ -2430,7 +2473,11 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
     if response_aliases.get("issue_search") != "page_issues":
         raise ContractError("issue_search must be the approved alias of page_issues")
     for operation in contract.operations:
-        if operation.compatibility not in {"compatible", "intentionally_changed"}:
+        if operation.compatibility not in {
+            "compatible",
+            "intentionally_changed",
+            "requires_cli>=0.4.44",
+        }:
             raise ContractError(
                 f"operation {operation.operation_id!r} has an invalid compatibility value"
             )

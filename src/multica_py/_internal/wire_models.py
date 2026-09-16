@@ -142,6 +142,7 @@ class _CommentWire(msgspec.Struct, frozen=True, kw_only=True):
     author_id: str | None = None
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
+    deleted_at: datetime.datetime | msgspec.UnsetType = msgspec.UNSET
     revision: int | msgspec.UnsetType = msgspec.UNSET
     issue_revision: int | msgspec.UnsetType = msgspec.UNSET
 
@@ -156,6 +157,7 @@ def comment_from_wire(wire: _CommentWire) -> Comment:
         author_id=wire.author_id,
         created_at=wire.created_at,
         updated_at=wire.updated_at,
+        deleted_at=None if wire.deleted_at is msgspec.UNSET else wire.deleted_at,
         revision=None if wire.revision is msgspec.UNSET else wire.revision,
         issue_revision=(None if wire.issue_revision is msgspec.UNSET else wire.issue_revision),
     )

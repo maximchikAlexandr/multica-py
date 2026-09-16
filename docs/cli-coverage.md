@@ -1,10 +1,10 @@
 # CLI Coverage
 
-Pinned target upstream: `multica-ai/multica@2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c` (tag `v0.4.43`)
+Pinned target upstream: `multica-ai/multica@c7f259c70a60bff30011c403fada79ab382f608a` (tag `v0.4.44`)
 
-The reviewed compatibility interval is `[0.4.42, 0.4.44)`: baseline
-`v0.4.42` remains supported and `v0.4.43` is the maximum tested target. The
-target command tree retains 189 nodes (186 unchanged, 3 changed, no additions,
+The reviewed compatibility interval is `[0.4.42, 0.4.45)`: baseline
+`v0.4.42` remains supported and `v0.4.44` is the maximum tested target. The
+target command tree retains 189 nodes (188 unchanged, 1 changed, no additions,
 removals, renames, or moves), and `repo checkout --fresh` remains outside the
 typed SDK surface.
 
@@ -15,7 +15,7 @@ operation IDs, source references, mappings, presence semantics, validators,
 and test vectors. `tests/cases/operations.py::OPERATION_CASES` is the sole
 success-operation executor and retains the complete public SDK table: 160
 approved operations, 81 response models, 163 response-entrypoint inventory
-rows (159 unchanged and 4 changed), 37 relation IDs, and 79 contract vectors
+rows (133 unchanged and 30 changed), 37 relation IDs, and 79 contract vectors
 (66 canonical and 13 variants). The frozen operation table contains 343 cases
 (184 canonical and 159 non-canonical), while 143 current payload fingerprints
 guard unchanged response behavior.
