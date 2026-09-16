@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 import pathlib
 from collections.abc import Callable
@@ -34,3 +35,21 @@ def test_fake_cli_direct_collection_preserves_page_contract(
     assert len(page) == 1
     assert page[0] is page.items[0]
     assert page[:] == page.items
+
+
+def test_fake_cli_comment_collection_preserves_tombstone(
+    client_factory: Callable[..., MulticaClient], tmp_path: pathlib.Path
+) -> None:
+    responses_dir = tmp_path / "responses"
+    responses_dir.mkdir()
+    response = FakeMultica(responses_dir=responses_dir).build_response(
+        stdout='[{"id":"comment-1","content":"","deleted_at":"2026-09-16T05:00:00Z"}]',
+        argv=("fake_multica", "issue", "comment", "list", "issue-1", "--output", "json"),
+    )
+    (responses_dir / "issue.json").write_text(json.dumps(response.to_dict()), encoding="utf-8")
+
+    client = client_factory(environment=(("MULTICA_FAKE_RESPONSES", str(responses_dir)),))
+    comment = client.issues.comments.list("issue-1").items[0]
+
+    assert comment.body == ""
+    assert comment.deleted_at == datetime.datetime(2026, 9, 16, 5, tzinfo=datetime.UTC)

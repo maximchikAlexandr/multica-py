@@ -10,7 +10,7 @@ from typing import cast
 import pytest
 
 from multica_py.client import MulticaClient
-from multica_py.exceptions import ConflictError, ValidationError
+from multica_py.exceptions import ConflictError, NotFoundError, ValidationError
 from multica_py.models.agents import AgentConversationStarter
 from tests.component.resources.cases import CommandCase
 from tests.fixtures.fake_multica import FakeMultica
@@ -30,6 +30,16 @@ _COMMAND_CASES: tuple[CommandCase, ...] = (
         stderr="Invalid request: thinking level is unsupported",
         expected_error=ValidationError,
         expected_exit_code=5,
+    ),
+    CommandCase(
+        id="comment-delete-pre-support-404",
+        stderr="Error: DELETE /api/comments/c1/keep-replies returned 404: missing",
+        expected_error=NotFoundError,
+        expected_exit_code=4,
+        expected_argv=("issue", "comment", "delete", "c1"),
+        resource_attr="issues.comments",
+        method="delete",
+        args=("c1",),
     ),
     CommandCase(
         id="agent-create-conversation-starters",
@@ -159,7 +169,10 @@ def test_public_commands_preserve_typed_fake_cli_detail(
         )
     )
 
-    operation = getattr(getattr(client, case.resource_attr), case.method)
+    resource: object = client
+    for resource_part in case.resource_attr.split("."):
+        resource = getattr(resource, resource_part)
+    operation = getattr(resource, case.method)
     if case.expected_error is not None:
         with pytest.raises(case.expected_error) as excinfo:
             operation(*case.args, **dict(case.kwargs))

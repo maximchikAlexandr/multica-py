@@ -962,6 +962,43 @@ def test_direct_issue_activity_operations_bind_origin_and_context(case: DirectBo
         client.issues.run_messages.assert_called_once_with("run_1", issue_id="iss_1", since=0)
 
 
+def test_comment_thread_tombstone_preserves_retained_reply() -> None:
+    transport = MagicMock()
+    transport.run_text.return_value = MagicMock(
+        text=(
+            '[{"id":"root","content":"","parent_id":"th_1",'
+            '"author_id":"author-1","revision":4,"deleted_at":"2026-09-16T05:00:00Z"},'
+            '{"id":"reply","content":"reply","parent_id":"root"}]'
+        ),
+        stderr="",
+    )
+    resource = IssueResource(transport, ClientConfig())
+
+    page = resource.comments.list_thread(issue_id="iss_1", thread_id="th_1", limit=10)
+
+    assert [comment.id for comment in page] == ["root", "reply"]
+    tombstone, reply = page.items
+    assert tombstone.body == ""
+    assert tombstone.deleted_at == datetime.datetime(2026, 9, 16, 5, tzinfo=datetime.UTC)
+    assert tombstone.author_id == "author-1"
+    assert tombstone.revision == 4
+    assert reply.body == "reply"
+    transport.run_text.assert_called_once_with(
+        (
+            "issue",
+            "comment",
+            "list",
+            "iss_1",
+            "--thread",
+            "th_1",
+            "--tail",
+            "10",
+            "--output",
+            "json",
+        )
+    )
+
+
 @pytest.mark.parametrize(
     ("method", "stdout", "expected"),
     [

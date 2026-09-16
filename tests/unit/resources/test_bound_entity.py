@@ -352,6 +352,7 @@ _ENTITY_POLICY_CASES: tuple[EntityPolicyCase, ...] = (
             "author_id",
             "created_at",
             "updated_at",
+            "deleted_at",
             "revision",
             "issue_revision",
         ),
