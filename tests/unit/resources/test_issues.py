@@ -119,6 +119,13 @@ class _IssueStatusSortCase:
 
 
 @dataclass(frozen=True)
+class _IssueLifecycleCase:
+    status: str
+    category: str | None
+    expected_category: object
+
+
+@dataclass(frozen=True)
 class _IssueRunMessagesCase:
     name: str
     payload: bytes
@@ -185,6 +192,22 @@ _ISSUE_STATUS_SORT_CASES = (
         expected_ids=("i-archived", "i-finished", "i-active", "i-intake"),
         expected_statuses=("archived", "a-finished", "todo", "z-intake"),
     ),
+)
+
+
+_ISSUE_LIFECYCLE_CASES = (
+    _IssueLifecycleCase("custom-unstarted", "unstarted", "todo"),
+    _IssueLifecycleCase("custom-started", "started", "in_progress"),
+    _IssueLifecycleCase("custom-done", "done", "done"),
+    _IssueLifecycleCase("custom-closed", "closed", "closed"),
+    _IssueLifecycleCase("backlog", "backlog", "backlog"),
+    _IssueLifecycleCase("todo", "started", "started"),
+    _IssueLifecycleCase("in_progress", "started", "started"),
+    _IssueLifecycleCase("in_review", "started", "started"),
+    _IssueLifecycleCase("done", "completed", "completed"),
+    _IssueLifecycleCase("blocked", "started", "started"),
+    _IssueLifecycleCase("cancelled", "cancelled", "cancelled"),
+    _IssueLifecycleCase("custom-omitted", None, msgspec.UNSET),
 )
 
 
@@ -808,6 +831,44 @@ def test_issue_status_sort_preserves_target_category_order_and_direction(
         stdin=None,
         timeout=None,
     )
+
+
+@pytest.mark.parametrize("case", _ISSUE_LIFECYCLE_CASES)
+def test_issue_lifecycle_projects_custom_phases_and_retains_builtins(
+    case: _IssueLifecycleCase, mock_transport: MagicMock
+) -> None:
+    row = {"id": "i1", "title": "Issue", "status": case.status, "status_name": case.status}
+    if case.category is not None:
+        row["status_category"] = case.category
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=("issue", "list", "--output", "json"),
+        exit_code=0,
+        stdout=json.dumps({"issues": [row]}).encode(),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    issue = IssueResource(mock_transport, ClientConfig()).list().items[0]
+
+    assert issue.status == case.status
+    if case.category is None:
+        assert issue.status_category is case.expected_category
+    else:
+        assert issue.status_category == case.expected_category
+    assert issue.status_name == case.status
+    mock_transport.run_bytes.assert_called_once_with(
+        ("issue", "list", "--output", "json"), stdin=None, timeout=None
+    )
+
+
+@pytest.mark.parametrize("field", ("status_category", "status_name"))
+@pytest.mark.parametrize("value", (None, 1, False, [], {}))
+def test_issue_lifecycle_projection_rejects_malformed_values(field: str, value: object) -> None:
+    payload = json.dumps(
+        {"issues": [{"id": "i1", "title": "Issue", "status": "custom", field: value}]}
+    ).encode()
+
+    with pytest.raises(OutputShapeError):
+        _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire))
 
 
 @pytest.mark.parametrize(

@@ -10,13 +10,17 @@ import pytest
 
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import _issue_from_wire, _IssueWire
 from multica_py.client import MulticaClient
+from multica_py.config import ClientConfig
 from multica_py.entities.issues import Issue
 from multica_py.entities.workspaces import WorkspaceMember
-from multica_py.exceptions import UnsupportedReferenceTargetError
+from multica_py.exceptions import UnsupportedReferenceTargetError, ValidationError
 from multica_py.models.issues import IssueAssignee
 from multica_py.models.relations import LazyRef
+from multica_py.resources.issues import IssueResource
+from multica_py.sentinels import Unset
 
 _OLD_PARENT = "parent-old"
 _OLD_PROJECT = "project-old"
@@ -393,6 +397,217 @@ def test_failed_issue_mutation_does_not_publish_or_change_original(
     assert source.project is old_handles["project"]
     assert source.assignee_ref is old_handles["assignee_ref"]
     assert all(not handle.loaded for handle in old_handles.values())
+
+
+@dataclass(frozen=True)
+class TriageParentUpdateCase:
+    name: str
+    parent_id: object
+    parent_arg: tuple[str, ...]
+
+
+TRIAGE_PARENT_UPDATE_CASES = (
+    TriageParentUpdateCase("omitted", Unset, ()),
+    TriageParentUpdateCase("same", _OLD_PARENT, ("--parent", _OLD_PARENT)),
+    TriageParentUpdateCase("foreign", "parent-foreign", ("--parent", "parent-foreign")),
+    TriageParentUpdateCase("clear", None, ("--parent", "")),
+)
+
+_TRIAGE_STATE = {
+    "id": "triage",
+    "title": "Original title",
+    "description": "Original description",
+    "status": "todo",
+    "priority": "low",
+    "assignee": {"id": "agent-original", "name": "Original agent", "type": "agent"},
+    "project_id": "project-original",
+    "parent_issue_id": _OLD_PARENT,
+}
+
+
+def _triage_state_payload() -> bytes:
+    return json.dumps(_TRIAGE_STATE).encode()
+
+
+@pytest.mark.parametrize("case", TRIAGE_PARENT_UPDATE_CASES, ids=lambda case: case.name)
+@pytest.mark.parametrize("bound", (False, True), ids=("resource", "bound"))
+def test_issue_update_preserves_triage_parent_presence_and_complete_argv(
+    case: TriageParentUpdateCase,
+    bound: bool,
+    client_with_transport: tuple[MulticaClient, MagicMock],
+) -> None:
+    client, transport = client_with_transport
+    resource = client.issues
+    if bound:
+        issue = _issue(
+            _issue_payload(parent_id=_OLD_PARENT, project_id=_OLD_PROJECT, assignee=_OLD_ASSIGNEE),
+            client,
+        )
+        command = issue.update_command(
+            title="new title",
+            description="new description",
+            priority="high",
+            parent_id=case.parent_id,  # type: ignore[arg-type]
+        )
+    else:
+        command = resource.update_command(
+            "issue-1",
+            title="new title",
+            description="new description",
+            priority="high",
+            parent_id=case.parent_id,  # type: ignore[arg-type]
+        )
+
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "update",
+        "issue-1",
+        "--title",
+        "new title",
+        "--description",
+        "new description",
+        "--priority",
+        "high",
+        *case.parent_arg,
+        "--output",
+        "json",
+    )
+    transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "case",
+    TRIAGE_PARENT_UPDATE_CASES[1:],
+    ids=lambda case: case.name,
+)
+@pytest.mark.parametrize("bound", (False, True), ids=("resource", "bound"))
+def test_triage_combined_parent_update_is_atomic_and_refetches_authoritative_state(
+    case: TriageParentUpdateCase,
+    bound: bool,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    config = ClientConfig()
+    transport = CliTransport(config)
+    requested: list[tuple[str, ...]] = []
+
+    def execute(argv: tuple[str, ...], **_: object) -> RawCommandResult:
+        requested.append(argv)
+        if argv[:2] == ("issue", "get"):
+            return raw_result(argv, stdout=_triage_state_payload())
+        return raw_result(
+            argv,
+            exit_code=1,
+            stderr=(
+                b"Error: PATCH /api/issues/triage returned 400: "
+                b"issue_in_triage: parent updates are not allowed for triage issues"
+            ),
+        )
+
+    transport._execute = execute  # type: ignore[assignment]
+    resource = IssueResource(transport, config)
+    client: MulticaClient | None = None
+    if bound:
+        client = MulticaClient(config)
+        client.issues._transport = transport
+        source = _issue(_triage_state_payload(), client)
+
+    try:
+        with pytest.raises(ValidationError, match="issue_in_triage") as excinfo:
+            if bound:
+                source.update(
+                    title="new title",
+                    description="new description",
+                    priority="high",
+                    assignee_id="agent-new",
+                    project_id="project-new",
+                    parent_id=case.parent_id,  # type: ignore[arg-type]
+                )
+            else:
+                resource.update(
+                    "triage",
+                    title="new title",
+                    description="new description",
+                    priority="high",
+                    assignee_id="agent-new",
+                    project_id="project-new",
+                    parent_id=case.parent_id,  # type: ignore[arg-type]
+                )
+
+        assert str(excinfo.value) == (
+            "Error: PATCH /api/issues/triage returned 400: "
+            "issue_in_triage: parent updates are not allowed for triage issues"
+        )
+        assert excinfo.value.exit_code == 5
+        assert len(requested) == 1
+        assert requested[0] == (
+            "issue",
+            "update",
+            "triage",
+            "--title",
+            "new title",
+            "--description",
+            "new description",
+            "--priority",
+            "high",
+            "--assignee-id",
+            "agent-new",
+            "--project",
+            "project-new",
+            *case.parent_arg,
+            "--output",
+            "json",
+        )
+
+        authoritative = resource.get("triage")
+        assert len(requested) == 2
+        assert authoritative.title == "Original title"
+        assert authoritative.description == "Original description"
+        assert authoritative.priority == "low"
+        assert authoritative.assignee == IssueAssignee(
+            id="agent-original", name="Original agent", type="agent"
+        )
+        assert authoritative.project_id == "project-original"
+        assert authoritative.parent_id == _OLD_PARENT
+    finally:
+        if client is not None:
+            client.close()
+
+
+@pytest.mark.parametrize("bound", (False, True), ids=("resource", "bound"))
+def test_triage_omitted_parent_remains_allowed(
+    bound: bool,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    config = ClientConfig()
+    transport = CliTransport(config)
+    requested: list[tuple[str, ...]] = []
+
+    def execute(argv: tuple[str, ...], **_: object) -> RawCommandResult:
+        requested.append(argv)
+        return raw_result(argv, stdout=_triage_state_payload())
+
+    transport._execute = execute  # type: ignore[assignment]
+    resource = IssueResource(transport, config)
+    client: MulticaClient | None = None
+    if bound:
+        client = MulticaClient(config)
+        client.issues._transport = transport
+        source = _issue(_triage_state_payload(), client)
+
+    try:
+        updated = (
+            source.update(title="new title")
+            if bound
+            else resource.update("triage", title="new title")
+        )
+
+        assert updated.id == "triage"
+        assert requested == [
+            ("issue", "update", "triage", "--title", "new title", "--output", "json")
+        ]
+    finally:
+        if client is not None:
+            client.close()
 
 
 @dataclass(frozen=True)
