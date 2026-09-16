@@ -53,9 +53,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.4.43'" in runtime
+    assert b"TARGET_VERSION = '0.4.44'" in runtime
     assert b"MIN_CLI_VERSION = '0.4.42'" in runtime
-    assert b"MAX_CLI_VERSION = '0.4.44'" in runtime
+    assert b"MAX_CLI_VERSION = '0.4.45'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -95,20 +95,20 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
     assert "kind" not in str(update_binding)
 
     binary = next(
-        item for item in contract.compatibility.verified_binaries if item.version == "0.4.42"
+        item for item in contract.compatibility.verified_binaries if item.version == "0.4.43"
     )
-    assert binary.commit.startswith("76f59f5f1")
+    assert binary.commit.startswith("2ae2dbbb8")
     assert (binary.build_date, binary.go_version, binary.os, binary.arch) == (
-        "2026-09-09T11:06:33Z",
+        "2026-09-11T17:19:51Z",
         "go1.26.8",
         "darwin",
         "arm64",
     )
     assert {item.operation_id for item in contract.compatibility.reviewed_responses} == {
-        "agents.tasks",
-        "issues.runs",
-        "issues.run_messages",
-        "issues.usage",
+        "issues.comments.list",
+        "issues.comments.delete",
+        "issues.children",
+        "issues.update",
     }
 
 
@@ -131,10 +131,11 @@ def test_retained_inventory_and_fresh_checkout_remain_outside_typed_surface() ->
     assert len(contract.compatibility.response_registry) == 163
     assert (
         sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
-        == 159
+        == 133
     )
     assert (
-        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 4
+        sum(item.disposition == "changed" for item in contract.compatibility.response_registry)
+        == 30
     )
     assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
 
