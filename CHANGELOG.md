@@ -7,6 +7,22 @@ one inspectable command contract canonical. Relation `.all()` tuple snapshots
 remain unchanged. The complete compiling migration table is in
 [docs/migration.md](docs/migration.md).
 
+### Multica 0.4.44 compatibility migration
+
+- Targets CLI `0.4.44` at
+  `c7f259c70a60bff30011c403fada79ab382f608a`, with bounds
+  `[0.4.42, 0.4.45)`; migrate directly from `0.4.43` and retain support for
+  `0.4.42` where the operation is retained.
+- Adds strict comment tombstones and target keep-replies deletion. Safe delete
+  requires CLI `0.4.44`; the reviewed pre-support 404 never triggers a
+  destructive fallback.
+- Preserves custom lifecycle keys with legacy category projection and rejects
+  every present Triage parent update atomically with `issue_in_triage`.
+- Keeps release archive, executable, and version JSON checksum roles separate;
+  activity, daemon garbage collection, maintenance, Dingtalk, and telemetry
+  changes remain outside the SDK surface. Contract, generated runtime, public
+  behavior, tests, docs, and package claims roll back atomically if gates fail.
+
 ### Multica 0.4.43 compatibility migration
 
 - Targets CLI `0.4.43` at
@@ -23,8 +39,8 @@ remain unchanged. The complete compiling migration table is in
 
 - Historically targeted CLI `0.4.42` at
   `76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`, with bounds
-  `[0.4.42, 0.4.43)`; this interval is superseded by the current `0.4.43`
-  target and `[0.4.42, 0.4.44)` bounds.
+  `[0.4.42, 0.4.43)`; this interval is superseded by the current `0.4.44`
+  target and `[0.4.42, 0.4.45)` bounds.
 - Removes Plugin operations, models, exports, and `Workspace.plugins`; there
   is no replacement API. Autopilot create/update no longer accept `priority`.
 - Makes Skill get content explicit, keeps Skill lists metadata-only, and adds
@@ -95,8 +111,8 @@ the exact before/after import table is maintained in the migration guide.
   nested/scalar projections. `IssueUsage` exposes exact token, cost-tick, and
   uncosted categories, while `TaskRun` retains reviewed runtime, worktree,
   result, and failure context. Historical notes for CLI 0.4.32 retain the
-  superseded interval `[0.4.28, 0.4.33)`; the current approved compatibility
-  interval is `[0.4.42, 0.4.44)`.
+  superseded interval `[0.4.28, 0.4.33)`; the current approved target is
+  `0.4.44` with compatibility interval `[0.4.42, 0.4.45)`.
 
 ## 0.1.0 (unreleased)
 

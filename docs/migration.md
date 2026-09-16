@@ -259,9 +259,39 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
-## v0.4.43 SDK additions and behavior
+## v0.4.44 SDK additions and behavior
 
-### Direct 0.4.42 → 0.4.43 migration
+### Direct 0.4.43 → 0.4.44 migration
+
+The approved target is Multica CLI `0.4.44` at source commit
+`c7f259c70a60bff30011c403fada79ab382f608a`; the compatibility interval is
+`[0.4.42, 0.4.45)`. Migrate directly from `0.4.43`; no intermediate SDK
+release is required. Retained operations continue to support CLI `0.4.42`,
+but safe comment deletion requires `0.4.44` and `0.4.45` is the exclusive
+ceiling.
+
+Comment tombstones preserve empty bodies, descendants, and valid
+`deleted_at` timestamps. Omission maps to `deleted_at=None`; explicit null,
+malformed timestamps, and wrong JSON types fail closed. The stable
+`issues.comments.delete(comment_id)` signature and argv now use target
+keep-replies semantics, and the reviewed pre-support plain-text 404 is a
+failure with no destructive fallback.
+
+Custom issue lifecycle keys remain open strings and project unstarted, started,
+done, and closed phases to the legacy `todo`, `in_progress`, `done`, and
+`closed` categories. On a Triage issue, any present `parent_id` update—same,
+foreign, or explicit `None`—raises `issue_in_triage` before mutation; omitted
+parent updates remain allowed, and ordinary issues retain set/clear behavior.
+
+The contract records release archive, extracted executable, and version JSON
+checksums as separate identities. Activity, daemon garbage collection,
+maintenance, Dingtalk, and telemetry changes remain outside the SDK surface.
+If acceptance fails, revert the approved contract, generated runtime, public
+behavior, tests, docs, and package claims together.
+
+## Historical v0.4.43 SDK additions and behavior
+
+### Direct 0.4.42 → 0.4.43 migration (superseded)
 
 The approved compatibility interval is `[0.4.42, 0.4.44)` and is pinned to
 target source commit `2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c`. Migrate
@@ -304,7 +334,7 @@ non-not-found 500 responses remain internal command failures. `repo checkout
 
 The historical v0.4.42 compatibility interval was `[0.4.42, 0.4.43)` and was
 pinned to target source commit `76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`.
-The current v0.4.43 interval is `[0.4.42, 0.4.44)`; consumers
+The current v0.4.44 interval is `[0.4.42, 0.4.45)`; consumers
 migrate directly from CLI/SDK `0.4.28`; versions `0.4.29` through `0.4.41`
 are not delivery targets. If a target gate fails, revert the contract,
 generated runtime, public API, tests, and documentation together so a mixed

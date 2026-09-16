@@ -6,13 +6,21 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
-## Approved v0.4.43 target
+## Approved v0.4.44 target
 
-This SDK contract supports Multica CLI `0.4.43` at commit
-`2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c`, with the tested interval
-`[0.4.42, 0.4.44)`. Migrate directly from `0.4.42`; no intermediate SDK
-release is required. The retained surface remains compatible with `0.4.42`,
-while explicit `conversation_starters` mutations require CLI `0.4.43`.
+This SDK contract supports Multica CLI `0.4.44` at commit
+`c7f259c70a60bff30011c403fada79ab382f608a`, with the tested interval
+`[0.4.42, 0.4.45)`. Migrate directly from `0.4.43`; no intermediate SDK
+release is required. Retained operations remain compatible with `0.4.42`,
+while safe comment deletion requires CLI `0.4.44`.
+
+The `Comment.deleted_at` field is `None` only when the wire field is omitted;
+valid target timestamps are preserved, while explicit null and malformed values
+fail closed. Comment deletion uses the target keep-replies route and never
+falls back to destructive deletion. Custom lifecycle phases retain their
+status key and project to the legacy `todo`, `in_progress`, `done`, or `closed`
+category. A present parent update on a Triage issue raises the standard
+`issue_in_triage` error before any field is written.
 
 Agent starters accept a tuple of up to three
 `AgentConversationStarter(label, prompt)` values. `Unset` omits the flag;

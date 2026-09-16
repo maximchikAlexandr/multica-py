@@ -31,13 +31,13 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
-The approved SDK target is Multica CLI `0.4.43` at commit
-`2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c`, with compatibility interval
-`[0.4.42, 0.4.44)`. Migrate directly from SDK/CLI `0.4.42`; no intermediate
-SDK release is supported. The target adds explicit agent conversation starters
-and presence-aware task-run, run-message, and issue-usage fields. See [the
-migration guide](docs/migration.md) for capability availability and rollback
-guidance.
+The approved SDK target is Multica CLI `0.4.44` at commit
+`c7f259c70a60bff30011c403fada79ab382f608a`, with compatibility interval
+`[0.4.42, 0.4.45)`. Migrate directly from SDK/CLI `0.4.43`; no intermediate
+SDK release is supported. Retained operations remain compatible with CLI
+`0.4.42`, while safe comment deletion requires `0.4.44`. See [the migration
+guide](docs/migration.md) for tombstones, lifecycle/Triage behavior, and
+atomic rollback guidance.
 
 ## Usage
 
@@ -55,7 +55,7 @@ command = client.issues.get_command("issue_123")
 print(command.commands)
 issue = command.run()
 
-# Reviewed v0.4.43 issue projection options remain opt-in.
+# Reviewed v0.4.44 issue projection options remain opt-in.
 page = client.issues.list(
     fields=("id", "title", "properties"),
     property_filters=("Environment=prod",),
@@ -66,7 +66,7 @@ files = client.skills.files.list(skill.id, with_content=True)
 
 from multica_py.models.agents import AgentConversationStarter
 
-# Explicit starter mutations require CLI 0.4.43; omission remains 0.4.42-compatible.
+# Explicit starter mutations retain their reviewed compatibility behavior; omission remains 0.4.42-compatible.
 preview = client.agents.create_command(
     name="Release helper",
     conversation_starters=(
