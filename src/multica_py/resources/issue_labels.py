@@ -6,6 +6,7 @@ from multica_py._generated.approved_sdk import (
     ISSUE_LABELS_ADD_BINDING,
     ISSUE_LABELS_LIST_BINDING,
     ISSUE_LABELS_REMOVE_BINDING,
+    validate_nonblank,
 )
 from multica_py._internal.commands import Command
 from multica_py._internal.issue_wires import _LabelWire
@@ -23,7 +24,14 @@ class IssueLabelResource(BaseResource):
     def _bind_page(self, page: Page[_LabelWire]) -> Page[Label]:
         return Page(
             items=tuple(
-                Label(id=item.id, name=item.name, color=item.color, _client=self._client)
+                Label(
+                    id=item.id,
+                    name=item.name,
+                    color=item.color,
+                    description=item.description,
+                    resource_type=item.resource_type,
+                    _client=self._client,
+                )
                 for item in page.items
             ),
             limit=page.limit,
@@ -36,46 +44,63 @@ class IssueLabelResource(BaseResource):
     def _add_bound_command(
         self, issue_id: str, label_id: str, *, options: OperationOptions | None = None
     ) -> Command[Page[Label]]:
-        return self.add_command(issue_id, label_id, options=options)._map(self._bind_page)
+        return self.add_command(issue_id, label_id, options=options)
 
     def _remove_bound_command(
         self, issue_id: str, label_id: str, *, options: OperationOptions | None = None
     ) -> Command[Page[Label]]:
-        return self.remove_command(issue_id, label_id, options=options)._map(self._bind_page)
+        return self.remove_command(issue_id, label_id, options=options)
 
     def list_command(
         self, issue_id: str, *, options: OperationOptions | None = None
-    ) -> Command[Page[_LabelWire]]:
+    ) -> Command[Page[Label]]:
         _ = cast("object", ISSUE_LABELS_LIST_BINDING)
-        return self._decoded_page_command(
-            ("issue", "label", "list", issue_id), _LabelWire, options=options
+        validate_nonblank(issue_id)
+        raw = cast(
+            "Command[Page[_LabelWire]]",
+            self._decoded_page_command(
+                ("issue", "label", "list", issue_id), _LabelWire, options=options
+            ),
         )
+        return raw._map(self._bind_page)
 
-    def list(self, issue_id: str, *, options: OperationOptions | None = None) -> Page[_LabelWire]:
+    def list(self, issue_id: str, *, options: OperationOptions | None = None) -> Page[Label]:
         return self.list_command(issue_id, options=options).run()
 
     def add_command(
         self, issue_id: str, label_id: str, *, options: OperationOptions | None = None
-    ) -> Command[Page[_LabelWire]]:
+    ) -> Command[Page[Label]]:
         _ = cast("object", ISSUE_LABELS_ADD_BINDING)
-        return self._decoded_page_command(
-            ("issue", "label", "add", issue_id, label_id), _LabelWire, options=options
+        validate_nonblank(issue_id)
+        validate_nonblank(label_id)
+        raw = cast(
+            "Command[Page[_LabelWire]]",
+            self._decoded_page_command(
+                ("issue", "label", "add", issue_id, label_id), _LabelWire, options=options
+            ),
         )
+        return raw._map(self._bind_page)
 
     def add(
         self, issue_id: str, label_id: str, *, options: OperationOptions | None = None
-    ) -> Page[_LabelWire]:
+    ) -> Page[Label]:
         return self.add_command(issue_id, label_id, options=options).run()
 
     def remove_command(
         self, issue_id: str, label_id: str, *, options: OperationOptions | None = None
-    ) -> Command[Page[_LabelWire]]:
+    ) -> Command[Page[Label]]:
         _ = cast("object", ISSUE_LABELS_REMOVE_BINDING)
-        return self._decoded_page_command(
-            ("issue", "label", "remove", issue_id, label_id), _LabelWire, options=options
+        validate_nonblank(issue_id)
+        validate_nonblank(label_id)
+        raw = cast(
+            "Command[Page[_LabelWire]]",
+            self._decoded_page_command(
+                ("issue", "label", "remove", issue_id, label_id), _LabelWire, options=options
+            ),
         )
+        return raw._map(self._bind_page)
 
     def remove(
         self, issue_id: str, label_id: str, *, options: OperationOptions | None = None
-    ) -> Page[_LabelWire]:
+    ) -> Page[Label]:
         return self.remove_command(issue_id, label_id, options=options).run()

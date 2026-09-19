@@ -392,14 +392,28 @@ class IssueResource(BaseResource):
 
     def _labels_relation(self, issue_id: str) -> tuple[Label, ...]:
         return tuple(
-            Label(id=item.id, name=item.name, color=item.color, _client=self._client)
+            Label(
+                id=item.id,
+                name=item.name,
+                color=item.color,
+                description=item.description,
+                resource_type=item.resource_type,
+                _client=self._client,
+            )
             for item in _page_items(self.labels.list(issue_id))
         )
 
     def _labels_relation_command(self, issue_id: str) -> Command[tuple[Label, ...]]:
         return self.labels.list_command(issue_id)._map(
             lambda page: tuple(
-                Label(id=item.id, name=item.name, color=item.color, _client=self._client)
+                Label(
+                    id=item.id,
+                    name=item.name,
+                    color=item.color,
+                    description=item.description,
+                    resource_type=item.resource_type,
+                    _client=self._client,
+                )
                 for item in page.items
             )
         )
