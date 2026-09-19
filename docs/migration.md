@@ -27,7 +27,7 @@ column so a migration can be completed mechanically.
 
 | Removed **Before** | Compiling **After** |
 |---|---|
-| `AgentCreateRequest(name="build")` | `client.agents.create(name="build")` |
+| `AgentCreateRequest(name="build")` | `client.agents.create(name="build", model="gpt-5")` |
 | `AgentUpdateRequest(name="build")` | `client.agents.update(agent_id, name="build")` |
 | `ProjectCreateRequest(name="alpha")` | `client.projects.create(name="alpha")` |
 | `ProjectUpdateRequest(name="alpha")` | `client.projects.update(project_id, name="alpha")` |
@@ -259,7 +259,50 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
-## v0.4.44 SDK additions and behavior
+## v0.5.0 SDK additions and behavior
+
+### Direct 0.4.44 → 0.5.0 migration
+
+The approved target is Multica CLI `0.5.0` at source commit
+`2df765a3c8f39789c9fb76316378bcffc20d22d9`; the compatibility interval is
+`[0.4.42, 0.5.1)`. Retained operations keep the `0.4.42` floor, while the
+new comment, skill-label, reviewed label-input, and target-only response
+behavior gates at `0.5.0`. There is no intermediate SDK release.
+
+Comment edits use `issues.comments.update(comment_id, body, *,
+expected_revision=...)`. The body is text-only, the revision is a positive
+non-boolean integer, and stale revisions raise the centralized conflict once;
+the SDK does not read, merge, retry, or alter attachments and preserves the
+upstream mention-retrigger behavior.
+
+Labels now preserve nullable `description` and open `resource_type` values.
+Create defaults to `issue`; list can filter `issue` or `skill`; update uses
+`Unset` to omit description and `None` or `""` to explicitly clear it.
+
+Skills expose `Skill.labels` as a typed lazy collection. Skill-list rows
+preload empty or populated labels without another command; skill-detail rows
+leave the relation unloaded until `skills.labels.list`. Bound add/remove
+mutations invalidate the cached collection, and unbound access fails before
+transport. Task issue-state deltas preserve absent versus known-empty values,
+future failure strings such as `runtime_access_denied` remain open, and OMP
+model/thinking combinations fail locally before any partial mutation.
+
+Agent creation now requires an explicit nonblank `model`; `thinking_level` is
+valid only when a model is effective. Agent updates preserve omitted model as
+retained authoritative state, treat `model=None` as an explicit clear, and
+reject clear-plus-thinking before transport, including during runtime swaps.
+
+Runtime deletion keeps empty success and centralized conflicts, including
+optional reviewed blocker guidance and legacy plain bodies. It never performs
+cascade, retry, agent unbinding, or profile deletion automatically.
+
+The release archive, extracted executable, and version JSON use separate
+checksum roles. Activity, daemon garbage collection, maintenance, Dingtalk,
+and telemetry changes remain outside the SDK surface. If acceptance fails,
+revert the approved contract, generated runtime, public behavior, tests, docs,
+and package claims together.
+
+## Historical v0.4.44 SDK additions and behavior
 
 ### Direct 0.4.43 → 0.4.44 migration
 
@@ -334,7 +377,7 @@ non-not-found 500 responses remain internal command failures. `repo checkout
 
 The historical v0.4.42 compatibility interval was `[0.4.42, 0.4.43)` and was
 pinned to target source commit `76f59f5f1cd9b6e779d0d34c603407d5d4001bf7`.
-The current v0.4.44 interval is `[0.4.42, 0.4.45)`; consumers
+The historical v0.4.44 interval was `[0.4.42, 0.4.45)`; consumers
 migrate directly from CLI/SDK `0.4.28`; versions `0.4.29` through `0.4.41`
 are not delivery targets. If a target gate fails, revert the contract,
 generated runtime, public API, tests, and documentation together so a mixed
