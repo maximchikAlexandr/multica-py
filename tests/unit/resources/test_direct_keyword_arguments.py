@@ -77,6 +77,7 @@ def test_issue_list_object_and_direct_forms_have_identical_empty_and_filtered_pl
                 "description",
                 "runtime_id",
                 "model",
+                "thinking_level",
                 "conversation_starters",
                 "options",
             ),
@@ -84,7 +85,17 @@ def test_issue_list_object_and_direct_forms_have_identical_empty_and_filtered_pl
         (
             AgentResource,
             "update_command",
-            ("self", "agent_id", "name", "description", "conversation_starters", "options"),
+            (
+                "self",
+                "agent_id",
+                "name",
+                "description",
+                "runtime_id",
+                "model",
+                "thinking_level",
+                "conversation_starters",
+                "options",
+            ),
         ),
         (
             IssueResource,

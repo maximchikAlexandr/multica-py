@@ -25,6 +25,10 @@ class Agent(_BoundEntity):  # type: ignore[misc]
     id: str
     name: str
     description: str | None = None
+    runtime_id: str | None = None
+    model: str | None = None
+    thinking_level: str | None = None
+    _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
     skill_refs: tuple[AgentSkill, ...] = msgspec.field(default_factory=tuple, name="skills")
     archived_at: datetime.datetime | None = None
     conversation_starters: tuple[AgentConversationStarter, ...] = ()

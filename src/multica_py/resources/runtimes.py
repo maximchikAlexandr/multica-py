@@ -110,21 +110,14 @@ class RuntimeResource(BaseResource):
     def delete_command(
         self, runtime_id: str, *, cascade: bool = False, options: OperationOptions | None = None
     ) -> Command[ActionResult[None]]:
-        """Build a runtime-delete plan, optionally cascading to dependents.
-
-        ``cascade=True`` asks the upstream CLI to unbind dependent agents,
-        cancel their queued/running work, and delete the runtime while
-        preserving each agent's configuration, chats, and task history.
-        """
         if not runtime_id.strip():
             raise ValueError("runtime_id must be nonblank")
-        args = ["runtime", "delete", runtime_id]
         if cascade:
-            args.append("--cascade")
+            raise ValueError("runtime delete does not support cascade")
+        args = ["runtime", "delete", runtime_id]
         return self._action_command(tuple(args), options=options)
 
     def delete(
         self, runtime_id: str, *, cascade: bool = False, options: OperationOptions | None = None
     ) -> ActionResult[None]:
-        """Delete a runtime; cascade preserves dependent agents and their history."""
         return self.delete_command(runtime_id, cascade=cascade, options=options).run()

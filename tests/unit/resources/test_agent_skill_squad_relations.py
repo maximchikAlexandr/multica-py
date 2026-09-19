@@ -37,7 +37,7 @@ from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
 from multica_py.entities.workspaces import WorkspaceMember
 from multica_py.enums import IssueStatus
-from multica_py.exceptions import DetachedEntityError
+from multica_py.exceptions import DetachedEntityError, OutputShapeError
 from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import TaskCancellationActor
@@ -1130,7 +1130,7 @@ def test_skill_projection_table_preserves_content_and_size(
     assert file.size == expected_size
 
 
-def test_skill_list_projection_accepts_metadata_only_rows() -> None:
+def test_skill_list_projection_rejects_missing_labels() -> None:
     transport = MagicMock()
     transport.run_bytes.return_value = RawCommandResult(
         argv=(),
@@ -1140,10 +1140,8 @@ def test_skill_list_projection_accepts_metadata_only_rows() -> None:
         duration=datetime.timedelta(),
     )
 
-    skill = SkillResource(transport, ClientConfig()).list().items[0]
-
-    assert skill.content is None
-    assert skill.description is None
+    with pytest.raises(OutputShapeError):
+        SkillResource(transport, ClientConfig()).list()
 
 
 @pytest.mark.parametrize(
@@ -1324,3 +1322,170 @@ def test_avatar_public_signature_and_legacy_absence() -> None:
     )
     assert signature.return_annotation == ActionResult[None]
     assert not hasattr(AgentResource, "upload_avatar")
+
+
+@dataclass(frozen=True)
+class AgentArgvCase:
+    id: str
+    expected: str
+    build: Callable[[AgentResource], Command[Agent]]
+
+
+def _create_agent_model_thinking(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent", model="gpt-5", thinking_level="high")
+
+
+def _create_agent_model_only(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent", model="gpt-5")
+
+
+def _update_agent_model_set(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", model="gpt-5")
+
+
+def _update_agent_omitted(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1")
+
+
+def _update_agent_model_clear(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", model=None)
+
+
+def _update_agent_thinking_clear(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", thinking_level=None)
+
+
+def _update_agent_model_thinking_set(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", model="gpt-5", thinking_level="high")
+
+
+def _update_agent_runtime_swap(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", runtime_id="runtime-2")
+
+
+def _update_agent_runtime_clear_model_clear(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", runtime_id=None, model=None)
+
+
+def _update_agent_runtime_swap_model_thinking_set(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command(
+        "agent-1", runtime_id="runtime-2", model="gpt-5", thinking_level="high"
+    )
+
+
+_AGENT_MODEL_RUNTIME_ARGV_CASES = (
+    AgentArgvCase(
+        "create-model-thinking",
+        "multica agent create --name agent --model gpt-5 --thinking-level high --output json",
+        _create_agent_model_thinking,
+    ),
+    AgentArgvCase(
+        "create-model-only",
+        "multica agent create --name agent --model gpt-5 --output json",
+        _create_agent_model_only,
+    ),
+    AgentArgvCase(
+        "update-model-set",
+        "multica agent update agent-1 --model gpt-5 --output json",
+        _update_agent_model_set,
+    ),
+    AgentArgvCase(
+        "update-omitted", "multica agent get agent-1 --output json", _update_agent_omitted
+    ),
+    AgentArgvCase(
+        "update-model-clear",
+        "multica agent update agent-1 --model '' --output json",
+        _update_agent_model_clear,
+    ),
+    AgentArgvCase(
+        "update-thinking-clear",
+        "multica agent update agent-1 --thinking-level '' --output json",
+        _update_agent_thinking_clear,
+    ),
+    AgentArgvCase(
+        "update-model-and-thinking-set",
+        "multica agent update agent-1 --model gpt-5 --thinking-level high --output json",
+        _update_agent_model_thinking_set,
+    ),
+    AgentArgvCase(
+        "update-runtime-swap",
+        "multica agent update agent-1 --runtime-id runtime-2 --output json",
+        _update_agent_runtime_swap,
+    ),
+    AgentArgvCase(
+        "update-runtime-clear-and-model-clear",
+        "multica agent update agent-1 --runtime-id '' --model '' --output json",
+        _update_agent_runtime_clear_model_clear,
+    ),
+    AgentArgvCase(
+        "update-runtime-swap-model-and-thinking-set",
+        "multica agent update agent-1 --runtime-id runtime-2 --model gpt-5 "
+        "--thinking-level high --output json",
+        _update_agent_runtime_swap_model_thinking_set,
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _AGENT_MODEL_RUNTIME_ARGV_CASES, ids=lambda case: case.id)
+def test_agent_model_thinking_runtime_matrix_emits_exact_argv(
+    case: AgentArgvCase, mock_transport: MagicMock
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    command = case.build(AgentResource(mock_transport, ClientConfig()))
+    assert command.commands == (case.expected,)
+    mock_transport.run_bytes.assert_not_called()
+
+
+@dataclass(frozen=True)
+class InvalidAgentOmpCase:
+    id: str
+    invoke: Callable[[AgentResource], Command[Agent]]
+
+
+def _create_agent_thinking_without_model(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent", thinking_level="high")
+
+
+def _create_agent_model_omitted(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent")
+
+
+def _create_agent_model_null(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent", model=None)
+
+
+def _create_agent_model_blank(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent", model=" ")
+
+
+def _update_agent_missing_model_with_runtime_swap(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", runtime_id="runtime-2", thinking_level="high")
+
+
+def _update_agent_clear_model_with_thinking(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", model=None, thinking_level="high")
+
+
+_INVALID_AGENT_OMP_CASES = (
+    InvalidAgentOmpCase("create-model-omitted", _create_agent_model_omitted),
+    InvalidAgentOmpCase("create-model-null", _create_agent_model_null),
+    InvalidAgentOmpCase("create-model-blank", _create_agent_model_blank),
+    InvalidAgentOmpCase("create-thinking-without-model", _create_agent_thinking_without_model),
+    InvalidAgentOmpCase(
+        "update-missing-model-thinking-runtime-swap", _update_agent_missing_model_with_runtime_swap
+    ),
+    InvalidAgentOmpCase(
+        "update-clear-model-with-thinking", _update_agent_clear_model_with_thinking
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _INVALID_AGENT_OMP_CASES, ids=lambda case: case.id)
+def test_agent_invalid_omp_matrix_fails_before_transport(
+    case: InvalidAgentOmpCase, mock_transport: MagicMock
+) -> None:
+    resource = AgentResource(mock_transport, ClientConfig())
+    with pytest.raises(ValueError, match="model"):
+        case.invoke(resource)
+    mock_transport.run_bytes.assert_not_called()
+    mock_transport.run_text.assert_not_called()
