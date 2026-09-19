@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "pinned_sha": "c7f259c70a60bff30011c403fada79ab382f608a",
-    "tag": "v0.4.44",
-    "visible_leaf_count": 153
+    "pinned_sha": "2df765a3c8f39789c9fb76316378bcffc20d22d9",
+    "tag": "v0.5.0",
+    "visible_leaf_count": 157
   },
   "commands": [
     "agent archive",
@@ -57,6 +57,7 @@
     "issue comment list",
     "issue comment resolve",
     "issue comment unresolve",
+    "issue comment update",
     "issue create",
     "issue get",
     "issue label add",
@@ -129,6 +130,9 @@
     "skill files upsert",
     "skill get",
     "skill import",
+    "skill label add",
+    "skill label list",
+    "skill label remove",
     "skill list",
     "skill refresh",
     "skill search",

@@ -8,7 +8,7 @@ import pathlib
 import subprocess
 import tempfile
 from dataclasses import dataclass, replace
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
@@ -29,7 +29,7 @@ from tools.upstream_contract.evidence import ReleaseIdentity, collect
 from tools.upstream_contract.generation import _validate_transient_projection, render_files
 
 APPROVED = pathlib.Path("contracts/sdk-contract.json")
-PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.4.43..v0.4.44/source/multica")
+PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.4.44..v0.5.0/source/multica")
 
 _SQUAD_MEMBER_OPERATION_IDS = (
     "squads.members.add",
@@ -276,15 +276,158 @@ def test_closed_contract_rejects_invalid_rows(
 
 def test_v3_catalogs_are_closed() -> None:
     contract = validate_contract(APPROVED)
-    assert len(contract.test_vectors) == 79
-    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 66
-    assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 13
+    assert len(contract.test_vectors) == 84
+    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 70
+    assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 14
     assert {item.public_name for item in contract.enum_definitions} == {
         "IssueSort",
         "SortDirection",
         "AutopilotExecutionMode",
+        "LabelResourceType",
     }
     assert all(item.parameter_name.isidentifier() for item in contract.validator_definitions)
+
+
+def _approved_v050_document() -> tuple[Any, Any]:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    operations = {item["operation_id"]: item for item in document["operations"]}
+    return document, operations
+
+
+def test_v050_comment_update_has_frozen_contract_rows() -> None:
+    document, operations = _approved_v050_document()
+    assert operations["issues.comments.update"]["compatibility"] == "requires_cli>=0.5.0"
+    catalogs = document["catalogs"]
+    assert catalogs["signatures"]["comment_update"] == (
+        "(comment_id: str, body: str, *, expected_revision: int, "
+        "options: OperationOptions | None = None) -> Comment"
+    )
+    assert catalogs["bindings"]["comment_update"] == {
+        "command": ["issue", "comment", "update"],
+        "output": "json",
+        "mappings": [
+            ["comment_id", "pos:0", "path:comment_id"],
+            ["body", "--content", "json_body:content"],
+            ["expected_revision", "--expected-revision", "json_body:expected_revision"],
+        ],
+        "constraints": ["nonblank:comment_id", "positive_int:expected_revision"],
+    }
+
+    assert catalogs["test_vectors"]["generated:issues.comments.update:default:canonical"][
+        "expected_argv"
+    ] == [
+        "issue",
+        "comment",
+        "update",
+        "cmt_1",
+        "--content",
+        "revised",
+        "--expected-revision",
+        "3",
+        "--output",
+        "json",
+    ]
+
+
+def test_v050_omp_create_update_have_frozen_contract_rows() -> None:
+    document, operations = _approved_v050_document()
+    assert operations["agents.create"]["compatibility"] == "intentionally_changed"
+    assert operations["agents.update"]["compatibility"] == "intentionally_changed"
+    assert {
+        "T-AGENT-OMP-V050",
+        "T-AGENT-OMP-INVALID-V050",
+    } <= set(operations["agents.create"]["test_ref_ids"])
+    assert {
+        "T-AGENT-OMP-V050",
+        "T-AGENT-OMP-INVALID-V050",
+    } <= set(operations["agents.update"]["test_ref_ids"])
+
+    catalogs = document["catalogs"]
+    assert catalogs["signatures"]["agents_create_manual"].count("thinking_level") == 1
+    assert catalogs["signatures"]["agents_update_manual"].count("runtime_id") == 1
+    assert catalogs["signatures"]["agents_update_manual"].count("model") == 1
+    assert catalogs["signatures"]["agents_update_manual"].count("thinking_level") == 1
+    assert catalogs["bindings"]["agents_create_manual"]["mappings"][:2] == [
+        ["model", "--model", "json_body:model"],
+        ["thinking_level", "--thinking-level", "json_body:thinking_level"],
+    ]
+    assert catalogs["bindings"]["agents_create_manual"]["constraints"][:2] == [
+        "model_required_for_create",
+        "thinking_requires_model",
+    ]
+    assert catalogs["bindings"]["agents_update_manual"]["mappings"][:3] == [
+        ["runtime_id", "--runtime-id", "json_body:runtime_id"],
+        ["model", "--model", "json_body:model"],
+        ["thinking_level", "--thinking-level", "json_body:thinking_level"],
+    ]
+    assert catalogs["bindings"]["agents_update_manual"]["constraints"][1] == (
+        "thinking_requires_effective_model"
+    )
+    assert set(catalogs["update_field_policies"]["agents.update"]["fields"]) >= {
+        "model",
+        "runtime_id",
+        "thinking_level",
+    }
+
+
+def test_v050_label_inputs_have_frozen_contract_rows() -> None:
+    document, operations = _approved_v050_document()
+    assert {
+        "labels.create",
+        "labels.list",
+        "labels.update",
+    } <= operations.keys()
+    assert all(
+        operations[operation_id]["compatibility"] == "requires_cli>=0.5.0"
+        for operation_id in ("labels.create", "labels.list", "labels.update")
+    )
+    catalogs = document["catalogs"]
+    assert catalogs["enum_definitions"][-1] == {
+        "enum_id": "label_resource_type",
+        "public_name": "LabelResourceType",
+        "members": [
+            {"name": "issue", "value": "issue"},
+            {"name": "skill", "value": "skill"},
+        ],
+    }
+    assert catalogs["update_field_policies"]["labels.update"]["fields"]["description"]["clear"] == {
+        "kind": "flag",
+        "source_ref_ids": ["S-LABEL-V050"],
+        "mapping": ["--description", "empty-string"],
+    }
+
+
+def test_v050_skill_labels_have_frozen_contract_rows() -> None:
+    document, operations = _approved_v050_document()
+    assert {
+        "skills.labels.list",
+        "skills.labels.add",
+        "skills.labels.remove",
+    } <= operations.keys()
+    assert all(
+        operations[operation_id]["compatibility"] == "requires_cli>=0.5.0"
+        for operation_id in (
+            "skills.labels.list",
+            "skills.labels.add",
+            "skills.labels.remove",
+        )
+    )
+    catalogs = document["catalogs"]
+    remove = next(
+        item
+        for item in operations["skills.labels.remove"]["entrypoints"]
+        if item["entrypoint_id"] == "default"
+    )
+    assert remove["fallback_response_id"] == "action_result_none"
+    assert catalogs["signatures"]["skill_labels_remove"].endswith(
+        "Page[Label] | ActionResult[None]"
+    )
+    assert catalogs["test_vectors"]["generated:skills.labels.remove:default:variant:01"][
+        "assertion"
+    ]["expected"] == {
+        "kind": "primitive",
+        "value": "multica_py.models.common.ActionResult",
+    }
 
 
 def test_autopilot_create_canonical_vector_uses_approved_flags() -> None:
@@ -334,12 +477,12 @@ def test_response_registry_has_old_target_ranges_and_explicit_removals() -> None
     assert {
         url.split("/blob/")[1].split("/")[0] for item in registry for url in item.source_urls
     } == {
-        "2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c",
         "c7f259c70a60bff30011c403fada79ab382f608a",
+        "2df765a3c8f39789c9fb76316378bcffc20d22d9",
     }
     assert all("#L1-L1" not in url for item in registry for url in item.source_urls)
     assert not any(item.operation_id.startswith("plugins.") for item in registry)
-    assert sum(item.disposition == "changed" for item in registry) == 30
+    assert sum(item.disposition == "changed" for item in registry) == 6
     assert all(
         all(token in item.action for token in ("model=", "fixture=", "docs=")) for item in registry
     )
@@ -603,15 +746,15 @@ def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     )
 
 
-def test_current_target_and_source_refs_are_pinned_to_v0444() -> None:
+def test_current_target_and_source_refs_are_pinned_to_v050() -> None:
     contract = load_contract(APPROVED)
-    assert contract.target.version == "0.4.44"
-    assert contract.target.tag == "v0.4.44"
-    assert contract.target.commit == "c7f259c70a60bff30011c403fada79ab382f608a"
-    assert contract.target.release_id == "389061637"
+    assert contract.target.version == "0.5.0"
+    assert contract.target.tag == "v0.5.0"
+    assert contract.target.commit == "2df765a3c8f39789c9fb76316378bcffc20d22d9"
+    assert contract.target.release_id == "391379076"
     assert (
         contract.target.release_provenance_ref
-        == ".devlocal/upstream-contract/v0.4.43..v0.4.44/release/release-verification.json"
+        == ".devlocal/upstream-contract/v0.4.44..v0.5.0/release/release-verification.json"
     )
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
     stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
@@ -628,16 +771,8 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
     assert (
         compatibility.min_cli_version,
         compatibility.max_tested_cli_version,
-    ) == ("0.4.42", "0.4.44")
+    ) == ("0.4.42", "0.5.0")
     assert compatibility.verified_binaries == (
-        VerifiedBinary(
-            version="0.4.43",
-            commit="2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c",
-            build_date="2026-09-11T17:19:51Z",
-            go_version="go1.26.8",
-            os="darwin",
-            arch="arm64",
-        ),
         VerifiedBinary(
             version="0.4.44",
             commit="c7f259c70a60bff30011c403fada79ab382f608a",
@@ -646,8 +781,16 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
             os="darwin",
             arch="arm64",
         ),
+        VerifiedBinary(
+            version="0.5.0",
+            commit="2df765a3c8f39789c9fb76316378bcffc20d22d9",
+            build_date="2026-09-18T10:09:36Z",
+            go_version="go1.26.8",
+            os="darwin",
+            arch="arm64",
+        ),
     )
-    assert [item.version for item in compatibility.release_artifacts] == ["0.4.43", "0.4.44"]
+    assert [item.version for item in compatibility.release_artifacts] == ["0.4.44", "0.5.0"]
     assert (
         compatibility.release_artifacts[0].archive_sha256
         != compatibility.release_artifacts[0].executable_sha256
@@ -659,19 +802,21 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
     assert compatibility.command_inventory == replace(
         compatibility.command_inventory,
         baseline_nodes=189,
-        target_nodes=189,
-        unchanged=188,
-        changed=1,
-        added=0,
+        target_nodes=194,
+        unchanged=186,
+        changed=3,
+        added=5,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
     )
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
-        "issues.comments.list",
-        "issues.comments.delete",
-        "issues.children",
-        "issues.update",
+        "agents.tasks",
+        "labels.create",
+        "labels.list",
+        "labels.update",
+        "runtimes.delete",
+        "skills.list",
     }
 
 
@@ -710,7 +855,7 @@ def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     assert json.loads(files[2].content) == {
         "max_cli_version": "0.4.36",
         "min_cli_version": "0.4.27",
-        "target_version": "0.4.44",
+        "target_version": "0.5.0",
     }
 
 
@@ -752,7 +897,7 @@ def test_v0420_delta_source_refs_cover_copy_search_and_runtime_delete() -> None:
     } <= refs.keys()
     assert refs["S-AGENT-COPY-RUN"].path == "server/cmd/multica/cmd_agent_copy.go"
     assert refs["S-ISSUE-SEARCH-RESPONSE"].path == "server/internal/handler/issue.go"
-    assert "unbind-agents-and-delete" in refs["S-RUNTIME-DELETE-RUN"].symbol
+    assert refs["S-RUNTIME-DELETE-RUN"].symbol == "runRuntimeDelete"
 
 
 def test_v0420_governs_copy_search_and_rejects_external_tag_commands(

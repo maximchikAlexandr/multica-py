@@ -38,40 +38,16 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "2ae2dbbb8f9ed9ffe1739ecf5abfe31a940ee50c"
-_TARGET_COMMIT = "c7f259c70a60bff30011c403fada79ab382f608a"
-_V0444_CHANGED_RESPONSE_WORK_ITEMS = frozenset(
+_BASELINE_COMMIT = "c7f259c70a60bff30011c403fada79ab382f608a"
+_TARGET_COMMIT = "2df765a3c8f39789c9fb76316378bcffc20d22d9"
+_V050_CHANGED_RESPONSE_WORK_ITEMS = frozenset(
     {
-        "comment_add",
-        "comment_delete",
-        "comment_list",
-        "comment_list_flat",
-        "comment_list_recent",
-        "comment_list_thread",
-        "issue_children",
-        "issue_create",
-        "issue_get",
-        "issue_list",
-        "issue_search",
-        "issue_status",
-        "issues_assign_bound",
-        "issues_assign_manual",
-        "issues_comments_reply_manual",
-        "issues_move_after",
-        "issues_move_after_bound",
-        "issues_move_before",
-        "issues_move_before_bound",
-        "issues_move_to_bottom",
-        "issues_move_to_bottom_bound",
-        "issues_move_to_top",
-        "issues_move_to_top_bound",
-        "issues_refresh",
-        "issues_set_status_bound",
-        "issues_unassign",
-        "issues_unassign_bound",
-        "issues_update_bound",
-        "issues_update_manual",
-        "project_issue_create",
+        "agent_tasks",
+        "labels_create_manual",
+        "label_list",
+        "labels_update_manual",
+        "runtime_delete",
+        "skill_list",
     }
 )
 _TAG_KINDS = frozenset(
@@ -89,7 +65,14 @@ _TAG_KINDS = frozenset(
     }
 )
 _ENUM_TYPES = frozenset(
-    {"IssueStatus", "ProjectStatus", "IssueSort", "SortDirection", "AutopilotExecutionMode"}
+    {
+        "IssueStatus",
+        "ProjectStatus",
+        "IssueSort",
+        "SortDirection",
+        "AutopilotExecutionMode",
+        "LabelResourceType",
+    }
 )
 _DECODED_TYPES = frozenset(
     {
@@ -103,6 +86,7 @@ _DECODED_TYPES = frozenset(
         "multica_py.models.autopilots.AutopilotRunListPage",
         "multica_py.models.autopilots.AutopilotTrigger",
         "multica_py.models.common.Page",
+        "multica_py.models.common.ActionResult",
         "multica_py.models.issue_activity.CommentThread",
         "multica_py.models.issue_activity.LinkedPullRequest",
         "multica_py.models.issue_activity.MetadataEntry",
@@ -170,7 +154,9 @@ _UPDATE_PRESENCE_VALUES = frozenset({"omit", "reject", "emit", "not_applicable"}
 _UPDATE_CLEAR_KINDS = frozenset({"none", "flag", "dedicated_flag", "composite", "empty_collection"})
 _UPDATE_POLICY_FIELDS = {
     "projects.update": frozenset({"name", "description"}),
-    "agents.update": frozenset({"name", "description", "conversation_starters"}),
+    "agents.update": frozenset(
+        {"name", "description", "runtime_id", "model", "thinking_level", "conversation_starters"}
+    ),
     "skills.update": frozenset({"name", "description"}),
     "issues.update": frozenset(
         {"title", "description", "priority", "assignee_id", "project_id", "parent_id"}
@@ -188,7 +174,7 @@ _UPDATE_POLICY_FIELDS = {
         }
     ),
     "autopilots.trigger_update": frozenset({"cron_expression", "timezone", "label", "enabled"}),
-    "labels.update": frozenset({"name", "color"}),
+    "labels.update": frozenset({"name", "color", "description"}),
     "projects.resources.update_local_directory": frozenset({"local_path"}),
     "runtimes.update": frozenset({"target_version", "wait"}),
     "users.profile_update": frozenset({"description"}),
@@ -453,6 +439,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "comment_list_flat",
             "comment_list_recent",
             "comment_list_thread",
+            "comment_update",
             "configuration_get_manual",
             "configuration_set_manual",
             "configuration_show_manual",
@@ -551,6 +538,9 @@ _AUXILIARY_CATALOG_KEYS = {
             "skill_files_upsert",
             "skill_get",
             "skill_list",
+            "skill_labels_add",
+            "skill_labels_list",
+            "skill_labels_remove",
             "skill_refresh",
             "skill_search",
             "skills_create_manual",
@@ -678,6 +668,7 @@ _AUXILIARY_CATALOG_KEYS = {
             "offset_nonnegative",
             "position_forbids_direction",
             "positive_int:max_concurrent_tasks",
+            "positive_int:expected_revision",
             "preserve_daemon_and_label",
             "since_cursor_int32",
             "strict:IssueStatus",
@@ -796,7 +787,7 @@ def _response_source_url(url: str, label: str) -> tuple[str, str, int, int]:
     match = _RESPONSE_SOURCE_URL.fullmatch(url)
     if match is None:
         raise ContractError(f"{label} must be a pinned GitHub source range")
-    path = match.group("path")
+    path = cast("str", match.group("path"))
     if (
         not path.endswith(".go")
         or path.startswith("/")
@@ -955,6 +946,7 @@ class BindingDescriptor:
 class PublicConvention:
     category: str
     response_id: str
+    fallback_response_id: str | None
     typed_input_id: str | None
     input_mode: str
     presence_policy_ids: tuple[str, ...]
@@ -1007,6 +999,10 @@ class Entrypoint:
     @property
     def typed_input_id(self) -> str | None:
         return self.convention.typed_input_id
+
+    @property
+    def fallback_response_id(self) -> str | None:
+        return self.convention.fallback_response_id
 
     @property
     def input_mode(self) -> str:
@@ -1362,6 +1358,7 @@ def _public_convention(value: object, label: str) -> PublicConvention:
             {
                 "category",
                 "response_id",
+                "fallback_response_id",
                 "typed_input_id",
                 "input_mode",
                 "presence_policy_ids",
@@ -1380,6 +1377,15 @@ def _public_convention(value: object, label: str) -> PublicConvention:
         raise ContractError(f"{label} assigns an action response to a non-action category")
     if response_id.startswith("page_") and category != "collection":
         raise ContractError(f"{label} assigns a page response to a non-collection category")
+    fallback_response_value = item["fallback_response_id"]
+    if fallback_response_value is None:
+        fallback_response_id = None
+    else:
+        fallback_response_id = _contract_identifier(
+            fallback_response_value, f"{label}.fallback_response_id"
+        )
+        if fallback_response_id not in _RESPONSE_CATALOG_IDS:
+            raise ContractError(f"{label}.fallback_response_id is not an approved response")
     typed_input_value = item["typed_input_id"]
     if typed_input_value is None:
         typed_input_id = None
@@ -1418,6 +1424,7 @@ def _public_convention(value: object, label: str) -> PublicConvention:
     return PublicConvention(
         category,
         response_id,
+        fallback_response_id,
         typed_input_id,
         input_mode,
         policy_ids,
@@ -1445,31 +1452,34 @@ def _operations(value: object) -> tuple[Operation, ...]:
             _list(item["entrypoints"], f"operations[{index}].entrypoints")
         ):
             ep = _dict(raw_ep, f"operations[{index}].entrypoints[{ep_index}]")
+            entrypoint_keys = frozenset(
+                {
+                    "entrypoint_id",
+                    "public_symbol",
+                    "signature_id",
+                    "binding_id",
+                    "response_id",
+                    "errors",
+                    "category",
+                    "typed_input_id",
+                    "input_mode",
+                    "presence_policy_ids",
+                    "command_symbol",
+                }
+            )
             _exact_keys(
                 ep,
-                frozenset(
-                    {
-                        "entrypoint_id",
-                        "public_symbol",
-                        "signature_id",
-                        "binding_id",
-                        "response_id",
-                        "errors",
-                        "category",
-                        "typed_input_id",
-                        "input_mode",
-                        "presence_policy_ids",
-                        "command_symbol",
-                    }
-                ),
+                entrypoint_keys
+                | ({"fallback_response_id"} if "fallback_response_id" in ep else set()),
                 "entrypoint",
             )
             convention = _public_convention(
                 {
-                    key: ep[key]
+                    key: ep.get(key)
                     for key in (
                         "category",
                         "response_id",
+                        "fallback_response_id",
                         "typed_input_id",
                         "input_mode",
                         "presence_policy_ids",
@@ -1483,6 +1493,8 @@ def _operations(value: object) -> tuple[Operation, ...]:
                 raise ContractError("entrypoint.command_symbol must match its public symbol")
             if convention.response_id != _str(ep["response_id"], "entrypoint.response_id"):
                 raise ContractError("entrypoint.response_id disagrees with its convention")
+            if convention.fallback_response_id != ep.get("fallback_response_id"):
+                raise ContractError("entrypoint.fallback_response_id disagrees with its convention")
             entrypoints.append(
                 Entrypoint(
                     entrypoint_id=_str(ep["entrypoint_id"], "entrypoint.entrypoint_id"),
@@ -1933,7 +1945,7 @@ def _validate_direct_bindings(catalog: ContractCatalog) -> None:
                 ):
                     stale.append(_str(mapping[0], "binding mapping source"))
             stale.extend(
-                constraint
+                _str(constraint, "binding constraint")
                 for constraint in _list(
                     binding["constraints"],
                     f"catalogs.bindings[{entrypoint.binding_id!r}].constraints",
@@ -2059,7 +2071,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         if not version_pattern.fullmatch(artifact.version):
             raise ContractError("release artifact version must be semantic")
         for field in ("archive_sha256", "executable_sha256", "version_output_sha256"):
-            if not _SHA256.fullmatch(getattr(artifact, field)):
+            if not _SHA256.fullmatch(cast("str", getattr(artifact, field))):
                 raise ContractError(f"release artifact {field} must be a SHA-256 digest")
         if artifact.archive_sha256 == artifact.executable_sha256:
             raise ContractError("release archive and executable digests must be distinct")
@@ -2217,8 +2229,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     binding_descriptors = _binding_descriptors(catalogs["binding_descriptors"])
     vectors_raw = _dict(catalogs["test_vectors"], "catalogs.test_vectors")
     vectors = tuple(_parse_vector(value, key) for key, value in vectors_raw.items())
-    if len(vectors) != 79:
-        raise ContractError(f"expected 79 test vectors, got {len(vectors)}")
+    if len(vectors) != 84:
+        raise ContractError(f"expected 84 test vectors, got {len(vectors)}")
     if len({vector.assertion.assertion_id for vector in vectors}) != len(vectors):
         raise ContractError("test vector assertion IDs must be unique")
     scope = _dict(raw["scope"], "scope")
@@ -2329,37 +2341,37 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.commit,
         contract.target.release_id,
     ) != (
-        "0.4.44",
-        "v0.4.44",
-        "c7f259c70a60bff30011c403fada79ab382f608a",
-        "389061637",
+        "0.5.0",
+        "v0.5.0",
+        "2df765a3c8f39789c9fb76316378bcffc20d22d9",
+        "391379076",
     ):
-        raise ContractError("approved contract must target Multica v0.4.44")
+        raise ContractError("approved contract must target Multica v0.5.0")
     if contract.compatibility.command_inventory != CommandInventory(
         baseline_nodes=189,
-        target_nodes=189,
-        unchanged=188,
-        changed=1,
-        added=0,
+        target_nodes=194,
+        unchanged=186,
+        changed=3,
+        added=5,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
     ):
-        raise ContractError("command inventory does not match the approved 0.4.43/0.4.44 review")
+        raise ContractError("command inventory does not match the approved 0.4.44/0.5.0 review")
     expected_artifacts = {
-        "0.4.43": (
-            "v0.4.43",
-            "387217464",
-            "multica-cli-0.4.43-darwin-arm64.tar.gz",
-            "7d31b12d2ae94eab780cfcfdcfb7a9f43c6327c4ae54813d886410305cd26261",
-            "b67ad1196dd62c6f59c29837db392a55a0e78a8ae2ac514ef861805eb2e19885",
-        ),
         "0.4.44": (
             "v0.4.44",
             "389061637",
             "multica-cli-0.4.44-darwin-arm64.tar.gz",
             "f300cf8036b1f596466acde35f67d986f1f75a657f77e6e0e9de1134563a76aa",
             "ac26860e3f60ab6eafd4e7066d43d0fad2b0691adfefac339c4921e1dd68f774",
+        ),
+        "0.5.0": (
+            "v0.5.0",
+            "391379076",
+            "multica-cli-0.5.0-darwin-arm64.tar.gz",
+            "b4bae1001c30a870c784b19123437df9f09308f750a699ce3693877ba6ffc5d1",
+            "e8305b68e13d7cceeaaf382723d465552a9555b6540f1899527eccb36847e094",
         ),
     }
     actual_artifacts = {
@@ -2386,24 +2398,25 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
         for disposition in ("unchanged", "changed")
     }
-    if dispositions != {"unchanged": 133, "changed": 30}:
-        raise ContractError("response registry must split into 133 unchanged and 30 changed items")
+    if dispositions != {"unchanged": 157, "changed": 6}:
+        raise ContractError("response registry must split into 157 unchanged and 6 changed items")
     changed_work_items = {
         item.work_item_id
         for item in contract.compatibility.response_registry
         if item.disposition == "changed"
     }
-    if changed_work_items != _V0444_CHANGED_RESPONSE_WORK_ITEMS:
+    if changed_work_items != _V050_CHANGED_RESPONSE_WORK_ITEMS:
         raise ContractError(
-            "response registry changed work items do not match the approved 0.4.44 review"
+            "response registry changed work items do not match the approved 0.5.0 review"
         )
     _validate_direct_bindings(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
         "issue_sort",
         "sort_direction",
         "autopilot_execution_mode",
+        "label_resource_type",
     }:
-        raise ContractError("v3 must define the three generated public enums")
+        raise ContractError("v3 must define the four generated public enums")
     if len(contract.validator_definitions) == 0:
         raise ContractError("v3 must define validator definitions")
     if len({item.validator_id for item in contract.validator_definitions}) != len(
@@ -2477,6 +2490,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             "compatible",
             "intentionally_changed",
             "requires_cli>=0.4.44",
+            "requires_cli>=0.5.0",
         }:
             raise ContractError(
                 f"operation {operation.operation_id!r} has an invalid compatibility value"
@@ -2503,6 +2517,13 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             if entrypoint.response_id not in responses:
                 raise ContractError(
                     f"entrypoint {entrypoint.entrypoint_id!r} has an unknown response"
+                )
+            if (
+                entrypoint.fallback_response_id is not None
+                and entrypoint.fallback_response_id not in responses
+            ):
+                raise ContractError(
+                    f"entrypoint {entrypoint.entrypoint_id!r} has an unknown fallback response"
                 )
             if entrypoint.binding_id not in descriptor_ids:
                 raise ContractError(f"missing binding descriptor {entrypoint.binding_id!r}")
@@ -2603,9 +2624,9 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
                 )
     base_count = sum(":canonical" in vector.vector_id for vector in contract.test_vectors)
     variant_count = len(contract.test_vectors) - base_count
-    if (base_count, variant_count) != (66, 13):
+    if (base_count, variant_count) != (70, 14):
         raise ContractError(
-            f"expected 66 entrypoint-base and 13 variant vectors, got {base_count}/{variant_count}"
+            f"expected 70 entrypoint-base and 14 variant vectors, got {base_count}/{variant_count}"
         )
     return contract
 
