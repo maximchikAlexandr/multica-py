@@ -4,6 +4,11 @@ import datetime
 import re
 from typing import TypeVar, cast
 
+from multica_py._generated.approved_sdk import (
+    COMMENT_UPDATE_BINDING,
+    validate_nonblank,
+    validate_positive_expected_revision,
+)
 from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import TextResult
@@ -22,7 +27,7 @@ from multica_py.models.issue_activity import (
     CommentCursor,
 )
 from multica_py.models.relations import CursorPage
-from multica_py.resources._base import BaseResource
+from multica_py.resources._base import BaseResource, _operation_minimum_cli_version
 
 P = TypeVar("P")
 
@@ -270,6 +275,49 @@ class IssueCommentResource(BaseResource):
 
     def add(self, issue_id: str, body: str, *, options: OperationOptions | None = None) -> Comment:
         return self.add_command(issue_id, body, options=options).run()
+
+    def update_command(
+        self,
+        comment_id: str,
+        body: str,
+        *,
+        expected_revision: int,
+        options: OperationOptions | None = None,
+    ) -> Command[Comment]:
+        _ = cast("object", COMMENT_UPDATE_BINDING)
+        validate_nonblank(comment_id)
+        if not isinstance(body, str):
+            raise TypeError("body must be a string")
+        validate_positive_expected_revision(expected_revision)
+        return self._decoded_command(
+            (
+                "issue",
+                "comment",
+                "update",
+                comment_id,
+                "--content",
+                body,
+                "--expected-revision",
+                str(expected_revision),
+            ),
+            _CommentWire,
+            options=options,
+            minimum_cli_version=_operation_minimum_cli_version(
+                cast("object", COMMENT_UPDATE_BINDING)
+            ),
+        )._map(lambda wire: _bind_comment(comment_from_wire(wire), self._client))
+
+    def update(
+        self,
+        comment_id: str,
+        body: str,
+        *,
+        expected_revision: int,
+        options: OperationOptions | None = None,
+    ) -> Comment:
+        return self.update_command(
+            comment_id, body, expected_revision=expected_revision, options=options
+        ).run()
 
     def reply_command(
         self,
