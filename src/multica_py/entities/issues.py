@@ -272,6 +272,13 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     workspace_slug: str | None = None
     issue_identifier: str | None = None
     workspace_context: str | None = None
+    issue_title: str | None = None
+    issue_description: str | None = None
+    issue_status: str | None = None
+    issue_assignee_type: str | None = None
+    issue_assignee_id: str | None = None
+    issue_changed_fields: tuple[str, ...] = ()
+    issue_state_delta_known: bool | None = None
     issue_statuses: tuple[TaskIssueStatusData, ...] = ()
     issue_statuses_omitted: int | None = None
     project_id: str | None = None

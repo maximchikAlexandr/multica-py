@@ -66,6 +66,23 @@ def test_runtime_delete_without_cascade_preserves_upstream_conflict_guidance() -
     transport.run_text.assert_called_once_with(("runtime", "delete", "r1"))
 
 
+def test_runtime_delete_rejects_cascade_before_transport(mock_transport: MagicMock) -> None:
+    resource = RuntimeResource(mock_transport, ClientConfig())
+    with pytest.raises(ValueError, match="does not support cascade"):
+        resource.delete_command("r1", cascade=True)
+    mock_transport.run_text.assert_not_called()
+
+
+def test_runtime_delete_empty_success_is_single_non_cascading_action(
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    resource = RuntimeResource(mock_transport, ClientConfig())
+    command = resource.delete_command("r1")
+    assert command.commands == ("multica runtime delete r1",)
+    mock_transport.run_text.assert_not_called()
+
+
 def test_runtime_usage_preserves_future_provider_and_model_strings() -> None:
     transport = MagicMock()
     transport.run_bytes.return_value = RawCommandResult(

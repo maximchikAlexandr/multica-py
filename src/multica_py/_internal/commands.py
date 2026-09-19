@@ -39,6 +39,7 @@ class _Step:
     mode: _StepMode
     stdin: bytes | None = None
     timeout: datetime.timedelta | None = None
+    minimum_cli_version: str | None = None
     refs: tuple[tuple[int, _StepRef], ...] = ()
     decode: Callable[[bytes, str], object] | None = None
     result_alias: str | None = None
@@ -126,15 +127,28 @@ class _CommandPlan(Generic[T_co]):
 
     def _run_step(self, step: _Step, argv: tuple[str, ...]) -> object:
         if step.mode == "run_bytes":
-            raw_result = self.transport.run_bytes(argv, stdin=step.stdin, timeout=step.timeout)
+            if step.minimum_cli_version is None:
+                raw_result = self.transport.run_bytes(argv, stdin=step.stdin, timeout=step.timeout)
+            else:
+                raw_result = self.transport.run_bytes(
+                    argv,
+                    stdin=step.stdin,
+                    timeout=step.timeout,
+                    minimum_cli_version=step.minimum_cli_version,
+                )
             if step.decode is None:
                 return raw_result
             return step.decode(raw_result.stdout, " ".join(raw_result.argv))
         if step.mode == "run_text":
-            if step.stdin is None and step.timeout is None:
+            if step.stdin is None and step.timeout is None and step.minimum_cli_version is None:
                 text_result = self.transport.run_text(argv)
             else:
-                text_result = self.transport.run_text(argv, stdin=step.stdin, timeout=step.timeout)
+                text_result = self.transport.run_text(
+                    argv,
+                    stdin=step.stdin,
+                    timeout=step.timeout,
+                    minimum_cli_version=step.minimum_cli_version,
+                )
             if step.decode is None:
                 return text_result
             return step.decode(text_result.text.encode("utf-8"), " ".join(argv))

@@ -1,23 +1,45 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TYPE_CHECKING, TypeVar, cast
 
 import msgspec
 
-from multica_py._generated.approved_sdk import validate_nonblank
+from multica_py._generated.approved_sdk import SKILL_LIST_BINDING, validate_nonblank
 from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.issue_wires import _LabelWire
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.entities.labels import Label
 from multica_py.entities.skills import Skill
 from multica_py.models.common import ActionResult, Page
+from multica_py.models.relations import LazyCollection
 from multica_py.models.skills import SkillFile, SkillSearchResult
-from multica_py.resources._base import BaseResource, _page_items, _validate_optional_string
+from multica_py.resources._base import (
+    BaseResource,
+    _operation_minimum_cli_version,
+    _page_items,
+    _validate_optional_string,
+)
 from multica_py.resources.skill_files import SkillFileResource
+from multica_py.resources.skill_labels import SkillLabelResource, _ensure_skill_scope
 from multica_py.sentinels import Unset, UnsetType
 
+if TYPE_CHECKING:
+    from multica_py.client import MulticaClient
+
 __all__ = ["Skill", "SkillResource"]
+
+T = TypeVar("T")
+
+
+def _invalidate_result(invalidate: Callable[[], None]) -> Callable[[T], T]:
+    def finish(result: T) -> T:
+        invalidate()
+        return result
+
+    return finish
 
 
 class _SkillSearchResultWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -36,6 +58,14 @@ class _SkillWire(msgspec.Struct, frozen=True, kw_only=True):
     content: str | None | msgspec.UnsetType = msgspec.UNSET
 
 
+class _SkillListWire(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    name: str
+    description: str | None = None
+    file_count: int = 0
+    labels: tuple[_LabelWire, ...]
+
+
 def _skill_from_wire(wire: _SkillWire) -> Skill:
     presence = (
         "missing" if wire.content is msgspec.UNSET else "null" if wire.content is None else "value"
@@ -50,13 +80,78 @@ def _skill_from_wire(wire: _SkillWire) -> Skill:
     )
 
 
+def _skill_from_list_wire(wire: _SkillListWire) -> Skill:
+    return Skill(
+        id=wire.id,
+        name=wire.name,
+        description=wire.description,
+        file_count=wire.file_count,
+        _wire_presence=(("content", "missing"),),
+    )
+
+
 class SkillResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
         self.files = SkillFileResource(transport, config)
+        self.labels = SkillLabelResource(transport, config)
+
+    def _set_client(self, client: MulticaClient) -> None:
+        super()._set_client(client)
+        self.labels._set_client(client)
 
     def _files_relation_command(self, skill_id: str) -> Command[tuple[SkillFile, ...]]:
         return self.files.list_command(skill_id, with_content=False)._map(_page_items)
+
+    def _labels_relation_command(self, skill_id: str) -> Command[tuple[Label, ...]]:
+        return self.labels.list_command(skill_id)._map(_page_items)
+
+    def _add_label_command(
+        self,
+        skill_id: str,
+        label_id: str,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[Page[Label]]:
+        command = self.labels.add_command(skill_id, label_id, options=options)
+
+        return command._map(_invalidate_result(invalidate))
+
+    def _remove_label_command(
+        self,
+        skill_id: str,
+        label_id: str,
+        *,
+        invalidate: Callable[[], None],
+        options: OperationOptions | None,
+    ) -> Command[Page[Label] | ActionResult[None]]:
+        command = self.labels.remove_command(skill_id, label_id, options=options)
+
+        return command._map(_invalidate_result(invalidate))
+
+    def _bind_skill_labels(self, skill: Skill, labels: tuple[_LabelWire, ...]) -> Skill:
+        labels = _ensure_skill_scope(labels)
+        values = tuple(
+            Label(
+                id=item.id,
+                name=item.name,
+                color=item.color,
+                description=item.description,
+                resource_type=item.resource_type,
+                _client=self._client,
+            )
+            for item in labels
+        )
+        skill._set_runtime(
+            "_labels",
+            LazyCollection(
+                lambda: values,
+                initial=values,
+                command_loader=lambda: self._labels_relation_command(skill.id),
+            ),
+        )
+        return skill
 
     def _upsert_file_command(
         self,
@@ -80,10 +175,18 @@ class SkillResource(BaseResource):
         return self.files.delete_command(skill_id, file_id, options=options)._map(invalidate)
 
     def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Skill]]:
-        return self._decoded_page_command(("skill", "list"), _SkillWire, options=options)._map(
+        return self._decoded_page_command(
+            ("skill", "list"),
+            _SkillListWire,
+            options=options,
+            minimum_cli_version=_operation_minimum_cli_version(cast("object", SKILL_LIST_BINDING)),
+        )._map(
             lambda page: Page(
                 items=tuple(
-                    _skill_from_wire(skill)._with_client(self._client) for skill in page.items
+                    self._bind_skill_labels(
+                        _skill_from_list_wire(skill), skill.labels
+                    )._with_client(self._client)
+                    for skill in page.items
                 ),
                 limit=page.limit,
                 offset=page.offset,

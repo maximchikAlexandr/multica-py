@@ -128,6 +128,7 @@ def _runtime(
             "    command: tuple[str, ...]",
             "    mappings: tuple[GeneratedMapping, ...]",
             "    validator_ids: tuple[str, ...]",
+            "    minimum_cli_version: str | None = None",
             "",
             "@dataclass(frozen=True)",
             "class GeneratedConvention:",
@@ -135,6 +136,7 @@ def _runtime(
             "    entrypoint_id: str",
             "    category: str",
             "    response_id: str",
+            "    fallback_response_id: str | None",
             "    typed_input_id: str | None",
             "    input_mode: str",
             "    presence_policy_ids: tuple[str, ...]",
@@ -142,6 +144,11 @@ def _runtime(
             "",
         ]
     )
+    minimums = {
+        operation.operation_id: operation.compatibility.removeprefix("requires_cli>=")
+        for operation in operations
+        if operation.compatibility == f"requires_cli>={compatibility.target_version}"
+    }
     for descriptor in sorted(binding_descriptors, key=binding_operation_key):
         mappings = ", ".join(
             f"GeneratedMapping({source!r}, {binding!r}, {destination!r})"
@@ -153,10 +160,12 @@ def _runtime(
                 f"{binding_names[descriptor.descriptor_id]} = GeneratedBinding(",
                 f"    {descriptor.operation_id!r}, {descriptor.entrypoint_id!r}, {descriptor.command!r},",
                 f"    {mappings_tup}, {descriptor.validator_ids!r},",
-                ")",
-                "",
             ]
         )
+        minimum = minimums.get(descriptor.operation_id)
+        if minimum is not None:
+            lines.append(f"    minimum_cli_version={minimum!r},")
+        lines.extend((")", ""))
     lines.append("OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (")
     for descriptor in sorted(binding_descriptors, key=binding_operation_key):
         lines.append(f"    {binding_names[descriptor.descriptor_id]},")
@@ -170,6 +179,7 @@ def _runtime(
                     "    GeneratedConvention(",
                     f"        {operation.operation_id!r}, {entrypoint.entrypoint_id!r},",
                     f"        {convention.category!r}, {convention.response_id!r},",
+                    f"        {convention.fallback_response_id!r},",
                     f"        {convention.typed_input_id!r}, {convention.input_mode!r},",
                     f"        {convention.presence_policy_ids!r}, {convention.command_symbol!r},",
                     "    ),",
@@ -184,7 +194,7 @@ def _runtime(
         parameter = validator.parameter_name
         body = _validator_body(validator.body_kind, parameter)
         lines.extend([f"def {validator.name}({parameter}: object) -> None:", body, ""])
-    exports = ["TARGET_VERSION", "MIN_CLI_VERSION", "MAX_CLI_VERSION"]
+    exports: list[str] = ["TARGET_VERSION", "MIN_CLI_VERSION", "MAX_CLI_VERSION"]
     exports.extend(item.public_name for item in sorted(enum_definitions, key=enum_key))
     exports.extend(["GeneratedMapping", "GeneratedBinding", "GeneratedConvention"])
     exports.extend(
@@ -196,10 +206,14 @@ def _runtime(
     exports.extend(
         item.name for item in sorted(validators_by_name.values(), key=validator_name_key)
     )
-    exports.sort(key=lambda name: (not name.isupper(), not name[:1].isupper(), name))
+    exports.sort(key=_export_sort_key)
     lines.append(f"__all__ = {tuple(exports)!r}")
     lines.append("")
     return "\n".join(lines).encode()
+
+
+def _export_sort_key(name: str) -> tuple[bool, bool, str]:
+    return not name.isupper(), not name[:1].isupper(), name
 
 
 def _validator_body(body_kind: str, parameter: str) -> str:

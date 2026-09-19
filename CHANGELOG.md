@@ -7,7 +7,28 @@ one inspectable command contract canonical. Relation `.all()` tuple snapshots
 remain unchanged. The complete compiling migration table is in
 [docs/migration.md](docs/migration.md).
 
-### Multica 0.4.44 compatibility migration
+### Multica 0.5.0 compatibility migration
+
+- Targets CLI `0.5.0` at
+  `2df765a3c8f39789c9fb76316378bcffc20d22d9`, with bounds
+  `[0.4.42, 0.5.1)`; migrate directly from `0.4.44` with no intermediate
+  SDK release.
+- Adds text-only optimistic `issues.comments.update` with a required positive
+  revision, typed `skills.labels.list/add/remove`, and preloaded `Skill.labels`.
+- Extends labels with reviewed `issue`/`skill` resource types and
+  presence-aware descriptions: `Unset` omits and `None`/`""` clears.
+- Preserves absent versus known-empty task deltas, open failure reasons such as
+  `runtime_access_denied`, and local OMP validation: create requires a nonblank
+  model, thinking requires an effective model, and update clear-plus-thinking
+  fails before transport. Structured or plain runtime-delete conflicts remain
+  supported without cascade or retry.
+- Reconciles 189 baseline to 194 target command nodes and all 163 response
+  work items. Archive, executable, and version JSON checksums remain separate;
+  activity, maintenance, Dingtalk, telemetry, and other non-SDK changes stay
+  excluded. Contract, generated runtime, API, fixtures, docs, and package
+  claims roll back atomically if gates fail.
+
+### Historical Multica 0.4.44 compatibility migration
 
 - Targets CLI `0.4.44` at
   `c7f259c70a60bff30011c403fada79ab382f608a`, with bounds
@@ -57,7 +78,7 @@ forms:
 
 | Before | After |
 |---|---|
-| `AgentCreateRequest(name="build")` | `client.agents.create(name="build")` |
+| `AgentCreateRequest(name="build")` | `client.agents.create(name="build", model="gpt-5")` |
 | `AgentUpdateRequest(name="build")` | `client.agents.update(agent_id, name="build")` |
 | `ProjectCreateRequest(name="alpha")` | `client.projects.create(name="alpha")` |
 | `ProjectUpdateRequest(name="alpha")` | `client.projects.update(project_id, name="alpha")` |
@@ -112,7 +133,7 @@ the exact before/after import table is maintained in the migration guide.
   uncosted categories, while `TaskRun` retains reviewed runtime, worktree,
   result, and failure context. Historical notes for CLI 0.4.32 retain the
   superseded interval `[0.4.28, 0.4.33)`; the current approved target is
-  `0.4.44` with compatibility interval `[0.4.42, 0.4.45)`.
+  `0.5.0` with compatibility interval `[0.4.42, 0.5.1)`.
 
 ## 0.1.0 (unreleased)
 

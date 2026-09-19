@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 from collections.abc import Callable
+from dataclasses import replace
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import msgspec
@@ -65,6 +66,11 @@ def _is_transport(value: object) -> bool:
     return isinstance(value, CliTransport)
 
 
+def _operation_minimum_cli_version(binding: object) -> str | None:
+    value = cast("object", getattr(binding, "minimum_cli_version", None))
+    return value if isinstance(value, str) else None
+
+
 class BaseResource:
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         self._transport = transport
@@ -98,9 +104,12 @@ class BaseResource:
         stage_provider: _StageProvider | None = None,
         capture_output_label: str | None = None,
         options: OperationOptions | None = None,
+        minimum_cli_version: str | None = None,
     ) -> Command[T]:
         config_snapshot = self._effective_config(options)
         transport_snapshot = self._transport_snapshot(config_snapshot)
+        if minimum_cli_version is not None:
+            steps = tuple(replace(step, minimum_cli_version=minimum_cli_version) for step in steps)
         return Command(
             _CommandPlan(
                 config_snapshot=config_snapshot,
@@ -140,12 +149,14 @@ class BaseResource:
         model_type: type[S],
         *,
         options: OperationOptions | None = None,
+        minimum_cli_version: str | None = None,
     ) -> Command[S]:
         plan_args, decode = self._plan_decode(args, model_type)
         return self._plan(
             steps=(_Step(plan_args, "run_bytes", decode=decode),),
             finalize=lambda results: cast("S", results[0]),
             options=options,
+            minimum_cli_version=minimum_cli_version,
         )
 
     def _decoded_list_command(
@@ -154,12 +165,14 @@ class BaseResource:
         item_type: type[S],
         *,
         options: OperationOptions | None = None,
+        minimum_cli_version: str | None = None,
     ) -> Command[tuple[S, ...]]:
         plan_args, decode = self._plan_decode_list(args, item_type)
         return self._plan(
             steps=(_Step(plan_args, "run_bytes", decode=decode),),
             finalize=lambda results: cast("tuple[S, ...]", results[0]),
             options=options,
+            minimum_cli_version=minimum_cli_version,
         )
 
     def _decoded_page_command(
@@ -168,10 +181,14 @@ class BaseResource:
         item_type: type[S],
         *,
         options: OperationOptions | None = None,
+        minimum_cli_version: str | None = None,
     ) -> Command[Page[S]]:
-        return self._decoded_list_command(args, item_type, options=options)._map(
-            lambda items: Page(items=items, total=len(items))
-        )
+        return self._decoded_list_command(
+            args,
+            item_type,
+            options=options,
+            minimum_cli_version=minimum_cli_version,
+        )._map(lambda items: Page(items=items, total=len(items)))
 
     def _text_command(
         self,

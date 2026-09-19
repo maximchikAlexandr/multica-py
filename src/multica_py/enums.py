@@ -9,6 +9,7 @@ __all__ = [
     "CompatibilityPolicy",
     "IssueSort",
     "IssueStatus",
+    "LabelResourceType",
     "MetadataValueType",
     "OutputMode",
     "ProjectStatus",
@@ -24,6 +25,11 @@ class IssueStatus(enum.StrEnum):
     done = "done"
     blocked = "blocked"
     cancelled = "cancelled"
+
+
+class LabelResourceType(enum.StrEnum):
+    issue = "issue"
+    skill = "skill"
 
 
 def _coerce_issue_status(value: str) -> IssueStatus | str:

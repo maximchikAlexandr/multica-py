@@ -50,6 +50,20 @@ def _encode_conversation_starters(
     return msgspec.json.encode(value).decode()
 
 
+def _validate_omp_model(
+    model: str | None | UnsetType,
+    thinking_level: str | None | UnsetType,
+    *,
+    effective_model: str | None | UnsetType = Unset,
+) -> None:
+    """Reject thinking settings that cannot be paired with a model locally."""
+    if thinking_level in (Unset, None, ""):
+        return
+    model_value = model if model is not Unset else effective_model
+    if model_value in (Unset, None) or not model_value.strip():
+        raise ValueError("thinking_level requires an effective model")
+
+
 class AgentResource(BaseResource):
     def __init__(self, transport: CliTransport, config: ClientConfig) -> None:
         super().__init__(transport, config)
@@ -285,6 +299,7 @@ class AgentResource(BaseResource):
         description: str | None = None,
         runtime_id: str | None = None,
         model: str | None = None,
+        thinking_level: str | None = None,
         conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[Agent]:
@@ -292,6 +307,10 @@ class AgentResource(BaseResource):
         _validate_optional_string(description, "description")
         _validate_optional_string(runtime_id, "runtime_id")
         _validate_optional_string(model, "model")
+        _validate_optional_string(thinking_level, "thinking_level")
+        if model is None or not model.strip():
+            raise ValueError("model must be nonblank for agent create")
+        _validate_omp_model(model, thinking_level)
         encoded_starters = _encode_conversation_starters(conversation_starters)
         args = ["agent", "create", "--name", name]
         if description is not None:
@@ -300,6 +319,8 @@ class AgentResource(BaseResource):
             args.extend(["--runtime-id", runtime_id])
         if model is not None:
             args.extend(["--model", model])
+        if thinking_level is not None:
+            args.extend(["--thinking-level", thinking_level])
         if encoded_starters is not None:
             args.extend(["--conversation-starters", encoded_starters])
         return self._decoded_command(tuple(args), Agent, options=options)._map(
@@ -313,6 +334,7 @@ class AgentResource(BaseResource):
         description: str | None = None,
         runtime_id: str | None = None,
         model: str | None = None,
+        thinking_level: str | None = None,
         conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Agent:
@@ -321,17 +343,22 @@ class AgentResource(BaseResource):
             description=description,
             runtime_id=runtime_id,
             model=model,
+            thinking_level=thinking_level,
             conversation_starters=conversation_starters,
             options=options,
         ).run()
 
-    def update_command(
+    def _update_command(
         self,
         agent_id: str,
         *,
         name: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
+        runtime_id: str | None | UnsetType = Unset,
+        model: str | None | UnsetType = Unset,
+        thinking_level: str | None | UnsetType = Unset,
         conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
+        effective_model: str | None | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[Agent]:
         validate_nonblank(agent_id)
@@ -339,8 +366,19 @@ class AgentResource(BaseResource):
             raise TypeError("name must be non-null")
         _validate_optional_string(name, "name")
         _validate_optional_string(description, "description")
+        _validate_optional_string(runtime_id, "runtime_id")
+        _validate_optional_string(model, "model")
+        _validate_optional_string(thinking_level, "thinking_level")
+        _validate_omp_model(model, thinking_level, effective_model=effective_model)
         encoded_starters = _encode_conversation_starters(conversation_starters)
-        if name is Unset and description is Unset and encoded_starters is None:
+        if (
+            name is Unset
+            and description is Unset
+            and runtime_id is Unset
+            and model is Unset
+            and thinking_level is Unset
+            and encoded_starters is None
+        ):
             return self._decoded_command(("agent", "get", agent_id), Agent, options=options)._map(
                 lambda agent: agent._with_client(self._client)
             )
@@ -349,10 +387,39 @@ class AgentResource(BaseResource):
             args.extend(["--name", name])
         if description is not Unset:
             args.extend(["--description", "" if description is None else description])
+        if runtime_id is not Unset:
+            args.extend(["--runtime-id", "" if runtime_id is None else runtime_id])
+        if model is not Unset:
+            args.extend(["--model", "" if model is None else model])
+        if thinking_level is not Unset:
+            args.extend(["--thinking-level", "" if thinking_level is None else thinking_level])
         if encoded_starters is not None:
             args.extend(["--conversation-starters", encoded_starters])
         return self._decoded_command(tuple(args), Agent, options=options)._map(
             lambda agent: agent._with_client(self._client)
+        )
+
+    def update_command(
+        self,
+        agent_id: str,
+        *,
+        name: str | UnsetType = Unset,
+        description: str | None | UnsetType = Unset,
+        runtime_id: str | None | UnsetType = Unset,
+        model: str | None | UnsetType = Unset,
+        thinking_level: str | None | UnsetType = Unset,
+        conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
+        options: OperationOptions | None = None,
+    ) -> Command[Agent]:
+        return self._update_command(
+            agent_id,
+            name=name,
+            description=description,
+            runtime_id=runtime_id,
+            model=model,
+            thinking_level=thinking_level,
+            conversation_starters=conversation_starters,
+            options=options,
         )
 
     def update(
@@ -361,6 +428,9 @@ class AgentResource(BaseResource):
         *,
         name: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
+        runtime_id: str | None | UnsetType = Unset,
+        model: str | None | UnsetType = Unset,
+        thinking_level: str | None | UnsetType = Unset,
         conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Agent:
@@ -368,6 +438,9 @@ class AgentResource(BaseResource):
             agent_id,
             name=name,
             description=description,
+            runtime_id=runtime_id,
+            model=model,
+            thinking_level=thinking_level,
             conversation_starters=conversation_starters,
             options=options,
         ).run()

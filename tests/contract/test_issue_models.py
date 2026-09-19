@@ -826,6 +826,197 @@ def test_task_cancellation_actor_is_shared_by_agent_and_issue_task_paths() -> No
     assert agent_task.cancelled_by == expected
 
 
+@dataclass(frozen=True)
+class TaskIssueDeltaCase:
+    id: str
+    payload: dict[str, object]
+    expected: dict[str, object]
+    presence: dict[str, str]
+
+
+_TASK_ISSUE_DELTA_CASES = (
+    TaskIssueDeltaCase(
+        id="absent",
+        payload={},
+        expected={
+            "issue_title": None,
+            "issue_description": None,
+            "issue_status": None,
+            "issue_assignee_type": None,
+            "issue_assignee_id": None,
+            "issue_changed_fields": (),
+            "issue_state_delta_known": None,
+        },
+        presence=dict.fromkeys(
+            (
+                "issue_title",
+                "issue_description",
+                "issue_status",
+                "issue_assignee_type",
+                "issue_assignee_id",
+                "issue_changed_fields",
+                "issue_state_delta_known",
+            ),
+            "missing",
+        ),
+    ),
+    TaskIssueDeltaCase(
+        id="null",
+        payload={
+            "issue_title": None,
+            "issue_description": None,
+            "issue_status": None,
+            "issue_assignee_type": None,
+            "issue_assignee_id": None,
+            "issue_changed_fields": None,
+            "issue_state_delta_known": None,
+        },
+        expected={
+            "issue_title": None,
+            "issue_description": None,
+            "issue_status": None,
+            "issue_assignee_type": None,
+            "issue_assignee_id": None,
+            "issue_changed_fields": (),
+            "issue_state_delta_known": None,
+        },
+        presence=dict.fromkeys(
+            (
+                "issue_title",
+                "issue_description",
+                "issue_status",
+                "issue_assignee_type",
+                "issue_assignee_id",
+                "issue_changed_fields",
+                "issue_state_delta_known",
+            ),
+            "null",
+        ),
+    ),
+    TaskIssueDeltaCase(
+        id="known-empty",
+        payload={"issue_changed_fields": [], "issue_state_delta_known": True},
+        expected={
+            "issue_title": None,
+            "issue_description": None,
+            "issue_status": None,
+            "issue_assignee_type": None,
+            "issue_assignee_id": None,
+            "issue_changed_fields": (),
+            "issue_state_delta_known": True,
+        },
+        presence={
+            "issue_title": "missing",
+            "issue_description": "missing",
+            "issue_status": "missing",
+            "issue_assignee_type": "missing",
+            "issue_assignee_id": "missing",
+            "issue_changed_fields": "value",
+            "issue_state_delta_known": "value",
+        },
+    ),
+    TaskIssueDeltaCase(
+        id="value",
+        payload={
+            "issue_title": "Issue",
+            "issue_description": "Description",
+            "issue_status": "in_progress",
+            "issue_assignee_type": "agent",
+            "issue_assignee_id": "agent-1",
+            "issue_changed_fields": ["title", "status"],
+            "issue_state_delta_known": True,
+        },
+        expected={
+            "issue_title": "Issue",
+            "issue_description": "Description",
+            "issue_status": "in_progress",
+            "issue_assignee_type": "agent",
+            "issue_assignee_id": "agent-1",
+            "issue_changed_fields": ("title", "status"),
+            "issue_state_delta_known": True,
+        },
+        presence=dict.fromkeys(
+            (
+                "issue_title",
+                "issue_description",
+                "issue_status",
+                "issue_assignee_type",
+                "issue_assignee_id",
+                "issue_changed_fields",
+                "issue_state_delta_known",
+            ),
+            "value",
+        ),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _TASK_ISSUE_DELTA_CASES, ids=lambda case: case.id)
+def test_task_issue_delta_matrix_is_shared_by_issue_and_agent_paths(
+    case: TaskIssueDeltaCase,
+) -> None:
+    payload = case.payload
+    expected = case.expected
+    presence = case.presence
+    base = {"id": "task-1", "status": "failed", "issue_id": "issue-1", **payload}
+    issue_run = _task_run_from_wire(
+        decode_json(json.dumps(base).encode(), _TaskRunWire), issue_id="issue-1"
+    )
+    agent_task = decode_json(json.dumps(base).encode(), AgentTask)
+
+    for field, value in expected.items():
+        assert getattr(issue_run, field) == value
+        assert getattr(agent_task, field) == value
+        assert dict(issue_run._wire_presence)[field] == presence[field]
+        assert dict(agent_task._wire_presence)[field] == presence[field]
+
+
+@pytest.mark.parametrize("reason", ("runtime_access_denied", "future_runtime_reason"))
+def test_task_failure_reason_is_open_on_both_response_paths(reason: str) -> None:
+    payload = {
+        "id": "task-1",
+        "status": "failed",
+        "issue_id": "issue-1",
+        "failure_reason": reason,
+    }
+    issue_run = _task_run_from_wire(
+        decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+    )
+    agent_task = decode_json(json.dumps(payload).encode(), AgentTask)
+    assert issue_run.failure_reason == reason
+    assert agent_task.failure_reason == reason
+
+
+@dataclass(frozen=True)
+class MalformedTaskIssueDeltaCase:
+    id: str
+    field: str
+    value: object
+
+
+_MALFORMED_TASK_ISSUE_DELTA_CASES = (
+    MalformedTaskIssueDeltaCase(
+        id="malformed-fields", field="issue_changed_fields", value=["title", 1]
+    ),
+    MalformedTaskIssueDeltaCase(id="malformed-known", field="issue_state_delta_known", value="yes"),
+)
+
+
+@pytest.mark.parametrize("case", _MALFORMED_TASK_ISSUE_DELTA_CASES, ids=lambda case: case.id)
+def test_task_issue_delta_malformed_fields_fail_on_both_response_paths(
+    case: MalformedTaskIssueDeltaCase,
+) -> None:
+    field = case.field
+    value = case.value
+    payload = {"id": "task-1", "status": "failed", "issue_id": "issue-1", field: value}
+    with pytest.raises((msgspec.ValidationError, OutputShapeError)):
+        _task_run_from_wire(
+            decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+        )
+    with pytest.raises((msgspec.ValidationError, OutputShapeError)):
+        decode_json(json.dumps(payload).encode(), AgentTask)
+
+
 @pytest.mark.parametrize(
     "payload",
     (

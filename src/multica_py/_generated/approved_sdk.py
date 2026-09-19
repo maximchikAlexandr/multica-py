@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-TARGET_VERSION = '0.4.44'
+TARGET_VERSION = '0.5.0'
 MIN_CLI_VERSION = '0.4.42'
-MAX_CLI_VERSION = '0.4.45'
+MAX_CLI_VERSION = '0.5.1'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'
@@ -18,6 +18,10 @@ class IssueSort(StrEnum):
     start_date = 'start_date'
     due_date = 'due_date'
     priority = 'priority'
+
+class LabelResourceType(StrEnum):
+    issue = 'issue'
+    skill = 'skill'
 
 class SortDirection(StrEnum):
     asc = 'asc'
@@ -36,6 +40,7 @@ class GeneratedBinding:
     command: tuple[str, ...]
     mappings: tuple[GeneratedMapping, ...]
     validator_ids: tuple[str, ...]
+    minimum_cli_version: str | None = None
 
 @dataclass(frozen=True)
 class GeneratedConvention:
@@ -43,6 +48,7 @@ class GeneratedConvention:
     entrypoint_id: str
     category: str
     response_id: str
+    fallback_response_id: str | None
     typed_input_id: str | None
     input_mode: str
     presence_policy_ids: tuple[str, ...]
@@ -65,7 +71,7 @@ AGENT_COPY_BINDING = GeneratedBinding(
 
 AGENTS_CREATE_MANUAL_BINDING = GeneratedBinding(
     'agents.create', 'default', ('agent', 'create'),
-    (GeneratedMapping('conversation_starters', '--conversation-starters', 'json_body:conversation_starters'),), (),
+    (GeneratedMapping('model', '--model', 'json_body:model'), GeneratedMapping('thinking_level', '--thinking-level', 'json_body:thinking_level'), GeneratedMapping('conversation_starters', '--conversation-starters', 'json_body:conversation_starters'),), (),
 )
 
 AGENT_GET_BINDING = GeneratedBinding(
@@ -145,7 +151,7 @@ AGENT_TASKS_BINDING = GeneratedBinding(
 
 AGENTS_UPDATE_MANUAL_BINDING = GeneratedBinding(
     'agents.update', 'default', ('agent', 'update'),
-    (GeneratedMapping('conversation_starters', '--conversation-starters', 'json_body:conversation_starters'),), (),
+    (GeneratedMapping('runtime_id', '--runtime-id', 'json_body:runtime_id'), GeneratedMapping('model', '--model', 'json_body:model'), GeneratedMapping('thinking_level', '--thinking-level', 'json_body:thinking_level'), GeneratedMapping('conversation_starters', '--conversation-starters', 'json_body:conversation_starters'),), (),
 )
 
 ATTACHMENT_DOWNLOAD_BINDING = GeneratedBinding(
@@ -346,6 +352,12 @@ ISSUES_COMMENTS_RESOLVE_MANUAL_BINDING = GeneratedBinding(
 ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING = GeneratedBinding(
     'issues.comments.unresolve', 'default', ('issue', 'comment', 'unresolve'),
     (), (),
+)
+
+COMMENT_UPDATE_BINDING = GeneratedBinding(
+    'issues.comments.update', 'default', ('issue', 'comment', 'update'),
+    (GeneratedMapping('comment_id', 'pos:0', 'path:comment_id'), GeneratedMapping('body', '--content', 'json_body:content'), GeneratedMapping('expected_revision', '--expected-revision', 'json_body:expected_revision'),), ('nonblank:comment_id', 'positive_int:expected_revision'),
+    minimum_cli_version='0.5.0',
 )
 
 ISSUE_CREATE_BINDING = GeneratedBinding(
@@ -551,6 +563,7 @@ ISSUES_USAGE_MANUAL_BINDING = GeneratedBinding(
 LABELS_CREATE_MANUAL_BINDING = GeneratedBinding(
     'labels.create', 'default', ('label', 'create'),
     (), (),
+    minimum_cli_version='0.5.0',
 )
 
 LABELS_DELETE_MANUAL_BINDING = GeneratedBinding(
@@ -566,11 +579,13 @@ LABEL_GET_BINDING = GeneratedBinding(
 LABEL_LIST_BINDING = GeneratedBinding(
     'labels.list', 'default', ('label', 'list'),
     (), (),
+    minimum_cli_version='0.5.0',
 )
 
 LABELS_UPDATE_MANUAL_BINDING = GeneratedBinding(
     'labels.update', 'default', ('label', 'update'),
     (), (),
+    minimum_cli_version='0.5.0',
 )
 
 MAINTENANCE_UPDATE_MANUAL_BINDING = GeneratedBinding(
@@ -768,9 +783,28 @@ SKILLS_IMPORT_FROM_URL_MANUAL_BINDING = GeneratedBinding(
     (), (),
 )
 
+SKILL_LABELS_ADD_BINDING = GeneratedBinding(
+    'skills.labels.add', 'default', ('skill', 'label', 'add'),
+    (GeneratedMapping('skill_id', 'pos:0', 'path:skill_id'), GeneratedMapping('label_id', 'pos:1', 'path:label_id'),), ('nonblank:skill_id', 'nonblank:label_id'),
+    minimum_cli_version='0.5.0',
+)
+
+SKILL_LABELS_LIST_BINDING = GeneratedBinding(
+    'skills.labels.list', 'default', ('skill', 'label', 'list'),
+    (GeneratedMapping('skill_id', 'pos:0', 'path:skill_id'),), ('nonblank:skill_id',),
+    minimum_cli_version='0.5.0',
+)
+
+SKILL_LABELS_REMOVE_BINDING = GeneratedBinding(
+    'skills.labels.remove', 'default', ('skill', 'label', 'remove'),
+    (GeneratedMapping('skill_id', 'pos:0', 'path:skill_id'), GeneratedMapping('label_id', 'pos:1', 'path:label_id'),), ('nonblank:skill_id', 'nonblank:label_id'),
+    minimum_cli_version='0.5.0',
+)
+
 SKILL_LIST_BINDING = GeneratedBinding(
     'skills.list', 'default', ('skill', 'list'),
     (), (),
+    minimum_cli_version='0.5.0',
 )
 
 SKILL_REFRESH_BINDING = GeneratedBinding(
@@ -924,6 +958,7 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     ISSUES_COMMENTS_REPLY_MANUAL_BINDING,
     ISSUES_COMMENTS_RESOLVE_MANUAL_BINDING,
     ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING,
+    COMMENT_UPDATE_BINDING,
     ISSUE_CREATE_BINDING,
     ISSUE_GET_BINDING,
     ISSUE_LABELS_ADD_BINDING,
@@ -1008,6 +1043,9 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     SKILL_FILES_UPSERT_BINDING,
     SKILL_GET_BINDING,
     SKILLS_IMPORT_FROM_URL_MANUAL_BINDING,
+    SKILL_LABELS_ADD_BINDING,
+    SKILL_LABELS_LIST_BINDING,
+    SKILL_LABELS_REMOVE_BINDING,
     SKILL_LIST_BINDING,
     SKILL_REFRESH_BINDING,
     SKILL_SEARCH_BINDING,
@@ -1033,978 +1071,1169 @@ OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (
     GeneratedConvention(
         'agents.archive', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agents.AgentResource.archive_command',
     ),
     GeneratedConvention(
         'agents.avatar', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agents.AgentResource.avatar_command',
     ),
     GeneratedConvention(
         'agents.copy', 'default',
         'create', 'agent',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agents.AgentResource.copy_command',
     ),
     GeneratedConvention(
         'agents.create', 'default',
         'create', 'agent',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agents.AgentResource.create_command',
     ),
     GeneratedConvention(
         'agents.get', 'default',
         'retrieve', 'agent',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agents.AgentResource.get_command',
     ),
     GeneratedConvention(
         'agents.list', 'default',
         'collection', 'page_agent',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agents.AgentResource.list_command',
     ),
     GeneratedConvention(
         'agents.mcp.add', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agent_mcp.AgentMcpResource.add_command',
     ),
     GeneratedConvention(
         'agents.mcp.add_bound', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.entities.agents.Agent.add_mcp_server_command',
     ),
     GeneratedConvention(
         'agents.mcp.disable', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agent_mcp.AgentMcpResource.disable_command',
     ),
     GeneratedConvention(
         'agents.mcp.disable_bound', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.entities.agents.Agent.disable_mcp_server_command',
     ),
     GeneratedConvention(
         'agents.mcp.enable', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agent_mcp.AgentMcpResource.enable_command',
     ),
     GeneratedConvention(
         'agents.mcp.enable_bound', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.entities.agents.Agent.enable_mcp_server_command',
     ),
     GeneratedConvention(
         'agents.mcp.list', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agent_mcp.AgentMcpResource.list_command',
     ),
     GeneratedConvention(
         'agents.mcp.remove', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agent_mcp.AgentMcpResource.remove_command',
     ),
     GeneratedConvention(
         'agents.mcp.remove_bound', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.entities.agents.Agent.remove_mcp_server_command',
     ),
     GeneratedConvention(
         'agents.restore', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agents.AgentResource.restore_command',
     ),
     GeneratedConvention(
         'agents.skills.list', 'default',
         'collection', 'page_agent_skills',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agent_skills.AgentSkillResource.list_command',
     ),
     GeneratedConvention(
         'agents.skills.set', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agent_skills.AgentSkillResource.set_command',
     ),
     GeneratedConvention(
         'agents.tasks', 'default',
         'collection', 'page_task_runs',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agents.AgentResource.tasks_command',
     ),
     GeneratedConvention(
         'agents.update', 'default',
         'update', 'agent',
+        None,
         None, 'direct',
         (), 'multica_py.resources.agents.AgentResource.update_command',
     ),
     GeneratedConvention(
         'attachments.download', 'default',
         'scalar', 'path',
+        None,
         None, 'direct',
         (), 'multica_py.resources.attachments.AttachmentResource.download_command',
     ),
     GeneratedConvention(
         'attachments.download_bytes', 'default',
         'retrieve', 'bytes',
+        None,
         None, 'direct',
         (), 'multica_py.resources.attachments.AttachmentResource.download_bytes_command',
     ),
     GeneratedConvention(
         'attachments.upload', 'default',
         'retrieve', 'attachment_result',
+        None,
         None, 'direct',
         (), 'multica_py.resources.attachments.AttachmentResource.upload_command',
     ),
     GeneratedConvention(
         'attachments.upload_bytes', 'default',
         'action', 'attachment_result',
+        None,
         None, 'direct',
         (), 'multica_py.resources.attachments.AttachmentResource.upload_bytes_command',
     ),
     GeneratedConvention(
         'auth.login', 'default',
         'action', 'action_result_str',
+        None,
         None, 'direct',
         (), 'multica_py.resources.auth.AuthResource.login_command',
     ),
     GeneratedConvention(
         'auth.logout', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.auth.AuthResource.logout_command',
     ),
     GeneratedConvention(
         'auth.status', 'default',
         'scalar', 'scalar_str',
+        None,
         None, 'direct',
         (), 'multica_py.resources.auth.AuthResource.status_command',
     ),
     GeneratedConvention(
         'autopilots.create', 'default',
         'create', 'autopilot',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.create_command',
     ),
     GeneratedConvention(
         'autopilots.delete', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.delete_command',
     ),
     GeneratedConvention(
         'autopilots.get', 'default',
         'retrieve', 'autopilot',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.get_command',
     ),
     GeneratedConvention(
         'autopilots.history', 'default',
         'collection', 'autopilot_run_list_page',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.history_command',
     ),
     GeneratedConvention(
         'autopilots.list', 'default',
         'collection', 'autopilot_list_page',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.list_command',
     ),
     GeneratedConvention(
         'autopilots.trigger', 'default',
         'retrieve', 'autopilot_run',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.trigger_command',
     ),
     GeneratedConvention(
         'autopilots.trigger_add', 'default',
         'retrieve', 'autopilot_trigger',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.trigger_add_command',
     ),
     GeneratedConvention(
         'autopilots.trigger_delete', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.trigger_delete_command',
     ),
     GeneratedConvention(
         'autopilots.trigger_update', 'default',
         'retrieve', 'autopilot_trigger',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.trigger_update_command',
     ),
     GeneratedConvention(
         'autopilots.update', 'default',
         'update', 'autopilot',
+        None,
         None, 'direct',
         (), 'multica_py.resources.autopilots.AutopilotResource.update_command',
     ),
     GeneratedConvention(
         'cli.command', 'default',
         'action', 'cli_result',
+        None,
         None, 'direct',
         (), 'multica_py.resources.cli.CliResource.command_command',
     ),
     GeneratedConvention(
         'configuration.get', 'default',
         'scalar', 'scalar_str',
+        None,
         None, 'direct',
         (), 'multica_py.resources.configuration.ConfigurationResource.get_command',
     ),
     GeneratedConvention(
         'configuration.set', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.configuration.ConfigurationResource.set_command',
     ),
     GeneratedConvention(
         'configuration.show', 'default',
         'mapping', 'mapping_config',
+        None,
         None, 'direct',
         (), 'multica_py.resources.configuration.ConfigurationResource.show_command',
     ),
     GeneratedConvention(
         'daemon.disk_usage', 'default',
         'collection', 'page_daemon_disk_usage',
+        None,
         None, 'direct',
         (), 'multica_py.resources.daemon.DaemonResource.disk_usage_command',
     ),
     GeneratedConvention(
         'daemon.logs', 'default',
         'process', 'process',
+        None,
         None, 'direct',
         (), 'multica_py.resources.daemon.DaemonResource.logs_command',
     ),
     GeneratedConvention(
         'daemon.restart', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.daemon.DaemonResource.restart_command',
     ),
     GeneratedConvention(
         'daemon.start', 'default',
         'process', 'process',
+        None,
         None, 'direct',
         (), 'multica_py.resources.daemon.DaemonResource.start_command',
     ),
     GeneratedConvention(
         'daemon.status', 'default',
         'retrieve', 'runtime_definition',
+        None,
         None, 'direct',
         (), 'multica_py.resources.daemon.DaemonResource.status_command',
     ),
     GeneratedConvention(
         'daemon.stop', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.daemon.DaemonResource.stop_command',
     ),
     GeneratedConvention(
         'issues.assign', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.assign_command',
     ),
     GeneratedConvention(
         'issues.assign_bound', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.Issue.assign_command',
     ),
     GeneratedConvention(
         'issues.cancel_task', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.cancel_task_command',
     ),
     GeneratedConvention(
         'issues.children', 'default',
         'collection', 'issue_children_result',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.children_command',
     ),
     GeneratedConvention(
         'issues.comments.add', 'default',
         'retrieve', 'comment',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_comments.IssueCommentResource.add_command',
     ),
     GeneratedConvention(
         'issues.comments.delete', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_comments.IssueCommentResource.delete_command',
     ),
     GeneratedConvention(
         'issues.comments.list', 'direct',
         'collection', 'page_comments',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_comments.IssueCommentResource.list_command',
     ),
     GeneratedConvention(
         'issues.comments.list', 'flat',
         'collection', 'comment_page',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_comments.IssueCommentResource.list_flat_command',
     ),
     GeneratedConvention(
         'issues.comments.list', 'recent',
         'collection', 'comment_thread_page',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_comments.IssueCommentResource.list_recent_command',
     ),
     GeneratedConvention(
         'issues.comments.list', 'thread',
         'collection', 'comment_page',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_comments.IssueCommentResource.list_thread_command',
     ),
     GeneratedConvention(
         'issues.comments.reply', 'default',
         'create', 'comment',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_comments.IssueCommentResource.reply_command',
     ),
     GeneratedConvention(
         'issues.comments.resolve', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_comments.IssueCommentResource.resolve_command',
     ),
     GeneratedConvention(
         'issues.comments.unresolve', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_comments.IssueCommentResource.unresolve_command',
     ),
     GeneratedConvention(
+        'issues.comments.update', 'default',
+        'update', 'comment',
+        None,
+        None, 'direct',
+        (), 'multica_py.resources.issue_comments.IssueCommentResource.update_command',
+    ),
+    GeneratedConvention(
         'issues.create', 'default',
         'create', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.create_command',
     ),
     GeneratedConvention(
         'issues.get', 'default',
         'retrieve', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.get_command',
     ),
     GeneratedConvention(
         'issues.labels.add', 'default',
         'collection', 'page_labels',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_labels.IssueLabelResource.add_command',
     ),
     GeneratedConvention(
         'issues.labels.list', 'default',
         'collection', 'page_labels',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_labels.IssueLabelResource.list_command',
     ),
     GeneratedConvention(
         'issues.labels.remove', 'default',
         'collection', 'page_labels',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_labels.IssueLabelResource.remove_command',
     ),
     GeneratedConvention(
         'issues.list', 'default',
         'collection', 'issue_list_page',
+        None,
         'IssueListFilter', 'dual_optional',
         ('omit',), 'multica_py.resources.issues.IssueResource.list_command',
     ),
     GeneratedConvention(
         'issues.metadata.delete', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_metadata.IssueMetadataResource.delete_command',
     ),
     GeneratedConvention(
         'issues.metadata.get', 'default',
         'retrieve', 'metadata_entries',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_metadata.IssueMetadataResource.get_command',
     ),
     GeneratedConvention(
         'issues.metadata.list', 'default',
         'collection', 'metadata_entries',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_metadata.IssueMetadataResource.list_command',
     ),
     GeneratedConvention(
         'issues.metadata.query', 'default',
         'mapping', 'metadata_entries',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_metadata.IssueMetadataResource.query_command',
     ),
     GeneratedConvention(
         'issues.metadata.set', 'default',
         'update', 'metadata_entries',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_metadata.IssueMetadataResource.set_command',
     ),
     GeneratedConvention(
         'issues.metadata.set_typed', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_metadata.IssueMetadataResource.set_typed_command',
     ),
     GeneratedConvention(
         'issues.move_after', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.move_after_command',
     ),
     GeneratedConvention(
         'issues.move_after_bound', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.Issue.move_after_command',
     ),
     GeneratedConvention(
         'issues.move_before', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.move_before_command',
     ),
     GeneratedConvention(
         'issues.move_before_bound', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.Issue.move_before_command',
     ),
     GeneratedConvention(
         'issues.move_to_bottom', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.move_to_bottom_command',
     ),
     GeneratedConvention(
         'issues.move_to_bottom_bound', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.Issue.move_to_bottom_command',
     ),
     GeneratedConvention(
         'issues.move_to_top', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.move_to_top_command',
     ),
     GeneratedConvention(
         'issues.move_to_top_bound', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.Issue.move_to_top_command',
     ),
     GeneratedConvention(
         'issues.properties.list', 'default',
         'collection', 'property_values',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_properties.IssuePropertyResource.list_command',
     ),
     GeneratedConvention(
         'issues.properties.set', 'default',
         'update', 'property_values',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_properties.IssuePropertyResource.set_command',
     ),
     GeneratedConvention(
         'issues.properties.unset', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_properties.IssuePropertyResource.unset_command',
     ),
     GeneratedConvention(
         'issues.pull_requests', 'default',
         'collection', 'page_linked_pull_requests',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.pull_requests_command',
     ),
     GeneratedConvention(
         'issues.refresh', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.Issue.refresh_command',
     ),
     GeneratedConvention(
         'issues.reorder', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.reorder_command',
     ),
     GeneratedConvention(
         'issues.rerun', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.rerun_command',
     ),
     GeneratedConvention(
         'issues.run_messages', 'default',
         'collection', 'page_run_messages',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.run_messages_command',
     ),
     GeneratedConvention(
         'issues.runs', 'default',
         'collection', 'page_task_runs',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.runs_command',
     ),
     GeneratedConvention(
         'issues.search', 'default',
         'collection', 'page_issues',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.search_command',
     ),
     GeneratedConvention(
         'issues.set_status', 'default',
         'update', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.set_status_command',
     ),
     GeneratedConvention(
         'issues.set_status_bound', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.Issue.set_status_command',
     ),
     GeneratedConvention(
         'issues.subscribers.add', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_subscribers.IssueSubscriberResource.add_command',
     ),
     GeneratedConvention(
         'issues.subscribers.list', 'default',
         'collection', 'page_subscribers',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_subscribers.IssueSubscriberResource.list_command',
     ),
     GeneratedConvention(
         'issues.subscribers.remove', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issue_subscribers.IssueSubscriberResource.remove_command',
     ),
     GeneratedConvention(
         'issues.unassign', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.unassign_command',
     ),
     GeneratedConvention(
         'issues.unassign_bound', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.Issue.unassign_command',
     ),
     GeneratedConvention(
         'issues.update', 'default',
         'update', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.update_command',
     ),
     GeneratedConvention(
         'issues.update_bound', 'default',
         'action', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.Issue.update_command',
     ),
     GeneratedConvention(
         'issues.usage', 'default',
         'collection', 'page_issue_usage',
+        None,
         None, 'direct',
         (), 'multica_py.resources.issues.IssueResource.usage_command',
     ),
     GeneratedConvention(
         'labels.create', 'default',
         'create', 'labels',
+        None,
         None, 'direct',
         (), 'multica_py.resources.labels.LabelResource.create_command',
     ),
     GeneratedConvention(
         'labels.delete', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.labels.LabelResource.delete_command',
     ),
     GeneratedConvention(
         'labels.get', 'default',
         'retrieve', 'labels',
+        None,
         None, 'direct',
         (), 'multica_py.resources.labels.LabelResource.get_command',
     ),
     GeneratedConvention(
         'labels.list', 'default',
         'collection', 'page_labels',
+        None,
         None, 'direct',
         (), 'multica_py.resources.labels.LabelResource.list_command',
     ),
     GeneratedConvention(
         'labels.update', 'default',
         'update', 'labels',
+        None,
         None, 'direct',
         (), 'multica_py.resources.labels.LabelResource.update_command',
     ),
     GeneratedConvention(
         'maintenance.update', 'default',
         'process', 'process',
+        None,
         None, 'direct',
         (), 'multica_py.resources.maintenance.MaintenanceResource.update_command',
     ),
     GeneratedConvention(
         'maintenance.version', 'default',
         'scalar', 'scalar_str',
+        None,
         None, 'direct',
         (), 'multica_py.resources.maintenance.MaintenanceResource.version_command',
     ),
     GeneratedConvention(
         'projects.create', 'default',
         'create', 'project',
+        None,
         None, 'direct',
         (), 'multica_py.resources.projects.ProjectResource.create_command',
     ),
     GeneratedConvention(
         'projects.delete', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.projects.ProjectResource.delete_command',
     ),
     GeneratedConvention(
         'projects.get', 'default',
         'retrieve', 'project',
+        None,
         None, 'direct',
         (), 'multica_py.resources.projects.ProjectResource.get_command',
     ),
     GeneratedConvention(
         'projects.issues.create', 'default',
         'create', 'issue',
+        None,
         None, 'direct',
         (), 'multica_py.resources.projects.ProjectIssueCollection.create_command',
     ),
     GeneratedConvention(
         'projects.list', 'default',
         'collection', 'page_project',
+        None,
         None, 'direct',
         (), 'multica_py.resources.projects.ProjectResource.list_command',
     ),
     GeneratedConvention(
         'projects.refresh', 'default',
         'action', 'project',
+        None,
         None, 'direct',
         (), 'multica_py.resources.projects.Project.refresh_command',
     ),
     GeneratedConvention(
         'projects.resources.add_local_directory', 'default',
         'retrieve', 'project_resource',
+        None,
         None, 'direct',
         (), 'multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory_command',
     ),
     GeneratedConvention(
         'projects.resources.list', 'default',
         'collection', 'page_project_resources',
+        None,
         None, 'direct',
         (), 'multica_py.resources.project_resources.ProjectResourceCollection.list_command',
     ),
     GeneratedConvention(
         'projects.resources.remove', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.project_resources.ProjectResourceCollection.remove_command',
     ),
     GeneratedConvention(
         'projects.resources.update_local_directory', 'default',
         'retrieve', 'project_resource',
+        None,
         None, 'direct',
         (), 'multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory_command',
     ),
     GeneratedConvention(
         'projects.set_status', 'default',
         'update', 'project',
+        None,
         None, 'direct',
         (), 'multica_py.resources.projects.ProjectResource.set_status_command',
     ),
     GeneratedConvention(
         'projects.update', 'default',
         'update', 'project',
+        None,
         None, 'direct',
         (), 'multica_py.resources.projects.ProjectResource.update_command',
     ),
     GeneratedConvention(
         'projects.update_bound', 'default',
         'action', 'project',
+        None,
         None, 'direct',
         (), 'multica_py.resources.projects.Project.update_command',
     ),
     GeneratedConvention(
         'properties.archive', 'default',
         'action', 'property_definition',
+        None,
         None, 'direct',
         (), 'multica_py.resources.properties.PropertyResource.archive_command',
     ),
     GeneratedConvention(
         'properties.create', 'default',
         'create', 'property_definition',
+        None,
         None, 'direct',
         (), 'multica_py.resources.properties.PropertyResource.create_command',
     ),
     GeneratedConvention(
         'properties.get', 'default',
         'retrieve', 'property_definition',
+        None,
         None, 'direct',
         (), 'multica_py.resources.properties.PropertyResource.get_command',
     ),
     GeneratedConvention(
         'properties.list', 'default',
         'collection', 'page_property_definitions',
+        None,
         None, 'direct',
         (), 'multica_py.resources.properties.PropertyResource.list_command',
     ),
     GeneratedConvention(
         'properties.unarchive', 'default',
         'action', 'property_definition',
+        None,
         None, 'direct',
         (), 'multica_py.resources.properties.PropertyResource.unarchive_command',
     ),
     GeneratedConvention(
         'properties.update', 'default',
         'update', 'property_definition',
+        None,
         None, 'direct',
         (), 'multica_py.resources.properties.PropertyResource.update_command',
     ),
     GeneratedConvention(
         'repositories.add', 'default',
         'action', 'action_result_repository_mutation_result',
+        None,
         None, 'direct',
         (), 'multica_py.resources.repositories.RepositoryResource.add_command',
     ),
     GeneratedConvention(
         'repositories.list', 'default',
         'collection', 'page_repository_records',
+        None,
         None, 'direct',
         (), 'multica_py.resources.repositories.RepositoryResource.list_command',
     ),
     GeneratedConvention(
         'repositories.remove', 'default',
         'action', 'action_result_repository_mutation_result',
+        None,
         None, 'direct',
         (), 'multica_py.resources.repositories.RepositoryResource.remove_command',
     ),
     GeneratedConvention(
         'runtimes.activity', 'default',
         'collection', 'page_runtime_activity',
+        None,
         None, 'direct',
         (), 'multica_py.resources.runtimes.RuntimeResource.activity_command',
     ),
     GeneratedConvention(
         'runtimes.delete', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.runtimes.RuntimeResource.delete_command',
     ),
     GeneratedConvention(
         'runtimes.list', 'default',
         'collection', 'page_runtime_definitions',
+        None,
         None, 'direct',
         (), 'multica_py.resources.runtimes.RuntimeResource.list_command',
     ),
     GeneratedConvention(
         'runtimes.rename', 'default',
         'update', 'runtime_definition',
+        None,
         None, 'direct',
         (), 'multica_py.resources.runtimes.RuntimeResource.rename_command',
     ),
     GeneratedConvention(
         'runtimes.update', 'default',
         'action', 'action_result_runtime_update_result',
+        None,
         None, 'direct',
         (), 'multica_py.resources.runtimes.RuntimeResource.update_command',
     ),
     GeneratedConvention(
         'runtimes.usage', 'default',
         'collection', 'page_runtime_usage',
+        None,
         None, 'direct',
         (), 'multica_py.resources.runtimes.RuntimeResource.usage_command',
     ),
     GeneratedConvention(
         'setup.cloud', 'default',
         'process', 'process',
+        None,
         None, 'direct',
         (), 'multica_py.resources.setup.SetupResource.cloud_command',
     ),
     GeneratedConvention(
         'setup.self_host', 'default',
         'process', 'process',
+        None,
         None, 'direct',
         (), 'multica_py.resources.setup.SetupResource.self_host_command',
     ),
     GeneratedConvention(
         'skills.create', 'default',
         'create', 'skill',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skills.SkillResource.create_command',
     ),
     GeneratedConvention(
         'skills.delete', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skills.SkillResource.delete_command',
     ),
     GeneratedConvention(
         'skills.files.delete', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skill_files.SkillFileResource.delete_command',
     ),
     GeneratedConvention(
         'skills.files.list', 'default',
         'collection', 'page_skill_files',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skill_files.SkillFileResource.list_command',
     ),
     GeneratedConvention(
         'skills.files.upsert', 'default',
         'retrieve', 'skill_file',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skill_files.SkillFileResource.upsert_command',
     ),
     GeneratedConvention(
         'skills.get', 'default',
         'retrieve', 'skill',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skills.SkillResource.get_command',
     ),
     GeneratedConvention(
         'skills.import_from_url', 'default',
         'create', 'skill',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skills.SkillResource.import_from_url_command',
     ),
     GeneratedConvention(
+        'skills.labels.add', 'default',
+        'collection', 'page_labels',
+        None,
+        None, 'direct',
+        (), 'multica_py.resources.skill_labels.SkillLabelResource.add_command',
+    ),
+    GeneratedConvention(
+        'skills.labels.list', 'default',
+        'collection', 'page_labels',
+        None,
+        None, 'direct',
+        (), 'multica_py.resources.skill_labels.SkillLabelResource.list_command',
+    ),
+    GeneratedConvention(
+        'skills.labels.remove', 'default',
+        'collection', 'page_labels',
+        'action_result_none',
+        None, 'direct',
+        (), 'multica_py.resources.skill_labels.SkillLabelResource.remove_command',
+    ),
+    GeneratedConvention(
         'skills.list', 'default',
         'collection', 'page_skill',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skills.SkillResource.list_command',
     ),
     GeneratedConvention(
         'skills.refresh', 'default',
         'action', 'skill',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skills.SkillResource.refresh_command',
     ),
     GeneratedConvention(
         'skills.search', 'default',
         'collection', 'page_skill_search_results',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skills.SkillResource.search_command',
     ),
     GeneratedConvention(
         'skills.update', 'default',
         'update', 'skill',
+        None,
         None, 'direct',
         (), 'multica_py.resources.skills.SkillResource.update_command',
     ),
     GeneratedConvention(
         'squads.get', 'default',
         'retrieve', 'squad',
+        None,
         None, 'direct',
         (), 'multica_py.resources.squads.SquadResource.get_command',
     ),
     GeneratedConvention(
         'squads.list', 'default',
         'collection', 'page_squad',
+        None,
         None, 'direct',
         (), 'multica_py.resources.squads.SquadResource.list_command',
     ),
     GeneratedConvention(
         'squads.members.add', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.squad_members.SquadMemberResource.add_command',
     ),
     GeneratedConvention(
         'squads.members.list', 'default',
         'collection', 'page_squad_members',
+        None,
         None, 'direct',
         (), 'multica_py.resources.squad_members.SquadMemberResource.list_command',
     ),
     GeneratedConvention(
         'squads.members.remove', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.squad_members.SquadMemberResource.remove_command',
     ),
     GeneratedConvention(
         'users.profile_get', 'default',
         'retrieve', 'user_profile',
+        None,
         None, 'direct',
         (), 'multica_py.resources.users.UserResource.profile_get_command',
     ),
     GeneratedConvention(
         'users.profile_update', 'default',
         'update', 'user_profile',
+        None,
         None, 'direct',
         (), 'multica_py.resources.users.UserResource.profile_update_command',
     ),
     GeneratedConvention(
         'workspaces.get', 'default',
         'retrieve', 'workspace',
+        None,
         None, 'direct',
         (), 'multica_py.resources.workspaces.WorkspaceResource.get_command',
     ),
     GeneratedConvention(
         'workspaces.list', 'default',
         'collection', 'page_workspace',
+        None,
         None, 'direct',
         (), 'multica_py.resources.workspaces.WorkspaceResource.list_command',
     ),
     GeneratedConvention(
         'workspaces.mcp.add', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.resources.workspace_mcp.WorkspaceMcpResource.add_command',
     ),
     GeneratedConvention(
         'workspaces.mcp.list', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.resources.workspace_mcp.WorkspaceMcpResource.list_command',
     ),
     GeneratedConvention(
         'workspaces.mcp.remove', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove_command',
     ),
     GeneratedConvention(
         'workspaces.mcp.update', 'default',
         'collection', 'page_mcp_servers',
+        None,
         None, 'direct',
         (), 'multica_py.resources.workspace_mcp.WorkspaceMcpResource.update_command',
     ),
     GeneratedConvention(
         'workspaces.members.list', 'default',
         'collection', 'page_workspace_members',
+        None,
         None, 'direct',
         (), 'multica_py.resources.workspaces.WorkspaceResource.members_command',
     ),
     GeneratedConvention(
         'workspaces.switch', 'default',
         'action', 'action_result_none',
+        None,
         None, 'direct',
         (), 'multica_py.resources.workspaces.WorkspaceResource.switch_command',
     ),
@@ -2038,6 +2267,10 @@ def validate_nonnegative_limit(value: object) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ValueError('value must be a nonnegative integer')
 
+def validate_positive_expected_revision(value: object) -> None:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError('value must be a positive integer')
+
 def validate_positive_limit(value: object) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ValueError('value must be a positive integer')
@@ -2070,4 +2303,4 @@ def validate_thread_cursor_limit(value: object) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise ValueError('value must be a positive integer')
 
-__all__ = ('AGENTS_ARCHIVE_MANUAL_BINDING', 'AGENTS_CREATE_MANUAL_BINDING', 'AGENTS_RESTORE_MANUAL_BINDING', 'AGENTS_UPDATE_MANUAL_BINDING', 'AGENT_AVATAR_BINDING', 'AGENT_COPY_BINDING', 'AGENT_GET_BINDING', 'AGENT_LIST_BINDING', 'AGENT_MCP_ADD_BINDING', 'AGENT_MCP_ADD_BOUND_BINDING', 'AGENT_MCP_DISABLE_BINDING', 'AGENT_MCP_DISABLE_BOUND_BINDING', 'AGENT_MCP_ENABLE_BINDING', 'AGENT_MCP_ENABLE_BOUND_BINDING', 'AGENT_MCP_LIST_BINDING', 'AGENT_MCP_REMOVE_BINDING', 'AGENT_MCP_REMOVE_BOUND_BINDING', 'AGENT_SKILLS_LIST_BINDING', 'AGENT_SKILLS_SET_BINDING', 'AGENT_TASKS_BINDING', 'ATTACHMENTS_DOWNLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENTS_UPLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENT_DOWNLOAD_BINDING', 'ATTACHMENT_UPLOAD_BINDING', 'AUTH_LOGIN_MANUAL_BINDING', 'AUTH_LOGOUT_MANUAL_BINDING', 'AUTH_STATUS_MANUAL_BINDING', 'AUTOPILOT_CREATE_BINDING', 'AUTOPILOT_DELETE_BINDING', 'AUTOPILOT_GET_BINDING', 'AUTOPILOT_HISTORY_BINDING', 'AUTOPILOT_LIST_BINDING', 'AUTOPILOT_TRIGGER_ADD_BINDING', 'AUTOPILOT_TRIGGER_BINDING', 'AUTOPILOT_TRIGGER_DELETE_BINDING', 'AUTOPILOT_TRIGGER_UPDATE_BINDING', 'AUTOPILOT_UPDATE_BINDING', 'CLI_COMMAND_BINDING', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'CONFIGURATION_GET_MANUAL_BINDING', 'CONFIGURATION_SET_MANUAL_BINDING', 'CONFIGURATION_SHOW_MANUAL_BINDING', 'DAEMON_DISK_USAGE_MANUAL_BINDING', 'DAEMON_LOGS_MANUAL_BINDING', 'DAEMON_RESTART_MANUAL_BINDING', 'DAEMON_START_MANUAL_BINDING', 'DAEMON_STATUS_MANUAL_BINDING', 'DAEMON_STOP_MANUAL_BINDING', 'ISSUES_ASSIGN_BOUND_BINDING', 'ISSUES_ASSIGN_MANUAL_BINDING', 'ISSUES_COMMENTS_REPLY_MANUAL_BINDING', 'ISSUES_COMMENTS_RESOLVE_MANUAL_BINDING', 'ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING', 'ISSUES_METADATA_QUERY_MANUAL_BINDING', 'ISSUES_METADATA_SET_TYPED_MANUAL_BINDING', 'ISSUES_MOVE_AFTER_BINDING', 'ISSUES_MOVE_AFTER_BOUND_BINDING', 'ISSUES_MOVE_BEFORE_BINDING', 'ISSUES_MOVE_BEFORE_BOUND_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BOUND_BINDING', 'ISSUES_MOVE_TO_TOP_BINDING', 'ISSUES_MOVE_TO_TOP_BOUND_BINDING', 'ISSUES_REFRESH_BINDING', 'ISSUES_REORDER_MANUAL_BINDING', 'ISSUES_SET_STATUS_BOUND_BINDING', 'ISSUES_UNASSIGN_BINDING', 'ISSUES_UNASSIGN_BOUND_BINDING', 'ISSUES_UPDATE_BOUND_BINDING', 'ISSUES_UPDATE_MANUAL_BINDING', 'ISSUES_USAGE_MANUAL_BINDING', 'ISSUE_CANCEL_TASK_BINDING', 'ISSUE_CHILDREN_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_GET_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_METADATA_DELETE_BINDING', 'ISSUE_METADATA_GET_BINDING', 'ISSUE_METADATA_LIST_BINDING', 'ISSUE_METADATA_SET_BINDING', 'ISSUE_PROPERTY_LIST_BINDING', 'ISSUE_PROPERTY_SET_BINDING', 'ISSUE_PROPERTY_UNSET_BINDING', 'ISSUE_PULL_REQUESTS_BINDING', 'ISSUE_RERUN_BINDING', 'ISSUE_RUNS_BINDING', 'ISSUE_RUN_MESSAGES_BINDING', 'ISSUE_SEARCH_BINDING', 'ISSUE_STATUS_BINDING', 'ISSUE_SUBSCRIBERS_ADD_BINDING', 'ISSUE_SUBSCRIBERS_LIST_BINDING', 'ISSUE_SUBSCRIBERS_REMOVE_BINDING', 'LABELS_CREATE_MANUAL_BINDING', 'LABELS_DELETE_MANUAL_BINDING', 'LABELS_UPDATE_MANUAL_BINDING', 'LABEL_GET_BINDING', 'LABEL_LIST_BINDING', 'MAINTENANCE_UPDATE_MANUAL_BINDING', 'MAINTENANCE_VERSION_MANUAL_BINDING', 'MAX_CLI_VERSION', 'MIN_CLI_VERSION', 'OPERATION_BINDINGS', 'OPERATION_CONVENTIONS', 'PROJECTS_DELETE_MANUAL_BINDING', 'PROJECTS_REFRESH_BINDING', 'PROJECTS_UPDATE_BOUND_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_GET_BINDING', 'PROJECT_ISSUE_CREATE_BINDING', 'PROJECT_LIST_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'PROPERTY_ARCHIVE_BINDING', 'PROPERTY_CREATE_BINDING', 'PROPERTY_GET_BINDING', 'PROPERTY_LIST_BINDING', 'PROPERTY_UNARCHIVE_BINDING', 'PROPERTY_UPDATE_BINDING', 'REPOSITORIES_ADD_BINDING', 'REPOSITORIES_LIST_BINDING', 'REPOSITORIES_REMOVE_BINDING', 'RUNTIME_ACTIVITY_BINDING', 'RUNTIME_DELETE_BINDING', 'RUNTIME_LIST_BINDING', 'RUNTIME_RENAME_BINDING', 'RUNTIME_UPDATE_BINDING', 'RUNTIME_USAGE_BINDING', 'SETUP_CLOUD_MANUAL_BINDING', 'SETUP_SELF_HOST_MANUAL_BINDING', 'SKILLS_CREATE_MANUAL_BINDING', 'SKILLS_DELETE_MANUAL_BINDING', 'SKILLS_IMPORT_FROM_URL_MANUAL_BINDING', 'SKILLS_UPDATE_MANUAL_BINDING', 'SKILL_FILES_DELETE_BINDING', 'SKILL_FILES_LIST_BINDING', 'SKILL_FILES_UPSERT_BINDING', 'SKILL_GET_BINDING', 'SKILL_LIST_BINDING', 'SKILL_REFRESH_BINDING', 'SKILL_SEARCH_BINDING', 'SQUAD_GET_BINDING', 'SQUAD_LIST_BINDING', 'SQUAD_MEMBERS_ADD_BINDING', 'SQUAD_MEMBERS_LIST_BINDING', 'SQUAD_MEMBERS_REMOVE_BINDING', 'TARGET_VERSION', 'USER_PROFILE_GET_BINDING', 'USER_PROFILE_UPDATE_BINDING', 'WORKSPACES_SWITCH_MANUAL_BINDING', 'WORKSPACE_GET_BINDING', 'WORKSPACE_LIST_BINDING', 'WORKSPACE_MCP_ADD_BINDING', 'WORKSPACE_MCP_LIST_BINDING', 'WORKSPACE_MCP_REMOVE_BINDING', 'WORKSPACE_MCP_UPDATE_BINDING', 'WORKSPACE_MEMBERS_LIST_BINDING', 'AutopilotExecutionMode', 'GeneratedBinding', 'GeneratedConvention', 'GeneratedMapping', 'IssueSort', 'SortDirection', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_limit', 'validate_positive_max_concurrent_tasks', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_since_cursor', 'validate_thread_cursor_limit')
+__all__ = ('AGENTS_ARCHIVE_MANUAL_BINDING', 'AGENTS_CREATE_MANUAL_BINDING', 'AGENTS_RESTORE_MANUAL_BINDING', 'AGENTS_UPDATE_MANUAL_BINDING', 'AGENT_AVATAR_BINDING', 'AGENT_COPY_BINDING', 'AGENT_GET_BINDING', 'AGENT_LIST_BINDING', 'AGENT_MCP_ADD_BINDING', 'AGENT_MCP_ADD_BOUND_BINDING', 'AGENT_MCP_DISABLE_BINDING', 'AGENT_MCP_DISABLE_BOUND_BINDING', 'AGENT_MCP_ENABLE_BINDING', 'AGENT_MCP_ENABLE_BOUND_BINDING', 'AGENT_MCP_LIST_BINDING', 'AGENT_MCP_REMOVE_BINDING', 'AGENT_MCP_REMOVE_BOUND_BINDING', 'AGENT_SKILLS_LIST_BINDING', 'AGENT_SKILLS_SET_BINDING', 'AGENT_TASKS_BINDING', 'ATTACHMENTS_DOWNLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENTS_UPLOAD_BYTES_MANUAL_BINDING', 'ATTACHMENT_DOWNLOAD_BINDING', 'ATTACHMENT_UPLOAD_BINDING', 'AUTH_LOGIN_MANUAL_BINDING', 'AUTH_LOGOUT_MANUAL_BINDING', 'AUTH_STATUS_MANUAL_BINDING', 'AUTOPILOT_CREATE_BINDING', 'AUTOPILOT_DELETE_BINDING', 'AUTOPILOT_GET_BINDING', 'AUTOPILOT_HISTORY_BINDING', 'AUTOPILOT_LIST_BINDING', 'AUTOPILOT_TRIGGER_ADD_BINDING', 'AUTOPILOT_TRIGGER_BINDING', 'AUTOPILOT_TRIGGER_DELETE_BINDING', 'AUTOPILOT_TRIGGER_UPDATE_BINDING', 'AUTOPILOT_UPDATE_BINDING', 'CLI_COMMAND_BINDING', 'COMMENT_ADD_BINDING', 'COMMENT_DELETE_BINDING', 'COMMENT_LIST_BINDING', 'COMMENT_LIST_FLAT_BINDING', 'COMMENT_LIST_RECENT_BINDING', 'COMMENT_LIST_THREAD_BINDING', 'COMMENT_UPDATE_BINDING', 'CONFIGURATION_GET_MANUAL_BINDING', 'CONFIGURATION_SET_MANUAL_BINDING', 'CONFIGURATION_SHOW_MANUAL_BINDING', 'DAEMON_DISK_USAGE_MANUAL_BINDING', 'DAEMON_LOGS_MANUAL_BINDING', 'DAEMON_RESTART_MANUAL_BINDING', 'DAEMON_START_MANUAL_BINDING', 'DAEMON_STATUS_MANUAL_BINDING', 'DAEMON_STOP_MANUAL_BINDING', 'ISSUES_ASSIGN_BOUND_BINDING', 'ISSUES_ASSIGN_MANUAL_BINDING', 'ISSUES_COMMENTS_REPLY_MANUAL_BINDING', 'ISSUES_COMMENTS_RESOLVE_MANUAL_BINDING', 'ISSUES_COMMENTS_UNRESOLVE_MANUAL_BINDING', 'ISSUES_METADATA_QUERY_MANUAL_BINDING', 'ISSUES_METADATA_SET_TYPED_MANUAL_BINDING', 'ISSUES_MOVE_AFTER_BINDING', 'ISSUES_MOVE_AFTER_BOUND_BINDING', 'ISSUES_MOVE_BEFORE_BINDING', 'ISSUES_MOVE_BEFORE_BOUND_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BINDING', 'ISSUES_MOVE_TO_BOTTOM_BOUND_BINDING', 'ISSUES_MOVE_TO_TOP_BINDING', 'ISSUES_MOVE_TO_TOP_BOUND_BINDING', 'ISSUES_REFRESH_BINDING', 'ISSUES_REORDER_MANUAL_BINDING', 'ISSUES_SET_STATUS_BOUND_BINDING', 'ISSUES_UNASSIGN_BINDING', 'ISSUES_UNASSIGN_BOUND_BINDING', 'ISSUES_UPDATE_BOUND_BINDING', 'ISSUES_UPDATE_MANUAL_BINDING', 'ISSUES_USAGE_MANUAL_BINDING', 'ISSUE_CANCEL_TASK_BINDING', 'ISSUE_CHILDREN_BINDING', 'ISSUE_CREATE_BINDING', 'ISSUE_GET_BINDING', 'ISSUE_LABELS_ADD_BINDING', 'ISSUE_LABELS_LIST_BINDING', 'ISSUE_LABELS_REMOVE_BINDING', 'ISSUE_LIST_BINDING', 'ISSUE_METADATA_DELETE_BINDING', 'ISSUE_METADATA_GET_BINDING', 'ISSUE_METADATA_LIST_BINDING', 'ISSUE_METADATA_SET_BINDING', 'ISSUE_PROPERTY_LIST_BINDING', 'ISSUE_PROPERTY_SET_BINDING', 'ISSUE_PROPERTY_UNSET_BINDING', 'ISSUE_PULL_REQUESTS_BINDING', 'ISSUE_RERUN_BINDING', 'ISSUE_RUNS_BINDING', 'ISSUE_RUN_MESSAGES_BINDING', 'ISSUE_SEARCH_BINDING', 'ISSUE_STATUS_BINDING', 'ISSUE_SUBSCRIBERS_ADD_BINDING', 'ISSUE_SUBSCRIBERS_LIST_BINDING', 'ISSUE_SUBSCRIBERS_REMOVE_BINDING', 'LABELS_CREATE_MANUAL_BINDING', 'LABELS_DELETE_MANUAL_BINDING', 'LABELS_UPDATE_MANUAL_BINDING', 'LABEL_GET_BINDING', 'LABEL_LIST_BINDING', 'MAINTENANCE_UPDATE_MANUAL_BINDING', 'MAINTENANCE_VERSION_MANUAL_BINDING', 'MAX_CLI_VERSION', 'MIN_CLI_VERSION', 'OPERATION_BINDINGS', 'OPERATION_CONVENTIONS', 'PROJECTS_DELETE_MANUAL_BINDING', 'PROJECTS_REFRESH_BINDING', 'PROJECTS_UPDATE_BOUND_BINDING', 'PROJECT_CREATE_BINDING', 'PROJECT_GET_BINDING', 'PROJECT_ISSUE_CREATE_BINDING', 'PROJECT_LIST_BINDING', 'PROJECT_RESOURCE_ADD_BINDING', 'PROJECT_RESOURCE_LIST_BINDING', 'PROJECT_RESOURCE_REMOVE_BINDING', 'PROJECT_RESOURCE_UPDATE_BINDING', 'PROJECT_STATUS_BINDING', 'PROJECT_UPDATE_BINDING', 'PROPERTY_ARCHIVE_BINDING', 'PROPERTY_CREATE_BINDING', 'PROPERTY_GET_BINDING', 'PROPERTY_LIST_BINDING', 'PROPERTY_UNARCHIVE_BINDING', 'PROPERTY_UPDATE_BINDING', 'REPOSITORIES_ADD_BINDING', 'REPOSITORIES_LIST_BINDING', 'REPOSITORIES_REMOVE_BINDING', 'RUNTIME_ACTIVITY_BINDING', 'RUNTIME_DELETE_BINDING', 'RUNTIME_LIST_BINDING', 'RUNTIME_RENAME_BINDING', 'RUNTIME_UPDATE_BINDING', 'RUNTIME_USAGE_BINDING', 'SETUP_CLOUD_MANUAL_BINDING', 'SETUP_SELF_HOST_MANUAL_BINDING', 'SKILLS_CREATE_MANUAL_BINDING', 'SKILLS_DELETE_MANUAL_BINDING', 'SKILLS_IMPORT_FROM_URL_MANUAL_BINDING', 'SKILLS_UPDATE_MANUAL_BINDING', 'SKILL_FILES_DELETE_BINDING', 'SKILL_FILES_LIST_BINDING', 'SKILL_FILES_UPSERT_BINDING', 'SKILL_GET_BINDING', 'SKILL_LABELS_ADD_BINDING', 'SKILL_LABELS_LIST_BINDING', 'SKILL_LABELS_REMOVE_BINDING', 'SKILL_LIST_BINDING', 'SKILL_REFRESH_BINDING', 'SKILL_SEARCH_BINDING', 'SQUAD_GET_BINDING', 'SQUAD_LIST_BINDING', 'SQUAD_MEMBERS_ADD_BINDING', 'SQUAD_MEMBERS_LIST_BINDING', 'SQUAD_MEMBERS_REMOVE_BINDING', 'TARGET_VERSION', 'USER_PROFILE_GET_BINDING', 'USER_PROFILE_UPDATE_BINDING', 'WORKSPACES_SWITCH_MANUAL_BINDING', 'WORKSPACE_GET_BINDING', 'WORKSPACE_LIST_BINDING', 'WORKSPACE_MCP_ADD_BINDING', 'WORKSPACE_MCP_LIST_BINDING', 'WORKSPACE_MCP_REMOVE_BINDING', 'WORKSPACE_MCP_UPDATE_BINDING', 'WORKSPACE_MEMBERS_LIST_BINDING', 'AutopilotExecutionMode', 'GeneratedBinding', 'GeneratedConvention', 'GeneratedMapping', 'IssueSort', 'LabelResourceType', 'SortDirection', 'normalize_optional_label', 'validate_comment_cursor', 'validate_description_input', 'validate_issue_sort', 'validate_issue_status', 'validate_nonblank', 'validate_nonnegative_limit', 'validate_positive_expected_revision', 'validate_positive_limit', 'validate_positive_max_concurrent_tasks', 'validate_project_description', 'validate_project_status', 'validate_project_update', 'validate_resource_update', 'validate_since_cursor', 'validate_thread_cursor_limit')

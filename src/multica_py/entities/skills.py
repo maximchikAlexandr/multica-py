@@ -7,6 +7,7 @@ import msgspec
 from multica_py._internal.commands import Command
 from multica_py.config import OperationOptions
 from multica_py.entities._base import _BoundEntity
+from multica_py.entities.labels import Label
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.relations import LazyCollection
 from multica_py.models.skills import SkillFile
@@ -27,6 +28,7 @@ class Skill(_BoundEntity):  # type: ignore[misc]
     _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
 
     _files: LazyCollection[SkillFile] | None = msgspec.field(default=None, name="_files")
+    _labels: LazyCollection[Label] | None = msgspec.field(default=None, name="_labels")
 
     @property
     def files(self) -> LazyCollection[SkillFile]:
@@ -52,6 +54,55 @@ class Skill(_BoundEntity):  # type: ignore[misc]
     def _invalidate_files(self) -> None:
         if self._files is not None:
             self._files.invalidate()
+
+    @property
+    def labels(self) -> LazyCollection[Label]:
+        if self._labels is None:
+            client = self._require_client(
+                entity_type="Skill", entity_id=self.id, relation_name="labels"
+            )
+            skill_id = self.id
+            labels = client.skills.labels
+            self._set_runtime(
+                "_labels",
+                LazyCollection(
+                    lambda: _page_items(labels.list(skill_id)),
+                    command_loader=lambda: client.skills._labels_relation_command(skill_id),
+                ),
+            )
+        return self._labels  # type: ignore[return-value]
+
+    def _invalidate_labels(self) -> None:
+        if self._labels is not None:
+            self._labels.invalidate()
+
+    def add_label_command(
+        self, label_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[Label]]:
+        client = self._require_client(
+            entity_type="Skill", entity_id=self.id, relation_name="labels"
+        )
+        return client.skills._add_label_command(
+            self.id, label_id, invalidate=self._invalidate_labels, options=options
+        )
+
+    def add_label(self, label_id: str, *, options: OperationOptions | None = None) -> Page[Label]:
+        return self.add_label_command(label_id, options=options).run()
+
+    def remove_label_command(
+        self, label_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Page[Label] | ActionResult[None]]:
+        client = self._require_client(
+            entity_type="Skill", entity_id=self.id, relation_name="labels"
+        )
+        return client.skills._remove_label_command(
+            self.id, label_id, invalidate=self._invalidate_labels, options=options
+        )
+
+    def remove_label(
+        self, label_id: str, *, options: OperationOptions | None = None
+    ) -> Page[Label] | ActionResult[None]:
+        return self.remove_label_command(label_id, options=options).run()
 
     def upsert_file(
         self, path: str, content: str, *, options: OperationOptions | None = None

@@ -393,6 +393,13 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     workspace_slug: str | None | msgspec.UnsetType = msgspec.UNSET
     issue_identifier: str | None | msgspec.UnsetType = msgspec.UNSET
     workspace_context: str | None | msgspec.UnsetType = msgspec.UNSET
+    issue_title: str | None | msgspec.UnsetType = msgspec.UNSET
+    issue_description: str | None | msgspec.UnsetType = msgspec.UNSET
+    issue_status: str | None | msgspec.UnsetType = msgspec.UNSET
+    issue_assignee_type: str | None | msgspec.UnsetType = msgspec.UNSET
+    issue_assignee_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    issue_changed_fields: tuple[str, ...] | None | msgspec.UnsetType = msgspec.UNSET
+    issue_state_delta_known: bool | None | msgspec.UnsetType = msgspec.UNSET
     issue_statuses: tuple[_TaskIssueStatusWire, ...] | None | msgspec.UnsetType = msgspec.UNSET
     issue_statuses_omitted: int | None | msgspec.UnsetType = msgspec.UNSET
     project_id: str | None | msgspec.UnsetType = msgspec.UNSET
@@ -529,6 +536,23 @@ def _task_run_from_wire(
         workspace_context=(
             None if wire.workspace_context is msgspec.UNSET else wire.workspace_context
         ),
+        issue_title=None if wire.issue_title is msgspec.UNSET else wire.issue_title,
+        issue_description=(
+            None if wire.issue_description is msgspec.UNSET else wire.issue_description
+        ),
+        issue_status=None if wire.issue_status is msgspec.UNSET else wire.issue_status,
+        issue_assignee_type=(
+            None if wire.issue_assignee_type is msgspec.UNSET else wire.issue_assignee_type
+        ),
+        issue_assignee_id=(
+            None if wire.issue_assignee_id is msgspec.UNSET else wire.issue_assignee_id
+        ),
+        issue_changed_fields=(
+            () if wire.issue_changed_fields in (msgspec.UNSET, None) else wire.issue_changed_fields
+        ),
+        issue_state_delta_known=(
+            None if wire.issue_state_delta_known is msgspec.UNSET else wire.issue_state_delta_known
+        ),
         issue_statuses=issue_statuses,
         issue_statuses_omitted=(
             None if wire.issue_statuses_omitted is msgspec.UNSET else wire.issue_statuses_omitted
@@ -622,6 +646,13 @@ def _task_run_from_wire(
                     ("workspace_slug", _presence_seed(wire.workspace_slug)),
                     ("issue_identifier", _presence_seed(wire.issue_identifier)),
                     ("workspace_context", _presence_seed(wire.workspace_context)),
+                    ("issue_title", _presence_seed(wire.issue_title)),
+                    ("issue_description", _presence_seed(wire.issue_description)),
+                    ("issue_status", _presence_seed(wire.issue_status)),
+                    ("issue_assignee_type", _presence_seed(wire.issue_assignee_type)),
+                    ("issue_assignee_id", _presence_seed(wire.issue_assignee_id)),
+                    ("issue_changed_fields", _presence_seed(wire.issue_changed_fields)),
+                    ("issue_state_delta_known", _presence_seed(wire.issue_state_delta_known)),
                     ("issue_statuses", _presence_seed(wire.issue_statuses)),
                     ("issue_statuses_omitted", _presence_seed(wire.issue_statuses_omitted)),
                     ("project_id", _presence_seed(wire.project_id)),

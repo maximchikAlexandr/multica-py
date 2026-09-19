@@ -395,7 +395,7 @@ class OperationOptionsCase:
 
 
 OPERATION_OPTIONS_CASES = (
-    OperationOptionsCase(AgentResource, "create_command", (("name", "agent"),)),
+    OperationOptionsCase(AgentResource, "create_command", (("name", "agent"), ("model", "gpt-5"))),
     OperationOptionsCase(AgentResource, "update_command", (("agent_id", "a1"), ("name", "agent"))),
     OperationOptionsCase(
         AutopilotResource,

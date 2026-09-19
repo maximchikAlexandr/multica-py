@@ -6,13 +6,14 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
-## Approved v0.4.44 target
+## Approved v0.5.0 target
 
-This SDK contract supports Multica CLI `0.4.44` at commit
-`c7f259c70a60bff30011c403fada79ab382f608a`, with the tested interval
-`[0.4.42, 0.4.45)`. Migrate directly from `0.4.43`; no intermediate SDK
+This SDK contract supports Multica CLI `0.5.0` at commit
+`2df765a3c8f39789c9fb76316378bcffc20d22d9`, with the tested interval
+`[0.4.42, 0.5.1)`. Migrate directly from `0.4.44`; no intermediate SDK
 release is required. Retained operations remain compatible with `0.4.42`,
-while safe comment deletion requires CLI `0.4.44`.
+while comment updates, skill labels, reviewed label inputs, and target-only
+response fields require CLI `0.5.0`.
 
 The `Comment.deleted_at` field is `None` only when the wire field is omitted;
 valid target timestamps are preserved, while explicit null and malformed values
@@ -198,27 +199,27 @@ All resources accessed as attributes of `MulticaClient`:
 - **daemon**: `start/logs()` → `ManagedProcess`, `status/stop/restart()` → `DaemonStatus`, `disk_usage()` → `Page[DaemonDiskUsageEntry]`
 - **workspaces**: `list/members` → `Page[T]`, `get()` → object, `switch()` → `ActionResult[None]`; tagged v0.4.28 has no `watch/unwatch` leaves
 - **issues**: full CRUD + `comments`, `recent_comment_threads`, `labels`, `subscribers`, `metadata`, `properties`, `pull_requests`, `children`, `runs`, `run_messages`, `usage`, `rerun(issue_id)`, `cancel_task(task_id)`, `assign`, `unassign`, `move_to_top`, `move_to_bottom`, `move_before`, and `move_after`; root create accepts ordinary descriptions and an optional canonical `project`, while project-scoped create supplies its project from the bound relation
-- **issues.comments**: `list` for flat comments, `list_flat`, `list_thread`, `list_recent`, `add`, `reply`, `delete`, `resolve`, `unresolve`
+- **issues.comments**: `list` for flat comments, `list_flat`, `list_thread`, `list_recent`, `add`, `reply`, `update`, `delete`, `resolve`, `unresolve`; `update` is text-only and requires a positive `expected_revision`
 - **issues.metadata**: `list`, `query`, `get`, `set`, `set_typed`, `delete`
 - **issues.properties**: `list`, `set`, `unset` for workspace property values on an issue
 - **issues.subscribers**: `list/add/remove`
 - **issues.labels**: `list/add/remove`
 - **projects**: `list/get/create/update/delete/set_status`
 - **projects.resources**: `list`, `add_local_directory`, `update_local_directory`, `remove`
-- **labels**: `list/get/create/update/delete`
+- **labels**: `list/get/create/update/delete`; resource type is `issue` or `skill`, and update uses `Unset` versus `None`/`""` to distinguish omission from clearing description
 - **agents**: `list/get/create/update/copy/copy_command/archive/restore/tasks/avatar`
 - **agents.skills**: `list/set`
 - **agents.mcp**: `list/add/enable/disable/remove`
-- **skills**: `list/get/create/update/delete/import_from_url/refresh/search`
+- **skills**: `list/get/create/update/delete/import_from_url/refresh/search`, with `labels.list/add/remove`; list results preload `Skill.labels`, while detail results load that relation only through `skills.labels.list`
 - **skills.files**: `list/upsert/delete`
 - **properties**: `list/get/create/update/archive/unarchive` for the workspace property catalog
 - **workspaces.mcp**: `list/add/update/remove` for workspace MCP servers
 - **autopilots**: `list/get/create/update/delete/trigger/history/trigger_add/trigger_update/trigger_delete`
 - **repositories**: `list/add/remove/checkout`
-- **runtimes**: `list/usage/activity/update/rename/delete`; `delete(..., cascade=True)`
-  unbinds dependent agents, cancels their queued/running work, and deletes the
-  runtime while preserving agent configuration, chats, and task history. Without
-  cascade, an upstream dependent-agent conflict is raised instead.
+- **runtimes**: `list/usage/activity/update/rename/delete`; delete preserves
+  empty success and raises the centralized conflict with optional reviewed
+  blocker guidance. It never cascades, retries, unbinds agents, or deletes a
+  profile automatically.
 - **attachments**: unified `upload`/`upload_command` for paths, bytes-like values, and binary streams, compatibility `upload_bytes` aliases, and `download`/`download_bytes` (no `list`)
 - **cli**: `command(*argv, options=None)` → `Command[CliResult]` for bounded raw invocations
 - **configuration**: `show/get/set`
@@ -372,7 +373,7 @@ from multica_py.exceptions import ConflictError, ValidationError
 try:
     client.runtimes.delete("runtime-1")
 except ConflictError as exc:
-    print(exc.exit_code, str(exc))  # use --cascade after reviewing the detail
+    print(exc.exit_code, str(exc))  # review optional blocker guidance
 except ValidationError as exc:
     print(exc.exit_code, str(exc))  # fix the reported upstream input
 ```

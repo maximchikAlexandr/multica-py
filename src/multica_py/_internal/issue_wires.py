@@ -30,6 +30,8 @@ class _LabelWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     name: str
     color: str | None = None
+    description: str | None = None
+    resource_type: str | None = None
 
 
 class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -290,7 +292,16 @@ def _issue_from_wire(
     if partial:
         runtime = _runtime_state(issue)
         if isinstance(wire.labels, tuple):
-            label_values = tuple(Label(id=row.id, name=row.name, color=row.color) for row in labels)
+            label_values = tuple(
+                Label(
+                    id=row.id,
+                    name=row.name,
+                    color=row.color,
+                    description=row.description,
+                    resource_type=row.resource_type,
+                )
+                for row in labels
+            )
             runtime["_labels"] = LazyCollection(lambda: label_values, initial=label_values)
         if wire.metadata is not msgspec.UNSET and isinstance(wire.metadata, Mapping):
             runtime["_metadata"] = LazyMapping(

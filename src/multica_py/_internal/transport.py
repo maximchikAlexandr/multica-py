@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import re
+from collections.abc import Mapping
 from contextlib import ExitStack
 from copy import copy
 from dataclasses import dataclass
+from typing import cast
 
 from multica_py._internal.argv import build_global_args
 from multica_py._internal.compat import check_version_from_config, parse_cli_version
@@ -21,6 +24,7 @@ from multica_py._internal.redaction import (
     snapshot_secret_files,
 )
 from multica_py._internal.specs import RawCommandResult, TextResult
+from multica_py.compatibility import CliVersion
 from multica_py.config import ClientConfig
 from multica_py.exceptions import (
     AuthenticationError,
@@ -78,9 +82,58 @@ _AUTHORIZATION_DIAGNOSTICS = (
 )
 
 
+def _structured_error_payload(stderr: str) -> dict[str, object] | None:
+    """Decode only a JSON object carried by the CLI error diagnostic."""
+    candidate = stderr.strip()
+    if not candidate.startswith("{"):
+        candidate = candidate[candidate.find("{") :] if "{" in candidate else ""
+    if not candidate:
+        return None
+    try:
+        payload = cast("object", json.loads(candidate))
+    except json.JSONDecodeError:
+        return None
+    return cast("dict[str, object]", payload) if isinstance(payload, dict) else None
+
+
+def _reviewed_error_fields(stderr: str) -> dict[str, object]:
+    payload = _structured_error_payload(stderr)
+    if payload is None:
+        return {}
+    fields: dict[str, object] = {}
+    code = payload.get("code")
+    if isinstance(code, str) and code:
+        fields["code"] = code
+    counts: dict[str, int] = {}
+    for key in ("active_agent_count", "undrained_task_count"):
+        value = payload.get(key)
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+            counts[key] = value
+    if counts:
+        fields["blocker_counts"] = counts
+    identity: dict[str, str] = {}
+    for key in ("profile_id", "profile_name", "runtime_status", "last_seen_at"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            identity[key] = value
+    if identity:
+        fields["profile_identity"] = identity
+    ttl = payload.get("auto_cleanup_after_days")
+    if isinstance(ttl, int) and not isinstance(ttl, bool) and ttl >= 0:
+        fields["auto_cleanup_after_days"] = ttl
+    guidance = payload.get("cleanup_guidance")
+    if isinstance(guidance, str) and guidance:
+        fields["cleanup_guidance"] = guidance
+    message = payload.get("error", payload.get("message"))
+    if isinstance(message, str) and message.strip():
+        fields["message"] = message.strip()
+    return fields
+
+
 @dataclass(slots=True)
 class _CompatibilityState:
     checked: bool = False
+    detected: CliVersion | None = None
 
 
 def _semantic_exit_code_for_http_status(status: int) -> int | None:
@@ -112,6 +165,18 @@ def classify_cli_failure(
     bodies, quoted API responses) that must not influence the error type or
     the reported exit code.
     """
+    status_match = _HTTP_STATUS_PATTERN.search(stderr)
+    status = int(status_match.group(1)) if status_match is not None else None
+    if status == 409:
+        return ConflictError, exit_code
+    if status == 403:
+        return AuthorizationError, 3
+    if status == 404:
+        return NotFoundError, 4
+    semantic_exit = None if status is None else _semantic_exit_code_for_http_status(status)
+    if semantic_exit is not None:
+        return _EXIT_CODE_EXCEPTIONS[semantic_exit], semantic_exit
+
     # The target deliberately shares exit 3 between 401 and 403.  Its
     # localized formatter is the only reviewed distinction available to the
     # SDK, so recognize the exact permission diagnostics before falling back
@@ -123,18 +188,6 @@ def classify_cli_failure(
     reported_exit_code = exit_code
     if exc_class is not None:
         return exc_class, reported_exit_code
-
-    status_match = _HTTP_STATUS_PATTERN.search(stderr)
-    if status_match is not None:
-        status = int(status_match.group(1))
-        if status == 409:
-            return ConflictError, exit_code
-        if status == 403:
-            return AuthorizationError, 3
-        semantic_exit = _semantic_exit_code_for_http_status(status)
-        if semantic_exit is not None:
-            exc_class = _EXIT_CODE_EXCEPTIONS[semantic_exit]
-            return exc_class, semantic_exit
 
     if any(marker in stderr for marker in _CONFLICT_MARKERS):
         return ConflictError, exit_code
@@ -192,8 +245,16 @@ class CliTransport:
         *,
         stdin: bytes | None = None,
         timeout: datetime.timedelta | None = None,
+        minimum_cli_version: str | None = None,
     ) -> RawCommandResult:
-        return self._run(command_args, stdin=stdin, timeout=timeout)
+        if minimum_cli_version is None:
+            return self._run(command_args, stdin=stdin, timeout=timeout)
+        return self._run(
+            command_args,
+            stdin=stdin,
+            timeout=timeout,
+            minimum_cli_version=minimum_cli_version,
+        )
 
     def run_text(
         self,
@@ -201,8 +262,17 @@ class CliTransport:
         *,
         stdin: bytes | None = None,
         timeout: datetime.timedelta | None = None,
+        minimum_cli_version: str | None = None,
     ) -> TextResult:
-        result = self._run(command_args, stdin=stdin, timeout=timeout)
+        if minimum_cli_version is None:
+            result = self._run(command_args, stdin=stdin, timeout=timeout)
+        else:
+            result = self._run(
+                command_args,
+                stdin=stdin,
+                timeout=timeout,
+                minimum_cli_version=minimum_cli_version,
+            )
         command = " ".join(result.argv)
         return TextResult(
             text=decode_text(result.stdout, command=command),
@@ -210,9 +280,15 @@ class CliTransport:
             exit_code=result.exit_code,
         )
 
-    def _check_compat(self) -> None:
+    def _check_compat(self, minimum_cli_version: str | None = None) -> None:
         state = self._compatibility_state
         if state.checked or self._config.compatibility.value == "ignore":
+            if state.detected is not None and minimum_cli_version is not None:
+                check_version_from_config(
+                    state.detected,
+                    self._config,
+                    operation_min_version=minimum_cli_version,
+                )
             state.checked = True
             return
         result = self._execute(("version", "--output", "json"), check_compat=False)
@@ -223,6 +299,13 @@ class CliTransport:
         check_version_from_config(parsed, self._config)
         if parsed is None:
             return
+        if minimum_cli_version is not None:
+            check_version_from_config(
+                parsed,
+                self._config,
+                operation_min_version=minimum_cli_version,
+            )
+        state.detected = parsed
         state.checked = True
 
     def _execute(
@@ -231,10 +314,11 @@ class CliTransport:
         *,
         stdin: bytes | None = None,
         timeout: datetime.timedelta | None = None,
+        minimum_cli_version: str | None = None,
         check_compat: bool = True,
     ) -> RawCommandResult:
         if check_compat:
-            self._check_compat()
+            self._check_compat(minimum_cli_version)
 
         argv = self._build_full_argv(command_args)
         cwd = os.fspath(self._config.cwd) if self._config.cwd is not None else None
@@ -290,8 +374,17 @@ class CliTransport:
         *,
         stdin: bytes | None = None,
         timeout: datetime.timedelta | None = None,
+        minimum_cli_version: str | None = None,
     ) -> RawCommandResult:
-        result = self._execute(command_args, stdin=stdin, timeout=timeout)
+        if minimum_cli_version is None:
+            result = self._execute(command_args, stdin=stdin, timeout=timeout)
+        else:
+            result = self._execute(
+                command_args,
+                stdin=stdin,
+                timeout=timeout,
+                minimum_cli_version=minimum_cli_version,
+            )
         if result.exit_code != 0:
             self._raise_command_error(result)
         return result
@@ -326,13 +419,21 @@ class CliTransport:
             stderr=stderr_text,
         )
         detail = stderr_text.strip() or stdout_text.strip()
-        message = detail or f"Command failed with exit code {result.exit_code} [command: {command}]"
+        structured = _reviewed_error_fields(stderr_text)
+        message = cast("str", structured.get("message", detail)) or (
+            f"Command failed with exit code {result.exit_code} [command: {command}]"
+        )
         raise exc_class(
             message,
             exit_code=reported_exit_code,
             stdout=stdout_text,
             stderr=stderr_text,
             argv=result.argv,
+            code=cast("str | None", structured.get("code")),
+            blocker_counts=cast("Mapping[str, int] | None", structured.get("blocker_counts")),
+            profile_identity=cast("Mapping[str, str] | None", structured.get("profile_identity")),
+            cleanup_guidance=cast("str | None", structured.get("cleanup_guidance")),
+            auto_cleanup_after_days=cast("int | None", structured.get("auto_cleanup_after_days")),
         )
 
     def spawn(

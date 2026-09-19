@@ -146,7 +146,9 @@ def _git_go_sources(source_checkout: pathlib.Path, commit: str) -> tuple[tuple[s
     ).stdout
     sources: list[tuple[str, str]] = []
     with tarfile.open(fileobj=io.BytesIO(archive), mode="r:") as stream:
-        for member in sorted(stream.getmembers(), key=lambda item: item.name):
+        members = stream.getmembers()
+        members.sort(key=_tar_member_name)
+        for member in members:
             if not member.isfile() or not member.name.endswith(".go"):
                 continue
             extracted = stream.extractfile(member)
@@ -154,6 +156,10 @@ def _git_go_sources(source_checkout: pathlib.Path, commit: str) -> tuple[tuple[s
                 continue
             sources.append((member.name, extracted.read().decode("utf-8", errors="replace")))
     return tuple(sources)
+
+
+def _tar_member_name(member: tarfile.TarInfo) -> str:
+    return member.name
 
 
 def _collect_facts(

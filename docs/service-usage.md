@@ -523,10 +523,9 @@ See the complete runnable examples under [examples/](../examples/).
 ## Handle typed upstream failures
 
 Conflict and validation exceptions retain actionable, redacted upstream
-detail. A runtime with dependent active agents refuses a non-cascade delete;
-use the cascade form only when unbinding those agents and cancelling their
-active work is intended. Their configuration, chats, and task history remain
-preserved:
+detail. A runtime with dependent active agents refuses deletion. The SDK
+preserves that centralized conflict and never adds cascade, retries, agent
+unbinding, or profile deletion automatically:
 
 ```python
 from multica_py.exceptions import ConflictError, ValidationError
@@ -535,7 +534,6 @@ try:
     client.runtimes.delete("runtime-1")
 except ConflictError as exc:
     print(f"delete refused ({exc.exit_code}): {exc}")
-    client.runtimes.delete("runtime-1", cascade=True)
 except ValidationError as exc:
     print(f"upstream input rejected ({exc.exit_code}): {exc}")
 ```

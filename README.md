@@ -31,13 +31,13 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
-The approved SDK target is Multica CLI `0.4.44` at commit
-`c7f259c70a60bff30011c403fada79ab382f608a`, with compatibility interval
-`[0.4.42, 0.4.45)`. Migrate directly from SDK/CLI `0.4.43`; no intermediate
+The approved SDK target is Multica CLI `0.5.0` at commit
+`2df765a3c8f39789c9fb76316378bcffc20d22d9`, with compatibility interval
+`[0.4.42, 0.5.1)`. Migrate directly from CLI/SDK `0.4.44`; no intermediate
 SDK release is supported. Retained operations remain compatible with CLI
-`0.4.42`, while safe comment deletion requires `0.4.44`. See [the migration
-guide](docs/migration.md) for tombstones, lifecycle/Triage behavior, and
-atomic rollback guidance.
+`0.4.42`; comment updates, skill labels, reviewed label inputs, and target-only
+response fields require `0.5.0`. See [the migration guide](docs/migration.md)
+for presence/error semantics, checksum roles, and atomic rollback guidance.
 
 ## Usage
 
@@ -55,7 +55,7 @@ command = client.issues.get_command("issue_123")
 print(command.commands)
 issue = command.run()
 
-# Reviewed v0.4.44 issue projection options remain opt-in.
+# Reviewed v0.5.0 issue projection options remain opt-in.
 page = client.issues.list(
     fields=("id", "title", "properties"),
     property_filters=("Environment=prod",),
@@ -66,9 +66,10 @@ files = client.skills.files.list(skill.id, with_content=True)
 
 from multica_py.models.agents import AgentConversationStarter
 
-# Explicit starter mutations retain their reviewed compatibility behavior; omission remains 0.4.42-compatible.
+# Agent creation requires an explicit model; starter mutations remain typed and lazy.
 preview = client.agents.create_command(
     name="Release helper",
+    model="gpt-5",
     conversation_starters=(
         AgentConversationStarter(label="Deploy", prompt="Deploy the release."),
     ),

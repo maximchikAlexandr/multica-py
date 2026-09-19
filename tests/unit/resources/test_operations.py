@@ -339,6 +339,7 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
         client.projects.resources._transport = transport
         client.skills._transport = transport
         client.skills.files._transport = transport
+        client.skills.labels._transport = transport
         client.squads._transport = transport
         client.squads.members._transport = transport
         resource: object = _bound_target(case, client)
@@ -593,12 +594,16 @@ def test_issue_natural_input_invalid_cases_do_not_touch_filesystem_or_transport(
 
 def test_discovered_public_methods() -> None:
     discovered = discover_public_methods()
-    contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
-    assert len(canonical) == 184
+    assert len(canonical) == 190
     assert len(canonical_cases) == len(canonical)
+
+
+def test_discovered_public_methods_match_approved_entrypoints() -> None:
+    contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
+    canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     contract_entrypoints = {
         (operation.operation_id, entrypoint.entrypoint_id): entrypoint
         for operation in contract.operations
@@ -616,9 +621,6 @@ def test_discovered_public_methods() -> None:
         governed.add((case.contract_operation_id, entrypoint_id))
     assert governed == set(contract_entrypoints)
     assert len(contract.operation_ids) == len(contract.operations)
-    assert len(OPERATION_CASES) == 343
-    assert len({c.id for c in OPERATION_CASES}) == 343
-    assert sum(not c.is_canonical for c in OPERATION_CASES) == 159
     presence_catalog = cast(
         "dict[str, object]",
         cast("dict[str, object]", contract.raw["catalogs"])["presence"],
@@ -650,10 +652,17 @@ def test_discovered_public_methods() -> None:
                 entrypoint.typed_input_id in repr(signature)
                 for signature, _return in eager_contracts
             ), case.sdk_method
+
+
+def test_operation_case_catalog_is_closed() -> None:
+    canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
-    assert len(generated) == 79
-    assert len(manual) == 264
+    assert len(OPERATION_CASES) == 350
+    assert len({c.id for c in OPERATION_CASES}) == 350
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == 160
+    assert len(generated) == 84
+    assert len(manual) == 266
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)

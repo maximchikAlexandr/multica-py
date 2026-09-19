@@ -88,6 +88,23 @@ class DetailCase:
 
 
 @dataclass(frozen=True)
+class RuntimeStatusCase:
+    id: str
+    status: int
+    code: str
+    expected_exc: type[CommandExecutionError]
+    expected_exit: int
+
+
+@dataclass(frozen=True)
+class RuntimeConflictCase:
+    id: str
+    stderr: bytes
+    expected_message: str
+    expected_fields: dict[str, object]
+
+
+@dataclass(frozen=True)
 class EnvironmentSecretCase:
     id: str
     env_key: str
@@ -1417,6 +1434,126 @@ def test_classify_cli_failure_maps_http_status() -> None:
     assert reported == 4
 
 
+@pytest.mark.parametrize(
+    "case",
+    (
+        RuntimeStatusCase(
+            "runtime-conflict-409",
+            409,
+            "runtime_profile_instance_delete_unsupported",
+            ConflictError,
+            1,
+        ),
+        RuntimeStatusCase("runtime-not-found-404", 404, "runtime_not_found", NotFoundError, 4),
+        RuntimeStatusCase(
+            "runtime-access-denied-403", 403, "runtime_access_denied", AuthorizationError, 3
+        ),
+    ),
+    ids=lambda case: case.id,
+)
+def test_structured_runtime_diagnostics_obey_http_status(
+    case: RuntimeStatusCase,
+) -> None:
+    stderr = (
+        f"Error: DELETE /api/runtimes/r1 returned {case.status}: "
+        f'{{"code":"{case.code}","error":"runtime diagnostic"}}'
+    )
+    exc_class, reported = classify_cli_failure(exit_code=1, stdout="", stderr=stderr)
+    assert exc_class is case.expected_exc
+    assert reported == case.expected_exit
+
+
+def test_structured_runtime_diagnostic_without_http_409_is_not_a_conflict() -> None:
+    exc_class, reported = classify_cli_failure(
+        exit_code=1,
+        stdout="",
+        stderr='{"code":"runtime_profile_instance_delete_unsupported","error":"blocked"}',
+    )
+    assert exc_class is CommandExecutionError
+    assert reported == 1
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        RuntimeConflictCase(
+            "structured-full",
+            b"Error: DELETE /api/runtimes/r1 returned 409: "
+            b'{"code":"runtime_profile_instance_delete_unsupported",'
+            b'"error":"blocked","profile_id":"p1","profile_name":"Laptop",'
+            b'"runtime_status":"offline","last_seen_at":"2026-09-19T00:00:00Z",'
+            b'"active_agent_count":2,"undrained_task_count":1,"auto_cleanup_after_days":7, '
+            b'"cleanup_guidance":"stop daemon"}',
+            "blocked",
+            {
+                "code": "runtime_profile_instance_delete_unsupported",
+                "blocker_counts": {"active_agent_count": 2, "undrained_task_count": 1},
+                "profile_identity": {
+                    "profile_id": "p1",
+                    "profile_name": "Laptop",
+                    "runtime_status": "offline",
+                    "last_seen_at": "2026-09-19T00:00:00Z",
+                },
+                "auto_cleanup_after_days": 7,
+                "cleanup_guidance": "stop daemon",
+            },
+        ),
+        RuntimeConflictCase(
+            "structured-optional-missing",
+            b"Error: DELETE /api/runtimes/r1 returned 409: "
+            b'{"code":"runtime_profile_instance_delete_unsupported","error":"blocked"}',
+            "blocked",
+            {
+                "code": "runtime_profile_instance_delete_unsupported",
+                "blocker_counts": None,
+                "profile_identity": None,
+                "auto_cleanup_after_days": None,
+                "cleanup_guidance": None,
+            },
+        ),
+        RuntimeConflictCase(
+            "structured-malformed",
+            b"Error: DELETE /api/runtimes/r1 returned 409: malformed",
+            b"Error: DELETE /api/runtimes/r1 returned 409: malformed".decode(),
+            {
+                "code": None,
+                "blocker_counts": None,
+                "profile_identity": None,
+                "auto_cleanup_after_days": None,
+                "cleanup_guidance": None,
+            },
+        ),
+        RuntimeConflictCase(
+            "plain-legacy",
+            b"Request conflict: runtime has active agents",
+            "Request conflict: runtime has active agents",
+            {
+                "code": None,
+                "blocker_counts": None,
+                "profile_identity": None,
+                "auto_cleanup_after_days": None,
+                "cleanup_guidance": None,
+            },
+        ),
+    ),
+    ids=lambda case: case.id,
+)
+def test_runtime_conflict_error_fields_are_centralized_and_optional(
+    case: RuntimeConflictCase,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    transport = CliTransport(ClientConfig())
+    result = raw_result(
+        argv=("multica", "runtime", "delete", "r1"), stderr=case.stderr, exit_code=1
+    )
+    with pytest.raises(ConflictError) as excinfo:
+        transport._raise_command_error(result)
+    error = excinfo.value
+    assert str(error) == case.expected_message
+    for field, expected in case.expected_fields.items():
+        assert getattr(error, field) == expected
+
+
 def test_classify_cli_failure_prefers_stderr_over_stdout_noise() -> None:
     exc_class, reported = classify_cli_failure(
         exit_code=1,
@@ -1627,6 +1764,23 @@ def test_strict_preflight_is_lazy_uses_exact_json_argv_and_preserves_global_orde
     ]
 
 
+def test_operation_minimum_rejects_new_surface_but_allows_retained_surface() -> None:
+    old_executor = _CompatibilityProbeExecutor(_CLI_0442_ENVELOPE)
+    old_transport = CliTransport(
+        ClientConfig(compatibility=CompatibilityPolicy.strict), executor=old_executor
+    )
+    with pytest.raises(UnsupportedCliVersionError, match=r"below minimum 0\.5\.0"):
+        old_transport.run_bytes(("issue", "comment", "update"), minimum_cli_version="0.5.0")
+    assert len(old_executor.requests) == 1
+
+    retained_executor = _CompatibilityProbeExecutor(_CLI_0442_ENVELOPE)
+    retained_transport = CliTransport(
+        ClientConfig(compatibility=CompatibilityPolicy.strict), executor=retained_executor
+    )
+    retained_transport.run_bytes(("issue", "comment", "add"))
+    assert len(retained_executor.requests) == 2
+
+
 def test_strict_client_constructor_is_lazy_and_first_public_operation_succeeds() -> None:
     executor = _CompatibilityProbeExecutor(_CLI_0442_ENVELOPE)
     config = ClientConfig(compatibility=CompatibilityPolicy.strict)
@@ -1674,10 +1828,11 @@ def test_snapshot_transports_share_compatibility_preflight_cache(
             check_compat: bool = True,
             stdin: bytes | None = None,
             timeout: datetime.timedelta | None = None,
+            minimum_cli_version: str | None = None,
         ) -> RawCommandResult:
             del stdin, timeout
             if check_compat:
-                self._check_compat()
+                self._check_compat(minimum_cli_version)
             self.commands.append(command_args)
             stdout = (
                 _CLI_0442_ENVELOPE if command_args == ("version", "--output", "json") else b"{}"
