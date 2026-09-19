@@ -59,6 +59,7 @@ APPROVED_ACTION_METHODS = frozenset(
         "runtimes.update",
         "skills.delete",
         "skills.files.delete",
+        "skills.labels.remove",
         "squads.members.add",
         "squads.members.remove",
         "workspaces.mcp.remove",

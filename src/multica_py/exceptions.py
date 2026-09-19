@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 
 class MulticaError(Exception):
     pass
@@ -67,12 +69,23 @@ class CommandExecutionError(MulticaError):
         stdout: str = "",
         stderr: str = "",
         argv: tuple[str, ...] = (),
+        *,
+        code: str | None = None,
+        blocker_counts: Mapping[str, int] | None = None,
+        profile_identity: Mapping[str, str] | None = None,
+        cleanup_guidance: str | None = None,
+        auto_cleanup_after_days: int | None = None,
     ) -> None:
         super().__init__(message)
         self.exit_code = exit_code
         self.stdout = stdout
         self.stderr = stderr
         self.argv = argv
+        self.code = code
+        self.blocker_counts = dict(blocker_counts) if blocker_counts is not None else None
+        self.profile_identity = dict(profile_identity) if profile_identity is not None else None
+        self.cleanup_guidance = cleanup_guidance
+        self.auto_cleanup_after_days = auto_cleanup_after_days
 
 
 class AuthenticationError(CommandExecutionError):

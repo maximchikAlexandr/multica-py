@@ -40,7 +40,7 @@ _NESTED_ATTRS: dict[str, tuple[str, ...]] = {
     "autopilots": ("triggers",),
     "issues": ("comments", "labels", "metadata", "subscribers"),
     "projects": ("resources",),
-    "skills": ("files",),
+    "skills": ("files", "labels"),
 }
 
 

@@ -53,7 +53,11 @@ def _parse_semver(version: str) -> tuple[int, int, int] | None:
     match = _SEMVER_PATTERN.match(version)
     if match is None:
         return None
-    return tuple(int(part) for part in match.groups())  # type: ignore[return-value]
+    return (
+        int(match.group(1)),
+        int(match.group(2)),
+        int(match.group(3)),
+    )
 
 
 def _load_supported_bounds() -> tuple[str, str]:
@@ -126,6 +130,7 @@ def check_version_from_config(
     detected: CliVersion | None,
     config: ClientConfig,
     pinned_version: str | None = None,
+    operation_min_version: str | None = None,
 ) -> None:
     if config.compatibility == CompatibilityPolicy.ignore:
         return
@@ -137,6 +142,11 @@ def check_version_from_config(
         raise UnsupportedCliVersionError(message)
     default_min, default_max = _load_supported_bounds()
     min_version = config.min_cli_version or pinned_version or default_min
+    if operation_min_version is not None:
+        configured_min = _parse_semver(min_version)
+        operation_min = _parse_semver(operation_min_version)
+        if operation_min is not None and (configured_min is None or operation_min > configured_min):
+            min_version = operation_min_version
     max_version = config.max_cli_version or default_max
     check_version(
         detected,

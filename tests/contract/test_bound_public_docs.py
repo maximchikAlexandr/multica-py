@@ -607,11 +607,11 @@ def _build_command(case: AfterExample, target: object) -> object:
 
 AFTER_EXAMPLES = (
     AfterExample(
-        'client.agents.create(name="build")',
+        'client.agents.create(name="build", model="gpt-5")',
         AgentResource.create,
         lambda client: client.agents,
         (),
-        (("name", "build"),),
+        (("name", "build"), ("model", "gpt-5")),
         _MIGRATION_AND_CHANGELOG,
     ),
     AfterExample(

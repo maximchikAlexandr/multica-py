@@ -10,8 +10,10 @@ from typing import cast
 import pytest
 
 from multica_py.client import MulticaClient
-from multica_py.exceptions import ConflictError, NotFoundError, ValidationError
+from multica_py.entities.comments import Comment
+from multica_py.exceptions import AuthorizationError, ConflictError, NotFoundError, ValidationError
 from multica_py.models.agents import AgentConversationStarter
+from multica_py.models.common import ActionResult
 from tests.component.resources.cases import CommandCase
 from tests.fixtures.fake_multica import FakeMultica
 
@@ -42,6 +44,165 @@ _COMMAND_CASES: tuple[CommandCase, ...] = (
         args=("c1",),
     ),
     CommandCase(
+        id="comment-update-eager-success",
+        stderr="",
+        expected_error=None,
+        expected_exit_code=0,
+        response_exit_code=0,
+        expected_argv=(
+            "issue",
+            "comment",
+            "update",
+            "cmt_1",
+            "--content",
+            "revised",
+            "--expected-revision",
+            "3",
+            "--output",
+            "json",
+        ),
+        resource_attr="issues.comments",
+        method="update",
+        args=("cmt_1", "revised"),
+        kwargs=(("expected_revision", 3),),
+        stdout='{"id":"cmt_1","content":"revised","revision":3}',
+        expected_comment=("cmt_1", "revised", 3),
+    ),
+    CommandCase(
+        id="runtime-delete-structured-409-full",
+        stderr=(
+            "Error: DELETE /api/runtimes/r1 returned 409: "
+            '{"code":"runtime_profile_instance_delete_unsupported",'
+            '"error":"runtime diagnostic","active_agent_count":2}'
+        ),
+        expected_error=ConflictError,
+        expected_exit_code=1,
+        expected_message="runtime diagnostic",
+        expected_argv=("runtime", "delete", "r1"),
+        resource_attr="runtimes",
+        method="delete",
+        args=("r1",),
+    ),
+    CommandCase(
+        id="runtime-delete-structured-409-optional-missing",
+        stderr=(
+            "Error: DELETE /api/runtimes/r1 returned 409: "
+            '{"code":"runtime_profile_instance_delete_unsupported",'
+            '"error":"stop daemon first"}'
+        ),
+        expected_error=ConflictError,
+        expected_exit_code=1,
+        expected_message="stop daemon first",
+        expected_argv=("runtime", "delete", "r1"),
+        resource_attr="runtimes",
+        method="delete",
+        args=("r1",),
+    ),
+    CommandCase(
+        id="runtime-delete-structured-409-malformed",
+        stderr="Error: DELETE /api/runtimes/r1 returned 409: not-json",
+        expected_error=ConflictError,
+        expected_exit_code=1,
+        expected_argv=("runtime", "delete", "r1"),
+        resource_attr="runtimes",
+        method="delete",
+        args=("r1",),
+    ),
+    CommandCase(
+        id="runtime-delete-structured-404",
+        stderr=(
+            "Error: DELETE /api/runtimes/r1 returned 404: "
+            '{"code":"runtime_not_found","error":"missing runtime"}'
+        ),
+        expected_error=NotFoundError,
+        expected_exit_code=4,
+        expected_message="missing runtime",
+        expected_argv=("runtime", "delete", "r1"),
+        resource_attr="runtimes",
+        method="delete",
+        args=("r1",),
+    ),
+    CommandCase(
+        id="runtime-delete-structured-403",
+        stderr=(
+            "Error: DELETE /api/runtimes/r1 returned 403: "
+            '{"code":"runtime_access_denied","error":"forbidden"}'
+        ),
+        expected_error=AuthorizationError,
+        expected_exit_code=3,
+        expected_message="forbidden",
+        expected_argv=("runtime", "delete", "r1"),
+        resource_attr="runtimes",
+        method="delete",
+        args=("r1",),
+    ),
+    CommandCase(
+        id="runtime-delete-plain-conflict",
+        stderr="Request conflict: runtime has active agents",
+        expected_error=ConflictError,
+        expected_exit_code=1,
+        expected_argv=("runtime", "delete", "r1"),
+        resource_attr="runtimes",
+        method="delete",
+        args=("r1",),
+    ),
+    CommandCase(
+        id="runtime-delete-empty-success-no-cascade",
+        stderr="",
+        expected_error=None,
+        expected_exit_code=0,
+        response_exit_code=0,
+        expected_argv=("runtime", "delete", "r1"),
+        resource_attr="runtimes",
+        method="delete",
+        args=("r1",),
+        expected_action_success=True,
+    ),
+    CommandCase(
+        id="agent-create-model-thinking-argv",
+        stderr="",
+        expected_error=None,
+        expected_exit_code=0,
+        response_exit_code=0,
+        expected_argv=(
+            "agent",
+            "create",
+            "--name",
+            "agent",
+            "--model",
+            "gpt-5",
+            "--thinking-level",
+            "high",
+            "--output",
+            "json",
+        ),
+        resource_attr="agents",
+        method="create",
+        kwargs=(("name", "agent"), ("model", "gpt-5"), ("thinking_level", "high")),
+        stdout='{"id":"a1","name":"agent","model":"gpt-5","thinking_level":"high"}',
+    ),
+    CommandCase(
+        id="agent-update-runtime-swap-argv",
+        stderr="",
+        expected_error=None,
+        expected_exit_code=0,
+        response_exit_code=0,
+        expected_argv=(
+            "agent",
+            "update",
+            "a1",
+            "--runtime-id",
+            "runtime-2",
+            "--output",
+            "json",
+        ),
+        resource_attr="agents",
+        method="update",
+        args=("a1",),
+        kwargs=(("runtime_id", "runtime-2"),),
+        stdout='{"id":"a1","name":"agent","runtime_id":"runtime-2"}',
+    ),
+    CommandCase(
         id="agent-create-conversation-starters",
         stderr="",
         expected_error=None,
@@ -52,6 +213,8 @@ _COMMAND_CASES: tuple[CommandCase, ...] = (
             "create",
             "--name",
             "agent",
+            "--model",
+            "gpt-5",
             "--conversation-starters",
             '[{"label":"Review","prompt":"Review this"},{"label":"Plan","prompt":"Plan this"}]',
             "--output",
@@ -61,6 +224,7 @@ _COMMAND_CASES: tuple[CommandCase, ...] = (
         method="create",
         kwargs=(
             ("name", "agent"),
+            ("model", "gpt-5"),
             (
                 "conversation_starters",
                 (
@@ -179,16 +343,24 @@ def test_public_commands_preserve_typed_fake_cli_detail(
 
         exc = excinfo.value
         assert exc.exit_code == case.expected_exit_code
-        assert case.stderr in str(exc)
+        assert (case.expected_message or case.stderr) in str(exc)
         assert case.stderr in exc.stderr
     else:
         result = operation(*case.args, **dict(case.kwargs))
+        if case.expected_action_success:
+            assert isinstance(result, ActionResult)
+            assert result.success
+            assert result.value is None
         if case.expected_starters is not None:
             assert tuple(getattr(result, "conversation_starters")) == case.expected_starters
         if case.expected_output_truncated is not None:
             assert result.items[0].output_truncated is case.expected_output_truncated
+        if case.expected_comment is not None:
+            assert isinstance(result, Comment)
+            assert (result.id, result.body, result.revision) == case.expected_comment
         records = [
             json.loads(line) for line in record_path.read_text(encoding="utf-8").splitlines()
         ]
+        assert len(records) == 1
         recorded_argv = cast("list[str]", records[-1]["argv"])
         assert tuple(recorded_argv[1:]) == case.expected_argv

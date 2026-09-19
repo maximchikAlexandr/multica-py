@@ -42,6 +42,7 @@ from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.setup import SetupResource
 from multica_py.resources.skill_files import SkillFileResource
+from multica_py.resources.skill_labels import SkillLabelResource
 from multica_py.resources.skills import SkillResource
 from multica_py.resources.squad_members import SquadMemberResource
 from multica_py.resources.squads import SquadResource
@@ -155,6 +156,7 @@ RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("runtimes", RuntimeResource),
     ("setup", SetupResource),
     ("skill_files", SkillFileResource),
+    ("skill_labels", SkillLabelResource),
     ("skills", SkillResource),
     ("squads", SquadResource),
     ("squads_members", SquadMemberResource),
@@ -173,6 +175,7 @@ _NESTED_RESOURCE_ATTRS: dict[tuple[str, str], str] = {
     ("issues", "subscribers"): "issue_subscribers",
     ("projects", "resources"): "project_resources",
     ("skills", "files"): "skill_files",
+    ("skills", "labels"): "skill_labels",
     ("squads", "members"): "squads_members",
     ("workspaces", "mcp"): "workspace_mcp",
 }
@@ -836,6 +839,21 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         contract_operation_id: str | None = None,
         bound_target: str | None = None,
     ) -> OperationCase:
+        if sdk_method == "agents.create" and not id.startswith("generated:"):
+            if not any(name == "model" for name, _value in kwargs):
+                kwargs = (*kwargs, ("model", "multica-test/fake"))
+                if expected_argv:
+                    insert_at = (
+                        expected_argv.index("--conversation-starters")
+                        if "--conversation-starters" in expected_argv
+                        else len(expected_argv) - 2
+                    )
+                    expected_argv = (
+                        *expected_argv[:insert_at],
+                        "--model",
+                        "multica-test/fake",
+                        *expected_argv[insert_at:],
+                    )
         if not transport:
             if sdk_method in _SPAWN_SDK_METHODS:
                 transport = "spawn"
@@ -2470,6 +2488,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             ("runtime", "delete", "r1", "--cascade"),
             args=("r1",),
             kwargs=(("cascade", True),),
+            expected_exception=ValueError,
             id="manual:runtimes.delete:variant:01",
             source_ref="D17",
         ),
@@ -2625,9 +2644,9 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "labels.create",
-            ("label", "create", "--name", "bug", "--output", "json"),
+            ("label", "create", "--name", "bug", "--resource-type", "issue", "--output", "json"),
             args=("bug",),
-            stdout=b'{"id":"lbl_001","name":"bug","color":"red"}',
+            stdout=b'{"id":"lbl_001","name":"bug","color":"red","resource_type":"issue"}',
             id="manual:labels.create:canonical",
         ),
         _c(
@@ -4118,6 +4137,24 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             source_ref="bound-resource-discovered",
             bound_target="skill",
             assert_result=_assert_action_none,
+        ),
+        _c(
+            "skills.Skill.add_label",
+            ("skill", "label", "add", "s1", "lbl_1", "--output", "json"),
+            args=("lbl_1",),
+            stdout=_LBL,
+            id="manual:skills.add_label_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="skill",
+        ),
+        _c(
+            "skills.Skill.remove_label",
+            ("skill", "label", "remove", "s1", "lbl_1", "--output", "json"),
+            args=("lbl_1",),
+            stdout=_LBL,
+            id="manual:skills.remove_label_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="skill",
         ),
         _c(
             "squads.Squad.add_member",
