@@ -55,7 +55,8 @@ operation delta.
 
 #### Scenario: Compatibility uses the generated interval
 - **WHEN** a client reads default policy
-- **THEN** it uses generated minimum and exclusive next-patch maximum versions
+- **THEN** it uses generated minimum and exclusive next-patch maximum versions.
+<!-- Source IDs: 002:FR-025,FR-033 -->
 
 ### Requirement: Git promotion
 A reviewed Git merge changing the approved contract and runtime projection MUST be the only promotion action.
