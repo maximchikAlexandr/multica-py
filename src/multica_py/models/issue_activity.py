@@ -58,6 +58,7 @@ class RunMessage(msgspec.Struct, frozen=True, kw_only=True):
     task_id: str
     seq: int
     type: str
+    call_id: str | None = None
     issue_id: str | None = None
     tool: str | None = None
     content: str | None = None

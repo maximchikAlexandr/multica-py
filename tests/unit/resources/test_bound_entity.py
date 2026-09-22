@@ -30,6 +30,7 @@ from multica_py.exceptions import DetachedEntityError
 from multica_py.models.agents import AgentSkill
 from multica_py.models.autopilots import AutopilotSubscriber, AutopilotTrigger
 from multica_py.models.common import Page
+from multica_py.models.issue_activity import TaskCancellationActor
 from multica_py.models.issues import (
     IssueAssignee,
     IssueChildStageGroup,
@@ -138,6 +139,8 @@ _BOUND_ENTITY_CASES: tuple[_BoundEntity, ...] = (
     TaskRun(
         id="task-1",
         status="completed",
+        wakeup_id="wakeup-1",
+        cancelled_by=TaskCancellationActor(type="system", id="actor-1", name="System"),
         agent_id="agent-1",
         started_at=datetime.datetime(2026, 8, 5, 12, 0, tzinfo=datetime.UTC),
         completed_at=datetime.datetime(2026, 8, 5, 12, 1, tzinfo=datetime.UTC),
@@ -377,6 +380,7 @@ _ENTITY_POLICY_CASES: tuple[EntityPolicyCase, ...] = (
         (
             "id",
             "status",
+            "wakeup_id",
             "cancelled_by",
             "workspace_slug",
             "issue_identifier",
@@ -547,8 +551,6 @@ def test_every_bound_entity_round_trips_all_public_fields(entity: _BoundEntity) 
     assert restored == entity.detach()
     snapshot = restored.to_dict()
     expected_fields = _entity_policy(type(entity)).public_fields
-    if type(entity) is TaskRun and entity.cancelled_by is None:
-        expected_fields = tuple(field for field in expected_fields if field != "cancelled_by")
     assert tuple(snapshot) == expected_fields
     assert all(not field.startswith("_") for field in snapshot)
 

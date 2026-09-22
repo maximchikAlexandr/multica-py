@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-TARGET_VERSION = '0.5.0'
+TARGET_VERSION = '0.5.1'
 MIN_CLI_VERSION = '0.4.42'
-MAX_CLI_VERSION = '0.5.1'
+MAX_CLI_VERSION = '0.5.2'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'
@@ -317,6 +317,7 @@ COMMENT_ADD_BINDING = GeneratedBinding(
 COMMENT_DELETE_BINDING = GeneratedBinding(
     'issues.comments.delete', 'default', ('issue', 'comment', 'delete'),
     (GeneratedMapping('comment_id', 'pos:0', 'path:comment_id'),), ('nonblank:comment_id',),
+    minimum_cli_version='0.4.44',
 )
 
 COMMENT_LIST_BINDING = GeneratedBinding(

@@ -23,7 +23,7 @@ from tools.upstream_contract.contract import (
 )
 
 APPROVED_FILE = Path("contracts/sdk-contract.json")
-DEFAULT_SOURCE_CHECKOUT = Path(".devlocal/upstream-contract/v0.4.44..v0.5.0/source/multica")
+DEFAULT_SOURCE_CHECKOUT = Path(".devlocal/upstream-contract/v0.5.0..v0.5.1/source/multica")
 BASELINE_FILES = (
     "openspec/specs/sdk-surface/spec.md",
     "openspec/specs/subprocess-transport/spec.md",

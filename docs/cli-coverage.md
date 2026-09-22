@@ -1,12 +1,14 @@
 # CLI Coverage
 
-Pinned target upstream: `multica-ai/multica@2df765a3c8f39789c9fb76316378bcffc20d22d9` (tag `v0.5.0`)
+Pinned target upstream: `multica-ai/multica@f41fae6b08fb734afcbd13205c0b3203dd0bc9c6` (tag `v0.5.1`)
 
-The reviewed compatibility interval is `[0.4.42, 0.5.1)`: baseline `v0.4.42`
-remains supported and `v0.5.0` is the maximum tested target. The direct
-`v0.4.44` → `v0.5.0` reconciliation covers 189 baseline and 194 target nodes:
-five additions, three changed label commands, and no removals, renames, or
-moves. `repo checkout --fresh` remains outside the typed SDK surface.
+The reviewed compatibility interval is `[0.4.42, 0.5.2)`: baseline `v0.5.0`
+remains the direct comparison and `v0.5.1` is the maximum tested target. The
+direct `v0.5.0` → `v0.5.1` reconciliation covers 194 baseline and 201 target
+nodes: 192 unchanged, two changed existing nodes (`issue` and `runtime profile
+create`), and seven deferred `issue wakeup` additions, with no removals,
+renames, or moves.
+`runtime profile --runtime-type` remains outside the typed SDK surface.
 
 ## Coverage authority
 
@@ -14,8 +16,8 @@ The approved contract is `contracts/sdk-contract.json`. It records reviewed
 operation IDs, source references, mappings, presence semantics, validators,
 and test vectors. `tests/cases/operations.py::OPERATION_CASES` is the sole
 success-operation executor and retains the complete public SDK table: 164
-approved operations, 81 response models, 163 response-entrypoint inventory
-rows (157 unchanged and 6 changed), 37 relation IDs, and 84 contract vectors
+approved operations, 81 response models, 167 response-entrypoint inventory
+rows (164 unchanged and 3 changed), 37 relation IDs, and 84 contract vectors
 (70 canonical and 14 variants). The frozen operation table contains 350 cases
 (190 canonical and 160 non-canonical), while 143 current payload fingerprints
 guard unchanged response behavior.

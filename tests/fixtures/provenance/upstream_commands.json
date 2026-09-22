@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "pinned_sha": "2df765a3c8f39789c9fb76316378bcffc20d22d9",
-    "tag": "v0.5.0",
-    "visible_leaf_count": 157
+    "pinned_sha": "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6",
+    "tag": "v0.5.1",
+    "visible_leaf_count": 164
   },
   "commands": [
     "agent archive",
@@ -82,6 +82,13 @@
     "issue subscriber list",
     "issue subscriber remove",
     "issue update",
+    "issue wakeup",
+    "issue wakeup events",
+    "issue wakeup list",
+    "issue wakeup get",
+    "issue wakeup disable",
+    "issue wakeup create",
+    "issue wakeup update",
     "issue usage",
     "label create",
     "label delete",

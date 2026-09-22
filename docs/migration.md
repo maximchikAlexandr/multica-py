@@ -259,6 +259,25 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
+## v0.5.1 SDK additions and behavior
+
+### Direct 0.5.0 → 0.5.1 migration
+
+The approved target is Multica CLI `0.5.1` at source commit
+`f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`; the compatibility interval is
+`[0.4.42, 0.5.2)`. This is a direct additive model-compatibility update: the
+existing `agents.tasks` `AgentTask` projection and `issues.runs` `TaskRun`
+projection may expose the same optional opaque-string `wakeup_id`, and run
+messages may expose an optional opaque-string `call_id`. Missing fields,
+including legacy payloads, decode as `None`; present non-string values remain
+protocol errors.
+
+The upstream `issue wakeup` command family is retained as deferred correlation
+context and is not exposed as SDK CRUD, generated operations, models, enums, or
+retry behavior. Runtime-profile `--runtime-type` likewise remains outside the
+typed SDK. Existing updater and work-directory/file-channel contracts are
+unchanged.
+
 ## v0.5.0 SDK additions and behavior
 
 ### Direct 0.4.44 → 0.5.0 migration

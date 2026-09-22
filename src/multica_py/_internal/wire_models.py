@@ -389,6 +389,7 @@ class _TaskUsageWire(msgspec.Struct, frozen=True, kw_only=True):
 class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     status: str
+    wakeup_id: str | None | msgspec.UnsetType = msgspec.UNSET
     cancelled_by: _TaskCancellationActorWire | msgspec.UnsetType = msgspec.UNSET
     workspace_slug: str | None | msgspec.UnsetType = msgspec.UNSET
     issue_identifier: str | None | msgspec.UnsetType = msgspec.UNSET
@@ -528,6 +529,7 @@ def _task_run_from_wire(
     return TaskRun(
         id=wire.id,
         status=wire.status,
+        wakeup_id=None if wire.wakeup_id is msgspec.UNSET else wire.wakeup_id,
         cancelled_by=cancelled_by,
         workspace_slug=None if wire.workspace_slug is msgspec.UNSET else wire.workspace_slug,
         issue_identifier=(
@@ -644,6 +646,7 @@ def _task_run_from_wire(
                 ((("agent_id", _presence_seed(wire.agent_id)),) if include_agent_presence else ())
                 + (
                     ("workspace_slug", _presence_seed(wire.workspace_slug)),
+                    ("wakeup_id", _presence_seed(wire.wakeup_id)),
                     ("issue_identifier", _presence_seed(wire.issue_identifier)),
                     ("workspace_context", _presence_seed(wire.workspace_context)),
                     ("issue_title", _presence_seed(wire.issue_title)),
@@ -696,6 +699,7 @@ class _RunMessageWire(msgspec.Struct, frozen=True, kw_only=True):
     task_id: str
     seq: int
     type: str
+    call_id: str | None = None
     issue_id: str | None = None
     tool: str | None = None
     content: str | None = None
@@ -729,6 +733,7 @@ def _run_message_from_wire(wire: _RunMessageWire) -> RunMessage:
         task_id=wire.task_id,
         seq=wire.seq,
         type=wire.type,
+        call_id=wire.call_id,
         issue_id=wire.issue_id,
         tool=wire.tool,
         content=wire.content,

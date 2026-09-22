@@ -29,7 +29,7 @@ from tools.upstream_contract.evidence import ReleaseIdentity, collect
 from tools.upstream_contract.generation import _validate_transient_projection, render_files
 
 APPROVED = pathlib.Path("contracts/sdk-contract.json")
-PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.4.44..v0.5.0/source/multica")
+PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.5.0..v0.5.1/source/multica")
 
 _SQUAD_MEMBER_OPERATION_IDS = (
     "squads.members.add",
@@ -469,20 +469,20 @@ def test_issue_operation_rationales_stay_with_their_operations() -> None:
     }
 
 
-def test_response_registry_has_old_target_ranges_and_explicit_removals() -> None:
+def test_response_registry_has_target_ranges_and_explicit_removals() -> None:
     contract = validate_contract(APPROVED)
     registry = contract.compatibility.response_registry
-    assert len(registry) == 163
+    assert len(registry) == 167
     assert {item.disposition for item in registry} == {"changed", "unchanged"}
     assert {
         url.split("/blob/")[1].split("/")[0] for item in registry for url in item.source_urls
     } == {
-        "c7f259c70a60bff30011c403fada79ab382f608a",
         "2df765a3c8f39789c9fb76316378bcffc20d22d9",
+        "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6",
     }
     assert all("#L1-L1" not in url for item in registry for url in item.source_urls)
     assert not any(item.operation_id.startswith("plugins.") for item in registry)
-    assert sum(item.disposition == "changed" for item in registry) == 6
+    assert sum(item.disposition == "changed" for item in registry) == 3
     assert all(
         all(token in item.action for token in ("model=", "fixture=", "docs=")) for item in registry
     )
@@ -746,15 +746,15 @@ def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     )
 
 
-def test_current_target_and_source_refs_are_pinned_to_v050() -> None:
+def test_current_target_and_source_refs_are_pinned_to_v051() -> None:
     contract = load_contract(APPROVED)
-    assert contract.target.version == "0.5.0"
-    assert contract.target.tag == "v0.5.0"
-    assert contract.target.commit == "2df765a3c8f39789c9fb76316378bcffc20d22d9"
-    assert contract.target.release_id == "391379076"
+    assert contract.target.version == "0.5.1"
+    assert contract.target.tag == "v0.5.1"
+    assert contract.target.commit == "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6"
+    assert contract.target.release_id == "392880229"
     assert (
         contract.target.release_provenance_ref
-        == ".devlocal/upstream-contract/v0.4.44..v0.5.0/release/release-verification.json"
+        == ".devlocal/upstream-contract/v0.5.0..v0.5.1/release/release-verification.json"
     )
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
     stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
@@ -765,22 +765,10 @@ def test_current_target_and_source_refs_are_pinned_to_v050() -> None:
     )
 
 
-def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separate() -> None:
+def test_compatibility_binary_and_release_provenance_are_exact() -> None:
     contract = load_contract(APPROVED)
     compatibility = contract.compatibility
-    assert (
-        compatibility.min_cli_version,
-        compatibility.max_tested_cli_version,
-    ) == ("0.4.42", "0.5.0")
     assert compatibility.verified_binaries == (
-        VerifiedBinary(
-            version="0.4.44",
-            commit="c7f259c70a60bff30011c403fada79ab382f608a",
-            build_date="2026-09-15T10:40:35Z",
-            go_version="go1.26.8",
-            os="darwin",
-            arch="arm64",
-        ),
         VerifiedBinary(
             version="0.5.0",
             commit="2df765a3c8f39789c9fb76316378bcffc20d22d9",
@@ -789,8 +777,16 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
             os="darwin",
             arch="arm64",
         ),
+        VerifiedBinary(
+            version="0.5.1",
+            commit="f41fae6b08fb734afcbd13205c0b3203dd0bc9c6",
+            build_date="2026-09-21T10:42:33Z",
+            go_version="go1.26.8",
+            os="darwin",
+            arch="arm64",
+        ),
     )
-    assert [item.version for item in compatibility.release_artifacts] == ["0.4.44", "0.5.0"]
+    assert [item.version for item in compatibility.release_artifacts] == ["0.5.0", "0.5.1"]
     assert (
         compatibility.release_artifacts[0].archive_sha256
         != compatibility.release_artifacts[0].executable_sha256
@@ -799,17 +795,39 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
         compatibility.release_artifacts[1].archive_sha256
         != compatibility.release_artifacts[1].executable_sha256
     )
+
+
+def test_compatibility_command_inventory_is_reconciled() -> None:
+    compatibility = load_contract(APPROVED).compatibility
     assert compatibility.command_inventory == replace(
         compatibility.command_inventory,
-        baseline_nodes=189,
-        target_nodes=194,
-        unchanged=186,
-        changed=3,
-        added=5,
+        baseline_nodes=194,
+        target_nodes=201,
+        unchanged=192,
+        changed=2,
+        added=7,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
     )
+    assert (
+        len(compatibility.command_inventory.added_commands) == compatibility.command_inventory.added
+    )
+    assert (
+        len(compatibility.command_inventory.changed_commands)
+        == compatibility.command_inventory.changed
+    )
+    assert set(compatibility.command_inventory.added_commands).isdisjoint(
+        compatibility.command_inventory.changed_commands
+    )
+
+
+def test_compatibility_reviewed_response_bounds_are_exact() -> None:
+    compatibility = load_contract(APPROVED).compatibility
+    assert (
+        compatibility.min_cli_version,
+        compatibility.max_tested_cli_version,
+    ) == ("0.4.42", "0.5.1")
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
         "agents.tasks",
         "labels.create",
@@ -817,25 +835,84 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
         "labels.update",
         "runtimes.delete",
         "skills.list",
+        "issues.runs",
+        "issues.run_messages",
     }
 
 
-@pytest.mark.parametrize(
-    ("field", "expected_message"),
-    (
-        ("baseline_nodes", "baseline_nodes"),
-        ("target_nodes", "target_nodes"),
+@dataclass(frozen=True)
+class CommandInventoryMutationCase:
+    case_id: str
+    field: str
+    expected_message: str
+
+
+COMMAND_INVENTORY_TOTAL_CASES = (
+    CommandInventoryMutationCase("baseline-nodes", "baseline_nodes", "baseline_nodes"),
+    CommandInventoryMutationCase("target-nodes", "target_nodes", "target_nodes"),
+)
+
+COMMAND_INVENTORY_COUNT_CASES = (
+    CommandInventoryMutationCase("added-commands", "added_commands", "added count"),
+    CommandInventoryMutationCase("changed-commands", "changed_commands", "changed count"),
+)
+
+COMMAND_INVENTORY_DUPLICATE_CASES = (
+    CommandInventoryMutationCase("added-commands-duplicate", "added_commands", "must be unique"),
+    CommandInventoryMutationCase(
+        "changed-commands-duplicate", "changed_commands", "must be unique"
     ),
 )
+
+
+@pytest.mark.parametrize("case", COMMAND_INVENTORY_TOTAL_CASES, ids=lambda case: case.case_id)
 def test_command_inventory_rejects_non_reconciling_totals(
-    field: str, expected_message: str, tmp_path: pathlib.Path
+    case: CommandInventoryMutationCase, tmp_path: pathlib.Path
 ) -> None:
     document = json.loads(APPROVED.read_text(encoding="utf-8"))
-    document["compatibility"]["command_inventory"][field] = 188
-    path = tmp_path / f"inventory-{field}.json"
+    document["compatibility"]["command_inventory"][case.field] = 188
+    path = tmp_path / f"inventory-{case.field}.json"
     path.write_text(json.dumps(document), encoding="utf-8")
 
-    with pytest.raises(ContractError, match=expected_message):
+    with pytest.raises(ContractError, match=case.expected_message):
+        load_contract(path)
+
+
+@pytest.mark.parametrize("case", COMMAND_INVENTORY_COUNT_CASES, ids=lambda case: case.case_id)
+def test_command_inventory_rejects_count_drift(
+    case: CommandInventoryMutationCase, tmp_path: pathlib.Path
+) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    document["compatibility"]["command_inventory"][case.field] = []
+    path = tmp_path / f"inventory-{case.field}.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ContractError, match=case.expected_message):
+        load_contract(path)
+
+
+def test_command_inventory_rejects_added_changed_overlap(tmp_path: pathlib.Path) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    inventory = document["compatibility"]["command_inventory"]
+    inventory["added_commands"][0] = inventory["changed_commands"][0]
+    path = tmp_path / "inventory-overlap.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ContractError, match="must not overlap"):
+        load_contract(path)
+
+
+@pytest.mark.parametrize("case", COMMAND_INVENTORY_DUPLICATE_CASES, ids=lambda case: case.case_id)
+def test_command_inventory_rejects_duplicate_delta_entries(
+    case: CommandInventoryMutationCase, tmp_path: pathlib.Path
+) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    entries = document["compatibility"]["command_inventory"][case.field]
+    entries[1] = entries[0]
+    path = tmp_path / f"inventory-duplicate-{case.field}.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ContractError, match=case.expected_message):
         load_contract(path)
 
 
@@ -855,7 +932,7 @@ def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     assert json.loads(files[2].content) == {
         "max_cli_version": "0.4.36",
         "min_cli_version": "0.4.27",
-        "target_version": "0.5.0",
+        "target_version": "0.5.1",
     }
 
 

@@ -38,16 +38,13 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "c7f259c70a60bff30011c403fada79ab382f608a"
-_TARGET_COMMIT = "2df765a3c8f39789c9fb76316378bcffc20d22d9"
-_V050_CHANGED_RESPONSE_WORK_ITEMS = frozenset(
+_BASELINE_COMMIT = "2df765a3c8f39789c9fb76316378bcffc20d22d9"
+_TARGET_COMMIT = "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6"
+_V051_CHANGED_RESPONSE_WORK_ITEMS = frozenset(
     {
         "agent_tasks",
-        "labels_create_manual",
-        "label_list",
-        "labels_update_manual",
-        "runtime_delete",
-        "skill_list",
+        "issue_runs",
+        "issue_run_messages",
     }
 )
 _TAG_KINDS = frozenset(
@@ -822,6 +819,122 @@ def _exact_keys(value: dict[str, object], expected: frozenset[str], label: str) 
         raise ContractError(f"{label} is missing fields: {', '.join(missing)}")
 
 
+def _validate_issue_wakeup_evidence(item: dict[str, object], source_ref_ids: set[str]) -> None:
+    evidence = _dict(
+        item["deferred_evidence"], "scope.family_dispositions.issue-wakeup.deferred_evidence"
+    )
+    _exact_keys(
+        evidence,
+        frozenset({"nodes", "mappings", "semantics"}),
+        "scope.family_dispositions.issue-wakeup.deferred_evidence",
+    )
+    expected_nodes = (
+        "issue wakeup",
+        "issue wakeup events",
+        "issue wakeup list",
+        "issue wakeup get",
+        "issue wakeup disable",
+        "issue wakeup create",
+        "issue wakeup update",
+    )
+    nodes = _list(
+        evidence["nodes"],
+        "scope.family_dispositions.issue-wakeup.deferred_evidence.nodes",
+    )
+    if len(nodes) != len(expected_nodes):
+        raise ContractError("issue-wakeup evidence must contain all seven deferred nodes")
+    node_commands: list[str] = []
+    referenced_mapping_ids: set[str] = set()
+    for index, value in enumerate(nodes):
+        node = _dict(value, f"issue-wakeup evidence node {index}")
+        _exact_keys(
+            node,
+            frozenset({"command", "source_ref_ids", "mapping_ids", "constraints", "semantics"}),
+            f"issue-wakeup evidence node {index}",
+        )
+        command = _str(node["command"], f"issue-wakeup evidence node {index}.command")
+        node_commands.append(command)
+        refs = tuple(
+            _str(ref, f"issue-wakeup evidence node {index}.source_ref_ids")
+            for ref in _list(
+                node["source_ref_ids"], f"issue-wakeup evidence node {index}.source_ref_ids"
+            )
+        )
+        if not refs or not set(refs) <= source_ref_ids:
+            raise ContractError(f"issue-wakeup evidence node {index} has unknown source refs")
+        node_mapping_ids = tuple(
+            _str(mapping, f"issue-wakeup evidence node {index}.mapping_ids")
+            for mapping in _list(
+                node["mapping_ids"], f"issue-wakeup evidence node {index}.mapping_ids"
+            )
+        )
+        referenced_mapping_ids.update(node_mapping_ids)
+        for field in ("constraints", "semantics"):
+            values = _list(node[field], f"issue-wakeup evidence node {index}.{field}")
+            if not values:
+                raise ContractError(f"issue-wakeup evidence node {index}.{field} cannot be empty")
+            for semantic_value in values:
+                _str(semantic_value, f"issue-wakeup evidence node {index}.{field}")
+    if tuple(node_commands) != expected_nodes:
+        raise ContractError("issue-wakeup evidence nodes must list the seven commands in order")
+
+    mappings = _list(
+        evidence["mappings"],
+        "scope.family_dispositions.issue-wakeup.deferred_evidence.mappings",
+    )
+    mapping_ids: set[str] = set()
+    for index, value in enumerate(mappings):
+        mapping = _dict(value, f"issue-wakeup evidence mapping {index}")
+        _exact_keys(
+            mapping,
+            frozenset({"mapping_id", "input", "destination", "source_ref_ids"}),
+            f"issue-wakeup evidence mapping {index}",
+        )
+        mapping_id = _str(
+            mapping["mapping_id"], f"issue-wakeup evidence mapping {index}.mapping_id"
+        )
+        if mapping_id in mapping_ids:
+            raise ContractError("issue-wakeup evidence mapping IDs must be unique")
+        mapping_ids.add(mapping_id)
+        _str(mapping["input"], f"issue-wakeup evidence mapping {index}.input")
+        _str(mapping["destination"], f"issue-wakeup evidence mapping {index}.destination")
+        refs = tuple(
+            _str(ref, f"issue-wakeup evidence mapping {index}.source_ref_ids")
+            for ref in _list(
+                mapping["source_ref_ids"],
+                f"issue-wakeup evidence mapping {index}.source_ref_ids",
+            )
+        )
+        if not refs or not set(refs) <= source_ref_ids:
+            raise ContractError(f"issue-wakeup evidence mapping {index} has unknown source refs")
+    if referenced_mapping_ids != mapping_ids:
+        raise ContractError("issue-wakeup evidence node mappings must match the pinned mapping set")
+
+    semantics = _dict(
+        evidence["semantics"],
+        "scope.family_dispositions.issue-wakeup.deferred_evidence.semantics",
+    )
+    semantic_fields = frozenset(
+        {
+            "scheduling",
+            "timezone",
+            "replacement",
+            "reenable",
+            "retry",
+            "duration",
+            "mutual_exclusion",
+            "loop_protection",
+        }
+    )
+    _exact_keys(
+        semantics,
+        semantic_fields,
+        "scope.family_dispositions.issue-wakeup.deferred_evidence.semantics",
+    )
+    for field in semantic_fields:
+        _str(semantics[field], f"issue-wakeup evidence semantics.{field}")
+
+
 @dataclass(frozen=True)
 class Target:
     version: str
@@ -880,6 +993,8 @@ class CommandInventory:
     removed: int
     hidden: tuple[str, ...]
     test_only: tuple[str, ...]
+    added_commands: tuple[str, ...] = ()
+    changed_commands: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -891,6 +1006,7 @@ class Compatibility:
     command_inventory: CommandInventory
     reviewed_responses: tuple[ReviewedResponse, ...]
     response_registry: tuple[ResponseReview, ...]
+    response_review_complete: bool
 
 
 @dataclass(frozen=True)
@@ -2012,6 +2128,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 "command_inventory",
                 "reviewed_responses",
                 "response_registry",
+                "response_review_complete",
+                "response_audit",
             }
         ),
         "compatibility",
@@ -2114,6 +2232,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         "removed",
         "hidden",
         "test_only",
+        "added_commands",
+        "changed_commands",
     )
     _exact_keys(inventory_raw, frozenset(inventory_fields), "compatibility.command_inventory")
     inventory = CommandInventory(
@@ -2137,6 +2257,19 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 inventory_raw["test_only"], "compatibility.command_inventory.test_only"
             )
         ),
+        added_commands=tuple(
+            _str(value, "compatibility.command_inventory.added_commands")
+            for value in _list(
+                inventory_raw["added_commands"], "compatibility.command_inventory.added_commands"
+            )
+        ),
+        changed_commands=tuple(
+            _str(value, "compatibility.command_inventory.changed_commands")
+            for value in _list(
+                inventory_raw["changed_commands"],
+                "compatibility.command_inventory.changed_commands",
+            )
+        ),
     )
     if inventory.baseline_nodes != inventory.unchanged + inventory.changed + inventory.removed:
         raise ContractError(
@@ -2144,6 +2277,18 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         )
     if inventory.target_nodes != inventory.unchanged + inventory.changed + inventory.added:
         raise ContractError("command inventory target_nodes must equal unchanged + changed + added")
+    if len(set(inventory.added_commands)) != len(inventory.added_commands):
+        raise ContractError("command inventory added_commands must be unique")
+    if len(set(inventory.changed_commands)) != len(inventory.changed_commands):
+        raise ContractError("command inventory changed_commands must be unique")
+    if set(inventory.added_commands) & set(inventory.changed_commands):
+        raise ContractError(
+            "command inventory added_commands and changed_commands must not overlap"
+        )
+    if len(inventory.added_commands) != inventory.added:
+        raise ContractError("command inventory added count must match added_commands")
+    if len(inventory.changed_commands) != inventory.changed:
+        raise ContractError("command inventory changed count must match changed_commands")
     response_registry: list[ResponseReview] = []
     for index, value in enumerate(
         _list(compatibility_raw["response_registry"], "compatibility.response_registry")
@@ -2192,6 +2337,41 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 action=action,
             )
         )
+    response_review_complete = _bool(
+        compatibility_raw["response_review_complete"],
+        "compatibility.response_review_complete",
+    )
+    response_audit = _dict(compatibility_raw["response_audit"], "compatibility.response_audit")
+    _exact_keys(
+        response_audit,
+        frozenset({"supported_entrypoints", "changed", "unchanged", "changed_entrypoints"}),
+        "compatibility.response_audit",
+    )
+    if (
+        _int(
+            response_audit["supported_entrypoints"],
+            "compatibility.response_audit.supported_entrypoints",
+        )
+        != 167
+    ):
+        raise ContractError("response audit must cover exactly 167 supported entrypoints")
+    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 3:
+        raise ContractError("response audit must contain exactly three changed entrypoints")
+    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 164:
+        raise ContractError("response audit must contain exactly 164 unchanged entrypoints")
+    changed_entrypoints = tuple(
+        _str(value, "compatibility.response_audit.changed_entrypoints")
+        for value in _list(
+            response_audit["changed_entrypoints"],
+            "compatibility.response_audit.changed_entrypoints",
+        )
+    )
+    if set(changed_entrypoints) != {
+        "agents.tasks",
+        "issues.runs",
+        "issues.run_messages",
+    }:
+        raise ContractError("response audit changed entrypoints do not match the approved set")
     compatibility = Compatibility(
         min_cli_version=bounds[0],
         max_tested_cli_version=bounds[1],
@@ -2200,6 +2380,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         command_inventory=inventory,
         reviewed_responses=tuple(reviewed_responses),
         response_registry=tuple(response_registry),
+        response_review_complete=response_review_complete,
     )
     catalogs = _dict(raw["catalogs"], "catalogs")
     catalog_required = frozenset(
@@ -2259,7 +2440,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             item,
             frozenset(
                 {"family", "disposition", "required_operation_ids", "source_ref_ids", "rationale"}
-            ),
+            )
+            | ({"deferred_evidence"} if item.get("family") == "issue-wakeup" else set()),
             f"scope.family_dispositions[{index}]",
         )
         for field in ("family", "disposition", "rationale"):
@@ -2302,6 +2484,11 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         if vector.operation_id not in operation_ids:
             raise ContractError(f"{vector.vector_id} references unknown operation")
     source_refs = _source_refs(raw["source_refs"])
+    source_ref_ids = {item.source_ref_id for item in source_refs}
+    for disposition in _list(scope["family_dispositions"], "scope.family_dispositions"):
+        item = _dict(disposition, "scope.family_dispositions item")
+        if item.get("family") == "issue-wakeup":
+            _validate_issue_wakeup_evidence(item, source_ref_ids)
     if any(item.commit != target.commit for item in source_refs):
         raise ContractError("every source_refs commit must match target.commit")
     test_refs = _test_refs(raw["test_refs"])
@@ -2341,37 +2528,47 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.commit,
         contract.target.release_id,
     ) != (
-        "0.5.0",
-        "v0.5.0",
-        "2df765a3c8f39789c9fb76316378bcffc20d22d9",
-        "391379076",
+        "0.5.1",
+        "v0.5.1",
+        "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6",
+        "392880229",
     ):
-        raise ContractError("approved contract must target Multica v0.5.0")
+        raise ContractError("approved contract must target Multica v0.5.1")
     if contract.compatibility.command_inventory != CommandInventory(
-        baseline_nodes=189,
-        target_nodes=194,
-        unchanged=186,
-        changed=3,
-        added=5,
+        baseline_nodes=194,
+        target_nodes=201,
+        unchanged=192,
+        changed=2,
+        added=7,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
-    ):
-        raise ContractError("command inventory does not match the approved 0.4.44/0.5.0 review")
-    expected_artifacts = {
-        "0.4.44": (
-            "v0.4.44",
-            "389061637",
-            "multica-cli-0.4.44-darwin-arm64.tar.gz",
-            "f300cf8036b1f596466acde35f67d986f1f75a657f77e6e0e9de1134563a76aa",
-            "ac26860e3f60ab6eafd4e7066d43d0fad2b0691adfefac339c4921e1dd68f774",
+        added_commands=(
+            "issue wakeup",
+            "issue wakeup events",
+            "issue wakeup list",
+            "issue wakeup get",
+            "issue wakeup disable",
+            "issue wakeup create",
+            "issue wakeup update",
         ),
+        changed_commands=("issue", "runtime profile create"),
+    ):
+        raise ContractError("command inventory does not match the approved 0.5.0/0.5.1 review")
+    expected_artifacts = {
         "0.5.0": (
             "v0.5.0",
             "391379076",
             "multica-cli-0.5.0-darwin-arm64.tar.gz",
             "b4bae1001c30a870c784b19123437df9f09308f750a699ce3693877ba6ffc5d1",
             "e8305b68e13d7cceeaaf382723d465552a9555b6540f1899527eccb36847e094",
+        ),
+        "0.5.1": (
+            "v0.5.1",
+            "392880229",
+            "multica-cli-0.5.1-darwin-arm64.tar.gz",
+            "85c5e6d8f9af4c3cfef9a6632a94b682ca09afb1e62900a8565eab5bb26a12ec",
+            "a7223c87c3da4b77afa8b0941504678c30a2770dd1d03df5f2325301360ed588",
         ),
     }
     actual_artifacts = {
@@ -2388,9 +2585,11 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         raise ContractError(
             "release artifact provenance does not match the approved baseline/target"
         )
-    if len(contract.compatibility.response_registry) != 163:
-        raise ContractError("response registry must contain exactly 163 response entrypoints")
-    if len({item.work_item_id for item in contract.compatibility.response_registry}) != 163:
+    if not contract.compatibility.response_review_complete:
+        raise ContractError("response review must be complete")
+    if len(contract.compatibility.response_registry) != 167:
+        raise ContractError("response registry must contain exactly 167 response entrypoints")
+    if len({item.work_item_id for item in contract.compatibility.response_registry}) != 167:
         raise ContractError("response registry work item IDs must be unique")
     dispositions = {
         disposition: sum(
@@ -2398,16 +2597,16 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
         for disposition in ("unchanged", "changed")
     }
-    if dispositions != {"unchanged": 157, "changed": 6}:
-        raise ContractError("response registry must split into 157 unchanged and 6 changed items")
+    if dispositions != {"unchanged": 164, "changed": 3}:
+        raise ContractError("response registry must split into 164 unchanged and 3 changed items")
     changed_work_items = {
         item.work_item_id
         for item in contract.compatibility.response_registry
         if item.disposition == "changed"
     }
-    if changed_work_items != _V050_CHANGED_RESPONSE_WORK_ITEMS:
+    if changed_work_items != _V051_CHANGED_RESPONSE_WORK_ITEMS:
         raise ContractError(
-            "response registry changed work items do not match the approved 0.5.0 review"
+            "response registry changed work items do not match the approved 0.5.1 review"
         )
     _validate_direct_bindings(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
@@ -2491,6 +2690,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             "intentionally_changed",
             "requires_cli>=0.4.44",
             "requires_cli>=0.5.0",
+            "requires_cli>=0.5.1",
         }:
             raise ContractError(
                 f"operation {operation.operation_id!r} has an invalid compatibility value"

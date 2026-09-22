@@ -35,6 +35,7 @@ from multica_py.exceptions import OutputShapeError
 from multica_py.models.agents import AgentTask
 from multica_py.models.issue_activity import (
     IssueUsage,
+    RunMessage,
     TaskCancellationActor,
     TaskIssueStatusData,
     TaskPluginHookTool,
@@ -1100,13 +1101,145 @@ def test_task_cancellation_actor_malformed_shapes_fail_closed(payload: dict[str,
         )
 
 
-@pytest.mark.parametrize("value", (None, False, True), ids=("legacy", "complete", "truncated"))
-def test_run_message_output_truncated_is_tri_state(value: bool | None) -> None:
-    payload: dict[str, object] = {"task_id": "task-1", "seq": 1, "type": "tool_result"}
-    if value is not None:
-        payload["output_truncated"] = value
-    message = decode_run_messages(json.dumps([payload]).encode(), "issue run-messages")[0]
-    assert message.output_truncated is value
+@dataclass(frozen=True)
+class RunMessageCorrelationCase:
+    payload: dict[str, object]
+    expected: RunMessage
+
+
+@dataclass(frozen=True)
+class TaskRunWakeupCase:
+    id: str
+    payload: dict[str, object]
+    expected_wakeup_id: str | None
+    serialized_wakeup_id: bool
+
+
+@dataclass(frozen=True)
+class RunMessageCallCase:
+    id: str
+    payload: dict[str, object]
+    expected_call_id: str | None
+
+
+RUN_MESSAGE_CORRELATION_CASES = (
+    RunMessageCorrelationCase(
+        {
+            "task_id": "task-1",
+            "seq": 1,
+            "type": "tool_use",
+            "call_id": "call-1",
+            "issue_id": "issue-1",
+            "content": "start",
+            "input": {"prompt": "hello"},
+            "output": "started",
+            "created_at": "2026-09-12T12:34:56.123456Z",
+        },
+        RunMessage(
+            task_id="task-1",
+            seq=1,
+            type="tool_use",
+            call_id="call-1",
+            issue_id="issue-1",
+            content="start",
+            input={"prompt": "hello"},
+            output="started",
+            created_at=datetime.datetime(2026, 9, 12, 12, 34, 56, 123456, tzinfo=datetime.UTC),
+        ),
+    ),
+    RunMessageCorrelationCase(
+        {
+            "task_id": "task-1",
+            "seq": 2,
+            "type": "tool_result",
+            "call_id": "call-2",
+            "issue_id": "issue-1",
+            "tool": "bash",
+            "content": "done",
+            "input": {"cmd": "echo hi"},
+            "output": "hi",
+            "created_at": "2026-09-12T12:34:57.123456Z",
+            "output_truncated": False,
+        },
+        RunMessage(
+            task_id="task-1",
+            seq=2,
+            type="tool_result",
+            call_id="call-2",
+            issue_id="issue-1",
+            tool="bash",
+            content="done",
+            input={"cmd": "echo hi"},
+            output="hi",
+            created_at=datetime.datetime(2026, 9, 12, 12, 34, 57, 123456, tzinfo=datetime.UTC),
+            output_truncated=False,
+        ),
+    ),
+    RunMessageCorrelationCase(
+        {
+            "task_id": "task-1",
+            "seq": 3,
+            "type": "text",
+            "call_id": "call-3",
+            "content": "partial",
+            "input": {"done": True},
+            "output": "partial",
+            "created_at": "2026-09-12T12:34:58.123456Z",
+            "output_truncated": True,
+        },
+        RunMessage(
+            task_id="task-1",
+            seq=3,
+            type="text",
+            call_id="call-3",
+            content="partial",
+            input={"done": True},
+            output="partial",
+            created_at=datetime.datetime(2026, 9, 12, 12, 34, 58, 123456, tzinfo=datetime.UTC),
+            output_truncated=True,
+        ),
+    ),
+)
+
+
+TASK_RUN_WAKEUP_CASES = (
+    TaskRunWakeupCase(
+        "present",
+        {"id": "task-1", "status": "completed", "issue_id": "issue-1", "wakeup_id": "wakeup-1"},
+        "wakeup-1",
+        True,
+    ),
+    TaskRunWakeupCase(
+        "omitted",
+        {"id": "task-1", "status": "completed", "issue_id": "issue-1"},
+        None,
+        False,
+    ),
+)
+
+
+RUN_MESSAGE_CALL_CASES = (
+    RunMessageCallCase(
+        "present",
+        {"task_id": "task-1", "seq": 2, "type": "tool_result", "call_id": "call-1"},
+        "call-1",
+    ),
+    RunMessageCallCase(
+        "omitted",
+        {"task_id": "task-1", "seq": 2, "type": "tool_result"},
+        None,
+    ),
+)
+
+
+def test_run_message_correlation_case_preserves_order_and_all_fields() -> None:
+    payload = json.dumps([case.payload for case in RUN_MESSAGE_CORRELATION_CASES]).encode()
+    messages = decode_run_messages(payload, "issue run-messages")
+
+    assert messages == tuple(case.expected for case in RUN_MESSAGE_CORRELATION_CASES)
+    assert tuple(message.seq for message in messages) == (1, 2, 3)
+    assert tuple(message.call_id for message in messages) == ("call-1", "call-2", "call-3")
+    assert tuple(message.output_truncated for message in messages) == (None, False, True)
 
 
 def test_run_message_preserves_timestamp_and_rejects_null_truncation() -> None:
@@ -1123,6 +1256,53 @@ def test_run_message_preserves_timestamp_and_rejects_null_truncation() -> None:
     with pytest.raises(OutputShapeError):
         decode_run_messages(
             b'[{"task_id":"task-1","seq":1,"type":"text","output_truncated":null}]',
+            "issue run-messages",
+        )
+
+
+@pytest.mark.parametrize("case", TASK_RUN_WAKEUP_CASES, ids=lambda case: case.id)
+def test_task_run_and_agent_task_wakeup_id_round_trip(case: TaskRunWakeupCase) -> None:
+    run = _task_run_from_wire(
+        decode_json(json.dumps(case.payload).encode(), _TaskRunWire), issue_id="issue-1"
+    )
+    agent_task = decode_json(json.dumps([case.payload]).encode(), list[AgentTask])[0]
+
+    assert run.wakeup_id == case.expected_wakeup_id
+    assert agent_task.wakeup_id == case.expected_wakeup_id
+    run_data = run.to_dict()
+    assert run_data["id"] == "task-1"
+    assert run_data["status"] == "completed"
+    assert ("wakeup_id" in run_data) is case.serialized_wakeup_id
+    assert run_data.get("wakeup_id") == case.expected_wakeup_id
+    assert msgspec.to_builtins(agent_task)["wakeup_id"] == case.expected_wakeup_id
+
+
+@pytest.mark.parametrize("case", RUN_MESSAGE_CALL_CASES, ids=lambda case: case.id)
+def test_run_message_call_id_round_trip(case: RunMessageCallCase) -> None:
+    message = decode_run_messages(json.dumps([case.payload]).encode(), "issue run-messages")[0]
+    assert message.call_id == case.expected_call_id
+    assert message.seq == 2
+    assert msgspec.to_builtins(message)["call_id"] == case.expected_call_id
+
+
+def test_task_run_wakeup_id_rejects_non_strings() -> None:
+    with pytest.raises((OutputShapeError, msgspec.ValidationError)):
+        wire = decode_json(b'{"id":"task-1","status":"completed","wakeup_id":1}', _TaskRunWire)
+        _task_run_from_wire(wire, issue_id="issue-1")
+
+
+def test_agent_task_wakeup_id_rejects_non_strings() -> None:
+    with pytest.raises((OutputShapeError, msgspec.ValidationError)):
+        decode_json(
+            b'[{"id":"task-1","status":"completed","issue_id":"issue-1","wakeup_id":1}]',
+            list[AgentTask],
+        )
+
+
+def test_run_message_call_id_rejects_non_strings() -> None:
+    with pytest.raises((OutputShapeError, msgspec.ValidationError)):
+        decode_run_messages(
+            b'[{"task_id":"task-1","seq":1,"type":"text","call_id":1}]',
             "issue run-messages",
         )
 

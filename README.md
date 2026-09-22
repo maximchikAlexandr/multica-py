@@ -31,13 +31,17 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
-The approved SDK target is Multica CLI `0.5.0` at commit
-`2df765a3c8f39789c9fb76316378bcffc20d22d9`, with compatibility interval
-`[0.4.42, 0.5.1)`. Migrate directly from CLI/SDK `0.4.44`; no intermediate
-SDK release is supported. Retained operations remain compatible with CLI
-`0.4.42`; comment updates, skill labels, reviewed label inputs, and target-only
-response fields require `0.5.0`. See [the migration guide](docs/migration.md)
-for presence/error semantics, checksum roles, and atomic rollback guidance.
+The approved SDK target is Multica CLI `0.5.1` at commit
+`f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`, with compatibility interval
+`[0.4.42, 0.5.2)`. Migrate directly from CLI/SDK `0.5.0`; no intermediate
+SDK release is supported. Existing operation-level gates from `0.5.0` remain
+unchanged; the global `0.4.42` floor applies where already approved.
+The existing `AgentTask` projection from `agents.tasks` and `TaskRun` projection
+from `issues.runs` expose the same optional opaque-string `wakeup_id` response
+field; `RunMessage` exposes optional `call_id`. These fields require `0.5.1`
+when present. The `issue wakeup` command family and runtime profiles remain
+outside this SDK. See [the migration guide](docs/migration.md) for
+presence/error semantics, checksum roles, and atomic rollback guidance.
 
 ## Usage
 
@@ -55,7 +59,7 @@ command = client.issues.get_command("issue_123")
 print(command.commands)
 issue = command.run()
 
-# Reviewed v0.5.0 issue projection options remain opt-in.
+# Reviewed issue projection options remain opt-in.
 page = client.issues.list(
     fields=("id", "title", "properties"),
     property_filters=("Environment=prod",),

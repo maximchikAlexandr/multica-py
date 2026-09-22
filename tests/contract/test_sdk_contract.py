@@ -53,9 +53,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.5.0'" in runtime
+    assert b"TARGET_VERSION = '0.5.1'" in runtime
     assert b"MIN_CLI_VERSION = '0.4.42'" in runtime
-    assert b"MAX_CLI_VERSION = '0.5.1'" in runtime
+    assert b"MAX_CLI_VERSION = '0.5.2'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -67,6 +67,38 @@ def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
             f"{descriptor.operation_id!r}, {descriptor.entrypoint_id!r}, {descriptor.command!r}"
         ).encode()
         assert descriptor_header in runtime
+
+
+def test_deferred_issue_wakeup_evidence_is_complete_without_sdk_operations() -> None:
+    contract = validate_contract(APPROVED)
+    scope = cast("dict[str, object]", contract.raw["scope"])
+    dispositions = cast("list[dict[str, object]]", scope["family_dispositions"])
+    wakeup = next(item for item in dispositions if item["family"] == "issue-wakeup")
+    evidence = cast("dict[str, object]", wakeup["deferred_evidence"])
+    nodes = cast("list[dict[str, object]]", evidence["nodes"])
+    assert [node["command"] for node in nodes] == [
+        "issue wakeup",
+        "issue wakeup events",
+        "issue wakeup list",
+        "issue wakeup get",
+        "issue wakeup disable",
+        "issue wakeup create",
+        "issue wakeup update",
+    ]
+    assert set(cast("dict[str, object]", evidence["semantics"])) == {
+        "scheduling",
+        "timezone",
+        "replacement",
+        "reenable",
+        "retry",
+        "duration",
+        "mutual_exclusion",
+        "loop_protection",
+    }
+    assert not hasattr(contract.compatibility, "response_audit")
+    assert not contract.operations or not any(
+        "wakeup" in operation.operation_id for operation in contract.operations
+    )
 
 
 def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -> None:
@@ -95,11 +127,11 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
     assert "kind" not in str(update_binding)
 
     binary = next(
-        item for item in contract.compatibility.verified_binaries if item.version == "0.4.44"
+        item for item in contract.compatibility.verified_binaries if item.version == "0.5.0"
     )
-    assert binary.commit.startswith("c7f259c70")
+    assert binary.commit.startswith("2df765a3c")
     assert (binary.build_date, binary.go_version, binary.os, binary.arch) == (
-        "2026-09-15T10:40:35Z",
+        "2026-09-18T10:09:36Z",
         "go1.26.8",
         "darwin",
         "arm64",
@@ -111,6 +143,8 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
         "labels.update",
         "runtimes.delete",
         "skills.list",
+        "issues.runs",
+        "issues.run_messages",
     }
 
 
@@ -130,13 +164,13 @@ def test_retained_inventory_and_fresh_checkout_remain_outside_typed_surface() ->
     assert len(operation_ids) == 164
     assert operation_ids == scoped_operation_ids
     assert len(contract.responses) == 81
-    assert len(contract.compatibility.response_registry) == 163
+    assert len(contract.compatibility.response_registry) == 167
     assert (
         sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
-        == 157
+        == 164
     )
     assert (
-        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 6
+        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 3
     )
     assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
 
