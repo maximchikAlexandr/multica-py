@@ -377,6 +377,7 @@ _ENTITY_POLICY_CASES: tuple[EntityPolicyCase, ...] = (
         (
             "id",
             "status",
+            "wakeup_id",
             "cancelled_by",
             "workspace_slug",
             "issue_identifier",
@@ -549,6 +550,8 @@ def test_every_bound_entity_round_trips_all_public_fields(entity: _BoundEntity) 
     expected_fields = _entity_policy(type(entity)).public_fields
     if type(entity) is TaskRun and entity.cancelled_by is None:
         expected_fields = tuple(field for field in expected_fields if field != "cancelled_by")
+    if type(entity) is TaskRun and entity.wakeup_id is None:
+        expected_fields = tuple(field for field in expected_fields if field != "wakeup_id")
     assert tuple(snapshot) == expected_fields
     assert all(not field.startswith("_") for field in snapshot)
 

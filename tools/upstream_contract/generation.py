@@ -147,7 +147,7 @@ def _runtime(
     minimums = {
         operation.operation_id: operation.compatibility.removeprefix("requires_cli>=")
         for operation in operations
-        if operation.compatibility == f"requires_cli>={compatibility.target_version}"
+        if operation.compatibility.startswith("requires_cli>=")
     }
     for descriptor in sorted(binding_descriptors, key=binding_operation_key):
         mappings = ", ".join(

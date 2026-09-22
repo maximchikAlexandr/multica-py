@@ -1127,6 +1127,76 @@ def test_run_message_preserves_timestamp_and_rejects_null_truncation() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (("wakeup_id", "wakeup-1"), ("wakeup_id", None), ("call_id", "call-1"), ("call_id", None)),
+)
+def test_optional_run_correlation_fields_round_trip(field: str, value: str | None) -> None:
+    if field == "wakeup_id":
+        payload: dict[str, object] = {
+            "id": "task-1",
+            "status": "completed",
+            "issue_id": "issue-1",
+        }
+        if value is not None:
+            payload[field] = value
+        run = _task_run_from_wire(
+            decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+        )
+        agent_task = decode_json(json.dumps([payload]).encode(), list[AgentTask])[0]
+        assert run.wakeup_id == value
+        assert agent_task.wakeup_id == value
+        run_data = run.to_dict()
+        if value is None:
+            assert field not in run_data
+        else:
+            assert run_data[field] == value
+        assert msgspec.to_builtins(agent_task)[field] == value
+        return
+
+    message_payload: dict[str, object] = {
+        "task_id": "task-1",
+        "seq": 2,
+        "type": "tool_result",
+    }
+    if value is not None:
+        message_payload[field] = value
+    message = decode_run_messages(json.dumps([message_payload]).encode(), "issue run-messages")[0]
+    assert message.call_id == value
+    assert message.seq == 2
+    assert msgspec.to_builtins(message)[field] == value
+
+
+@pytest.mark.parametrize(
+    ("model_type", "payload"),
+    (
+        (
+            _TaskRunWire,
+            {"id": "task-1", "status": "completed", "wakeup_id": 1},
+        ),
+        (
+            AgentTask,
+            [{"id": "task-1", "status": "completed", "issue_id": "issue-1", "wakeup_id": 1}],
+        ),
+        (
+            "run-message",
+            [{"task_id": "task-1", "seq": 1, "type": "text", "call_id": 1}],
+        ),
+    ),
+)
+def test_optional_run_correlation_fields_reject_non_strings(
+    model_type: object, payload: object
+) -> None:
+    with pytest.raises((OutputShapeError, msgspec.ValidationError)):
+        if model_type is _TaskRunWire:
+            wire = decode_json(json.dumps(payload).encode(), _TaskRunWire)
+            _task_run_from_wire(wire, issue_id="issue-1")
+        elif model_type is AgentTask:
+            decode_json(json.dumps(payload).encode(), list[AgentTask])
+        else:
+            decode_run_messages(json.dumps(payload).encode(), "issue run-messages")
+
+
 def test_issue_usage_counts_preserve_large_integers_independently() -> None:
     usage = decode_json(
         b'{"task_count":2,"terminal_task_count":9007199254740993,'

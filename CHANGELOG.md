@@ -7,12 +7,31 @@ one inspectable command contract canonical. Relation `.all()` tuple snapshots
 remain unchanged. The complete compiling migration table is in
 [docs/migration.md](docs/migration.md).
 
-### Multica 0.5.0 compatibility migration
+### Multica 0.5.1 compatibility migration
+
+- Targets CLI `0.5.1` at
+  `f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`, with bounds
+  `[0.4.42, 0.5.2)`; migrate directly from `0.5.0` with no intermediate SDK
+  release.
+- Preserves optional open-string `TaskRun.wakeup_id` and `RunMessage.call_id`
+  when supplied, while omitted legacy values remain `None` and malformed
+  values fail at the typed protocol boundary.
+- Reconciles 194 baseline to 201 target command nodes: 192 unchanged, two
+  changed existing nodes (`issue` and `runtime profile create`), and seven
+  deferred `issue wakeup` additions. Runtime profiles remain outside the SDK
+  surface. Contract, generated runtime, tests, docs, and package claims roll
+  back atomically if gates fail.
+
+### Historical Multica 0.5.0 compatibility migration
 
 - Targets CLI `0.5.0` at
   `2df765a3c8f39789c9fb76316378bcffc20d22d9`, with bounds
   `[0.4.42, 0.5.1)`; migrate directly from `0.4.44` with no intermediate
   SDK release.
+- Baseline release `391379076` used archive
+  `b4bae1001c30a870c784b19123437df9f09308f750a699ce3693877ba6ffc5d1` and
+  extracted executable
+  `e8305b68e13d7cceeaaf382723d465552a9555b6540f1899527eccb36847e094`.
 - Adds text-only optimistic `issues.comments.update` with a required positive
   revision, typed `skills.labels.list/add/remove`, and preloaded `Skill.labels`.
 - Extends labels with reviewed `issue`/`skill` resource types and
@@ -133,7 +152,8 @@ the exact before/after import table is maintained in the migration guide.
   uncosted categories, while `TaskRun` retains reviewed runtime, worktree,
   result, and failure context. Historical notes for CLI 0.4.32 retain the
   superseded interval `[0.4.28, 0.4.33)`; the current approved target is
-  `0.5.0` with compatibility interval `[0.4.42, 0.5.1)`.
+  `0.5.1` with compatibility interval `[0.4.42, 0.5.2)`; the `0.5.0`
+  release is comparison provenance only.
 
 ## 0.1.0 (unreleased)
 

@@ -268,6 +268,7 @@ def _stream_task_run_events(
 class TaskRun(_BoundEntity):  # type: ignore[misc]
     id: str
     status: str
+    wakeup_id: str | None = None
     cancelled_by: TaskCancellationActor | None = None
     workspace_slug: str | None = None
     issue_identifier: str | None = None
@@ -337,6 +338,8 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
         # entity with no actor must serialize as the legacy omitted shape.
         if self.cancelled_by is None:
             data.pop("cancelled_by", None)
+        if self.wakeup_id is None:
+            data.pop("wakeup_id", None)
         return data
 
     @classmethod

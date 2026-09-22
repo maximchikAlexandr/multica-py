@@ -6,14 +6,16 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
-## Approved v0.5.0 target
+## Approved v0.5.1 target
 
-This SDK contract supports Multica CLI `0.5.0` at commit
-`2df765a3c8f39789c9fb76316378bcffc20d22d9`, with the tested interval
-`[0.4.42, 0.5.1)`. Migrate directly from `0.4.44`; no intermediate SDK
-release is required. Retained operations remain compatible with `0.4.42`,
-while comment updates, skill labels, reviewed label inputs, and target-only
-response fields require CLI `0.5.0`.
+This SDK contract supports Multica CLI `0.5.1` at commit
+`f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`, with the tested interval
+`[0.4.42, 0.5.2)`. Migrate directly from `0.5.0`; no intermediate SDK
+release is required. Existing operation-level gates from `0.5.0` remain
+unchanged; the global `0.4.42` floor applies where already approved.
+`TaskRun.wakeup_id` and `RunMessage.call_id` are optional opaque-string
+correlation fields and require CLI `0.5.1` when present. The `issue wakeup`
+family is deferred and runtime profiles are not SDK surface.
 
 The `Comment.deleted_at` field is `None` only when the wire field is omitted;
 valid target timestamps are preserved, while explicit null and malformed values
@@ -29,8 +31,9 @@ Agent starters accept a tuple of up to three
 prompts are trimmed for nonblank validation and limited to 80 and 4000 Unicode
 code points. `None`, malformed values, and invalid items fail before transport.
 The additive response fields are presence-aware: omitted cancellation and usage
-values remain `None`, and omitted `RunMessage.output_truncated` means unknown
-rather than false. `false` and `true` remain distinct.
+values remain `None`, omitted correlation fields remain `None`, and omitted
+`RunMessage.output_truncated` means unknown rather than false. `false` and
+`true` remain distinct.
 
 ## Client
 

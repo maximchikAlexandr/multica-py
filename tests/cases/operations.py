@@ -603,6 +603,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
     _TASK_RUN_ROWS = msgspec.json.decode(_TASK_RUN)
     for row in _TASK_RUN_ROWS:
         row.pop("cancelled_by", None)
+        row.pop("wakeup_id", None)
     _TASK_RUN = msgspec.json.encode(_TASK_RUN_ROWS)
     _USAGE = msgspec.json.encode(IssueUsage(total_runs=3))
     _USAGE_FIELDS = msgspec.json.decode(_USAGE)

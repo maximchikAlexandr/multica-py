@@ -17,6 +17,7 @@ class AgentTask(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     status: str
     issue_id: str
+    wakeup_id: str | None = None
     issue_title: str | None = None
     issue_description: str | None = None
     issue_status: str | None = None
