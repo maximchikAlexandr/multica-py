@@ -35,6 +35,7 @@ from multica_py.exceptions import OutputShapeError
 from multica_py.models.agents import AgentTask
 from multica_py.models.issue_activity import (
     IssueUsage,
+    RunMessage,
     TaskCancellationActor,
     TaskIssueStatusData,
     TaskPluginHookTool,
@@ -1100,13 +1101,100 @@ def test_task_cancellation_actor_malformed_shapes_fail_closed(payload: dict[str,
         )
 
 
-@pytest.mark.parametrize("value", (None, False, True), ids=("legacy", "complete", "truncated"))
-def test_run_message_output_truncated_is_tri_state(value: bool | None) -> None:
-    payload: dict[str, object] = {"task_id": "task-1", "seq": 1, "type": "tool_result"}
-    if value is not None:
-        payload["output_truncated"] = value
-    message = decode_run_messages(json.dumps([payload]).encode(), "issue run-messages")[0]
-    assert message.output_truncated is value
+@dataclass(frozen=True)
+class RunMessageCorrelationCase:
+    payload: dict[str, object]
+    expected: RunMessage
+
+
+RUN_MESSAGE_CORRELATION_CASES = (
+    RunMessageCorrelationCase(
+        {
+            "task_id": "task-1",
+            "seq": 1,
+            "type": "tool_use",
+            "call_id": "call-1",
+            "issue_id": "issue-1",
+            "content": "start",
+            "input": {"prompt": "hello"},
+            "output": "started",
+            "created_at": "2026-09-12T12:34:56.123456Z",
+        },
+        RunMessage(
+            task_id="task-1",
+            seq=1,
+            type="tool_use",
+            call_id="call-1",
+            issue_id="issue-1",
+            content="start",
+            input={"prompt": "hello"},
+            output="started",
+            created_at=datetime.datetime(2026, 9, 12, 12, 34, 56, 123456, tzinfo=datetime.UTC),
+        ),
+    ),
+    RunMessageCorrelationCase(
+        {
+            "task_id": "task-1",
+            "seq": 2,
+            "type": "tool_result",
+            "call_id": "call-2",
+            "issue_id": "issue-1",
+            "tool": "bash",
+            "content": "done",
+            "input": {"cmd": "echo hi"},
+            "output": "hi",
+            "created_at": "2026-09-12T12:34:57.123456Z",
+            "output_truncated": False,
+        },
+        RunMessage(
+            task_id="task-1",
+            seq=2,
+            type="tool_result",
+            call_id="call-2",
+            issue_id="issue-1",
+            tool="bash",
+            content="done",
+            input={"cmd": "echo hi"},
+            output="hi",
+            created_at=datetime.datetime(2026, 9, 12, 12, 34, 57, 123456, tzinfo=datetime.UTC),
+            output_truncated=False,
+        ),
+    ),
+    RunMessageCorrelationCase(
+        {
+            "task_id": "task-1",
+            "seq": 3,
+            "type": "text",
+            "call_id": "call-3",
+            "content": "partial",
+            "input": {"done": True},
+            "output": "partial",
+            "created_at": "2026-09-12T12:34:58.123456Z",
+            "output_truncated": True,
+        },
+        RunMessage(
+            task_id="task-1",
+            seq=3,
+            type="text",
+            call_id="call-3",
+            content="partial",
+            input={"done": True},
+            output="partial",
+            created_at=datetime.datetime(2026, 9, 12, 12, 34, 58, 123456, tzinfo=datetime.UTC),
+            output_truncated=True,
+        ),
+    ),
+)
+
+
+def test_run_message_correlation_case_preserves_order_and_all_fields() -> None:
+    payload = json.dumps([case.payload for case in RUN_MESSAGE_CORRELATION_CASES]).encode()
+    messages = decode_run_messages(payload, "issue run-messages")
+
+    assert messages == tuple(case.expected for case in RUN_MESSAGE_CORRELATION_CASES)
+    assert tuple(message.seq for message in messages) == (1, 2, 3)
+    assert tuple(message.call_id for message in messages) == ("call-1", "call-2", "call-3")
+    assert tuple(message.output_truncated for message in messages) == (None, False, True)
 
 
 def test_run_message_preserves_timestamp_and_rejects_null_truncation() -> None:
@@ -1128,73 +1216,78 @@ def test_run_message_preserves_timestamp_and_rejects_null_truncation() -> None:
 
 
 @pytest.mark.parametrize(
-    ("field", "value"),
-    (("wakeup_id", "wakeup-1"), ("wakeup_id", None), ("call_id", "call-1"), ("call_id", None)),
+    ("payload", "expected_wakeup_id", "expected_serialized"),
+    (
+        (
+            {"id": "task-1", "status": "completed", "issue_id": "issue-1", "wakeup_id": "wakeup-1"},
+            "wakeup-1",
+            True,
+        ),
+        (
+            {"id": "task-1", "status": "completed", "issue_id": "issue-1"},
+            None,
+            False,
+        ),
+    ),
+    ids=("present", "omitted"),
 )
-def test_optional_run_correlation_fields_round_trip(field: str, value: str | None) -> None:
-    if field == "wakeup_id":
-        payload: dict[str, object] = {
-            "id": "task-1",
-            "status": "completed",
-            "issue_id": "issue-1",
-        }
-        if value is not None:
-            payload[field] = value
-        run = _task_run_from_wire(
-            decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
-        )
-        agent_task = decode_json(json.dumps([payload]).encode(), list[AgentTask])[0]
-        assert run.wakeup_id == value
-        assert agent_task.wakeup_id == value
-        run_data = run.to_dict()
-        if value is None:
-            assert field not in run_data
-        else:
-            assert run_data[field] == value
-        assert msgspec.to_builtins(agent_task)[field] == value
-        return
+def test_task_run_and_agent_task_wakeup_id_round_trip(
+    payload: dict[str, object],
+    expected_wakeup_id: str | None,
+    expected_serialized: bool,
+) -> None:
+    run = _task_run_from_wire(
+        decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+    )
+    agent_task = decode_json(json.dumps([payload]).encode(), list[AgentTask])[0]
 
-    message_payload: dict[str, object] = {
-        "task_id": "task-1",
-        "seq": 2,
-        "type": "tool_result",
-    }
-    if value is not None:
-        message_payload[field] = value
-    message = decode_run_messages(json.dumps([message_payload]).encode(), "issue run-messages")[0]
-    assert message.call_id == value
-    assert message.seq == 2
-    assert msgspec.to_builtins(message)[field] == value
+    assert run.wakeup_id == expected_wakeup_id
+    assert agent_task.wakeup_id == expected_wakeup_id
+    run_data = run.to_dict()
+    assert run_data["id"] == "task-1"
+    assert run_data["status"] == "completed"
+    assert ("wakeup_id" in run_data) is expected_serialized
+    assert run_data.get("wakeup_id") == expected_wakeup_id
+    assert msgspec.to_builtins(agent_task)["wakeup_id"] == expected_wakeup_id
 
 
 @pytest.mark.parametrize(
-    ("model_type", "payload"),
+    ("payload", "expected_call_id"),
     (
-        (
-            _TaskRunWire,
-            {"id": "task-1", "status": "completed", "wakeup_id": 1},
-        ),
-        (
-            AgentTask,
-            [{"id": "task-1", "status": "completed", "issue_id": "issue-1", "wakeup_id": 1}],
-        ),
-        (
-            "run-message",
-            [{"task_id": "task-1", "seq": 1, "type": "text", "call_id": 1}],
-        ),
+        ({"task_id": "task-1", "seq": 2, "type": "tool_result", "call_id": "call-1"}, "call-1"),
+        ({"task_id": "task-1", "seq": 2, "type": "tool_result"}, None),
     ),
+    ids=("present", "omitted"),
 )
-def test_optional_run_correlation_fields_reject_non_strings(
-    model_type: object, payload: object
+def test_run_message_call_id_round_trip(
+    payload: dict[str, object], expected_call_id: str | None
 ) -> None:
+    message = decode_run_messages(json.dumps([payload]).encode(), "issue run-messages")[0]
+    assert message.call_id == expected_call_id
+    assert message.seq == 2
+    assert msgspec.to_builtins(message)["call_id"] == expected_call_id
+
+
+def test_task_run_wakeup_id_rejects_non_strings() -> None:
     with pytest.raises((OutputShapeError, msgspec.ValidationError)):
-        if model_type is _TaskRunWire:
-            wire = decode_json(json.dumps(payload).encode(), _TaskRunWire)
-            _task_run_from_wire(wire, issue_id="issue-1")
-        elif model_type is AgentTask:
-            decode_json(json.dumps(payload).encode(), list[AgentTask])
-        else:
-            decode_run_messages(json.dumps(payload).encode(), "issue run-messages")
+        wire = decode_json(b'{"id":"task-1","status":"completed","wakeup_id":1}', _TaskRunWire)
+        _task_run_from_wire(wire, issue_id="issue-1")
+
+
+def test_agent_task_wakeup_id_rejects_non_strings() -> None:
+    with pytest.raises((OutputShapeError, msgspec.ValidationError)):
+        decode_json(
+            b'[{"id":"task-1","status":"completed","issue_id":"issue-1","wakeup_id":1}]',
+            list[AgentTask],
+        )
+
+
+def test_run_message_call_id_rejects_non_strings() -> None:
+    with pytest.raises((OutputShapeError, msgspec.ValidationError)):
+        decode_run_messages(
+            b'[{"task_id":"task-1","seq":1,"type":"text","call_id":1}]',
+            "issue run-messages",
+        )
 
 
 def test_issue_usage_counts_preserve_large_integers_independently() -> None:

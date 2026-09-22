@@ -17241,16 +17241,97 @@
         "rationale": "Telemetry changes are internal and generate no public SDK symbol, parameter, relation, or adapter."
       },
       {
-        "family": "issue-wakeup",
-        "disposition": "defer",
-        "required_operation_ids": [],
-        "source_ref_ids": [
-          "S-ISSUE-WAKEUP-CLI",
-          "S-ISSUE-WAKEUP-RUN",
-          "S-ISSUE-WAKEUP-SERVICE",
-          "S-ISSUE-WAKEUP-HANDLER"
+      "family": "issue-wakeup",
+      "disposition": "defer",
+      "required_operation_ids": [],
+      "source_ref_ids": [
+        "S-ISSUE-WAKEUP-CLI",
+        "S-ISSUE-WAKEUP-RUN",
+        "S-ISSUE-WAKEUP-SERVICE",
+        "S-ISSUE-WAKEUP-HANDLER"
+      ],
+      "rationale": "The parent and six wakeup leaves remain reviewed candidate evidence only; no public operation, model, enum, retry, or compatibility promise is generated.",
+      "deferred_evidence": {
+        "nodes": [
+          {
+            "command": "issue wakeup",
+            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-RUN"],
+            "mapping_ids": [],
+            "constraints": ["Parent command only; child lifecycle remains deferred."],
+            "semantics": ["Candidate family boundary is evidence only; no generated operation is allowed."]
+          },
+          {
+            "command": "issue wakeup events",
+            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"],
+            "mapping_ids": ["kind", "event", "filter-agent-id", "filter-actor-type", "filter-actor-id", "task-id", "parent"],
+            "constraints": ["Event filters and task/actor selectors are source-governed candidates."],
+            "semantics": ["Event-triggered wakeups remain deferred until the complete family is approved."]
+          },
+          {
+            "command": "issue wakeup list",
+            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-RUN", "S-ISSUE-WAKEUP-HANDLER"],
+            "mapping_ids": ["agent-id", "kind", "event", "filter-agent-id", "filter-actor-type", "filter-actor-id", "task-id", "parent"],
+            "constraints": ["List filters and pagination remain candidate evidence, not a public resource promise."],
+            "semantics": ["Read/list behavior does not authorize wakeup models or relations."]
+          },
+          {
+            "command": "issue wakeup get",
+            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-RUN", "S-ISSUE-WAKEUP-HANDLER"],
+            "mapping_ids": ["agent-id", "task-id"],
+            "constraints": ["Get uses list-then-local-select behavior where required by the reviewed command path."],
+            "semantics": ["Lookup behavior remains evidence only and creates no public wakeup identity type."]
+          },
+          {
+            "command": "issue wakeup disable",
+            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE", "S-ISSUE-WAKEUP-HANDLER"],
+            "mapping_ids": ["agent-id", "task-id"],
+            "constraints": ["Disable is part of the deferred lifecycle and cannot be exposed independently."],
+            "semantics": ["Disable/re-enable behavior remains coupled to complete replacement semantics."]
+          },
+          {
+            "command": "issue wakeup create",
+            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE", "S-ISSUE-WAKEUP-HANDLER"],
+            "mapping_ids": ["agent-id", "instruction", "instruction-file", "kind", "mode", "event", "filter-agent-id", "filter-actor-type", "filter-actor-id", "task-id", "parent", "at", "after", "every", "cron", "timezone"],
+            "constraints": ["Inline and file instruction channels, event filters, and schedule modes remain source-governed candidates."],
+            "semantics": ["Create-only retry and schedule validation are evidence only; no retry promise is generated."]
+          },
+          {
+            "command": "issue wakeup update",
+            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE", "S-ISSUE-WAKEUP-HANDLER"],
+            "mapping_ids": ["agent-id", "instruction", "instruction-file", "kind", "mode", "event", "filter-agent-id", "filter-actor-type", "filter-actor-id", "task-id", "parent", "at", "after", "every", "cron", "timezone"],
+            "constraints": ["Update is complete replacement and cannot be separated from re-enable behavior."],
+            "semantics": ["Replacement and re-enable rules remain candidate evidence only."]
+          }
         ],
-        "rationale": "The parent and six wakeup leaves remain reviewed candidate evidence only; no public operation, model, enum, retry, or compatibility promise is generated."
+        "mappings": [
+          {"mapping_id": "agent-id", "input": "agent-id", "destination": "agent_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-RUN"]},
+          {"mapping_id": "instruction", "input": "instruction", "destination": "instruction", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "instruction-file", "input": "instruction-file", "destination": "instruction", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "kind", "input": "kind", "destination": "kind", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "mode", "input": "mode", "destination": "mode", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "event", "input": "event", "destination": "event_types", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "filter-agent-id", "input": "filter-agent-id", "destination": "filter_agent_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "filter-actor-type", "input": "filter-actor-type", "destination": "filter_actor_type", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "filter-actor-id", "input": "filter-actor-id", "destination": "filter_actor_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "task-id", "input": "task-id", "destination": "filter_task_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "parent", "input": "parent", "destination": "parent_comment_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "at", "input": "at", "destination": "at", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "after", "input": "after", "destination": "after_seconds", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "every", "input": "every", "destination": "interval_seconds", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "cron", "input": "cron", "destination": "cron_expression", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
+          {"mapping_id": "timezone", "input": "timezone", "destination": "timezone", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]}
+        ],
+        "semantics": {
+          "scheduling": "Absolute at, delayed after_seconds, interval every, and cron cron_expression are distinct candidate schedule modes.",
+          "timezone": "Timezone is validated with the schedule and remains a candidate input mapping.",
+          "replacement": "Update replaces the complete wakeup input rather than patching individual fields.",
+          "reenable": "Update re-enables the wakeup as part of the complete replacement lifecycle.",
+          "retry": "Create may retry once after 250 ms only for HTTP 409 wakeup_source_busy; ambiguous failures are not retried.",
+          "duration": "Delayed and interval durations are positive whole seconds within the source-defined bounds.",
+          "mutual_exclusion": "Event selectors are mutually constrained, and event scheduling is mutually exclusive with absolute/delayed/interval/cron scheduling.",
+          "loop_protection": "Event-triggered wakeups require loop-protection guidance so a wakeup cannot recursively trigger itself."
+        }
+      }
       },
       {
         "family": "runtime-profile",

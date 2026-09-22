@@ -69,6 +69,38 @@ def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
         assert descriptor_header in runtime
 
 
+def test_deferred_issue_wakeup_evidence_is_complete_without_sdk_operations() -> None:
+    contract = validate_contract(APPROVED)
+    scope = cast("dict[str, object]", contract.raw["scope"])
+    dispositions = cast("list[dict[str, object]]", scope["family_dispositions"])
+    wakeup = next(item for item in dispositions if item["family"] == "issue-wakeup")
+    evidence = cast("dict[str, object]", wakeup["deferred_evidence"])
+    nodes = cast("list[dict[str, object]]", evidence["nodes"])
+    assert [node["command"] for node in nodes] == [
+        "issue wakeup",
+        "issue wakeup events",
+        "issue wakeup list",
+        "issue wakeup get",
+        "issue wakeup disable",
+        "issue wakeup create",
+        "issue wakeup update",
+    ]
+    assert set(cast("dict[str, object]", evidence["semantics"])) == {
+        "scheduling",
+        "timezone",
+        "replacement",
+        "reenable",
+        "retry",
+        "duration",
+        "mutual_exclusion",
+        "loop_protection",
+    }
+    assert not hasattr(contract.compatibility, "response_audit")
+    assert not contract.operations or not any(
+        "wakeup" in operation.operation_id for operation in contract.operations
+    )
+
+
 def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -> None:
     contract = validate_contract(APPROVED)
     catalogs = cast("dict[str, object]", contract.raw["catalogs"])

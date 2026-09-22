@@ -819,6 +819,122 @@ def _exact_keys(value: dict[str, object], expected: frozenset[str], label: str) 
         raise ContractError(f"{label} is missing fields: {', '.join(missing)}")
 
 
+def _validate_issue_wakeup_evidence(item: dict[str, object], source_ref_ids: set[str]) -> None:
+    evidence = _dict(
+        item["deferred_evidence"], "scope.family_dispositions.issue-wakeup.deferred_evidence"
+    )
+    _exact_keys(
+        evidence,
+        frozenset({"nodes", "mappings", "semantics"}),
+        "scope.family_dispositions.issue-wakeup.deferred_evidence",
+    )
+    expected_nodes = (
+        "issue wakeup",
+        "issue wakeup events",
+        "issue wakeup list",
+        "issue wakeup get",
+        "issue wakeup disable",
+        "issue wakeup create",
+        "issue wakeup update",
+    )
+    nodes = _list(
+        evidence["nodes"],
+        "scope.family_dispositions.issue-wakeup.deferred_evidence.nodes",
+    )
+    if len(nodes) != len(expected_nodes):
+        raise ContractError("issue-wakeup evidence must contain all seven deferred nodes")
+    node_commands: list[str] = []
+    referenced_mapping_ids: set[str] = set()
+    for index, value in enumerate(nodes):
+        node = _dict(value, f"issue-wakeup evidence node {index}")
+        _exact_keys(
+            node,
+            frozenset({"command", "source_ref_ids", "mapping_ids", "constraints", "semantics"}),
+            f"issue-wakeup evidence node {index}",
+        )
+        command = _str(node["command"], f"issue-wakeup evidence node {index}.command")
+        node_commands.append(command)
+        refs = tuple(
+            _str(ref, f"issue-wakeup evidence node {index}.source_ref_ids")
+            for ref in _list(
+                node["source_ref_ids"], f"issue-wakeup evidence node {index}.source_ref_ids"
+            )
+        )
+        if not refs or not set(refs) <= source_ref_ids:
+            raise ContractError(f"issue-wakeup evidence node {index} has unknown source refs")
+        node_mapping_ids = tuple(
+            _str(mapping, f"issue-wakeup evidence node {index}.mapping_ids")
+            for mapping in _list(
+                node["mapping_ids"], f"issue-wakeup evidence node {index}.mapping_ids"
+            )
+        )
+        referenced_mapping_ids.update(node_mapping_ids)
+        for field in ("constraints", "semantics"):
+            values = _list(node[field], f"issue-wakeup evidence node {index}.{field}")
+            if not values:
+                raise ContractError(f"issue-wakeup evidence node {index}.{field} cannot be empty")
+            for semantic_value in values:
+                _str(semantic_value, f"issue-wakeup evidence node {index}.{field}")
+    if tuple(node_commands) != expected_nodes:
+        raise ContractError("issue-wakeup evidence nodes must list the seven commands in order")
+
+    mappings = _list(
+        evidence["mappings"],
+        "scope.family_dispositions.issue-wakeup.deferred_evidence.mappings",
+    )
+    mapping_ids: set[str] = set()
+    for index, value in enumerate(mappings):
+        mapping = _dict(value, f"issue-wakeup evidence mapping {index}")
+        _exact_keys(
+            mapping,
+            frozenset({"mapping_id", "input", "destination", "source_ref_ids"}),
+            f"issue-wakeup evidence mapping {index}",
+        )
+        mapping_id = _str(
+            mapping["mapping_id"], f"issue-wakeup evidence mapping {index}.mapping_id"
+        )
+        if mapping_id in mapping_ids:
+            raise ContractError("issue-wakeup evidence mapping IDs must be unique")
+        mapping_ids.add(mapping_id)
+        _str(mapping["input"], f"issue-wakeup evidence mapping {index}.input")
+        _str(mapping["destination"], f"issue-wakeup evidence mapping {index}.destination")
+        refs = tuple(
+            _str(ref, f"issue-wakeup evidence mapping {index}.source_ref_ids")
+            for ref in _list(
+                mapping["source_ref_ids"],
+                f"issue-wakeup evidence mapping {index}.source_ref_ids",
+            )
+        )
+        if not refs or not set(refs) <= source_ref_ids:
+            raise ContractError(f"issue-wakeup evidence mapping {index} has unknown source refs")
+    if referenced_mapping_ids != mapping_ids:
+        raise ContractError("issue-wakeup evidence node mappings must match the pinned mapping set")
+
+    semantics = _dict(
+        evidence["semantics"],
+        "scope.family_dispositions.issue-wakeup.deferred_evidence.semantics",
+    )
+    semantic_fields = frozenset(
+        {
+            "scheduling",
+            "timezone",
+            "replacement",
+            "reenable",
+            "retry",
+            "duration",
+            "mutual_exclusion",
+            "loop_protection",
+        }
+    )
+    _exact_keys(
+        semantics,
+        semantic_fields,
+        "scope.family_dispositions.issue-wakeup.deferred_evidence.semantics",
+    )
+    for field in semantic_fields:
+        _str(semantics[field], f"issue-wakeup evidence semantics.{field}")
+
+
 @dataclass(frozen=True)
 class Target:
     version: str
@@ -891,7 +1007,6 @@ class Compatibility:
     reviewed_responses: tuple[ReviewedResponse, ...]
     response_registry: tuple[ResponseReview, ...]
     response_review_complete: bool
-    response_audit: dict[str, object]
 
 
 @dataclass(frozen=True)
@@ -2266,7 +2381,6 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         reviewed_responses=tuple(reviewed_responses),
         response_registry=tuple(response_registry),
         response_review_complete=response_review_complete,
-        response_audit=response_audit,
     )
     catalogs = _dict(raw["catalogs"], "catalogs")
     catalog_required = frozenset(
@@ -2326,7 +2440,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             item,
             frozenset(
                 {"family", "disposition", "required_operation_ids", "source_ref_ids", "rationale"}
-            ),
+            )
+            | ({"deferred_evidence"} if item.get("family") == "issue-wakeup" else set()),
             f"scope.family_dispositions[{index}]",
         )
         for field in ("family", "disposition", "rationale"):
@@ -2369,6 +2484,11 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         if vector.operation_id not in operation_ids:
             raise ContractError(f"{vector.vector_id} references unknown operation")
     source_refs = _source_refs(raw["source_refs"])
+    source_ref_ids = {item.source_ref_id for item in source_refs}
+    for disposition in _list(scope["family_dispositions"], "scope.family_dispositions"):
+        item = _dict(disposition, "scope.family_dispositions item")
+        if item.get("family") == "issue-wakeup":
+            _validate_issue_wakeup_evidence(item, source_ref_ids)
     if any(item.commit != target.commit for item in source_refs):
         raise ContractError("every source_refs commit must match target.commit")
     test_refs = _test_refs(raw["test_refs"])

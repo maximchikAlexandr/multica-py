@@ -765,13 +765,9 @@ def test_current_target_and_source_refs_are_pinned_to_v051() -> None:
     )
 
 
-def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separate() -> None:
+def test_compatibility_binary_and_release_provenance_are_exact() -> None:
     contract = load_contract(APPROVED)
     compatibility = contract.compatibility
-    assert (
-        compatibility.min_cli_version,
-        compatibility.max_tested_cli_version,
-    ) == ("0.4.42", "0.5.1")
     assert compatibility.verified_binaries == (
         VerifiedBinary(
             version="0.5.0",
@@ -799,6 +795,10 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
         compatibility.release_artifacts[1].archive_sha256
         != compatibility.release_artifacts[1].executable_sha256
     )
+
+
+def test_compatibility_command_inventory_is_reconciled() -> None:
+    compatibility = load_contract(APPROVED).compatibility
     assert compatibility.command_inventory == replace(
         compatibility.command_inventory,
         baseline_nodes=194,
@@ -820,6 +820,14 @@ def test_issue_activity_compatibility_keeps_binary_and_source_provenance_separat
     assert set(compatibility.command_inventory.added_commands).isdisjoint(
         compatibility.command_inventory.changed_commands
     )
+
+
+def test_compatibility_reviewed_response_bounds_are_exact() -> None:
+    compatibility = load_contract(APPROVED).compatibility
+    assert (
+        compatibility.min_cli_version,
+        compatibility.max_tested_cli_version,
+    ) == ("0.4.42", "0.5.1")
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
         "agents.tasks",
         "labels.create",
