@@ -840,41 +840,54 @@ def test_compatibility_reviewed_response_bounds_are_exact() -> None:
     }
 
 
-@pytest.mark.parametrize(
-    ("field", "expected_message"),
-    (
-        ("baseline_nodes", "baseline_nodes"),
-        ("target_nodes", "target_nodes"),
+@dataclass(frozen=True)
+class CommandInventoryMutationCase:
+    case_id: str
+    field: str
+    expected_message: str
+
+
+COMMAND_INVENTORY_TOTAL_CASES = (
+    CommandInventoryMutationCase("baseline-nodes", "baseline_nodes", "baseline_nodes"),
+    CommandInventoryMutationCase("target-nodes", "target_nodes", "target_nodes"),
+)
+
+COMMAND_INVENTORY_COUNT_CASES = (
+    CommandInventoryMutationCase("added-commands", "added_commands", "added count"),
+    CommandInventoryMutationCase("changed-commands", "changed_commands", "changed count"),
+)
+
+COMMAND_INVENTORY_DUPLICATE_CASES = (
+    CommandInventoryMutationCase("added-commands-duplicate", "added_commands", "must be unique"),
+    CommandInventoryMutationCase(
+        "changed-commands-duplicate", "changed_commands", "must be unique"
     ),
 )
+
+
+@pytest.mark.parametrize("case", COMMAND_INVENTORY_TOTAL_CASES, ids=lambda case: case.case_id)
 def test_command_inventory_rejects_non_reconciling_totals(
-    field: str, expected_message: str, tmp_path: pathlib.Path
+    case: CommandInventoryMutationCase, tmp_path: pathlib.Path
 ) -> None:
     document = json.loads(APPROVED.read_text(encoding="utf-8"))
-    document["compatibility"]["command_inventory"][field] = 188
-    path = tmp_path / f"inventory-{field}.json"
+    document["compatibility"]["command_inventory"][case.field] = 188
+    path = tmp_path / f"inventory-{case.field}.json"
     path.write_text(json.dumps(document), encoding="utf-8")
 
-    with pytest.raises(ContractError, match=expected_message):
+    with pytest.raises(ContractError, match=case.expected_message):
         load_contract(path)
 
 
-@pytest.mark.parametrize(
-    ("field", "message"),
-    (
-        ("added_commands", "added count"),
-        ("changed_commands", "changed count"),
-    ),
-)
+@pytest.mark.parametrize("case", COMMAND_INVENTORY_COUNT_CASES, ids=lambda case: case.case_id)
 def test_command_inventory_rejects_count_drift(
-    field: str, message: str, tmp_path: pathlib.Path
+    case: CommandInventoryMutationCase, tmp_path: pathlib.Path
 ) -> None:
     document = json.loads(APPROVED.read_text(encoding="utf-8"))
-    document["compatibility"]["command_inventory"][field] = []
-    path = tmp_path / f"inventory-{field}.json"
+    document["compatibility"]["command_inventory"][case.field] = []
+    path = tmp_path / f"inventory-{case.field}.json"
     path.write_text(json.dumps(document), encoding="utf-8")
 
-    with pytest.raises(ContractError, match=message):
+    with pytest.raises(ContractError, match=case.expected_message):
         load_contract(path)
 
 
@@ -889,17 +902,17 @@ def test_command_inventory_rejects_added_changed_overlap(tmp_path: pathlib.Path)
         load_contract(path)
 
 
-@pytest.mark.parametrize("field", ("added_commands", "changed_commands"))
+@pytest.mark.parametrize("case", COMMAND_INVENTORY_DUPLICATE_CASES, ids=lambda case: case.case_id)
 def test_command_inventory_rejects_duplicate_delta_entries(
-    field: str, tmp_path: pathlib.Path
+    case: CommandInventoryMutationCase, tmp_path: pathlib.Path
 ) -> None:
     document = json.loads(APPROVED.read_text(encoding="utf-8"))
-    entries = document["compatibility"]["command_inventory"][field]
+    entries = document["compatibility"]["command_inventory"][case.field]
     entries[1] = entries[0]
-    path = tmp_path / f"inventory-duplicate-{field}.json"
+    path = tmp_path / f"inventory-duplicate-{case.field}.json"
     path.write_text(json.dumps(document), encoding="utf-8")
 
-    with pytest.raises(ContractError, match="must be unique"):
+    with pytest.raises(ContractError, match=case.expected_message):
         load_contract(path)
 
 

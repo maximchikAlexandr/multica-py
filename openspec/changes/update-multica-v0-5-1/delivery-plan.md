@@ -43,8 +43,9 @@ planning issue properties and were read back after write.
   compatibility interval `[0.4.42,0.5.2)` with unchanged operation minimums;
   194-to-201 command reconciliation; seven explicit wakeup deferrals;
   runtime-profile `not_sdk_surface`; updater/workdir retained dispositions;
-  all 167 supported response entrypoints; optional open-string
-  `TaskRun.wakeup_id` on `agents.tasks` and `issues.runs`; optional open-string
+  all 167 supported response entrypoints; the shared optional open-string
+  `wakeup_id` field through the existing `AgentTask` projection on `agents.tasks`
+  and `TaskRun` projection on `issues.runs`; optional open-string
   `RunMessage.call_id` on `issues.run_messages`; present, omitted/legacy, and
   malformed response semantics; stable operation/resource/signature inventories.
 - `DoD / evidence`: Independent identities and digests agree; strict pinned-

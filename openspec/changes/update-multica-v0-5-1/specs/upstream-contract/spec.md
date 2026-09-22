@@ -89,8 +89,9 @@ response shapes.
 
 ### Requirement: Complete supported response review governs adaptation
 The contract SHALL reproduce `response_review_complete=true` for all 167
-supported response entrypoints: `agents.tasks` and `issues.runs` SHALL adapt
-the `page_task_runs` response for optional `wakeup_id`,
+supported response entrypoints: `agents.tasks` SHALL adapt its existing
+`Page[AgentTask]` projection and `issues.runs` SHALL adapt its `Page[TaskRun]`
+projection for the shared optional `wakeup_id` response field,
 `issues.run_messages` SHALL adapt `page_run_messages` for optional `call_id`,
 and the remaining 164 entrypoints SHALL retain their exact reviewed envelopes,
 fields, paths, types, nullability, omission, collection and pagination behavior,

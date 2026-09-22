@@ -3,14 +3,15 @@
 ### Requirement: Multica 0.5.1 upgrade coverage is table-driven
 Offline unit, contract, and component coverage SHALL extend existing frozen
 case tables and shared fixtures for present, omitted/legacy, and malformed
-`wakeup_id` and `call_id` payloads. Coverage SHALL verify both task-run
-entrypoints, run-message sequence ordering, serialization/presence behavior,
+`wakeup_id` and `call_id` payloads. Coverage SHALL verify the `AgentTask`
+projection from `agents.tasks`, the `TaskRun` projection from `issues.runs`,
+run-message sequence ordering, serialization/presence behavior,
 complete argv and transport calls, and unchanged legacy payloads without adding
 duplicate test helpers or a parallel case framework.
 
 #### Scenario: Present and omitted matrices cover every adapted entrypoint
 - **WHEN** the focused model, resource, contract, and component suites run
-- **THEN** `agents.tasks`, `issues.runs`, and `issues.run_messages` each have present and omitted/legacy proof and malformed types fail at the protocol boundary
+- **THEN** `agents.tasks` (`AgentTask`), `issues.runs` (`TaskRun`), and `issues.run_messages` each have present and omitted/legacy proof and malformed types fail at the protocol boundary
 
 #### Scenario: Deferred surface has a negative inventory guard
 - **WHEN** public method, operation, generated symbol, and documentation inventories are audited

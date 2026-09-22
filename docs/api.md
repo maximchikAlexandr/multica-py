@@ -13,9 +13,11 @@ This SDK contract supports Multica CLI `0.5.1` at commit
 `[0.4.42, 0.5.2)`. Migrate directly from `0.5.0`; no intermediate SDK
 release is required. Existing operation-level gates from `0.5.0` remain
 unchanged; the global `0.4.42` floor applies where already approved.
-`TaskRun.wakeup_id` and `RunMessage.call_id` are optional opaque-string
-correlation fields and require CLI `0.5.1` when present. The `issue wakeup`
-family is deferred and runtime profiles are not SDK surface.
+The existing `AgentTask` projection from `agents.tasks` and `TaskRun` projection
+from `issues.runs` expose the same optional opaque-string `wakeup_id` response
+field; `RunMessage.call_id` is also optional. These fields require CLI `0.5.1`
+when present. The `issue wakeup` family is deferred and runtime profiles are
+not SDK surface.
 
 The `Comment.deleted_at` field is `None` only when the wire field is omitted;
 valid target timestamps are preserved, while explicit null and malformed values
@@ -454,6 +456,9 @@ memory; use streaming for unbounded output and do not mix the two modes.
   and the four matching `uncosted_*_tokens` values. Current fields are `None`
   only when absent from a legacy envelope; cache reads are not folded into
   `total_tokens`.
+- `AgentTask` — the existing `agents.tasks` page projection exposes optional
+  opaque-string `wakeup_id`; omitted legacy rows decode it as `None` and it does
+  not imply wakeup CRUD.
 - `TaskRun` — in addition to IDs/status/timestamps, exposes reviewed
   `runtime_id`, `workspace_id`, absolute and privacy-safe relative work dirs,
   durable work dirs, `branch_name`, immutable JSON `result`, `error`, and
@@ -461,8 +466,8 @@ memory; use streaming for unbounded output and do not mix the two modes.
   `relative_durable_work_dir` for display. `TaskRun.stream_events()` yields
   immutable semantic `RunEvent` objects incrementally (see streaming below).
 - `RunMessage` — the raw pinned upstream run-message model with required
-  `task_id`, `seq`, `type` and optional `issue_id`, `tool`, `content`, `input`,
-  `output`, `created_at`. The old `id`/`run_id`/`role` fields were removed
+  `task_id`, `seq`, `type` and optional `call_id`, `issue_id`, `tool`, `content`,
+  `input`, `output`, `created_at`. The old `id`/`run_id`/`role` fields were removed
   because they were not backed by the pinned CLI payload.
 - `multica_py.types.JsonValue` — closed recursive JSON union. Object nodes are immutable
   `Mapping[str, JsonValue]` snapshots and arrays are tuples; use

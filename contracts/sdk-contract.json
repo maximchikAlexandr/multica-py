@@ -47,7 +47,8 @@
         ],
         "omission_policy": "Absent issue delta fields remain unavailable; known=true with an empty delta remains distinguishable; failure_reason stays an open string including runtime_access_denied and future values. Optional wakeup_id is an open string when present, omitted legacy rows decode as None, and non-string values fail typed decoding.",
         "test_ref_ids": [
-          "T-OPERATION"
+          "T-OPERATION",
+          "T-CORRELATION-RUN-IDENTIFIERS"
         ]
       },
       {
@@ -137,7 +138,8 @@
         ],
         "omission_policy": "Optional wakeup_id is an open string when present; omission in ordinary or legacy rows decodes as None and malformed non-string values fail typed decoding.",
         "test_ref_ids": [
-          "T-OPERATION"
+          "T-OPERATION",
+          "T-CORRELATION-RUN-IDENTIFIERS"
         ]
       },
       {
@@ -16520,6 +16522,11 @@
       "test_ref_id": "T-TASK-RUN-V0432",
       "path": "tests/contract/test_issue_models.py",
       "node_id": "test_task_run_decode_matrix"
+    },
+    {
+      "test_ref_id": "T-CORRELATION-RUN-IDENTIFIERS",
+      "path": "tests/contract/test_issue_models.py",
+      "node_id": "test_task_run_and_agent_task_wakeup_id_round_trip"
     },
     {
       "test_ref_id": "relation:R01",

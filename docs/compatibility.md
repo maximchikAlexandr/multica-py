@@ -11,10 +11,11 @@ compares baseline `0.5.0` at source commit
 `2df765a3c8f39789c9fb76316378bcffc20d22d9` with target `0.5.1` at source
 commit `f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`; it does not publish an
 intermediate SDK release. Existing operation-level gates from `0.5.0` remain
-unchanged; the global `0.4.42` floor applies where already approved. Optional
-`TaskRun.wakeup_id` and `RunMessage.call_id` response fields gate at `0.5.1`,
-and `0.5.2` is exclusive. The seven `issue wakeup` nodes are deferred and
-runtime-profile operations are not SDK surface.
+unchanged; the global `0.4.42` floor applies where already approved. The shared
+`wakeup_id` response field on existing `AgentTask` (`agents.tasks`)
+and `TaskRun` (`issues.runs`) projections, plus `RunMessage.call_id`, gate at
+`0.5.1`, and `0.5.2` is exclusive. The seven `issue wakeup` nodes are deferred
+and runtime-profile operations are not SDK surface.
 
 The baseline comparison release is GitHub release `391379076`, asset
 `multica-cli-0.5.0-darwin-arm64.tar.gz`: archive digest

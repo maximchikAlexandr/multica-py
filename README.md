@@ -36,11 +36,12 @@ The approved SDK target is Multica CLI `0.5.1` at commit
 `[0.4.42, 0.5.2)`. Migrate directly from CLI/SDK `0.5.0`; no intermediate
 SDK release is supported. Existing operation-level gates from `0.5.0` remain
 unchanged; the global `0.4.42` floor applies where already approved.
-`TaskRun.wakeup_id` and `RunMessage.call_id` are optional opaque-string
-correlation fields and require `0.5.1` when present. The `issue wakeup` command
-family and runtime profiles remain outside this SDK. See [the migration
-guide](docs/migration.md) for presence/error semantics, checksum roles, and
-atomic rollback guidance.
+The existing `AgentTask` projection from `agents.tasks` and `TaskRun` projection
+from `issues.runs` expose the same optional opaque-string `wakeup_id` response
+field; `RunMessage` exposes optional `call_id`. These fields require `0.5.1`
+when present. The `issue wakeup` command family and runtime profiles remain
+outside this SDK. See [the migration guide](docs/migration.md) for
+presence/error semantics, checksum roles, and atomic rollback guidance.
 
 ## Usage
 

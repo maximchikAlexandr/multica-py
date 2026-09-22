@@ -9,13 +9,13 @@
 ## 2. Render and implement optional correlation fields
 
 - [x] 2.1 Render the approved contract twice to isolated destinations, require byte-identical results, commit only the deterministic generated runtime projection, and verify target/max-tested/exclusive-ceiling metadata.
-- [x] 2.2 Add optional open-string `wakeup_id` to `_TaskRunWire`, `_task_run_from_wire`, and `TaskRun` so present values round-trip, omitted ordinary/legacy values remain `None`, and malformed non-string values fail through the existing protocol boundary.
+- [x] 2.2 Add optional open-string `wakeup_id` to the existing `_TaskRunWire`, `_task_run_from_wire`, `TaskRun`, and `AgentTask` projections so present values round-trip through both `agents.tasks` and `issues.runs`, omitted ordinary/legacy values remain `None`, and malformed non-string values fail through the existing protocol boundary.
 - [x] 2.3 Add optional open-string `call_id` to the run-message wire/adapter and `RunMessage` so present values round-trip, omitted legacy values remain `None`, and ordering plus tri-state truncation semantics are unchanged.
 - [x] 2.4 Confirm public resources, eager/command signatures, operation IDs, relations, enums, dependencies, and transport behavior are unchanged and that no `issue wakeup` or runtime-profile API is introduced.
 
 ## 3. Extend table-driven verification
 
-- [x] 3.1 Extend existing frozen task-run decode/serialization cases for present, omitted/legacy, and malformed `wakeup_id` payloads through both `agents.tasks` and `issues.runs` without new duplicate helpers.
+- [x] 3.1 Extend existing frozen task-run and `AgentTask` decode/serialization cases for present, omitted/legacy, and malformed `wakeup_id` payloads through both `agents.tasks` and `issues.runs` without new duplicate helpers.
 - [x] 3.2 Extend existing frozen run-message cases for present, omitted/legacy, and malformed `call_id` payloads while asserting sequence ordering, timestamps, input/output/content, and `output_truncated` behavior.
 - [x] 3.3 Extend contract and component cases to prove exact argv/transport counts, unchanged legacy envelopes and errors, absence of wakeup public methods/generated symbols, and stable operation/resource inventories.
 - [x] 3.4 Update provenance, command, response, compatibility, source-link, generated-runtime, and package fixtures so their exact totals and target identities match the approved `0.5.1` contract.

@@ -18,7 +18,8 @@ Verified command evidence moves from 194 to 201 public help nodes: the
 moved. Existing `issue` changes only by the new child, while
 `runtime profile create` adds `--runtime-type` beside the legacy
 `--protocol-family`. Response review covers all 167 supported entrypoints:
-`agents.tasks` and `issues.runs` add optional `TaskRun.wakeup_id`,
+`agents.tasks` projects the optional `wakeup_id` field through existing
+`AgentTask`, `issues.runs` projects it through existing `TaskRun`,
 `issues.run_messages` adds optional `RunMessage.call_id`, and 164 remain exact.
 Current code already centralizes typed wire decoding, exposes both public
 models, keeps table-driven operation/model fixtures, and generates compatibility
@@ -62,11 +63,12 @@ because its exact binary and source were reviewed.
 
 ### Model correlation identifiers as optional open strings
 
-Add `wakeup_id: str | None = None` to `_TaskRunWire` and `TaskRun`, thread it
-through `_task_run_from_wire`, and add `call_id: str | None = None` to the
-run-message wire and public `RunMessage` path. Present strings round-trip;
-omitted ordinary/legacy fields decode to `None`; invalid non-string values fail
-at the existing protocol boundary. No enum or identifier wrapper is introduced
+Add the shared `wakeup_id: str | None = None` field to the existing task-run
+wire/model projections (`TaskRun` and `AgentTask`), thread it through their
+existing adapters, and add `call_id: str | None = None` to the run-message wire
+and public `RunMessage` path. Present strings round-trip; omitted
+ordinary/legacy fields decode to `None`; invalid non-string values fail at the
+existing protocol boundary. No enum or identifier wrapper is introduced
 because both values are opaque server identities. A lazy wakeup relation was
 rejected because it would silently promote the deferred CRUD family. Collapsing
 these fields into generic metadata was rejected because upstream now provides

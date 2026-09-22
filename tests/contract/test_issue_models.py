@@ -1107,6 +1107,21 @@ class RunMessageCorrelationCase:
     expected: RunMessage
 
 
+@dataclass(frozen=True)
+class TaskRunWakeupCase:
+    id: str
+    payload: dict[str, object]
+    expected_wakeup_id: str | None
+    serialized_wakeup_id: bool
+
+
+@dataclass(frozen=True)
+class RunMessageCallCase:
+    id: str
+    payload: dict[str, object]
+    expected_call_id: str | None
+
+
 RUN_MESSAGE_CORRELATION_CASES = (
     RunMessageCorrelationCase(
         {
@@ -1187,6 +1202,36 @@ RUN_MESSAGE_CORRELATION_CASES = (
 )
 
 
+TASK_RUN_WAKEUP_CASES = (
+    TaskRunWakeupCase(
+        "present",
+        {"id": "task-1", "status": "completed", "issue_id": "issue-1", "wakeup_id": "wakeup-1"},
+        "wakeup-1",
+        True,
+    ),
+    TaskRunWakeupCase(
+        "omitted",
+        {"id": "task-1", "status": "completed", "issue_id": "issue-1"},
+        None,
+        False,
+    ),
+)
+
+
+RUN_MESSAGE_CALL_CASES = (
+    RunMessageCallCase(
+        "present",
+        {"task_id": "task-1", "seq": 2, "type": "tool_result", "call_id": "call-1"},
+        "call-1",
+    ),
+    RunMessageCallCase(
+        "omitted",
+        {"task_id": "task-1", "seq": 2, "type": "tool_result"},
+        None,
+    ),
+)
+
+
 def test_run_message_correlation_case_preserves_order_and_all_fields() -> None:
     payload = json.dumps([case.payload for case in RUN_MESSAGE_CORRELATION_CASES]).encode()
     messages = decode_run_messages(payload, "issue run-messages")
@@ -1215,57 +1260,29 @@ def test_run_message_preserves_timestamp_and_rejects_null_truncation() -> None:
         )
 
 
-@pytest.mark.parametrize(
-    ("payload", "expected_wakeup_id", "expected_serialized"),
-    (
-        (
-            {"id": "task-1", "status": "completed", "issue_id": "issue-1", "wakeup_id": "wakeup-1"},
-            "wakeup-1",
-            True,
-        ),
-        (
-            {"id": "task-1", "status": "completed", "issue_id": "issue-1"},
-            None,
-            False,
-        ),
-    ),
-    ids=("present", "omitted"),
-)
-def test_task_run_and_agent_task_wakeup_id_round_trip(
-    payload: dict[str, object],
-    expected_wakeup_id: str | None,
-    expected_serialized: bool,
-) -> None:
+@pytest.mark.parametrize("case", TASK_RUN_WAKEUP_CASES, ids=lambda case: case.id)
+def test_task_run_and_agent_task_wakeup_id_round_trip(case: TaskRunWakeupCase) -> None:
     run = _task_run_from_wire(
-        decode_json(json.dumps(payload).encode(), _TaskRunWire), issue_id="issue-1"
+        decode_json(json.dumps(case.payload).encode(), _TaskRunWire), issue_id="issue-1"
     )
-    agent_task = decode_json(json.dumps([payload]).encode(), list[AgentTask])[0]
+    agent_task = decode_json(json.dumps([case.payload]).encode(), list[AgentTask])[0]
 
-    assert run.wakeup_id == expected_wakeup_id
-    assert agent_task.wakeup_id == expected_wakeup_id
+    assert run.wakeup_id == case.expected_wakeup_id
+    assert agent_task.wakeup_id == case.expected_wakeup_id
     run_data = run.to_dict()
     assert run_data["id"] == "task-1"
     assert run_data["status"] == "completed"
-    assert ("wakeup_id" in run_data) is expected_serialized
-    assert run_data.get("wakeup_id") == expected_wakeup_id
-    assert msgspec.to_builtins(agent_task)["wakeup_id"] == expected_wakeup_id
+    assert ("wakeup_id" in run_data) is case.serialized_wakeup_id
+    assert run_data.get("wakeup_id") == case.expected_wakeup_id
+    assert msgspec.to_builtins(agent_task)["wakeup_id"] == case.expected_wakeup_id
 
 
-@pytest.mark.parametrize(
-    ("payload", "expected_call_id"),
-    (
-        ({"task_id": "task-1", "seq": 2, "type": "tool_result", "call_id": "call-1"}, "call-1"),
-        ({"task_id": "task-1", "seq": 2, "type": "tool_result"}, None),
-    ),
-    ids=("present", "omitted"),
-)
-def test_run_message_call_id_round_trip(
-    payload: dict[str, object], expected_call_id: str | None
-) -> None:
-    message = decode_run_messages(json.dumps([payload]).encode(), "issue run-messages")[0]
-    assert message.call_id == expected_call_id
+@pytest.mark.parametrize("case", RUN_MESSAGE_CALL_CASES, ids=lambda case: case.id)
+def test_run_message_call_id_round_trip(case: RunMessageCallCase) -> None:
+    message = decode_run_messages(json.dumps([case.payload]).encode(), "issue run-messages")[0]
+    assert message.call_id == case.expected_call_id
     assert message.seq == 2
-    assert msgspec.to_builtins(message)["call_id"] == expected_call_id
+    assert msgspec.to_builtins(message)["call_id"] == case.expected_call_id
 
 
 def test_task_run_wakeup_id_rejects_non_strings() -> None:

@@ -12,10 +12,10 @@ promoting the new wakeup family into the public SDK.
   `f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`, release ID `392880229`, and a
   reviewed compatibility interval `[0.4.42,0.5.2)`; preserve existing
   operation-level gates and require `0.5.1` for the two newly decoded fields.
-- Add `TaskRun.wakeup_id` and `RunMessage.call_id` as optional open strings,
-  preserving omission for ordinary and legacy rows and preserving all existing
-  envelopes, ordering, pagination, timestamps, numeric values, errors, and
-  enum openness.
+- Add the optional open-string `wakeup_id` response field to the existing
+  `TaskRun` and `AgentTask` projections, plus `RunMessage.call_id`, preserving
+  omission for ordinary and legacy rows and preserving all existing envelopes,
+  ordering, pagination, timestamps, numeric values, errors, and enum openness.
 - Reconcile the complete CLI inventory from 194 to 201 public help nodes: seven
   added, none removed, renamed, or moved, and only `issue` plus
   `runtime profile create` changed among existing nodes.
@@ -50,8 +50,9 @@ promoting the new wakeup family into the public SDK.
 - `upstream-contract`: Pin exact `0.5.1` authority, compatibility bounds,
   complete command/response reconciliation, reviewed optional-field mappings,
   and explicit deferred or non-SDK dispositions.
-- `sdk-surface`: Add optional `TaskRun.wakeup_id` and `RunMessage.call_id`
-  fields without adding wakeup operations or changing legacy decoding.
+- `sdk-surface`: Add the shared optional `wakeup_id` projection to `TaskRun`
+  and `AgentTask`, plus `RunMessage.call_id`, without adding wakeup operations
+  or changing legacy decoding.
 - `verification-and-release`: Require provenance, 201-node and 167-entrypoint
   audits, deterministic generation, table-driven presence matrices, offline
   quality, packaging, migration, and clean-tree evidence.

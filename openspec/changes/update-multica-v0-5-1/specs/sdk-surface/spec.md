@@ -1,22 +1,26 @@
 ## ADDED Requirements
 
-### Requirement: Task runs expose optional wakeup correlation
-`TaskRun` SHALL expose `wakeup_id: str | None`. The task-run wire decoder SHALL
-accept a non-null string when present and SHALL produce `None` when the field is
-omitted by ordinary or legacy rows. The value SHALL remain an open identifier,
-SHALL survive entity serialization and both `agents.tasks` and `issues.runs`
-decoding, and SHALL NOT imply that wakeup CRUD is supported.
+### Requirement: Task-run projections expose optional wakeup correlation
+`TaskRun` SHALL expose `wakeup_id: str | None`, and the existing `AgentTask`
+projection returned by `agents.tasks` SHALL expose the same optional field. The
+task-run wire decoder SHALL accept a non-null string when present and SHALL
+produce `None` when the field is omitted by ordinary or legacy rows. The value
+SHALL remain an open identifier, SHALL survive entity/model serialization and
+both `agents.tasks` (`AgentTask`) and `issues.runs` (`TaskRun`) decoding, and
+SHALL NOT imply that wakeup CRUD is supported. `AgentTask.wakeup_id` is the
+same reviewed upstream response field projected through the existing
+`AgentTask` model, not a new operation or relation.
 
-#### Scenario: Wakeup-created run preserves its identifier
-- **WHEN** either supported task-run response contains a string `wakeup_id`
-- **THEN** the decoded `TaskRun.wakeup_id` equals that exact string and existing task fields remain unchanged
+#### Scenario: Wakeup-created task projections preserve their identifier
+- **WHEN** an `agents.tasks` or `issues.runs` response contains a string `wakeup_id`
+- **THEN** the decoded `AgentTask.wakeup_id` or `TaskRun.wakeup_id` equals that exact string and existing task fields remain unchanged
 
-#### Scenario: Ordinary and legacy runs omit the identifier
-- **WHEN** either supported task-run response omits `wakeup_id`
-- **THEN** decoding succeeds with `TaskRun.wakeup_id is None` and serialization preserves the established omission behavior
+#### Scenario: Ordinary and legacy task projections omit the identifier
+- **WHEN** an `agents.tasks` or `issues.runs` response omits `wakeup_id`
+- **THEN** decoding succeeds with the corresponding `AgentTask.wakeup_id` or `TaskRun.wakeup_id` set to `None` and serialization preserves the established omission behavior
 
-#### Scenario: Invalid wakeup identifier fails typed decoding
-- **WHEN** a task-run response contains a non-string non-null `wakeup_id`
+#### Scenario: Invalid wakeup identifier fails typed decoding on both projections
+- **WHEN** an `agents.tasks` or `issues.runs` response contains a non-string non-null `wakeup_id`
 - **THEN** the existing protocol error boundary rejects the malformed response without coercion
 
 ### Requirement: Run messages expose optional call correlation
@@ -44,6 +48,6 @@ The implementation SHALL extend the existing `_TaskRunWire`, task-run adapter,
 introduce a new enum, wrapper, relation, lazy loader, transport path, or
 dependency for either identifier.
 
-#### Scenario: Public model inventory changes only by two fields
+#### Scenario: Public model inventory changes only by two upstream fields
 - **WHEN** public symbols, signatures, resources, and models are compared before and after the upgrade
-- **THEN** the only response-surface additions are `TaskRun.wakeup_id` and `RunMessage.call_id`, while operation and resource inventories remain unchanged
+- **THEN** the only response-surface additions are the shared `wakeup_id` field on existing `TaskRun`/`AgentTask` projections and `RunMessage.call_id`, while operation and resource inventories remain unchanged
