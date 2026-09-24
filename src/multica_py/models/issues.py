@@ -39,6 +39,30 @@ class IssueAssignee(msgspec.Struct, frozen=True, kw_only=True):
     type: str | None = None
 
 
+class DuplicateIssueReference(msgspec.Struct, frozen=True, kw_only=True):
+    """Read-only snapshot of the issue that caused a duplicate."""
+
+    id: str
+    identifier: str
+    title: str
+    status: str
+
+
+class IssuePropertyAssignment(msgspec.Struct, frozen=True, kw_only=True):
+    """One ordered, atomic property assignment for issue creation."""
+
+    reference: str
+    value: str
+
+    def __post_init__(self) -> None:
+        if type(self.reference) is not str:
+            raise TypeError("reference must be a string")
+        if not self.reference.strip():
+            raise ValueError("reference must be nonblank")
+        if type(self.value) is not str:
+            raise TypeError("value must be a string")
+
+
 class LinkedPullRequest(msgspec.Struct, frozen=True, kw_only=True):
     url: str
     title: str | None = None

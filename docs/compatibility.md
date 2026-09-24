@@ -6,15 +6,16 @@ The generated runtime constants in
 - `TARGET_VERSION` remains the exact source checkout pinned by every source reference;
 - `MIN_CLI_VERSION` and exclusive `MAX_CLI_VERSION` come from the approved compatibility block.
 
-The current reviewed interval is `[0.4.42, 0.5.2)`. This direct migration
-compares baseline `0.5.0` at source commit
-`2df765a3c8f39789c9fb76316378bcffc20d22d9` with target `0.5.1` at source
-commit `f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`; it does not publish an
+The current reviewed interval is `[0.4.42, 0.5.3)`. This direct migration
+compares baseline `0.5.1` at source commit
+`f41fae6b08fb734afcbd13205c0b3203dd0bc9c6` with target `0.5.2` at source
+commit `d45aba1cd7582bef9210b921bbb7dc198b48e1ee`; it does not publish an
 intermediate SDK release. Existing operation-level gates from `0.5.0` remain
 unchanged; the global `0.4.42` floor applies where already approved. The shared
-`wakeup_id` response field on existing `AgentTask` (`agents.tasks`)
-and `TaskRun` (`issues.runs`) projections, plus `RunMessage.call_id`, gate at
-`0.5.1`, and `0.5.2` is exclusive. The seven `issue wakeup` nodes are deferred
+`duplicate_of` issue snapshots and supplement metadata on existing `AgentTask`
+(`agents.tasks`) and `TaskRun` (`issues.runs`) projections, plus atomic issue
+properties, require CLI `0.5.2`, and `0.5.3` is exclusive. REST-only
+supplement/duplicate mutations and timeline actions remain deferred
 and runtime-profile operations are not SDK surface.
 
 The baseline comparison release is GitHub release `391379076`, asset

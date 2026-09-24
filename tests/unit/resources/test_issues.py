@@ -39,6 +39,7 @@ from multica_py.models.issues import (
     IssueListFilter,
     IssueListPage,
     IssueMetadataItem,
+    IssuePropertyAssignment,
     NoDescription,
 )
 from multica_py.models.properties import PropertyValue
@@ -312,6 +313,47 @@ def test_issue_create_direct_uses_full_expected_argv(case: _IssueCreateArgvCase)
     )
 
     assert tuple(step.argv for step in command._plan.steps) == case.expected_steps
+
+
+def test_issue_create_properties_are_ordered_atomic_and_version_gated() -> None:
+    resource = IssueResource(MagicMock(), ClientConfig())
+    command = resource.create_command(
+        title="Test",
+        properties=(
+            IssuePropertyAssignment(reference="Impact", value="high"),
+            IssuePropertyAssignment(reference="Release", value="__none__"),
+        ),
+    )
+
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "create",
+        "--title",
+        "Test",
+        "--property",
+        "Impact=high",
+        "--property",
+        "Release=__none__",
+        "--output",
+        "json",
+    )
+    assert command._plan.steps[0].minimum_cli_version == "0.5.2"
+    assert len(command._plan.steps) == 1
+
+
+@pytest.mark.parametrize(
+    "properties",
+    [
+        [IssuePropertyAssignment(reference="A", value="1")],
+        ("A=1",),
+        (IssuePropertyAssignment(reference="A", value="1"), "B=2"),
+    ],
+)
+def test_issue_create_properties_reject_non_typed_collections(properties: object) -> None:
+    with pytest.raises(TypeError):
+        IssueResource(MagicMock(), ClientConfig()).create_command(
+            title="Test", properties=cast("tuple[IssuePropertyAssignment, ...]", properties)
+        )
 
 
 def test_global_args_with_server_and_workspace():

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2
+
+- Add immutable duplicate issue snapshots and read-only task supplement metadata.
+- Add ordered atomic `IssuePropertyAssignment` inputs to issue creation.
+- Move the approved CLI compatibility ceiling to exclusive `0.5.3`.
+
 ## Unreleased — unified SDK operation contracts
 
 This breaking alpha makes direct typed inputs, bound `Issue` read paths, and

@@ -47,6 +47,7 @@ from multica_py.models.issues import (
     IssueListFilter,
     IssueListPage,
     IssueMetadataItem,
+    IssuePropertyAssignment,
     IssueReference,
     LinkedPullRequest,
     NoDescription,
@@ -87,6 +88,7 @@ _VALID_ISSUE_FIELDS = frozenset(
         "title",
         "description",
         "status",
+        "duplicate_of",
         "status_category",
         "status_name",
         "priority",
@@ -322,6 +324,17 @@ def _normalize_issue_filter(
         property_filters=property_filters,
         resolve_properties=resolve_properties,
     )
+
+
+def _normalize_issue_properties(
+    properties: tuple[IssuePropertyAssignment, ...],
+) -> tuple[IssuePropertyAssignment, ...]:
+    if type(properties) is not tuple:
+        raise TypeError("properties must be a tuple of IssuePropertyAssignment")
+    for assignment in properties:
+        if type(assignment) is not IssuePropertyAssignment:
+            raise TypeError("properties must contain only IssuePropertyAssignment values")
+    return properties
 
 
 def _decode_issue_search(stdout: bytes, command: str) -> Page[Issue]:
@@ -890,6 +903,7 @@ class IssueResource(BaseResource):
         priority: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
+        properties: tuple[IssuePropertyAssignment, ...] = (),
         project: ProjectReference | None = None,
         project_id: str | None = None,
         parent_id: str | None = None,
@@ -919,6 +933,7 @@ class IssueResource(BaseResource):
             if project_id is not None
             else None
         )
+        properties = _normalize_issue_properties(properties)
         args = ["issue", "create", "--title", title]
         args.extend(description_args)
         if priority is not None:
@@ -929,6 +944,8 @@ class IssueResource(BaseResource):
             args.extend(["--project", normalized_project])
         if parent_id is not None:
             args.extend(["--parent", parent_id])
+        for assignment in properties:
+            args.extend(["--property", f"{assignment.reference}={assignment.value}"])
         create_args, create_decode = self._plan_decode(tuple(args), _IssueWire)
         steps = [_Step(create_args, "run_bytes", decode=create_decode, result_alias="create")]
         for label_id in label_ids:
@@ -958,7 +975,12 @@ class IssueResource(BaseResource):
             wire = cast("_IssueWire", results[-1] if label_ids else results[0])
             return self._bind_issue(wire)
 
-        return self._plan(steps=tuple(steps), finalize=finalize, options=options)
+        return self._plan(
+            steps=tuple(steps),
+            finalize=finalize,
+            options=options,
+            minimum_cli_version="0.5.2" if properties else None,
+        )
 
     def create(
         self,
@@ -970,6 +992,7 @@ class IssueResource(BaseResource):
         priority: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
+        properties: tuple[IssuePropertyAssignment, ...] = (),
         project: ProjectReference | None = None,
         project_id: str | None = None,
         parent_id: str | None = None,
@@ -983,6 +1006,7 @@ class IssueResource(BaseResource):
             priority=priority,
             assignee_id=assignee_id,
             label_ids=label_ids,
+            properties=properties,
             project=project,
             project_id=project_id,
             parent_id=parent_id,

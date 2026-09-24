@@ -259,6 +259,23 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
+## v0.5.2 SDK additions and behavior
+
+### Direct 0.5.1 → 0.5.2 migration
+
+The approved target is Multica CLI `0.5.2` at source commit
+`d45aba1cd7582bef9210b921bbb7dc198b48e1ee`; the compatibility interval is
+`[0.4.42, 0.5.3)`. Existing operations retain their prior minimums. New
+`Issue.duplicate_of`, task supplement metadata, and atomic issue properties
+require CLI `0.5.2`; omission remains distinct from explicit null, empty, and
+false at the wire boundary. `IssuePropertyAssignment` values are emitted in
+caller order as repeatable `--property` arguments, with catalog and type
+validation owned by the pinned CLI. Legacy label attachment remains a
+post-create composite workflow. Supplement/duplicate mutations, timeline
+actions, comment receipts, and create-time attachments remain outside this
+SDK. Rollback restores the prior contract, generated runtime, models, tests,
+docs, and package together.
+
 ## v0.5.1 SDK additions and behavior
 
 ### Direct 0.5.0 → 0.5.1 migration

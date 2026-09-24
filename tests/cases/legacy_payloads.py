@@ -99,7 +99,7 @@ CURRENT_PAYLOAD_FINGERPRINTS: dict[str, str] = {
     "manual:issues.search:canonical": "131e5882d81de842e40e99626804764c28671490a742b28f339bb8beab5a2e20",
     "manual:issues.children:canonical": "b3943f2247cb581b3e709b7c25b9ae1e9364673b6e72054a9fb6a930d76c421d",
     "manual:issues.pull_requests:canonical": "0cf13f2534b52d4f6a81d65e2bc21d78d4404c74b8402ea285f6d58fe457f657",
-    "manual:issues.runs:canonical": "f23dd8aef28c83007fb544824a2775c505d7dc9d3adda97e13c19314c5f20897",
+    "manual:issues.runs:canonical": "a4d5da204976362d419904d2c49d4f059d4fb7c3cfabbf84fbc1898adeeca528",
     "manual:issues.usage:canonical": "55bde5a189beb9673263daae455efba7d6cd91d63593f2ec7ef0bc324bceb47c",
     "generated:issues.comments.add:default:canonical": "768d027bbe0a02b4cf03ca7a0032628630f998de2b86341bb1f3e12608fe83a9",
     "generated:issues.comments.delete:default:canonical": "533daeb5f552f1468dd2e303cf6da92c6fa5be879daf5ca38b6d64756b67a33b",

@@ -22,6 +22,7 @@ from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import (
     IssueDescriptionInput,
     IssueListFilter,
+    IssuePropertyAssignment,
 )
 from multica_py.models.project_resources import ProjectResourceRecord
 from multica_py.models.relations import OffsetLazyCollection, OffsetPage
@@ -80,6 +81,7 @@ class ProjectIssueCollection(OffsetLazyCollection[Issue]):
         priority: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
+        properties: tuple[IssuePropertyAssignment, ...] = (),
         parent_id: str | None = None,
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
@@ -91,6 +93,7 @@ class ProjectIssueCollection(OffsetLazyCollection[Issue]):
             priority=priority,
             assignee_id=assignee_id,
             label_ids=label_ids,
+            properties=properties,
             project_id=self._project_id,
             parent_id=parent_id,
             options=options,
@@ -112,6 +115,7 @@ class ProjectIssueCollection(OffsetLazyCollection[Issue]):
         priority: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
+        properties: tuple[IssuePropertyAssignment, ...] = (),
         parent_id: str | None = None,
         options: OperationOptions | None = None,
     ) -> Issue:
@@ -123,6 +127,7 @@ class ProjectIssueCollection(OffsetLazyCollection[Issue]):
             priority=priority,
             assignee_id=assignee_id,
             label_ids=label_ids,
+            properties=properties,
             parent_id=parent_id,
             options=options,
         ).run()

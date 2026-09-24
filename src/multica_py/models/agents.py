@@ -18,6 +18,9 @@ class AgentTask(msgspec.Struct, frozen=True, kw_only=True):
     status: str
     issue_id: str
     wakeup_id: str | None = None
+    supplement_capability: str | None = None
+    supplement_comment_ids: tuple[str, ...] = ()
+    can_supplement: bool | None = None
     issue_title: str | None = None
     issue_description: str | None = None
     issue_status: str | None = None

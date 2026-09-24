@@ -4,7 +4,13 @@ from multica_py.models.autopilots import (
 )
 from multica_py.models.common import ActionResult, CommentCursor, Page
 from multica_py.models.issue_activity import MetadataPage
-from multica_py.models.issues import IssueChildrenResult, IssueListFilter, IssueListPage
+from multica_py.models.issues import (
+    DuplicateIssueReference,
+    IssueChildrenResult,
+    IssueListFilter,
+    IssueListPage,
+    IssuePropertyAssignment,
+)
 from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
 from multica_py.models.relations import (
     CursorLazyCollection,
@@ -24,9 +30,11 @@ __all__ = [
     "CommentCursor",
     "CursorLazyCollection",
     "CursorPage",
+    "DuplicateIssueReference",
     "IssueChildrenResult",
     "IssueListFilter",
     "IssueListPage",
+    "IssuePropertyAssignment",
     "LazyCollection",
     "LazyMapping",
     "LocalDirectoryResourceRef",

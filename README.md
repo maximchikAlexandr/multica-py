@@ -31,17 +31,31 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
-The approved SDK target is Multica CLI `0.5.1` at commit
-`f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`, with compatibility interval
-`[0.4.42, 0.5.2)`. Migrate directly from CLI/SDK `0.5.0`; no intermediate
-SDK release is supported. Existing operation-level gates from `0.5.0` remain
-unchanged; the global `0.4.42` floor applies where already approved.
-The existing `AgentTask` projection from `agents.tasks` and `TaskRun` projection
-from `issues.runs` expose the same optional opaque-string `wakeup_id` response
-field; `RunMessage` exposes optional `call_id`. These fields require `0.5.1`
-when present. The `issue wakeup` command family and runtime profiles remain
-outside this SDK. See [the migration guide](docs/migration.md) for
-presence/error semantics, checksum roles, and atomic rollback guidance.
+The approved SDK target is Multica CLI `0.5.2` at commit
+`d45aba1cd7582bef9210b921bbb7dc198b48e1ee` (release `394535503`), with
+compatibility interval `[0.4.42, 0.5.3)`. Migrate directly from CLI/SDK
+`0.5.1`; no intermediate SDK release is supported. Existing operation-level
+gates remain unchanged, while the new duplicate/supplement projections and
+atomic issue properties require CLI `0.5.2`. The exclusive `0.5.3` ceiling
+keeps the reviewed contract bounded.
+
+Issue responses expose the immutable `duplicate_of` snapshot when supplied;
+omitted and explicit-null values remain distinguishable through wire presence.
+`AgentTask` and `TaskRun` expose read-only `supplement_capability`, ordered
+`supplement_comment_ids`, and `can_supplement` with omission-aware defaults.
+Issue creation accepts ordered atomic properties through
+`IssuePropertyAssignment`; the pinned CLI remains responsible for property
+catalog, type, canonicalization, duplicate, archived, capability, atomicity,
+and post-create validation. Existing label attachment remains a separate
+post-create workflow.
+
+Task-supplement mutation/receipt APIs, duplicate mutation and timeline APIs,
+and issue-create attachment inputs remain outside this SDK. On a failed target
+acceptance, roll back the contract, generated runtime, models, resources,
+tests, docs, and package claims together to the prior `0.5.1` state. The
+`issue wakeup` command family and runtime profiles remain outside this SDK.
+See [the migration guide](docs/migration.md) for presence/error semantics,
+version gates, deferred surfaces, checksum roles, and rollback guidance.
 
 ## Usage
 
@@ -64,6 +78,18 @@ page = client.issues.list(
     fields=("id", "title", "properties"),
     property_filters=("Environment=prod",),
     resolve_properties=True,
+)
+
+from multica_py.models.issues import IssuePropertyAssignment
+
+# Atomic create-time properties are sent in caller order; CLI 0.5.2 owns
+# catalog lookup, value canonicalization, and server-side atomicity.
+issue = client.issues.create(
+    title="Release checklist",
+    properties=(
+        IssuePropertyAssignment(reference="Environment", value="production"),
+        IssuePropertyAssignment(reference="Release", value="2026.09"),
+    ),
 )
 skill = client.skills.get("skill_123")  # get requests full content
 files = client.skills.files.list(skill.id, with_content=True)

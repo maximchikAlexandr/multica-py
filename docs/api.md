@@ -593,3 +593,26 @@ own the issue-run status refresh contract.
 `RunToolFinishedEvent`, `RunErrorEvent`, `RunStatusChangedEvent`, and
 `RunUnknownEvent` are exported from `multica_py`. Async streaming is deferred
 until the SDK adopts an end-to-end asynchronous command execution model.
+# Multica Python SDK API
+
+## Multica 0.5.2 additions
+
+Issue responses expose the immutable `Issue.duplicate_of` snapshot when the
+server provides one. `AgentTask` and `TaskRun` expose read-only
+`supplement_capability`, ordered `supplement_comment_ids`, and
+`can_supplement`; omission remains distinct in wire presence metadata.
+
+Issue creation accepts ordered atomic properties:
+
+```python
+from multica_py import IssuePropertyAssignment
+
+client.issues.create(
+    title="Release issue",
+    properties=(IssuePropertyAssignment(reference="Priority", value="high"),),
+)
+```
+
+The pinned CLI owns property catalog, type, canonicalization, duplicate,
+archived, atomicity, and post-create snapshot validation. Legacy `label_ids`
+attachment remains a separate post-create workflow.
