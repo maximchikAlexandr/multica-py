@@ -77,19 +77,22 @@ encoding, error decoding, and open-enum policy.
 ### Requirement: Atomic create-time property mapping is approved
 The `issues.create` operation SHALL map each ordered
 `IssuePropertyAssignment(reference, value)` to one repeatable
-`--property <reference>=<value>` binding. The pinned CLI SHALL remain the
-authority for configuration and capability preflight, name or UUID definition
-resolution, all property-type canonical JSON conversions, duplicate and
-archived rejection, atomic request binding, and post-create property snapshot
-verification. The approved mapping SHALL preserve caller order and SHALL NOT
-introduce a client-side catalog lookup.
+`--property <reference>=<value>` binding. SDK-local validation SHALL be limited
+to the tuple and item types, a nonblank string reference, and a string value.
+Empty string values, `__none__`, and comparison spellings SHALL reach the pinned
+CLI unchanged. The pinned CLI SHALL remain the authority for value grammar,
+configuration and capability preflight, name or UUID definition resolution,
+all property-type canonical JSON conversions, duplicate and archived rejection,
+atomic request binding, and post-create property snapshot verification. The
+approved mapping SHALL preserve caller order and SHALL NOT introduce a
+client-side catalog lookup.
 
 #### Scenario: Ordered assignments map without extra I/O
 - **WHEN** create receives multiple valid assignments
 - **THEN** command construction emits one `--property` pair per item in caller order and performs no filesystem, catalog, or transport I/O
 
-#### Scenario: CLI owns catalog-sensitive validation and atomicity
-- **WHEN** a property reference is unresolved, archived, duplicated, type-invalid, or mismatches the returned snapshot
+#### Scenario: CLI owns value grammar, catalog validation, and atomicity
+- **WHEN** a property value is empty, equals `__none__`, uses a comparison spelling, or a property reference is unresolved, archived, duplicated, type-invalid, or mismatches the returned snapshot
 - **THEN** the pinned CLI returns its reviewed failure and the SDK surfaces that failure without a create-then-set fallback
 
 ### Requirement: New REST-only and local-file behavior remains outside the SDK

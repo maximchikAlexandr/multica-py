@@ -66,8 +66,10 @@ SHALL expose `properties: tuple[IssuePropertyAssignment, ...] = ()` with eager
 and command signature parity. Each immutable assignment SHALL contain a nonblank
 property name or UUID reference and a string value. Valid assignments SHALL emit
 one repeatable `--property <reference>=<value>` argument in caller order on the
-single create command. Non-tuples, wrong item types, blank references, empty
-values, `__none__`, and comparison spellings SHALL fail before transport.
+single create command. Non-tuples, wrong item types, non-string values, and
+non-string or blank references SHALL fail before transport. Empty string
+values, `__none__`, and comparison spellings SHALL be emitted unchanged so the
+pinned CLI owns their value-grammar validation and rejection.
 
 #### Scenario: All server property types use one stable SDK mapping
 - **WHEN** callers supply text, URL, number, date, checkbox, select,
@@ -78,13 +80,12 @@ values, `__none__`, and comparison spellings SHALL fail before transport.
 - **WHEN** an assignment uses a nonblank property display name or definition UUID
 - **THEN** the SDK emits that reference without a catalog lookup and returns the issue snapshot decoded by the existing issue adapter
 
-#### Scenario: Invalid stable shapes perform no I/O
-- **WHEN** the properties collection or assignment shape violates the local contract
+#### Scenario: Invalid stable structures perform no I/O
+- **WHEN** the properties collection is not a tuple, an assignment has the wrong item type, a reference is not a string or is blank, or a value is not a string
 - **THEN** construction raises `TypeError` or `ValueError` before transport and no partial issue exists
 
-#### Scenario: Catalog-sensitive failures remain atomic CLI failures
-- **WHEN** the CLI rejects a duplicate, unresolved, archived, malformed, empty,
-  comparison, reserved, capability-incompatible, or snapshot-mismatched property
+#### Scenario: CLI-owned value and catalog failures remain atomic
+- **WHEN** the CLI rejects an empty string value, `__none__`, a comparison spelling, a duplicate, unresolved, archived, type-invalid, capability-incompatible, or snapshot-mismatched property
 - **THEN** the SDK surfaces the reviewed command failure and never falls back to post-create property mutation
 
 #### Scenario: Existing label workflow remains explicit

@@ -17,9 +17,9 @@ offline gate SHALL require a backend or network.
 - **WHEN** agent-task and task-run fixtures exercise omitted and open capability, omitted/empty/ordered IDs, omitted/true/false permission, malformed values, and existing usage/result/error/failure members
 - **THEN** both projections preserve exact values, presence, order, and unchanged legacy behavior
 
-#### Scenario: Property matrix covers every type and failure boundary
+#### Scenario: Property validation ownership is deterministic
 - **WHEN** create cases exercise all property types, names and UUIDs, repeat order, eager/command/project-bound parity, duplicate, malformed, empty, archived, `__none__`, comparison, capability, canonical JSON, atomicity, and post-create mismatch paths
-- **THEN** exact argv, validation timing, one-create behavior, returned snapshots, and zero fallback property calls match the approved contract
+- **THEN** tuple/item/reference/value-type failures are local and transport-free, while empty, `__none__`, comparison, duplicate, malformed, archived, capability, and mismatch failures are CLI-owned, and exact argv, exception behavior, one-create behavior, returned snapshots, and zero fallback property calls match the approved contract
 
 #### Scenario: Excluded surface remains absent
 - **WHEN** negative inventories inspect public operations, symbols, resources, methods, enums, retries, generated mappings, and canonical vectors

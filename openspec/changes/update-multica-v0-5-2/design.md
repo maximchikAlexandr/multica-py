@@ -112,13 +112,14 @@ project-bound delegates, gain
 emits one `--property <reference>=<value>` pair in caller order before
 `--output json`. `reference` accepts a property name or UUID and must be
 nonblank after trimming; `value` must be a string and is passed verbatim after
-the separator so the CLI can apply the property definition's type rules.
-Non-tuples, wrong item types, blank references, empty values, `__none__`, and
-comparison spellings fail locally before transport. Duplicate references,
-archived definitions, unresolved names/UUIDs, invalid select/actor/date/URL/
-number/checkbox/multi values, and post-create snapshot mismatch remain pinned
-CLI errors because resolving them locally would require a race-prone catalog
-request and duplicate server logic.
+the separator so the CLI can apply the property definition's value grammar and
+type rules. Non-tuples, wrong item types, non-string values, and non-string or
+blank references fail locally before transport. Empty string values,
+`__none__`, comparison spellings, duplicate references, archived definitions,
+unresolved names/UUIDs, invalid select/actor/date/URL/number/checkbox/multi
+values, and post-create snapshot mismatch are emitted unchanged and remain
+pinned CLI errors because resolving them locally would require a race-prone
+catalog request and duplicate server logic.
 
 The CLI performs configuration/capability preflight, resolves definitions,
 converts every supported property type to canonical JSON, rejects duplicates,
@@ -150,7 +151,8 @@ approved contract, never from collector or audit output.
   absence-aware and assert `_wire_presence` matrices for issue and both task
   projections.
 - [Property validation drifts from the server catalog] → Validate only stable
-  local shape and delegate type/catalog/canonicalization rules to the pinned CLI.
+  local structure and delegate value grammar, type, catalog, and
+  canonicalization rules to the pinned CLI.
 - [Labels make an otherwise atomic create workflow composite] → Document that
   `properties` are atomic with issue creation while legacy label attachment
   remains a separate post-create workflow.

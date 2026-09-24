@@ -16,16 +16,16 @@
 
 ## 3. Implement atomic typed create properties
 
-- [ ] 3.1 Add immutable public `IssuePropertyAssignment(reference, value)` with stable local validation for tuple/item/reference/value/reserved/comparison shapes and export it through the repository's established issue-model surface.
+- [ ] 3.1 Add immutable public `IssuePropertyAssignment(reference, value)` with local validation for tuple/item types, nonblank string references, and string values, and export it through the repository's established issue-model surface.
 - [ ] 3.2 Add matching `properties` parameters to issue resource eager/command methods and project-bound delegates; emit repeatable `--property <reference>=<value>` pairs in caller order on the single create step with no catalog lookup or post-create property fallback.
 - [ ] 3.3 Preserve existing description, project, parent, assignee, priority, label plan, options, decoding, and client binding behavior; document that create properties are atomic while legacy label attachment remains composite.
-- [ ] 3.4 Surface pinned CLI capability, catalog, canonicalization, duplicate, archived, type, atomicity, and post-create mismatch failures through existing command error handling without reimplementing server-owned property rules.
+- [ ] 3.4 Surface pinned CLI empty-value, `__none__`, comparison-spelling, capability, catalog, canonicalization, duplicate, archived, type, atomicity, and post-create mismatch failures through existing command error handling without reimplementing server-owned property rules.
 
 ## 4. Extend table-driven verification and documentation
 
 - [ ] 4.1 Extend existing frozen issue response cases for omitted/null/valid/malformed duplicate snapshots, missing-original and status-snapshot semantics, every supported issue response path, and unchanged pagination/labels/metadata/properties/binding behavior.
 - [ ] 4.2 Extend existing task cases for omitted/open capability, omitted/empty/ordered comment IDs, omitted/true/false permission, malformed values, both operations, presence evidence, and unchanged usage/result/error/failure/cancellation/delta fields.
-- [ ] 4.3 Extend existing operation/component cases for property names and UUIDs, all property types, repeat order, eager/command/project-bound parity, local invalid shapes, CLI-owned duplicate/malformed/empty/archived/`__none__`/comparison/capability/canonicalization/atomicity/mismatch failures, exact argv, and zero fallback calls.
+- [ ] 4.3 Extend existing operation/component cases for property names and UUIDs, all property types, repeat order, eager/command/project-bound parity, local tuple/item/reference/value-type failures, CLI-owned empty/`__none__`/comparison/duplicate/malformed/archived/capability/canonicalization/atomicity/mismatch failures, exact argv, and zero fallback calls.
 - [ ] 4.4 Update provenance, command, response, compatibility, source-link, generated-runtime, negative inventory, and package fixtures for exact `0.5.2` identities, 201 nodes, 167 response work items, and excluded REST/local-file surfaces.
 - [ ] 4.5 Update README, API, compatibility, migration, changelog, prepared-live, and release guidance for direct `0.5.1→0.5.2`, new read fields, atomic properties, omission behavior, version gates, deferred surfaces, and rollback without an intermediate SDK delivery.
 
