@@ -87,6 +87,31 @@ class _IssueCreateArgvCase:
     description_input: IssueDescriptionInput
     label_ids: tuple[str, ...]
     expected_steps: tuple[tuple[str, ...], ...]
+    properties: tuple[IssuePropertyAssignment, ...] = ()
+    minimum_cli_version: str | None = None
+
+
+@dataclass(frozen=True)
+class _IssuePropertyValidationCase:
+    id: str
+    reference: object
+    value: object
+    error_type: type[Exception]
+    message: str
+
+
+@dataclass(frozen=True)
+class _IssuePropertyCollectionCase:
+    id: str
+    properties: object
+    message: str
+
+
+@dataclass(frozen=True)
+class _AcceptedIssuePropertyCase:
+    id: str
+    reference: str
+    value: str
 
 
 @dataclass(frozen=True)
@@ -247,6 +272,65 @@ _ISSUE_CREATE_ARGV_CASES = (
             ("issue", "get", "", "--output", "json"),
         ),
     ),
+    _IssueCreateArgvCase(
+        name="with properties and labels",
+        description_input=NoDescription(),
+        label_ids=("bug", "urgent"),
+        properties=(
+            IssuePropertyAssignment(reference="Impact", value="high"),
+            IssuePropertyAssignment(reference="Release", value="__none__"),
+        ),
+        minimum_cli_version="0.5.2",
+        expected_steps=(
+            (
+                "issue",
+                "create",
+                "--title",
+                "Test",
+                "--property",
+                "Impact=high",
+                "--property",
+                "Release=__none__",
+                "--output",
+                "json",
+            ),
+            ("issue", "label", "add", "", "bug", "--output", "json"),
+            ("issue", "label", "add", "", "urgent", "--output", "json"),
+            ("issue", "get", "", "--output", "json"),
+        ),
+    ),
+)
+
+
+_ISSUE_PROPERTY_VALIDATION_CASES = (
+    _IssuePropertyValidationCase(
+        id="reference-non-string",
+        reference=1,
+        value="value",
+        error_type=TypeError,
+        message="reference must be a string",
+    ),
+    _IssuePropertyValidationCase(
+        id="reference-blank",
+        reference=" \t",
+        value="value",
+        error_type=ValueError,
+        message="reference must be nonblank",
+    ),
+    _IssuePropertyValidationCase(
+        id="value-non-string",
+        reference="Reference",
+        value=1,
+        error_type=TypeError,
+        message="value must be a string",
+    ),
+)
+
+
+_ACCEPTED_ISSUE_PROPERTY_CASES = (
+    _AcceptedIssuePropertyCase("empty-value", "Reference", ""),
+    _AcceptedIssuePropertyCase("none-sentinel", "Reference", "__none__"),
+    _AcceptedIssuePropertyCase("special-string", "Reference", "A=B / C"),
 )
 
 
@@ -309,10 +393,14 @@ _ISSUE_ATTACHMENT_CASES = (
 def test_issue_create_direct_uses_full_expected_argv(case: _IssueCreateArgvCase) -> None:
     resource = IssueResource(MagicMock(), ClientConfig())
     command = resource.create_command(
-        title="Test", description_input=case.description_input, label_ids=case.label_ids
+        title="Test",
+        description_input=case.description_input,
+        label_ids=case.label_ids,
+        properties=case.properties,
     )
 
     assert tuple(step.argv for step in command._plan.steps) == case.expected_steps
+    assert command._plan.steps[0].minimum_cli_version == case.minimum_cli_version
 
 
 def test_issue_create_properties_are_ordered_atomic_and_version_gated() -> None:
@@ -342,18 +430,71 @@ def test_issue_create_properties_are_ordered_atomic_and_version_gated() -> None:
 
 
 @pytest.mark.parametrize(
-    "properties",
-    [
-        [IssuePropertyAssignment(reference="A", value="1")],
-        ("A=1",),
-        (IssuePropertyAssignment(reference="A", value="1"), "B=2"),
-    ],
+    "case",
+    (
+        _IssuePropertyCollectionCase(
+            id="list",
+            properties=[IssuePropertyAssignment(reference="A", value="1")],
+            message="properties must be a tuple of IssuePropertyAssignment",
+        ),
+        _IssuePropertyCollectionCase(
+            id="string-item",
+            properties=("A=1",),
+            message="properties must contain only IssuePropertyAssignment values",
+        ),
+        _IssuePropertyCollectionCase(
+            id="mixed-items",
+            properties=(IssuePropertyAssignment(reference="A", value="1"), "B=2"),
+            message="properties must contain only IssuePropertyAssignment values",
+        ),
+    ),
+    ids=lambda case: case.id,
 )
-def test_issue_create_properties_reject_non_typed_collections(properties: object) -> None:
-    with pytest.raises(TypeError):
-        IssueResource(MagicMock(), ClientConfig()).create_command(
-            title="Test", properties=cast("tuple[IssuePropertyAssignment, ...]", properties)
+def test_issue_create_properties_reject_non_typed_collections(
+    case: _IssuePropertyCollectionCase,
+) -> None:
+    resource = IssueResource(MagicMock(), ClientConfig())
+    with pytest.raises(TypeError, match=f"^{case.message}$"):
+        resource.create_command(
+            title="Test", properties=cast("tuple[IssuePropertyAssignment, ...]", case.properties)
         )
+
+
+@pytest.mark.parametrize("case", _ISSUE_PROPERTY_VALIDATION_CASES, ids=lambda case: case.id)
+def test_issue_property_assignment_rejects_invalid_values_before_transport(
+    case: _IssuePropertyValidationCase,
+) -> None:
+    transport = MagicMock()
+    resource = IssueResource(transport, ClientConfig())
+    with pytest.raises(case.error_type, match=f"^{case.message}$"):
+        resource.create_command(
+            title="Test",
+            properties=(
+                IssuePropertyAssignment(
+                    reference=cast("str", case.reference), value=cast("str", case.value)
+                ),
+            ),
+        )
+    transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize("case", _ACCEPTED_ISSUE_PROPERTY_CASES, ids=lambda case: case.id)
+def test_issue_property_assignment_accepts_empty_and_special_string_values(
+    case: _AcceptedIssuePropertyCase,
+) -> None:
+    transport = MagicMock()
+    command = IssueResource(transport, ClientConfig()).create_command(
+        title="Test",
+        properties=(IssuePropertyAssignment(reference=case.reference, value=case.value),),
+    )
+    assert command._plan.steps[0].argv[-4:] == (
+        "--property",
+        f"{case.reference}={case.value}",
+        "--output",
+        "json",
+    )
+    assert command._plan.steps[0].minimum_cli_version == "0.5.2"
+    transport.run_bytes.assert_not_called()
 
 
 def test_global_args_with_server_and_workspace():

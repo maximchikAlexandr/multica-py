@@ -24,6 +24,7 @@ from multica_py.models.common import ActionResult, Page
 from multica_py.models.issues import (
     IssueListFilter,
     IssueListPage,
+    IssuePropertyAssignment,
 )
 from multica_py.models.project_resources import ProjectResourceRecord
 from multica_py.models.relations import LazyCollection, OffsetPage
@@ -150,6 +151,14 @@ class ProjectRelationCommandCase:
     expected_argv: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class ProjectIssueCreateCase:
+    id: str
+    label_ids: tuple[str, ...]
+    properties: tuple[IssuePropertyAssignment, ...]
+    expected_steps: tuple[tuple[str, ...], ...]
+
+
 PROJECT_RELATION_COMMAND_CASES = (
     ProjectRelationCommandCase(
         "resources all",
@@ -195,6 +204,56 @@ PROJECT_RELATION_COMMAND_CASES = (
             "p1",
             "--output",
             "json",
+        ),
+    ),
+)
+
+
+PROJECT_ISSUE_CREATE_CASES = (
+    ProjectIssueCreateCase(
+        id="properties-only",
+        label_ids=(),
+        properties=(IssuePropertyAssignment(reference="Impact", value="high"),),
+        expected_steps=(
+            (
+                "issue",
+                "create",
+                "--title",
+                "Deploy",
+                "--project",
+                "p1",
+                "--property",
+                "Impact=high",
+                "--output",
+                "json",
+            ),
+        ),
+    ),
+    ProjectIssueCreateCase(
+        id="properties-and-labels",
+        label_ids=("bug", "urgent"),
+        properties=(
+            IssuePropertyAssignment(reference="Impact", value="high"),
+            IssuePropertyAssignment(reference="Release", value="__none__"),
+        ),
+        expected_steps=(
+            (
+                "issue",
+                "create",
+                "--title",
+                "Deploy",
+                "--project",
+                "p1",
+                "--property",
+                "Impact=high",
+                "--property",
+                "Release=__none__",
+                "--output",
+                "json",
+            ),
+            ("issue", "label", "add", "", "bug", "--output", "json"),
+            ("issue", "label", "add", "", "urgent", "--output", "json"),
+            ("issue", "get", "", "--output", "json"),
         ),
     ),
 )
@@ -468,6 +527,33 @@ def test_project_issue_create_forwards_natural_inputs_without_project_lookup() -
         stdin=None,
         timeout=None,
     )
+
+
+@pytest.mark.parametrize("case", PROJECT_ISSUE_CREATE_CASES, ids=lambda case: case.id)
+def test_project_issue_create_forwards_atomic_properties_and_legacy_labels(
+    case: ProjectIssueCreateCase,
+) -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    projects = ProjectResource(transport, ClientConfig())
+    issues = IssueResource(transport, ClientConfig())
+    client = MagicMock()
+    client.projects = projects
+    client.issues = issues
+    projects._set_client(client)
+    issues._set_client(client)
+    project = Project(id="p1", name="Test", status=_PLANNED, _client=client)
+
+    command = cast("ProjectIssueCollection", project.issues).create_command(
+        title="Deploy",
+        label_ids=case.label_ids,
+        properties=case.properties,
+    )
+
+    assert tuple(step.argv for step in command._plan.steps) == case.expected_steps
+    assert command._plan.steps[0].minimum_cli_version == "0.5.2"
+    assert len(command._plan.steps) == 1 + len(case.label_ids) + bool(case.label_ids)
+    transport.run_bytes.assert_not_called()
 
 
 def test_project_add_local_directory_command_freezes_path_and_invalidates_after_success() -> None:

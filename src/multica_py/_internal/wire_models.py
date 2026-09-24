@@ -391,7 +391,7 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     status: str
     wakeup_id: str | None | msgspec.UnsetType = msgspec.UNSET
     supplement_capability: str | None | msgspec.UnsetType = msgspec.UNSET
-    supplement_comment_ids: tuple[str, ...] | None | msgspec.UnsetType = msgspec.UNSET
+    supplement_comment_ids: tuple[str, ...] | msgspec.UnsetType = msgspec.UNSET
     can_supplement: bool | None | msgspec.UnsetType = msgspec.UNSET
     cancelled_by: _TaskCancellationActorWire | msgspec.UnsetType = msgspec.UNSET
     workspace_slug: str | None | msgspec.UnsetType = msgspec.UNSET
@@ -537,9 +537,7 @@ def _task_run_from_wire(
             None if wire.supplement_capability is msgspec.UNSET else wire.supplement_capability
         ),
         supplement_comment_ids=(
-            ()
-            if wire.supplement_comment_ids in (msgspec.UNSET, None)
-            else wire.supplement_comment_ids
+            () if wire.supplement_comment_ids is msgspec.UNSET else wire.supplement_comment_ids
         ),
         can_supplement=(None if wire.can_supplement is msgspec.UNSET else wire.can_supplement),
         cancelled_by=cancelled_by,

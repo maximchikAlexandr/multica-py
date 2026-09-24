@@ -670,6 +670,26 @@ def test_task_run_decode_matrix(case: DecodeCase) -> None:
         assert not hasattr(wire, "active_sibling_runs")
 
 
+@pytest.mark.parametrize(
+    "operation",
+    ("agents.tasks", "issues.runs"),
+    ids=("agents.tasks", "issues.runs"),
+)
+def test_task_supplement_comment_ids_rejects_explicit_null(operation: str) -> None:
+    payload = {
+        "id": "task-1",
+        "status": "completed",
+        "issue_id": "issue-1",
+        "supplement_comment_ids": None,
+    }
+    with pytest.raises(OutputShapeError, match="supplement_comment_ids"):
+        if operation == "agents.tasks":
+            decode_json(json.dumps(payload).encode(), AgentTask)
+        else:
+            wire = decode_json(json.dumps(payload).encode(), _TaskRunWire)
+            _task_run_from_wire(wire, issue_id="issue-1")
+
+
 @pytest.mark.parametrize("case", ISSUE_TARGET_DECODE_CASES, ids=lambda case: case.id)
 def test_issue_target_projection_decode_matrix(case: DecodeCase) -> None:
     issue = _issue_from_wire(decode_json(json.dumps(case.payload).encode(), _IssueWire))

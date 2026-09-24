@@ -50,7 +50,7 @@ class _AgentTaskWire(msgspec.Struct, frozen=True, kw_only=True):
     issue_id: str
     wakeup_id: str | None | msgspec.UnsetType = msgspec.UNSET
     supplement_capability: str | None | msgspec.UnsetType = msgspec.UNSET
-    supplement_comment_ids: tuple[str, ...] | None | msgspec.UnsetType = msgspec.UNSET
+    supplement_comment_ids: tuple[str, ...] | msgspec.UnsetType = msgspec.UNSET
     can_supplement: bool | None | msgspec.UnsetType = msgspec.UNSET
     issue_title: str | None | msgspec.UnsetType = msgspec.UNSET
     issue_description: str | None | msgspec.UnsetType = msgspec.UNSET
@@ -75,9 +75,7 @@ def _agent_task_from_wire(wire: _AgentTaskWire) -> AgentTask:
             None if wire.supplement_capability is msgspec.UNSET else wire.supplement_capability
         ),
         supplement_comment_ids=(
-            ()
-            if wire.supplement_comment_ids in (msgspec.UNSET, None)
-            else wire.supplement_comment_ids
+            () if wire.supplement_comment_ids is msgspec.UNSET else wire.supplement_comment_ids
         ),
         can_supplement=(None if wire.can_supplement is msgspec.UNSET else wire.can_supplement),
         issue_title=None if wire.issue_title is msgspec.UNSET else wire.issue_title,
