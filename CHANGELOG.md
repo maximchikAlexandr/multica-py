@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.2
+
+- Approved target: Multica CLI `0.5.2`, release `394535503`, source commit
+  `d45aba1cd7582bef9210b921bbb7dc198b48e1ee`, with compatibility bounds
+  `[0.4.42, 0.5.3)`.
+- Migrate directly from `0.5.1`; no intermediate SDK delivery is required.
+- Add immutable duplicate issue snapshots, read-only task supplement metadata,
+  and ordered atomic `IssuePropertyAssignment` inputs to issue creation. New
+  fields and properties require CLI `0.5.2`; retained operations keep their
+  existing minimums.
+- Keep task-supplement and duplicate mutation/receipt APIs, issue timeline and
+  attachment inputs, issue wakeup, and runtime-profile surfaces deferred.
+- If acceptance gates fail, roll back the approved contract, generated runtime,
+  models/resources, tests, docs, and package claims atomically to the prior
+  `0.5.1` state.
+
 ## Unreleased — unified SDK operation contracts
 
 This breaking alpha makes direct typed inputs, bound `Issue` read paths, and
@@ -7,7 +23,7 @@ one inspectable command contract canonical. Relation `.all()` tuple snapshots
 remain unchanged. The complete compiling migration table is in
 [docs/migration.md](docs/migration.md).
 
-### Multica 0.5.1 compatibility migration
+### Historical Multica 0.5.1 compatibility migration
 
 - Targets CLI `0.5.1` at
   `f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`, with bounds
@@ -151,9 +167,10 @@ the exact before/after import table is maintained in the migration guide.
   nested/scalar projections. `IssueUsage` exposes exact token, cost-tick, and
   uncosted categories, while `TaskRun` retains reviewed runtime, worktree,
   result, and failure context. Historical notes for CLI 0.4.32 retain the
-  superseded interval `[0.4.28, 0.4.33)`; the current approved target is
-  `0.5.1` with compatibility interval `[0.4.42, 0.5.2)`; the `0.5.0`
-  release is comparison provenance only.
+  superseded interval `[0.4.28, 0.4.33)`; the historical `0.5.1` target had
+  compatibility interval `[0.4.42, 0.5.2)`; the current approved target is
+  `0.5.2` with `[0.4.42, 0.5.3)`. The `0.5.0` release is comparison
+  provenance only.
 
 ## 0.1.0 (unreleased)
 

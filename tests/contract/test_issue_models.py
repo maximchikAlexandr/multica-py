@@ -473,6 +473,45 @@ TASK_RUN_DECODE_CASES = (
 )
 
 
+@dataclass(frozen=True)
+class TaskSupplementDecodeCase:
+    id: str
+    payload: dict[str, object]
+    decode: Callable[[bytes], object]
+
+
+def _decode_agent_task_payload(payload: bytes) -> object:
+    return decode_json(payload, AgentTask)
+
+
+def _decode_task_run_payload(payload: bytes) -> object:
+    return _task_run_from_wire(decode_json(payload, _TaskRunWire), issue_id="issue-1")
+
+
+_TASK_SUPPLEMENT_EXPLICIT_NULL_CASES = (
+    TaskSupplementDecodeCase(
+        id="agents.tasks-explicit-null",
+        payload={
+            "id": "task-1",
+            "status": "completed",
+            "issue_id": "issue-1",
+            "supplement_comment_ids": None,
+        },
+        decode=_decode_agent_task_payload,
+    ),
+    TaskSupplementDecodeCase(
+        id="issues.runs-explicit-null",
+        payload={
+            "id": "task-1",
+            "status": "completed",
+            "issue_id": "issue-1",
+            "supplement_comment_ids": None,
+        },
+        decode=_decode_task_run_payload,
+    ),
+)
+
+
 ISSUE_TARGET_DECODE_CASES = (
     DecodeCase(
         "current",
@@ -668,6 +707,14 @@ def test_task_run_decode_matrix(case: DecodeCase) -> None:
         assert isinstance(run.result, MappingProxyType)
         assert not hasattr(wire, "plugin_execution_manifest")
         assert not hasattr(wire, "active_sibling_runs")
+
+
+@pytest.mark.parametrize("case", _TASK_SUPPLEMENT_EXPLICIT_NULL_CASES, ids=lambda case: case.id)
+def test_task_supplement_comment_ids_rejects_explicit_null(
+    case: TaskSupplementDecodeCase,
+) -> None:
+    with pytest.raises(OutputShapeError, match="supplement_comment_ids"):
+        case.decode(json.dumps(case.payload).encode())
 
 
 @pytest.mark.parametrize("case", ISSUE_TARGET_DECODE_CASES, ids=lambda case: case.id)

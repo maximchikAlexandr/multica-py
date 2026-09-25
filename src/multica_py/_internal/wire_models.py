@@ -390,6 +390,9 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     status: str
     wakeup_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    supplement_capability: str | None | msgspec.UnsetType = msgspec.UNSET
+    supplement_comment_ids: tuple[str, ...] | msgspec.UnsetType = msgspec.UNSET
+    can_supplement: bool | None | msgspec.UnsetType = msgspec.UNSET
     cancelled_by: _TaskCancellationActorWire | msgspec.UnsetType = msgspec.UNSET
     workspace_slug: str | None | msgspec.UnsetType = msgspec.UNSET
     issue_identifier: str | None | msgspec.UnsetType = msgspec.UNSET
@@ -530,6 +533,13 @@ def _task_run_from_wire(
         id=wire.id,
         status=wire.status,
         wakeup_id=None if wire.wakeup_id is msgspec.UNSET else wire.wakeup_id,
+        supplement_capability=(
+            None if wire.supplement_capability is msgspec.UNSET else wire.supplement_capability
+        ),
+        supplement_comment_ids=(
+            () if wire.supplement_comment_ids is msgspec.UNSET else wire.supplement_comment_ids
+        ),
+        can_supplement=(None if wire.can_supplement is msgspec.UNSET else wire.can_supplement),
         cancelled_by=cancelled_by,
         workspace_slug=None if wire.workspace_slug is msgspec.UNSET else wire.workspace_slug,
         issue_identifier=(
@@ -647,6 +657,9 @@ def _task_run_from_wire(
                 + (
                     ("workspace_slug", _presence_seed(wire.workspace_slug)),
                     ("wakeup_id", _presence_seed(wire.wakeup_id)),
+                    ("supplement_capability", _presence_seed(wire.supplement_capability)),
+                    ("supplement_comment_ids", _presence_seed(wire.supplement_comment_ids)),
+                    ("can_supplement", _presence_seed(wire.can_supplement)),
                     ("issue_identifier", _presence_seed(wire.issue_identifier)),
                     ("workspace_context", _presence_seed(wire.workspace_context)),
                     ("issue_title", _presence_seed(wire.issue_title)),

@@ -49,6 +49,9 @@ class _AgentTaskWire(msgspec.Struct, frozen=True, kw_only=True):
     status: str
     issue_id: str
     wakeup_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    supplement_capability: str | None | msgspec.UnsetType = msgspec.UNSET
+    supplement_comment_ids: tuple[str, ...] | msgspec.UnsetType = msgspec.UNSET
+    can_supplement: bool | None | msgspec.UnsetType = msgspec.UNSET
     issue_title: str | None | msgspec.UnsetType = msgspec.UNSET
     issue_description: str | None | msgspec.UnsetType = msgspec.UNSET
     issue_status: str | None | msgspec.UnsetType = msgspec.UNSET
@@ -68,6 +71,13 @@ def _agent_task_from_wire(wire: _AgentTaskWire) -> AgentTask:
         status=wire.status,
         issue_id=wire.issue_id,
         wakeup_id=None if wire.wakeup_id is msgspec.UNSET else wire.wakeup_id,
+        supplement_capability=(
+            None if wire.supplement_capability is msgspec.UNSET else wire.supplement_capability
+        ),
+        supplement_comment_ids=(
+            () if wire.supplement_comment_ids is msgspec.UNSET else wire.supplement_comment_ids
+        ),
+        can_supplement=(None if wire.can_supplement is msgspec.UNSET else wire.can_supplement),
         issue_title=None if wire.issue_title is msgspec.UNSET else wire.issue_title,
         issue_description=(
             None if wire.issue_description is msgspec.UNSET else wire.issue_description
@@ -95,6 +105,9 @@ def _agent_task_from_wire(wire: _AgentTaskWire) -> AgentTask:
         ),
         _wire_presence=(
             ("wakeup_id", _presence_seed(wire.wakeup_id)),
+            ("supplement_capability", _presence_seed(wire.supplement_capability)),
+            ("supplement_comment_ids", _presence_seed(wire.supplement_comment_ids)),
+            ("can_supplement", _presence_seed(wire.can_supplement)),
             ("issue_title", _presence_seed(wire.issue_title)),
             ("issue_description", _presence_seed(wire.issue_description)),
             ("issue_status", _presence_seed(wire.issue_status)),

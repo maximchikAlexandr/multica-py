@@ -53,9 +53,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.5.1'" in runtime
+    assert b"TARGET_VERSION = '0.5.2'" in runtime
     assert b"MIN_CLI_VERSION = '0.4.42'" in runtime
-    assert b"MAX_CLI_VERSION = '0.5.2'" in runtime
+    assert b"MAX_CLI_VERSION = '0.5.3'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -127,11 +127,11 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
     assert "kind" not in str(update_binding)
 
     binary = next(
-        item for item in contract.compatibility.verified_binaries if item.version == "0.5.0"
+        item for item in contract.compatibility.verified_binaries if item.version == "0.5.1"
     )
-    assert binary.commit.startswith("2df765a3c")
+    assert binary.commit.startswith("f41fae6b0")
     assert (binary.build_date, binary.go_version, binary.os, binary.arch) == (
-        "2026-09-18T10:09:36Z",
+        "2026-09-21T10:42:33Z",
         "go1.26.8",
         "darwin",
         "arm64",
@@ -143,6 +143,7 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
         "labels.update",
         "runtimes.delete",
         "skills.list",
+        "issues.create",
         "issues.runs",
         "issues.run_messages",
     }

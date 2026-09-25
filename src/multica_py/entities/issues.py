@@ -42,6 +42,7 @@ from multica_py.models.issue_activity import (
 )
 from multica_py.models.issues import (
     AssignmentTarget,
+    DuplicateIssueReference,
     IssueAssignee,
     IssueChildrenResult,
     IssueChildStageGroup,
@@ -269,6 +270,9 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     id: str
     status: str
     wakeup_id: str | None = None
+    supplement_capability: str | None = None
+    supplement_comment_ids: tuple[str, ...] = ()
+    can_supplement: bool | None = None
     cancelled_by: TaskCancellationActor | None = None
     workspace_slug: str | None = None
     issue_identifier: str | None = None
@@ -340,6 +344,10 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             data.pop("cancelled_by", None)
         if self.wakeup_id is None:
             data.pop("wakeup_id", None)
+        if self.supplement_capability is None:
+            data.pop("supplement_capability", None)
+        if self.can_supplement is None:
+            data.pop("can_supplement", None)
         return data
 
     @classmethod
@@ -470,6 +478,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
     id: str
     title: str
     status: str
+    duplicate_of: DuplicateIssueReference | None = None
     status_name: str | None = None
     revision: int | None = None
     last_activity_at: datetime.datetime | None = None
@@ -527,6 +536,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             "title",
             "description",
             "status",
+            "duplicate_of",
             "status_category",
             "status_name",
             "priority",

@@ -6,18 +6,20 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
-## Approved v0.5.1 target
+## Approved v0.5.2 target
 
-This SDK contract supports Multica CLI `0.5.1` at commit
-`f41fae6b08fb734afcbd13205c0b3203dd0bc9c6`, with the tested interval
-`[0.4.42, 0.5.2)`. Migrate directly from `0.5.0`; no intermediate SDK
-release is required. Existing operation-level gates from `0.5.0` remain
-unchanged; the global `0.4.42` floor applies where already approved.
-The existing `AgentTask` projection from `agents.tasks` and `TaskRun` projection
-from `issues.runs` expose the same optional opaque-string `wakeup_id` response
-field; `RunMessage.call_id` is also optional. These fields require CLI `0.5.1`
-when present. The `issue wakeup` family is deferred and runtime profiles are
-not SDK surface.
+This SDK contract supports Multica CLI `0.5.2` at commit
+`d45aba1cd7582bef9210b921bbb7dc198b48e1ee` (release `394535503`), with the
+tested interval `[0.4.42, 0.5.3)`. Migrate directly from `0.5.1`; no
+intermediate SDK release is required. Existing operation-level gates from
+`0.5.1` remain unchanged; the global `0.4.42` floor applies where already
+approved. The `AgentTask` projection from `agents.tasks` and `TaskRun`
+projection from `issues.runs` expose the approved supplement metadata; issue
+responses expose the immutable `duplicate_of` snapshot, and issue properties
+are atomic on the single create step. These additions require CLI `0.5.2`;
+`0.5.3` is exclusive. The `issue wakeup` family and runtime profiles are
+deferred and are not SDK surface. The former v0.5.1 target text is historical
+comparison context.
 
 The `Comment.deleted_at` field is `None` only when the wire field is omitted;
 valid target timestamps are preserved, while explicit null and malformed values
@@ -593,3 +595,26 @@ own the issue-run status refresh contract.
 `RunToolFinishedEvent`, `RunErrorEvent`, `RunStatusChangedEvent`, and
 `RunUnknownEvent` are exported from `multica_py`. Async streaming is deferred
 until the SDK adopts an end-to-end asynchronous command execution model.
+# Multica Python SDK API
+
+## Multica 0.5.2 additions
+
+Issue responses expose the immutable `Issue.duplicate_of` snapshot when the
+server provides one. `AgentTask` and `TaskRun` expose read-only
+`supplement_capability`, ordered `supplement_comment_ids`, and
+`can_supplement`; omission remains distinct in wire presence metadata.
+
+Issue creation accepts ordered atomic properties:
+
+```python
+from multica_py.models.issues import IssuePropertyAssignment
+
+client.issues.create(
+    title="Release issue",
+    properties=(IssuePropertyAssignment(reference="Priority", value="high"),),
+)
+```
+
+The pinned CLI owns property catalog, type, canonicalization, duplicate,
+archived, atomicity, and post-create snapshot validation. Legacy `label_ids`
+attachment remains a separate post-create workflow.

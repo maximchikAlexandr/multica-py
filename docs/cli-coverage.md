@@ -1,12 +1,12 @@
 # CLI Coverage
 
-Pinned target upstream: `multica-ai/multica@f41fae6b08fb734afcbd13205c0b3203dd0bc9c6` (tag `v0.5.1`)
+Pinned target upstream: `multica-ai/multica@d45aba1cd7582bef9210b921bbb7dc198b48e1ee` (tag `v0.5.2`)
 
-The reviewed compatibility interval is `[0.4.42, 0.5.2)`: baseline `v0.5.0`
-remains the direct comparison and `v0.5.1` is the maximum tested target. The
-direct `v0.5.0` → `v0.5.1` reconciliation covers 194 baseline and 201 target
-nodes: 192 unchanged, two changed existing nodes (`issue` and `runtime profile
-create`), and seven deferred `issue wakeup` additions, with no removals,
+The reviewed compatibility interval is `[0.4.42, 0.5.3)`: baseline `v0.5.1`
+remains the direct comparison and `v0.5.2` is the maximum tested target. The
+direct `v0.5.1` → `v0.5.2` reconciliation covers 201 baseline and 201 target
+nodes: 198 unchanged, three changed existing nodes (`issue create`, `issue list`,
+and `issue timeline`), with no additions, removals,
 renames, or moves.
 `runtime profile --runtime-type` remains outside the typed SDK surface.
 

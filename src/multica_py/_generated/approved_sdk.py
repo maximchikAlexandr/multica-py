@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-TARGET_VERSION = '0.5.1'
+TARGET_VERSION = '0.5.2'
 MIN_CLI_VERSION = '0.4.42'
-MAX_CLI_VERSION = '0.5.2'
+MAX_CLI_VERSION = '0.5.3'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'
@@ -363,7 +363,8 @@ COMMENT_UPDATE_BINDING = GeneratedBinding(
 
 ISSUE_CREATE_BINDING = GeneratedBinding(
     'issues.create', 'default', ('issue', 'create'),
-    (GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'local_control:description'), GeneratedMapping('description_file', '--description-file', 'local_control:description'), GeneratedMapping('description_input', 'description-selector', 'local_control:description'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('project', '--project', 'json_body:project_id'), GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('parent_id', '--parent', 'json_body:parent_issue_id'), GeneratedMapping('label_ids', 'repeat:issue label add', 'json_body:label_id'),), ('nonblank:title', 'description_exactly_one'),
+    (GeneratedMapping('title', '--title', 'json_body:title'), GeneratedMapping('description', '--description', 'local_control:description'), GeneratedMapping('description_file', '--description-file', 'local_control:description'), GeneratedMapping('description_input', 'description-selector', 'local_control:description'), GeneratedMapping('priority', '--priority', 'json_body:priority'), GeneratedMapping('assignee_id', '--assignee-id', 'json_body:assignee_id'), GeneratedMapping('project', '--project', 'json_body:project_id'), GeneratedMapping('project_id', '--project', 'json_body:project_id'), GeneratedMapping('parent_id', '--parent', 'json_body:parent_issue_id'), GeneratedMapping('label_ids', 'repeat:issue label add', 'json_body:label_id'), GeneratedMapping('properties', 'repeat:--property', 'json_body:properties'),), ('nonblank:title', 'description_exactly_one'),
+    minimum_cli_version='0.5.2',
 )
 
 ISSUE_GET_BINDING = GeneratedBinding(

@@ -12,6 +12,7 @@ from multica_py.enums import _coerce_issue_status
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.common import CommentCursor
 from multica_py.models.issues import (
+    DuplicateIssueReference,
     IssueAssignee,
     IssueChildrenResult,
     IssueChildStageGroup,
@@ -39,6 +40,7 @@ class _IssueWire(msgspec.Struct, frozen=True, kw_only=True):
     title: str | msgspec.UnsetType = msgspec.UNSET
     description: str | None | msgspec.UnsetType = msgspec.UNSET
     status: str | msgspec.UnsetType = msgspec.UNSET
+    duplicate_of: DuplicateIssueReference | None | msgspec.UnsetType = msgspec.UNSET
     status_name: str | msgspec.UnsetType = msgspec.UNSET
     revision: int | msgspec.UnsetType = msgspec.UNSET
     last_activity_at: datetime.datetime | None | msgspec.UnsetType = msgspec.UNSET
@@ -135,6 +137,7 @@ _ISSUE_PROJECTION_FIELDS: tuple[tuple[str, str], ...] = (
     ("title", "title"),
     ("description", "description"),
     ("status", "status"),
+    ("duplicate_of", "duplicate_of"),
     ("status_category", "status_category"),
     ("status_name", "status_name"),
     ("priority", "priority"),
@@ -245,6 +248,7 @@ def _issue_from_wire(
             if wire.status is msgspec.UNSET
             else _coerce_issue_status(wire.status)
         ),
+        duplicate_of=(None if wire.duplicate_of is msgspec.UNSET else wire.duplicate_of),
         status_name=None if wire.status_name is msgspec.UNSET else wire.status_name,
         revision=None if wire.revision is msgspec.UNSET else wire.revision,
         last_activity_at=(
@@ -278,6 +282,7 @@ def _issue_from_wire(
         _wire_presence=(
             (
                 ("status_name", _presence_seed(wire.status_name)),
+                ("duplicate_of", _presence_seed(wire.duplicate_of)),
                 ("revision", _presence_seed(wire.revision)),
                 ("last_activity_at", _presence_seed(wire.last_activity_at)),
                 ("source_context", _presence_seed(wire.source_context)),

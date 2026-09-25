@@ -38,13 +38,13 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "2df765a3c8f39789c9fb76316378bcffc20d22d9"
-_TARGET_COMMIT = "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6"
-_V051_CHANGED_RESPONSE_WORK_ITEMS = frozenset(
+_BASELINE_COMMIT = "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6"
+_TARGET_COMMIT = "d45aba1cd7582bef9210b921bbb7dc198b48e1ee"
+_V052_CHANGED_RESPONSE_WORK_ITEMS = frozenset(
     {
         "agent_tasks",
         "issue_runs",
-        "issue_run_messages",
+        "issue_create",
     }
 )
 _TAG_KINDS = frozenset(
@@ -2369,7 +2369,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     if set(changed_entrypoints) != {
         "agents.tasks",
         "issues.runs",
-        "issues.run_messages",
+        "issues.create",
     }:
         raise ContractError("response audit changed entrypoints do not match the approved set")
     compatibility = Compatibility(
@@ -2528,47 +2528,39 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.commit,
         contract.target.release_id,
     ) != (
-        "0.5.1",
-        "v0.5.1",
-        "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6",
-        "392880229",
+        "0.5.2",
+        "v0.5.2",
+        "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+        "394535503",
     ):
-        raise ContractError("approved contract must target Multica v0.5.1")
+        raise ContractError("approved contract must target Multica v0.5.2")
     if contract.compatibility.command_inventory != CommandInventory(
-        baseline_nodes=194,
+        baseline_nodes=201,
         target_nodes=201,
-        unchanged=192,
-        changed=2,
-        added=7,
+        unchanged=198,
+        changed=3,
+        added=0,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
-        added_commands=(
-            "issue wakeup",
-            "issue wakeup events",
-            "issue wakeup list",
-            "issue wakeup get",
-            "issue wakeup disable",
-            "issue wakeup create",
-            "issue wakeup update",
-        ),
-        changed_commands=("issue", "runtime profile create"),
+        added_commands=(),
+        changed_commands=("issue create", "issue list", "issue timeline"),
     ):
-        raise ContractError("command inventory does not match the approved 0.5.0/0.5.1 review")
+        raise ContractError("command inventory does not match the approved 0.5.1/0.5.2 review")
     expected_artifacts = {
-        "0.5.0": (
-            "v0.5.0",
-            "391379076",
-            "multica-cli-0.5.0-darwin-arm64.tar.gz",
-            "b4bae1001c30a870c784b19123437df9f09308f750a699ce3693877ba6ffc5d1",
-            "e8305b68e13d7cceeaaf382723d465552a9555b6540f1899527eccb36847e094",
-        ),
         "0.5.1": (
             "v0.5.1",
             "392880229",
             "multica-cli-0.5.1-darwin-arm64.tar.gz",
             "85c5e6d8f9af4c3cfef9a6632a94b682ca09afb1e62900a8565eab5bb26a12ec",
             "a7223c87c3da4b77afa8b0941504678c30a2770dd1d03df5f2325301360ed588",
+        ),
+        "0.5.2": (
+            "v0.5.2",
+            "394535503",
+            "multica-cli-0.5.2-darwin-arm64.tar.gz",
+            "7893b31e23cb58ef897b8d44c01b736acc33786aae70aa5d167f7a674b713cc3",
+            "9f735a52685a958b739a616ec77d3003b3665e5686609d8e050bcd6dcb279984",
         ),
     }
     actual_artifacts = {
@@ -2604,9 +2596,9 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         for item in contract.compatibility.response_registry
         if item.disposition == "changed"
     }
-    if changed_work_items != _V051_CHANGED_RESPONSE_WORK_ITEMS:
+    if changed_work_items != _V052_CHANGED_RESPONSE_WORK_ITEMS:
         raise ContractError(
-            "response registry changed work items do not match the approved 0.5.1 review"
+            "response registry changed work items do not match the approved 0.5.2 review"
         )
     _validate_direct_bindings(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
@@ -2691,6 +2683,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             "requires_cli>=0.4.44",
             "requires_cli>=0.5.0",
             "requires_cli>=0.5.1",
+            "requires_cli>=0.5.2",
         }:
             raise ContractError(
                 f"operation {operation.operation_id!r} has an invalid compatibility value"
