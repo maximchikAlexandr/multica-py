@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-TARGET_VERSION = '0.5.2'
+TARGET_VERSION = '0.5.3'
 MIN_CLI_VERSION = '0.4.42'
-MAX_CLI_VERSION = '0.5.3'
+MAX_CLI_VERSION = '0.5.4'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'

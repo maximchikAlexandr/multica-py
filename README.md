@@ -31,13 +31,14 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
-The approved SDK target is Multica CLI `0.5.2` at commit
-`d45aba1cd7582bef9210b921bbb7dc198b48e1ee` (release `394535503`), with
-compatibility interval `[0.4.42, 0.5.3)`. Migrate directly from CLI/SDK
-`0.5.1`; no intermediate SDK release is supported. Existing operation-level
-gates remain unchanged, while the new duplicate/supplement projections and
-atomic issue properties require CLI `0.5.2`. The exclusive `0.5.3` ceiling
-keeps the reviewed contract bounded.
+The approved SDK target is Multica CLI `0.5.3` at commit
+`ff8b285497809e084915016c40c2bc5e5991ffbc` (release `395523214`), with
+compatibility interval `[0.4.42, 0.5.4)`. Migrate directly from CLI/SDK
+`0.5.2`; no intermediate SDK release is supported. The public command and
+response shapes remain unchanged. Multica `0.5.3` corrects resumed Claude
+session usage accounting; the SDK preserves those target-provided values and
+does not subtract provider baselines or add usage APIs. The exclusive `0.5.4`
+ceiling keeps the reviewed contract bounded.
 
 Issue responses expose the immutable `duplicate_of` snapshot when supplied;
 omitted and explicit-null values remain distinguishable through wire presence.
@@ -50,10 +51,12 @@ and post-create validation. Existing label attachment remains a separate
 post-create workflow.
 
 Task-supplement mutation/receipt APIs, duplicate mutation and timeline APIs,
-and issue-create attachment inputs remain outside this SDK. On a failed target
-acceptance, roll back the contract, generated runtime, models, resources,
-tests, docs, and package claims together to the prior `0.5.1` state. The
-`issue wakeup` command family and runtime profiles remain outside this SDK.
+issue-create attachment inputs, PR automation, UI cache calculations, daemon
+identity, messaging/media, mobile, localization, and pricing changes remain
+outside this SDK. On a failed target acceptance, roll back the contract,
+generated runtime, fixtures, docs, and package claims together to the prior
+`0.5.2` state. The `issue wakeup` command family and runtime profiles remain
+outside this SDK.
 See [the migration guide](docs/migration.md) for presence/error semantics,
 version gates, deferred surfaces, checksum roles, and rollback guidance.
 
