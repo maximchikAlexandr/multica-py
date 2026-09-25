@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.3
+
+- Approved target: Multica CLI `0.5.3`, release `395523214`, source commit
+  `ff8b285497809e084915016c40c2bc5e5991ffbc`, with compatibility bounds
+  `[0.4.42, 0.5.4)` and direct migration from `0.5.2`.
+- Retains all 201 public command nodes and all 167 approved response
+  entrypoints without public SDK shape changes.
+- Preserves target-provided resumed Claude usage values through the existing
+  task, issue, and runtime models; the SDK performs no baseline subtraction or
+  aggregate recomputation.
+- Keeps PR automation, UI cache calculations, daemon identity, messaging/media,
+  mobile, localization, runtime, documentation-site, and pricing changes out of
+  the SDK. Contract, generated runtime, fixtures, docs, and package claims roll
+  back atomically if any release gate fails.
+
 ## 0.5.2
 
 - Approved target: Multica CLI `0.5.2`, release `394535503`, source commit
@@ -169,7 +184,7 @@ the exact before/after import table is maintained in the migration guide.
   result, and failure context. Historical notes for CLI 0.4.32 retain the
   superseded interval `[0.4.28, 0.4.33)`; the historical `0.5.1` target had
   compatibility interval `[0.4.42, 0.5.2)`; the current approved target is
-  `0.5.2` with `[0.4.42, 0.5.3)`. The `0.5.0` release is comparison
+  `0.5.3` with `[0.4.42, 0.5.4)`. The `0.5.0` release is comparison
   provenance only.
 
 ## 0.1.0 (unreleased)

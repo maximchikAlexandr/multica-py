@@ -1,28 +1,28 @@
 {
   "schema_version": 3,
   "target": {
-    "version": "0.5.2",
-    "tag": "v0.5.2",
-    "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
-    "release_id": "394535503",
-    "release_provenance_ref": ".devlocal/upstream-contract/v0.5.1..v0.5.2/release/release-verification.json"
+    "version": "0.5.3",
+    "tag": "v0.5.3",
+    "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+    "release_id": "395523214",
+    "release_provenance_ref": ".devlocal/upstream-contract/v0.5.2..v0.5.3/release/release-verification.json"
   },
   "compatibility": {
     "min_cli_version": "0.4.42",
-    "max_tested_cli_version": "0.5.2",
+    "max_tested_cli_version": "0.5.3",
     "verified_binaries": [
       {
-        "version": "0.5.1",
-        "commit": "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6",
-        "build_date": "2026-09-21T10:42:33Z",
+        "version": "0.5.2",
+        "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+        "build_date": "2026-09-23T10:42:33Z",
         "go_version": "go1.26.8",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "version": "0.5.2",
-        "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
-        "build_date": "2026-09-23T10:42:33Z",
+        "version": "0.5.3",
+        "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+        "build_date": "2026-09-24T10:07:17Z",
         "go_version": "go1.26.8",
         "os": "darwin",
         "arch": "arm64"
@@ -32,8 +32,8 @@
       {
         "operation_id": "agents.tasks",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L25-L32",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L25-L32"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L25-L32",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L25-L32"
         ],
         "fields": [
           "issue_title",
@@ -57,8 +57,8 @@
       {
         "operation_id": "issues.runs",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L398-L408",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L398-L408"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L398-L408",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L398-L408"
         ],
         "fields": [
           "wakeup_id",
@@ -75,8 +75,8 @@
       {
         "operation_id": "issues.create",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L210-L300",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L210-L300"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L210-L300",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L210-L300"
         ],
         "fields": [
           "duplicate_of"
@@ -89,8 +89,8 @@
       {
         "operation_id": "labels.create",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_label.go#L20-L84",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L20-L84"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L20-L84",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L20-L84"
         ],
         "fields": [
           "description",
@@ -104,8 +104,8 @@
       {
         "operation_id": "labels.list",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_label.go#L20-L84",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L20-L84"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L20-L84",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L20-L84"
         ],
         "fields": ["description", "resource_type"],
         "omission_policy": "Omitted resource_type preserves the server issue default; an explicit skill filter is encoded as --resource-type skill.",
@@ -114,8 +114,8 @@
       {
         "operation_id": "labels.update",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_label.go#L20-L84",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L20-L84"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L20-L84",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L20-L84"
         ],
         "fields": ["description"],
         "omission_policy": "Unset omits --description; null and empty emit an explicit empty description to clear it; a non-empty value sets it.",
@@ -124,8 +124,8 @@
       {
         "operation_id": "runtimes.delete",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_runtime.go#L60-L100",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L60-L100"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L60-L100",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_runtime.go#L60-L100"
         ],
         "fields": ["empty_success", "blocker_counts", "profile_identity", "cleanup_guidance"],
         "omission_policy": "Empty success remains ActionResult[None]; structured 409 context is optional and plain legacy conflicts remain readable without cascade or retry.",
@@ -134,8 +134,8 @@
       {
         "operation_id": "skills.list",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L27-L124",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L27-L124"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L27-L124",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L27-L124"
         ],
         "fields": ["labels"],
         "omission_policy": "Skill list responses require a non-null labels array, including an explicit empty array; skill detail omits labels and leaves the relation unloaded.",
@@ -144,8 +144,8 @@
       {
         "operation_id": "issues.run_messages",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L410-L415",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L410-L415"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L410-L415",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L410-L415"
         ],
         "fields": ["call_id"],
         "omission_policy": "Optional call_id is an open string when present; omission in legacy rows decodes as None without changing sequence or truncation semantics and malformed non-string values fail typed decoding.",
@@ -154,15 +154,6 @@
     ],
     "release_artifacts": [
       {
-        "version": "0.5.1",
-        "tag": "v0.5.1",
-        "release_id": "392880229",
-        "asset_name": "multica-cli-0.5.1-darwin-arm64.tar.gz",
-        "archive_sha256": "85c5e6d8f9af4c3cfef9a6632a94b682ca09afb1e62900a8565eab5bb26a12ec",
-        "executable_sha256": "a7223c87c3da4b77afa8b0941504678c30a2770dd1d03df5f2325301360ed588",
-        "version_output_sha256": "587cb1df67fdada00aa1da960ac869acefaaafaacd5071faa8266675ef17d133"
-      },
-      {
         "version": "0.5.2",
         "tag": "v0.5.2",
         "release_id": "394535503",
@@ -170,6 +161,15 @@
         "archive_sha256": "7893b31e23cb58ef897b8d44c01b736acc33786aae70aa5d167f7a674b713cc3",
         "executable_sha256": "9f735a52685a958b739a616ec77d3003b3665e5686609d8e050bcd6dcb279984",
         "version_output_sha256": "4f3bd93112beb2c90090e9a8bef396d4c72db97e1e7f377a2bf7b00bc32c03cd"
+      },
+      {
+        "version": "0.5.3",
+        "tag": "v0.5.3",
+        "release_id": "395523214",
+        "asset_name": "multica-cli-0.5.3-darwin-arm64.tar.gz",
+        "archive_sha256": "c41428158b87a8dba409542d55c869d5d86ca738a01ba6e0b4698b49cc94d718",
+        "executable_sha256": "576fe10229b95a624bbdf12ae54054c5d7a58156ea4cffa41ccae6d161729565",
+        "version_output_sha256": "67194f3de511d86a206d7656894705352f9c555794eb6c40166247a213163d9b"
       }
     ],
     "response_registry": [
@@ -178,8 +178,8 @@
         "operation_id": "agents.avatar",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L72-L79",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L72-L79"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L72-L79",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L72-L79"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:agent_avatar; docs=compatibility:agents.avatar"
       },
@@ -188,8 +188,8 @@
         "operation_id": "agents.copy",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L131-L138",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L131-L138"
         ],
         "action": "retained: model=agent; fixture=response:agent_copy; docs=compatibility:agents.copy"
       },
@@ -198,8 +198,8 @@
         "operation_id": "agents.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L31-L38",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L31-L38"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L31-L38",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L31-L38"
         ],
         "action": "retained: model=agent; fixture=response:agent_get; docs=compatibility:agents.get"
       },
@@ -208,8 +208,8 @@
         "operation_id": "agents.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L25-L32",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L25-L32"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L25-L32",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L25-L32"
         ],
         "action": "retained: model=Page[agent]; fixture=response:agent_list; docs=compatibility:agents.list"
       },
@@ -218,8 +218,8 @@
         "operation_id": "agents.mcp.add",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L125-L132",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L125-L132"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L125-L132",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L125-L132"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:agent_mcp_add; docs=compatibility:agents.mcp.add"
       },
@@ -228,8 +228,8 @@
         "operation_id": "agents.mcp.add_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L125-L132",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L125-L132"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L125-L132",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L125-L132"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:agent_mcp_add_bound; docs=compatibility:agents.mcp.add_bound"
       },
@@ -238,8 +238,8 @@
         "operation_id": "agents.mcp.disable",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L131-L138",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L131-L138"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:agent_mcp_disable; docs=compatibility:agents.mcp.disable"
       },
@@ -248,8 +248,8 @@
         "operation_id": "agents.mcp.disable_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L131-L138",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L131-L138"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:agent_mcp_disable_bound; docs=compatibility:agents.mcp.disable_bound"
       },
@@ -258,8 +258,8 @@
         "operation_id": "agents.mcp.enable",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L131-L138",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L131-L138"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:agent_mcp_enable; docs=compatibility:agents.mcp.enable"
       },
@@ -268,8 +268,8 @@
         "operation_id": "agents.mcp.enable_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L131-L138",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L131-L138"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:agent_mcp_enable_bound; docs=compatibility:agents.mcp.enable_bound"
       },
@@ -278,8 +278,8 @@
         "operation_id": "agents.mcp.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L25-L32",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L25-L32"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L25-L32",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L25-L32"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:agent_mcp_list; docs=compatibility:agents.mcp.list"
       },
@@ -288,8 +288,8 @@
         "operation_id": "agents.mcp.remove",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L131-L138",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L131-L138"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:agent_mcp_remove; docs=compatibility:agents.mcp.remove"
       },
@@ -298,8 +298,8 @@
         "operation_id": "agents.mcp.remove_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L131-L138",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L131-L138",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L131-L138"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:agent_mcp_remove_bound; docs=compatibility:agents.mcp.remove_bound"
       },
@@ -308,8 +308,8 @@
         "operation_id": "agents.skills.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L25-L32",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L25-L32"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L25-L32",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L25-L32"
         ],
         "action": "retained: model=Page[agent_skills]; fixture=response:agent_skills_list; docs=compatibility:agents.skills.list"
       },
@@ -318,28 +318,28 @@
         "operation_id": "agents.skills.set",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L104-L111",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L104-L111"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L104-L111",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L104-L111"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:agent_skills_set; docs=compatibility:agents.skills.set"
       },
       {
         "work_item_id": "agent_tasks",
         "operation_id": "agents.tasks",
-        "disposition": "changed",
+        "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L65-L72",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L65-L72"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L65-L72",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L65-L72"
         ],
-        "action": "changed: model=Page[task_runs]; fixture=response:agent_tasks; docs=compatibility:agents.tasks"
+        "action": "retained: model=Page[task_runs]; fixture=response:agent_tasks; docs=compatibility:agents.tasks"
       },
       {
         "work_item_id": "agents_archive_manual",
         "operation_id": "agents.archive",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L51-L58",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L51-L58"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L51-L58",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L51-L58"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:agents_archive_manual; docs=compatibility:agents.archive"
       },
@@ -348,8 +348,8 @@
         "operation_id": "agents.create",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L38-L45",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L38-L45"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L38-L45",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L38-L45"
         ],
         "action": "retained: model=agent; fixture=response:agents_create_manual; docs=compatibility:agents.create"
       },
@@ -358,8 +358,8 @@
         "operation_id": "agents.restore",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L58-L65",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L58-L65"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L58-L65",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L58-L65"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:agents_restore_manual; docs=compatibility:agents.restore"
       },
@@ -368,8 +368,8 @@
         "operation_id": "agents.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_agent.go#L44-L51",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L44-L51"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_agent.go#L44-L51",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_agent.go#L44-L51"
         ],
         "action": "retained: model=agent; fixture=response:agents_update_manual; docs=compatibility:agents.update"
       },
@@ -378,8 +378,8 @@
         "operation_id": "attachments.download",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_attachment.go#L20-L27",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_attachment.go#L20-L27"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_attachment.go#L20-L27",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_attachment.go#L20-L27"
         ],
         "action": "retained: model=path; fixture=response:attachment_download; docs=compatibility:attachments.download"
       },
@@ -388,8 +388,8 @@
         "operation_id": "attachments.upload",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_attachment.go#L34-L41",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_attachment.go#L34-L41"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_attachment.go#L34-L41",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_attachment.go#L34-L41"
         ],
         "action": "retained: model=attachment_result; fixture=response:attachment_upload; docs=compatibility:attachments.upload"
       },
@@ -398,8 +398,8 @@
         "operation_id": "attachments.download_bytes",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_attachment.go#L20-L27",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_attachment.go#L20-L27"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_attachment.go#L20-L27",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_attachment.go#L20-L27"
         ],
         "action": "retained: model=bytes; fixture=response:attachments_download_bytes_manual; docs=compatibility:attachments.download_bytes"
       },
@@ -408,8 +408,8 @@
         "operation_id": "attachments.upload_bytes",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_attachment.go#L34-L41",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_attachment.go#L34-L41"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_attachment.go#L34-L41",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_attachment.go#L34-L41"
         ],
         "action": "retained: model=attachment_result; fixture=response:attachments_upload_bytes_manual; docs=compatibility:attachments.upload_bytes"
       },
@@ -418,8 +418,8 @@
         "operation_id": "auth.login",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_login.go#L30-L37",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_login.go#L30-L37"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_login.go#L30-L37",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_login.go#L30-L37"
         ],
         "action": "retained: model=ActionResult[str]; fixture=response:auth_login_manual; docs=compatibility:auth.login"
       },
@@ -428,8 +428,8 @@
         "operation_id": "auth.logout",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_auth.go#L54-L61",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_auth.go#L54-L61"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_auth.go#L54-L61",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_auth.go#L54-L61"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:auth_logout_manual; docs=compatibility:auth.logout"
       },
@@ -438,8 +438,8 @@
         "operation_id": "auth.status",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_auth.go#L48-L55",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_auth.go#L48-L55"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_auth.go#L48-L55",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_auth.go#L48-L55"
         ],
         "action": "retained: model=str; fixture=response:auth_status_manual; docs=compatibility:auth.status"
       },
@@ -448,8 +448,8 @@
         "operation_id": "autopilots.create",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L35-L42",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L36-L43"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L35-L42",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L36-L43"
         ],
         "action": "retained: model=autopilot; fixture=response:autopilot_create; docs=compatibility:autopilots.create"
       },
@@ -458,8 +458,8 @@
         "operation_id": "autopilots.delete",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L48-L55",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L49-L56"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L48-L55",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L49-L56"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:autopilot_delete; docs=compatibility:autopilots.delete"
       },
@@ -468,8 +468,8 @@
         "operation_id": "autopilots.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L28-L35",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L29-L36"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L28-L35",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L29-L36"
         ],
         "action": "retained: model=autopilot; fixture=response:autopilot_get; docs=compatibility:autopilots.get"
       },
@@ -478,8 +478,8 @@
         "operation_id": "autopilots.history",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L62-L69",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L63-L70"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L62-L69",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L63-L70"
         ],
         "action": "retained: model=autopilot_run_list_page; fixture=response:autopilot_history; docs=compatibility:autopilots.history"
       },
@@ -488,8 +488,8 @@
         "operation_id": "autopilots.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L22-L29",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L23-L30"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L22-L29",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L23-L30"
         ],
         "action": "retained: model=autopilot_list_page; fixture=response:autopilot_list; docs=compatibility:autopilots.list"
       },
@@ -498,8 +498,8 @@
         "operation_id": "autopilots.trigger",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L55-L62",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L56-L63"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L55-L62",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L56-L63"
         ],
         "action": "retained: model=autopilot_run; fixture=response:autopilot_trigger; docs=compatibility:autopilots.trigger"
       },
@@ -508,8 +508,8 @@
         "operation_id": "autopilots.trigger_add",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L69-L76",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L70-L77"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L69-L76",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L70-L77"
         ],
         "action": "retained: model=autopilot_trigger; fixture=response:autopilot_trigger_add; docs=compatibility:autopilots.trigger_add"
       },
@@ -518,8 +518,8 @@
         "operation_id": "autopilots.trigger_delete",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L83-L90",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L91-L98"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L83-L90",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L91-L98"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:autopilot_trigger_delete; docs=compatibility:autopilots.trigger_delete"
       },
@@ -528,8 +528,8 @@
         "operation_id": "autopilots.trigger_update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L76-L83",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L84-L91"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L76-L83",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L84-L91"
         ],
         "action": "retained: model=autopilot_trigger; fixture=response:autopilot_trigger_update; docs=compatibility:autopilots.trigger_update"
       },
@@ -538,8 +538,8 @@
         "operation_id": "autopilots.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_autopilot.go#L41-L48",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L42-L49"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_autopilot.go#L41-L48",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_autopilot.go#L42-L49"
         ],
         "action": "retained: model=autopilot; fixture=response:autopilot_update; docs=compatibility:autopilots.update"
       },
@@ -548,8 +548,8 @@
         "operation_id": "cli.command",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/main.go#L32-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/main.go#L32-L39"
         ],
         "action": "retained: model=CliResult; fixture=response:cli_command; docs=compatibility:cli.command"
       },
@@ -558,8 +558,8 @@
         "operation_id": "issues.comments.add",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L258-L265",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L262-L269"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L258-L265",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L262-L269"
         ],
         "action": "retained: model=comment; fixture=response:comment_add; docs=compatibility:issues.comments.add"
       },
@@ -568,8 +568,8 @@
         "operation_id": "issues.comments.delete",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L265-L272",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L269-L276"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L265-L272",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L269-L276"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:comment_delete; docs=compatibility:issues.comments.delete"
       },
@@ -578,8 +578,8 @@
         "operation_id": "issues.comments.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=Page[Comment]; fixture=response:comment_list; docs=compatibility:issues.comments.list"
       },
@@ -588,8 +588,8 @@
         "operation_id": "issues.comments.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=Page[Comment]; fixture=response:comment_list_flat; docs=compatibility:issues.comments.list"
       },
@@ -598,8 +598,8 @@
         "operation_id": "issues.comments.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=Page[Comment]; fixture=response:comment_list_recent; docs=compatibility:issues.comments.list"
       },
@@ -608,8 +608,8 @@
         "operation_id": "issues.comments.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=Page[Comment]; fixture=response:comment_list_thread; docs=compatibility:issues.comments.list"
       },
@@ -618,8 +618,8 @@
         "operation_id": "configuration.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_config.go#L21-L28",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_config.go#L21-L28"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_config.go#L21-L28",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_config.go#L21-L28"
         ],
         "action": "retained: model=str; fixture=response:configuration_get_manual; docs=compatibility:configuration.get"
       },
@@ -628,8 +628,8 @@
         "operation_id": "configuration.set",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_config.go#L48-L55",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_config.go#L49-L56"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_config.go#L48-L55",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_config.go#L49-L56"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:configuration_set_manual; docs=compatibility:configuration.set"
       },
@@ -638,8 +638,8 @@
         "operation_id": "configuration.show",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_config.go#L21-L28",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_config.go#L21-L28"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_config.go#L21-L28",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_config.go#L21-L28"
         ],
         "action": "retained: model=Mapping[str, str]; fixture=response:configuration_show_manual; docs=compatibility:configuration.show"
       },
@@ -648,8 +648,8 @@
         "operation_id": "daemon.disk_usage",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_daemon.go#L72-L79",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L72-L79"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L72-L79",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_daemon.go#L72-L79"
         ],
         "action": "retained: model=Page[disk_usage]; fixture=response:daemon_disk_usage_manual; docs=compatibility:daemon.disk_usage"
       },
@@ -658,8 +658,8 @@
         "operation_id": "daemon.logs",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_daemon.go#L66-L73",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L66-L73"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L66-L73",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_daemon.go#L66-L73"
         ],
         "action": "retained: model=ManagedProcess; fixture=response:daemon_logs_manual; docs=compatibility:daemon.logs"
       },
@@ -668,8 +668,8 @@
         "operation_id": "daemon.restart",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_daemon.go#L60-L67",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L60-L67"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L60-L67",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_daemon.go#L60-L67"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:daemon_restart_manual; docs=compatibility:daemon.restart"
       },
@@ -678,8 +678,8 @@
         "operation_id": "daemon.start",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_daemon.go#L34-L41",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L34-L41"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L34-L41",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_daemon.go#L34-L41"
         ],
         "action": "retained: model=ManagedProcess; fixture=response:daemon_start_manual; docs=compatibility:daemon.start"
       },
@@ -688,8 +688,8 @@
         "operation_id": "daemon.status",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_daemon.go#L47-L54",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L47-L54"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L47-L54",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_daemon.go#L47-L54"
         ],
         "action": "retained: model=runtime_definition; fixture=response:daemon_status_manual; docs=compatibility:daemon.status"
       },
@@ -698,8 +698,8 @@
         "operation_id": "daemon.stop",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_daemon.go#L41-L48",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L41-L48"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_daemon.go#L41-L48",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_daemon.go#L41-L48"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:daemon_stop_manual; docs=compatibility:daemon.stop"
       },
@@ -708,8 +708,8 @@
         "operation_id": "issues.cancel_task",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L344-L351",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L359-L366"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L344-L351",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L359-L366"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issue_cancel_task; docs=compatibility:issues.cancel_task"
       },
@@ -718,28 +718,28 @@
         "operation_id": "issues.children",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L191-L198",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L191-L198"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L191-L198",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L191-L198"
         ],
         "action": "retained: model=issue_child_stage_groups; fixture=response:issue_children; docs=compatibility:issues.children"
       },
       {
         "work_item_id": "issue_create",
         "operation_id": "issues.create",
-        "disposition": "changed",
+        "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L199-L206",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L199-L206"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L199-L206",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L199-L206"
         ],
-        "action": "changed: model=issue; fixture=response:issue_create; docs=compatibility:issues.create"
+        "action": "retained: model=issue; fixture=response:issue_create; docs=compatibility:issues.create"
       },
       {
         "work_item_id": "issue_get",
         "operation_id": "issues.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L176-L183",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L176-L183"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L176-L183",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L176-L183"
         ],
         "action": "retained: model=issue; fixture=response:issue_get; docs=compatibility:issues.get"
       },
@@ -748,8 +748,8 @@
         "operation_id": "issues.labels.add",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L258-L265",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L262-L269"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L258-L265",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L262-L269"
         ],
         "action": "retained: model=Page[labels]; fixture=response:issue_labels_add; docs=compatibility:issues.labels.add"
       },
@@ -758,8 +758,8 @@
         "operation_id": "issues.labels.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=Page[labels]; fixture=response:issue_labels_list; docs=compatibility:issues.labels.list"
       },
@@ -768,8 +768,8 @@
         "operation_id": "issues.labels.remove",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L307-L314",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L311-L318"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L307-L314",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L311-L318"
         ],
         "action": "retained: model=Page[labels]; fixture=response:issue_labels_remove; docs=compatibility:issues.labels.remove"
       },
@@ -778,8 +778,8 @@
         "operation_id": "issues.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=issue_list_page; fixture=response:issue_list; docs=compatibility:issues.list"
       },
@@ -788,8 +788,8 @@
         "operation_id": "issues.metadata.delete",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L265-L272",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L269-L276"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L265-L272",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L269-L276"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issue_metadata_delete; docs=compatibility:issues.metadata.delete"
       },
@@ -798,8 +798,8 @@
         "operation_id": "issues.metadata.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L176-L183",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L176-L183"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L176-L183",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L176-L183"
         ],
         "action": "retained: model=metadata_entries; fixture=response:issue_metadata_get; docs=compatibility:issues.metadata.get"
       },
@@ -808,8 +808,8 @@
         "operation_id": "issues.metadata.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=metadata_entries; fixture=response:issue_metadata_list; docs=compatibility:issues.metadata.list"
       },
@@ -818,8 +818,8 @@
         "operation_id": "issues.metadata.set",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L39-L46",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L39-L46"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L39-L46",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L39-L46"
         ],
         "action": "retained: model=metadata_entries; fixture=response:issue_metadata_set; docs=compatibility:issues.metadata.set"
       },
@@ -828,8 +828,8 @@
         "operation_id": "issues.properties.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=property_values; fixture=response:issue_property_list; docs=compatibility:issues.properties.list"
       },
@@ -838,8 +838,8 @@
         "operation_id": "issues.properties.set",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L39-L46",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L39-L46"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L39-L46",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L39-L46"
         ],
         "action": "retained: model=property_values; fixture=response:issue_property_set; docs=compatibility:issues.properties.set"
       },
@@ -848,8 +848,8 @@
         "operation_id": "issues.properties.unset",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L39-L46",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L39-L46"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L39-L46",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L39-L46"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issue_property_unset; docs=compatibility:issues.properties.unset"
       },
@@ -858,8 +858,8 @@
         "operation_id": "issues.pull_requests",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L183-L190",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L183-L190"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L183-L190",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L183-L190"
         ],
         "action": "retained: model=Page[linked_pull_requests]; fixture=response:issue_pull_requests; docs=compatibility:issues.pull_requests"
       },
@@ -868,8 +868,8 @@
         "operation_id": "issues.rerun",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L337-L344",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L352-L359"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L337-L344",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L352-L359"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issue_rerun; docs=compatibility:issues.rerun"
       },
@@ -878,28 +878,28 @@
         "operation_id": "issues.run_messages",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L323-L330",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L338-L345"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L323-L330",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L338-L345"
         ],
         "action": "retained: model=Page[run_messages]; fixture=response:issue_run_messages; docs=compatibility:issues.run_messages"
       },
       {
         "work_item_id": "issue_runs",
         "operation_id": "issues.runs",
-        "disposition": "changed",
+        "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L316-L323",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L326-L333"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L316-L323",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L326-L333"
         ],
-        "action": "changed: model=Page[task_runs]; fixture=response:issue_runs; docs=compatibility:issues.runs"
+        "action": "retained: model=Page[task_runs]; fixture=response:issue_runs; docs=compatibility:issues.runs"
       },
       {
         "work_item_id": "issue_search",
         "operation_id": "issues.search",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L354-L361",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L369-L376"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L354-L361",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L369-L376"
         ],
         "action": "retained: model=Page[Issue]; fixture=response:issue_search; docs=compatibility:issues.search"
       },
@@ -908,8 +908,8 @@
         "operation_id": "issues.set_status",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L219-L226",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L219-L226"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L219-L226",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L219-L226"
         ],
         "action": "retained: model=issue; fixture=response:issue_status; docs=compatibility:issues.set_status"
       },
@@ -918,8 +918,8 @@
         "operation_id": "issues.subscribers.add",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L258-L265",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L262-L269"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L258-L265",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L262-L269"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issue_subscribers_add; docs=compatibility:issues.subscribers.add"
       },
@@ -928,8 +928,8 @@
         "operation_id": "issues.subscribers.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=Page[subscribers]; fixture=response:issue_subscribers_list; docs=compatibility:issues.subscribers.list"
       },
@@ -938,8 +938,8 @@
         "operation_id": "issues.subscribers.remove",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L307-L314",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L311-L318"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L307-L314",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L311-L318"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issue_subscribers_remove; docs=compatibility:issues.subscribers.remove"
       },
@@ -948,8 +948,8 @@
         "operation_id": "issues.assign_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/main.go#L32-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/main.go#L32-L39"
         ],
         "action": "retained: model=issue; fixture=response:issues_assign_bound; docs=compatibility:issues.assign_bound"
       },
@@ -958,8 +958,8 @@
         "operation_id": "issues.assign",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L212-L219",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L212-L219"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L212-L219",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L212-L219"
         ],
         "action": "retained: model=issue; fixture=response:issues_assign_manual; docs=compatibility:issues.assign"
       },
@@ -968,8 +968,8 @@
         "operation_id": "issues.comments.reply",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L258-L265",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L262-L269"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L258-L265",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L262-L269"
         ],
         "action": "retained: model=comment; fixture=response:issues_comments_reply_manual; docs=compatibility:issues.comments.reply"
       },
@@ -978,8 +978,8 @@
         "operation_id": "issues.comments.resolve",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L272-L279",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L276-L283"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L272-L279",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L276-L283"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issues_comments_resolve_manual; docs=compatibility:issues.comments.resolve"
       },
@@ -988,8 +988,8 @@
         "operation_id": "issues.comments.unresolve",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L279-L286",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L283-L290"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L279-L286",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L283-L290"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issues_comments_unresolve_manual; docs=compatibility:issues.comments.unresolve"
       },
@@ -998,8 +998,8 @@
         "operation_id": "issues.metadata.query",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L170-L177",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L170-L177",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L170-L177"
         ],
         "action": "retained: model=metadata_entries; fixture=response:issues_metadata_query_manual; docs=compatibility:issues.metadata.query"
       },
@@ -1008,8 +1008,8 @@
         "operation_id": "issues.metadata.set_typed",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L39-L46",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L39-L46"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L39-L46",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L39-L46"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issues_metadata_set_typed_manual; docs=compatibility:issues.metadata.set_typed"
       },
@@ -1018,8 +1018,8 @@
         "operation_id": "issues.move_after",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L228-L235",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L230-L237"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L228-L235",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L230-L237"
         ],
         "action": "retained: model=issue; fixture=response:issues_move_after; docs=compatibility:issues.move_after"
       },
@@ -1028,8 +1028,8 @@
         "operation_id": "issues.move_after_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L228-L235",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L230-L237"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L228-L235",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L230-L237"
         ],
         "action": "retained: model=issue; fixture=response:issues_move_after_bound; docs=compatibility:issues.move_after_bound"
       },
@@ -1038,8 +1038,8 @@
         "operation_id": "issues.move_before",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L228-L235",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L230-L237"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L228-L235",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L230-L237"
         ],
         "action": "retained: model=issue; fixture=response:issues_move_before; docs=compatibility:issues.move_before"
       },
@@ -1048,8 +1048,8 @@
         "operation_id": "issues.move_before_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L228-L235",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L230-L237"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L228-L235",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L230-L237"
         ],
         "action": "retained: model=issue; fixture=response:issues_move_before_bound; docs=compatibility:issues.move_before_bound"
       },
@@ -1058,8 +1058,8 @@
         "operation_id": "issues.move_to_bottom",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L228-L235",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L230-L237"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L228-L235",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L230-L237"
         ],
         "action": "retained: model=issue; fixture=response:issues_move_to_bottom; docs=compatibility:issues.move_to_bottom"
       },
@@ -1068,8 +1068,8 @@
         "operation_id": "issues.move_to_bottom_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L228-L235",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L230-L237"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L228-L235",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L230-L237"
         ],
         "action": "retained: model=issue; fixture=response:issues_move_to_bottom_bound; docs=compatibility:issues.move_to_bottom_bound"
       },
@@ -1078,8 +1078,8 @@
         "operation_id": "issues.move_to_top",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L228-L235",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L230-L237"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L228-L235",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L230-L237"
         ],
         "action": "retained: model=issue; fixture=response:issues_move_to_top; docs=compatibility:issues.move_to_top"
       },
@@ -1088,8 +1088,8 @@
         "operation_id": "issues.move_to_top_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L228-L235",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L230-L237"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L228-L235",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L230-L237"
         ],
         "action": "retained: model=issue; fixture=response:issues_move_to_top_bound; docs=compatibility:issues.move_to_top_bound"
       },
@@ -1098,8 +1098,8 @@
         "operation_id": "issues.refresh",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/main.go#L32-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/main.go#L32-L39"
         ],
         "action": "retained: model=issue; fixture=response:issues_refresh; docs=compatibility:issues.refresh"
       },
@@ -1108,8 +1108,8 @@
         "operation_id": "issues.reorder",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L228-L235",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L230-L237"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L228-L235",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L230-L237"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:issues_reorder_manual; docs=compatibility:issues.reorder"
       },
@@ -1118,8 +1118,8 @@
         "operation_id": "issues.set_status_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/main.go#L32-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/main.go#L32-L39"
         ],
         "action": "retained: model=issue; fixture=response:issues_set_status_bound; docs=compatibility:issues.set_status_bound"
       },
@@ -1128,8 +1128,8 @@
         "operation_id": "issues.unassign",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L212-L219",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L212-L219"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L212-L219",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L212-L219"
         ],
         "action": "retained: model=issue; fixture=response:issues_unassign; docs=compatibility:issues.unassign"
       },
@@ -1138,8 +1138,8 @@
         "operation_id": "issues.unassign_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/main.go#L32-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/main.go#L32-L39"
         ],
         "action": "retained: model=issue; fixture=response:issues_unassign_bound; docs=compatibility:issues.unassign_bound"
       },
@@ -1148,8 +1148,8 @@
         "operation_id": "issues.update_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/main.go#L32-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/main.go#L32-L39"
         ],
         "action": "retained: model=issue; fixture=response:issues_update_bound; docs=compatibility:issues.update_bound"
       },
@@ -1158,8 +1158,8 @@
         "operation_id": "issues.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L205-L212",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L205-L212"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L205-L212",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L205-L212"
         ],
         "action": "retained: model=issue; fixture=response:issues_update_manual; docs=compatibility:issues.update"
       },
@@ -1168,8 +1168,8 @@
         "operation_id": "issues.usage",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L330-L337",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L345-L352"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L330-L337",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L345-L352"
         ],
         "action": "retained: model=Page[issue_usage]; fixture=response:issues_usage_manual; docs=compatibility:issues.usage"
       },
@@ -1178,8 +1178,8 @@
         "operation_id": "labels.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_label.go#L28-L35",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L28-L35"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L28-L35",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L28-L35"
         ],
         "action": "retained: model=labels; fixture=response:label_get; docs=compatibility:labels.get"
       },
@@ -1188,8 +1188,8 @@
         "operation_id": "labels.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_label.go#L22-L29",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L22-L29"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L22-L29",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L22-L29"
         ],
         "action": "retained: model=Page[labels]; fixture=response:label_list; docs=compatibility:labels.list"
       },
@@ -1198,8 +1198,8 @@
         "operation_id": "labels.create",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_label.go#L35-L42",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L35-L42"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L35-L42",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L35-L42"
         ],
         "action": "retained: model=labels; fixture=response:labels_create_manual; docs=compatibility:labels.create"
       },
@@ -1208,8 +1208,8 @@
         "operation_id": "labels.delete",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_label.go#L48-L55",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L48-L55"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L48-L55",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L48-L55"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:labels_delete_manual; docs=compatibility:labels.delete"
       },
@@ -1218,8 +1218,8 @@
         "operation_id": "labels.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_label.go#L41-L48",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L41-L48"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L41-L48",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L41-L48"
         ],
         "action": "retained: model=labels; fixture=response:labels_update_manual; docs=compatibility:labels.update"
       },
@@ -1228,8 +1228,8 @@
         "operation_id": "maintenance.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_update.go#L15-L22",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_update.go#L15-L22"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_update.go#L15-L22",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_update.go#L15-L22"
         ],
         "action": "retained: model=ManagedProcess; fixture=response:maintenance_update_manual; docs=compatibility:maintenance.update"
       },
@@ -1238,8 +1238,8 @@
         "operation_id": "maintenance.version",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_version.go#L15-L22",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_version.go#L15-L22"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_version.go#L15-L22",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_version.go#L15-L22"
         ],
         "action": "retained: model=str; fixture=response:maintenance_version_manual; docs=compatibility:maintenance.version"
       },
@@ -1248,8 +1248,8 @@
         "operation_id": "projects.create",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L33-L40",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L33-L40"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L33-L40",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L33-L40"
         ],
         "action": "retained: model=project; fixture=response:project_create; docs=compatibility:projects.create"
       },
@@ -1258,8 +1258,8 @@
         "operation_id": "projects.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L26-L33",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L26-L33"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L26-L33",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L26-L33"
         ],
         "action": "retained: model=project; fixture=response:project_get; docs=compatibility:projects.get"
       },
@@ -1268,8 +1268,8 @@
         "operation_id": "projects.issues.create",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L199-L206",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L199-L206"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L199-L206",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L199-L206"
         ],
         "action": "retained: model=issue; fixture=response:project_issue_create; docs=compatibility:projects.issues.create"
       },
@@ -1278,8 +1278,8 @@
         "operation_id": "projects.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L20-L27",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L20-L27"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L20-L27",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L20-L27"
         ],
         "action": "retained: model=Page[project]; fixture=response:project_list; docs=compatibility:projects.list"
       },
@@ -1288,8 +1288,8 @@
         "operation_id": "projects.resources.add_local_directory",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L72-L79",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L72-L79"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L72-L79",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L72-L79"
         ],
         "action": "retained: model=project_resource; fixture=response:project_resource_add; docs=compatibility:projects.resources.add_local_directory"
       },
@@ -1298,8 +1298,8 @@
         "operation_id": "projects.resources.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L20-L27",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L20-L27"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L20-L27",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L20-L27"
         ],
         "action": "retained: model=Page[project_resources]; fixture=response:project_resource_list; docs=compatibility:projects.resources.list"
       },
@@ -1308,8 +1308,8 @@
         "operation_id": "projects.resources.remove",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L86-L93",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L86-L93"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L86-L93",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L86-L93"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:project_resource_remove; docs=compatibility:projects.resources.remove"
       },
@@ -1318,8 +1318,8 @@
         "operation_id": "projects.resources.update_local_directory",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L39-L46",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L39-L46"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L39-L46",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L39-L46"
         ],
         "action": "retained: model=project_resource; fixture=response:project_resource_update; docs=compatibility:projects.resources.update_local_directory"
       },
@@ -1328,8 +1328,8 @@
         "operation_id": "projects.set_status",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L53-L60",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L53-L60"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L53-L60",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L53-L60"
         ],
         "action": "retained: model=project; fixture=response:project_status; docs=compatibility:projects.set_status"
       },
@@ -1338,8 +1338,8 @@
         "operation_id": "projects.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L39-L46",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L39-L46"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L39-L46",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L39-L46"
         ],
         "action": "retained: model=project; fixture=response:project_update; docs=compatibility:projects.update"
       },
@@ -1348,8 +1348,8 @@
         "operation_id": "projects.delete",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_project.go#L46-L53",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L46-L53"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_project.go#L46-L53",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_project.go#L46-L53"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:projects_delete_manual; docs=compatibility:projects.delete"
       },
@@ -1358,8 +1358,8 @@
         "operation_id": "projects.refresh",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/main.go#L32-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/main.go#L32-L39"
         ],
         "action": "retained: model=project; fixture=response:projects_refresh; docs=compatibility:projects.refresh"
       },
@@ -1368,8 +1368,8 @@
         "operation_id": "projects.update_bound",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/main.go#L32-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/main.go#L32-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/main.go#L32-L39"
         ],
         "action": "retained: model=project; fixture=response:projects_update_bound; docs=compatibility:projects.update_bound"
       },
@@ -1378,8 +1378,8 @@
         "operation_id": "properties.archive",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_property.go#L93-L100",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L98-L105"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L93-L100",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_property.go#L98-L105"
         ],
         "action": "retained: model=property_definition; fixture=response:property_archive; docs=compatibility:properties.archive"
       },
@@ -1388,8 +1388,8 @@
         "operation_id": "properties.create",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_property.go#L68-L75",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L73-L80"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L68-L75",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_property.go#L73-L80"
         ],
         "action": "retained: model=property_definition; fixture=response:property_create; docs=compatibility:properties.create"
       },
@@ -1398,8 +1398,8 @@
         "operation_id": "properties.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_property.go#L61-L68",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L66-L73"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L61-L68",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_property.go#L66-L73"
         ],
         "action": "retained: model=property_definition; fixture=response:property_get; docs=compatibility:properties.get"
       },
@@ -1408,8 +1408,8 @@
         "operation_id": "properties.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_property.go#L54-L61",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L59-L66"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L54-L61",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_property.go#L59-L66"
         ],
         "action": "retained: model=Page[property_definition]; fixture=response:property_list; docs=compatibility:properties.list"
       },
@@ -1418,8 +1418,8 @@
         "operation_id": "properties.unarchive",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_property.go#L100-L107",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L105-L112"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L100-L107",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_property.go#L105-L112"
         ],
         "action": "retained: model=property_definition; fixture=response:property_unarchive; docs=compatibility:properties.unarchive"
       },
@@ -1428,8 +1428,8 @@
         "operation_id": "properties.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_property.go#L84-L91",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L89-L96"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_property.go#L84-L91",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_property.go#L89-L96"
         ],
         "action": "retained: model=property_definition; fixture=response:property_update; docs=compatibility:properties.update"
       },
@@ -1438,8 +1438,8 @@
         "operation_id": "repositories.add",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_repo.go#L31-L38",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_repo.go#L31-L38"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_repo.go#L31-L38",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_repo.go#L31-L38"
         ],
         "action": "retained: model=ActionResult[RepositoryMutationResult]; fixture=response:repositories_add; docs=compatibility:repositories.add"
       },
@@ -1448,8 +1448,8 @@
         "operation_id": "repositories.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_repo.go#L23-L30",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_repo.go#L23-L30"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_repo.go#L23-L30",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_repo.go#L23-L30"
         ],
         "action": "retained: model=Page[repository_records]; fixture=response:repositories_list; docs=compatibility:repositories.list"
       },
@@ -1458,8 +1458,8 @@
         "operation_id": "repositories.remove",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_repo.go#L40-L47",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_repo.go#L40-L47"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_repo.go#L40-L47",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_repo.go#L40-L47"
         ],
         "action": "retained: model=ActionResult[RepositoryMutationResult]; fixture=response:repositories_remove; docs=compatibility:repositories.remove"
       },
@@ -1468,8 +1468,8 @@
         "operation_id": "runtimes.activity",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_runtime.go#L35-L42",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L35-L42"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L35-L42",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_runtime.go#L35-L42"
         ],
         "action": "retained: model=Page[runtime_activity]; fixture=response:runtime_activity; docs=compatibility:runtimes.activity"
       },
@@ -1478,8 +1478,8 @@
         "operation_id": "runtimes.delete",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_runtime.go#L59-L66",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L59-L66"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L59-L66",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_runtime.go#L59-L66"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:runtime_delete; docs=compatibility:runtimes.delete"
       },
@@ -1488,8 +1488,8 @@
         "operation_id": "runtimes.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_runtime.go#L22-L29",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L22-L29"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L22-L29",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_runtime.go#L22-L29"
         ],
         "action": "retained: model=Page[runtime_definitions]; fixture=response:runtime_list; docs=compatibility:runtimes.list"
       },
@@ -1498,8 +1498,8 @@
         "operation_id": "runtimes.rename",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_runtime.go#L49-L56",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L49-L56"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L49-L56",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_runtime.go#L49-L56"
         ],
         "action": "retained: model=runtime_definition; fixture=response:runtime_rename; docs=compatibility:runtimes.rename"
       },
@@ -1508,8 +1508,8 @@
         "operation_id": "runtimes.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_runtime.go#L42-L49",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L42-L49"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L42-L49",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_runtime.go#L42-L49"
         ],
         "action": "retained: model=ActionResult[RuntimeUpdateResult]; fixture=response:runtime_update; docs=compatibility:runtimes.update"
       },
@@ -1518,8 +1518,8 @@
         "operation_id": "runtimes.usage",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_runtime.go#L28-L35",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L28-L35"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L28-L35",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_runtime.go#L28-L35"
         ],
         "action": "retained: model=Page[runtime_usage]; fixture=response:runtime_usage; docs=compatibility:runtimes.usage"
       },
@@ -1528,8 +1528,8 @@
         "operation_id": "setup.cloud",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_setup.go#L38-L45",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_setup.go#L38-L45"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_setup.go#L38-L45",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_setup.go#L38-L45"
         ],
         "action": "retained: model=ManagedProcess; fixture=response:setup_cloud_manual; docs=compatibility:setup.cloud"
       },
@@ -1538,8 +1538,8 @@
         "operation_id": "setup.self_host",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_setup.go#L52-L59",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_setup.go#L52-L59"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_setup.go#L52-L59",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_setup.go#L52-L59"
         ],
         "action": "retained: model=ManagedProcess; fixture=response:setup_self_host_manual; docs=compatibility:setup.self_host"
       },
@@ -1548,8 +1548,8 @@
         "operation_id": "skills.files.delete",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L52-L59",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L52-L59"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L52-L59",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L52-L59"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:skill_files_delete; docs=compatibility:skills.files.delete"
       },
@@ -1558,8 +1558,8 @@
         "operation_id": "skills.files.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L26-L33",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L26-L33"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L26-L33",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L26-L33"
         ],
         "action": "retained: model=Page[skill_files]; fixture=response:skill_files_list; docs=compatibility:skills.files.list"
       },
@@ -1568,8 +1568,8 @@
         "operation_id": "skills.files.upsert",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L93-L100",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L93-L100"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L93-L100",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L93-L100"
         ],
         "action": "retained: model=skill_file; fixture=response:skill_files_upsert; docs=compatibility:skills.files.upsert"
       },
@@ -1578,8 +1578,8 @@
         "operation_id": "skills.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L32-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L32-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L32-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L32-L39"
         ],
         "action": "retained: model=skill; fixture=response:skill_get; docs=compatibility:skills.get"
       },
@@ -1588,8 +1588,8 @@
         "operation_id": "skills.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L26-L33",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L26-L33"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L26-L33",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L26-L33"
         ],
         "action": "retained: model=Page[skill]; fixture=response:skill_list; docs=compatibility:skills.list"
       },
@@ -1598,8 +1598,8 @@
         "operation_id": "skills.refresh",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L65-L72",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L65-L72"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L65-L72",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L65-L72"
         ],
         "action": "retained: model=skill; fixture=response:skill_refresh; docs=compatibility:skills.refresh"
       },
@@ -1608,8 +1608,8 @@
         "operation_id": "skills.search",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L72-L79",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L72-L79"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L72-L79",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L72-L79"
         ],
         "action": "retained: model=Page[skill_search_result]; fixture=response:skill_search; docs=compatibility:skills.search"
       },
@@ -1618,8 +1618,8 @@
         "operation_id": "skills.create",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L39-L46",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L39-L46"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L39-L46",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L39-L46"
         ],
         "action": "retained: model=skill; fixture=response:skills_create_manual; docs=compatibility:skills.create"
       },
@@ -1628,8 +1628,8 @@
         "operation_id": "skills.delete",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L52-L59",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L52-L59"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L52-L59",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L52-L59"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:skills_delete_manual; docs=compatibility:skills.delete"
       },
@@ -1638,8 +1638,8 @@
         "operation_id": "skills.import_from_url",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L59-L66",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L59-L66"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L59-L66",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L59-L66"
         ],
         "action": "retained: model=skill; fixture=response:skills_import_from_url_manual; docs=compatibility:skills.import_from_url"
       },
@@ -1648,8 +1648,8 @@
         "operation_id": "skills.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill.go#L45-L52",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L45-L52"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L45-L52",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L45-L52"
         ],
         "action": "retained: model=skill; fixture=response:skills_update_manual; docs=compatibility:skills.update"
       },
@@ -1658,8 +1658,8 @@
         "operation_id": "squads.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_squad.go#L75-L82",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L75-L82"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L75-L82",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_squad.go#L75-L82"
         ],
         "action": "retained: model=squad; fixture=response:squad_get; docs=compatibility:squads.get"
       },
@@ -1668,8 +1668,8 @@
         "operation_id": "squads.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_squad.go#L21-L28",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L21-L28"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L21-L28",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_squad.go#L21-L28"
         ],
         "action": "retained: model=Page[squad]; fixture=response:squad_list; docs=compatibility:squads.list"
       },
@@ -1678,8 +1678,8 @@
         "operation_id": "squads.members.add",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_squad.go#L300-L307",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L300-L307"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L300-L307",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_squad.go#L300-L307"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:squad_members_add; docs=compatibility:squads.members.add"
       },
@@ -1688,8 +1688,8 @@
         "operation_id": "squads.members.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_squad.go#L21-L28",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L21-L28"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L21-L28",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_squad.go#L21-L28"
         ],
         "action": "retained: model=Page[squad_members]; fixture=response:squad_members_list; docs=compatibility:squads.members.list"
       },
@@ -1698,8 +1698,8 @@
         "operation_id": "squads.members.remove",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_squad.go#L397-L404",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L397-L404"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_squad.go#L397-L404",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_squad.go#L397-L404"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:squad_members_remove; docs=compatibility:squads.members.remove"
       },
@@ -1708,8 +1708,8 @@
         "operation_id": "users.profile_get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_user.go#L33-L40",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_user.go#L33-L40"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_user.go#L33-L40",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_user.go#L33-L40"
         ],
         "action": "retained: model=user_profile; fixture=response:user_profile_get; docs=compatibility:users.profile_get"
       },
@@ -1718,8 +1718,8 @@
         "operation_id": "users.profile_update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_user.go#L39-L46",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_user.go#L39-L46"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_user.go#L39-L46",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_user.go#L39-L46"
         ],
         "action": "retained: model=user_profile; fixture=response:user_profile_update; docs=compatibility:users.profile_update"
       },
@@ -1728,8 +1728,8 @@
         "operation_id": "workspaces.get",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_workspace.go#L41-L48",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L41-L48"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L41-L48",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_workspace.go#L41-L48"
         ],
         "action": "retained: model=workspace; fixture=response:workspace_get; docs=compatibility:workspaces.get"
       },
@@ -1738,8 +1738,8 @@
         "operation_id": "workspaces.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_workspace.go#L21-L28",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L21-L28"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L21-L28",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_workspace.go#L21-L28"
         ],
         "action": "retained: model=Page[workspace]; fixture=response:workspace_list; docs=compatibility:workspaces.list"
       },
@@ -1748,8 +1748,8 @@
         "operation_id": "workspaces.mcp.add",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_workspace.go#L123-L130",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L123-L130"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L123-L130",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_workspace.go#L123-L130"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:workspace_mcp_add; docs=compatibility:workspaces.mcp.add"
       },
@@ -1758,8 +1758,8 @@
         "operation_id": "workspaces.mcp.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_workspace.go#L21-L28",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L21-L28"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L21-L28",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_workspace.go#L21-L28"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:workspace_mcp_list; docs=compatibility:workspaces.mcp.list"
       },
@@ -1768,8 +1768,8 @@
         "operation_id": "workspaces.mcp.remove",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_workspace.go#L149-L156",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L149-L156"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L149-L156",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_workspace.go#L149-L156"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:workspace_mcp_remove; docs=compatibility:workspaces.mcp.remove"
       },
@@ -1778,8 +1778,8 @@
         "operation_id": "workspaces.mcp.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_workspace.go#L78-L85",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L78-L85"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L78-L85",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_workspace.go#L78-L85"
         ],
         "action": "retained: model=Page[mcp_server]; fixture=response:workspace_mcp_update; docs=compatibility:workspaces.mcp.update"
       },
@@ -1788,8 +1788,8 @@
         "operation_id": "workspaces.members.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_workspace.go#L21-L28",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L21-L28"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L21-L28",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_workspace.go#L21-L28"
         ],
         "action": "retained: model=Page[workspace_members]; fixture=response:workspace_members_list; docs=compatibility:workspaces.members.list"
       },
@@ -1798,8 +1798,8 @@
         "operation_id": "workspaces.switch",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_workspace.go#L85-L92",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L85-L92"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_workspace.go#L85-L92",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_workspace.go#L85-L92"
         ],
         "action": "retained: model=ActionResult[None]; fixture=response:workspaces_switch_manual; docs=compatibility:workspaces.switch"
       },
@@ -1808,8 +1808,8 @@
         "operation_id": "issues.comments.update",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_issue.go#L324-L337",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L324-L337"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L324-L337",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L324-L337"
         ],
         "action": "retained: model=comment; fixture=response:comment_update; docs=compatibility:issues.comments.update"
       },
@@ -1818,8 +1818,8 @@
         "operation_id": "skills.labels.add",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill_label.go#L17-L34",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill_label.go#L17-L34"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill_label.go#L17-L34",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill_label.go#L17-L34"
         ],
         "action": "retained: model=Page[labels]; fixture=response:skill_labels_add; docs=compatibility:skills.labels.add"
       },
@@ -1828,8 +1828,8 @@
         "operation_id": "skills.labels.list",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill_label.go#L17-L28",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill_label.go#L17-L28"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill_label.go#L17-L28",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill_label.go#L17-L28"
         ],
         "action": "retained: model=Page[labels]; fixture=response:skill_labels_list; docs=compatibility:skills.labels.list"
       },
@@ -1838,8 +1838,8 @@
         "operation_id": "skills.labels.remove",
         "disposition": "unchanged",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/f41fae6b08fb734afcbd13205c0b3203dd0bc9c6/server/cmd/multica/cmd_skill_label.go#L17-L39",
-          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill_label.go#L17-L39"
+          "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill_label.go#L17-L39",
+          "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill_label.go#L17-L39"
         ],
         "action": "retained: model=Page[labels]; fixture=response:skill_labels_remove; docs=compatibility:skills.labels.remove"
       }
@@ -1847,8 +1847,8 @@
     "command_inventory": {
       "baseline_nodes": 201,
       "target_nodes": 201,
-      "unchanged": 198,
-      "changed": 3,
+      "unchanged": 201,
+      "changed": 0,
       "added": 0,
       "removed": 0,
       "hidden": [
@@ -1860,22 +1860,14 @@
         "x"
       ],
       "added_commands": [],
-      "changed_commands": [
-        "issue create",
-        "issue list",
-        "issue timeline"
-      ]
+      "changed_commands": []
     },
     "response_review_complete": true,
     "response_audit": {
       "supported_entrypoints": 167,
-      "changed": 3,
-      "unchanged": 164,
-      "changed_entrypoints": [
-        "agents.tasks",
-        "issues.runs",
-        "issues.create"
-      ]
+      "changed": 0,
+      "unchanged": 167,
+      "changed_entrypoints": []
     }
   },
   "catalogs": {
@@ -15777,7 +15769,7 @@
     {
       "source_ref_id": "S-AUTO",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_autopilot.go",
       "symbol": "autopilotListCmd/autopilotGetCmd/autopilotCreateCmd/autopilotUpdateCmd/autopilotDeleteCmd/autopilotTriggerCmd/autopilotRunsCmd/runAutopilotList/runAutopilotGet/runAutopilotCreate/runAutopilotUpdate/runAutopilotDelete/runAutopilotTrigger/runAutopilotRuns",
       "line_start": 24,
@@ -15786,7 +15778,7 @@
     {
       "source_ref_id": "S-ISSUE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueStatusCmd/issueCommentListCmd/issueCommentAddCmd/issueCommentDeleteCmd/runIssueCreate/runIssueUpdate/runIssueStatus/runIssueCommentList/runIssueCommentAdd/runIssueCommentDelete",
       "line_start": 203,
@@ -15795,7 +15787,7 @@
     {
       "source_ref_id": "S-LABEL",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue_label.go",
       "symbol": "issueLabelListCmd/issueLabelAddCmd/issueLabelRemoveCmd/runIssueLabelList/runIssueLabelAdd/runIssueLabelRemove",
       "line_start": 21,
@@ -15804,7 +15796,7 @@
     {
       "source_ref_id": "S-PROJECT",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_project.go",
       "symbol": "projectStatusCmd/projectResourceListCmd/projectResourceAddCmd/projectResourceUpdateCmd/projectResourceRemoveCmd/runProjectCreate/runProjectUpdate/runProjectStatus/runProjectResourceList/runProjectResourceAdd/runProjectResourceUpdate/runProjectResourceRemove",
       "line_start": 37,
@@ -15813,7 +15805,7 @@
     {
       "source_ref_id": "S-CLIENT",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/cli/client.go",
       "symbol": "APIContext/newHTTPError",
       "line_start": 95,
@@ -15822,7 +15814,7 @@
     {
       "source_ref_id": "S-ERRORS",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/cli/errors.go",
       "symbol": "HTTPError/Kind/KindConflict/KindValidation/serverMessagePrefixes/Invalid request: /请求无效：/Request conflict: /请求冲突：",
       "line_start": 18,
@@ -15831,7 +15823,7 @@
     {
       "source_ref_id": "D03",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueChildrenCmd/childStage/runIssueChildren",
       "line_start": 192,
@@ -15840,7 +15832,7 @@
     {
       "source_ref_id": "D04",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issuePullRequestsCmd/runIssuePullRequests/normalizePullRequestList/printIssuePullRequestsTable/pullRequestURL",
       "line_start": 184,
@@ -15849,7 +15841,7 @@
     {
       "source_ref_id": "D05",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue_metadata.go",
       "symbol": "issueMetadataCmd/issueMetadataListCmd/issueMetadataGetCmd/issueMetadataSetCmd/issueMetadataDeleteCmd/runIssueMetadataList/runIssueMetadataGet/runIssueMetadataSet/runIssueMetadataDelete",
       "line_start": 61,
@@ -15858,7 +15850,7 @@
     {
       "source_ref_id": "D06",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueRunMessagesCmd/runIssueRunMessages",
       "line_start": 339,
@@ -15867,7 +15859,7 @@
     {
       "source_ref_id": "S-RUN-MESSAGES-SINCE-FLAG",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueRunMessagesCmd",
       "line_start": 339,
@@ -15876,7 +15868,7 @@
     {
       "source_ref_id": "S-RUN-MESSAGES-QUERY",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "runIssueRunMessages",
       "line_start": 343,
@@ -15885,7 +15877,7 @@
     {
       "source_ref_id": "S-RUN-MESSAGES-HANDLER-PARSE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/daemon.go",
       "symbol": "taskMessageToPayload",
       "line_start": 4866,
@@ -15894,7 +15886,7 @@
     {
       "source_ref_id": "S-RUN-MESSAGES-HANDLER-PAYLOAD",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/daemon.go",
       "symbol": "taskMessageToPayload",
       "line_start": 4866,
@@ -15903,16 +15895,16 @@
     {
       "source_ref_id": "S-RUN-MESSAGES-PAYLOAD",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/pkg/protocol/messages.go",
       "symbol": "TaskMessagePayload",
-      "line_start": 200,
-      "line_end": 201
+      "line_start": 211,
+      "line_end": 212
     },
     {
       "source_ref_id": "S-RUN-MESSAGES-SQL",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/pkg/db/queries/task_message.sql",
       "symbol": "ListTaskMessagesSince",
       "line_start": 91,
@@ -15921,7 +15913,7 @@
     {
       "source_ref_id": "D07",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueRerunCmd/issueCancelTaskCmd/runIssueRerun/runIssueCancelTask",
       "line_start": 356,
@@ -15930,7 +15922,7 @@
     {
       "source_ref_id": "D08",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_agent.go",
       "symbol": "agentSkillsCmd/agentSkillsListCmd/agentSkillsSetCmd/runAgentSkillsList/runAgentSkillsSet",
       "line_start": 82,
@@ -15939,7 +15931,7 @@
     {
       "source_ref_id": "D09",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_skill.go",
       "symbol": "skillFilesCmd/skillFilesListCmd/skillFilesUpsertCmd/skillFilesDeleteCmd/runSkillFilesList/runSkillFilesUpsert/runSkillFilesDelete",
       "line_start": 82,
@@ -15948,7 +15940,7 @@
     {
       "source_ref_id": "D11",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_autopilot.go",
       "symbol": "autopilotTriggerCmd/runAutopilotTrigger",
       "line_start": 57,
@@ -15957,7 +15949,7 @@
     {
       "source_ref_id": "D13",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_autopilot.go",
       "symbol": "autopilotTriggerAddCmd/autopilotTriggerUpdateCmd/autopilotTriggerDeleteCmd/runAutopilotTriggerAdd/runAutopilotTriggerUpdate/runAutopilotTriggerDelete",
       "line_start": 71,
@@ -15966,7 +15958,7 @@
     {
       "source_ref_id": "D14",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_attachment.go",
       "symbol": "attachmentCmd/attachmentDownloadCmd/attachmentUploadCmd/runAttachmentUpload/runAttachmentDownload",
       "line_start": 16,
@@ -15975,7 +15967,7 @@
     {
       "source_ref_id": "D15",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_user.go",
       "symbol": "userProfileCmd/userProfileGetCmd/userProfileUpdateCmd/runUserProfileGet/runUserProfileUpdate",
       "line_start": 25,
@@ -15984,7 +15976,7 @@
     {
       "source_ref_id": "D16",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_repo.go",
       "symbol": "repoListCmd/repoAddCmd/repoRemoveCmd/repoCheckoutCmd/runRepoList/runRepoAdd/runRepoRemove/runRepoCheckout",
       "line_start": 24,
@@ -15993,7 +15985,7 @@
     {
       "source_ref_id": "D17",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_runtime.go",
       "symbol": "runtimeListCmd/runtimeUsageCmd/runtimeActivityCmd/runtimeUpdateCmd/runtimeRenameCmd/runtimeDeleteCmd/runRuntimeList/runRuntimeUsage/runRuntimeActivity/runRuntimeUpdate/runRuntimeRename/runRuntimeDelete",
       "line_start": 23,
@@ -16002,7 +15994,7 @@
     {
       "source_ref_id": "D18",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_agent.go",
       "symbol": "agentAvatarCmd/runAgentAvatar",
       "line_start": 73,
@@ -16011,7 +16003,7 @@
     {
       "source_ref_id": "S-SQUAD",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_squad.go",
       "symbol": "squadCmd/squadListCmd/squadGetCmd/squadCreateCmd/squadUpdateCmd/squadDeleteCmd/squadMemberCmd/squadMemberListCmd/squadMemberAddCmd/squadMemberSetRoleCmd/squadMemberRemoveCmd/runSquadList/runSquadGet/runSquadCreate/runSquadUpdate/runSquadDelete/runSquadMemberList/runSquadMemberAdd/runSquadMemberSetRole/runSquadMemberRemove",
       "line_start": 15,
@@ -16020,7 +16012,7 @@
     {
       "source_ref_id": "S-WORKSPACE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_workspace.go",
       "symbol": "workspaceCmd/workspaceListCmd/workspaceCreateCmd/workspaceGetCmd/workspaceMemberCmd/workspaceMemberListCmd/workspaceUpdateCmd/runWorkspaceList/runWorkspaceCreate/runWorkspaceGet/runWorkspaceUpdate/runWorkspaceMembers",
       "line_start": 17,
@@ -16029,7 +16021,7 @@
     {
       "source_ref_id": "S-ISSUE-LIST-METADATA-CLI",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueListCmd/runIssueList",
       "line_start": 171,
@@ -16038,7 +16030,7 @@
     {
       "source_ref_id": "S-ISSUE-LIST-METADATA-PARSER",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue_metadata.go",
       "symbol": "buildMetadataFilterQueryParam",
       "line_start": 19,
@@ -16047,7 +16039,7 @@
     {
       "source_ref_id": "S-ISSUE-LIST-METADATA-HANDLER",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/issue.go",
       "symbol": "ListIssues/parseMetadataFilterParam/MetadataFilter",
       "line_start": 353,
@@ -16056,7 +16048,7 @@
     {
       "source_ref_id": "S-ISSUE-RESPONSE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/issue.go",
       "symbol": "IssueResponse",
       "line_start": 36,
@@ -16065,7 +16057,7 @@
     {
       "source_ref_id": "S-ISSUE-LIST-PROJECTION",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/issue.go",
       "symbol": "ListIssues/labelsByIssue/IssueResponse",
       "line_start": 36,
@@ -16074,7 +16066,7 @@
     {
       "source_ref_id": "S-WORKSPACE-MEMBERS-CLI",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_workspace.go",
       "symbol": "runWorkspaceMembers",
       "line_start": 61,
@@ -16083,7 +16075,7 @@
     {
       "source_ref_id": "S-WORKSPACE-MEMBER-IDENTITY",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/workspace.go",
       "symbol": "MemberWithUserResponse/ListMembersWithUser",
       "line_start": 488,
@@ -16092,7 +16084,7 @@
     {
       "source_ref_id": "S-ISSUE-GET-ATTACHMENTS",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/issue.go",
       "symbol": "GetIssue/ListAttachmentsByIssue/Attachments",
       "line_start": 93,
@@ -16101,7 +16093,7 @@
     {
       "source_ref_id": "S-AGENT-COPY-CMD",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_agent_copy.go",
       "symbol": "agentCopyCmd",
       "line_start": 16,
@@ -16110,7 +16102,7 @@
     {
       "source_ref_id": "S-AGENT-COPY-FLAGS",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_agent_copy.go",
       "symbol": "registerAgentCopyFlags",
       "line_start": 53,
@@ -16119,7 +16111,7 @@
     {
       "source_ref_id": "S-AGENT-COPY-RUN",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_agent_copy.go",
       "symbol": "runAgentCopy",
       "line_start": 48,
@@ -16128,7 +16120,7 @@
     {
       "source_ref_id": "S-AGENT-PERMISSIONS",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_agent.go",
       "symbol": "applyAgentPermissionFlags",
       "line_start": 601,
@@ -16137,7 +16129,7 @@
     {
       "source_ref_id": "S-AGENT-MAX-CONCURRENCY",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_agent_validation.go",
       "symbol": "validateAgentMaxConcurrentTasksFlag",
       "line_start": 9,
@@ -16146,7 +16138,7 @@
     {
       "source_ref_id": "S-ISSUE-SEARCH-CMD",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueSearchCmd",
       "line_start": 373,
@@ -16155,7 +16147,7 @@
     {
       "source_ref_id": "S-ISSUE-SEARCH-FLAGS",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueSearchCmd",
       "line_start": 373,
@@ -16164,7 +16156,7 @@
     {
       "source_ref_id": "S-ISSUE-SEARCH-RUN",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "runIssueSearch/match_source",
       "line_start": 383,
@@ -16173,7 +16165,7 @@
     {
       "source_ref_id": "S-ISSUE-SEARCH-RESPONSE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/issue.go",
       "symbol": "SearchIssueResponse/match_source",
       "line_start": 482,
@@ -16182,7 +16174,7 @@
     {
       "source_ref_id": "S-ISSUE-SEARCH-QUERY",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/issue.go",
       "symbol": "match_source",
       "line_start": 485,
@@ -16191,7 +16183,7 @@
     {
       "source_ref_id": "S-ISSUE-SEARCH-ENCODE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/issue.go",
       "symbol": "SearchIssueResponse",
       "line_start": 482,
@@ -16200,7 +16192,7 @@
     {
       "source_ref_id": "S-RUNTIME-DELETE-CMD",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_runtime.go",
       "symbol": "runtimeDeleteCmd",
       "line_start": 60,
@@ -16209,7 +16201,7 @@
     {
       "source_ref_id": "S-RUNTIME-DELETE-RUN",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_runtime.go",
       "symbol": "runRuntimeDelete",
       "line_start": 68,
@@ -16218,7 +16210,7 @@
     {
       "source_ref_id": "S-RUNTIME-DELETE-CONFLICT",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_runtime.go",
       "symbol": "runtimeDeleteConflict",
       "line_start": 233,
@@ -16227,7 +16219,7 @@
     {
       "source_ref_id": "S-PROPERTY-CMD",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_property.go",
       "symbol": "propertyListCmd/propertyGetCmd/propertyCreateCmd/propertyUpdateCmd/propertyArchiveCmd/runPropertyList/runPropertyCreate/runPropertyUpdate",
       "line_start": 60,
@@ -16236,7 +16228,7 @@
     {
       "source_ref_id": "S-PROPERTY-ACTOR",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_property.go",
       "symbol": "actor/multi_actor/encodeIssuePropertyValue/resolveActorPropertyRef",
       "line_start": 29,
@@ -16245,7 +16237,7 @@
     {
       "source_ref_id": "S-ISSUE-PROPERTY-CMD",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_property.go",
       "symbol": "issuePropertyListCmd/issuePropertySetCmd/issuePropertyUnsetCmd/runIssuePropertyList/runIssuePropertySet/runIssuePropertyUnset",
       "line_start": 118,
@@ -16254,7 +16246,7 @@
     {
       "source_ref_id": "S-WORKSPACE-MCP",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_workspace.go",
       "symbol": "workspaceMcpListCmd/workspaceMcpAddCmd/workspaceMcpUpdateCmd/workspaceMcpRemoveCmd/runWorkspaceMcpList/resolveMcpJSONObject",
       "line_start": 113,
@@ -16263,7 +16255,7 @@
     {
       "source_ref_id": "S-AGENT-MCP",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_agent_mcp.go",
       "symbol": "agentMcpListCmd/agentMcpAddCmd/agentMcpEnableCmd/agentMcpDisableCmd/agentMcpRemoveCmd/runAgentMcpList",
       "line_start": 28,
@@ -16272,7 +16264,7 @@
     {
       "source_ref_id": "S-SKILL-REFRESH",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_skill.go",
       "symbol": "skillRefreshCmd/runSkillRefresh",
       "line_start": 66,
@@ -16281,7 +16273,7 @@
     {
       "source_ref_id": "S-SKILL-SEARCH",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_skill.go",
       "symbol": "skillSearchCmd/runSkillSearch",
       "line_start": 73,
@@ -16290,7 +16282,7 @@
     {
       "source_ref_id": "S-ISSUE-STATUS-VALIDATE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "validIssueStatuses/validateIssueStatus/issueStatusKeyPattern",
       "line_start": 391,
@@ -16299,7 +16291,7 @@
     {
       "source_ref_id": "S-ISSUE-STATUS-RUN",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueStatusCmd/runIssueStatus",
       "line_start": 220,
@@ -16308,7 +16300,7 @@
     {
       "source_ref_id": "S-ISSUE-ASSIGNEE-RESOLVE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "resolveAssignee/resolveAssigneeByID/ambiguousAssigneeError",
       "line_start": 2950,
@@ -16317,7 +16309,7 @@
     {
       "source_ref_id": "S-ISSUE-ASSIGNEE-FLAGS",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "pickAssigneeFromFlags/runIssueAssign",
       "line_start": 217,
@@ -16326,7 +16318,7 @@
     {
       "source_ref_id": "S-ISSUE-QUERY-FLAGS",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "validIssueFields/issueListCmd/resolvePropertiesHelp/buildPropertiesFilterQueryParam/filterIssueFields",
       "line_start": 171,
@@ -16335,7 +16327,7 @@
     {
       "source_ref_id": "S-AUTOPILOT-UPDATE-FLAGS",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_autopilot.go",
       "symbol": "autopilotCreateCmd/autopilotUpdateCmd/runAutopilotCreate/runAutopilotUpdate",
       "line_start": 37,
@@ -16344,7 +16336,7 @@
     {
       "source_ref_id": "S-AGENT-CONVERSATION-STARTERS",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_agent.go",
       "symbol": "agentCreateCmd/agentUpdateCmd/applyConversationStartersFlag/parseConversationStarters",
       "line_start": 39,
@@ -16353,7 +16345,7 @@
     {
       "source_ref_id": "S-TASK-CANCELLATION-ACTOR-V0433",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/agent.go",
       "symbol": "TaskCancellationActor/AgentTaskResponse/taskCancellationActorToResponse",
       "line_start": 349,
@@ -16362,16 +16354,16 @@
     {
       "source_ref_id": "S-RUN-MESSAGE-TRUNCATION-V0433",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/pkg/protocol/messages.go",
       "symbol": "TaskMessagePayload/OutputTruncated",
-      "line_start": 200,
-      "line_end": 216
+      "line_start": 211,
+      "line_end": 227
     },
     {
       "source_ref_id": "S-ISSUE-USAGE-COVERAGE-V0433",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/pkg/db/generated/task_usage.sql.go",
       "symbol": "GetIssueUsageSummaryRow/TerminalTaskCount/MeteredTaskCount/UnreportedTaskCount",
       "line_start": 51,
@@ -16380,7 +16372,7 @@
     {
       "source_ref_id": "S-COMMENT-UPDATE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue.go",
       "symbol": "issueCommentUpdateCmd/runIssueCommentUpdate",
       "line_start": 270,
@@ -16389,7 +16381,7 @@
     {
       "source_ref_id": "S-LABEL-V050",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_label.go",
       "symbol": "labelCmd/labelCreateCmd/labelListCmd/labelUpdateCmd/runLabelCreate/runLabelList/runLabelUpdate",
       "line_start": 20,
@@ -16398,7 +16390,7 @@
     {
       "source_ref_id": "S-SKILL-LABEL",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_skill_label.go",
       "symbol": "skillLabelCmd/skillLabelListCmd/skillLabelAddCmd/skillLabelRemoveCmd/runSkillLabelList/runSkillLabelAdd/runSkillLabelRemove",
       "line_start": 14,
@@ -16407,7 +16399,7 @@
     {
       "source_ref_id": "S-SKILL-LIST-V050",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/skill.go",
       "symbol": "SkillResponse/SkillSummaryResponse/labelsBySkill",
       "line_start": 46,
@@ -16416,7 +16408,7 @@
     {
       "source_ref_id": "S-TASK-V050",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/agent.go",
       "symbol": "AgentTaskResponse/taskToResponse",
       "line_start": 359,
@@ -16425,7 +16417,7 @@
     {
       "source_ref_id": "S-RUNTIME-V050",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_runtime.go",
       "symbol": "runtimeDeleteCmd/runRuntimeDelete/runtimeDeleteConflict",
       "line_start": 60,
@@ -16434,7 +16426,7 @@
     {
       "source_ref_id": "S-ISSUE-WAKEUP-CLI",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue_wakeup.go",
       "symbol": "newIssueWakeupCommand",
       "line_start": 20,
@@ -16443,7 +16435,7 @@
     {
       "source_ref_id": "S-ISSUE-WAKEUP-RUN",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_issue_wakeup.go",
       "symbol": "runIssueWakeup",
       "line_start": 62,
@@ -16452,7 +16444,7 @@
     {
       "source_ref_id": "S-ISSUE-WAKEUP-SERVICE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/service/issue_wakeup.go",
       "symbol": "WakeupInput/Validate",
       "line_start": 30,
@@ -16461,7 +16453,7 @@
     {
       "source_ref_id": "S-ISSUE-WAKEUP-HANDLER",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/internal/handler/issue_wakeup.go",
       "symbol": "CreateIssueWakeup",
       "line_start": 181,
@@ -16470,7 +16462,7 @@
     {
       "source_ref_id": "S-RUNTIME-PROFILE-TYPE",
       "repository": "multica-ai/multica",
-      "commit": "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
       "path": "server/cmd/multica/cmd_runtime_profile.go",
       "symbol": "runtimeProfileCreateCmd",
       "line_start": 80,

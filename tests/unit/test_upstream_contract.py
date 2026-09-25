@@ -19,6 +19,7 @@ from multica_py.resources.squad_members import SquadMemberResource
 from scripts.audit_source_links import check_registry_source_links
 from tools.upstream_contract.contract import (
     ContractError,
+    ReleaseArtifact,
     ResultAssertion,
     VerifiedBinary,
     assert_result,
@@ -29,7 +30,7 @@ from tools.upstream_contract.evidence import ReleaseIdentity, collect
 from tools.upstream_contract.generation import _validate_transient_projection, render_files
 
 APPROVED = pathlib.Path("contracts/sdk-contract.json")
-PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.5.1..v0.5.2/source/multica")
+PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.5.2..v0.5.3/source/multica")
 
 _SQUAD_MEMBER_OPERATION_IDS = (
     "squads.members.add",
@@ -473,16 +474,16 @@ def test_response_registry_has_target_ranges_and_explicit_removals() -> None:
     contract = validate_contract(APPROVED)
     registry = contract.compatibility.response_registry
     assert len(registry) == 167
-    assert {item.disposition for item in registry} == {"changed", "unchanged"}
+    assert {item.disposition for item in registry} == {"unchanged"}
     assert {
         url.split("/blob/")[1].split("/")[0] for item in registry for url in item.source_urls
     } == {
-        "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6",
         "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
+        "ff8b285497809e084915016c40c2bc5e5991ffbc",
     }
     assert all("#L1-L1" not in url for item in registry for url in item.source_urls)
     assert not any(item.operation_id.startswith("plugins.") for item in registry)
-    assert sum(item.disposition == "changed" for item in registry) == 3
+    assert sum(item.disposition == "changed" for item in registry) == 0
     assert all(
         all(token in item.action for token in ("model=", "fixture=", "docs=")) for item in registry
     )
@@ -746,15 +747,15 @@ def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     )
 
 
-def test_current_target_and_source_refs_are_pinned_to_v052() -> None:
+def test_current_target_and_source_refs_are_pinned_to_v053() -> None:
     contract = load_contract(APPROVED)
-    assert contract.target.version == "0.5.2"
-    assert contract.target.tag == "v0.5.2"
-    assert contract.target.commit == "d45aba1cd7582bef9210b921bbb7dc198b48e1ee"
-    assert contract.target.release_id == "394535503"
+    assert contract.target.version == "0.5.3"
+    assert contract.target.tag == "v0.5.3"
+    assert contract.target.commit == "ff8b285497809e084915016c40c2bc5e5991ffbc"
+    assert contract.target.release_id == "395523214"
     assert (
         contract.target.release_provenance_ref
-        == ".devlocal/upstream-contract/v0.5.1..v0.5.2/release/release-verification.json"
+        == ".devlocal/upstream-contract/v0.5.2..v0.5.3/release/release-verification.json"
     )
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
     stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
@@ -770,14 +771,6 @@ def test_compatibility_binary_and_release_provenance_are_exact() -> None:
     compatibility = contract.compatibility
     assert compatibility.verified_binaries == (
         VerifiedBinary(
-            version="0.5.1",
-            commit="f41fae6b08fb734afcbd13205c0b3203dd0bc9c6",
-            build_date="2026-09-21T10:42:33Z",
-            go_version="go1.26.8",
-            os="darwin",
-            arch="arm64",
-        ),
-        VerifiedBinary(
             version="0.5.2",
             commit="d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
             build_date="2026-09-23T10:42:33Z",
@@ -785,15 +778,34 @@ def test_compatibility_binary_and_release_provenance_are_exact() -> None:
             os="darwin",
             arch="arm64",
         ),
+        VerifiedBinary(
+            version="0.5.3",
+            commit="ff8b285497809e084915016c40c2bc5e5991ffbc",
+            build_date="2026-09-24T10:07:17Z",
+            go_version="go1.26.8",
+            os="darwin",
+            arch="arm64",
+        ),
     )
-    assert [item.version for item in compatibility.release_artifacts] == ["0.5.1", "0.5.2"]
-    assert (
-        compatibility.release_artifacts[0].archive_sha256
-        != compatibility.release_artifacts[0].executable_sha256
-    )
-    assert (
-        compatibility.release_artifacts[1].archive_sha256
-        != compatibility.release_artifacts[1].executable_sha256
+    assert compatibility.release_artifacts == (
+        ReleaseArtifact(
+            version="0.5.2",
+            tag="v0.5.2",
+            release_id="394535503",
+            asset_name="multica-cli-0.5.2-darwin-arm64.tar.gz",
+            archive_sha256="7893b31e23cb58ef897b8d44c01b736acc33786aae70aa5d167f7a674b713cc3",
+            executable_sha256="9f735a52685a958b739a616ec77d3003b3665e5686609d8e050bcd6dcb279984",
+            version_output_sha256="4f3bd93112beb2c90090e9a8bef396d4c72db97e1e7f377a2bf7b00bc32c03cd",
+        ),
+        ReleaseArtifact(
+            version="0.5.3",
+            tag="v0.5.3",
+            release_id="395523214",
+            asset_name="multica-cli-0.5.3-darwin-arm64.tar.gz",
+            archive_sha256="c41428158b87a8dba409542d55c869d5d86ca738a01ba6e0b4698b49cc94d718",
+            executable_sha256="576fe10229b95a624bbdf12ae54054c5d7a58156ea4cffa41ccae6d161729565",
+            version_output_sha256="67194f3de511d86a206d7656894705352f9c555794eb6c40166247a213163d9b",
+        ),
     )
 
 
@@ -803,8 +815,8 @@ def test_compatibility_command_inventory_is_reconciled() -> None:
         compatibility.command_inventory,
         baseline_nodes=201,
         target_nodes=201,
-        unchanged=198,
-        changed=3,
+        unchanged=201,
+        changed=0,
         added=0,
         removed=0,
         hidden=("probe-runtimes",),
@@ -827,7 +839,7 @@ def test_compatibility_reviewed_response_bounds_are_exact() -> None:
     assert (
         compatibility.min_cli_version,
         compatibility.max_tested_cli_version,
-    ) == ("0.4.42", "0.5.2")
+    ) == ("0.4.42", "0.5.3")
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
         "agents.tasks",
         "labels.create",
@@ -894,7 +906,12 @@ def test_command_inventory_rejects_count_drift(
 def test_command_inventory_rejects_added_changed_overlap(tmp_path: pathlib.Path) -> None:
     document = json.loads(APPROVED.read_text(encoding="utf-8"))
     inventory = document["compatibility"]["command_inventory"]
-    inventory["added_commands"].append(inventory["changed_commands"][0])
+    inventory["changed_commands"].append("synthetic")
+    inventory["changed"] = 1
+    inventory["added_commands"].append("synthetic")
+    inventory["added"] = 1
+    inventory["unchanged"] = 200
+    inventory["target_nodes"] = 202
     path = tmp_path / "inventory-overlap.json"
     path.write_text(json.dumps(document), encoding="utf-8")
 
@@ -908,6 +925,9 @@ def test_command_inventory_rejects_duplicate_delta_entries(
 ) -> None:
     document = json.loads(APPROVED.read_text(encoding="utf-8"))
     entries = document["compatibility"]["command_inventory"][case.field]
+    entries.extend(("synthetic", "synthetic"))
+    document["compatibility"]["command_inventory"]["changed"] = 2
+    document["compatibility"]["command_inventory"]["unchanged"] = 199
     entries[1] = entries[0]
     path = tmp_path / f"inventory-duplicate-{case.field}.json"
     path.write_text(json.dumps(document), encoding="utf-8")
@@ -932,7 +952,7 @@ def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     assert json.loads(files[2].content) == {
         "max_cli_version": "0.4.36",
         "min_cli_version": "0.4.27",
-        "target_version": "0.5.2",
+        "target_version": "0.5.3",
     }
 
 

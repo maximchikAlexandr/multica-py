@@ -38,15 +38,8 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "f41fae6b08fb734afcbd13205c0b3203dd0bc9c6"
-_TARGET_COMMIT = "d45aba1cd7582bef9210b921bbb7dc198b48e1ee"
-_V052_CHANGED_RESPONSE_WORK_ITEMS = frozenset(
-    {
-        "agent_tasks",
-        "issue_runs",
-        "issue_create",
-    }
-)
+_BASELINE_COMMIT = "d45aba1cd7582bef9210b921bbb7dc198b48e1ee"
+_TARGET_COMMIT = "ff8b285497809e084915016c40c2bc5e5991ffbc"
 _TAG_KINDS = frozenset(
     {
         "primitive",
@@ -2355,10 +2348,10 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         != 167
     ):
         raise ContractError("response audit must cover exactly 167 supported entrypoints")
-    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 3:
-        raise ContractError("response audit must contain exactly three changed entrypoints")
-    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 164:
-        raise ContractError("response audit must contain exactly 164 unchanged entrypoints")
+    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 0:
+        raise ContractError("response audit must contain no changed entrypoints")
+    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 167:
+        raise ContractError("response audit must contain exactly 167 unchanged entrypoints")
     changed_entrypoints = tuple(
         _str(value, "compatibility.response_audit.changed_entrypoints")
         for value in _list(
@@ -2366,12 +2359,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "compatibility.response_audit.changed_entrypoints",
         )
     )
-    if set(changed_entrypoints) != {
-        "agents.tasks",
-        "issues.runs",
-        "issues.create",
-    }:
-        raise ContractError("response audit changed entrypoints do not match the approved set")
+    if changed_entrypoints:
+        raise ContractError("response audit must not list changed entrypoints")
     compatibility = Compatibility(
         min_cli_version=bounds[0],
         max_tested_cli_version=bounds[1],
@@ -2528,39 +2517,39 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.commit,
         contract.target.release_id,
     ) != (
-        "0.5.2",
-        "v0.5.2",
-        "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
-        "394535503",
+        "0.5.3",
+        "v0.5.3",
+        "ff8b285497809e084915016c40c2bc5e5991ffbc",
+        "395523214",
     ):
-        raise ContractError("approved contract must target Multica v0.5.2")
+        raise ContractError("approved contract must target Multica v0.5.3")
     if contract.compatibility.command_inventory != CommandInventory(
         baseline_nodes=201,
         target_nodes=201,
-        unchanged=198,
-        changed=3,
+        unchanged=201,
+        changed=0,
         added=0,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
         added_commands=(),
-        changed_commands=("issue create", "issue list", "issue timeline"),
+        changed_commands=(),
     ):
-        raise ContractError("command inventory does not match the approved 0.5.1/0.5.2 review")
+        raise ContractError("command inventory does not match the approved 0.5.2/0.5.3 review")
     expected_artifacts = {
-        "0.5.1": (
-            "v0.5.1",
-            "392880229",
-            "multica-cli-0.5.1-darwin-arm64.tar.gz",
-            "85c5e6d8f9af4c3cfef9a6632a94b682ca09afb1e62900a8565eab5bb26a12ec",
-            "a7223c87c3da4b77afa8b0941504678c30a2770dd1d03df5f2325301360ed588",
-        ),
         "0.5.2": (
             "v0.5.2",
             "394535503",
             "multica-cli-0.5.2-darwin-arm64.tar.gz",
             "7893b31e23cb58ef897b8d44c01b736acc33786aae70aa5d167f7a674b713cc3",
             "9f735a52685a958b739a616ec77d3003b3665e5686609d8e050bcd6dcb279984",
+        ),
+        "0.5.3": (
+            "v0.5.3",
+            "395523214",
+            "multica-cli-0.5.3-darwin-arm64.tar.gz",
+            "c41428158b87a8dba409542d55c869d5d86ca738a01ba6e0b4698b49cc94d718",
+            "576fe10229b95a624bbdf12ae54054c5d7a58156ea4cffa41ccae6d161729565",
         ),
     }
     actual_artifacts = {
@@ -2589,17 +2578,15 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
         for disposition in ("unchanged", "changed")
     }
-    if dispositions != {"unchanged": 164, "changed": 3}:
-        raise ContractError("response registry must split into 164 unchanged and 3 changed items")
+    if dispositions != {"unchanged": 167, "changed": 0}:
+        raise ContractError("response registry must contain 167 unchanged items")
     changed_work_items = {
         item.work_item_id
         for item in contract.compatibility.response_registry
         if item.disposition == "changed"
     }
-    if changed_work_items != _V052_CHANGED_RESPONSE_WORK_ITEMS:
-        raise ContractError(
-            "response registry changed work items do not match the approved 0.5.2 review"
-        )
+    if changed_work_items:
+        raise ContractError("response registry must not mark wire-compatible items changed")
     _validate_direct_bindings(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
         "issue_sort",

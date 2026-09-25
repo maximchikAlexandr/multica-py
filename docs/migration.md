@@ -259,6 +259,24 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
+## v0.5.3 SDK patch migration
+
+### Direct 0.5.2 → 0.5.3 migration
+
+The approved target is Multica CLI `0.5.3` at source commit
+`ff8b285497809e084915016c40c2bc5e5991ffbc`; the compatibility interval is
+`[0.4.42, 0.5.4)`. The public CLI tree, response entrypoints, models,
+operations, relations, signatures, and dependencies are unchanged. The target
+corrects resumed Claude session usage by emitting per-run values after its own
+baseline handling; existing task, issue, and runtime usage models preserve those
+values exactly, with no provider-session reads or SDK-side subtraction.
+
+PR automation, UI cache-hit calculations, daemon identity and Windows behavior,
+messaging/media, mobile/localization, runtime, documentation-site, pricing, and
+other unrelated upstream changes remain outside the SDK. If a release gate
+fails, restore the contract, generated runtime, fixtures, docs, and package
+claims together to the approved `0.5.2` state.
+
 ## v0.5.2 SDK additions and behavior
 
 ### Direct 0.5.1 → 0.5.2 migration

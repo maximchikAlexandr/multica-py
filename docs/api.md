@@ -6,20 +6,19 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
-## Approved v0.5.2 target
+## Approved v0.5.3 target
 
-This SDK contract supports Multica CLI `0.5.2` at commit
-`d45aba1cd7582bef9210b921bbb7dc198b48e1ee` (release `394535503`), with the
-tested interval `[0.4.42, 0.5.3)`. Migrate directly from `0.5.1`; no
-intermediate SDK release is required. Existing operation-level gates from
-`0.5.1` remain unchanged; the global `0.4.42` floor applies where already
-approved. The `AgentTask` projection from `agents.tasks` and `TaskRun`
-projection from `issues.runs` expose the approved supplement metadata; issue
-responses expose the immutable `duplicate_of` snapshot, and issue properties
-are atomic on the single create step. These additions require CLI `0.5.2`;
-`0.5.3` is exclusive. The `issue wakeup` family and runtime profiles are
-deferred and are not SDK surface. The former v0.5.1 target text is historical
-comparison context.
+This SDK contract supports Multica CLI `0.5.3` at commit
+`ff8b285497809e084915016c40c2bc5e5991ffbc` (release `395523214`), with the
+tested interval `[0.4.42, 0.5.4)`. Migrate directly from `0.5.2`; no
+intermediate SDK release is required. All 201 public command nodes and all 167
+approved response entrypoints retain their existing shape. Multica `0.5.3`
+corrects resumed Claude session usage accounting behind the existing task,
+issue, and runtime usage models; the SDK preserves returned values without
+provider-session reads or client-side subtraction. The `issue wakeup` family,
+runtime profiles, PR automation, UI cache calculations, daemon identity,
+messaging/media, mobile, localization, and pricing changes remain outside the
+SDK surface. The `0.5.2` duplicate/supplement/property gates remain in force.
 
 The `Comment.deleted_at` field is `None` only when the wire field is omitted;
 valid target timestamps are preserved, while explicit null and malformed values

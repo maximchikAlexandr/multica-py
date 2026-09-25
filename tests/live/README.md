@@ -16,9 +16,9 @@ The profile is preauthenticated by the prepared environment owner. No
 credential is copied into the repository, pytest environment, artifacts, or
 command line.
 
-The prepared CLI MUST be `0.5.1`. The fixture uses
+The prepared CLI MUST be `0.5.3`. The fixture uses
 `CompatibilityPolicy.strict` with the generated compatibility bounds
-`[0.4.42, 0.5.2)` and no local version override. Client construction is
+`[0.4.42, 0.5.4)` and no local version override. Client construction is
 I/O-free; the first public SDK operation performs the JSON version preflight.
 
 The prepared workspace must contain at least one member, agent, skill, squad,

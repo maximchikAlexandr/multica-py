@@ -53,15 +53,16 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.5.2'" in runtime
+    assert b"TARGET_VERSION = '0.5.3'" in runtime
     assert b"MIN_CLI_VERSION = '0.4.42'" in runtime
-    assert b"MAX_CLI_VERSION = '0.5.3'" in runtime
+    assert b"MAX_CLI_VERSION = '0.5.4'" in runtime
 
     descriptors = {
         item.operation_id: item
         for item in contract.binding_descriptors
         if item.operation_id in {"agents.copy", "issues.search"}
     }
+    assert set(descriptors) == {"agents.copy", "issues.search"}
     for descriptor in descriptors.values():
         descriptor_header = (
             f"{descriptor.operation_id!r}, {descriptor.entrypoint_id!r}, {descriptor.command!r}"
@@ -126,12 +127,15 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
     assert "title" not in str(update_binding)
     assert "kind" not in str(update_binding)
 
+
+def test_prior_binary_provenance_and_reviewed_responses_are_exact() -> None:
+    contract = validate_contract(APPROVED)
     binary = next(
-        item for item in contract.compatibility.verified_binaries if item.version == "0.5.1"
+        item for item in contract.compatibility.verified_binaries if item.version == "0.5.2"
     )
-    assert binary.commit.startswith("f41fae6b0")
+    assert binary.commit.startswith("d45aba1cd")
     assert (binary.build_date, binary.go_version, binary.os, binary.arch) == (
-        "2026-09-21T10:42:33Z",
+        "2026-09-23T10:42:33Z",
         "go1.26.8",
         "darwin",
         "arm64",
@@ -149,9 +153,7 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
     }
 
 
-def test_retained_inventory_and_fresh_checkout_remain_outside_typed_surface() -> None:
-    from multica_py.resources.repositories import RepositoryResource
-
+def test_retained_inventory_is_reconciled() -> None:
     contract = validate_contract(APPROVED)
     operation_ids = {operation.operation_id for operation in contract.operations}
     scope = cast("dict[str, object]", contract.raw["scope"])
@@ -168,13 +170,19 @@ def test_retained_inventory_and_fresh_checkout_remain_outside_typed_surface() ->
     assert len(contract.compatibility.response_registry) == 167
     assert (
         sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
-        == 164
+        == 167
     )
     assert (
-        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 3
+        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 0
     )
     assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
 
+
+def test_fresh_checkout_remains_outside_typed_surface() -> None:
+    from multica_py.resources.repositories import RepositoryResource
+
+    contract = validate_contract(APPROVED)
+    operation_ids = {operation.operation_id for operation in contract.operations}
     assert any("repoCheckoutCmd" in source_ref.symbol for source_ref in contract.source_refs)
     assert not any("checkout" in operation_id for operation_id in operation_ids)
     assert not hasattr(RepositoryResource, "checkout")
