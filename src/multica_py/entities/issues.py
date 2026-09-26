@@ -1008,9 +1008,16 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         title: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
         priority: str | UnsetType = Unset,
+        status: IssueStatus | str | UnsetType = Unset,
+        stage: int | None | UnsetType = Unset,
+        start_date: str | None | UnsetType = Unset,
+        due_date: str | None | UnsetType = Unset,
+        position: float | UnsetType = Unset,
         assignee_id: str | None | UnsetType = Unset,
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
+        attachments: tuple[str, ...] | UnsetType = Unset,
+        no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
         client = self._require_client(
@@ -1021,9 +1028,16 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             title=title,
             description=description,
             priority=priority,
+            status=status,
+            stage=stage,
+            start_date=start_date,
+            due_date=due_date,
+            position=position,
             assignee_id=assignee_id,
             project_id=project_id,
             parent_id=parent_id,
+            attachments=attachments,
+            no_start=no_start,
             options=options,
         )
 
@@ -1033,33 +1047,55 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         title: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
         priority: str | UnsetType = Unset,
+        status: IssueStatus | str | UnsetType = Unset,
+        stage: int | None | UnsetType = Unset,
+        start_date: str | None | UnsetType = Unset,
+        due_date: str | None | UnsetType = Unset,
+        position: float | UnsetType = Unset,
         assignee_id: str | None | UnsetType = Unset,
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
+        attachments: tuple[str, ...] | UnsetType = Unset,
+        no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Issue:
         return self.update_command(
             title=title,
             description=description,
             priority=priority,
+            status=status,
+            stage=stage,
+            start_date=start_date,
+            due_date=due_date,
+            position=position,
             assignee_id=assignee_id,
             project_id=project_id,
             parent_id=parent_id,
+            attachments=attachments,
+            no_start=no_start,
             options=options,
         ).run()
 
     def assign_command(
-        self, assignee: AssignmentTarget, *, options: OperationOptions | None = None
+        self,
+        assignee: AssignmentTarget,
+        *,
+        no_start: bool = False,
+        options: OperationOptions | None = None,
     ) -> Command[Issue]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="assign"
         )
-        return client.issues.assign_command(self.id, assignee, options=options)
+        return client.issues.assign_command(self.id, assignee, no_start=no_start, options=options)
 
     def assign(
-        self, assignee: AssignmentTarget, *, options: OperationOptions | None = None
+        self,
+        assignee: AssignmentTarget,
+        *,
+        no_start: bool = False,
+        options: OperationOptions | None = None,
     ) -> Issue:
-        return self.assign_command(assignee, options=options).run()
+        return self.assign_command(assignee, no_start=no_start, options=options).run()
 
     def unassign_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
         client = self._require_client(
@@ -1071,17 +1107,25 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         return self.unassign_command(options=options).run()
 
     def set_status_command(
-        self, status: IssueStatus | str, *, options: OperationOptions | None = None
+        self,
+        status: IssueStatus | str,
+        *,
+        no_start: bool = False,
+        options: OperationOptions | None = None,
     ) -> Command[Issue]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="set_status"
         )
-        return client.issues.set_status_command(self.id, status, options=options)
+        return client.issues.set_status_command(self.id, status, no_start=no_start, options=options)
 
     def set_status(
-        self, status: IssueStatus | str, *, options: OperationOptions | None = None
+        self,
+        status: IssueStatus | str,
+        *,
+        no_start: bool = False,
+        options: OperationOptions | None = None,
     ) -> Issue:
-        return self.set_status_command(status, options=options).run()
+        return self.set_status_command(status, no_start=no_start, options=options).run()
 
     def move_to_top_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
         client = self._require_client(

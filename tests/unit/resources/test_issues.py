@@ -1112,12 +1112,12 @@ def test_issue_page_decoder_rejects_bounded_malformed_pages(payload: bytes) -> N
         _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire))
 
 
-def test_deferred_issue_query_surfaces_remain_absent() -> None:
+def test_issue_query_surface_matches_public_cli() -> None:
     import inspect
 
-    assert not hasattr(IssueResource, "timeline")
-    assert "active" not in inspect.signature(IssueResource.runs).parameters
-    assert "siblings" not in inspect.signature(IssueResource.runs).parameters
+    assert hasattr(IssueResource, "timeline")
+    assert "active" in inspect.signature(IssueResource.runs).parameters
+    assert "siblings" in inspect.signature(IssueResource.runs).parameters
 
 
 def test_issue_entity_commands_route_relations_and_mutations_lazily(

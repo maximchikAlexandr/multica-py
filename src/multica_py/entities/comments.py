@@ -25,6 +25,14 @@ class Comment(_BoundEntity):  # type: ignore[misc]
     deleted_at: datetime.datetime | None = None
     revision: int | None = None
     issue_revision: int | None = None
+    author_type: str | None = None
+    author_name: str | None = None
+    resolved: bool | None = None
+    reactions: object | None = None
+    attachments: tuple[object, ...] = ()
+    folded: bool | None = None
+    trigger: object | None = None
+    supplement: object | None = None
 
 
 class CommentThread(_BoundEntity):  # type: ignore[misc]

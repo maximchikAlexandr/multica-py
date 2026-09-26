@@ -143,6 +143,14 @@ class _CommentWire(msgspec.Struct, frozen=True, kw_only=True):
     deleted_at: datetime.datetime | msgspec.UnsetType = msgspec.UNSET
     revision: int | msgspec.UnsetType = msgspec.UNSET
     issue_revision: int | msgspec.UnsetType = msgspec.UNSET
+    author_type: str | None = None
+    author_name: str | None = None
+    resolved: bool | None = None
+    reactions: object | None = None
+    attachments: tuple[object, ...] = ()
+    folded: bool | None = None
+    trigger: object | None = None
+    supplement: object | None = None
 
 
 def comment_from_wire(wire: _CommentWire) -> Comment:
@@ -158,6 +166,22 @@ def comment_from_wire(wire: _CommentWire) -> Comment:
         deleted_at=None if wire.deleted_at is msgspec.UNSET else wire.deleted_at,
         revision=None if wire.revision is msgspec.UNSET else wire.revision,
         issue_revision=(None if wire.issue_revision is msgspec.UNSET else wire.issue_revision),
+        author_type=wire.author_type,
+        author_name=wire.author_name,
+        resolved=wire.resolved,
+        reactions=None
+        if wire.reactions is None
+        else _coerce_json_value(wire.reactions, field_name="reactions"),
+        attachments=tuple(
+            _coerce_json_value(item, field_name="attachments") for item in wire.attachments
+        ),
+        folded=wire.folded,
+        trigger=None
+        if wire.trigger is None
+        else _coerce_json_value(wire.trigger, field_name="trigger"),
+        supplement=None
+        if wire.supplement is None
+        else _coerce_json_value(wire.supplement, field_name="supplement"),
     )
 
 
@@ -219,6 +243,11 @@ class _AutopilotWire(msgspec.Struct, frozen=True, kw_only=True):
     subscribers: tuple[_AutopilotSubscriberWire, ...] | msgspec.UnsetType = msgspec.UNSET
     can_write: bool | None = None
     can_manage_access: bool | None = None
+    has_webhook_token: bool | None = None
+    webhook_token_hint: str | None = None
+    webhook_token: str | None = None
+    webhook_path: str | None = None
+    webhook_url: str | None = None
 
 
 def _autopilot_from_wire(wire: _AutopilotWire) -> Autopilot:
@@ -253,6 +282,11 @@ def _autopilot_from_wire(wire: _AutopilotWire) -> Autopilot:
         ),
         can_write=wire.can_write,
         can_manage_access=wire.can_manage_access,
+        has_webhook_token=wire.has_webhook_token,
+        webhook_token_hint=wire.webhook_token_hint,
+        webhook_token=wire.webhook_token,
+        webhook_path=wire.webhook_path,
+        webhook_url=wire.webhook_url,
         _wire_presence=(("project_id", _presence_seed(wire.project_id)),),
     )
 
