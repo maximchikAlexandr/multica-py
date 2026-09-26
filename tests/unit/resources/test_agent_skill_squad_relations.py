@@ -47,7 +47,7 @@ from multica_py.models.issues import (
 )
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
 from multica_py.models.skills import SkillFile
-from multica_py.models.system import SquadMember
+from multica_py.models.system import SquadMember, SquadMemberRemoval
 from multica_py.models.workspaces import McpServer
 from multica_py.resources._base import BaseResource
 from multica_py.resources.agent_skills import AgentSkillResource
@@ -128,6 +128,15 @@ def _make_client(
         return resource._plan(
             steps=(_Step(("squad", "member", "mutation"), "run_text"),),
             finalize=lambda _results: ActionResult[None](value=None),
+        )
+
+    def typed_effect_command(loader: Callable[[], object]) -> Command[object]:
+        transport = MagicMock(spec=CliTransport)
+        transport.run_text.return_value = TextResult("", "", 0)
+        resource = BaseResource(transport, ClientConfig())
+        return resource._plan(
+            steps=(_Step(("squad", "member", "mutation"), "run_text"),),
+            finalize=lambda _results: loader(),
         )
 
     client.agents.skills.list.return_value = skills
@@ -221,11 +230,29 @@ def _make_client(
     client.skills.files.delete_command = lambda skill_id, file_id, **_kwargs: empty_command(
         lambda: client.skills.files.delete(skill_id, file_id)
     )
-    client.squads.members.add_command = lambda squad_id, member_id, **_kwargs: effect_command(
-        lambda: client.squads.members.add(squad_id, member_id)
+    client.squads.members.add.side_effect = (
+        lambda squad_id, *, member_id, member_type, role="", **_kwargs: SquadMember(
+            member_id=member_id, member_type=member_type, role=role
+        )
     )
-    client.squads.members.remove_command = lambda squad_id, member_id, **_kwargs: effect_command(
-        lambda: client.squads.members.remove(squad_id, member_id)
+    client.squads.members.remove.side_effect = (
+        lambda squad_id, *, member_id, member_type, **_kwargs: SquadMemberRemoval(
+            squad_id=squad_id, member_id=member_id, removed=True
+        )
+    )
+    client.squads.members.add_command = (
+        lambda squad_id, *, member_id, member_type, role="", **_kwargs: typed_effect_command(
+            lambda: client.squads.members.add(
+                squad_id, member_id=member_id, member_type=member_type, role=role
+            )
+        )
+    )
+    client.squads.members.remove_command = lambda squad_id, *, member_id, member_type, **_kwargs: (
+        typed_effect_command(
+            lambda: client.squads.members.remove(
+                squad_id, member_id=member_id, member_type=member_type
+            )
+        )
     )
     client.squads.members.list_command = lambda squad_id: empty_command(
         lambda: client.squads.members.list(squad_id)
@@ -258,11 +285,23 @@ def _make_client(
             IssueListFilter(assignee_id=assignee_id, limit=limit, offset=offset)
         )
     )
-    client.squads._add_member_command = lambda squad_id, member_id, *, invalidate, options: (
-        client.squads.members.add_command(squad_id, member_id, options=options)._map(invalidate)
+    client.squads._add_member_command = (
+        lambda squad_id, *, member_id, member_type, role, invalidate, options: (
+            client.squads.members.add_command(
+                squad_id,
+                member_id=member_id,
+                member_type=member_type,
+                role=role,
+                options=options,
+            )._map(invalidate)
+        )
     )
-    client.squads._remove_member_command = lambda squad_id, member_id, *, invalidate, options: (
-        client.squads.members.remove_command(squad_id, member_id, options=options)._map(invalidate)
+    client.squads._remove_member_command = (
+        lambda squad_id, *, member_id, member_type, invalidate, options: (
+            client.squads.members.remove_command(
+                squad_id, member_id=member_id, member_type=member_type, options=options
+            )._map(invalidate)
+        )
     )
     return client
 
@@ -723,12 +762,34 @@ def test_squad_issue_all_command_previews_next_page_and_runs_exact_offset() -> N
 def test_squad_member_commands_invalidate_only_after_success() -> None:
     client = MulticaClient(ClientConfig())
     transport = MagicMock(spec=CliTransport)
-    transport.run_bytes.return_value = RawCommandResult(
-        stdout=b'[{"member_id":"m1","member_type":"agent","role":"dev"}]',
-        stderr=b"",
-        exit_code=0,
-        argv=("squad", "member", "list", "sq_1", "--output", "json"),
-        duration=datetime.timedelta(),
+    transport.run_bytes.side_effect = (
+        RawCommandResult(
+            stdout=b'[{"member_id":"m1","member_type":"agent","role":"dev"}]',
+            stderr=b"",
+            exit_code=0,
+            argv=("squad", "member", "list", "sq_1", "--output", "json"),
+            duration=datetime.timedelta(),
+        ),
+        RawCommandResult(
+            stdout=b'{"member_id":"m2","member_type":"agent","role":"dev"}',
+            stderr=b"",
+            exit_code=0,
+            argv=(
+                "squad",
+                "member",
+                "add",
+                "sq_1",
+                "--member-id",
+                "m2",
+                "--type",
+                "agent",
+                "--role",
+                "dev",
+                "--output",
+                "json",
+            ),
+            duration=datetime.timedelta(),
+        ),
     )
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     transport.run_text.return_value = TextResult("", "", 0)
@@ -738,8 +799,10 @@ def test_squad_member_commands_invalidate_only_after_success() -> None:
     relation = entity.members
     entity.members.all()
 
-    add = entity.add_member_command("m2")
-    assert add.commands == ("multica squad member add sq_1 m2",)
+    add = entity.add_member_command("m2", member_type="agent", role="dev")
+    assert add.commands == (
+        "multica squad member add sq_1 --member-id m2 --type agent --role dev --output json",
+    )
     assert relation.loaded
     add.run()
     if relation.loaded:
@@ -749,22 +812,24 @@ def test_squad_member_commands_invalidate_only_after_success() -> None:
 def test_squad_remove_command_failure_keeps_members_cache() -> None:
     client = MulticaClient(ClientConfig())
     transport = MagicMock(spec=CliTransport)
-    transport.run_bytes.return_value = RawCommandResult(
-        stdout=b'[{"member_id":"m1","member_type":"agent","role":"dev"}]',
-        stderr=b"",
-        exit_code=0,
-        argv=("squad", "member", "list", "sq_1", "--output", "json"),
-        duration=datetime.timedelta(),
+    transport.run_bytes.side_effect = (
+        RawCommandResult(
+            stdout=b'[{"member_id":"m1","member_type":"agent","role":"dev"}]',
+            stderr=b"",
+            exit_code=0,
+            argv=("squad", "member", "list", "sq_1", "--output", "json"),
+            duration=datetime.timedelta(),
+        ),
+        RuntimeError("transport failed"),
     )
     transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_text.side_effect = RuntimeError("transport failed")
     client.squads._transport = transport
     client.squads.members._transport = transport
     entity = _squad(client=client)
     relation = entity.members
     relation.all()
 
-    failed = entity.remove_member_command("m1")
+    failed = entity.remove_member_command("m1", member_type="agent")
     with pytest.raises(RuntimeError, match="transport failed"):
         failed.run()
     assert relation.loaded
@@ -827,18 +892,25 @@ def test_squad_parent_mutations_invalidate_only_members(case: SquadParentMutatio
 
     cached_members = entity.members.all()
     entity.issues.all()
+    mutation_kwargs = {"member_type": "agent"}
+    if case.method == "add_member":
+        mutation_kwargs["role"] = "dev"
     if case.succeeds:
-        result = getattr(entity, case.method)(case.member_id)
-        assert isinstance(result, ActionResult)
-        assert result.success and result.value is None
+        result = getattr(entity, case.method)(case.member_id, **mutation_kwargs)
+        if case.method == "add_member":
+            assert result == SquadMember(member_id="m1", member_type="agent", role="dev")
+        else:
+            assert result == SquadMemberRemoval(squad_id="sq_1", member_id="m1", removed=True)
         assert entity.members.all() == cached_members
         assert client.squads.members.list.call_count == 2
     else:
         with pytest.raises(RuntimeError, match="transport failed"):
-            getattr(entity, case.method)(case.member_id)
+            getattr(entity, case.method)(case.member_id, **mutation_kwargs)
         assert entity.members.all() == cached_members
         assert client.squads.members.list.call_count == 1
-    assert child.call_args.args == ("sq_1", case.member_id)
+    assert child.call_args.args == ("sq_1",)
+    assert child.call_args.kwargs["member_id"] == case.member_id
+    assert child.call_args.kwargs["member_type"] == "agent"
     assert client.issues.list.call_count == 1
 
 
@@ -849,7 +921,7 @@ def test_squad_parent_mutation_does_not_invalidate_another_wrapper() -> None:
 
     first.members.all()
     second.members.all()
-    first.add_member("m1")
+    first.add_member("m1", member_type="agent", role="dev")
     first.members.all()
     second.members.all()
 
@@ -863,7 +935,7 @@ def test_squad_parent_validation_preserves_loaded_members(case: SquadParentValid
     cached_members = entity.members.all()
 
     with pytest.raises(ValueError):
-        getattr(entity, case.method)("")
+        getattr(entity, case.method)("", member_type="agent")
 
     assert entity.members.all() == cached_members
     assert client.squads.members.list.call_count == 1
