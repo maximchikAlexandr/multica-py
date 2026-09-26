@@ -13,10 +13,9 @@ from multica_py._generated.approved_sdk import (
 )
 from multica_py._internal.commands import Command, _Step, _StepRef
 from multica_py._internal.decoders import decode_json
-from multica_py._internal.specs import RawCommandResult
 from multica_py.config import OperationOptions
 from multica_py.execution import OutputArtifact
-from multica_py.models.system import AttachmentResult
+from multica_py.models.system import AttachmentDownloadResult, AttachmentResult
 from multica_py.resources._base import BaseResource
 
 UploadSource = str | os.PathLike[str] | Buffer | BinaryIO
@@ -58,8 +57,12 @@ def _stream_filename(stream: BinaryIO, filename: str | None) -> str:
     return _safe_leaf(filename, "filename")
 
 
-def _decode_download_path(data: bytes, *, command: str) -> pathlib.Path:
-    return pathlib.Path(decode_json(data, str, command=command))
+def _decode_upload_result(data: bytes, *, command: str) -> AttachmentResult:
+    return decode_json(data, AttachmentResult, command=command)
+
+
+def _decode_download_result(data: bytes, *, command: str) -> AttachmentDownloadResult:
+    return decode_json(data, AttachmentDownloadResult, command=command)
 
 
 class AttachmentResource(BaseResource):
@@ -130,10 +133,14 @@ class AttachmentResource(BaseResource):
         args = ["attachment", "upload", ""]
         if task_id is not None:
             args.extend(["--task", task_id])
-        plan_args, decode = self._plan_decode(tuple(args), AttachmentResult)
         return self._plan(
             steps=(
-                _Step(plan_args, "run_bytes", refs=((2, _StepRef(kind="temp")),), decode=decode),
+                _Step(
+                    tuple(args),
+                    "run_bytes",
+                    refs=((2, _StepRef(kind="temp")),),
+                    decode=lambda data, command: _decode_upload_result(data, command=command),
+                ),
             ),
             finalize=lambda results: cast("AttachmentResult", results[0]),
             stage_provider=stage_provider,
@@ -208,17 +215,22 @@ class AttachmentResource(BaseResource):
         *,
         output_dir: pathlib.Path,
         options: OperationOptions | None = None,
-    ) -> Command[pathlib.Path]:
+    ) -> Command[AttachmentDownloadResult]:
         _ = cast("object", ATTACHMENT_DOWNLOAD_BINDING)
         validate_nonblank(attachment_id)
         args = ("attachment", "download", attachment_id, "--output-dir", str(output_dir.resolve()))
 
-        def finalize(results: tuple[object, ...]) -> pathlib.Path:
-            result = cast("RawCommandResult", results[0])
-            return _decode_download_path(result.stdout, command=" ".join(result.argv))
+        def finalize(results: tuple[object, ...]) -> AttachmentDownloadResult:
+            return cast("AttachmentDownloadResult", results[0])
 
         return self._plan(
-            steps=(_Step((*args, "--output", "json"), "run_bytes"),),
+            steps=(
+                _Step(
+                    args,
+                    "run_bytes",
+                    decode=lambda data, command: _decode_download_result(data, command=command),
+                ),
+            ),
             finalize=finalize,
             options=options,
         )
@@ -229,23 +241,29 @@ class AttachmentResource(BaseResource):
         *,
         output_dir: pathlib.Path,
         options: OperationOptions | None = None,
-    ) -> pathlib.Path:
+    ) -> AttachmentDownloadResult:
         return self.download_command(attachment_id, output_dir=output_dir, options=options).run()
 
     def download_bytes_command(
         self, attachment_id: str, *, options: OperationOptions | None = None
     ) -> Command[bytes]:
         _safe_leaf(attachment_id, "attachment_id")
-        args = ("attachment", "download", attachment_id, "--output-dir", "", "--output", "json")
+        args = ("attachment", "download", attachment_id, "--output-dir", "")
 
         def finalize(results: tuple[object, ...]) -> bytes:
-            result = cast("RawCommandResult", results[0])
-            returned_path = _decode_download_path(result.stdout, command=" ".join(result.argv))
+            returned = cast("AttachmentDownloadResult", results[0])
             artifact = cast("OutputArtifact", results[1])
-            return artifact.read(str(returned_path))
+            return artifact.read(returned.path)
 
         return self._plan(
-            steps=(_Step(args, "run_bytes", refs=((4, _StepRef(kind="output")),)),),
+            steps=(
+                _Step(
+                    args,
+                    "run_bytes",
+                    refs=((4, _StepRef(kind="output")),),
+                    decode=lambda data, command: _decode_download_result(data, command=command),
+                ),
+            ),
             finalize=finalize,
             capture_output_label="download",
             options=options,

@@ -11,6 +11,7 @@ from multica_py._internal.decoders import decode_json
 from multica_py._internal.wire_models import _ProjectResourceRecordWire, project_resource_from_wire
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.project_resources import (
+    GithubRepoResourceRef,
     LocalDirectoryResourceRef,
     ProjectResourceRecord,
 )
@@ -75,19 +76,21 @@ def test_decode_local_directory_record(case: ProjectResourceDecodeCase) -> None:
     assert record.resource_ref.local_path == str(pathlib.Path("/tmp/sandbox").resolve())
 
 
-def test_discriminator_rejects_unknown_resource_type() -> None:
+def test_discriminator_preserves_github_resource_type() -> None:
     payload = {
         "id": "res_001",
         "project_id": "pr_001",
         "resource_type": "github_repo",
         "resource_ref": {
-            "local_path": "/tmp/sandbox",
-            "daemon_id": "daemon-001",
+            "url": "https://github.com/acme/repo",
+            "ref": "main",
         },
     }
     wire = decode_json(json.dumps(payload).encode(), _ProjectResourceRecordWire)
-    with pytest.raises(Exception, match="Unsupported resource_type"):
-        project_resource_from_wire(wire)
+    record = project_resource_from_wire(wire)
+    assert record.resource_ref == GithubRepoResourceRef(
+        url="https://github.com/acme/repo", ref="main"
+    )
 
 
 _REJECT_CASES = (

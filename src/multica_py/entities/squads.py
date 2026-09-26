@@ -9,9 +9,8 @@ from multica_py._internal.commands import Command
 from multica_py.config import OperationOptions
 from multica_py.entities._base import _BoundEntity
 from multica_py.entities.issues import Issue
-from multica_py.models.common import ActionResult
 from multica_py.models.relations import LazyCollection, OffsetLazyCollection, OffsetPage
-from multica_py.models.system import SquadMember
+from multica_py.models.system import SquadMember, SquadMemberRemoval
 
 
 class Squad(_BoundEntity):  # type: ignore[misc]
@@ -70,45 +69,72 @@ class Squad(_BoundEntity):  # type: ignore[misc]
             self._members.invalidate()
 
     def add_member(
-        self, member_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.add_member_command(member_id, options=options).run()
+        self,
+        member_id: str,
+        *,
+        member_type: str,
+        role: str = "",
+        options: OperationOptions | None = None,
+    ) -> SquadMember:
+        return self.add_member_command(
+            member_id, member_type=member_type, role=role, options=options
+        ).run()
 
     def add_member_command(
-        self, member_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
+        self,
+        member_id: str,
+        *,
+        member_type: str,
+        role: str = "",
+        options: OperationOptions | None = None,
+    ) -> Command[SquadMember]:
         validate_nonblank(member_id)
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="add_member"
         )
 
-        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            if result.success:
-                self._invalidate_members()
+        def invalidate(result: SquadMember) -> SquadMember:
+            self._invalidate_members()
             return result
 
         return client.squads._add_member_command(
-            self.id, member_id, invalidate=invalidate, options=options
+            self.id,
+            member_id=member_id,
+            member_type=member_type,
+            role=role,
+            invalidate=invalidate,
+            options=options,
         )
 
     def remove_member(
-        self, member_id: str, *, options: OperationOptions | None = None
-    ) -> ActionResult[None]:
-        return self.remove_member_command(member_id, options=options).run()
+        self,
+        member_id: str,
+        *,
+        member_type: str,
+        options: OperationOptions | None = None,
+    ) -> SquadMemberRemoval:
+        return self.remove_member_command(member_id, member_type=member_type, options=options).run()
 
     def remove_member_command(
-        self, member_id: str, *, options: OperationOptions | None = None
-    ) -> Command[ActionResult[None]]:
+        self,
+        member_id: str,
+        *,
+        member_type: str,
+        options: OperationOptions | None = None,
+    ) -> Command[SquadMemberRemoval]:
         validate_nonblank(member_id)
         client = self._require_client(
             entity_type="Squad", entity_id=self.id, relation_name="remove_member"
         )
 
-        def invalidate(result: ActionResult[None]) -> ActionResult[None]:
-            if result.success:
-                self._invalidate_members()
+        def invalidate(result: SquadMemberRemoval) -> SquadMemberRemoval:
+            self._invalidate_members()
             return result
 
         return client.squads._remove_member_command(
-            self.id, member_id, invalidate=invalidate, options=options
+            self.id,
+            member_id=member_id,
+            member_type=member_type,
+            invalidate=invalidate,
+            options=options,
         )

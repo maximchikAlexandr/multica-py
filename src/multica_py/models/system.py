@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import cast
 
 import msgspec
@@ -52,12 +53,49 @@ class AttachmentResult(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     filename: str
     url: str | None = None
+    markdown_url: str | None = None
+    markdown: str | None = None
+
+
+class AttachmentDownloadResult(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    filename: str
+    path: str
+    size: str | None = None
+
+
+class DaemonWorkspace(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    runtimes: tuple[str, ...] = ()
 
 
 class DaemonStatus(msgspec.Struct, frozen=True, kw_only=True):
-    running: bool = False
+    status: str = ""
     pid: int | None = None
-    uptime: float | None = None
+    uptime: str | None = None
+    os: str | None = None
+    profile: str | None = None
+    daemon_id: str | None = None
+    device_name: str | None = None
+    server_url: str | None = None
+    cli_version: str | None = None
+    launched_by: str | None = None
+    active_task_count: int | None = None
+    running_task_count: int | None = None
+    resource_wait_task_count: int | None = None
+    repo_maintenance_active: int | None = None
+    repo_checkout_waiters: int | None = None
+    pending_terminal_report_count: int | None = None
+    pending_terminal_report_bytes: int | None = None
+    failed_terminal_report_count: int | None = None
+    failed_terminal_report_bytes: int | None = None
+    agents: tuple[str, ...] | None = None
+    skipped_agents: dict[str, str] | None = None
+    reload_pending_reason: str | None = None
+    workspaces: tuple[DaemonWorkspace, ...] | None = None
+    # Kept only for decoding pre-health-endpoint SDK fixtures. The pinned CLI
+    # emits ``status`` and never fabricates this boolean.
+    running: bool | None = None
 
 
 class DaemonLaunchOptions(msgspec.Struct, frozen=True, kw_only=True):
@@ -121,9 +159,66 @@ class DaemonLaunchOptions(msgspec.Struct, frozen=True, kw_only=True):
         return tuple(args)
 
 
-class DaemonDiskUsageEntry(msgspec.Struct, frozen=True, kw_only=True):
+class DaemonTaskDiskUsage(msgspec.Struct, frozen=True, kw_only=True):
+    workspace_id: str
+    workspace_short: str
+    task_short: str
     path: str
+    kind: str
+    parent_id: str | None = None
+    parent_status: str = ""
+    age_seconds: int = 0
     size_bytes: int = 0
+    artifact_size_bytes: int = 0
+
+
+# Compatibility name for callers that imported the pre-report row model.
+DaemonDiskUsageEntry = DaemonTaskDiskUsage
+
+
+class DaemonWorkspaceDiskUsage(msgspec.Struct, frozen=True, kw_only=True):
+    workspace_id: str
+    workspace_short: str
+    task_count: int = 0
+    size_bytes: int = 0
+    artifact_size_bytes: int = 0
+    artifact_ratio: float = 0.0
+    oldest_age_seconds: int = 0
+
+
+class DaemonDiskUsageReport(msgspec.Struct, frozen=True, kw_only=True):
+    workspaces_root: str
+    generated_at: datetime.datetime
+    artifact_patterns: tuple[str, ...] = ()
+    managed_artifact_subpaths: tuple[str, ...] = ()
+    tasks: tuple[DaemonTaskDiskUsage, ...] = ()
+    workspaces: tuple[DaemonWorkspaceDiskUsage, ...] = ()
+    total_task_count: int = 0
+    total_workspace_count: int = 0
+    total_size_bytes: int = 0
+    total_artifact_size_bytes: int = 0
+    total_artifact_ratio: float = 0.0
+    repo_cache_size_bytes: int = 0
+    repo_cache_count: int = 0
+
+
+class DaemonDiskUsageRoot(msgspec.Struct, frozen=True, kw_only=True):
+    profile: str
+    report: DaemonDiskUsageReport
+
+
+class DaemonAggregateDiskUsageReport(msgspec.Struct, frozen=True, kw_only=True):
+    generated_at: datetime.datetime
+    artifact_patterns: tuple[str, ...] = ()
+    managed_artifact_subpaths: tuple[str, ...] = ()
+    roots: tuple[DaemonDiskUsageRoot, ...] = ()
+    total_task_count: int = 0
+    total_workspace_count: int = 0
+    total_size_bytes: int = 0
+    total_artifact_size_bytes: int = 0
+    total_artifact_ratio: float = 0.0
+    total_repo_cache_size_bytes: int = 0
+    total_repo_cache_count: int = 0
 
 
 class AuthenticationStatus(msgspec.Struct, frozen=True, kw_only=True):
@@ -149,6 +244,12 @@ class SquadMember(msgspec.Struct, frozen=True, kw_only=True):
     member_id: str
     member_type: str
     role: str
+
+
+class SquadMemberRemoval(msgspec.Struct, frozen=True, kw_only=True):
+    squad_id: str
+    member_id: str
+    removed: bool
 
 
 class MaintenanceVersion(msgspec.Struct, frozen=True, kw_only=True):
