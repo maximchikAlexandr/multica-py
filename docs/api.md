@@ -605,19 +605,22 @@ preview = run.refresh_command()
 print(preview.commands)
 fresh_run = preview.run()
 
+# Choose one cancellation form:
 cancel_preview = run.cancel_command()
 print(cancel_preview.commands)
 result = cancel_preview.run()
+run = run.refresh()  # refresh explicitly after cancellation when needed
 ```
 
-`cancel()` also returns the existing `ActionResult[None]` and leaves `run`
-unchanged. Refresh explicitly after cancellation when current state is needed:
+Alternatively, use eager cancellation and then refresh:
 
 ```python
 result = run.cancel()
-run = run.refresh()
+run = run.refresh()  # refresh explicitly after cancellation when needed
 ```
 
+`cancel()` returns the existing `ActionResult[None]` and leaves `run`
+unchanged. Refresh explicitly after cancellation when current state is needed.
 Read messages directly through `run.messages`; these lifecycle adapters do not
 add polling, waiting, terminal-state interpretation, verification, or a new
 message abstraction.
