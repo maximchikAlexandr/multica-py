@@ -186,18 +186,17 @@ def _runtime(
         lines.append(f"    {binding_names[descriptor.descriptor_id]},")
     lines.extend((")", ""))
     lines.append("PUBLIC_INVENTORY: tuple[GeneratedInventoryItem, ...] = (")
-    if catalog.inventory is not None:
-        inventory_items: tuple[InventoryItem, ...] = catalog.inventory.items
-        for item in sorted(inventory_items, key=_inventory_item_key):
-            lines.extend(
-                [
-                    "    GeneratedInventoryItem(",
-                    f"        {item.inventory_id!r}, {item.kind!r}, {item.identity!r},",
-                    f"        {item.disposition!r}, {item.public_symbol!r}, {item.transport!r},",
-                    f"        {item.compatibility!r},",
-                    "    ),",
-                ]
-            )
+    inventory_items: tuple[InventoryItem, ...] = catalog.inventory.items
+    for item in sorted(inventory_items, key=_inventory_item_key):
+        lines.extend(
+            [
+                "    GeneratedInventoryItem(",
+                f"        {item.inventory_id!r}, {item.kind!r}, {item.identity!r},",
+                f"        {item.disposition!r}, {item.public_symbol!r}, {item.transport!r},",
+                f"        {item.compatibility!r},",
+                "    ),",
+            ]
+        )
     lines.extend((")", ""))
     lines.append("OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (")
     for operation in sorted(operations, key=operation_key):

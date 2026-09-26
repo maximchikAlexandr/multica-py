@@ -14,6 +14,7 @@ from tools.upstream_contract.inventory import (
     parse_inventory,
     parse_recursive_help,
     reconcile_command_inventory,
+    validate_inventory,
 )
 
 
@@ -70,28 +71,71 @@ def test_inventory_rejects_unreviewed_rows_and_reconciles_help() -> None:
         "compatibility": "requires_cli>=0.5.3",
         "rationale": "Exact source/help and canonical argv evidence.",
     }
-    inventory = parse_inventory(
-        {
-            "schema_version": 1,
-            "complete": True,
-            "items": [item],
-            "source_commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
-            "source_evidence_ref": "evidence:source",
-            "help_evidence_ref": "evidence:help",
-        }
-    )
+    reconciliation: dict[str, list[str]] = {
+        "source_only": [],
+        "help_only": [],
+        "unresolved_factories": [],
+        "unresolved_aliases": [],
+    }
+    raw_inventory: dict[str, object] = {
+        "schema_version": 1,
+        "complete": False,
+        "items": [item],
+        "source_commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+        "source_evidence_ref": "evidence:source",
+        "help_evidence_ref": "evidence:help",
+        "expected_identities": {"command": ["issue list"]},
+        "reconciliation": reconciliation,
+    }
+    inventory = parse_inventory(raw_inventory)
     assert inventory.by_id["command:issue-list"].identity == "issue list"
     with pytest.raises(InventoryError):
+        parse_inventory({**raw_inventory, "items": [{**item, "disposition": "unknown"}]})
+    with pytest.raises(InventoryError, match="complete inventory"):
+        parse_inventory({**raw_inventory, "complete": True, "items": []})
+    with pytest.raises(InventoryError, match="unresolved source/help"):
+        extra_items = [
+            {**item, "inventory_id": "input:value", "kind": "input", "identity": "value"},
+            {**item, "inventory_id": "output:value", "kind": "output", "identity": "value"},
+            {
+                **item,
+                "inventory_id": "field:value",
+                "kind": "field",
+                "identity": "value",
+                "disposition": "typed-equivalent",
+            },
+            {
+                **item,
+                "inventory_id": "transport:value",
+                "kind": "transport",
+                "identity": "value",
+                "disposition": "transport",
+                "public_symbol": None,
+                "transport": "run_bytes",
+            },
+        ]
         parse_inventory(
             {
-                "schema_version": 1,
+                **raw_inventory,
                 "complete": True,
-                "items": [{**item, "disposition": "unknown"}],
-                "source_commit": inventory.source_commit,
-                "source_evidence_ref": inventory.source_evidence_ref,
-                "help_evidence_ref": inventory.help_evidence_ref,
+                "items": [item, *extra_items],
+                "expected_identities": {
+                    "command": ["issue list"],
+                    "input": ["value"],
+                    "output": ["value"],
+                    "field": ["value"],
+                    "transport": ["value"],
+                },
+                "reconciliation": {
+                    **reconciliation,
+                    "unresolved_factories": ["issue-wakeup"],
+                },
             }
         )
+    with pytest.raises(InventoryError, match="disposition"):
+        parse_inventory({**raw_inventory, "items": [{**item, "disposition": "deferred"}]})
+    with pytest.raises(InventoryError, match="exactly cover"):
+        validate_inventory(raw_inventory, expected_identities={"command:issue-list": "wrong"})
 
     help_nodes = parse_recursive_help(
         {"path": "issue", "children": [{"path": "list"}, {"path": "probe", "hidden": True}]}

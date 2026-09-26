@@ -32,11 +32,19 @@
         "items": {"items": {"$ref": "#/$defs/InventoryItem"}, "type": "array"},
         "source_commit": {"minLength": 1, "type": "string"},
         "source_evidence_ref": {"minLength": 1, "type": "string"},
-        "help_evidence_ref": {"minLength": 1, "type": "string"}
+        "help_evidence_ref": {"minLength": 1, "type": "string"},
+        "expected_identities": {
+          "additionalProperties": {"items": {"type": "string"}, "type": "array"},
+          "type": "object"
+        },
+        "reconciliation": {
+          "additionalProperties": {"items": {"type": "string"}, "type": "array"},
+          "type": "object"
+        }
       },
       "required": [
         "schema_version", "complete", "items", "source_commit",
-        "source_evidence_ref", "help_evidence_ref"
+        "source_evidence_ref", "help_evidence_ref", "expected_identities", "reconciliation"
       ],
       "title": "PublicInventory",
       "type": "object"
@@ -550,7 +558,8 @@
       "required": [
         "schema_version",
         "baseline",
-        "artifact"
+        "artifact",
+        "inventory"
       ],
       "title": "SemanticCLIContract",
       "type": "object"

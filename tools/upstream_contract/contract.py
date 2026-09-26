@@ -1177,7 +1177,7 @@ class ContractCatalog:
     update_field_policies: tuple[UpdateModelPolicy, ...]
     test_vectors: tuple[TestVector, ...]
     raw: dict[str, object]
-    inventory: PublicInventory | None = None
+    inventory: PublicInventory
 
     @property
     def operation_ids(self) -> frozenset[str]:
@@ -2095,7 +2095,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "traceability",
         }
     )
-    _exact_keys(raw, required | ({"inventory"} if "inventory" in raw else set()), "contract")
+    _exact_keys(raw, required | {"inventory"}, "contract")
     if _int(raw["schema_version"], "schema_version") != 3:
         raise ContractError("approved contract schema_version must be 3")
     target_raw = _dict(raw["target"], "target")
@@ -2496,16 +2496,16 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "compatibility reviewed responses reference unknown tests: "
             + ", ".join(sorted(unknown_reviewed_test_refs))
         )
-    public_inventory: PublicInventory | None = None
-    if "inventory" in raw:
-        try:
-            public_inventory = validate_inventory(
-                raw["inventory"],
-                source_ref_ids=source_ref_ids,
-                test_ref_ids=known_test_refs,
-            )
-        except InventoryError as exc:
-            raise ContractError(str(exc)) from exc
+    try:
+        public_inventory = validate_inventory(
+            raw["inventory"],
+            source_ref_ids=source_ref_ids,
+            test_ref_ids=known_test_refs,
+        )
+    except InventoryError as exc:
+        raise ContractError(str(exc)) from exc
+    if public_inventory.source_commit != target.commit:
+        raise ContractError("inventory.source_commit must match target.commit")
     return ContractCatalog(
         target=target,
         compatibility=compatibility,

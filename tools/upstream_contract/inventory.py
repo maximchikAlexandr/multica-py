@@ -8,9 +8,12 @@ the approved-contract validator or the deterministic renderer.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import cast
+
+_COMMIT = re.compile(r"^[0-9a-f]{40}$")
 
 DISPOSITIONS = frozenset(
     {"typed", "typed-equivalent", "transport", "presentation-only", "outside-public-scope"}
@@ -45,10 +48,20 @@ class PublicInventory:
     source_commit: str
     source_evidence_ref: str
     help_evidence_ref: str
+    expected_identities: tuple[tuple[str, tuple[str, ...]], ...]
+    reconciliation: tuple[tuple[str, tuple[str, ...]], ...]
 
     @property
     def by_id(self) -> dict[str, InventoryItem]:
         return {item.inventory_id: item for item in self.items}
+
+    @property
+    def expected_by_kind(self) -> dict[str, tuple[str, ...]]:
+        return dict(self.expected_identities)
+
+    @property
+    def reconciliation_by_kind(self) -> dict[str, tuple[str, ...]]:
+        return dict(self.reconciliation)
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,6 +176,29 @@ def _string_tuple(value: object, label: str) -> tuple[str, ...]:
     return result
 
 
+def _mapping_key(pair: tuple[object, object]) -> str:
+    return str(pair[0])
+
+
+def _string_tuple_map(
+    value: object,
+    label: str,
+    *,
+    allowed_keys: frozenset[str] | None = None,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    if not isinstance(value, dict):
+        raise InventoryError(f"{label} must be an object")
+    result: list[tuple[str, tuple[str, ...]]] = []
+    pairs = list(cast("dict[object, object]", value).items())
+    pairs.sort(key=_mapping_key)
+    for key, raw_values in pairs:
+        kind = _string(key, f"{label} key")
+        if allowed_keys is not None and kind not in allowed_keys:
+            raise InventoryError(f"{label} contains unknown kind {kind!r}")
+        result.append((kind, _string_tuple(raw_values, f"{label}.{kind}")))
+    return tuple(result)
+
+
 def parse_inventory(raw: object) -> PublicInventory:
     """Parse and semantically validate an approved inventory document."""
 
@@ -176,6 +212,8 @@ def parse_inventory(raw: object) -> PublicInventory:
         "source_commit",
         "source_evidence_ref",
         "help_evidence_ref",
+        "expected_identities",
+        "reconciliation",
     }
     if set(raw_dict) != required:
         raise InventoryError("inventory has unknown or missing keys")
@@ -184,8 +222,22 @@ def parse_inventory(raw: object) -> PublicInventory:
     if not isinstance(raw_dict["complete"], bool):
         raise InventoryError("inventory.complete must be boolean")
     source_commit = _string(raw_dict["source_commit"], "inventory.source_commit")
+    if not _COMMIT.fullmatch(source_commit):
+        raise InventoryError("inventory.source_commit must be a full lowercase hexadecimal commit")
     source_evidence_ref = _string(raw_dict["source_evidence_ref"], "inventory.source_evidence_ref")
     help_evidence_ref = _string(raw_dict["help_evidence_ref"], "inventory.help_evidence_ref")
+    expected_identities = _string_tuple_map(
+        raw_dict["expected_identities"],
+        "inventory.expected_identities",
+        allowed_keys=ITEM_KINDS,
+    )
+    reconciliation = _string_tuple_map(
+        raw_dict["reconciliation"],
+        "inventory.reconciliation",
+        allowed_keys=frozenset(
+            {"source_only", "help_only", "unresolved_factories", "unresolved_aliases"}
+        ),
+    )
     raw_items = raw_dict["items"]
     if not isinstance(raw_items, list):
         raise InventoryError("inventory.items must be a list")
@@ -254,6 +306,18 @@ def parse_inventory(raw: object) -> PublicInventory:
         raise InventoryError("a complete inventory must contain reviewed items")
     if complete and any(not item.source_ref_ids or not item.test_ref_ids for item in items):
         raise InventoryError("every complete inventory item needs source and test evidence")
+    expected_by_kind = {kind: tuple(sorted(values)) for kind, values in expected_identities}
+    if complete and set(expected_by_kind) != ITEM_KINDS:
+        raise InventoryError("complete inventory must declare every approved item kind")
+    actual_by_kind: dict[str, list[str]] = {}
+    for item in items:
+        actual_by_kind.setdefault(item.kind, []).append(item.identity)
+    actual = {kind: tuple(sorted(values)) for kind, values in actual_by_kind.items()}
+    if complete and actual != expected_by_kind:
+        raise InventoryError("inventory does not exactly cover expected public identities")
+    reconciliation_by_kind = dict(reconciliation)
+    if complete and any(reconciliation_by_kind.values()):
+        raise InventoryError("inventory contains unresolved source/help review items")
     return PublicInventory(
         1,
         complete,
@@ -261,6 +325,8 @@ def parse_inventory(raw: object) -> PublicInventory:
         source_commit,
         source_evidence_ref,
         help_evidence_ref,
+        expected_identities,
+        reconciliation,
     )
 
 

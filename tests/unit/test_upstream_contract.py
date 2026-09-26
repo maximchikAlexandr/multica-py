@@ -936,6 +936,54 @@ def test_command_inventory_rejects_duplicate_delta_entries(
         load_contract(path)
 
 
+def test_public_inventory_is_mandatory(tmp_path: pathlib.Path) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    document.pop("inventory")
+    path = tmp_path / "missing-inventory.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ContractError, match="missing fields"):
+        load_contract(path)
+
+
+def test_public_inventory_rejects_stale_deferral_and_duplicate_identity(
+    tmp_path: pathlib.Path,
+) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    document["inventory"]["items"][0]["disposition"] = "deferred"
+    stale = tmp_path / "stale-inventory.json"
+    stale.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(ContractError, match="disposition is not approved"):
+        load_contract(stale)
+
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    duplicate = dict(document["inventory"]["items"][0])
+    document["inventory"]["items"].append(duplicate)
+    duplicate_path = tmp_path / "duplicate-inventory.json"
+    duplicate_path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(ContractError, match="IDs must be unique"):
+        load_contract(duplicate_path)
+
+
+def test_public_inventory_rejects_incomplete_identity_coverage(tmp_path: pathlib.Path) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    document["inventory"]["expected_identities"]["command"].pop()
+    path = tmp_path / "incomplete-inventory.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ContractError, match="expected public identities"):
+        load_contract(path)
+
+
+def test_generated_runtime_contains_reviewed_inventory() -> None:
+    assert len(approved_sdk.PUBLIC_INVENTORY) == 693
+    assert approved_sdk.PUBLIC_INVENTORY[0].disposition in {
+        "typed",
+        "typed-equivalent",
+        "transport",
+    }
+
+
 def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     tmp_path: pathlib.Path,
 ) -> None:
