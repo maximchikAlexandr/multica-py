@@ -77,9 +77,18 @@ def _bind_thread(
     thread: CommentThread,
     client: MulticaClient | None,
     issue_id: str,
+    *,
+    comments: tuple[Comment, ...] | None = None,
 ) -> CommentThread:
     result = thread
     result = result._with_client(client)
     if result.issue_id is None:
         result = msgspec.structs.replace(result, issue_id=issue_id)
+    if comments is not None:
+        bound_comments = tuple(_bind_comment(comment, client) for comment in comments)
+
+        def page_loader(*, cursor: CommentCursor | None) -> CursorPage[Comment]:
+            return CursorPage(items=bound_comments)
+
+        result._set_runtime("_comments", CursorLazyCollection(page_loader))
     return result

@@ -7,11 +7,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from multica_py._internal.specs import RawCommandResult
+from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py.config import ClientConfig
 from multica_py.entities.comments import Comment
-from multica_py.exceptions import ConflictError
-from multica_py.resources.issue_comments import IssueCommentResource
+from multica_py.exceptions import ConflictError, OutputShapeError
+from multica_py.models.common import CommentCursor
+from multica_py.resources.issue_comments import IssueCommentResource, _extract_cursor
 
 
 def test_update_command_is_lazy_and_decodes_comment(mock_transport: MagicMock) -> None:
@@ -123,3 +124,94 @@ def test_update_preserves_content_and_classifies_stale_revision_once(
         resource.update("cmt_1", "mention [@agent]", expected_revision=7)
 
     assert calls == [expected]
+
+
+def test_recent_decodes_native_flat_root_and_reply_records(mock_transport: MagicMock) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_text.return_value = TextResult(
+        '[{"id":"root","content":"root body"},'
+        '{"id":"reply","content":"reply body","parent_id":"root"}]',
+        "",
+        0,
+    )
+    resource = IssueCommentResource(mock_transport, ClientConfig())
+
+    page = resource.list_recent(issue_id="issue-1", limit=5)
+
+    assert [thread.id for thread in page.items] == ["root"]
+    assert [
+        (comment.id, comment.body, comment.thread_id) for comment in page.items[0].comments.all()
+    ] == [
+        ("root", "root body", None),
+        ("reply", "reply body", "root"),
+    ]
+    mock_transport.run_text.assert_called_once_with(
+        ("issue", "comment", "list", "issue-1", "--recent", "5", "--output", "json")
+    )
+
+
+def test_recent_rejects_flat_reply_with_missing_parent(mock_transport: MagicMock) -> None:
+    mock_transport.run_text.return_value = TextResult(
+        '[{"id":"reply","content":"reply body","parent_id":"missing"}]', "", 0
+    )
+    resource = IssueCommentResource(mock_transport, ClientConfig())
+
+    with pytest.raises(OutputShapeError, match="unknown parent"):
+        resource.list_recent(issue_id="issue-1")
+
+
+@pytest.mark.parametrize(
+    ("stderr", "expected"),
+    (
+        (
+            "Next thread cursor: --before 2026-09-26T19:00:00.123456Z --before-id root",
+            CommentCursor(before="2026-09-26T19:00:00.123456Z", before_id="root"),
+        ),
+        (
+            "Next reply cursor: --before 2026-09-26T19:00:00.123456Z --before-id reply",
+            CommentCursor(before="2026-09-26T19:00:00.123456Z", before_id="reply"),
+        ),
+        ("no pagination", None),
+    ),
+)
+def test_extract_cursor_accepts_native_thread_and_reply_forms(
+    stderr: str, expected: CommentCursor | None
+) -> None:
+    assert _extract_cursor(stderr) == expected
+
+
+@pytest.mark.parametrize(
+    "stderr",
+    (
+        "Next thread cursor: --before 2026-09-26T19:00:00Z",
+        "Next reply cursor: --before-id reply",
+        "Next thread cursor: before: old before-id: root",
+    ),
+)
+def test_extract_cursor_rejects_malformed_native_forms(stderr: str) -> None:
+    with pytest.raises(OutputShapeError, match="cursor pair"):
+        _extract_cursor(stderr)
+
+
+def test_recent_preserves_summary_full_and_compact_controls(mock_transport: MagicMock) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_text.return_value = TextResult("[]", "", 0)
+    resource = IssueCommentResource(mock_transport, ClientConfig())
+
+    resource.list_recent(issue_id="issue-1", summary=True, full=True, compact=True, limit=5)
+
+    mock_transport.run_text.assert_called_once_with(
+        (
+            "issue",
+            "comment",
+            "list",
+            "issue-1",
+            "--recent",
+            "5",
+            "--summary",
+            "--full",
+            "--compact",
+            "--output",
+            "json",
+        )
+    )
