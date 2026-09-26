@@ -619,7 +619,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _USAGE_FIELDS.pop(field, None)
     _USAGE = msgspec.json.encode(_USAGE_FIELDS)
     _DS_STOP = msgspec.json.encode(DaemonStatus(running=False))
-    _DS = msgspec.json.encode(DaemonStatus(running=True, pid=12345, uptime=3600.0))
+    _DS = msgspec.json.encode(DaemonStatus(running=True, pid=12345, uptime="1h"))
     _DS_RESTART = msgspec.json.encode(DaemonStatus(running=True, pid=12345))
     _AUTH_STATUS = msgspec.json.encode(
         AuthenticationStatus(authenticated=True, user_id="usr_001", token_type="bearer")

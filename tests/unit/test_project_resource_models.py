@@ -72,6 +72,7 @@ def test_decode_local_directory_record(case: ProjectResourceDecodeCase) -> None:
         decode_json(json.dumps(case.payload).encode(), _ProjectResourceRecordWire)
     )
     assert record.resource_type == "local_directory"
+    assert isinstance(record.resource_ref, LocalDirectoryResourceRef)
     assert record.resource_ref.label == case.label
     assert record.resource_ref.local_path == str(pathlib.Path("/tmp/sandbox").resolve())
 
