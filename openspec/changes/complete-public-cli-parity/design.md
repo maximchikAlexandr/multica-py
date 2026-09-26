@@ -70,7 +70,8 @@ handwritten discovery in CI.
 ### Decision 2: Implement in contract-first vertical slices
 
 The first implementation slice freezes the complete inventory and removes all
-unknowns. The second corrects A1–A10 and provides native regression fixtures so
+unknowns. The second corrects A1–A10 and provides native regression fixtures;
+its focused public-operation gate MUST pass before any new family begins, so
 subsequent work builds on truthful transports and models. Remaining slices add
 typed operations, missing inputs, response fields, and final closure gates by
 resource family. Each slice updates the approved contract, public code,
