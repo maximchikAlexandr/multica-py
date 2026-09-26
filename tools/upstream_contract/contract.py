@@ -69,6 +69,8 @@ _ENUM_TYPES = frozenset(
 _DECODED_TYPES = frozenset(
     {
         "builtins.dict",
+        "builtins.list",
+        "builtins.str",
         "multica_py.models.agents.AgentSkill",
         "multica_py.models.agents.AgentTask",
         "multica_py.models.attachments.AttachmentResult",
@@ -254,6 +256,23 @@ _RESPONSE_CATALOG_IDS = frozenset(
         "user_profile",
         "workspace",
         "workspace_members",
+        "autopilot_trigger_rotate_url",
+        "chat_history",
+        "chat_thread",
+        "issue_timeline",
+        "issue_wakeup_events",
+        "issue_wakeup_list",
+        "issue_wakeup_get",
+        "issue_wakeup_disable",
+        "issue_wakeup_create",
+        "issue_wakeup_update",
+        "repository_checkout",
+        "runtime_profile_list",
+        "runtime_profile_create",
+        "runtime_profile_update",
+        "runtime_profile_delete",
+        "runtime_profile_set_path",
+        "runtime_profile_unset_path",
     }
 )
 _RESPONSE_ALIASES = frozenset({"issue_search"})
@@ -671,6 +690,35 @@ _AUXILIARY_CATALOG_KEYS = {
 }
 _MANUAL_SIGNATURE_IDS = frozenset(
     {
+        "agents_env_get",
+        "agents_env_set",
+        "agents_skills_add",
+        "autopilots_trigger_list",
+        "autopilot_trigger_rotate_url",
+        "chat_history",
+        "chat_thread",
+        "issue_timeline",
+        "issue_wakeup_events",
+        "issue_wakeup_list",
+        "issue_wakeup_get",
+        "issue_wakeup_disable",
+        "issue_wakeup_create",
+        "issue_wakeup_update",
+        "repository_checkout",
+        "squads_activity",
+        "squads_create",
+        "squads_delete",
+        "squads_update",
+        "squads_members_set_role",
+        "runtime_profile_list",
+        "runtime_profile_create",
+        "runtime_profile_update",
+        "runtime_profile_delete",
+        "runtime_profile_set_path",
+        "runtime_profile_unset_path",
+        "workspaces_create",
+        "workspaces_members_invite",
+        "workspaces_update",
         "agents_archive_manual",
         "agents_create_manual",
         "agents_restore_manual",
@@ -2076,6 +2124,59 @@ def _validate_direct_bindings(catalog: ContractCatalog) -> None:
                     raise ContractError("cli.command must use dynamic argv without fixed mappings")
 
 
+def _validate_promoted_inventory_closure(catalog: ContractCatalog) -> None:
+    """Keep the newly approved command rows closed over the generated contract.
+
+    The broad inventory intentionally still records transport-only CLI leaves.
+    Rows promoted by this WP, however, are a stronger promise: every one must
+    resolve to exactly one operation, binding, response, public symbol, and
+    canonical vector before generation is accepted.
+    """
+
+    descriptors_by_command: dict[tuple[str, ...], list[BindingDescriptor]] = {}
+    for descriptor in catalog.binding_descriptors:
+        descriptors_by_command.setdefault(descriptor.command, []).append(descriptor)
+    operations = {operation.operation_id: operation for operation in catalog.operations}
+    vectors = catalog.vector_by_id
+    responses = catalog.response_by_id
+    for item in catalog.inventory.items:
+        if item.kind != "command" or item.disposition != "typed":
+            continue
+        command = tuple(item.identity.removeprefix("multica ").split())
+        matches = descriptors_by_command.get(command, [])
+        if len(matches) != 1:
+            raise ContractError(
+                f"typed inventory command {item.identity!r} must resolve to one binding"
+            )
+        descriptor = matches[0]
+        operation = operations.get(descriptor.operation_id)
+        if operation is None:
+            raise ContractError(
+                f"typed inventory command {item.identity!r} references an unknown operation"
+            )
+        entrypoint = next(
+            (
+                entrypoint
+                for entrypoint in operation.entrypoints
+                if entrypoint.entrypoint_id == descriptor.entrypoint_id
+            ),
+            None,
+        )
+        if entrypoint is None or entrypoint.public_symbol != item.public_symbol:
+            raise ContractError(
+                f"typed inventory command {item.identity!r} has no matching public symbol"
+            )
+        if entrypoint.response_id not in responses:
+            raise ContractError(
+                f"typed inventory command {item.identity!r} has no response catalog entry"
+            )
+        vector_id = f"generated:{operation.operation_id}:{entrypoint.entrypoint_id}:canonical"
+        if vector_id not in vectors:
+            raise ContractError(
+                f"typed inventory command {item.identity!r} has no canonical vector"
+            )
+
+
 def load_contract(path: pathlib.Path) -> ContractCatalog:
     try:
         raw_value = cast("object", json.loads(path.read_text(encoding="utf-8")))
@@ -2402,8 +2503,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     binding_descriptors = _binding_descriptors(catalogs["binding_descriptors"])
     vectors_raw = _dict(catalogs["test_vectors"], "catalogs.test_vectors")
     vectors = tuple(_parse_vector(value, key) for key, value in vectors_raw.items())
-    if len(vectors) != 84:
-        raise ContractError(f"expected 84 test vectors, got {len(vectors)}")
+    if len(vectors) != 113:
+        raise ContractError(f"expected 113 test vectors, got {len(vectors)}")
     if len({vector.assertion.assertion_id for vector in vectors}) != len(vectors):
         raise ContractError("test vector assertion IDs must be unique")
     scope = _dict(raw["scope"], "scope")
@@ -2433,7 +2534,11 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             frozenset(
                 {"family", "disposition", "required_operation_ids", "source_ref_ids", "rationale"}
             )
-            | ({"deferred_evidence"} if item.get("family") == "issue-wakeup" else set()),
+            | (
+                {"deferred_evidence"}
+                if item.get("family") == "issue-wakeup" and item.get("disposition") == "defer"
+                else set()
+            ),
             f"scope.family_dispositions[{index}]",
         )
         for field in ("family", "disposition", "rationale"):
@@ -2479,7 +2584,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     source_ref_ids = {item.source_ref_id for item in source_refs}
     for disposition in _list(scope["family_dispositions"], "scope.family_dispositions"):
         item = _dict(disposition, "scope.family_dispositions item")
-        if item.get("family") == "issue-wakeup":
+        if item.get("family") == "issue-wakeup" and item.get("disposition") == "defer":
             _validate_issue_wakeup_evidence(item, source_ref_ids)
     if any(item.commit != target.commit for item in source_refs):
         raise ContractError("every source_refs commit must match target.commit")
@@ -2602,6 +2707,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
     if changed_work_items:
         raise ContractError("response registry must not mark wire-compatible items changed")
     _validate_direct_bindings(contract)
+    _validate_promoted_inventory_closure(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
         "issue_sort",
         "sort_direction",
@@ -2685,6 +2791,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             "requires_cli>=0.5.0",
             "requires_cli>=0.5.1",
             "requires_cli>=0.5.2",
+            "requires_cli>=0.5.3",
         }:
             raise ContractError(
                 f"operation {operation.operation_id!r} has an invalid compatibility value"
@@ -2818,9 +2925,9 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
                 )
     base_count = sum(":canonical" in vector.vector_id for vector in contract.test_vectors)
     variant_count = len(contract.test_vectors) - base_count
-    if (base_count, variant_count) != (70, 14):
+    if (base_count, variant_count) != (99, 14):
         raise ContractError(
-            f"expected 70 entrypoint-base and 14 variant vectors, got {base_count}/{variant_count}"
+            f"expected 99 entrypoint-base and 14 variant vectors, got {base_count}/{variant_count}"
         )
     return contract
 

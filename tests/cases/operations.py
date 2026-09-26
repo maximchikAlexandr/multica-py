@@ -417,9 +417,17 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
             item for item in operation.entrypoints if item.entrypoint_id == vector.entrypoint_id
         )
         class_name = entrypoint.public_symbol.rsplit(".", 2)[-2]
-        flat_key, _ = class_by_name[class_name]
-        dotted_prefix = _NESTED_DOTTED_PREFIXES.get(flat_key, flat_key)
         method = entrypoint.public_symbol.rsplit(".", 1)[-1]
+        # WP-01 promotes successor-family contracts before those resources are
+        # implemented.  Keep their vectors in the contract closure tests, but
+        # do not manufacture executable operation cases for absent resources.
+        class_entry = class_by_name.get(class_name)
+        if class_entry is None:
+            continue
+        flat_key, resource_class = class_entry
+        if not hasattr(resource_class, method) or not hasattr(resource_class, f"{method}_command"):
+            continue
+        dotted_prefix = _NESTED_DOTTED_PREFIXES.get(flat_key, flat_key)
         sdk_method = f"{dotted_prefix}.{method}"
         generated.append(
             OperationCase(

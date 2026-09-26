@@ -5,6 +5,8 @@ from typing import cast
 
 import pytest
 
+from multica_py._generated import approved_sdk
+from multica_py._generated.approved_sdk import GeneratedBinding
 from tools.upstream_contract.contract import validate_contract
 from tools.upstream_contract.generation import (
     RUNTIME_PATH,
@@ -25,7 +27,7 @@ def test_sdk_contract() -> None:
     assert len(contract.binding_descriptors) == sum(
         len(operation.entrypoints) for operation in contract.operations
     )
-    assert len(contract.test_vectors) == 84
+    assert len(contract.test_vectors) == 113
     assert (
         tuple((item.operation_id, item.entrypoint_id) for item in contract.binding_descriptors)
         != ()
@@ -70,36 +72,75 @@ def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
         assert descriptor_header in runtime
 
 
-def test_deferred_issue_wakeup_evidence_is_complete_without_sdk_operations() -> None:
+_PROMOTED_COMMAND_OPERATIONS = {
+    "multica agent env get": "agents.env.get",
+    "multica agent env set": "agents.env.set",
+    "multica agent skills add": "agents.skills.add",
+    "multica autopilot trigger-rotate-url": "autopilots.trigger_rotate_url",
+    "multica autopilot trigger-list": "autopilots.trigger_list",
+    "multica chat history": "chats.history",
+    "multica chat thread": "chats.thread",
+    "multica issue timeline": "issues.timeline",
+    "multica issue wakeup events": "issues.wakeups.events",
+    "multica issue wakeup list": "issues.wakeups.list",
+    "multica issue wakeup get": "issues.wakeups.get",
+    "multica issue wakeup disable": "issues.wakeups.disable",
+    "multica issue wakeup create": "issues.wakeups.create",
+    "multica issue wakeup update": "issues.wakeups.update",
+    "multica repo checkout": "repositories.checkout",
+    "multica runtime profile list": "runtime_profiles.list",
+    "multica runtime profile create": "runtime_profiles.create",
+    "multica runtime profile update": "runtime_profiles.update",
+    "multica runtime profile delete": "runtime_profiles.delete",
+    "multica runtime profile set-path": "runtime_profiles.set_path",
+    "multica runtime profile unset-path": "runtime_profiles.unset_path",
+    "multica squad activity": "squads.activity",
+    "multica squad create": "squads.create",
+    "multica squad delete": "squads.delete",
+    "multica squad member set-role": "squads.members.set_role",
+    "multica squad update": "squads.update",
+    "multica workspace create": "workspaces.create",
+    "multica workspace member invite": "workspaces.members.invite",
+    "multica workspace update": "workspaces.update",
+}
+
+
+def test_promoted_public_operations_have_closed_binding_coverage() -> None:
     contract = validate_contract(APPROVED)
+    operations = {operation.operation_id: operation for operation in contract.operations}
+    descriptors = {
+        descriptor.descriptor_id: descriptor for descriptor in contract.binding_descriptors
+    }
+    vectors = contract.vector_by_id
+    responses = contract.response_by_id
+    inventory = {item.identity: item for item in contract.inventory.items if item.kind == "command"}
+    for identity, operation_id in _PROMOTED_COMMAND_OPERATIONS.items():
+        item = inventory[identity]
+        operation = operations[operation_id]
+        entrypoint = operation.entrypoints[0]
+        descriptor = descriptors[entrypoint.binding_id]
+        assert item.disposition == "typed"
+        assert item.public_symbol == entrypoint.public_symbol
+        assert set(item.source_ref_ids) >= set(operation.source_ref_ids)
+        assert set(item.test_ref_ids) >= {"T-INVENTORY", "T-WP01-PROMOTION"}
+        assert (descriptor.operation_id, descriptor.entrypoint_id) == (operation_id, "default")
+        assert entrypoint.response_id in responses
+        assert f"generated:{operation_id}:default:canonical" in vectors
+        generated = cast(
+            "GeneratedBinding",
+            getattr(
+                approved_sdk,
+                f"{descriptor.descriptor_id.upper().replace('.', '_')}_BINDING",
+            ),
+        )
+        assert generated.operation_id == operation_id
+
     scope = cast("dict[str, object]", contract.raw["scope"])
     dispositions = cast("list[dict[str, object]]", scope["family_dispositions"])
-    wakeup = next(item for item in dispositions if item["family"] == "issue-wakeup")
-    evidence = cast("dict[str, object]", wakeup["deferred_evidence"])
-    nodes = cast("list[dict[str, object]]", evidence["nodes"])
-    assert [node["command"] for node in nodes] == [
-        "issue wakeup",
-        "issue wakeup events",
-        "issue wakeup list",
-        "issue wakeup get",
-        "issue wakeup disable",
-        "issue wakeup create",
-        "issue wakeup update",
-    ]
-    assert set(cast("dict[str, object]", evidence["semantics"])) == {
-        "scheduling",
-        "timezone",
-        "replacement",
-        "reenable",
-        "retry",
-        "duration",
-        "mutual_exclusion",
-        "loop_protection",
-    }
-    assert not hasattr(contract.compatibility, "response_audit")
-    assert not contract.operations or not any(
-        "wakeup" in operation.operation_id for operation in contract.operations
-    )
+    for family in ("chat-read", "issue-wakeup", "runtime-profile"):
+        family_row = next(row for row in dispositions if row["family"] == family)
+        assert family_row["disposition"] != "defer"
+        assert "deferred_evidence" not in family_row
 
 
 def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -> None:
@@ -164,9 +205,9 @@ def test_retained_inventory_is_reconciled() -> None:
         if test_ref.test_ref_id.startswith("relation:")
     )
 
-    assert len(operation_ids) == 164
+    assert len(operation_ids) == 193
     assert operation_ids == scoped_operation_ids
-    assert len(contract.responses) == 81
+    assert len(contract.responses) == 98
     assert len(contract.compatibility.response_registry) == 167
     assert (
         sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
@@ -178,13 +219,13 @@ def test_retained_inventory_is_reconciled() -> None:
     assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
 
 
-def test_fresh_checkout_remains_outside_typed_surface() -> None:
+def test_checkout_is_contract_first_until_successor_resource_implementation() -> None:
     from multica_py.resources.repositories import RepositoryResource
 
     contract = validate_contract(APPROVED)
     operation_ids = {operation.operation_id for operation in contract.operations}
     assert any("repoCheckoutCmd" in source_ref.symbol for source_ref in contract.source_refs)
-    assert not any("checkout" in operation_id for operation_id in operation_ids)
+    assert "repositories.checkout" in operation_ids
     assert not hasattr(RepositoryResource, "checkout")
 
 

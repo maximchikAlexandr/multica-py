@@ -277,8 +277,8 @@ def test_closed_contract_rejects_invalid_rows(
 
 def test_v3_catalogs_are_closed() -> None:
     contract = validate_contract(APPROVED)
-    assert len(contract.test_vectors) == 84
-    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 70
+    assert len(contract.test_vectors) == 113
+    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 99
     assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 14
     assert {item.public_name for item in contract.enum_definitions} == {
         "IssueSort",
