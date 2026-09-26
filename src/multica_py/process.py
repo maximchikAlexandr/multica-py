@@ -171,6 +171,16 @@ class ManagedProcess:
             self._active_streams.discard("stderr")
             self._maybe_finalize()
 
+    def write(self, data: bytes) -> None:
+        """Write interactive input without taking ownership of the process."""
+        if self._closed:
+            raise ProcessOutputModeError("closed", "interactive stdin")
+        self._handle.write_stdin(data)
+
+    def close_input(self) -> None:
+        if not self._closed:
+            self._handle.close_stdin()
+
     def _kill_immediate(self) -> None:
         self._handle.kill_immediate()
 

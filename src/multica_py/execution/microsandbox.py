@@ -236,6 +236,12 @@ class _MicrosandboxProcessHandle:
         self._output.claim("streaming")
         yield from self._lines("stderr")
 
+    def write_stdin(self, data: bytes) -> None:
+        raise NotImplementedError("microsandbox interactive stdin is provider-dependent")
+
+    def close_stdin(self) -> None:
+        raise NotImplementedError("microsandbox interactive stdin is provider-dependent")
+
     def close(self) -> None:
         return None
 
@@ -325,6 +331,22 @@ class MicrosandboxExecutor:
                 timeout=_seconds(request.timeout),
                 stdin=request.stdin,
                 tty=False,
+            ),
+            timeout=_seconds(request.timeout),
+        )
+        return _MicrosandboxProcessHandle(self, request.argv, handle, request.timeout)
+
+    def terminal(self, request: ExecutionRequest) -> _MicrosandboxProcessHandle:
+        """Use the provider's terminal flag for interactive CLI leaves."""
+        handle = self._provider_call(
+            self._sandbox.exec_stream(
+                request.argv[0],
+                list(request.argv[1:]),
+                cwd=request.cwd,
+                env=dict(request.environment),
+                timeout=_seconds(request.timeout),
+                stdin=request.stdin,
+                tty=True,
             ),
             timeout=_seconds(request.timeout),
         )

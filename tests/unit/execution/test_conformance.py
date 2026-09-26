@@ -83,6 +83,10 @@ class _RecordingExecutor:
         self.requests.append(request)
         return self.inner.spawn(request)
 
+    def terminal(self, request: ExecutionRequest) -> ProcessHandle:
+        self.requests.append(request)
+        return self.inner.terminal(request)
+
     def stage(self, label: str, content: bytes) -> AbstractContextManager[str]:
         return self.inner.stage(label, content)
 
@@ -637,6 +641,9 @@ def test_target_paths_use_fspath_without_controller_normalization(
 
         def spawn(self, request: ExecutionRequest) -> ProcessHandle:
             raise AssertionError(f"unexpected spawn: {request!r}")
+
+        def terminal(self, request: ExecutionRequest) -> ProcessHandle:
+            raise AssertionError(f"unexpected terminal: {request!r}")
 
         def stage(self, label: str, content: bytes) -> AbstractContextManager[str]:
             return nullcontext(f"/target/{label}")

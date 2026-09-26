@@ -1150,6 +1150,8 @@ def test_collect_writes_review_items_and_never_contract(tmp_path: pathlib.Path) 
     assert (output / "evidence.json").is_file()
     evidence = json.loads((output / "evidence.json").read_text(encoding="utf-8"))
     assert {item["kind"] for item in evidence["facts"]} == {"cobra_use"}
+    assert ["git", "-C", str(source), "rev-parse", "HEAD"] in evidence["commands"]
+    assert ["git", "-C", str(source), "status", "--porcelain"] in evidence["commands"]
     review = json.loads((output / "review-items.json").read_text(encoding="utf-8"))
     assert review["items"]
     assert {item["code"] for item in review["items"]} <= {

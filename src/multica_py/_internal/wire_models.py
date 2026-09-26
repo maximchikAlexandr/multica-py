@@ -3,13 +3,15 @@ from __future__ import annotations
 import datetime
 import pathlib
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, cast
 
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_since_cursor
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.json_values import _coerce_json_value
+from multica_py._internal.wire_presence import WirePresence
+from multica_py._internal.wire_presence import presence as _presence_seed
 from multica_py.enums import ProjectStatus
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.autopilots import (
@@ -76,15 +78,7 @@ __all__ = [
     "_issue_row_from_wire",
 ]
 
-_PresenceSeed = Literal["missing", "null", "value"]
-
-
-def _presence_seed(value: object) -> _PresenceSeed:
-    if value is msgspec.UNSET:
-        return "missing"
-    if value is None:
-        return "null"
-    return "value"
+_PresenceSeed = WirePresence
 
 
 class _AutopilotTriggerWire(msgspec.Struct, frozen=True, kw_only=True):

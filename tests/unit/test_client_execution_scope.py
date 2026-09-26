@@ -40,6 +40,9 @@ class _Executor:
     def spawn(self, request: ExecutionRequest) -> ProcessHandle:
         raise AssertionError(f"unexpected spawn: {request!r}")
 
+    def terminal(self, request: ExecutionRequest) -> ProcessHandle:
+        raise AssertionError(f"unexpected terminal: {request!r}")
+
     @contextlib.contextmanager
     def stage(self, label: str, content: bytes) -> Iterator[str]:
         directory = Path.cwd() / f".test-stage-{len(self.staged)}"

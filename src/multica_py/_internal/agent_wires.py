@@ -5,20 +5,13 @@ from typing import TYPE_CHECKING
 
 import msgspec
 
+from multica_py._internal.wire_presence import presence as _presence_seed
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.agents import AgentConversationStarter, AgentSkill, AgentTask
 from multica_py.models.issue_activity import TaskCancellationActor
 
 if TYPE_CHECKING:
     from multica_py.entities.agents import Agent
-
-
-def _presence_seed(value: object) -> str:
-    if value is msgspec.UNSET:
-        return "missing"
-    if value is None:
-        return "null"
-    return "value"
 
 
 class _AgentConversationStarterWire(msgspec.Struct, frozen=True, kw_only=True):

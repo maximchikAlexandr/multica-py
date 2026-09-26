@@ -22,6 +22,7 @@ from .contract import (
     ValidatorDefinition,
     validate_contract,
 )
+from .inventory import InventoryItem
 
 RUNTIME_PATH = pathlib.PurePosixPath("src/multica_py/_generated/approved_sdk.py")
 TRANSIENT_PATHS = (
@@ -71,6 +72,10 @@ def _compatibility_projection(catalog: ContractCatalog) -> _CompatibilityProject
         max_cli_version=_next_patch(compatibility.max_tested_cli_version),
         target_version=catalog.target.version,
     )
+
+
+def _inventory_item_key(item: InventoryItem) -> str:
+    return item.inventory_id
 
 
 def _runtime(
@@ -142,6 +147,16 @@ def _runtime(
             "    presence_policy_ids: tuple[str, ...]",
             "    command_symbol: str",
             "",
+            "@dataclass(frozen=True)",
+            "class GeneratedInventoryItem:",
+            "    inventory_id: str",
+            "    kind: str",
+            "    identity: str",
+            "    disposition: str",
+            "    public_symbol: str | None",
+            "    transport: str | None",
+            "    compatibility: str",
+            "",
         ]
     )
     minimums = {
@@ -170,6 +185,20 @@ def _runtime(
     for descriptor in sorted(binding_descriptors, key=binding_operation_key):
         lines.append(f"    {binding_names[descriptor.descriptor_id]},")
     lines.extend((")", ""))
+    lines.append("PUBLIC_INVENTORY: tuple[GeneratedInventoryItem, ...] = (")
+    if catalog.inventory is not None:
+        inventory_items: tuple[InventoryItem, ...] = catalog.inventory.items
+        for item in sorted(inventory_items, key=_inventory_item_key):
+            lines.extend(
+                [
+                    "    GeneratedInventoryItem(",
+                    f"        {item.inventory_id!r}, {item.kind!r}, {item.identity!r},",
+                    f"        {item.disposition!r}, {item.public_symbol!r}, {item.transport!r},",
+                    f"        {item.compatibility!r},",
+                    "    ),",
+                ]
+            )
+    lines.extend((")", ""))
     lines.append("OPERATION_CONVENTIONS: tuple[GeneratedConvention, ...] = (")
     for operation in sorted(operations, key=operation_key):
         for entrypoint in sorted(operation.entrypoints, key=entrypoint_key):
@@ -196,13 +225,16 @@ def _runtime(
         lines.extend([f"def {validator.name}({parameter}: object) -> None:", body, ""])
     exports: list[str] = ["TARGET_VERSION", "MIN_CLI_VERSION", "MAX_CLI_VERSION"]
     exports.extend(item.public_name for item in sorted(enum_definitions, key=enum_key))
-    exports.extend(["GeneratedMapping", "GeneratedBinding", "GeneratedConvention"])
+    exports.extend(
+        ["GeneratedMapping", "GeneratedBinding", "GeneratedConvention", "GeneratedInventoryItem"]
+    )
     exports.extend(
         binding_names[descriptor.descriptor_id]
         for descriptor in sorted(binding_descriptors, key=binding_descriptor_key)
     )
     exports.append("OPERATION_BINDINGS")
     exports.append("OPERATION_CONVENTIONS")
+    exports.append("PUBLIC_INVENTORY")
     exports.extend(
         item.name for item in sorted(validators_by_name.values(), key=validator_name_key)
     )

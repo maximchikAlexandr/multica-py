@@ -279,3 +279,15 @@ class BaseResource:
             finalize=lambda results: cast("ManagedProcess", results[0]),
             options=options,
         )
+
+    def _terminal_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[ManagedProcess]:
+        return self._plan(
+            steps=(_Step(args, "terminal"),),
+            finalize=lambda results: cast("ManagedProcess", results[0]),
+            options=options,
+        )

@@ -1,5 +1,46 @@
 {
   "$defs": {
+    "InventoryItem": {
+      "additionalProperties": false,
+      "properties": {
+        "inventory_id": {"minLength": 1, "type": "string"},
+        "kind": {"enum": ["command", "input", "output", "field", "transport"], "type": "string"},
+        "identity": {"minLength": 1, "type": "string"},
+        "disposition": {
+          "enum": ["typed", "typed-equivalent", "transport", "presentation-only", "outside-public-scope"],
+          "type": "string"
+        },
+        "source_ref_ids": {"items": {"type": "string"}, "type": "array"},
+        "test_ref_ids": {"items": {"type": "string"}, "type": "array"},
+        "public_symbol": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+        "transport": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+        "compatibility": {"minLength": 1, "type": "string"},
+        "rationale": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "inventory_id", "kind", "identity", "disposition", "source_ref_ids",
+        "test_ref_ids", "public_symbol", "transport", "compatibility", "rationale"
+      ],
+      "title": "InventoryItem",
+      "type": "object"
+    },
+    "PublicInventory": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 1, "type": "integer"},
+        "complete": {"type": "boolean"},
+        "items": {"items": {"$ref": "#/$defs/InventoryItem"}, "type": "array"},
+        "source_commit": {"minLength": 1, "type": "string"},
+        "source_evidence_ref": {"minLength": 1, "type": "string"},
+        "help_evidence_ref": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "schema_version", "complete", "items", "source_commit",
+        "source_evidence_ref", "help_evidence_ref"
+      ],
+      "title": "PublicInventory",
+      "type": "object"
+    },
     "ArgumentContract": {
       "properties": {
         "grammar": {
@@ -501,6 +542,9 @@
           },
           "default": {},
           "type": "object"
+        },
+        "inventory": {
+          "$ref": "#/$defs/PublicInventory"
         }
       },
       "required": [
