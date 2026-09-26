@@ -8,12 +8,12 @@ from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.issues import Issue
 from multica_py.entities.squads import Squad
-from multica_py.models.common import ActionResult, Page
+from multica_py.models.common import Page
 from multica_py.models.issues import IssueListFilter
 from multica_py.models.relations import (
     OffsetPage,
 )
-from multica_py.models.system import SquadMember
+from multica_py.models.system import SquadMember, SquadMemberRemoval
 from multica_py.resources._base import BaseResource
 from multica_py.resources.squad_members import SquadMemberResource
 
@@ -44,22 +44,33 @@ class SquadResource(BaseResource):
     def _add_member_command(
         self,
         squad_id: str,
-        member_id: str,
         *,
-        invalidate: Callable[[ActionResult[None]], ActionResult[None]],
+        member_id: str,
+        member_type: str,
+        role: str = "",
+        invalidate: Callable[[SquadMember], SquadMember],
         options: OperationOptions | None,
-    ) -> Command[ActionResult[None]]:
-        return self.members.add_command(squad_id, member_id, options=options)._map(invalidate)
+    ) -> Command[SquadMember]:
+        return self.members.add_command(
+            squad_id,
+            member_id=member_id,
+            member_type=member_type,
+            role=role,
+            options=options,
+        )._map(invalidate)
 
     def _remove_member_command(
         self,
         squad_id: str,
-        member_id: str,
         *,
-        invalidate: Callable[[ActionResult[None]], ActionResult[None]],
+        member_id: str,
+        member_type: str,
+        invalidate: Callable[[SquadMemberRemoval], SquadMemberRemoval],
         options: OperationOptions | None,
-    ) -> Command[ActionResult[None]]:
-        return self.members.remove_command(squad_id, member_id, options=options)._map(invalidate)
+    ) -> Command[SquadMemberRemoval]:
+        return self.members.remove_command(
+            squad_id, member_id=member_id, member_type=member_type, options=options
+        )._map(invalidate)
 
     def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Squad]]:
         return self._decoded_list_command(("squad", "list"), Squad, options=options)._map(

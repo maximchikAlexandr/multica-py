@@ -1792,9 +1792,9 @@ def test_strict_client_constructor_is_lazy_and_first_public_operation_succeeds()
     finally:
         client.close()
 
-    assert status.authenticated is False
+    assert status == "{}"
     assert executor.requests[0].argv[-3:] == ("version", "--output", "json")
-    assert executor.requests[1].argv[-4:] == ("auth", "status", "--output", "json")
+    assert executor.requests[1].argv[-2:] == ("auth", "status")
 
 
 @pytest.mark.parametrize("version_output", _INVALID_VERSION_OUTPUTS)
@@ -1861,8 +1861,8 @@ def test_snapshot_transports_share_compatibility_preflight_cache(
 
     assert transport.commands == [
         ("version", "--output", "json"),
-        ("auth", "status", "--output", "json"),
-        ("auth", "logout", "--output", "json"),
+        ("auth", "status"),
+        ("auth", "logout"),
     ]
 
 

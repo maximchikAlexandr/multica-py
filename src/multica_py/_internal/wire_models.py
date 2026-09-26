@@ -28,7 +28,11 @@ from multica_py.models.issue_activity import (
     TaskProjectResourceData,
     TaskUsageData,
 )
-from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
+from multica_py.models.project_resources import (
+    GithubRepoResourceRef,
+    LocalDirectoryResourceRef,
+    ProjectResourceRecord,
+)
 from multica_py.models.properties import PropertyDefinition
 from multica_py.types import JsonValue
 
@@ -837,32 +841,59 @@ class _LocalDirectoryResourceRefWire(msgspec.Struct, frozen=True, kw_only=True):
     local_path: str
     daemon_id: str
     label: str | None = None
+    execution_mode: str | None = None
 
 
 class _ProjectResourceRecordWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     project_id: str
     resource_type: str
-    resource_ref: _LocalDirectoryResourceRefWire
+    resource_ref: object
+    label: str | None = None
+    position: int | None = None
 
 
 def project_resource_from_wire(wire: _ProjectResourceRecordWire) -> ProjectResourceRecord:
-    if wire.resource_type != "local_directory":
-        raise OutputShapeError(
-            f"Unsupported resource_type {wire.resource_type!r}; expected 'local_directory'"
-        )
+    if not isinstance(wire.resource_ref, Mapping):
+        raise OutputShapeError("resource_ref must be a JSON object")
     ref = wire.resource_ref
-    if not pathlib.Path(ref.local_path).is_absolute():
-        raise OutputShapeError("local_path must be an absolute path")
+    if wire.resource_type == "local_directory":
+        local_path = ref.get("local_path")
+        daemon_id = ref.get("daemon_id")
+        if not isinstance(local_path, str) or not isinstance(daemon_id, str):
+            raise OutputShapeError("local_directory resource_ref requires local_path and daemon_id")
+        if not pathlib.Path(local_path).is_absolute():
+            raise OutputShapeError("local_path must be an absolute path")
+        resource_ref: object = LocalDirectoryResourceRef(
+            local_path=str(pathlib.Path(local_path).resolve()),
+            daemon_id=daemon_id,
+            label=ref.get("label") if isinstance(ref.get("label"), str) else None,
+            execution_mode=(
+                ref.get("execution_mode") if isinstance(ref.get("execution_mode"), str) else None
+            ),
+        )
+    elif wire.resource_type == "github_repo":
+        url = ref.get("url")
+        if not isinstance(url, str):
+            raise OutputShapeError("github_repo resource_ref requires url")
+        resource_ref = GithubRepoResourceRef(
+            url=url,
+            default_branch_hint=(
+                ref.get("default_branch_hint")
+                if isinstance(ref.get("default_branch_hint"), str)
+                else None
+            ),
+            ref=ref.get("ref") if isinstance(ref.get("ref"), str) else None,
+        )
+    else:
+        resource_ref = dict(ref)
     return ProjectResourceRecord(
         id=wire.id,
         project_id=wire.project_id,
         resource_type=wire.resource_type,
-        resource_ref=LocalDirectoryResourceRef(
-            local_path=str(pathlib.Path(ref.local_path).resolve()),
-            daemon_id=ref.daemon_id,
-            label=ref.label,
-        ),
+        resource_ref=resource_ref,  # type: ignore[arg-type]
+        label=wire.label,
+        position=wire.position,
     )
 
 
