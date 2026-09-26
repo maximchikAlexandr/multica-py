@@ -4,7 +4,7 @@ import datetime
 import json
 import math
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Literal, cast
 from unittest.mock import MagicMock
 
 import msgspec
@@ -30,9 +30,11 @@ from multica_py.exceptions import (
     CommandExecutionError,
     DetachedEntityError,
     MissingRelationContextError,
+    NetworkError,
     NotFoundError,
     OutputShapeError,
     ProtocolError,
+    ValidationError,
 )
 from multica_py.models.issues import (
     InlineDescription,
@@ -162,6 +164,41 @@ class _IssueRunMessagesCase:
     expected_argv: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class _TaskRunLifecycleCase:
+    name: str
+    expected_preview: tuple[str, ...]
+    expected_argv: tuple[str, ...]
+    options: OperationOptions | None = None
+
+
+@dataclass(frozen=True)
+class _TaskRunRelationCase:
+    name: str
+    action: Literal["refresh", "cancel"]
+    bound: bool
+    issue_id: str | None
+    expected_error: type[Exception] | None = None
+    expected_preview: tuple[str, ...] | None = None
+
+
+@dataclass(frozen=True)
+class _TaskRunFailureCase:
+    name: str
+    action: Literal["refresh", "cancel"]
+    transport_method: Literal["run_bytes", "run_text"]
+    expected_argv: tuple[str, ...]
+    error_type: type[Exception]
+    error_message: str
+
+
+@dataclass(frozen=True)
+class _TaskRunRefreshOutputCase:
+    name: str
+    payload: bytes
+    expected_error: type[Exception]
+
+
 _ISSUE_RUN_MESSAGES_CASES = (
     _IssueRunMessagesCase(
         name="truncation-and-timestamp",
@@ -183,6 +220,113 @@ _ISSUE_RUN_MESSAGES_CASES = (
             "--output",
             "json",
         ),
+    ),
+)
+
+
+_TASK_RUN_REFRESH_CASES = (
+    _TaskRunLifecycleCase(
+        name="default",
+        expected_preview=("multica issue runs i1 --output json",),
+        expected_argv=("issue", "runs", "i1", "--output", "json"),
+    ),
+    _TaskRunLifecycleCase(
+        name="option-scoped",
+        expected_preview=("multica issue runs i1 --output json",),
+        expected_argv=("issue", "runs", "i1", "--output", "json"),
+        options=OperationOptions(profile="operation"),
+    ),
+)
+
+
+_TASK_RUN_CANCEL_CASES = (
+    _TaskRunLifecycleCase(
+        name="default",
+        expected_preview=("multica issue cancel-task run1 --issue i1",),
+        expected_argv=("issue", "cancel-task", "run1", "--issue", "i1"),
+    ),
+    _TaskRunLifecycleCase(
+        name="option-scoped",
+        expected_preview=("multica issue cancel-task run1 --issue i1",),
+        expected_argv=("issue", "cancel-task", "run1", "--issue", "i1"),
+        options=OperationOptions(profile="operation"),
+    ),
+)
+
+
+_TASK_RUN_RELATION_CASES = (
+    _TaskRunRelationCase(
+        name="detached-refresh",
+        action="refresh",
+        bound=False,
+        issue_id=None,
+        expected_error=DetachedEntityError,
+    ),
+    _TaskRunRelationCase(
+        name="detached-cancel",
+        action="cancel",
+        bound=False,
+        issue_id=None,
+        expected_error=DetachedEntityError,
+    ),
+    _TaskRunRelationCase(
+        name="missing-refresh-issue-context",
+        action="refresh",
+        bound=True,
+        issue_id=None,
+        expected_error=MissingRelationContextError,
+    ),
+    _TaskRunRelationCase(
+        name="optional-cancel-issue-context",
+        action="cancel",
+        bound=True,
+        issue_id=None,
+        expected_preview=("multica issue cancel-task run1",),
+    ),
+)
+
+
+_TASK_RUN_FAILURE_CASES = (
+    _TaskRunFailureCase(
+        name="refresh-validation-error",
+        action="refresh",
+        transport_method="run_bytes",
+        expected_argv=("issue", "runs", "i1", "--output", "json"),
+        error_type=ValidationError,
+        error_message="validation failed",
+    ),
+    _TaskRunFailureCase(
+        name="refresh-transport-error",
+        action="refresh",
+        transport_method="run_bytes",
+        expected_argv=("issue", "runs", "i1", "--output", "json"),
+        error_type=NetworkError,
+        error_message="transport failed",
+    ),
+    _TaskRunFailureCase(
+        name="cancel-validation-error",
+        action="cancel",
+        transport_method="run_text",
+        expected_argv=("issue", "cancel-task", "run1", "--issue", "i1"),
+        error_type=ValidationError,
+        error_message="validation failed",
+    ),
+    _TaskRunFailureCase(
+        name="cancel-transport-error",
+        action="cancel",
+        transport_method="run_text",
+        expected_argv=("issue", "cancel-task", "run1", "--issue", "i1"),
+        error_type=NetworkError,
+        error_message="transport failed",
+    ),
+)
+
+
+_TASK_RUN_REFRESH_OUTPUT_CASES = (
+    _TaskRunRefreshOutputCase(
+        name="missing-target",
+        payload=b'[{"id":"other","status":"running"}]',
+        expected_error=ProtocolError,
     ),
 )
 
@@ -1237,46 +1381,26 @@ def test_task_run_messages_relation_command_delegates_to_issue_resource(
     mock_transport.run_bytes.assert_not_called()
 
 
-def test_task_run_lifecycle_commands_are_inspectable_and_option_scoped(
-    mock_transport: MagicMock,
-) -> None:
-    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    client = MagicMock()
+def _task_run_client(mock_transport: MagicMock) -> MagicMock:
     resource = IssueResource(mock_transport, ClientConfig())
+    client = MagicMock()
     resource._set_client(client)
     client.issues = resource
-    run = TaskRun(id="run1", status="completed", _client=client, issue_id="i1")
-    options = OperationOptions(profile="operation")
+    return client
 
-    refresh = run.refresh_command(options=options)
-    cancel = run.cancel_command(options=options)
 
-    assert refresh.commands == ("multica issue runs i1 --output json",)
-    assert cancel.commands == ("multica issue cancel-task run1 --issue i1",)
-    assert refresh._plan.config_snapshot.profile == "operation"
-    assert cancel._plan.config_snapshot.profile == "operation"
+def _assert_no_task_run_transport_calls(mock_transport: MagicMock) -> None:
     mock_transport.run_bytes.assert_not_called()
     mock_transport.run_text.assert_not_called()
+    mock_transport.spawn.assert_not_called()
 
 
-def test_task_run_refresh_selects_exact_row_and_preserves_original_snapshot(
-    mock_transport: MagicMock,
+@pytest.mark.parametrize("case", _TASK_RUN_REFRESH_CASES, ids=lambda case: case.name)
+def test_task_run_refresh_cases_are_inspectable_and_eager_equivalent(
+    case: _TaskRunLifecycleCase, mock_transport: MagicMock
 ) -> None:
     mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    mock_transport.run_bytes.return_value = RawCommandResult(
-        argv=(),
-        exit_code=0,
-        stdout=(
-            b'[{"id":"other","status":"running"},'
-            b'{"id":"run1","status":"cancelled","result":{"fresh":true}}]'
-        ),
-        stderr=b"",
-        duration=datetime.timedelta(),
-    )
-    client = MagicMock()
-    resource = IssueResource(mock_transport, ClientConfig())
-    resource._set_client(client)
-    client.issues = resource
+    client = _task_run_client(mock_transport)
     run = TaskRun(
         id="run1",
         status="completed",
@@ -1284,73 +1408,150 @@ def test_task_run_refresh_selects_exact_row_and_preserves_original_snapshot(
         _client=client,
         issue_id="i1",
     )
+    command = run.refresh_command(options=case.options)
 
-    refreshed = run.refresh()
+    assert command.commands == case.expected_preview
+    if case.options is not None:
+        assert command._plan.config_snapshot.profile == case.options.profile
+    _assert_no_task_run_transport_calls(mock_transport)
 
-    assert refreshed.id == "run1"
-    assert refreshed.status == "cancelled"
-    assert refreshed.result == {"fresh": True}
-    assert refreshed._client is client
-    assert run.status == "completed"
-    assert run.result == {"fresh": False}
-    mock_transport.run_bytes.assert_called_once_with(
-        ("issue", "runs", "i1", "--output", "json"), stdin=None, timeout=None
+    payload = (
+        b'[{"id":"other","status":"running"},'
+        b'{"id":"run1","status":"cancelled","result":{"fresh":true}}]'
     )
-
-
-def test_task_run_cancel_returns_action_result_without_refresh_or_mutation(
-    mock_transport: MagicMock,
-) -> None:
-    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    mock_transport.run_text.return_value = TextResult(text="cancelled", stderr="", exit_code=0)
-    client = MagicMock()
-    resource = IssueResource(mock_transport, ClientConfig())
-    resource._set_client(client)
-    client.issues = resource
-    run = TaskRun(id="run1", status="running", _client=client, issue_id="i1")
-
-    result = run.cancel()
-
-    assert result.success
-    assert result.value is None
-    assert run.status == "running"
-    mock_transport.run_text.assert_called_once_with(
-        ("issue", "cancel-task", "run1", "--issue", "i1")
-    )
-    mock_transport.run_bytes.assert_not_called()
-
-
-def test_task_run_lifecycle_failures_stop_before_io_and_preserve_protocol_errors(
-    mock_transport: MagicMock,
-) -> None:
-    detached = TaskRun(id="run1", status="running")
-    with pytest.raises(DetachedEntityError):
-        detached.refresh_command()
-    with pytest.raises(DetachedEntityError):
-        detached.cancel_command()
-
-    client = MagicMock()
-    resource = IssueResource(mock_transport, ClientConfig())
-    resource._set_client(client)
-    client.issues = resource
-    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    missing_context = TaskRun(id="run1", status="running", _client=client)
-    with pytest.raises(MissingRelationContextError):
-        missing_context.refresh_command()
-    assert missing_context.cancel_command().commands == ("multica issue cancel-task run1",)
-    mock_transport.run_bytes.assert_not_called()
-    mock_transport.run_text.assert_not_called()
-
     mock_transport.run_bytes.return_value = RawCommandResult(
-        argv=(),
+        argv=case.expected_argv,
         exit_code=0,
-        stdout=b'[{"id":"other","status":"running"}]',
+        stdout=payload,
         stderr=b"",
         duration=datetime.timedelta(),
     )
-    with pytest.raises(ProtocolError):
-        TaskRun(id="run1", status="running", _client=client, issue_id="i1").refresh()
-    mock_transport.run_bytes.assert_called_once()
+    command_result = command.run()
+    assert isinstance(command_result, TaskRun)
+    assert command_result.id == "run1"
+    assert command_result.status == "cancelled"
+    assert command_result.result == {"fresh": True}
+    assert command_result._client is client
+    mock_transport.run_bytes.assert_called_once_with(case.expected_argv, stdin=None, timeout=None)
+    mock_transport.run_text.assert_not_called()
+    mock_transport.spawn.assert_not_called()
+
+    mock_transport.reset_mock()
+    eager_result = run.refresh(options=case.options)
+
+    assert eager_result == command_result
+    mock_transport.run_bytes.assert_called_once_with(case.expected_argv, stdin=None, timeout=None)
+    mock_transport.run_text.assert_not_called()
+    mock_transport.spawn.assert_not_called()
+    assert run.status == "completed"
+    assert run.result == {"fresh": False}
+
+
+@pytest.mark.parametrize("case", _TASK_RUN_CANCEL_CASES, ids=lambda case: case.name)
+def test_task_run_cancel_cases_are_inspectable_and_eager_equivalent(
+    case: _TaskRunLifecycleCase, mock_transport: MagicMock
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    client = _task_run_client(mock_transport)
+    run = TaskRun(id="run1", status="running", _client=client, issue_id="i1")
+    command = run.cancel_command(options=case.options)
+
+    assert command.commands == case.expected_preview
+    if case.options is not None:
+        assert command._plan.config_snapshot.profile == case.options.profile
+    _assert_no_task_run_transport_calls(mock_transport)
+
+    mock_transport.run_text.return_value = TextResult(text="cancelled", stderr="", exit_code=0)
+    command_result = command.run()
+    assert command_result.success
+    assert command_result.value is None
+    mock_transport.run_text.assert_called_once_with(case.expected_argv)
+    mock_transport.run_bytes.assert_not_called()
+    mock_transport.spawn.assert_not_called()
+
+    mock_transport.reset_mock()
+    eager_result = run.cancel(options=case.options)
+
+    assert eager_result == command_result
+    mock_transport.run_text.assert_called_once_with(case.expected_argv)
+    mock_transport.run_bytes.assert_not_called()
+    mock_transport.spawn.assert_not_called()
+    assert run.status == "running"
+
+
+@pytest.mark.parametrize("case", _TASK_RUN_RELATION_CASES, ids=lambda case: case.name)
+def test_task_run_relation_cases_preserve_context_boundaries(
+    case: _TaskRunRelationCase, mock_transport: MagicMock
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    client = _task_run_client(mock_transport) if case.bound else None
+    run = TaskRun(id="run1", status="running", _client=client, issue_id=case.issue_id)
+    command_method = getattr(run, f"{case.action}_command")
+
+    if case.expected_error is not None:
+        with pytest.raises(case.expected_error):
+            command_method()
+        _assert_no_task_run_transport_calls(mock_transport)
+        return
+
+    command = command_method()
+    assert command.commands == case.expected_preview
+    _assert_no_task_run_transport_calls(mock_transport)
+
+
+@pytest.mark.parametrize("case", _TASK_RUN_FAILURE_CASES, ids=lambda case: case.name)
+def test_task_run_failure_cases_propagate_transport_errors_unchanged(
+    case: _TaskRunFailureCase, mock_transport: MagicMock
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    client = _task_run_client(mock_transport)
+    run = TaskRun(id="run1", status="running", _client=client, issue_id="i1")
+    error = case.error_type(case.error_message)
+    transport_call = getattr(mock_transport, case.transport_method)
+    transport_call.side_effect = error
+
+    with pytest.raises(case.error_type) as exc_info:
+        getattr(run, case.action)()
+
+    assert exc_info.value is error
+    transport_call.assert_called_once_with(
+        case.expected_argv,
+        **({"stdin": None, "timeout": None} if case.transport_method == "run_bytes" else {}),
+    )
+    other_method = (
+        mock_transport.run_text
+        if case.transport_method == "run_bytes"
+        else mock_transport.run_bytes
+    )
+    other_method.assert_not_called()
+    mock_transport.spawn.assert_not_called()
+    assert run.status == "running"
+
+
+@pytest.mark.parametrize("case", _TASK_RUN_REFRESH_OUTPUT_CASES, ids=lambda case: case.name)
+def test_task_run_refresh_output_cases_preserve_protocol_errors(
+    case: _TaskRunRefreshOutputCase, mock_transport: MagicMock
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    client = _task_run_client(mock_transport)
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=("issue", "runs", "i1", "--output", "json"),
+        exit_code=0,
+        stdout=case.payload,
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    run = TaskRun(id="run1", status="running", _client=client, issue_id="i1")
+
+    with pytest.raises(case.expected_error):
+        run.refresh()
+
+    mock_transport.run_bytes.assert_called_once_with(
+        ("issue", "runs", "i1", "--output", "json"), stdin=None, timeout=None
+    )
+    mock_transport.run_text.assert_not_called()
+    mock_transport.spawn.assert_not_called()
+    assert run.status == "running"
 
 
 @pytest.mark.parametrize("case", _ISSUE_RUN_MESSAGES_CASES, ids=lambda case: case.name)
