@@ -115,10 +115,16 @@ preview = run.refresh_command()
 print(preview.commands)
 fresh_run = preview.run()
 
+# Choose one cancellation form:
 cancel_preview = run.cancel_command()
 print(cancel_preview.commands)
 result = cancel_preview.run()
+run = run.refresh()  # refresh explicitly after cancellation when needed
+```
 
+Alternatively, use eager cancellation and then refresh:
+
+```python
 result = run.cancel()
 run = run.refresh()  # refresh explicitly after cancellation when needed
 ```
