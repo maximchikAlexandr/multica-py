@@ -124,3 +124,12 @@ class AutopilotTrigger(msgspec.Struct, frozen=True, kw_only=True):
     last_fired_at: datetime.datetime | None = None
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
+
+
+class AutopilotTriggerRotateURL(msgspec.Struct, frozen=True, kw_only=True):
+    autopilot_id: str | None = None
+    trigger_id: str | None = None
+    url: str | None = None
+    path: str | None = None
+    token: str | None = None
+    warning: str | None = None

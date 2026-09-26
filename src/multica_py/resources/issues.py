@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import datetime
 import json
 import os
 from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast, overload
 
-from multica_py._generated.approved_sdk import validate_nonblank, validate_since_cursor
+from multica_py._generated.approved_sdk import (
+    ISSUE_TIMELINE_BINDING,
+    validate_nonblank,
+    validate_since_cursor,
+)
 from multica_py._internal.commands import Command, _replace_plan, _Step, _StepRef
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.issue_wires import (
@@ -21,6 +26,7 @@ from multica_py._internal.issue_wires import (
     _IssueWire,
     _LabelWire,
 )
+from multica_py._internal.json_values import _coerce_json_value
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import _task_run_from_wire, _TaskRunWire, decode_run_messages
 from multica_py.config import ClientConfig, OperationOptions
@@ -38,6 +44,7 @@ from multica_py.models.issue_activity import (
     RunMessage,
     Subscriber,
 )
+from multica_py.models.issue_timeline import IssueTimelineEvent, IssueTimelinePage
 from multica_py.models.issues import (
     AssignmentTarget,
     FileDescription,
@@ -61,7 +68,12 @@ from multica_py.models.relations import (
     RelationMetadata,
     _RelationLoad,
 )
-from multica_py.resources._base import BaseResource, _normalize_description_file, _page_items
+from multica_py.resources._base import (
+    BaseResource,
+    _normalize_description_file,
+    _operation_minimum_cli_version,
+    _page_items,
+)
 from multica_py.resources.issue_comments import IssueCommentResource
 from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
@@ -383,6 +395,59 @@ def _offset_page_from_issue_page(
         limit=limit,
         offset=offset,
         has_more=page.has_more,
+    )
+
+
+def _decode_issue_timeline(stdout: bytes, command: str) -> IssueTimelinePage:
+    raw = decode_json(stdout, object, command=command)
+    if isinstance(raw, list):
+        rows = raw
+        total = limit = offset = None
+        cursor = None
+    elif isinstance(raw, Mapping):
+        rows = raw.get("events", raw.get("activities", raw.get("items", ())))
+        total = raw.get("total") if isinstance(raw.get("total"), int) else None
+        limit = raw.get("limit") if isinstance(raw.get("limit"), int) else None
+        offset = raw.get("offset") if isinstance(raw.get("offset"), int) else None
+        cursor = raw.get("next_cursor") if isinstance(raw.get("next_cursor"), str) else None
+    else:
+        raise OutputShapeError("issue timeline response must be an array or object")
+    if not isinstance(rows, list | tuple):
+        raise OutputShapeError("issue timeline items must be an array")
+    items: list[IssueTimelineEvent] = []
+    for item in rows:
+        if not isinstance(item, Mapping):
+            raise OutputShapeError("issue timeline item must be an object")
+        raw_timestamp = item.get("created_at", item.get("ts"))
+        created_at = None
+        if isinstance(raw_timestamp, datetime.datetime):
+            created_at = raw_timestamp
+        elif isinstance(raw_timestamp, str):
+            try:
+                created_at = datetime.datetime.fromisoformat(raw_timestamp.replace("Z", "+00:00"))
+            except ValueError:
+                raise OutputShapeError(
+                    "issue timeline created_at must be an ISO timestamp"
+                ) from None
+        items.append(
+            IssueTimelineEvent(
+                id=str(item.get("id", "")),
+                type=str(item.get("type", item.get("event_type", ""))),
+                action=cast("str | None", item.get("action")),
+                actor_type=cast("str | None", item.get("actor_type")),
+                actor_id=cast("str | None", item.get("actor_id")),
+                summary=cast("str | None", item.get("summary", item.get("content"))),
+                created_at=created_at,
+                data=_coerce_json_value(item.get("data"), field_name="timeline.data")
+                if item.get("data") is not None
+                else None,
+                metadata=_coerce_json_value(item.get("metadata"), field_name="timeline.metadata")
+                if item.get("metadata") is not None
+                else None,
+            )
+        )
+    return IssueTimelinePage(
+        items=tuple(items), total=total, limit=limit, offset=offset, next_cursor=cursor
     )
 
 
@@ -893,6 +958,71 @@ class IssueResource(BaseResource):
     ) -> IssueChildrenResult:
         return self.children_command(issue_id, options=options).run()
 
+    def timeline_command(
+        self,
+        issue_id: str,
+        *,
+        activity_only: bool = False,
+        actions: tuple[str, ...] = (),
+        since: str | None = None,
+        tail: int | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[IssueTimelinePage]:
+        _ = cast("object", ISSUE_TIMELINE_BINDING)
+        validate_nonblank(issue_id)
+        if type(activity_only) is not bool:
+            raise TypeError("activity_only must be a bool")
+        if type(actions) is not tuple or any(
+            type(action) is not str or not action for action in actions
+        ):
+            raise TypeError("actions must be a tuple of nonblank strings")
+        if since is not None and not isinstance(since, str):
+            raise TypeError("since must be a string or None")
+        if tail is not None and (type(tail) is not int or tail < 0):
+            raise ValueError("tail must be nonnegative")
+        args = ["issue", "timeline", issue_id]
+        if activity_only:
+            args.append("--activity-only")
+        for action in actions:
+            args.extend(("--action", action))
+        if since:
+            args.extend(("--since", since))
+        if tail is not None:
+            args.extend(("--tail", str(tail)))
+        return self._plan(
+            steps=(
+                _Step(
+                    (*args, "--output", "json"),
+                    "run_bytes",
+                    decode=_decode_issue_timeline,
+                ),
+            ),
+            finalize=lambda results: cast("IssueTimelinePage", results[0]),
+            options=options,
+            minimum_cli_version=_operation_minimum_cli_version(
+                cast("object", ISSUE_TIMELINE_BINDING)
+            ),
+        )
+
+    def timeline(
+        self,
+        issue_id: str,
+        *,
+        activity_only: bool = False,
+        actions: tuple[str, ...] = (),
+        since: str | None = None,
+        tail: int | None = None,
+        options: OperationOptions | None = None,
+    ) -> IssueTimelinePage:
+        return self.timeline_command(
+            issue_id,
+            activity_only=activity_only,
+            actions=actions,
+            since=since,
+            tail=tail,
+            options=options,
+        ).run()
+
     def create_command(
         self,
         *,
@@ -901,12 +1031,18 @@ class IssueResource(BaseResource):
         description_file: str | os.PathLike[str] | None = None,
         description_input: IssueDescriptionInput | None = None,
         priority: str | None = None,
+        status: IssueStatus | str | None = None,
+        stage: int | None = None,
+        start_date: str | None = None,
+        due_date: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
         properties: tuple[IssuePropertyAssignment, ...] = (),
         project: ProjectReference | None = None,
         project_id: str | None = None,
         parent_id: str | None = None,
+        attachments: tuple[str, ...] = (),
+        no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
         """Create an issue and optionally attach labels.
@@ -938,12 +1074,27 @@ class IssueResource(BaseResource):
         args.extend(description_args)
         if priority is not None:
             args.extend(["--priority", priority])
+        if status is not None:
+            args.extend(["--status", _issue_status_token(status)])
+        if stage is not None:
+            if type(stage) is not int or stage < 0:
+                raise ValueError("stage must be a nonnegative integer")
+            args.extend(["--stage", str(stage)])
+        if start_date is not None:
+            args.extend(["--start-date", start_date])
+        if due_date is not None:
+            args.extend(["--due-date", due_date])
         if assignee_id is not None:
             args.extend(["--assignee-id", assignee_id])
         if normalized_project is not None:
             args.extend(["--project", normalized_project])
         if parent_id is not None:
             args.extend(["--parent", parent_id])
+        for attachment in attachments:
+            validate_nonblank(attachment)
+            args.extend(["--attachment", attachment])
+        if no_start:
+            args.append("--no-start")
         for assignment in properties:
             args.extend(["--property", f"{assignment.reference}={assignment.value}"])
         create_args, create_decode = self._plan_decode(tuple(args), _IssueWire)
@@ -990,12 +1141,18 @@ class IssueResource(BaseResource):
         description_file: str | os.PathLike[str] | None = None,
         description_input: IssueDescriptionInput | None = None,
         priority: str | None = None,
+        status: IssueStatus | str | None = None,
+        stage: int | None = None,
+        start_date: str | None = None,
+        due_date: str | None = None,
         assignee_id: str | None = None,
         label_ids: tuple[str, ...] = (),
         properties: tuple[IssuePropertyAssignment, ...] = (),
         project: ProjectReference | None = None,
         project_id: str | None = None,
         parent_id: str | None = None,
+        attachments: tuple[str, ...] = (),
+        no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Issue:
         return self.create_command(
@@ -1004,12 +1161,18 @@ class IssueResource(BaseResource):
             description_file=description_file,
             description_input=description_input,
             priority=priority,
+            status=status,
+            stage=stage,
+            start_date=start_date,
+            due_date=due_date,
             assignee_id=assignee_id,
             label_ids=label_ids,
             properties=properties,
             project=project,
             project_id=project_id,
             parent_id=parent_id,
+            attachments=attachments,
+            no_start=no_start,
             options=options,
         ).run()
 
@@ -1020,9 +1183,16 @@ class IssueResource(BaseResource):
         title: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
         priority: str | UnsetType = Unset,
+        status: IssueStatus | str | UnsetType = Unset,
+        stage: int | None | UnsetType = Unset,
+        start_date: str | None | UnsetType = Unset,
+        due_date: str | None | UnsetType = Unset,
+        position: float | UnsetType = Unset,
         assignee_id: str | None | UnsetType = Unset,
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
+        attachments: tuple[str, ...] | UnsetType = Unset,
+        no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
@@ -1037,6 +1207,11 @@ class IssueResource(BaseResource):
             title is Unset
             and description is Unset
             and priority is Unset
+            and status is Unset
+            and stage is Unset
+            and start_date is Unset
+            and due_date is Unset
+            and position is Unset
             and assignee_id is Unset
             and project_id is Unset
             and parent_id is Unset
@@ -1049,12 +1224,32 @@ class IssueResource(BaseResource):
             args.extend(["--description", "" if description is None else description])
         if priority is not Unset:
             args.extend(["--priority", priority])
+        if status is not Unset:
+            args.extend(["--status", _issue_status_token(status)])
+        if stage is not Unset:
+            if stage is not None and (type(stage) is not int or stage < 0):
+                raise ValueError("stage must be a nonnegative integer")
+            args.extend(["--stage", "" if stage is None else str(stage)])
+        if start_date is not Unset:
+            args.extend(["--start-date", "" if start_date is None else start_date])
+        if due_date is not Unset:
+            args.extend(["--due-date", "" if due_date is None else due_date])
+        if position is not Unset:
+            if type(position) not in (int, float) or isinstance(position, bool):
+                raise TypeError("position must be a number or Unset")
+            args.extend(["--position", str(position)])
         if assignee_id is not Unset and assignee_id is not None:
             args.extend(["--assignee-id", assignee_id])
         if project_id is not Unset:
             args.extend(["--project", "" if project_id is None else project_id])
         if parent_id is not Unset:
             args.extend(["--parent", "" if parent_id is None else parent_id])
+        if attachments is not Unset:
+            for attachment in attachments:
+                validate_nonblank(attachment)
+                args.extend(["--attachment", attachment])
+        if no_start:
+            args.append("--no-start")
 
         steps: list[_Step] = []
         if len(args) > 3:
@@ -1087,9 +1282,16 @@ class IssueResource(BaseResource):
         title: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
         priority: str | UnsetType = Unset,
+        status: IssueStatus | str | UnsetType = Unset,
+        stage: int | None | UnsetType = Unset,
+        start_date: str | None | UnsetType = Unset,
+        due_date: str | None | UnsetType = Unset,
+        position: float | UnsetType = Unset,
         assignee_id: str | None | UnsetType = Unset,
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
+        attachments: tuple[str, ...] | UnsetType = Unset,
+        no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Issue:
         return self.update_command(
@@ -1097,9 +1299,16 @@ class IssueResource(BaseResource):
             title=title,
             description=description,
             priority=priority,
+            status=status,
+            stage=stage,
+            start_date=start_date,
+            due_date=due_date,
+            position=position,
             assignee_id=assignee_id,
             project_id=project_id,
             parent_id=parent_id,
+            attachments=attachments,
+            no_start=no_start,
             options=options,
         ).run()
 
@@ -1108,10 +1317,15 @@ class IssueResource(BaseResource):
         issue_id: str,
         assignee: AssignmentTarget,
         *,
+        no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
         args = ["issue", "assign", issue_id, *_assignee_assign_args(assignee)]
+        if type(no_start) is not bool:
+            raise TypeError("no_start must be a bool")
+        if no_start:
+            args.append("--no-start")
         return self._decoded_command(tuple(args), _IssueWire, options=options)._map(
             self._bind_issue
         )
@@ -1121,9 +1335,10 @@ class IssueResource(BaseResource):
         issue_id: str,
         assignee: AssignmentTarget,
         *,
+        no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Issue:
-        return self.assign_command(issue_id, assignee, options=options).run()
+        return self.assign_command(issue_id, assignee, no_start=no_start, options=options).run()
 
     def unassign_command(
         self, issue_id: str, *, options: OperationOptions | None = None
@@ -1137,18 +1352,33 @@ class IssueResource(BaseResource):
         return self.unassign_command(issue_id, options=options).run()
 
     def set_status_command(
-        self, issue_id: str, status: IssueStatus | str, *, options: OperationOptions | None = None
+        self,
+        issue_id: str,
+        status: IssueStatus | str,
+        *,
+        no_start: bool = False,
+        options: OperationOptions | None = None,
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
         status_token = _issue_status_token(status)
-        return self._decoded_command(
-            ("issue", "status", issue_id, status_token), _IssueWire, options=options
-        )._map(self._bind_issue)
+        if type(no_start) is not bool:
+            raise TypeError("no_start must be a bool")
+        args = ["issue", "status", issue_id, status_token]
+        if no_start:
+            args.append("--no-start")
+        return self._decoded_command(tuple(args), _IssueWire, options=options)._map(
+            self._bind_issue
+        )
 
     def set_status(
-        self, issue_id: str, status: IssueStatus | str, *, options: OperationOptions | None = None
+        self,
+        issue_id: str,
+        status: IssueStatus | str,
+        *,
+        no_start: bool = False,
+        options: OperationOptions | None = None,
     ) -> Issue:
-        return self.set_status_command(issue_id, status, options=options).run()
+        return self.set_status_command(issue_id, status, no_start=no_start, options=options).run()
 
     def reorder_command(
         self,
@@ -1261,22 +1491,52 @@ class IssueResource(BaseResource):
         return self.move_after_command(issue_id, other_issue, options=options).run()
 
     def search_command(
-        self, query: str, *, options: OperationOptions | None = None
+        self,
+        query: str,
+        *,
+        limit: int | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[Page[Issue]]:
         validate_nonblank(query)
-        args = ("issue", "search", query, "--output", "json")
+        if limit is not None and (type(limit) is not int or limit < 0):
+            raise ValueError("limit must be nonnegative")
+        args = ["issue", "search", query]
+        if limit is not None:
+            args.extend(("--limit", str(limit)))
+        args.extend(("--output", "json"))
         return self._plan(
-            steps=(_Step(args, "run_bytes", decode=_decode_issue_search),),
+            steps=(_Step(tuple(args), "run_bytes", decode=_decode_issue_search),),
             finalize=lambda results: cast("Page[Issue]", results[0]),
             options=options,
         )._map(self._bind_issue_search_page)
 
-    def search(self, query: str, *, options: OperationOptions | None = None) -> Page[Issue]:
-        return self.search_command(query, options=options).run()
+    def search(
+        self, query: str, *, limit: int | None = None, options: OperationOptions | None = None
+    ) -> Page[Issue]:
+        return self.search_command(query, limit=limit, options=options).run()
 
     def runs_command(
-        self, issue_id: str, *, options: OperationOptions | None = None
+        self,
+        issue_id: str,
+        *,
+        active: bool = False,
+        siblings: bool = False,
+        limit: int | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[Page[TaskRun]]:
+        validate_nonblank(issue_id)
+        if type(active) is not bool or type(siblings) is not bool:
+            raise TypeError("active and siblings must be bools")
+        if limit is not None and (type(limit) is not int or limit < 0):
+            raise ValueError("limit must be nonnegative")
+        args = ["issue", "runs", issue_id]
+        if active:
+            args.append("--active")
+        if siblings:
+            args.append("--siblings")
+        if limit is not None:
+            args.extend(("--limit", str(limit)))
+
         def finalize(page: Page[_TaskRunWire]) -> Page[TaskRun]:
             return Page(
                 items=tuple(
@@ -1290,12 +1550,24 @@ class IssueResource(BaseResource):
                 next_cursor=page.next_cursor,
             )
 
-        return self._decoded_page_command(
-            ("issue", "runs", issue_id), _TaskRunWire, options=options
-        )._map(finalize)
+        return self._decoded_page_command(tuple(args), _TaskRunWire, options=options)._map(finalize)
 
-    def runs(self, issue_id: str, *, options: OperationOptions | None = None) -> Page[TaskRun]:
-        return self.runs_command(issue_id, options=options).run()
+    def runs(
+        self,
+        issue_id: str,
+        *,
+        active: bool = False,
+        siblings: bool = False,
+        limit: int | None = None,
+        options: OperationOptions | None = None,
+    ) -> Page[TaskRun]:
+        return self.runs_command(
+            issue_id,
+            active=active,
+            siblings=siblings,
+            limit=limit,
+            options=options,
+        ).run()
 
     def run_messages_command(
         self,

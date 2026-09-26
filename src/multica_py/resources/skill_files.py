@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import cast
 
 from multica_py._generated.approved_sdk import (
@@ -8,7 +9,8 @@ from multica_py._generated.approved_sdk import (
     SKILL_FILES_UPSERT_BINDING,
     validate_nonblank,
 )
-from multica_py._internal.commands import Command
+from multica_py._internal.commands import Command, _Step
+from multica_py._internal.decoders import decode_json
 from multica_py.config import OperationOptions
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.skills import SkillFile
@@ -45,23 +47,61 @@ class SkillFileResource(BaseResource):
         self,
         skill_id: str,
         path: str,
-        content: str,
+        content: str | None = None,
         *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
         options: OperationOptions | None = None,
     ) -> Command[SkillFile]:
         _ = cast("object", SKILL_FILES_UPSERT_BINDING)
         validate_nonblank(skill_id)
         validate_nonblank(path)
-        return self._decoded_command(
-            ("skill", "files", "upsert", skill_id, "--path", path, "--content", content),
-            SkillFile,
+        if sum(value is not None for value in (content, content_file, content_stdin)) != 1:
+            raise TypeError("exactly one of content, content_file, or content_stdin is required")
+        args = ["skill", "files", "upsert", skill_id, "--path", path]
+        stdin = None
+        if content is not None:
+            if not isinstance(content, str):
+                raise TypeError("content must be a string")
+            args.extend(("--content", content))
+        elif content_file is not None:
+            args.extend(("--content-file", os.fspath(content_file)))
+        else:
+            if not isinstance(content_stdin, bytes):
+                raise TypeError("content_stdin must be bytes")
+            args.append("--content-stdin")
+            stdin = content_stdin
+        return self._plan(
+            steps=(
+                _Step(
+                    (*args, "--output", "json"),
+                    "run_bytes",
+                    stdin=stdin,
+                    decode=lambda stdout, command: decode_json(stdout, SkillFile, command=command),
+                ),
+            ),
+            finalize=lambda results: cast("SkillFile", results[0]),
             options=options,
         )
 
     def upsert(
-        self, skill_id: str, path: str, content: str, *, options: OperationOptions | None = None
+        self,
+        skill_id: str,
+        path: str,
+        content: str | None = None,
+        *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
+        options: OperationOptions | None = None,
     ) -> SkillFile:
-        return self.upsert_command(skill_id, path, content, options=options).run()
+        return self.upsert_command(
+            skill_id,
+            path,
+            content,
+            content_file=content_file,
+            content_stdin=content_stdin,
+            options=options,
+        ).run()
 
     def delete_command(
         self, skill_id: str, file_id: str, *, options: OperationOptions | None = None

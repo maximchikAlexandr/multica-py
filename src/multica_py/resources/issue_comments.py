@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import os
 import re
 from typing import TypeVar, cast
 
@@ -385,16 +386,42 @@ class IssueCommentResource(BaseResource):
         ).run()
 
     def add_command(
-        self, issue_id: str, body: str, *, options: OperationOptions | None = None
+        self,
+        issue_id: str,
+        body: str | None = None,
+        *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
+        attachment: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[Comment]:
-        return self._decoded_command(
-            ("issue", "comment", "add", issue_id, "--content", body),
-            _CommentWire,
+        return self._content_command(
+            ("issue", "comment", "add", issue_id),
+            body,
+            content_file=content_file,
+            content_stdin=content_stdin,
+            attachment=attachment,
             options=options,
-        )._map(lambda wire: _bind_comment(comment_from_wire(wire), self._client))
+        )
 
-    def add(self, issue_id: str, body: str, *, options: OperationOptions | None = None) -> Comment:
-        return self.add_command(issue_id, body, options=options).run()
+    def add(
+        self,
+        issue_id: str,
+        body: str | None = None,
+        *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
+        attachment: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Comment:
+        return self.add_command(
+            issue_id,
+            body,
+            content_file=content_file,
+            content_stdin=content_stdin,
+            attachment=attachment,
+            options=options,
+        ).run()
 
     def update_command(
         self,
@@ -443,29 +470,92 @@ class IssueCommentResource(BaseResource):
         self,
         issue_id: str,
         thread_id: str,
-        body: str,
+        body: str | None = None,
         *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
+        attachment: str | None = None,
         options: OperationOptions | None = None,
     ) -> Command[Comment]:
-        return self._decoded_command(
-            (
-                "issue",
-                "comment",
-                "add",
-                issue_id,
-                "--content",
-                body,
-                "--parent",
-                thread_id,
-            ),
-            _CommentWire,
+        return self._content_command(
+            ("issue", "comment", "add", issue_id),
+            body,
+            suffix=("--parent", thread_id),
+            content_file=content_file,
+            content_stdin=content_stdin,
+            attachment=attachment,
             options=options,
-        )._map(lambda wire: _bind_comment(comment_from_wire(wire), self._client))
+        )
 
     def reply(
-        self, issue_id: str, thread_id: str, body: str, *, options: OperationOptions | None = None
+        self,
+        issue_id: str,
+        thread_id: str,
+        body: str | None = None,
+        *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
+        attachment: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Comment:
-        return self.reply_command(issue_id, thread_id, body, options=options).run()
+        return self.reply_command(
+            issue_id,
+            thread_id,
+            body,
+            content_file=content_file,
+            content_stdin=content_stdin,
+            attachment=attachment,
+            options=options,
+        ).run()
+
+    def _content_command(
+        self,
+        args: tuple[str, ...],
+        body: str | None,
+        *,
+        suffix: tuple[str, ...] = (),
+        content_file: str | os.PathLike[str] | None,
+        content_stdin: bytes | None,
+        attachment: str | None,
+        options: OperationOptions | None,
+    ) -> Command[Comment]:
+        selected = sum(value is not None for value in (body, content_file, content_stdin))
+        if selected != 1:
+            raise TypeError("exactly one of body, content_file, or content_stdin is required")
+        command_args = list(args)
+        stdin = None
+        if body is not None:
+            if not isinstance(body, str):
+                raise TypeError("body must be a string")
+            command_args.extend(("--content", body))
+        elif content_file is not None:
+            command_args.extend(("--content-file", os.fspath(content_file)))
+        else:
+            if not isinstance(content_stdin, bytes):
+                raise TypeError("content_stdin must be bytes")
+            command_args.append("--content-stdin")
+            stdin = content_stdin
+        command_args.extend(suffix)
+        if attachment is not None:
+            if not isinstance(attachment, str) or not attachment.strip():
+                raise ValueError("attachment must be a nonblank string")
+            command_args.extend(("--attachment", attachment))
+        return self._plan(
+            steps=(
+                _Step(
+                    (*command_args, "--output", "json"),
+                    "run_bytes",
+                    stdin=stdin,
+                    decode=lambda stdout, command: decode_json(
+                        stdout, _CommentWire, command=command
+                    ),
+                ),
+            ),
+            finalize=lambda results: _bind_comment(
+                comment_from_wire(cast("_CommentWire", results[0])), self._client
+            ),
+            options=options,
+        )
 
     def delete_command(
         self, comment_id: str, *, options: OperationOptions | None = None
