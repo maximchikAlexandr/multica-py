@@ -464,8 +464,11 @@ memory; use streaming for unbounded output and do not mix the two modes.
   `runtime_id`, `workspace_id`, absolute and privacy-safe relative work dirs,
   durable work dirs, `branch_name`, immutable JSON `result`, `error`, and
   `failure_reason`. Prefer `relative_work_dir` or
-  `relative_durable_work_dir` for display. `TaskRun.stream_events()` yields
-  immutable semantic `RunEvent` objects incrementally (see streaming below).
+  `relative_durable_work_dir` for display. Bound runs also expose
+  `refresh()` / `refresh_command()` and `cancel()` / `cancel_command()`;
+  cancellation returns `ActionResult[None]` and does not refresh the snapshot.
+  `TaskRun.stream_events()` yields immutable semantic `RunEvent` objects
+  incrementally (see streaming below).
 - `RunMessage` — the raw pinned upstream run-message model with required
   `task_id`, `seq`, `type` and optional `call_id`, `issue_id`, `tool`, `content`,
   `input`, `output`, `created_at`. The old `id`/`run_id`/`role` fields were removed
@@ -589,6 +592,31 @@ since=0)` remain available for snapshot access and are independent of the
 stream cache. `AutopilotRun.messages` remains raw-only; no
 `AutopilotRun.stream_events` is exposed because the autopilot relation does not
 own the issue-run status refresh contract.
+
+### Direct TaskRun lifecycle actions
+
+Lifecycle actions remain explicit and inspectable. `refresh()` scans the
+existing issue-run page and returns a new immutable snapshot; its command form
+performs no transport I/O until `.run()`:
+
+```python
+fresh_run = run.refresh()
+preview = run.refresh_command()
+print(preview.commands)
+fresh_run = preview.run()
+```
+
+`cancel()` returns the existing `ActionResult[None]` and leaves `run`
+unchanged. Refresh explicitly after cancellation when current state is needed:
+
+```python
+result = run.cancel()
+run = run.refresh()
+```
+
+Read messages directly through `run.messages`; these lifecycle adapters do not
+add polling, waiting, terminal-state interpretation, verification, or a new
+message abstraction.
 
 `RunEvent`, `RunTextEvent`, `RunThinkingEvent`, `RunToolStartedEvent`,
 `RunToolFinishedEvent`, `RunErrorEvent`, `RunStatusChangedEvent`, and

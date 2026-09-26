@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 from multica_py.config import OperationOptions
 from multica_py.entities.agents import Agent
 from multica_py.entities.autopilots import Autopilot
-from multica_py.entities.issues import Issue
+from multica_py.entities.issues import Issue, TaskRun
 from multica_py.entities.projects import Project
 from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
@@ -188,6 +188,7 @@ _NESTED_DOTTED_PREFIXES: dict[str, str] = {
 _BOUND_RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("agents.Agent", Agent),
     ("issues.Issue", Issue),
+    ("issues.TaskRun", TaskRun),
     ("projects.Project", Project),
     ("projects.issues", ProjectIssueCollection),
     ("skills.Skill", Skill),
@@ -674,6 +675,11 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         from multica_py.entities.issues import Issue
 
         assert type(result) is Issue
+        assert getattr(result, "_client", None) is not None
+
+    def _assert_bound_task_run(result: object, _mt: MagicMock) -> None:
+        assert type(result) is TaskRun
+        assert result.id == "run_1"
         assert getattr(result, "_client", None) is not None
 
     def _assert_bound_project(result: object, _mt: MagicMock) -> None:
@@ -3844,6 +3850,23 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             contract_operation_id="issues.refresh",
             bound_target="issue",
             assert_result=_assert_bound_issue,
+        ),
+        _c(
+            "issues.TaskRun.refresh",
+            ("issue", "runs", "i1", "--output", "json"),
+            stdout=_TASK_RUN,
+            id="manual:issues.task_run_refresh_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="task_run",
+            assert_result=_assert_bound_task_run,
+        ),
+        _c(
+            "issues.TaskRun.cancel",
+            ("issue", "cancel-task", "run_1", "--issue", "i1"),
+            id="manual:issues.task_run_cancel_bound:canonical",
+            source_ref="bound-resource-discovered",
+            bound_target="task_run",
+            assert_result=_assert_action_none,
         ),
         _c(
             "issues.Issue.update",

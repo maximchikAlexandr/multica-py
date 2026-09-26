@@ -26,7 +26,7 @@ from multica_py._internal.wire_models import _task_run_from_wire, _TaskRunWire, 
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities._base import _normalize_entity_id
 from multica_py.entities.comments import Comment, CommentThread
-from multica_py.entities.issues import Issue, TaskRun
+from multica_py.entities.issues import Issue, TaskRun, _select_task_run
 from multica_py.entities.labels import Label
 from multica_py.enums import IssueStatus
 from multica_py.exceptions import JsonOutputError, OutputShapeError
@@ -1296,6 +1296,13 @@ class IssueResource(BaseResource):
 
     def runs(self, issue_id: str, *, options: OperationOptions | None = None) -> Page[TaskRun]:
         return self.runs_command(issue_id, options=options).run()
+
+    def _task_run_refresh_command(
+        self, issue_id: str, task_id: str, *, options: OperationOptions | None = None
+    ) -> Command[TaskRun]:
+        return self.runs_command(issue_id, options=options)._map(
+            lambda page: _select_task_run(page, issue_id=issue_id, task_id=task_id)
+        )
 
     def run_messages_command(
         self,
