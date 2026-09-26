@@ -104,6 +104,36 @@ positive finite number. Prefer this iterator over
 polling `TaskRun.messages` directly when you want ordered, deduplicated event
 delivery with terminal-status awareness.
 
+## Refresh and cancel a task run directly
+
+`TaskRun` lifecycle actions are direct bound adapters over the existing issue
+run and cancellation commands. Inspect a command without transport I/O, or run
+it eagerly:
+
+```python
+preview = run.refresh_command()
+print(preview.commands)
+fresh_run = preview.run()
+
+# Choose one cancellation form:
+cancel_preview = run.cancel_command()
+print(cancel_preview.commands)
+result = cancel_preview.run()
+run = run.refresh()  # refresh explicitly after cancellation when needed
+```
+
+Alternatively, use eager cancellation and then refresh:
+
+```python
+result = run.cancel()
+run = run.refresh()  # refresh explicitly after cancellation when needed
+```
+
+Cancellation returns `ActionResult[None]` and does not mutate the original
+snapshot or implicitly refresh it. Read raw messages through `run.messages`;
+there are no additional polling, waiting, terminal-state, verification, or
+orchestration helpers in this surface.
+
 Web routing is configured independently when an application needs entity
 links. The API server URL is never used as a frontend fallback:
 

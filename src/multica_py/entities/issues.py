@@ -195,13 +195,20 @@ def _emit_unseen(
         cursor[0] = max(cursor[0], seq)
 
 
-def _refresh_run(client: MulticaClient, issue_id: str, task_id: str) -> TaskRun:
-    runs = _page_items(client.issues.runs(issue_id))
+def _select_task_run(
+    runs: Page[TaskRun] | tuple[TaskRun, ...], *, issue_id: str, task_id: str
+) -> TaskRun:
     for run in runs:
         if run.id == task_id:
             return run
     raise ProtocolError(
         f"task run {task_id!r} disappeared from issue {issue_id!r} during stream refresh"
+    )
+
+
+def _refresh_run(client: MulticaClient, issue_id: str, task_id: str) -> TaskRun:
+    return _select_task_run(
+        _page_items(client.issues.runs(issue_id)), issue_id=issue_id, task_id=task_id
     )
 
 
@@ -451,6 +458,29 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
         return client.issues._run_messages_relation_command(
             self.id, issue_id=self.issue_id, since=0, options=options
         )
+
+    def refresh_command(self, *, options: OperationOptions | None = None) -> Command[TaskRun]:
+        client = self._require_client(
+            entity_type="TaskRun", entity_id=self.id, relation_name="refresh"
+        )
+        issue_id = self.issue_id
+        if not issue_id:
+            raise MissingRelationContextError("TaskRun", self.id, "refresh", "issue_id")
+        return client.issues._task_run_refresh_command(issue_id, self.id, options=options)
+
+    def refresh(self, *, options: OperationOptions | None = None) -> TaskRun:
+        return self.refresh_command(options=options).run()
+
+    def cancel_command(
+        self, *, options: OperationOptions | None = None
+    ) -> Command[ActionResult[None]]:
+        client = self._require_client(
+            entity_type="TaskRun", entity_id=self.id, relation_name="cancel"
+        )
+        return client.issues.cancel_task_command(self.id, issue_id=self.issue_id, options=options)
+
+    def cancel(self, *, options: OperationOptions | None = None) -> ActionResult[None]:
+        return self.cancel_command(options=options).run()
 
     def stream_events(self, *, poll_interval: float = 1.0) -> Iterator[RunEvent]:
         """Incrementally yield semantic :class:`RunEvent` objects for this task run.
