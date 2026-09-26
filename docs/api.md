@@ -604,9 +604,13 @@ fresh_run = run.refresh()
 preview = run.refresh_command()
 print(preview.commands)
 fresh_run = preview.run()
+
+cancel_preview = run.cancel_command()
+print(cancel_preview.commands)
+result = cancel_preview.run()
 ```
 
-`cancel()` returns the existing `ActionResult[None]` and leaves `run`
+`cancel()` also returns the existing `ActionResult[None]` and leaves `run`
 unchanged. Refresh explicitly after cancellation when current state is needed:
 
 ```python
