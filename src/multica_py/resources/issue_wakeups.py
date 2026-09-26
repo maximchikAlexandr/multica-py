@@ -92,7 +92,7 @@ def _decode_wakeup(stdout: bytes, command: str) -> IssueWakeup:
 
 def _decode_reenabled_wakeup(stdout: bytes, command: str) -> IssueWakeup:
     wakeup = _decode_wakeup(stdout, command)
-    if wakeup.enabled is False:
+    if wakeup.enabled is not True:
         raise OutputShapeError("issue wakeup update must return an enabled wakeup")
     return wakeup
 
@@ -194,6 +194,88 @@ def _with_busy_retry(command: Command[T]) -> Command[T]:
         raise AssertionError("bounded wakeup retry exhausted without a result")
 
     return _coalesced_command(command, run)
+
+
+def _validate_wakeup_inputs(
+    *,
+    kind: str,
+    mode: str | None,
+    event_types: tuple[str, ...],
+    filter_actor_type: str | None,
+    filter_actor_id: str | None,
+    filter_agent_id: str | None,
+    filter_task_id: str | None,
+    after_seconds: int | None,
+    at: str | None,
+    interval_seconds: int | None,
+    cron_expression: str | None,
+) -> None:
+    if kind not in {"event", "at", "every", "cron"}:
+        raise ValueError("kind must be event, at, every or cron")
+    if mode is not None and mode not in {"once", "continuous"}:
+        raise ValueError("mode must be once or continuous")
+    if at is not None and (not isinstance(at, str) or not at.strip()):
+        raise ValueError("at must be a nonblank timestamp when provided")
+    if cron_expression is not None and (
+        not isinstance(cron_expression, str) or not cron_expression.strip()
+    ):
+        raise ValueError("cron_expression must be nonblank when provided")
+    for name, value in (("after_seconds", after_seconds), ("interval_seconds", interval_seconds)):
+        if value is not None and (type(value) is not int or value <= 0):
+            raise ValueError(f"{name} must be a positive whole number of seconds")
+
+    has_schedule = any(
+        value is not None for value in (after_seconds, at, interval_seconds, cron_expression)
+    )
+    has_filter = any(
+        value is not None
+        for value in (filter_actor_type, filter_actor_id, filter_agent_id, filter_task_id)
+    )
+    if filter_actor_type is not None or filter_actor_id is not None:
+        if filter_actor_type not in {"member", "agent"} or not filter_actor_id:
+            raise ValueError("actor filters require member|agent and a nonblank actor ID")
+        if filter_agent_id is not None or filter_task_id is not None:
+            raise ValueError("actor filters cannot be combined with agent or task filters")
+    if filter_task_id is not None and (
+        not event_types or any(not event.startswith("task.") for event in event_types)
+    ):
+        raise ValueError("task filter requires only task events")
+
+    if kind == "event":
+        if not event_types:
+            raise ValueError("event wakeups require at least one event type")
+        if has_schedule:
+            raise ValueError("event wakeups cannot contain a schedule")
+        return
+    if event_types or has_filter:
+        raise ValueError("schedule wakeups cannot contain event or filter inputs")
+    if kind == "at":
+        if (at is None) == (after_seconds is None):
+            raise ValueError("at wakeups require exactly one of at or after_seconds")
+        if mode not in (None, "once"):
+            raise ValueError("at wakeups require once mode")
+        if interval_seconds is not None or cron_expression is not None:
+            raise ValueError("at wakeups cannot combine schedules")
+    elif kind == "every":
+        if interval_seconds is None or interval_seconds < 60 or interval_seconds > 31536000:
+            raise ValueError("every wakeups require interval_seconds from 60 to 31536000")
+        if (
+            mode not in (None, "continuous")
+            or at is not None
+            or after_seconds is not None
+            or cron_expression
+        ):
+            raise ValueError("every wakeups require continuous mode and only interval_seconds")
+    elif kind == "cron":
+        if (
+            mode not in (None, "continuous")
+            or at is not None
+            or after_seconds is not None
+            or interval_seconds is not None
+        ):
+            raise ValueError("cron wakeups require continuous mode and only cron_expression")
+        if cron_expression is None:
+            raise ValueError("cron wakeups require cron_expression")
 
 
 class IssueWakeupResource(BaseResource):
@@ -474,6 +556,19 @@ class IssueWakeupResource(BaseResource):
             raise TypeError("event_types must be a tuple of strings")
         if any(not isinstance(event, str) or not event for event in event_types):
             raise ValueError("event_types must contain nonblank strings")
+        _validate_wakeup_inputs(
+            kind=wakeup_kind,
+            mode=mode,
+            event_types=event_types,
+            filter_actor_type=filter_actor_type,
+            filter_actor_id=filter_actor_id,
+            filter_agent_id=filter_agent_id,
+            filter_task_id=filter_task_id,
+            after_seconds=after_seconds,
+            at=at,
+            interval_seconds=interval_seconds,
+            cron_expression=cron_expression,
+        )
         if wakeup_id is not None:
             validate_nonblank(wakeup_id)
         args = ["issue", "wakeup", command, issue_id]

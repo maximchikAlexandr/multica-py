@@ -132,7 +132,7 @@ def test_wakeup_create_retries_only_explicit_busy_once(monkeypatch: pytest.Monke
     sleeps: list[float] = []
     monkeypatch.setattr("multica_py.resources.issue_wakeups.time.sleep", sleeps.append)
     command = resource(IssueWakeupResource, mock_transport).create_command(
-        "iss-1", instruction="Run checks"
+        "iss-1", instruction="Run checks", event_types=("comment.created",)
     )
 
     assert command.run().id == "wake-1"
@@ -148,7 +148,7 @@ def test_wakeup_busy_retry_is_bounded_and_does_not_retry_other_failures(
     mock_transport.run_bytes.side_effect = [busy, busy]
     monkeypatch.setattr("multica_py.resources.issue_wakeups.time.sleep", lambda _seconds: None)
     command = resource(IssueWakeupResource, mock_transport).create_command(
-        "iss-1", instruction="Run checks"
+        "iss-1", instruction="Run checks", event_types=("comment.created",)
     )
 
     with pytest.raises(ConflictError):
@@ -177,11 +177,71 @@ def test_wakeup_update_rejects_response_that_was_not_reenabled() -> None:
     mock_transport = transport()
     mock_transport.run_bytes.return_value = command_result(b'{"id":"wake-1","enabled":false}')
     command = resource(IssueWakeupResource, mock_transport).update_command(
-        "iss-1", "wake-1", instruction="Run checks"
+        "iss-1", "wake-1", instruction="Run checks", event_types=("comment.created",)
     )
 
     with pytest.raises(OutputShapeError, match="enabled"):
         command.run()
+
+
+def test_wakeup_update_requires_explicit_enabled_shape() -> None:
+    mock_transport = transport()
+    mock_transport.run_bytes.return_value = command_result(b'{"id":"wake-1"}')
+    command = resource(IssueWakeupResource, mock_transport).update_command(
+        "iss-1", "wake-1", instruction="Run checks", event_types=("comment.created",)
+    )
+
+    with pytest.raises(OutputShapeError, match="enabled"):
+        command.run()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    (
+        ({"kind": "at", "after_seconds": -1}, "positive whole"),
+        ({"kind": "at", "after_seconds": 0}, "positive whole"),
+        ({"kind": "every", "interval_seconds": 0}, "positive whole"),
+        (
+            {"kind": "event", "event_types": ("comment.created",), "at": "2026-09-27T10:00:00Z"},
+            "event wakeups",
+        ),
+        (
+            {"kind": "at", "at": "2026-09-27T10:00:00Z", "after_seconds": 1},
+            "exactly one",
+        ),
+        (
+            {"kind": "every", "interval_seconds": 60, "at": "2026-09-27T10:00:00Z"},
+            "only interval",
+        ),
+        (
+            {
+                "kind": "event",
+                "event_types": ("comment.created",),
+                "filter_actor_type": "member",
+                "filter_actor_id": "member-1",
+                "filter_task_id": "task-1",
+            },
+            "actor filters",
+        ),
+        (
+            {
+                "kind": "event",
+                "event_types": ("comment.created",),
+                "filter_task_id": "task-1",
+            },
+            "task filter",
+        ),
+    ),
+)
+def test_wakeup_invalid_schedule_and_filters_fail_before_io(
+    kwargs: dict[str, object], message: str
+) -> None:
+    mock_transport = transport()
+    wakeups = resource(IssueWakeupResource, mock_transport)
+
+    with pytest.raises(ValueError, match=message):
+        wakeups.create_command("iss-1", instruction="Run checks", **kwargs)
+    mock_transport.run_bytes.assert_not_called()
 
 
 def test_rotation_requires_confirmation_and_has_exact_argv() -> None:
