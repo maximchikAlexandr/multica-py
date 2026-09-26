@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import pathlib
+import re
 from typing import cast
 
 import pytest
 
-from multica_py._generated import approved_sdk
-from multica_py._generated.approved_sdk import GeneratedBinding
 from tools.upstream_contract.contract import validate_contract
 from tools.upstream_contract.generation import (
     RUNTIME_PATH,
@@ -107,6 +106,7 @@ _PROMOTED_COMMAND_OPERATIONS = {
 
 def test_promoted_public_operations_have_closed_binding_coverage() -> None:
     contract = validate_contract(APPROVED)
+    runtime = render_files(APPROVED)[0].content.decode("utf-8")
     operations = {operation.operation_id: operation for operation in contract.operations}
     descriptors = {
         descriptor.descriptor_id: descriptor for descriptor in contract.binding_descriptors
@@ -126,14 +126,14 @@ def test_promoted_public_operations_have_closed_binding_coverage() -> None:
         assert (descriptor.operation_id, descriptor.entrypoint_id) == (operation_id, "default")
         assert entrypoint.response_id in responses
         assert f"generated:{operation_id}:default:canonical" in vectors
-        generated = cast(
-            "GeneratedBinding",
-            getattr(
-                approved_sdk,
-                f"{descriptor.descriptor_id.upper().replace('.', '_')}_BINDING",
-            ),
+        binding_name = f"{descriptor.descriptor_id.upper().replace('.', '_')}_BINDING"
+        assert re.search(
+            rf"^{re.escape(binding_name)} = GeneratedBinding\(\n"
+            rf"    {re.escape(repr(operation_id))}, "
+            rf"{re.escape(repr(descriptor.entrypoint_id))},",
+            runtime,
+            re.MULTILINE,
         )
-        assert generated.operation_id == operation_id
 
     scope = cast("dict[str, object]", contract.raw["scope"])
     dispositions = cast("list[dict[str, object]]", scope["family_dispositions"])
