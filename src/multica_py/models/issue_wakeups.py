@@ -44,6 +44,7 @@ class IssueWakeupEvent(msgspec.Struct, frozen=True, kw_only=True):
 
 class IssueWakeupEvents(msgspec.Struct, frozen=True, kw_only=True):
     events: tuple[IssueWakeupEvent, ...] = ()
+    loop_protection: str | None = None
 
 
 IssueWakeupPage = Page[IssueWakeup]

@@ -116,7 +116,7 @@ class ChatResource(BaseResource):
             if not thread_id.strip():
                 raise ValueError("thread_id must be nonblank")
             args.append(thread_id)
-        if limit:
+        if limit is not None:
             args.extend(("--limit", str(limit)))
         if before:
             args.extend(("--before", before))
