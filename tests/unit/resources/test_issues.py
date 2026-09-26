@@ -196,6 +196,7 @@ class _TaskRunFailureCase:
     name: str
     action: Literal["refresh", "cancel"]
     transport_method: Literal["run_bytes", "run_text"]
+    other_transport_method: Literal["run_bytes", "run_text"]
     expected_argv: tuple[str, ...]
     expected_call_kwargs: dict[str, object]
     error_type: type[Exception]
@@ -311,6 +312,7 @@ _TASK_RUN_FAILURE_CASES = (
         name="refresh-validation-error",
         action="refresh",
         transport_method="run_bytes",
+        other_transport_method="run_text",
         expected_argv=("issue", "runs", "i1", "--output", "json"),
         expected_call_kwargs={"stdin": None, "timeout": None},
         error_type=ValidationError,
@@ -320,6 +322,7 @@ _TASK_RUN_FAILURE_CASES = (
         name="refresh-transport-error",
         action="refresh",
         transport_method="run_bytes",
+        other_transport_method="run_text",
         expected_argv=("issue", "runs", "i1", "--output", "json"),
         expected_call_kwargs={"stdin": None, "timeout": None},
         error_type=NetworkError,
@@ -329,6 +332,7 @@ _TASK_RUN_FAILURE_CASES = (
         name="cancel-validation-error",
         action="cancel",
         transport_method="run_text",
+        other_transport_method="run_bytes",
         expected_argv=("issue", "cancel-task", "run1", "--issue", "i1"),
         expected_call_kwargs={},
         error_type=ValidationError,
@@ -338,6 +342,7 @@ _TASK_RUN_FAILURE_CASES = (
         name="cancel-transport-error",
         action="cancel",
         transport_method="run_text",
+        other_transport_method="run_bytes",
         expected_argv=("issue", "cancel-task", "run1", "--issue", "i1"),
         expected_call_kwargs={},
         error_type=NetworkError,
@@ -1544,12 +1549,7 @@ def test_task_run_failure_cases_propagate_transport_errors_unchanged(
 
     assert exc_info.value is error
     transport_call.assert_called_once_with(case.expected_argv, **case.expected_call_kwargs)
-    other_method = (
-        mock_transport.run_text
-        if case.transport_method == "run_bytes"
-        else mock_transport.run_bytes
-    )
-    other_method.assert_not_called()
+    getattr(mock_transport, case.other_transport_method).assert_not_called()
     mock_transport.spawn.assert_not_called()
     assert run.status == "running"
 
