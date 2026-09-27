@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import datetime
+from pathlib import Path
+from typing import Protocol, TypedDict, TypeVar, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,6 +17,26 @@ from multica_py.resources.issues import IssueResource
 from multica_py.resources.skill_files import SkillFileResource
 from tests.unit.resources._factories import command_result
 
+_ResourceT_co = TypeVar("_ResourceT_co", covariant=True)
+
+
+class _InvalidWakeupKwargs(TypedDict, total=False):
+    kind: str
+    after_seconds: int
+    interval_seconds: int
+    event_types: tuple[str, ...]
+    at: str
+    filter_actor_type: str
+    filter_actor_id: str
+    filter_task_id: str
+
+
+_ResourceT = TypeVar("_ResourceT")
+
+
+class _ResourceFactory(Protocol[_ResourceT_co]):
+    def __call__(self, transport: CliTransport, config: ClientConfig) -> _ResourceT_co: ...
+
 
 def transport() -> MagicMock:
     result = MagicMock(spec=CliTransport)
@@ -22,8 +44,8 @@ def transport() -> MagicMock:
     return result
 
 
-def resource(resource_type: type[object], mock_transport: MagicMock) -> object:
-    return resource_type(mock_transport, ClientConfig())  # type: ignore[call-arg]
+def resource(resource_type: _ResourceFactory[_ResourceT], mock_transport: MagicMock) -> _ResourceT:
+    return resource_type(cast("CliTransport", mock_transport), ClientConfig())
 
 
 def test_timeline_uses_exact_filters_and_decodes_native_page() -> None:
@@ -234,7 +256,7 @@ def test_wakeup_update_requires_explicit_enabled_shape() -> None:
     ),
 )
 def test_wakeup_invalid_schedule_and_filters_fail_before_io(
-    kwargs: dict[str, object], message: str
+    kwargs: _InvalidWakeupKwargs, message: str
 ) -> None:
     mock_transport = transport()
     wakeups = resource(IssueWakeupResource, mock_transport)
@@ -264,7 +286,7 @@ def test_autopilot_secrets_are_opt_in_on_the_wire() -> None:
     )
 
 
-def test_skill_file_content_channels_are_exact_and_mutually_exclusive(tmp_path) -> None:
+def test_skill_file_content_channels_are_exact_and_mutually_exclusive(tmp_path: Path) -> None:
     mock_transport = transport()
     files = resource(SkillFileResource, mock_transport)
     from_file = files.upsert_command("sk-1", "README.md", content_file=tmp_path / "README.md")
