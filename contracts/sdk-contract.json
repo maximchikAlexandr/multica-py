@@ -35517,6 +35517,3873 @@
         "transport": null,
         "compatibility": "intentionally_changed",
         "rationale": "Reviewed signature `workspace_mcp_add` is the typed input contract for workspaces.mcp.add.default."
+      },
+      {
+        "inventory_id": "input:workspace_mcp_list",
+        "kind": "input",
+        "identity": "workspace_mcp_list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-WORKSPACE-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.list",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Reviewed signature `workspace_mcp_list` is the typed input contract for workspaces.mcp.list.default."
+      },
+      {
+        "inventory_id": "input:workspace_mcp_remove",
+        "kind": "input",
+        "identity": "workspace_mcp_remove",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-WORKSPACE-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Reviewed signature `workspace_mcp_remove` is the typed input contract for workspaces.mcp.remove.default."
+      },
+      {
+        "inventory_id": "input:workspace_mcp_update",
+        "kind": "input",
+        "identity": "workspace_mcp_update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-WORKSPACE-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.update",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Reviewed signature `workspace_mcp_update` is the typed input contract for workspaces.mcp.update.default."
+      },
+      {
+        "inventory_id": "input:workspace_members_list",
+        "kind": "input",
+        "identity": "workspace_members_list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-WORKSPACE",
+          "S-WORKSPACE-MEMBERS-CLI",
+          "S-WORKSPACE-MEMBER-IDENTITY"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.members",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed signature `workspace_members_list` is the typed input contract for workspaces.members.list.default."
+      },
+      {
+        "inventory_id": "input:workspaces_switch_manual",
+        "kind": "input",
+        "identity": "workspaces_switch_manual",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-WORKSPACE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.switch",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed signature `workspaces_switch_manual` is the typed input contract for workspaces.switch.default."
+      },
+      {
+        "inventory_id": "output:action_result_none",
+        "kind": "output",
+        "identity": "action_result_none",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D05",
+          "D07",
+          "D08",
+          "D09",
+          "D13",
+          "D17",
+          "D18",
+          "S-AUTO",
+          "S-CLIENT",
+          "S-ISSUE",
+          "S-ISSUE-PROPERTY-CMD",
+          "S-LABEL",
+          "S-PROJECT",
+          "S-RUNTIME-DELETE-CMD",
+          "S-RUNTIME-DELETE-CONFLICT",
+          "S-RUNTIME-DELETE-RUN",
+          "S-RUNTIME-V050",
+          "S-SQUAD",
+          "S-WORKSPACE",
+          "S-WORKSPACE-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "ActionResult[None]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `action_result_none` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:action_result_repository_mutation_result",
+        "kind": "output",
+        "identity": "action_result_repository_mutation_result",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D16"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "ActionResult[RepositoryMutationResult]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `action_result_repository_mutation_result` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:action_result_runtime_update_result",
+        "kind": "output",
+        "identity": "action_result_runtime_update_result",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D17"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "ActionResult[RuntimeUpdateResult]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `action_result_runtime_update_result` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:action_result_str",
+        "kind": "output",
+        "identity": "action_result_str",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "ActionResult[str]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `action_result_str` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:agent",
+        "kind": "output",
+        "identity": "agent",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AGENT-CONVERSATION-STARTERS",
+          "S-AGENT-COPY-CMD",
+          "S-AGENT-COPY-FLAGS",
+          "S-AGENT-COPY-RUN",
+          "S-AGENT-MAX-CONCURRENCY",
+          "S-AGENT-PERMISSIONS",
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "agent",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `agent` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:agent_skills",
+        "kind": "output",
+        "identity": "agent_skills",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "agent_skills",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `agent_skills` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:agent_tasks",
+        "kind": "output",
+        "identity": "agent_tasks",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "agent_tasks",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `agent_tasks` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:attachment_result",
+        "kind": "output",
+        "identity": "attachment_result",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D14"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "attachment_result",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `attachment_result` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:autopilot",
+        "kind": "output",
+        "identity": "autopilot",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO",
+          "S-AUTOPILOT-UPDATE-FLAGS"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "autopilot",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `autopilot` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:autopilot_list_page",
+        "kind": "output",
+        "identity": "autopilot_list_page",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "autopilot_list_page",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `autopilot_list_page` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:autopilot_run",
+        "kind": "output",
+        "identity": "autopilot_run",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D11"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "autopilot_run",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `autopilot_run` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:autopilot_run_list_page",
+        "kind": "output",
+        "identity": "autopilot_run_list_page",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "autopilot_run_list_page",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `autopilot_run_list_page` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:autopilot_trigger",
+        "kind": "output",
+        "identity": "autopilot_trigger",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D13"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "autopilot_trigger",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `autopilot_trigger` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:bytes",
+        "kind": "output",
+        "identity": "bytes",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D14"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "bytes",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `bytes` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:cli_result",
+        "kind": "output",
+        "identity": "cli_result",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "CliResult",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `cli_result` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:comment",
+        "kind": "output",
+        "identity": "comment",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-COMMENT-UPDATE",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "comment",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `comment` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:comment_page",
+        "kind": "output",
+        "identity": "comment_page",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "comment_page",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `comment_page` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:comment_thread_page",
+        "kind": "output",
+        "identity": "comment_thread_page",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "comment_thread_page",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `comment_thread_page` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:comments",
+        "kind": "output",
+        "identity": "comments",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "comments",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `comments` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:issue",
+        "kind": "output",
+        "identity": "issue",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-ISSUE-ASSIGNEE-FLAGS",
+          "S-ISSUE-ASSIGNEE-RESOLVE",
+          "S-ISSUE-GET-ATTACHMENTS",
+          "S-ISSUE-QUERY-FLAGS",
+          "S-ISSUE-RESPONSE",
+          "S-ISSUE-STATUS-RUN",
+          "S-ISSUE-STATUS-VALIDATE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "issue",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `issue` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:issue_children_result",
+        "kind": "output",
+        "identity": "issue_children_result",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D03"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "issue_child_stage_groups",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `issue_children_result` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:issue_list_page",
+        "kind": "output",
+        "identity": "issue_list_page",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-ISSUE-LIST-METADATA-CLI",
+          "S-ISSUE-LIST-METADATA-HANDLER",
+          "S-ISSUE-LIST-METADATA-PARSER",
+          "S-ISSUE-LIST-PROJECTION",
+          "S-ISSUE-QUERY-FLAGS",
+          "S-ISSUE-RESPONSE",
+          "S-ISSUE-STATUS-VALIDATE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "issue_list_page",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `issue_list_page` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:labels",
+        "kind": "output",
+        "identity": "labels",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-LABEL",
+          "S-LABEL-V050"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "labels",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Approved response catalog `labels` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:linked_pull_requests",
+        "kind": "output",
+        "identity": "linked_pull_requests",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "linked_pull_requests",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `linked_pull_requests` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:mapping_config",
+        "kind": "output",
+        "identity": "mapping_config",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Mapping[str, str]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `mapping_config` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:metadata_entries",
+        "kind": "output",
+        "identity": "metadata_entries",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D05",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "metadata_entries",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `metadata_entries` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:none",
+        "kind": "output",
+        "identity": "none",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "none",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `none` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_agent",
+        "kind": "output",
+        "identity": "page_agent",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[agent]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_agent` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_agent_skills",
+        "kind": "output",
+        "identity": "page_agent_skills",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D08"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[agent_skills]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_agent_skills` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_agent_tasks",
+        "kind": "output",
+        "identity": "page_agent_tasks",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[agent_tasks]",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `page_agent_tasks` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_comments",
+        "kind": "output",
+        "identity": "page_comments",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[Comment]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_comments` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_daemon_disk_usage",
+        "kind": "output",
+        "identity": "page_daemon_disk_usage",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[disk_usage]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_daemon_disk_usage` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_issue_usage",
+        "kind": "output",
+        "identity": "page_issue_usage",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-ISSUE-USAGE-COVERAGE-V0433"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[issue_usage]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_issue_usage` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_issues",
+        "kind": "output",
+        "identity": "page_issues",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-ISSUE-SEARCH-CMD",
+          "S-ISSUE-SEARCH-ENCODE",
+          "S-ISSUE-SEARCH-QUERY",
+          "S-ISSUE-SEARCH-RESPONSE",
+          "S-ISSUE-SEARCH-RUN"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[Issue]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_issues` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_labels",
+        "kind": "output",
+        "identity": "page_labels",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-LABEL",
+          "S-LABEL-V050",
+          "S-SKILL-LABEL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[labels]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_labels` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_linked_pull_requests",
+        "kind": "output",
+        "identity": "page_linked_pull_requests",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D04"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[linked_pull_requests]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_linked_pull_requests` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_mcp_servers",
+        "kind": "output",
+        "identity": "page_mcp_servers",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AGENT-MCP",
+          "S-WORKSPACE-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[mcp_server]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_mcp_servers` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_project",
+        "kind": "output",
+        "identity": "page_project",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[project]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_project` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_project_resources",
+        "kind": "output",
+        "identity": "page_project_resources",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[project_resources]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_project_resources` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_property_definitions",
+        "kind": "output",
+        "identity": "page_property_definitions",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-PROPERTY-CMD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[property_definition]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_property_definitions` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_repository_records",
+        "kind": "output",
+        "identity": "page_repository_records",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D16"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[repository_records]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_repository_records` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_run_messages",
+        "kind": "output",
+        "identity": "page_run_messages",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D06",
+          "S-RUN-MESSAGE-TRUNCATION-V0433",
+          "S-RUN-MESSAGES-HANDLER-PARSE",
+          "S-RUN-MESSAGES-HANDLER-PAYLOAD",
+          "S-RUN-MESSAGES-PAYLOAD",
+          "S-RUN-MESSAGES-QUERY",
+          "S-RUN-MESSAGES-SINCE-FLAG",
+          "S-RUN-MESSAGES-SQL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[run_messages]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_run_messages` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_runtime_activity",
+        "kind": "output",
+        "identity": "page_runtime_activity",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D17"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[runtime_activity]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_runtime_activity` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_runtime_definitions",
+        "kind": "output",
+        "identity": "page_runtime_definitions",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D17"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[runtime_definitions]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_runtime_definitions` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_runtime_usage",
+        "kind": "output",
+        "identity": "page_runtime_usage",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D17"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[runtime_usage]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_runtime_usage` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_skill",
+        "kind": "output",
+        "identity": "page_skill",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO",
+          "S-SKILL-LIST-V050"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[skill]",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Approved response catalog `page_skill` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_skill_files",
+        "kind": "output",
+        "identity": "page_skill_files",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D09"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[skill_files]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_skill_files` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_skill_search_results",
+        "kind": "output",
+        "identity": "page_skill_search_results",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-SKILL-SEARCH"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[skill_search_result]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_skill_search_results` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_squad",
+        "kind": "output",
+        "identity": "page_squad",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-SQUAD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[squad]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_squad` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_squad_members",
+        "kind": "output",
+        "identity": "page_squad_members",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-SQUAD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[squad_members]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_squad_members` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_subscribers",
+        "kind": "output",
+        "identity": "page_subscribers",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[subscribers]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_subscribers` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_task_runs",
+        "kind": "output",
+        "identity": "page_task_runs",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D06",
+          "S-AUTO",
+          "S-TASK-CANCELLATION-ACTOR-V0433",
+          "S-TASK-V050"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[task_runs]",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `page_task_runs` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_workspace",
+        "kind": "output",
+        "identity": "page_workspace",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-WORKSPACE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[workspace]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_workspace` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:page_workspace_members",
+        "kind": "output",
+        "identity": "page_workspace_members",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-WORKSPACE",
+          "S-WORKSPACE-MEMBER-IDENTITY",
+          "S-WORKSPACE-MEMBERS-CLI"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[workspace_members]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `page_workspace_members` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:path",
+        "kind": "output",
+        "identity": "path",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D14"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "path",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `path` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:process",
+        "kind": "output",
+        "identity": "process",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "ManagedProcess",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `process` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:project",
+        "kind": "output",
+        "identity": "project",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "project",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `project` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:project_resource",
+        "kind": "output",
+        "identity": "project_resource",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "project_resource",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `project_resource` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:project_resources",
+        "kind": "output",
+        "identity": "project_resources",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "project_resources",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `project_resources` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:property_definition",
+        "kind": "output",
+        "identity": "property_definition",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-PROPERTY-ACTOR",
+          "S-PROPERTY-CMD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "property_definition",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `property_definition` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:property_values",
+        "kind": "output",
+        "identity": "property_values",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-ISSUE-PROPERTY-CMD",
+          "S-PROPERTY-ACTOR"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "property_values",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `property_values` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:repository_mutation_result",
+        "kind": "output",
+        "identity": "repository_mutation_result",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "repository_mutation_result",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `repository_mutation_result` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:repository_records",
+        "kind": "output",
+        "identity": "repository_records",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "repository_records",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `repository_records` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:run_messages",
+        "kind": "output",
+        "identity": "run_messages",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "run_messages",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `run_messages` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:runtime_activity",
+        "kind": "output",
+        "identity": "runtime_activity",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "runtime_activity",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `runtime_activity` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:runtime_definition",
+        "kind": "output",
+        "identity": "runtime_definition",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D17",
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "runtime_definition",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `runtime_definition` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:runtime_definitions",
+        "kind": "output",
+        "identity": "runtime_definitions",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "runtime_definitions",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `runtime_definitions` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:runtime_update_result",
+        "kind": "output",
+        "identity": "runtime_update_result",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "runtime_update_result",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `runtime_update_result` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:runtime_usage",
+        "kind": "output",
+        "identity": "runtime_usage",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "runtime_usage",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `runtime_usage` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:scalar_str",
+        "kind": "output",
+        "identity": "scalar_str",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "str",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `scalar_str` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:skill",
+        "kind": "output",
+        "identity": "skill",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D09",
+          "S-AUTO",
+          "S-SKILL-REFRESH"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "skill",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `skill` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:skill_file",
+        "kind": "output",
+        "identity": "skill_file",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D09"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "skill_file",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `skill_file` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:skill_files",
+        "kind": "output",
+        "identity": "skill_files",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "skill_files",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `skill_files` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:skill_search_result",
+        "kind": "output",
+        "identity": "skill_search_result",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "skill_search_result",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `skill_search_result` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:squad",
+        "kind": "output",
+        "identity": "squad",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-SQUAD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "squad",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `squad` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:squad_members",
+        "kind": "output",
+        "identity": "squad_members",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "squad_members",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `squad_members` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:subscribers",
+        "kind": "output",
+        "identity": "subscribers",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "subscribers",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `subscribers` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:task_runs",
+        "kind": "output",
+        "identity": "task_runs",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "task_runs",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `task_runs` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:user_profile",
+        "kind": "output",
+        "identity": "user_profile",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "D15"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "user_profile",
+        "transport": null,
+        "compatibility": "intentionally_changed",
+        "rationale": "Approved response catalog `user_profile` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:workspace",
+        "kind": "output",
+        "identity": "workspace",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-WORKSPACE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "workspace",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Approved response catalog `workspace` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "output:workspace_members",
+        "kind": "output",
+        "identity": "workspace_members",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "workspace_members",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Approved response catalog `workspace_members` preserves the reviewed public/native output shape."
+      },
+      {
+        "inventory_id": "transport:agent_avatar",
+        "kind": "transport",
+        "identity": "agent_avatar",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D18"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_avatar` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_copy",
+        "kind": "transport",
+        "identity": "agent_copy",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-COPY-CMD",
+          "S-AGENT-COPY-FLAGS",
+          "S-AGENT-COPY-RUN",
+          "S-AGENT-PERMISSIONS",
+          "S-AGENT-MAX-CONCURRENCY"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_copy` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_get",
+        "kind": "transport",
+        "identity": "agent_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `agent_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_list",
+        "kind": "transport",
+        "identity": "agent_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `agent_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_mcp_add",
+        "kind": "transport",
+        "identity": "agent_mcp_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_mcp_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_mcp_add_bound",
+        "kind": "transport",
+        "identity": "agent_mcp_add_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_mcp_add_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_mcp_disable",
+        "kind": "transport",
+        "identity": "agent_mcp_disable",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_mcp_disable` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_mcp_disable_bound",
+        "kind": "transport",
+        "identity": "agent_mcp_disable_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_mcp_disable_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_mcp_enable",
+        "kind": "transport",
+        "identity": "agent_mcp_enable",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_mcp_enable` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_mcp_enable_bound",
+        "kind": "transport",
+        "identity": "agent_mcp_enable_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_mcp_enable_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_mcp_list",
+        "kind": "transport",
+        "identity": "agent_mcp_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_mcp_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_mcp_remove",
+        "kind": "transport",
+        "identity": "agent_mcp_remove",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_mcp_remove` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_mcp_remove_bound",
+        "kind": "transport",
+        "identity": "agent_mcp_remove_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AGENT-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_mcp_remove_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_skills_list",
+        "kind": "transport",
+        "identity": "agent_skills_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D08"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_skills_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_skills_set",
+        "kind": "transport",
+        "identity": "agent_skills_set",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D08"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_skills_set` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agent_tasks",
+        "kind": "transport",
+        "identity": "agent_tasks",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO",
+          "S-TASK-CANCELLATION-ACTOR-V0433",
+          "S-TASK-V050"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agent_tasks` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agents_archive_manual",
+        "kind": "transport",
+        "identity": "agents_archive_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `agents_archive_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agents_create_manual",
+        "kind": "transport",
+        "identity": "agents_create_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO",
+          "S-AGENT-CONVERSATION-STARTERS"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agents_create_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agents_restore_manual",
+        "kind": "transport",
+        "identity": "agents_restore_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `agents_restore_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:agents_update_manual",
+        "kind": "transport",
+        "identity": "agents_update_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO",
+          "S-AGENT-CONVERSATION-STARTERS"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `agents_update_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:attachment_download",
+        "kind": "transport",
+        "identity": "attachment_download",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D14"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `attachment_download` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:attachment_upload",
+        "kind": "transport",
+        "identity": "attachment_upload",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D14"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `attachment_upload` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:attachments_download_bytes_manual",
+        "kind": "transport",
+        "identity": "attachments_download_bytes_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D14"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `attachments_download_bytes_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:attachments_upload_bytes_manual",
+        "kind": "transport",
+        "identity": "attachments_upload_bytes_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D14"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `attachments_upload_bytes_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:auth_login_manual",
+        "kind": "transport",
+        "identity": "auth_login_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `auth_login_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:auth_logout_manual",
+        "kind": "transport",
+        "identity": "auth_logout_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `auth_logout_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:auth_status_manual",
+        "kind": "transport",
+        "identity": "auth_status_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `auth_status_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_create",
+        "kind": "transport",
+        "identity": "autopilot_create",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO",
+          "S-AUTOPILOT-UPDATE-FLAGS"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_create` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_delete",
+        "kind": "transport",
+        "identity": "autopilot_delete",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_text",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_delete` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_get",
+        "kind": "transport",
+        "identity": "autopilot_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_history",
+        "kind": "transport",
+        "identity": "autopilot_history",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_history` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_list",
+        "kind": "transport",
+        "identity": "autopilot_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_trigger",
+        "kind": "transport",
+        "identity": "autopilot_trigger",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D11"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_trigger` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_trigger_add",
+        "kind": "transport",
+        "identity": "autopilot_trigger_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D13"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_trigger_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_trigger_delete",
+        "kind": "transport",
+        "identity": "autopilot_trigger_delete",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D13"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_trigger_delete` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_trigger_update",
+        "kind": "transport",
+        "identity": "autopilot_trigger_update",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D13"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_trigger_update` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:autopilot_update",
+        "kind": "transport",
+        "identity": "autopilot_update",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO",
+          "S-AUTOPILOT-UPDATE-FLAGS"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `autopilot_update` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:cli_command",
+        "kind": "transport",
+        "identity": "cli_command",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `cli_command` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:comment_add",
+        "kind": "transport",
+        "identity": "comment_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `comment_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:comment_delete",
+        "kind": "transport",
+        "identity": "comment_delete",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_text",
+        "compatibility": "requires_cli>=0.4.44",
+        "rationale": "Canonical binding `comment_delete` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:comment_list",
+        "kind": "transport",
+        "identity": "comment_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `comment_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:comment_list_flat",
+        "kind": "transport",
+        "identity": "comment_list_flat",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `comment_list_flat` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:comment_list_recent",
+        "kind": "transport",
+        "identity": "comment_list_recent",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_text",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `comment_list_recent` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:comment_list_thread",
+        "kind": "transport",
+        "identity": "comment_list_thread",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_text",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `comment_list_thread` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:comment_update",
+        "kind": "transport",
+        "identity": "comment_update",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-COMMENT-UPDATE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Canonical binding `comment_update` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:configuration_get_manual",
+        "kind": "transport",
+        "identity": "configuration_get_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `configuration_get_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:configuration_set_manual",
+        "kind": "transport",
+        "identity": "configuration_set_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `configuration_set_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:configuration_show_manual",
+        "kind": "transport",
+        "identity": "configuration_show_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `configuration_show_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:daemon_disk_usage_manual",
+        "kind": "transport",
+        "identity": "daemon_disk_usage_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `daemon_disk_usage_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:daemon_logs_manual",
+        "kind": "transport",
+        "identity": "daemon_logs_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `daemon_logs_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:daemon_restart_manual",
+        "kind": "transport",
+        "identity": "daemon_restart_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `daemon_restart_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:daemon_start_manual",
+        "kind": "transport",
+        "identity": "daemon_start_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `daemon_start_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:daemon_status_manual",
+        "kind": "transport",
+        "identity": "daemon_status_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `daemon_status_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:daemon_stop_manual",
+        "kind": "transport",
+        "identity": "daemon_stop_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `daemon_stop_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_cancel_task",
+        "kind": "transport",
+        "identity": "issue_cancel_task",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D07"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_cancel_task` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_children",
+        "kind": "transport",
+        "identity": "issue_children",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D03"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_children` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_create",
+        "kind": "transport",
+        "identity": "issue_create",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "requires_cli>=0.5.2",
+        "rationale": "Canonical binding `issue_create` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_get",
+        "kind": "transport",
+        "identity": "issue_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-ISSUE-RESPONSE",
+          "S-ISSUE-GET-ATTACHMENTS",
+          "S-ISSUE-QUERY-FLAGS"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issue_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_labels_add",
+        "kind": "transport",
+        "identity": "issue_labels_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-LABEL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issue_labels_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_labels_list",
+        "kind": "transport",
+        "identity": "issue_labels_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-LABEL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issue_labels_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_labels_remove",
+        "kind": "transport",
+        "identity": "issue_labels_remove",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-LABEL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issue_labels_remove` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_list",
+        "kind": "transport",
+        "identity": "issue_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-ISSUE-LIST-METADATA-CLI",
+          "S-ISSUE-LIST-METADATA-PARSER",
+          "S-ISSUE-LIST-METADATA-HANDLER",
+          "S-ISSUE-RESPONSE",
+          "S-ISSUE-LIST-PROJECTION",
+          "S-ISSUE-STATUS-VALIDATE",
+          "S-ISSUE-QUERY-FLAGS"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_metadata_delete",
+        "kind": "transport",
+        "identity": "issue_metadata_delete",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D05"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_metadata_delete` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_metadata_get",
+        "kind": "transport",
+        "identity": "issue_metadata_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D05"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_metadata_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_metadata_list",
+        "kind": "transport",
+        "identity": "issue_metadata_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D05"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_metadata_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_metadata_set",
+        "kind": "transport",
+        "identity": "issue_metadata_set",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D05"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_metadata_set` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_property_list",
+        "kind": "transport",
+        "identity": "issue_property_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE-PROPERTY-CMD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_property_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_property_set",
+        "kind": "transport",
+        "identity": "issue_property_set",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE-PROPERTY-CMD",
+          "S-PROPERTY-ACTOR"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_property_set` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_property_unset",
+        "kind": "transport",
+        "identity": "issue_property_unset",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE-PROPERTY-CMD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_text",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_property_unset` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_pull_requests",
+        "kind": "transport",
+        "identity": "issue_pull_requests",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D04"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_pull_requests` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_rerun",
+        "kind": "transport",
+        "identity": "issue_rerun",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D07"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_rerun` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_run_messages",
+        "kind": "transport",
+        "identity": "issue_run_messages",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D06",
+          "S-RUN-MESSAGES-SINCE-FLAG",
+          "S-RUN-MESSAGES-QUERY",
+          "S-RUN-MESSAGES-HANDLER-PARSE",
+          "S-RUN-MESSAGES-HANDLER-PAYLOAD",
+          "S-RUN-MESSAGES-PAYLOAD",
+          "S-RUN-MESSAGES-SQL",
+          "S-RUN-MESSAGE-TRUNCATION-V0433"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_run_messages` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_runs",
+        "kind": "transport",
+        "identity": "issue_runs",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D06",
+          "S-TASK-CANCELLATION-ACTOR-V0433"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_runs` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_search",
+        "kind": "transport",
+        "identity": "issue_search",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE-SEARCH-CMD",
+          "S-ISSUE-SEARCH-RUN",
+          "S-ISSUE-SEARCH-QUERY",
+          "S-ISSUE-SEARCH-RESPONSE",
+          "S-ISSUE-SEARCH-ENCODE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issue_search` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_status",
+        "kind": "transport",
+        "identity": "issue_status",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-ISSUE-STATUS-VALIDATE",
+          "S-ISSUE-STATUS-RUN"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issue_status` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_subscribers_add",
+        "kind": "transport",
+        "identity": "issue_subscribers_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issue_subscribers_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_subscribers_list",
+        "kind": "transport",
+        "identity": "issue_subscribers_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issue_subscribers_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issue_subscribers_remove",
+        "kind": "transport",
+        "identity": "issue_subscribers_remove",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issue_subscribers_remove` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_assign_bound",
+        "kind": "transport",
+        "identity": "issues_assign_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_assign_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_assign_manual",
+        "kind": "transport",
+        "identity": "issues_assign_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-ISSUE-ASSIGNEE-RESOLVE",
+          "S-ISSUE-ASSIGNEE-FLAGS"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issues_assign_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_comments_reply_manual",
+        "kind": "transport",
+        "identity": "issues_comments_reply_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issues_comments_reply_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_comments_resolve_manual",
+        "kind": "transport",
+        "identity": "issues_comments_resolve_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issues_comments_resolve_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_comments_unresolve_manual",
+        "kind": "transport",
+        "identity": "issues_comments_unresolve_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issues_comments_unresolve_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_metadata_query_manual",
+        "kind": "transport",
+        "identity": "issues_metadata_query_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issues_metadata_query_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_metadata_set_typed_manual",
+        "kind": "transport",
+        "identity": "issues_metadata_set_typed_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issues_metadata_set_typed_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_move_after",
+        "kind": "transport",
+        "identity": "issues_move_after",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_move_after` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_move_after_bound",
+        "kind": "transport",
+        "identity": "issues_move_after_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_move_after_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_move_before",
+        "kind": "transport",
+        "identity": "issues_move_before",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_move_before` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_move_before_bound",
+        "kind": "transport",
+        "identity": "issues_move_before_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_move_before_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_move_to_bottom",
+        "kind": "transport",
+        "identity": "issues_move_to_bottom",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_move_to_bottom` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_move_to_bottom_bound",
+        "kind": "transport",
+        "identity": "issues_move_to_bottom_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_move_to_bottom_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_move_to_top",
+        "kind": "transport",
+        "identity": "issues_move_to_top",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_move_to_top` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_move_to_top_bound",
+        "kind": "transport",
+        "identity": "issues_move_to_top_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_move_to_top_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_refresh",
+        "kind": "transport",
+        "identity": "issues_refresh",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_refresh` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_reorder_manual",
+        "kind": "transport",
+        "identity": "issues_reorder_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `issues_reorder_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_set_status_bound",
+        "kind": "transport",
+        "identity": "issues_set_status_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-ISSUE-STATUS-VALIDATE",
+          "S-ISSUE-STATUS-RUN"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_set_status_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_unassign",
+        "kind": "transport",
+        "identity": "issues_unassign",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_unassign` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_unassign_bound",
+        "kind": "transport",
+        "identity": "issues_unassign_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_unassign_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_update_bound",
+        "kind": "transport",
+        "identity": "issues_update_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_update_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_update_manual",
+        "kind": "transport",
+        "identity": "issues_update_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_update_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:issues_usage_manual",
+        "kind": "transport",
+        "identity": "issues_usage_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE",
+          "S-ISSUE-USAGE-COVERAGE-V0433"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `issues_usage_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:label_get",
+        "kind": "transport",
+        "identity": "label_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-LABEL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `label_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:label_list",
+        "kind": "transport",
+        "identity": "label_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-LABEL-V050"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Canonical binding `label_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:labels_create_manual",
+        "kind": "transport",
+        "identity": "labels_create_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-LABEL-V050"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Canonical binding `labels_create_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:labels_delete_manual",
+        "kind": "transport",
+        "identity": "labels_delete_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-LABEL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `labels_delete_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:labels_update_manual",
+        "kind": "transport",
+        "identity": "labels_update_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-LABEL-V050"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Canonical binding `labels_update_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:maintenance_update_manual",
+        "kind": "transport",
+        "identity": "maintenance_update_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `maintenance_update_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:maintenance_version_manual",
+        "kind": "transport",
+        "identity": "maintenance_version_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `maintenance_version_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_create",
+        "kind": "transport",
+        "identity": "project_create",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `project_create` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_get",
+        "kind": "transport",
+        "identity": "project_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `project_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_issue_create",
+        "kind": "transport",
+        "identity": "project_issue_create",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `project_issue_create` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_list",
+        "kind": "transport",
+        "identity": "project_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `project_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_resource_add",
+        "kind": "transport",
+        "identity": "project_resource_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `project_resource_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_resource_list",
+        "kind": "transport",
+        "identity": "project_resource_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `project_resource_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_resource_remove",
+        "kind": "transport",
+        "identity": "project_resource_remove",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_text",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `project_resource_remove` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_resource_update",
+        "kind": "transport",
+        "identity": "project_resource_update",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `project_resource_update` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_status",
+        "kind": "transport",
+        "identity": "project_status",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `project_status` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:project_update",
+        "kind": "transport",
+        "identity": "project_update",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `project_update` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:projects_delete_manual",
+        "kind": "transport",
+        "identity": "projects_delete_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROJECT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `projects_delete_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:projects_refresh",
+        "kind": "transport",
+        "identity": "projects_refresh",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `projects_refresh` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:projects_update_bound",
+        "kind": "transport",
+        "identity": "projects_update_bound",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `projects_update_bound` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:property_archive",
+        "kind": "transport",
+        "identity": "property_archive",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROPERTY-CMD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `property_archive` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:property_create",
+        "kind": "transport",
+        "identity": "property_create",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROPERTY-CMD",
+          "S-PROPERTY-ACTOR"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `property_create` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:property_get",
+        "kind": "transport",
+        "identity": "property_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROPERTY-CMD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `property_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:property_list",
+        "kind": "transport",
+        "identity": "property_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROPERTY-CMD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `property_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:property_unarchive",
+        "kind": "transport",
+        "identity": "property_unarchive",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROPERTY-CMD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `property_unarchive` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:property_update",
+        "kind": "transport",
+        "identity": "property_update",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-PROPERTY-CMD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `property_update` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:repositories_add",
+        "kind": "transport",
+        "identity": "repositories_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D16"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `repositories_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:repositories_list",
+        "kind": "transport",
+        "identity": "repositories_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D16"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `repositories_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:repositories_remove",
+        "kind": "transport",
+        "identity": "repositories_remove",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D16"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `repositories_remove` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:runtime_activity",
+        "kind": "transport",
+        "identity": "runtime_activity",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D17"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `runtime_activity` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:runtime_delete",
+        "kind": "transport",
+        "identity": "runtime_delete",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D17",
+          "S-RUNTIME-DELETE-CMD",
+          "S-RUNTIME-DELETE-RUN",
+          "S-RUNTIME-DELETE-CONFLICT",
+          "S-RUNTIME-V050"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `runtime_delete` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:runtime_list",
+        "kind": "transport",
+        "identity": "runtime_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D17"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `runtime_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:runtime_rename",
+        "kind": "transport",
+        "identity": "runtime_rename",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D17"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `runtime_rename` records the reviewed executor channel and argv mapping."
       }
     ],
     "source_commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
