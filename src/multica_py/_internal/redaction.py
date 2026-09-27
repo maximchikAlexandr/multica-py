@@ -46,7 +46,7 @@ _FILE_CONTENT_SECRET_OPTIONS = frozenset(
 _STDIN_CONTENT_SECRET_OPTIONS = frozenset(
     {"credential-stdin", "server-config-stdin"},
 )
-_INLINE_SECRET_OPTIONS = frozenset({"auth-header", "server-config"})
+_INLINE_SECRET_OPTIONS = frozenset({"auth-header", "custom-env", "server-config"})
 _SECRET_KEY_COMPACT_ALIASES = frozenset(
     {"apikey", "accesskey", "accesstoken", "authtoken", "clientsecret", "privatekey"}
 )

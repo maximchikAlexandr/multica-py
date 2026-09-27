@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import os
 from typing import TYPE_CHECKING, TypeVar
 
@@ -43,9 +44,14 @@ def _page_items(value: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
 class WorkspaceMember(_BoundEntity):  # type: ignore[misc]
     id: str
     name: str
+    workspace_id: str | None = None
+    status: str | None = None
+    avatar_url: str | None = None
     role: str | None = None
     user_id: str | None = None
     email: str | None = None
+    invited_at: datetime.datetime | None = None
+    joined_at: datetime.datetime | None = None
 
     _issues: OffsetLazyCollection[Issue] | None = msgspec.field(default=None, name="_issues")
 
@@ -77,7 +83,14 @@ class WorkspaceMember(_BoundEntity):  # type: ignore[misc]
 class Workspace(_BoundEntity):  # type: ignore[misc]
     id: str
     name: str
+    slug: str | None = None
     description: str | None = None
+    context: str | None = None
+    issue_prefix: str | None = None
+    owner_id: str | None = None
+    archived_at: datetime.datetime | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
     _members: LazyCollection[WorkspaceMember] | None = msgspec.field(default=None, name="_members")
     _agents: LazyCollection[Agent] | None = msgspec.field(default=None, name="_agents")

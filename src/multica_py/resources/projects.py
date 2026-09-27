@@ -179,8 +179,16 @@ class ProjectResource(BaseResource):
     def _bind(self, project: _ProjectWire) -> Project:
         return _project_from_wire(project)._with_client(self._client)
 
-    def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[Project]]:
-        return self._decoded_page_command(("project", "list"), _ProjectWire, options=options)._map(
+    def list_command(
+        self,
+        *,
+        status: ProjectStatus | str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[Page[Project]]:
+        args = ["project", "list"]
+        if status is not None:
+            args.extend(("--status", _normalize_project_status(status).value))
+        return self._decoded_page_command(tuple(args), _ProjectWire, options=options)._map(
             lambda page: Page(
                 items=tuple(map(self._bind, page.items)),
                 limit=page.limit,
@@ -191,8 +199,13 @@ class ProjectResource(BaseResource):
             )
         )
 
-    def list(self, *, options: OperationOptions | None = None) -> Page[Project]:
-        return self.list_command(options=options).run()
+    def list(
+        self,
+        *,
+        status: ProjectStatus | str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Page[Project]:
+        return self.list_command(status=status, options=options).run()
 
     def get_command(
         self, project_id: str, *, options: OperationOptions | None = None
@@ -210,6 +223,12 @@ class ProjectResource(BaseResource):
         name: str,
         description: str | None = None,
         description_file: str | os.PathLike[str] | None = None,
+        status: ProjectStatus | str | None = None,
+        icon: str | None = None,
+        lead: str | None = None,
+        start_date: str | None = None,
+        due_date: str | None = None,
+        repositories: tuple[str, ...] = (),
         options: OperationOptions | None = None,
     ) -> Command[Project]:
         validate_nonblank(name)
@@ -229,6 +248,20 @@ class ProjectResource(BaseResource):
             args.extend(["--description", description])
         elif normalized_description_file is not None:
             args.extend(["--description-file", normalized_description_file])
+        if status is not None:
+            args.extend(("--status", _normalize_project_status(status).value))
+        for field_name, value in (
+            ("--icon", icon),
+            ("--lead", lead),
+            ("--start-date", start_date),
+            ("--due-date", due_date),
+        ):
+            if value is not None:
+                _validate_optional_string(value, field_name.lstrip("-"))
+                args.extend((field_name, value))
+        for repository in repositories:
+            validate_nonblank(repository)
+            args.extend(("--repo", repository))
         return self._decoded_command(tuple(args), _ProjectWire, options=options)._map(self._bind)
 
     def create(
@@ -237,12 +270,24 @@ class ProjectResource(BaseResource):
         name: str,
         description: str | None = None,
         description_file: str | os.PathLike[str] | None = None,
+        status: ProjectStatus | str | None = None,
+        icon: str | None = None,
+        lead: str | None = None,
+        start_date: str | None = None,
+        due_date: str | None = None,
+        repositories: tuple[str, ...] = (),
         options: OperationOptions | None = None,
     ) -> Project:
         return self.create_command(
             name=name,
             description=description,
             description_file=description_file,
+            status=status,
+            icon=icon,
+            lead=lead,
+            start_date=start_date,
+            due_date=due_date,
+            repositories=repositories,
             options=options,
         ).run()
 
@@ -252,6 +297,11 @@ class ProjectResource(BaseResource):
         *,
         name: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
+        status: ProjectStatus | str | UnsetType = Unset,
+        icon: str | None | UnsetType = Unset,
+        lead: str | None | UnsetType = Unset,
+        start_date: str | None | UnsetType = Unset,
+        due_date: str | None | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[Project]:
         validate_nonblank(project_id)
@@ -259,7 +309,10 @@ class ProjectResource(BaseResource):
             raise TypeError("name must be non-null")
         _validate_optional_string(name, "name")
         _validate_optional_string(description, "description")
-        if name is Unset and description is Unset:
+        if all(
+            value is Unset
+            for value in (name, description, status, icon, lead, start_date, due_date)
+        ):
             return self.get_command(project_id, options=options)
         args = ["project", "update", project_id]
         if name is not Unset:
@@ -270,6 +323,18 @@ class ProjectResource(BaseResource):
             args.extend(["--description", ""])
         else:
             args.extend(["--description", description])
+        if status is not Unset:
+            if status is None:
+                raise TypeError("status must be non-null")
+            args.extend(("--status", _normalize_project_status(status).value))
+        for field_name, value in (
+            ("--icon", icon),
+            ("--lead", lead),
+            ("--start-date", start_date),
+            ("--due-date", due_date),
+        ):
+            if value is not Unset:
+                args.extend((field_name, "" if value is None else value))
         return self._decoded_command(tuple(args), _ProjectWire, options=options)._map(self._bind)
 
     def update(
@@ -278,10 +343,23 @@ class ProjectResource(BaseResource):
         *,
         name: str | UnsetType = Unset,
         description: str | None | UnsetType = Unset,
+        status: ProjectStatus | str | UnsetType = Unset,
+        icon: str | None | UnsetType = Unset,
+        lead: str | None | UnsetType = Unset,
+        start_date: str | None | UnsetType = Unset,
+        due_date: str | None | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Project:
         return self.update_command(
-            project_id, name=name, description=description, options=options
+            project_id,
+            name=name,
+            description=description,
+            status=status,
+            icon=icon,
+            lead=lead,
+            start_date=start_date,
+            due_date=due_date,
+            options=options,
         ).run()
 
     def delete_command(

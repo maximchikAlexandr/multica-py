@@ -33,6 +33,12 @@ class Agent(_BoundEntity):  # type: ignore[misc]
     archived_at: datetime.datetime | None = None
     conversation_starters: tuple[AgentConversationStarter, ...] = ()
     runtime_availability: str | None = None
+    service_tier: str | None = None
+    permission_mode: str | None = None
+    public_to_workspace: bool | None = None
+    public_to_member_ids: tuple[str, ...] = ()
+    max_concurrent_tasks: int | None = None
+    custom_args: tuple[str, ...] = ()
 
     _skills: LazyCollection[AgentSkill] | None = msgspec.field(default=None, name="_skills")
     _tasks: LazyCollection[AgentTask] | None = msgspec.field(default=None, name="_tasks")

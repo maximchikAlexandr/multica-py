@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import datetime
-from typing import cast
+from collections.abc import Iterator
+from typing import cast, overload
 
 import msgspec
 
@@ -21,10 +22,68 @@ class RepositoryMutationResult(msgspec.Struct, frozen=True, kw_only=True):
     repos: tuple[RepositoryRecord, ...] = ()
 
 
+class RepositoryCheckoutResult(msgspec.Struct, frozen=True, kw_only=True):
+    """The path emitted by the CLI after a native repository checkout."""
+
+    path: str
+
+    def __fspath__(self) -> str:
+        return self.path
+
+    def __str__(self) -> str:
+        return self.path
+
+
+class RuntimeProfile(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    runtime_type: str | None = None
+    protocol_family: str | None = None
+    command_name: str = ""
+    display_name: str = ""
+    description: str | None = None
+    enabled: bool | None = None
+    path: str | None = None
+
+
+class RuntimeProfiles(msgspec.Struct, frozen=True, kw_only=True):
+    items: tuple[RuntimeProfile, ...] = ()
+
+    def __iter__(self) -> Iterator[RuntimeProfile]:
+        return iter(self.items)
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    @overload
+    def __getitem__(self, index: int) -> RuntimeProfile: ...
+
+    @overload
+    def __getitem__(
+        self, index: slice[int | None, int | None, int | None]
+    ) -> tuple[RuntimeProfile, ...]: ...
+
+    def __getitem__(
+        self, index: int | slice[int | None, int | None, int | None]
+    ) -> RuntimeProfile | tuple[RuntimeProfile, ...]:
+        return self.items[index]
+
+
 class RuntimeDefinition(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     name: str
     version: str | None = None
+    runtime_type: str | None = None
+    provider: str | None = None
+    profile_id: str | None = None
+    profile_name: str | None = None
+    device_id: str | None = None
+    device_name: str | None = None
+    owner_id: str | None = None
+    status: str | None = None
+    protocol_family: str | None = None
+    command_name: str | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
 
 class RuntimeUsage(msgspec.Struct, frozen=True, kw_only=True):
@@ -35,6 +94,15 @@ class RuntimeUsage(msgspec.Struct, frozen=True, kw_only=True):
     output_tokens: int
     cache_read_tokens: int
     cache_write_tokens: int
+    total_tokens: int | None = None
+    input_cost: float | None = None
+    output_cost: float | None = None
+    cache_read_cost: float | None = None
+    cache_write_cost: float | None = None
+    total_cost: float | None = None
+    currency: str | None = None
+    duration_seconds: float | None = None
+    created_at: datetime.datetime | None = None
 
 
 class RuntimeActivity(msgspec.Struct, frozen=True, kw_only=True):
@@ -47,6 +115,11 @@ class RuntimeUpdateResult(msgspec.Struct, frozen=True, kw_only=True):
     status: str
     output: str | None = None
     error: str | None = None
+    target_version: str | None = None
+    current_version: str | None = None
+    started_at: datetime.datetime | None = None
+    completed_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
 
 class AttachmentResult(msgspec.Struct, frozen=True, kw_only=True):
@@ -67,6 +140,10 @@ class AttachmentDownloadResult(msgspec.Struct, frozen=True, kw_only=True):
 class DaemonWorkspace(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     runtimes: tuple[str, ...] = ()
+    path: str | None = None
+    status: str | None = None
+    size_bytes: int | None = None
+    artifact_size_bytes: int | None = None
 
 
 class DaemonStatus(msgspec.Struct, frozen=True, kw_only=True):
@@ -111,17 +188,45 @@ class DaemonLaunchOptions(msgspec.Struct, frozen=True, kw_only=True):
     max_concurrent_tasks: int | UnsetType = Unset
     update: bool | UnsetType = Unset
     reload: bool | UnsetType = Unset
+    daemon_id: str | UnsetType = Unset
+    device_name: str | UnsetType = Unset
+    runtime_name: str | UnsetType = Unset
+    workspaces_root: str | UnsetType = Unset
+    ws_claim_poll_interval: str | float | UnsetType = Unset
+    agent_timeout: str | float | UnsetType = Unset
+    codex_semantic_inactivity_timeout: str | float | UnsetType = Unset
+    codex_handshake_timeout: str | float | UnsetType = Unset
+    no_auto_update: bool | UnsetType = Unset
+    auto_update_interval: str | float | UnsetType = Unset
+    no_auto_reload: bool | UnsetType = Unset
 
     def __post_init__(self) -> None:
-        for name in ("foreground", "update", "reload"):
+        for name in ("foreground", "update", "reload", "no_auto_update", "no_auto_reload"):
             value = cast("object", getattr(self, name))
             if value is not Unset and not isinstance(value, bool):
                 raise TypeError(f"{name} must be a bool or Unset")
-        for name in ("identity", "data_dir", "pid_file"):
+        for name in (
+            "identity",
+            "data_dir",
+            "pid_file",
+            "daemon_id",
+            "device_name",
+            "runtime_name",
+            "workspaces_root",
+        ):
             value = cast("object", getattr(self, name))
             if value is not Unset and (not isinstance(value, str) or not value.strip()):
                 raise ValueError(f"{name} must be nonblank when provided")
-        for name in ("poll_interval", "heartbeat_interval", "watchdog_interval"):
+        for name in (
+            "poll_interval",
+            "heartbeat_interval",
+            "watchdog_interval",
+            "ws_claim_poll_interval",
+            "agent_timeout",
+            "codex_semantic_inactivity_timeout",
+            "codex_handshake_timeout",
+            "auto_update_interval",
+        ):
             value = cast("object", getattr(self, name))
             if value is not Unset and (
                 not isinstance(value, (str, float, int)) or isinstance(value, bool)
@@ -139,13 +244,24 @@ class DaemonLaunchOptions(msgspec.Struct, frozen=True, kw_only=True):
         args: list[str] = []
         for name, flag in (
             ("foreground", "--foreground"),
+            ("daemon_id", "--daemon-id"),
+            ("device_name", "--device-name"),
+            ("runtime_name", "--runtime-name"),
+            ("workspaces_root", "--workspaces-root"),
+            ("poll_interval", "--poll-interval"),
+            ("ws_claim_poll_interval", "--ws-claim-poll-interval"),
+            ("heartbeat_interval", "--heartbeat-interval"),
+            ("agent_timeout", "--agent-timeout"),
+            ("codex_semantic_inactivity_timeout", "--codex-semantic-inactivity-timeout"),
+            ("codex_handshake_timeout", "--codex-handshake-timeout"),
+            ("max_concurrent_tasks", "--max-concurrent-tasks"),
+            ("no_auto_update", "--no-auto-update"),
+            ("auto_update_interval", "--auto-update-interval"),
+            ("no_auto_reload", "--no-auto-reload"),
             ("identity", "--identity"),
             ("data_dir", "--data-dir"),
             ("pid_file", "--pid-file"),
-            ("poll_interval", "--poll-interval"),
-            ("heartbeat_interval", "--heartbeat-interval"),
             ("watchdog_interval", "--watchdog-interval"),
-            ("max_concurrent_tasks", "--max-concurrent-tasks"),
             ("update", "--update"),
             ("reload", "--reload"),
         ):
@@ -244,6 +360,10 @@ class SquadMember(msgspec.Struct, frozen=True, kw_only=True):
     member_id: str
     member_type: str
     role: str
+    name: str | None = None
+    email: str | None = None
+    status: str | None = None
+    avatar_url: str | None = None
 
 
 class SquadMemberRemoval(msgspec.Struct, frozen=True, kw_only=True):

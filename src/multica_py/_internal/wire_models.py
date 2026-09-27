@@ -120,6 +120,15 @@ class _ProjectWire(msgspec.Struct, frozen=True, kw_only=True):
     title: str
     description: str | None = None
     status: ProjectStatus
+    workspace_id: str | None = None
+    icon: str | None = None
+    lead_type: str | None = None
+    lead_id: str | None = None
+    start_date: str | None = None
+    due_date: str | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
+    resource_count: int | None = None
 
 
 def _project_from_wire(wire: _ProjectWire) -> Project:
@@ -130,6 +139,15 @@ def _project_from_wire(wire: _ProjectWire) -> Project:
         name=wire.title,
         description=wire.description,
         status=wire.status,
+        workspace_id=wire.workspace_id,
+        icon=wire.icon,
+        lead_type=wire.lead_type,
+        lead_id=wire.lead_id,
+        start_date=wire.start_date,
+        due_date=wire.due_date,
+        created_at=wire.created_at,
+        updated_at=wire.updated_at,
+        resource_count=wire.resource_count,
     )
 
 
@@ -885,6 +903,8 @@ class _ProjectResourceRecordWire(msgspec.Struct, frozen=True, kw_only=True):
     resource_ref: object
     label: str | None = None
     position: int | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
 
 def project_resource_from_wire(wire: _ProjectResourceRecordWire) -> ProjectResourceRecord:
@@ -928,6 +948,8 @@ def project_resource_from_wire(wire: _ProjectResourceRecordWire) -> ProjectResou
         resource_ref=resource_ref,  # type: ignore[arg-type]
         label=wire.label,
         position=wire.position,
+        created_at=wire.created_at,
+        updated_at=wire.updated_at,
     )
 
 
