@@ -11,14 +11,11 @@ singular-reference example is in
 This SDK contract supports Multica CLI `0.5.3` at commit
 `ff8b285497809e084915016c40c2bc5e5991ffbc` (release `395523214`), with the
 tested interval `[0.4.42, 0.5.4)`. Migrate directly from `0.5.2`; no
-intermediate SDK release is required. All 201 public command nodes and all 167
-approved response entrypoints retain their existing shape. Multica `0.5.3`
-corrects resumed Claude session usage accounting behind the existing task,
-issue, and runtime usage models; the SDK preserves returned values without
-provider-session reads or client-side subtraction. The `issue wakeup` family,
-runtime profiles, PR automation, UI cache calculations, daemon identity,
-messaging/media, mobile, localization, and pricing changes remain outside the
-SDK surface. The `0.5.2` duplicate/supplement/property gates remain in force.
+intermediate SDK release is required. The complete public CLI parity surface
+is represented by typed eager and `*_command()` methods, including chat
+history/thread, issue wakeups, repository checkout, runtime profiles, and
+inherited global options. The `0.5.2` duplicate/supplement/property gates
+remain in force.
 
 The `Comment.deleted_at` field is `None` only when the wire field is omitted;
 valid target timestamps are preserved, while explicit null and malformed values

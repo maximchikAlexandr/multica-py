@@ -219,14 +219,15 @@ def test_retained_inventory_is_reconciled() -> None:
     assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
 
 
-def test_checkout_is_contract_first_until_successor_resource_implementation() -> None:
+def test_checkout_matches_successor_resource_contract() -> None:
     from multica_py.resources.repositories import RepositoryResource
 
     contract = validate_contract(APPROVED)
     operation_ids = {operation.operation_id for operation in contract.operations}
     assert any("repoCheckoutCmd" in source_ref.symbol for source_ref in contract.source_refs)
     assert "repositories.checkout" in operation_ids
-    assert not hasattr(RepositoryResource, "checkout")
+    assert hasattr(RepositoryResource, "checkout")
+    assert hasattr(RepositoryResource, "checkout_command")
 
 
 def test_removed_plugin_surface_and_autopilot_priority_are_absent() -> None:

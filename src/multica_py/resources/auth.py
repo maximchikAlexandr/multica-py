@@ -63,12 +63,22 @@ class AuthResource(BaseResource):
 
     @overload
     def login(
-        self, token: str, *, options: OperationOptions | None = None
+        self,
+        token: str,
+        *,
+        callback_host: str | None = None,
+        prompt_token: bool = False,
+        options: OperationOptions | None = None,
     ) -> ActionResult[str]: ...
 
     @overload
     def login(
-        self, token: None = None, *, options: OperationOptions | None = None
+        self,
+        token: None = None,
+        *,
+        callback_host: str | None = None,
+        prompt_token: bool = False,
+        options: OperationOptions | None = None,
     ) -> ManagedProcess: ...
 
     def login(

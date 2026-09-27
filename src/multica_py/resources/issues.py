@@ -79,6 +79,7 @@ from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_properties import IssuePropertyResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
+from multica_py.resources.issue_wakeups import IssueWakeupResource
 from multica_py.sentinels import Unset, UnsetType
 from multica_py.types import MetadataValue
 
@@ -459,6 +460,7 @@ class IssueResource(BaseResource):
         self.properties = IssuePropertyResource(transport, config)
         self.subscribers = IssueSubscriberResource(transport, config)
         self.labels = IssueLabelResource(transport, config)
+        self.wakeups = IssueWakeupResource(transport, config)
 
     def _set_client(self, client: MulticaClient) -> None:
         super()._set_client(client)
@@ -467,6 +469,7 @@ class IssueResource(BaseResource):
         self.properties._set_client(client)
         self.subscribers._set_client(client)
         self.labels._set_client(client)
+        self.wakeups._set_client(client)
 
     def _labels_relation(self, issue_id: str) -> tuple[Label, ...]:
         return tuple(

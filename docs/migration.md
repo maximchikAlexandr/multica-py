@@ -15,6 +15,17 @@ There is no provider registry or automatic provider discovery. See
 target-path/environment/staging rules, process-control guarantees, and the
 provider-adapter contract.
 
+## Complete public CLI parity
+
+The 0.5.3 parity release adds typed command plans for chat history/thread,
+issue wakeups, repository checkout, and runtime profiles. Replace raw CLI
+invocations with `client.chats`, `issue.wakeups`, `client.repositories`, and
+`client.runtime_profiles`; each eager method has a matching `*_command()`
+preview. Checkout now returns `RepositoryCheckoutResult`, profile path methods
+require absolute `pathlib.Path` values, and action methods return typed
+`ActionResult` values. Interactive login remains a managed process when no
+token is supplied, while token previews redact secrets.
+
 ## Breaking alpha migration table
 
 This release intentionally removes one-operation input containers and public

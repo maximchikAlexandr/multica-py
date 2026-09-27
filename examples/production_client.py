@@ -27,6 +27,12 @@ def inspect_workspace(client: MulticaClient, workspace_id: str) -> None:
     for project in projects:
         print(f"{project.name}: {len(project.issues)} issues")
 
+    # Public parity families share the same immutable client and previewable plans.
+    print(client.chats.history_command(limit=10).commands)
+    print(client.issues.wakeups.list_command("issue_123").commands)
+    print(client.repositories.checkout_command("https://example.com/repo.git").commands)
+    print(client.runtime_profiles.list_command().commands)
+
 
 if __name__ == "__main__":
     inspect_workspace(build_client(), "ws_123")

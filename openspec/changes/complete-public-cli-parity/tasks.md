@@ -60,7 +60,7 @@
 - [ ] 6.6 Extend skill import/create/update and skill-file upsert for local file/conflict/config/content channels and concrete flag mappings (C15, C22–C23).
 - [ ] 6.7 Extend daemon start/restart/disk-usage/logs and self-update for launch options, scoped reports, line count, and distinct download timeout (C16–C19).
 - [ ] 6.8 Extend login and user-profile update for callback host, prompt-token mode, human-local safeguards, and safe content without bypassing upstream guards (C21, C23).
-- [ ] 6.9 Reconcile all global/inherited flags and prove each typed equivalent or presentation-only disposition without duplicating domain methods.
+- [x] 6.9 Reconcile all global/inherited flags and prove each typed equivalent or presentation-only disposition without duplicating domain methods.
 
 ## 7. Preserve complete response shapes
 
@@ -75,11 +75,11 @@
 
 ## 8. Close verification, documentation, and delivery
 
-- [ ] 8.1 Expand frozen `OperationCase` and decoder tables so every typed public method has one canonical exact argv/transport/result case plus required noncanonical presence and failure rows.
-- [ ] 8.2 Add source-linked native payload/stderr fixtures for every corrected or new response and negative fixtures proving malformed data fails without silent defaults.
-- [ ] 8.3 Extend component fake-CLI coverage across JSON, text, bytes, stdin/file, spawn, streaming, foreground, terminal-safe, redaction, cleanup, and cancellation paths.
-- [ ] 8.4 Close public method, contract inventory, generated-binding, response field, docs, `__all__`, bound surface, package artifact, and exclusion bijections with no allowlist for unknown public items.
-- [ ] 8.5 Update README, API, CLI coverage, compatibility, service usage, migration, changelog, and examples with corrected signatures/results, coverage dimensions, secret/interactive safety, and breaking migrations.
+- [x] 8.1 Expand frozen `OperationCase` and decoder tables so every typed public method has one canonical exact argv/transport/result case plus required noncanonical presence and failure rows.
+- [x] 8.2 Add source-linked native payload/stderr fixtures for every corrected or new response and negative fixtures proving malformed data fails without silent defaults.
+- [x] 8.3 Extend component fake-CLI coverage across JSON, text, bytes, stdin/file, spawn, streaming, foreground, terminal-safe, redaction, cleanup, and cancellation paths.
+- [x] 8.4 Close public method, contract inventory, generated-binding, response field, docs, `__all__`, bound surface, package artifact, and exclusion bijections with no allowlist for unknown public items.
+- [x] 8.5 Update README, API, CLI coverage, compatibility, service usage, migration, changelog, and examples with corrected signatures/results, coverage dimensions, secret/interactive safety, and breaking migrations.
 - [ ] 8.6 Run focused tests after each resource slice, then Ruff check/format, mypy source/tests/scripts/tools, full non-live pytest with coverage, and live-node collection exclusion.
 - [ ] 8.7 Run strict OpenSpec validation, pinned-source approved-contract validation, two-render determinism, generated freshness, source-link/content audits, build, wheel/sdist package tests, and dependency checks.
 - [ ] 8.8 Verify one exact clean delivery SHA, record optional prepared-live status separately, and confirm no downloaded binary, source checkout, evidence, transient report, secret, or visual HTML is tracked or packaged.
