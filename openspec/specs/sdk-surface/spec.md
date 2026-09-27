@@ -222,32 +222,28 @@ and `Autopilot.runs/triggers/subscribers` provide the relation surface.
 - **THEN** every supported autopilot operation has its governed binding and response contract
 
 ### Requirement: Corrected profile, repository, and runtime surfaces
-The SDK MUST expose only source-governed D15–D17 surfaces. `users.profile_get`
-returns immutable `UserProfile`; `users.profile_update(UserProfileUpdate)`
-updates only a present description. `repositories.list/add/remove` use
-immutable URL/description records and multi-URL mutation results.
-`repositories.get` and `repositories.checkout` MUST be absent: checkout is a
-daemon-task workflow, not a configured SDK server operation. `runtimes.get`
-MUST be absent; usage/activity return immutable tuples, usage validates
-`1 <= days <= 365`, update requires target-version with optional wait, rename
-supports machine, and delete supports cascade. `runtimes.delete(...,
-cascade=True)` SHALL mean that active dependent agents are unbound, their
-queued/running tasks are cancelled, and the runtime is deleted; agent
-configuration, chats, and task history SHALL remain preserved so the agents
-can later be attached to another runtime. No SDK documentation SHALL describe
-cascade deletion as destroying or archiving those agents.
+The SDK MUST expose source-governed profile, repository, and runtime surfaces.
+`users.profile_get` and `users.profile_update` SHALL preserve every reviewed
+public field and safe file/stdin content input. Repository list/add/remove
+SHALL retain immutable URL/description records and mutation results, while
+native `repositories.checkout` SHALL expose URL, optional ref, fresh behavior,
+and the actual CLI-emitted checkout result through the controlled process
+transport. Runtime list/usage/activity/update/rename/delete SHALL preserve the
+reviewed records and controls, and `runtime_profiles` SHALL expose governed
+list/create/update/delete/set-path/unset-path operations. No surface SHALL
+invent server-only fields or reimplement CLI-local orchestration.
 
 #### Scenario: D15–D17 discovery is exact
 - **WHEN** public resources and the approved contract are inspected
-- **THEN** every approved D15–D17 symbol resolves with its approved signature, no removed legacy or daemon-only checkout symbol resolves, and each supported method has exactly one canonical transport vector
+- **THEN** every reviewed public profile, repository, repository-checkout, runtime, and runtime-profile operation resolves with one approved signature and canonical vector
 
 #### Scenario: Runtime cascade preserves agents
-- **WHEN** `runtimes.delete(runtime_id, cascade=True)` is executed against Multica `v0.4.20`
-- **THEN** argv contains `runtime delete <runtime-id> --cascade`, the runtime is deleted after dependent agents are unbound and their active work is cancelled, and those agents retain configuration, chats, and task history
+- **WHEN** `runtimes.delete(runtime_id, cascade=True)` executes against a compatible CLI
+- **THEN** the exact governed cascade argv is used and agent configuration, chats, and task history remain preserved
 
 #### Scenario: Runtime delete without cascade preserves the refusal
-- **WHEN** dependent active agents exist and `runtimes.delete(runtime_id)` omits cascade
-- **THEN** the operation raises the classified upstream conflict and does not imply that retrying will delete or archive the agents
+- **WHEN** dependent active agents exist and cascade is omitted
+- **THEN** the operation raises the classified upstream conflict without implying destructive retry behavior
 
 ### Requirement: Workspace member identity is explicit
 The SDK SHALL decode workspace membership identity and user identity as separate
@@ -1664,6 +1660,89 @@ public type or operation.
 #### Scenario: Public SDK surface remains unchanged
 - **WHEN** public models, symbols, operations, signatures, response fields, and dependency metadata are compared before and after the upgrade
 - **THEN** no usage-specific public surface or dependency is added and existing numeric validation remains unchanged
+
+### Requirement: Broken advertised contracts are corrected at the public boundary
+Daemon status/disk usage/stop/restart, auth status/logout, project resources,
+recent comments, comment cursors, attachment upload/download/download-bytes,
+and squad member add/remove SHALL match the pinned CLI's actual argv,
+transport, output, and response shapes. The SDK SHALL NOT append an unsupported
+`--output` flag or fabricate a JSON result for a text or lifecycle operation.
+
+#### Scenario: Native mismatch fixtures pass through public methods
+- **WHEN** source-linked native fixtures and stderr samples exercise the listed regressions
+- **THEN** public methods preserve the actual state, cursor, metadata, member flag mapping, and payload fields without shape errors or silent defaults
+
+### Requirement: Every public domain operation has typed coverage
+The SDK SHALL expose typed operations for repository checkout; agent env
+get/set and skills add; workspace create/update/member invite; squad
+create/update/delete/member set-role/activity; issue timeline; autopilot trigger
+URL rotation; chat history/thread; issue wakeups; and runtime profiles. Existing
+equivalent typed operations SHALL be reused and duplicate wrappers SHALL NOT be
+added without a semantic difference.
+
+The approved `multica autopilot trigger-list` leaf SHALL be implemented as
+`AutopilotResource.trigger_list_command` and `AutopilotResource.trigger_list`.
+The command method SHALL accept the reviewed autopilot identity and operation
+options, use the exact native argv and approved mapping decoder/result, and
+the eager method SHALL execute that same plan and return the approved mapping
+result. The approved entry SHALL NOT be
+removed, deferred, or hidden by subset-only discovery tests.
+
+#### Scenario: Typed discovery matches the approved inventory
+- **WHEN** public method discovery is compared with all `typed` and `typed-equivalent` inventory rows
+- **THEN** each row resolves exactly once and no public domain capability relies only on raw argv
+
+#### Scenario: Trigger list is an exact public operation
+- **WHEN** callers list triggers for a valid autopilot identity
+- **THEN** the SDK executes `multica autopilot trigger-list <autopilot-id>` through the approved decoded transport and returns the reviewed mapping result without changing the approved symbol or disposition
+
+#### Scenario: Missing approved methods fail closure
+- **WHEN** an approved public symbol, command companion, or canonical vector is absent from runtime discovery
+- **THEN** strict contract and operation-case equality fail before release
+
+### Requirement: Existing operations expose all behavior-affecting inputs
+Every existing typed operation SHALL expose or cite a proven typed equivalent
+for each public behavior-affecting positional input and flag. This includes the
+input gaps C1 through C24 in GitHub issue #93, global and inherited controls,
+atomic create/update controls, pagination and compact/folding controls, file or
+stdin content, foreground/streaming controls, daemon configuration, and
+download timeout. Presentation-only spellings SHALL be inventoried without
+duplicating Python parameters.
+
+#### Scenario: Presence-sensitive inputs are explicit
+- **WHEN** omission, null, empty string, zero, false, or an explicit clear have different CLI behavior
+- **THEN** the public signature and approved contract preserve those states with `Unset` or another existing explicit representation and tests cover each supported state
+
+#### Scenario: Content channels use one safe Python contract
+- **WHEN** comment, skill, agent-env, skill-file, or user-profile content supports inline, file, or stdin CLI channels
+- **THEN** the SDK exposes one typed safe-content design that preserves bytes/text, redaction, preview, and execution without giant argv or per-command abstractions
+
+### Requirement: Public models preserve emitted fields and variants
+Public models SHALL preserve every reviewed CLI-emitted field and nested record
+for daemon, runtime, workspace, squad, project, project resource, autopilot
+trigger, property, agent, attachment, version, comment, and all other audited
+responses. Models SHALL preserve field absence separately from explicit null or
+empty where the CLI does, and secret-bearing fields SHALL require explicit
+opt-in and remain redacted from previews, reprs, logs, and errors.
+
+#### Scenario: Rich records round-trip without data loss
+- **WHEN** a native response contains any reviewed field from D1 through D17
+- **THEN** the public result exposes the field with its reviewed type, nesting, presence, and redaction semantics
+
+#### Scenario: Response variants remain discriminable
+- **WHEN** daemon or another operation emits healthy, starting, stopped, conflict, aggregate, or lifecycle variants
+- **THEN** the public result preserves enough typed state to distinguish the variants without fabricated defaults
+
+### Requirement: Minimal existing architecture is reused
+New coverage SHALL reuse `Command[T]`, `BaseResource` planning/finalizers,
+`CliTransport`, existing page/action conventions, approved contract generation,
+and frozen table-driven cases. It SHALL NOT add a workflow engine, generic
+resource framework, second runtime registry, checkout-registry clone, or new
+runtime dependency.
+
+#### Scenario: A new family follows existing resource structure
+- **WHEN** chat, wakeup, or runtime-profile support is added
+- **THEN** it uses the existing resource/model/command patterns and introduces only family-specific validation and decoding required by the reviewed contract
 
 ### Requirement: TaskRun exposes only the minimal lifecycle action surface
 The public bound `TaskRun` SHALL expose `refresh(*, options: OperationOptions | None = None) -> TaskRun`, `refresh_command(*, options: OperationOptions | None = None) -> Command[TaskRun]`, `cancel(*, options: OperationOptions | None = None) -> ActionResult[None]`, and `cancel_command(*, options: OperationOptions | None = None) -> Command[ActionResult[None]]`. The eager and command forms SHALL have identical operation parameters, SHALL use the standard per-operation options and typed exception behavior, and SHALL perform no transport I/O during command construction. This change SHALL NOT add a task handle, run lookup resource, wait/poll API, terminal-state helper, task creation/correlation API, or additional messages API.
