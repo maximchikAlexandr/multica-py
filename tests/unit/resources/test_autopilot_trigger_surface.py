@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import pathlib
+from collections.abc import Mapping
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -127,6 +128,27 @@ def test_direct_trigger_add_uses_exact_schedule_argv_and_decodes_response() -> N
         label="half-hour",
     )
     assert eager == trigger
+
+
+def test_direct_trigger_list_uses_exact_argv_and_decodes_mapping() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    transport.run_bytes.return_value = command_result(
+        b'{"tr_1":"schedule","tr_2":"webhook"}',
+        "autopilot",
+        "trigger-list",
+        "a1",
+        "--output",
+        "json",
+    )
+    resource = autopilot_resource(transport)
+
+    command = resource.trigger_list_command("a1")
+
+    assert command.commands == ("multica autopilot trigger-list a1 --output json",)
+    transport.run_bytes.assert_not_called()
+    assert command.run() == {"tr_1": "schedule", "tr_2": "webhook"}
+    assert resource.trigger_list("a1") == {"tr_1": "schedule", "tr_2": "webhook"}
 
 
 @pytest.mark.parametrize(
@@ -405,7 +427,6 @@ def test_legacy_autopilot_methods_are_absent() -> None:
     assert not hasattr(AutopilotResource, "run")
     assert not hasattr(AutopilotResource, "get_run")
     assert not hasattr(AutopilotResource, "trigger_create")
-    assert not hasattr(AutopilotResource, "trigger_list")
 
 
 @pytest.mark.parametrize("case", TRIGGER_VALIDATION_CASES)
@@ -431,6 +452,24 @@ class TriggerSignatureCase:
 
 
 TRIGGER_SIGNATURE_CASES = (
+    TriggerSignatureCase(
+        AutopilotResource,
+        "trigger_list",
+        (
+            ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str, inspect.Parameter.empty),
+            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None, None),
+        ),
+        Mapping[str, object],
+    ),
+    TriggerSignatureCase(
+        AutopilotResource,
+        "trigger_list_command",
+        (
+            ("autopilot_id", inspect.Parameter.POSITIONAL_OR_KEYWORD, str, inspect.Parameter.empty),
+            ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None, None),
+        ),
+        Command[Mapping[str, object]],
+    ),
     TriggerSignatureCase(
         AutopilotResource,
         "trigger_add",

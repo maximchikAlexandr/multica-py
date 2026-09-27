@@ -18,13 +18,16 @@ provider-adapter contract.
 ## Complete public CLI parity
 
 The 0.5.3 parity release adds typed command plans for chat history/thread,
-issue wakeups, repository checkout, and runtime profiles. Replace raw CLI
-invocations with `client.chats`, `issue.wakeups`, `client.repositories`, and
-`client.runtime_profiles`; each eager method has a matching `*_command()`
-preview. Checkout now returns `RepositoryCheckoutResult`, profile path methods
-require absolute `pathlib.Path` values, and action methods return typed
-`ActionResult` values. Interactive login remains a managed process when no
-token is supplied, while token previews redact secrets.
+issue wakeups, repository checkout, runtime profiles, and autopilot trigger
+listing. Replace raw CLI invocations with `client.chats`, `issue.wakeups`,
+`client.repositories`, `client.runtime_profiles`, and
+`client.autopilots.trigger_list(autopilot_id)`; each eager method has a matching
+`*_command()` preview. Trigger listing returns the reviewed mapping result and
+emits `multica autopilot trigger-list <autopilot-id> --output json`. Checkout
+now returns `RepositoryCheckoutResult`, profile path methods require absolute
+`pathlib.Path` values, and action methods return typed `ActionResult` values.
+Interactive login remains a managed process when no token is supplied, while
+token previews redact secrets.
 
 ## Breaking alpha migration table
 

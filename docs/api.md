@@ -217,7 +217,7 @@ All resources accessed as attributes of `MulticaClient`:
 - **skills.files**: `list/upsert/delete`
 - **properties**: `list/get/create/update/archive/unarchive` for the workspace property catalog
 - **workspaces.mcp**: `list/add/update/remove` for workspace MCP servers
-- **autopilots**: `list/get/create/update/delete/trigger/history/trigger_add/trigger_update/trigger_delete`
+- **autopilots**: `list/get/create/update/delete/trigger/trigger_list/history/trigger_add/trigger_update/trigger_delete`
 - **repositories**: `list/add/remove/checkout`
 - **runtimes**: `list/usage/activity/update/rename/delete`; delete preserves
   empty success and raises the centralized conflict with optional reviewed
@@ -245,8 +245,11 @@ Skill bodies are projections: `skills.get()` explicitly requests full content,
 with_content=True)` opts into file bodies. Omitted content is not fabricated as
 an empty string.
 
-The target's `issue timeline`, `autopilot trigger-list`, and compact
-`issue runs --active/--siblings` envelopes remain deferred. Existing default
+The target's `issue timeline` and `autopilot trigger-list` leaves have typed
+coverage. `client.autopilots.trigger_list(autopilot_id)` returns the reviewed
+mapping result, and `trigger_list_command()` exposes the exact
+`multica autopilot trigger-list <autopilot-id> --output json` plan. Compact
+`issue runs --active/--siblings` envelopes remain deferred; existing default
 issue run history continues to return the full TaskRun page.
 
 ### Schedule triggers

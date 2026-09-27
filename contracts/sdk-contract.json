@@ -18121,6 +18121,7 @@
         "expected_argv": [
           "autopilot",
           "trigger-list",
+          "auto-1",
           "--output",
           "json"
         ],
@@ -23321,7 +23322,7 @@
     {
       "operation_id": "autopilots.trigger_list",
       "compatibility": "requires_cli>=0.5.3",
-      "rationale": "Reviewed source/help promotion for multica autopilot trigger-list; successor typed binding and canonical transport are governed without implementing the family.",
+      "rationale": "Reviewed source/help promotion for multica autopilot trigger-list is backed by the implemented typed resource method, generated binding, mapping result, and canonical vector.",
       "source_ref_ids": [
         "I-CMD-090"
       ],
@@ -27985,65 +27986,69 @@
         "inventory_id": "command:multica.agent.archive",
         "kind": "command",
         "identity": "multica agent archive",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-067"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent archive",
+        "public_symbol": "multica_py.resources.agents.AgentResource.archive",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.avatar",
         "kind": "command",
         "identity": "multica agent avatar",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-070"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent avatar",
+        "public_symbol": "multica_py.resources.agents.AgentResource.avatar",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.copy",
         "kind": "command",
         "identity": "multica agent copy",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-076"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent copy",
+        "public_symbol": "multica_py.resources.agents.AgentResource.copy",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.create",
         "kind": "command",
         "identity": "multica agent create",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-065"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent create",
+        "public_symbol": "multica_py.resources.agents.AgentResource.create",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.env.get",
@@ -28083,129 +28088,137 @@
         "inventory_id": "command:multica.agent.get",
         "kind": "command",
         "identity": "multica agent get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-064"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent get",
+        "public_symbol": "multica_py.resources.agents.AgentResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.list",
         "kind": "command",
         "identity": "multica agent list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-063"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent list",
+        "public_symbol": "multica_py.resources.agents.AgentResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.mcp.add",
         "kind": "command",
         "identity": "multica agent mcp add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-078"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent mcp add",
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.add",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.mcp.disable",
         "kind": "command",
         "identity": "multica agent mcp disable",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-080"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent mcp disable",
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.disable",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.mcp.enable",
         "kind": "command",
         "identity": "multica agent mcp enable",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-079"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent mcp enable",
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.enable",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.mcp.list",
         "kind": "command",
         "identity": "multica agent mcp list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-077"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent mcp list",
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.mcp.remove",
         "kind": "command",
         "identity": "multica agent mcp remove",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-081"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent mcp remove",
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.remove",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.restore",
         "kind": "command",
         "identity": "multica agent restore",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-068"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent restore",
+        "public_symbol": "multica_py.resources.agents.AgentResource.restore",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.skills.add",
@@ -28228,257 +28241,273 @@
         "inventory_id": "command:multica.agent.skills.list",
         "kind": "command",
         "identity": "multica agent skills list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-071"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent skills list",
+        "public_symbol": "multica_py.resources.agent_skills.AgentSkillResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.skills.set",
         "kind": "command",
         "identity": "multica agent skills set",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-072"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent skills set",
+        "public_symbol": "multica_py.resources.agent_skills.AgentSkillResource.set",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.tasks",
         "kind": "command",
         "identity": "multica agent tasks",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-069"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent tasks",
+        "public_symbol": "multica_py.resources.agents.AgentResource.tasks",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.agent.update",
         "kind": "command",
         "identity": "multica agent update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-066"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica agent update",
+        "public_symbol": "multica_py.resources.agents.AgentResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.attachment.download",
         "kind": "command",
         "identity": "multica attachment download",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-161"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica attachment download",
+        "public_symbol": "multica_py.resources.attachments.AttachmentResource.download",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.attachment.upload",
         "kind": "command",
         "identity": "multica attachment upload",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-162"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica attachment upload",
+        "public_symbol": "multica_py.resources.attachments.AttachmentResource.upload",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.auth.logout",
         "kind": "command",
         "identity": "multica auth logout",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-155"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica auth logout",
+        "public_symbol": "multica_py.resources.auth.AuthResource.logout",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.auth.status",
         "kind": "command",
         "identity": "multica auth status",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-154"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica auth status",
+        "public_symbol": "multica_py.resources.auth.AuthResource.status",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.create",
         "kind": "command",
         "identity": "multica autopilot create",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-084"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot create",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.create",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.delete",
         "kind": "command",
         "identity": "multica autopilot delete",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-086"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot delete",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.delete",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.get",
         "kind": "command",
         "identity": "multica autopilot get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-083"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot get",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.list",
         "kind": "command",
         "identity": "multica autopilot list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-082"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot list",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.runs",
         "kind": "command",
         "identity": "multica autopilot runs",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-088"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot runs",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.history",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.trigger",
         "kind": "command",
         "identity": "multica autopilot trigger",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-087"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot trigger",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.trigger-add",
         "kind": "command",
         "identity": "multica autopilot trigger-add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-089"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot trigger-add",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_add",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.trigger-delete",
         "kind": "command",
         "identity": "multica autopilot trigger-delete",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-092"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot trigger-delete",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_delete",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.trigger-list",
@@ -28518,33 +28547,35 @@
         "inventory_id": "command:multica.autopilot.trigger-update",
         "kind": "command",
         "identity": "multica autopilot trigger-update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-091"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot trigger-update",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.autopilot.update",
         "kind": "command",
         "identity": "multica autopilot update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-085"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica autopilot update",
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.chat.history",
@@ -28584,65 +28615,69 @@
         "inventory_id": "command:multica.config.set",
         "kind": "command",
         "identity": "multica config set",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-164"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica config set",
+        "public_symbol": "multica_py.resources.configuration.ConfigurationResource.set",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.config.show",
         "kind": "command",
         "identity": "multica config show",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-163"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica config show",
+        "public_symbol": "multica_py.resources.configuration.ConfigurationResource.show",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.daemon.disk-usage",
         "kind": "command",
         "identity": "multica daemon disk-usage",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-141"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica daemon disk-usage",
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.disk_usage",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.daemon.logs",
         "kind": "command",
         "identity": "multica daemon logs",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-140"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica daemon logs",
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.logs",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.daemon.probe-runtimes",
@@ -28664,577 +28699,613 @@
         "inventory_id": "command:multica.daemon.restart",
         "kind": "command",
         "identity": "multica daemon restart",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-137"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica daemon restart",
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.restart",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.daemon.start",
         "kind": "command",
         "identity": "multica daemon start",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-135"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica daemon start",
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.start",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.daemon.status",
         "kind": "command",
         "identity": "multica daemon status",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-138"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica daemon status",
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.status",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.daemon.stop",
         "kind": "command",
         "identity": "multica daemon stop",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-136"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica daemon stop",
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.stop",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.assign",
         "kind": "command",
         "identity": "multica issue assign",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-007"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue assign",
+        "public_symbol": "multica_py.resources.issues.IssueResource.assign",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.cancel-task",
         "kind": "command",
         "identity": "multica issue cancel-task",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-023"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue cancel-task",
+        "public_symbol": "multica_py.resources.issues.IssueResource.cancel_task",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.children",
         "kind": "command",
         "identity": "multica issue children",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-004"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue children",
+        "public_symbol": "multica_py.resources.issues.IssueResource.children",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.comment.add",
         "kind": "command",
         "identity": "multica issue comment add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-011"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue comment add",
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.add",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.comment.delete",
         "kind": "command",
         "identity": "multica issue comment delete",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-013"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue comment delete",
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.delete",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.comment.list",
         "kind": "command",
         "identity": "multica issue comment list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-010"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue comment list",
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.comment.resolve",
         "kind": "command",
         "identity": "multica issue comment resolve",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-014"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue comment resolve",
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.resolve",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.comment.unresolve",
         "kind": "command",
         "identity": "multica issue comment unresolve",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-015"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue comment unresolve",
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.unresolve",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.comment.update",
         "kind": "command",
         "identity": "multica issue comment update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-012"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue comment update",
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.create",
         "kind": "command",
         "identity": "multica issue create",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-005"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue create",
+        "public_symbol": "multica_py.resources.issues.IssueResource.create",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.get",
         "kind": "command",
         "identity": "multica issue get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-002"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue get",
+        "public_symbol": "multica_py.resources.issues.IssueResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.label.add",
         "kind": "command",
         "identity": "multica issue label add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-026"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue label add",
+        "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.add",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.label.list",
         "kind": "command",
         "identity": "multica issue label list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-025"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue label list",
+        "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.label.remove",
         "kind": "command",
         "identity": "multica issue label remove",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-027"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue label remove",
+        "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.remove",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.list",
         "kind": "command",
         "identity": "multica issue list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-001"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue list",
+        "public_symbol": "multica_py.resources.issues.IssueResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.metadata.delete",
         "kind": "command",
         "identity": "multica issue metadata delete",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-031"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue metadata delete",
+        "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.delete",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.metadata.get",
         "kind": "command",
         "identity": "multica issue metadata get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-029"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue metadata get",
+        "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.metadata.list",
         "kind": "command",
         "identity": "multica issue metadata list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-028"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue metadata list",
+        "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.metadata.set",
         "kind": "command",
         "identity": "multica issue metadata set",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-030"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue metadata set",
+        "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.set",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.property.list",
         "kind": "command",
         "identity": "multica issue property list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-033"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue property list",
+        "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.property.set",
         "kind": "command",
         "identity": "multica issue property set",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-034"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue property set",
+        "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.set",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.property.unset",
         "kind": "command",
         "identity": "multica issue property unset",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-035"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue property unset",
+        "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.unset",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.pull-requests",
         "kind": "command",
         "identity": "multica issue pull-requests",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-003"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue pull-requests",
+        "public_symbol": "multica_py.resources.issues.IssueResource.pull_requests",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.reorder",
         "kind": "command",
         "identity": "multica issue reorder",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-009"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue reorder",
+        "public_symbol": "multica_py.resources.issues.IssueResource.reorder",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.rerun",
         "kind": "command",
         "identity": "multica issue rerun",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-022"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue rerun",
+        "public_symbol": "multica_py.resources.issues.IssueResource.rerun",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.run-messages",
         "kind": "command",
         "identity": "multica issue run-messages",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-020"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue run-messages",
+        "public_symbol": "multica_py.resources.issues.IssueResource.run_messages",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.runs",
         "kind": "command",
         "identity": "multica issue runs",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-019"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue runs",
+        "public_symbol": "multica_py.resources.issues.IssueResource.runs",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.search",
         "kind": "command",
         "identity": "multica issue search",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-024"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue search",
+        "public_symbol": "multica_py.resources.issues.IssueResource.search",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.status",
         "kind": "command",
         "identity": "multica issue status",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-008"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue status",
+        "public_symbol": "multica_py.resources.issues.IssueResource.set_status",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.subscriber.add",
         "kind": "command",
         "identity": "multica issue subscriber add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-017"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue subscriber add",
+        "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.add",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.subscriber.list",
         "kind": "command",
         "identity": "multica issue subscriber list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-016"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue subscriber list",
+        "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.subscriber.remove",
         "kind": "command",
         "identity": "multica issue subscriber remove",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-018"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue subscriber remove",
+        "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.remove",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.timeline",
@@ -29257,33 +29328,35 @@
         "inventory_id": "command:multica.issue.update",
         "kind": "command",
         "identity": "multica issue update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-006"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue update",
+        "public_symbol": "multica_py.resources.issues.IssueResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.usage",
         "kind": "command",
         "identity": "multica issue usage",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-021"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica issue usage",
+        "public_symbol": "multica_py.resources.issues.IssueResource.usage",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.issue.wakeup.create",
@@ -29391,369 +29464,392 @@
         "inventory_id": "command:multica.label.create",
         "kind": "command",
         "identity": "multica label create",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-054"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica label create",
+        "public_symbol": "multica_py.resources.labels.LabelResource.create",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.label.delete",
         "kind": "command",
         "identity": "multica label delete",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-056"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica label delete",
+        "public_symbol": "multica_py.resources.labels.LabelResource.delete",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.label.get",
         "kind": "command",
         "identity": "multica label get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-053"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica label get",
+        "public_symbol": "multica_py.resources.labels.LabelResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.label.list",
         "kind": "command",
         "identity": "multica label list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-052"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica label list",
+        "public_symbol": "multica_py.resources.labels.LabelResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.label.update",
         "kind": "command",
         "identity": "multica label update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-055"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica label update",
+        "public_symbol": "multica_py.resources.labels.LabelResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.login",
         "kind": "command",
         "identity": "multica login",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-158"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica login",
+        "public_symbol": "multica_py.resources.auth.AuthResource.login",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.create",
         "kind": "command",
         "identity": "multica project create",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-044"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project create",
+        "public_symbol": "multica_py.resources.projects.ProjectResource.create",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.delete",
         "kind": "command",
         "identity": "multica project delete",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-046"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project delete",
+        "public_symbol": "multica_py.resources.projects.ProjectResource.delete",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.get",
         "kind": "command",
         "identity": "multica project get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-043"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project get",
+        "public_symbol": "multica_py.resources.projects.ProjectResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.list",
         "kind": "command",
         "identity": "multica project list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-042"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project list",
+        "public_symbol": "multica_py.resources.projects.ProjectResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.resource.add",
         "kind": "command",
         "identity": "multica project resource add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-049"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project resource add",
+        "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.resource.list",
         "kind": "command",
         "identity": "multica project resource list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-048"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project resource list",
+        "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.resource.remove",
         "kind": "command",
         "identity": "multica project resource remove",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-051"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project resource remove",
+        "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.remove",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.resource.update",
         "kind": "command",
         "identity": "multica project resource update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-050"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project resource update",
+        "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.status",
         "kind": "command",
         "identity": "multica project status",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-047"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project status",
+        "public_symbol": "multica_py.resources.projects.ProjectResource.set_status",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.project.update",
         "kind": "command",
         "identity": "multica project update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-045"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica project update",
+        "public_symbol": "multica_py.resources.projects.ProjectResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.property.archive",
         "kind": "command",
         "identity": "multica property archive",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-061"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica property archive",
+        "public_symbol": "multica_py.resources.properties.PropertyResource.archive",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.property.create",
         "kind": "command",
         "identity": "multica property create",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-059"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica property create",
+        "public_symbol": "multica_py.resources.properties.PropertyResource.create",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.property.get",
         "kind": "command",
         "identity": "multica property get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-058"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica property get",
+        "public_symbol": "multica_py.resources.properties.PropertyResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.property.list",
         "kind": "command",
         "identity": "multica property list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-057"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica property list",
+        "public_symbol": "multica_py.resources.properties.PropertyResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.property.unarchive",
         "kind": "command",
         "identity": "multica property unarchive",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-062"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica property unarchive",
+        "public_symbol": "multica_py.resources.properties.PropertyResource.unarchive",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.property.update",
         "kind": "command",
         "identity": "multica property update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-060"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica property update",
+        "public_symbol": "multica_py.resources.properties.PropertyResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.repo.add",
         "kind": "command",
         "identity": "multica repo add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-106"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica repo add",
+        "public_symbol": "multica_py.resources.repositories.RepositoryResource.add",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.repo.checkout",
@@ -29776,81 +29872,86 @@
         "inventory_id": "command:multica.repo.list",
         "kind": "command",
         "identity": "multica repo list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-105"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica repo list",
+        "public_symbol": "multica_py.resources.repositories.RepositoryResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.repo.remove",
         "kind": "command",
         "identity": "multica repo remove",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-107"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica repo remove",
+        "public_symbol": "multica_py.resources.repositories.RepositoryResource.remove",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.runtime.activity",
         "kind": "command",
         "identity": "multica runtime activity",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-144"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica runtime activity",
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.activity",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.runtime.delete",
         "kind": "command",
         "identity": "multica runtime delete",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-147"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica runtime delete",
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.delete",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.runtime.list",
         "kind": "command",
         "identity": "multica runtime list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-142"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica runtime list",
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.runtime.profile.create",
@@ -29958,305 +30059,324 @@
         "inventory_id": "command:multica.runtime.rename",
         "kind": "command",
         "identity": "multica runtime rename",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-146"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica runtime rename",
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.rename",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.runtime.update",
         "kind": "command",
         "identity": "multica runtime update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-145"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica runtime update",
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.runtime.usage",
         "kind": "command",
         "identity": "multica runtime usage",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-143"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica runtime usage",
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.usage",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.setup.cloud",
         "kind": "command",
         "identity": "multica setup cloud",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-159"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica setup cloud",
+        "public_symbol": "multica_py.resources.setup.SetupResource.cloud",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.setup.self-host",
         "kind": "command",
         "identity": "multica setup self-host",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-160"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica setup self-host",
+        "public_symbol": "multica_py.resources.setup.SetupResource.self_host",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.create",
         "kind": "command",
         "identity": "multica skill create",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-111"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill create",
+        "public_symbol": "multica_py.resources.skills.SkillResource.create",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.delete",
         "kind": "command",
         "identity": "multica skill delete",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-113"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill delete",
+        "public_symbol": "multica_py.resources.skills.SkillResource.delete",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.files.delete",
         "kind": "command",
         "identity": "multica skill files delete",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-119"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill files delete",
+        "public_symbol": "multica_py.resources.skill_files.SkillFileResource.delete",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.files.list",
         "kind": "command",
         "identity": "multica skill files list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-117"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill files list",
+        "public_symbol": "multica_py.resources.skill_files.SkillFileResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.files.upsert",
         "kind": "command",
         "identity": "multica skill files upsert",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-118"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill files upsert",
+        "public_symbol": "multica_py.resources.skill_files.SkillFileResource.upsert",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.get",
         "kind": "command",
         "identity": "multica skill get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-110"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill get",
+        "public_symbol": "multica_py.resources.skills.SkillResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.import",
         "kind": "command",
         "identity": "multica skill import",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-114"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill import",
+        "public_symbol": "multica_py.resources.skills.SkillResource.import_from_url",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.label.add",
         "kind": "command",
         "identity": "multica skill label add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-121"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill label add",
+        "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.add",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.label.list",
         "kind": "command",
         "identity": "multica skill label list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-120"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill label list",
+        "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.label.remove",
         "kind": "command",
         "identity": "multica skill label remove",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-122"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill label remove",
+        "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.remove",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.list",
         "kind": "command",
         "identity": "multica skill list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-109"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill list",
+        "public_symbol": "multica_py.resources.skills.SkillResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.refresh",
         "kind": "command",
         "identity": "multica skill refresh",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-115"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill refresh",
+        "public_symbol": "multica_py.resources.skills.SkillResource.refresh",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.search",
         "kind": "command",
         "identity": "multica skill search",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-116"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill search",
+        "public_symbol": "multica_py.resources.skills.SkillResource.search",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.skill.update",
         "kind": "command",
         "identity": "multica skill update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-112"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica skill update",
+        "public_symbol": "multica_py.resources.skills.SkillResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.squad.activity",
@@ -30313,81 +30433,86 @@
         "inventory_id": "command:multica.squad.get",
         "kind": "command",
         "identity": "multica squad get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-124"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica squad get",
+        "public_symbol": "multica_py.resources.squads.SquadResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.squad.list",
         "kind": "command",
         "identity": "multica squad list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-123"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica squad list",
+        "public_symbol": "multica_py.resources.squads.SquadResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.squad.member.add",
         "kind": "command",
         "identity": "multica squad member add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-129"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica squad member add",
+        "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.add",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.squad.member.list",
         "kind": "command",
         "identity": "multica squad member list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-128"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica squad member list",
+        "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.squad.member.remove",
         "kind": "command",
         "identity": "multica squad member remove",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-130"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica squad member remove",
+        "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.remove",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.squad.member.set-role",
@@ -30427,65 +30552,69 @@
         "inventory_id": "command:multica.update",
         "kind": "command",
         "identity": "multica update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-165"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica update",
+        "public_symbol": "multica_py.resources.maintenance.MaintenanceResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.user.profile.get",
         "kind": "command",
         "identity": "multica user profile get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-156"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica user profile get",
+        "public_symbol": "multica_py.resources.users.UserResource.profile_get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.user.profile.update",
         "kind": "command",
         "identity": "multica user profile update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-157"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica user profile update",
+        "public_symbol": "multica_py.resources.users.UserResource.profile_update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.version",
         "kind": "command",
         "identity": "multica version",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-166"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica version",
+        "public_symbol": "multica_py.resources.maintenance.MaintenanceResource.version",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.workspace.create",
@@ -30508,97 +30637,103 @@
         "inventory_id": "command:multica.workspace.get",
         "kind": "command",
         "identity": "multica workspace get",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-096"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica workspace get",
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.get",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.workspace.list",
         "kind": "command",
         "identity": "multica workspace list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-094"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica workspace list",
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.workspace.mcp.add",
         "kind": "command",
         "identity": "multica workspace mcp add",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-102"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica workspace mcp add",
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.add",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.workspace.mcp.list",
         "kind": "command",
         "identity": "multica workspace mcp list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-101"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica workspace mcp list",
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.list",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.workspace.mcp.remove",
         "kind": "command",
         "identity": "multica workspace mcp remove",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-104"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica workspace mcp remove",
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.workspace.mcp.update",
         "kind": "command",
         "identity": "multica workspace mcp update",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-103"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica workspace mcp update",
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.update",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.workspace.member.invite",
@@ -30621,33 +30756,35 @@
         "inventory_id": "command:multica.workspace.member.list",
         "kind": "command",
         "identity": "multica workspace member list",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-097"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica workspace member list",
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.members",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.workspace.switch",
         "kind": "command",
         "identity": "multica workspace switch",
-        "disposition": "transport",
+        "disposition": "typed",
         "source_ref_ids": [
           "I-CMD-100"
         ],
         "test_ref_ids": [
-          "T-INVENTORY"
+          "T-INVENTORY",
+          "T-OPERATION"
         ],
-        "public_symbol": null,
-        "transport": "cli:multica workspace switch",
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.switch",
+        "transport": null,
         "compatibility": "requires_cli>=0.5.3",
-        "rationale": "Pinned source/help leaf is reviewed as an explicit transport-only capability until a typed SDK operation exists."
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
       },
       {
         "inventory_id": "command:multica.workspace.update",
