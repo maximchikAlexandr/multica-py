@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import pathlib
 
 import msgspec
@@ -37,6 +38,8 @@ class ProjectResourceRecord(msgspec.Struct, frozen=True, kw_only=True):
     resource_ref: LocalDirectoryResourceRef | GithubRepoResourceRef | JsonValue
     label: str | None = None
     position: int | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
     def __post_init__(self) -> None:
         if not self.id.strip():

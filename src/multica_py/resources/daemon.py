@@ -8,6 +8,7 @@ from multica_py.models.common import ActionResult
 from multica_py.models.system import (
     DaemonAggregateDiskUsageReport,
     DaemonDiskUsageReport,
+    DaemonLaunchOptions,
     DaemonStatus,
 )
 from multica_py.process import ManagedProcess
@@ -15,11 +16,24 @@ from multica_py.resources._base import BaseResource
 
 
 class DaemonResource(BaseResource):
-    def start_command(self, *, options: OperationOptions | None = None) -> Command[ManagedProcess]:
-        return self._spawn_command(("daemon", "start"), options=options)
+    def start_command(
+        self,
+        *,
+        launch_options: DaemonLaunchOptions | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[ManagedProcess]:
+        args = ["daemon", "start"]
+        if launch_options is not None:
+            args.extend(launch_options.to_argv())
+        return self._spawn_command(tuple(args), options=options)
 
-    def start(self, *, options: OperationOptions | None = None) -> ManagedProcess:
-        return self.start_command(options=options).run()
+    def start(
+        self,
+        *,
+        launch_options: DaemonLaunchOptions | None = None,
+        options: OperationOptions | None = None,
+    ) -> ManagedProcess:
+        return self.start_command(launch_options=launch_options, options=options).run()
 
     def status_command(self, *, options: OperationOptions | None = None) -> Command[DaemonStatus]:
         return self._decoded_command(("daemon", "status"), DaemonStatus, options=options)
@@ -36,12 +50,23 @@ class DaemonResource(BaseResource):
         return self.stop_command(options=options).run()
 
     def restart_command(
-        self, *, options: OperationOptions | None = None
+        self,
+        *,
+        launch_options: DaemonLaunchOptions | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[ActionResult[None]]:
-        return self._action_command(("daemon", "restart"), options=options)
+        args = ["daemon", "restart"]
+        if launch_options is not None:
+            args.extend(launch_options.to_argv())
+        return self._action_command(tuple(args), options=options)
 
-    def restart(self, *, options: OperationOptions | None = None) -> ActionResult[None]:
-        return self.restart_command(options=options).run()
+    def restart(
+        self,
+        *,
+        launch_options: DaemonLaunchOptions | None = None,
+        options: OperationOptions | None = None,
+    ) -> ActionResult[None]:
+        return self.restart_command(launch_options=launch_options, options=options).run()
 
     def disk_usage_command(
         self,
@@ -97,14 +122,26 @@ class DaemonResource(BaseResource):
         ).run()
 
     def logs_command(
-        self, follow: bool = False, *, options: OperationOptions | None = None
+        self,
+        follow: bool = False,
+        *,
+        lines: int | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[ManagedProcess]:
         args = ["daemon", "logs"]
         if follow:
             args.append("--follow")
+        if lines is not None:
+            if lines < 0:
+                raise ValueError("lines must be non-negative")
+            args.extend(("--lines", str(lines)))
         return self._spawn_command(tuple(args), options=options)
 
     def logs(
-        self, follow: bool = False, *, options: OperationOptions | None = None
+        self,
+        follow: bool = False,
+        *,
+        lines: int | None = None,
+        options: OperationOptions | None = None,
     ) -> ManagedProcess:
-        return self.logs_command(follow, options=options).run()
+        return self.logs_command(follow, lines=lines, options=options).run()

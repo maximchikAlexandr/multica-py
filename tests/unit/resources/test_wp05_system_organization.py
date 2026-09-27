@@ -10,12 +10,25 @@ import pytest
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.enums import ProjectStatus
 from multica_py.models.common import ActionResult
-from multica_py.models.system import RepositoryCheckoutResult, RuntimeProfiles
+from multica_py.models.system import (
+    DaemonLaunchOptions,
+    RepositoryCheckoutResult,
+    RuntimeDefinition,
+    RuntimeProfiles,
+    RuntimeUsage,
+)
 from multica_py.resources.agents import AgentResource
+from multica_py.resources.auth import AuthResource
+from multica_py.resources.daemon import DaemonResource
+from multica_py.resources.project_resources import ProjectResourceCollection
+from multica_py.resources.projects import ProjectResource
 from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtime_profiles import RuntimeProfileResource
+from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.squads import SquadResource
+from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
 
 
@@ -239,3 +252,222 @@ def test_runtime_profiles_support_list_create_update_and_path_validation() -> No
 
     with pytest.raises(ValueError, match="absolute"):
         resource.set_path_command("profile-1", pathlib.Path("relative"))
+
+
+def test_project_create_update_and_projection_preserve_reviewed_fields() -> None:
+    transport = _transport(
+        stdout={
+            "id": "project-1",
+            "title": "Parity",
+            "status": "in_progress",
+            "icon": "rocket",
+            "lead_type": "member",
+            "lead_id": "member-1",
+            "start_date": "2026-09-01",
+            "due_date": "2026-10-01",
+            "resource_count": 2,
+        }
+    )
+    resource = ProjectResource(transport, ClientConfig())
+    project = resource.create(
+        name="Parity",
+        status=ProjectStatus.in_progress,
+        icon="rocket",
+        lead="member-1",
+        start_date="2026-09-01",
+        due_date="2026-10-01",
+        repositories=("https://example.test/repo.git",),
+    )
+    assert project.icon == "rocket"
+    assert project.lead_id == "member-1"
+    assert project.resource_count == 2
+    assert transport.run_bytes.call_args.args[0] == (
+        "project",
+        "create",
+        "--title",
+        "Parity",
+        "--status",
+        "in_progress",
+        "--icon",
+        "rocket",
+        "--lead",
+        "member-1",
+        "--start-date",
+        "2026-09-01",
+        "--due-date",
+        "2026-10-01",
+        "--repo",
+        "https://example.test/repo.git",
+        "--output",
+        "json",
+    )
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(),
+        exit_code=0,
+        stdout=msgspec.json.encode({"id": "project-1", "title": "Parity", "status": "paused"}),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    resource.update("project-1", status=ProjectStatus.paused, due_date=None)
+    assert transport.run_bytes.call_args.args[0][-6:] == (
+        "--status",
+        "paused",
+        "--due-date",
+        "",
+        "--output",
+        "json",
+    )
+
+
+def test_project_resource_variants_labels_position_and_presence_are_mapped() -> None:
+    transport = _transport(
+        stdout={
+            "id": "resource-1",
+            "project_id": "project-1",
+            "resource_type": "github_repo",
+            "resource_ref": {"url": "https://example.test/repo.git", "ref": "main"},
+            "label": "primary",
+            "position": 3,
+        }
+    )
+    resource = ProjectResourceCollection(transport, ClientConfig())
+    record = resource.add(
+        "project-1",
+        resource_type="github_repo",
+        url="https://example.test/repo.git",
+        ref={"url": "https://example.test/repo.git", "ref": "main"},
+        label="primary",
+    )
+    assert record.resource_type == "github_repo"
+    assert record.position == 3
+    assert transport.run_bytes.call_args.args[0] == (
+        "project",
+        "resource",
+        "add",
+        "project-1",
+        "--type",
+        "github_repo",
+        "--url",
+        "https://example.test/repo.git",
+        "--ref",
+        '{"url":"https://example.test/repo.git","ref":"main"}',
+        "--label",
+        "primary",
+        "--output",
+        "json",
+    )
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(),
+        exit_code=0,
+        stdout=msgspec.json.encode(
+            {
+                "id": "resource-1",
+                "project_id": "project-1",
+                "resource_type": "github_repo",
+                "resource_ref": {"url": "https://example.test/repo.git"},
+                "label": None,
+                "position": 4,
+            }
+        ),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    updated = resource.update("project-1", "resource-1", clear_label=True, position=4)
+    assert updated.label is None and updated.position == 4
+    with pytest.raises(ValueError, match="at least one"):
+        resource.update_command("project-1", "resource-1")
+
+
+def test_daemon_launch_log_and_auth_controls_preserve_presence() -> None:
+    transport = _transport(text="ok")
+    daemon = DaemonResource(transport, ClientConfig())
+    launch = DaemonLaunchOptions(
+        daemon_id="daemon-1",
+        device_name="Mac",
+        runtime_name="Codex",
+        workspaces_root="/var/lib/multica",
+        ws_claim_poll_interval="10s",
+        no_auto_update=True,
+        no_auto_reload=True,
+    )
+    assert daemon.start_command(launch_options=launch).commands == (
+        "multica daemon start --daemon-id daemon-1 --device-name Mac --runtime-name Codex "
+        "--workspaces-root /var/lib/multica --ws-claim-poll-interval 10s "
+        "--no-auto-update=true --no-auto-reload=true",
+    )
+    assert (
+        daemon.restart_command(launch_options=launch)
+        .commands[0]
+        .startswith("multica daemon restart --daemon-id daemon-1")
+    )
+    assert daemon.logs_command(lines=25, follow=True).commands == (
+        "multica daemon logs --follow --lines 25",
+    )
+    auth = AuthResource(transport, ClientConfig())
+    assert auth.login_command(callback_host="10.0.0.5").commands == (
+        "multica login --callback-host 10.0.0.5",
+    )
+    assert auth.login_command(prompt_token=True).commands == ("multica login --token",)
+    with pytest.raises(ValueError, match="nonblank"):
+        auth.login_command(callback_host=" ")
+    with pytest.raises(ValueError, match="combined"):
+        auth.login_command("secret", prompt_token=True)
+
+
+def test_runtime_rich_variants_decode_priced_usage_and_update_metadata() -> None:
+    transport = _transport(
+        stdout=[
+            {
+                "id": "runtime-1",
+                "name": "Codex",
+                "provider": "openai",
+                "profile_id": "profile-1",
+                "device_name": "Mac",
+                "status": "ready",
+                "created_at": "2026-09-01T00:00:00Z",
+            }
+        ]
+    )
+    resource = RuntimeResource(transport, ClientConfig())
+    definition = resource.list()[0]
+    assert isinstance(definition, RuntimeDefinition)
+    assert definition.profile_id == "profile-1"
+    transport.run_bytes.return_value = RawCommandResult(
+        argv=(),
+        exit_code=0,
+        stdout=msgspec.json.encode(
+            [
+                {
+                    "date": "2026-09-01",
+                    "provider": "openai",
+                    "model": "gpt-5",
+                    "input_tokens": 1,
+                    "output_tokens": 2,
+                    "cache_read_tokens": 3,
+                    "cache_write_tokens": 4,
+                    "total_cost": 0.12,
+                    "currency": "USD",
+                }
+            ]
+        ),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    usage = resource.usage("runtime-1")
+    assert isinstance(usage[0], RuntimeUsage)
+    assert usage[0].total_cost == 0.12 and usage[0].currency == "USD"
+
+
+def test_user_profile_content_channels_preserve_safe_presence() -> None:
+    resource = UserResource(_transport(), ClientConfig())
+    assert resource.profile_update_command(description_stdin="line one\nline two").commands == (
+        "multica user profile update --description-stdin --output json",
+    )
+    assert resource.profile_update_command(
+        description_file="profile.md", allow_external_file=True
+    ).commands == (
+        "multica user profile update --description-file "
+        f"{pathlib.Path.cwd() / 'profile.md'} --allow-external-file --output json",
+    )
+    with pytest.raises(TypeError, match="combined"):
+        resource.profile_update_command(description="inline", description_file="profile.md")
