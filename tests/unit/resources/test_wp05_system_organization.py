@@ -80,9 +80,18 @@ def test_agent_env_and_atomic_skill_add_use_reviewed_json_channels() -> None:
         "json",
     )
 
-    command = resource.env_set_command("agent-1", custom_env={"API_TOKEN": "secret-value"})
-    assert "secret-value" not in command.commands[0]
-    assert "--custom-env" in command.commands[0]
+    command = resource.env_set_command("agent-1", custom_env={"MODE": "safe"})
+    assert command._plan.steps[0].argv == (
+        "agent",
+        "env",
+        "set",
+        "agent-1",
+        "--custom-env",
+        '{"MODE":"safe"}',
+        "--output",
+        "json",
+    )
+    assert command.commands == ("multica agent env set agent-1 --custom-env '***' --output json",)
 
     transport.run_bytes.return_value = RawCommandResult(
         argv=(), exit_code=0, stdout=b"{}", stderr=b"", duration=datetime.timedelta()

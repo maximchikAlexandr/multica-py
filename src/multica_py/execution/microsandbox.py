@@ -337,20 +337,8 @@ class MicrosandboxExecutor:
         return _MicrosandboxProcessHandle(self, request.argv, handle, request.timeout)
 
     def terminal(self, request: ExecutionRequest) -> _MicrosandboxProcessHandle:
-        """Use the provider's terminal flag for interactive CLI leaves."""
-        handle = self._provider_call(
-            self._sandbox.exec_stream(
-                request.argv[0],
-                list(request.argv[1:]),
-                cwd=request.cwd,
-                env=dict(request.environment),
-                timeout=_seconds(request.timeout),
-                stdin=request.stdin,
-                tty=True,
-            ),
-            timeout=_seconds(request.timeout),
-        )
-        return _MicrosandboxProcessHandle(self, request.argv, handle, request.timeout)
+        """Reject terminal input until the provider exposes write/close support."""
+        raise ExecutionUnavailableError("microsandbox executor does not support interactive stdin")
 
     @contextlib.contextmanager
     def stage(self, label: str, content: bytes) -> Iterator[str]:

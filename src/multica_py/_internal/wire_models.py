@@ -12,6 +12,7 @@ from multica_py._internal.decoders import decode_json
 from multica_py._internal.json_values import _coerce_json_value
 from multica_py._internal.wire_presence import WirePresence
 from multica_py._internal.wire_presence import presence as _presence_seed
+from multica_py.entities._base import _runtime_state
 from multica_py.enums import ProjectStatus
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.autopilots import (
@@ -271,7 +272,7 @@ class _AutopilotWire(msgspec.Struct, frozen=True, kw_only=True):
 def _autopilot_from_wire(wire: _AutopilotWire) -> Autopilot:
     from multica_py.entities.autopilots import Autopilot
 
-    return Autopilot(
+    result = Autopilot(
         id=wire.id,
         workspace_id=wire.workspace_id,
         title=wire.title,
@@ -307,6 +308,12 @@ def _autopilot_from_wire(wire: _AutopilotWire) -> Autopilot:
         webhook_url=wire.webhook_url,
         _wire_presence=(("project_id", _presence_seed(wire.project_id)),),
     )
+    # The pinned CLI only emits credential-bearing webhook fields for the
+    # explicit ``--show-secrets`` path. Keep those values available to that
+    # audited result while making ordinary entity access redacted by default.
+    if any((wire.webhook_token, wire.webhook_path, wire.webhook_url)):
+        _runtime_state(result)["secret_access"] = True
+    return result
 
 
 class _AutopilotGetWire(msgspec.Struct, frozen=True, kw_only=True):
