@@ -17201,6 +17201,1233 @@
             "value": "multica_py.models.common.ActionResult"
           }
         }
+      },
+      "generated:autopilots.trigger_rotate_url:default:canonical": {
+        "vector_id": "generated:autopilots.trigger_rotate_url:default:canonical",
+        "operation_id": "autopilots.trigger_rotate_url",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "auto-1"
+          },
+          {
+            "kind": "primitive",
+            "value": "trigger-1"
+          }
+        ],
+        "kwargs": [
+          [
+            "yes",
+            {
+              "kind": "primitive",
+              "value": true
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "autopilot",
+          "trigger-rotate-url",
+          "auto-1",
+          "trigger-1",
+          "--yes"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:autopilots.trigger_rotate_url:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:chats.history:default:canonical": {
+        "vector_id": "generated:chats.history:default:canonical",
+        "operation_id": "chats.history",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [
+          [
+            "limit",
+            {
+              "kind": "primitive",
+              "value": 20
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "chat",
+          "history",
+          "--limit",
+          "20",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:chats.history:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:chats.thread:default:canonical": {
+        "vector_id": "generated:chats.thread:default:canonical",
+        "operation_id": "chats.thread",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "thread-1"
+          }
+        ],
+        "kwargs": [
+          [
+            "limit",
+            {
+              "kind": "primitive",
+              "value": 20
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "chat",
+          "thread",
+          "thread-1",
+          "--limit",
+          "20",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:chats.thread:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:issues.timeline:default:canonical": {
+        "vector_id": "generated:issues.timeline:default:canonical",
+        "operation_id": "issues.timeline",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ISSUE-1"
+          }
+        ],
+        "kwargs": [
+          [
+            "activity_only",
+            {
+              "kind": "primitive",
+              "value": true
+            }
+          ],
+          [
+            "actions",
+            {
+              "kind": "list",
+              "items": [
+                {
+                  "kind": "primitive",
+                  "value": "status_changed"
+                }
+              ]
+            }
+          ],
+          [
+            "since",
+            {
+              "kind": "primitive",
+              "value": "2026-09-01T00:00:00Z"
+            }
+          ],
+          [
+            "tail",
+            {
+              "kind": "primitive",
+              "value": 10
+            }
+          ]
+        ],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "timeline",
+          "ISSUE-1",
+          "--activity-only",
+          "--action",
+          "status_changed",
+          "--since",
+          "2026-09-01T00:00:00Z",
+          "--tail",
+          "10",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.timeline:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.list"
+          }
+        }
+      },
+      "generated:issues.wakeups.events:default:canonical": {
+        "vector_id": "generated:issues.wakeups.events:default:canonical",
+        "operation_id": "issues.wakeups.events",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "wakeup",
+          "events",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.wakeups.events:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:issues.wakeups.list:default:canonical": {
+        "vector_id": "generated:issues.wakeups.list:default:canonical",
+        "operation_id": "issues.wakeups.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ISSUE-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "wakeup",
+          "list",
+          "ISSUE-1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.wakeups.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.list"
+          }
+        }
+      },
+      "generated:issues.wakeups.get:default:canonical": {
+        "vector_id": "generated:issues.wakeups.get:default:canonical",
+        "operation_id": "issues.wakeups.get",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ISSUE-1"
+          },
+          {
+            "kind": "primitive",
+            "value": "wake-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "wakeup",
+          "get",
+          "ISSUE-1",
+          "wake-1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.wakeups.get:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:issues.wakeups.disable:default:canonical": {
+        "vector_id": "generated:issues.wakeups.disable:default:canonical",
+        "operation_id": "issues.wakeups.disable",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ISSUE-1"
+          },
+          {
+            "kind": "primitive",
+            "value": "wake-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "wakeup",
+          "disable",
+          "ISSUE-1",
+          "wake-1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.wakeups.disable:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:issues.wakeups.create:default:canonical": {
+        "vector_id": "generated:issues.wakeups.create:default:canonical",
+        "operation_id": "issues.wakeups.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ISSUE-1"
+          }
+        ],
+        "kwargs": [
+          [
+            "instruction",
+            {
+              "kind": "primitive",
+              "value": "Run checks"
+            }
+          ],
+          [
+            "kind",
+            {
+              "kind": "primitive",
+              "value": "event"
+            }
+          ],
+          [
+            "event_types",
+            {
+              "kind": "list",
+              "items": [
+                {
+                  "kind": "primitive",
+                  "value": "comment.created"
+                }
+              ]
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "wakeup",
+          "create",
+          "ISSUE-1",
+          "--instruction",
+          "Run checks",
+          "--kind",
+          "event",
+          "--event",
+          "comment.created",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.wakeups.create:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:issues.wakeups.update:default:canonical": {
+        "vector_id": "generated:issues.wakeups.update:default:canonical",
+        "operation_id": "issues.wakeups.update",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "ISSUE-1"
+          },
+          {
+            "kind": "primitive",
+            "value": "wake-1"
+          }
+        ],
+        "kwargs": [
+          [
+            "instruction",
+            {
+              "kind": "primitive",
+              "value": "Run checks"
+            }
+          ],
+          [
+            "kind",
+            {
+              "kind": "primitive",
+              "value": "event"
+            }
+          ],
+          [
+            "event_types",
+            {
+              "kind": "list",
+              "items": [
+                {
+                  "kind": "primitive",
+                  "value": "comment.created"
+                }
+              ]
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "issue",
+          "wakeup",
+          "update",
+          "ISSUE-1",
+          "wake-1",
+          "--instruction",
+          "Run checks",
+          "--kind",
+          "event",
+          "--event",
+          "comment.created",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:issues.wakeups.update:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:repositories.checkout:default:canonical": {
+        "vector_id": "generated:repositories.checkout:default:canonical",
+        "operation_id": "repositories.checkout",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "https://example.test/repo.git"
+          }
+        ],
+        "kwargs": [
+          [
+            "ref",
+            {
+              "kind": "primitive",
+              "value": "main"
+            }
+          ],
+          [
+            "fresh",
+            {
+              "kind": "primitive",
+              "value": false
+            }
+          ]
+        ],
+        "stdout_base64": "L3dvcmt0cmVlcy9leGFtcGxlCg==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_text",
+        "expected_argv": [
+          "repo",
+          "checkout",
+          "https://example.test/repo.git",
+          "--ref",
+          "main"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:repositories.checkout:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.str"
+          }
+        }
+      },
+      "generated:runtime_profiles.list:default:canonical": {
+        "vector_id": "generated:runtime_profiles.list:default:canonical",
+        "operation_id": "runtime_profiles.list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "W10=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "runtime",
+          "profile",
+          "list",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:runtime_profiles.list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.list"
+          }
+        }
+      },
+      "generated:runtime_profiles.create:default:canonical": {
+        "vector_id": "generated:runtime_profiles.create:default:canonical",
+        "operation_id": "runtime_profiles.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [
+          [
+            "runtime_type",
+            {
+              "kind": "primitive",
+              "value": "pi"
+            }
+          ],
+          [
+            "command_name",
+            {
+              "kind": "primitive",
+              "value": "pi"
+            }
+          ],
+          [
+            "display_name",
+            {
+              "kind": "primitive",
+              "value": "Pi"
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "runtime",
+          "profile",
+          "create",
+          "--runtime-type",
+          "pi",
+          "--command-name",
+          "pi",
+          "--display-name",
+          "Pi",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:runtime_profiles.create:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:runtime_profiles.update:default:canonical": {
+        "vector_id": "generated:runtime_profiles.update:default:canonical",
+        "operation_id": "runtime_profiles.update",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "profile-1"
+          }
+        ],
+        "kwargs": [
+          [
+            "enabled",
+            {
+              "kind": "primitive",
+              "value": false
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "runtime",
+          "profile",
+          "update",
+          "profile-1",
+          "--enabled",
+          "false",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:runtime_profiles.update:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:runtime_profiles.delete:default:canonical": {
+        "vector_id": "generated:runtime_profiles.delete:default:canonical",
+        "operation_id": "runtime_profiles.delete",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "profile-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "runtime",
+          "profile",
+          "delete",
+          "profile-1"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:runtime_profiles.delete:default:canonical",
+          "kind": "none",
+          "expected": {
+            "kind": "primitive",
+            "value": null
+          }
+        }
+      },
+      "generated:runtime_profiles.set_path:default:canonical": {
+        "vector_id": "generated:runtime_profiles.set_path:default:canonical",
+        "operation_id": "runtime_profiles.set_path",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "profile-1"
+          }
+        ],
+        "kwargs": [
+          [
+            "path",
+            {
+              "kind": "primitive",
+              "value": "/usr/local/bin/pi"
+            }
+          ]
+        ],
+        "stdout_base64": "",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "runtime",
+          "profile",
+          "set-path",
+          "profile-1",
+          "--path",
+          "/usr/local/bin/pi"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:runtime_profiles.set_path:default:canonical",
+          "kind": "none",
+          "expected": {
+            "kind": "primitive",
+            "value": null
+          }
+        }
+      },
+      "generated:runtime_profiles.unset_path:default:canonical": {
+        "vector_id": "generated:runtime_profiles.unset_path:default:canonical",
+        "operation_id": "runtime_profiles.unset_path",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "profile-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "runtime",
+          "profile",
+          "unset-path",
+          "profile-1"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:runtime_profiles.unset_path:default:canonical",
+          "kind": "none",
+          "expected": {
+            "kind": "primitive",
+            "value": null
+          }
+        }
+      },
+      "generated:agents.env.get:default:canonical": {
+        "vector_id": "generated:agents.env.get:default:canonical",
+        "operation_id": "agents.env.get",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "agent-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "agent",
+          "env",
+          "get",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:agents.env.get:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:agents.env.set:default:canonical": {
+        "vector_id": "generated:agents.env.set:default:canonical",
+        "operation_id": "agents.env.set",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "agent-1"
+          }
+        ],
+        "kwargs": [
+          [
+            "custom_env",
+            {
+              "kind": "inline_description",
+              "text": "{}"
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "agent",
+          "env",
+          "set",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:agents.env.set:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:agents.skills.add:default:canonical": {
+        "vector_id": "generated:agents.skills.add:default:canonical",
+        "operation_id": "agents.skills.add",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "agent-1"
+          }
+        ],
+        "kwargs": [
+          [
+            "skill_ids",
+            {
+              "kind": "list",
+              "items": [
+                {
+                  "kind": "primitive",
+                  "value": "skill-1"
+                }
+              ]
+            }
+          ]
+        ],
+        "stdout_base64": "bnVsbA==",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "agent",
+          "skills",
+          "add",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:agents.skills.add:default:canonical",
+          "kind": "none",
+          "expected": {
+            "kind": "primitive",
+            "value": null
+          }
+        }
+      },
+      "generated:autopilots.trigger_list:default:canonical": {
+        "vector_id": "generated:autopilots.trigger_list:default:canonical",
+        "operation_id": "autopilots.trigger_list",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "auto-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "autopilot",
+          "trigger-list",
+          "auto-1",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:autopilots.trigger_list:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:squads.activity:default:canonical": {
+        "vector_id": "generated:squads.activity:default:canonical",
+        "operation_id": "squads.activity",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "issue-1"
+          },
+          {
+            "kind": "primitive",
+            "value": "approved"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "squad",
+          "activity",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:squads.activity:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:squads.create:default:canonical": {
+        "vector_id": "generated:squads.create:default:canonical",
+        "operation_id": "squads.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [
+          [
+            "name",
+            {
+              "kind": "primitive",
+              "value": "Core"
+            }
+          ],
+          [
+            "leader",
+            {
+              "kind": "primitive",
+              "value": "agent-1"
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "squad",
+          "create",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:squads.create:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:squads.delete:default:canonical": {
+        "vector_id": "generated:squads.delete:default:canonical",
+        "operation_id": "squads.delete",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "squad-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "squad",
+          "delete",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:squads.delete:default:canonical",
+          "kind": "none",
+          "expected": {
+            "kind": "primitive",
+            "value": null
+          }
+        }
+      },
+      "generated:squads.members.set_role:default:canonical": {
+        "vector_id": "generated:squads.members.set_role:default:canonical",
+        "operation_id": "squads.members.set_role",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "squad-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "squad",
+          "member",
+          "set-role",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:squads.members.set_role:default:canonical",
+          "kind": "none",
+          "expected": {
+            "kind": "primitive",
+            "value": null
+          }
+        }
+      },
+      "generated:squads.update:default:canonical": {
+        "vector_id": "generated:squads.update:default:canonical",
+        "operation_id": "squads.update",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "squad-1"
+          }
+        ],
+        "kwargs": [],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "squad",
+          "update",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:squads.update:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:workspaces.create:default:canonical": {
+        "vector_id": "generated:workspaces.create:default:canonical",
+        "operation_id": "workspaces.create",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [
+          [
+            "name",
+            {
+              "kind": "primitive",
+              "value": "Core"
+            }
+          ],
+          [
+            "slug",
+            {
+              "kind": "primitive",
+              "value": "core"
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "workspace",
+          "create",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:workspaces.create:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:workspaces.members.invite:default:canonical": {
+        "vector_id": "generated:workspaces.members.invite:default:canonical",
+        "operation_id": "workspaces.members.invite",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [
+          {
+            "kind": "primitive",
+            "value": "person@example.test"
+          }
+        ],
+        "kwargs": [
+          [
+            "role",
+            {
+              "kind": "primitive",
+              "value": "member"
+            }
+          ]
+        ],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "workspace",
+          "member",
+          "invite",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:workspaces.members.invite:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
+      },
+      "generated:workspaces.update:default:canonical": {
+        "vector_id": "generated:workspaces.update:default:canonical",
+        "operation_id": "workspaces.update",
+        "entrypoint_id": "default",
+        "is_canonical": true,
+        "args": [],
+        "kwargs": [],
+        "stdout_base64": "e30=",
+        "stderr": "",
+        "exit_code": 0,
+        "transport_method": "run_bytes",
+        "expected_argv": [
+          "workspace",
+          "update",
+          "--output",
+          "json"
+        ],
+        "stdin_base64": null,
+        "timeout": null,
+        "assertion": {
+          "id": "assert:generated:workspaces.update:default:canonical",
+          "kind": "decoded_type",
+          "expected": {
+            "kind": "primitive",
+            "value": "builtins.dict"
+          }
+        }
       }
     },
     "update_field_policies": {
