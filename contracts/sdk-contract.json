@@ -5494,6 +5494,893 @@
           "nonblank:skill_id",
           "nonblank:label_id"
         ]
+      },
+      "autopilot_trigger_rotate_url": {
+        "command": [
+          "autopilot",
+          "trigger-rotate-url"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ],
+          [
+            "trigger_id",
+            "pos:1",
+            "path:trigger_id"
+          ],
+          [
+            "yes",
+            "--yes",
+            "local_control:yes"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id",
+          "nonblank:trigger_id"
+        ]
+      },
+      "chat_history": {
+        "command": [
+          "chat",
+          "history"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "limit",
+            "--limit",
+            "query:limit"
+          ],
+          [
+            "before",
+            "--before",
+            "query:before"
+          ]
+        ],
+        "constraints": []
+      },
+      "chat_thread": {
+        "command": [
+          "chat",
+          "thread"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "thread_id",
+            "pos:0",
+            "query:id"
+          ],
+          [
+            "limit",
+            "--limit",
+            "query:limit"
+          ],
+          [
+            "before",
+            "--before",
+            "query:before"
+          ]
+        ],
+        "constraints": []
+      },
+      "issue_timeline": {
+        "command": [
+          "issue",
+          "timeline"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "activity_only",
+            "--activity-only",
+            "query:activity_only"
+          ],
+          [
+            "actions",
+            "--action",
+            "query:action"
+          ],
+          [
+            "since",
+            "--since",
+            "query:since"
+          ],
+          [
+            "tail",
+            "--tail",
+            "query:tail"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_wakeup_events": {
+        "command": [
+          "issue",
+          "wakeup",
+          "events"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "issue_wakeup_list": {
+        "command": [
+          "issue",
+          "wakeup",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_wakeup_get": {
+        "command": [
+          "issue",
+          "wakeup",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "wakeup_id",
+            "pos:1",
+            "path:wakeup_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:wakeup_id"
+        ]
+      },
+      "issue_wakeup_disable": {
+        "command": [
+          "issue",
+          "wakeup",
+          "disable"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "wakeup_id",
+            "pos:1",
+            "path:wakeup_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:wakeup_id"
+        ]
+      },
+      "issue_wakeup_create": {
+        "command": [
+          "issue",
+          "wakeup",
+          "create"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "agent_id",
+            "--agent-id",
+            "json_body:agent_id"
+          ],
+          [
+            "instruction",
+            "--instruction",
+            "json_body:instruction"
+          ],
+          [
+            "kind",
+            "--kind",
+            "json_body:kind"
+          ],
+          [
+            "mode",
+            "--mode",
+            "json_body:mode"
+          ],
+          [
+            "event_types",
+            "--event",
+            "json_body:event_types"
+          ],
+          [
+            "filter_actor_type",
+            "--filter-actor-type",
+            "json_body:filter_actor_type"
+          ],
+          [
+            "filter_actor_id",
+            "--filter-actor-id",
+            "json_body:filter_actor_id"
+          ],
+          [
+            "filter_agent_id",
+            "--filter-agent-id",
+            "json_body:filter_agent_id"
+          ],
+          [
+            "filter_task_id",
+            "--task-id",
+            "json_body:filter_task_id"
+          ],
+          [
+            "parent_comment_id",
+            "--parent",
+            "json_body:parent_comment_id"
+          ],
+          [
+            "after_seconds",
+            "--after",
+            "json_body:after_seconds"
+          ],
+          [
+            "at",
+            "--at",
+            "json_body:at"
+          ],
+          [
+            "interval_seconds",
+            "--every",
+            "json_body:interval_seconds"
+          ],
+          [
+            "cron_expression",
+            "--cron",
+            "json_body:cron_expression"
+          ],
+          [
+            "timezone",
+            "--timezone",
+            "json_body:timezone"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id"
+        ]
+      },
+      "issue_wakeup_update": {
+        "command": [
+          "issue",
+          "wakeup",
+          "update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "agent_id",
+            "--agent-id",
+            "json_body:agent_id"
+          ],
+          [
+            "instruction",
+            "--instruction",
+            "json_body:instruction"
+          ],
+          [
+            "kind",
+            "--kind",
+            "json_body:kind"
+          ],
+          [
+            "mode",
+            "--mode",
+            "json_body:mode"
+          ],
+          [
+            "event_types",
+            "--event",
+            "json_body:event_types"
+          ],
+          [
+            "filter_actor_type",
+            "--filter-actor-type",
+            "json_body:filter_actor_type"
+          ],
+          [
+            "filter_actor_id",
+            "--filter-actor-id",
+            "json_body:filter_actor_id"
+          ],
+          [
+            "filter_agent_id",
+            "--filter-agent-id",
+            "json_body:filter_agent_id"
+          ],
+          [
+            "filter_task_id",
+            "--task-id",
+            "json_body:filter_task_id"
+          ],
+          [
+            "parent_comment_id",
+            "--parent",
+            "json_body:parent_comment_id"
+          ],
+          [
+            "after_seconds",
+            "--after",
+            "json_body:after_seconds"
+          ],
+          [
+            "at",
+            "--at",
+            "json_body:at"
+          ],
+          [
+            "interval_seconds",
+            "--every",
+            "json_body:interval_seconds"
+          ],
+          [
+            "cron_expression",
+            "--cron",
+            "json_body:cron_expression"
+          ],
+          [
+            "timezone",
+            "--timezone",
+            "json_body:timezone"
+          ],
+          [
+            "wakeup_id",
+            "pos:1",
+            "path:wakeup_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:wakeup_id"
+        ]
+      },
+      "repository_checkout": {
+        "command": [
+          "repo",
+          "checkout"
+        ],
+        "output": "text",
+        "mappings": [
+          [
+            "url",
+            "pos:0",
+            "path:url"
+          ],
+          [
+            "ref",
+            "--ref",
+            "query:ref"
+          ],
+          [
+            "fresh",
+            "--fresh",
+            "local_control:fresh"
+          ]
+        ],
+        "constraints": [
+          "nonblank:url"
+        ]
+      },
+      "runtime_profile_list": {
+        "command": [
+          "runtime",
+          "profile",
+          "list"
+        ],
+        "output": "json",
+        "mappings": [],
+        "constraints": []
+      },
+      "runtime_profile_create": {
+        "command": [
+          "runtime",
+          "profile",
+          "create"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "runtime_type",
+            "--runtime-type",
+            "json_body:runtime_type"
+          ],
+          [
+            "protocol_family",
+            "--protocol-family",
+            "json_body:protocol_family"
+          ],
+          [
+            "command_name",
+            "--command-name",
+            "json_body:command_name"
+          ],
+          [
+            "display_name",
+            "--display-name",
+            "json_body:display_name"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ]
+        ],
+        "constraints": [
+          "required_nonnull:runtime_type_or_protocol_family",
+          "nonblank:command_name",
+          "nonblank:display_name"
+        ]
+      },
+      "runtime_profile_update": {
+        "command": [
+          "runtime",
+          "profile",
+          "update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "profile_id",
+            "pos:0",
+            "path:profile_id"
+          ],
+          [
+            "display_name",
+            "--display-name",
+            "json_body:display_name"
+          ],
+          [
+            "command_name",
+            "--command-name",
+            "json_body:command_name"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ],
+          [
+            "enabled",
+            "--enabled",
+            "json_body:enabled"
+          ]
+        ],
+        "constraints": [
+          "nonblank:profile_id",
+          "at_least_one_update_field"
+        ]
+      },
+      "runtime_profile_delete": {
+        "command": [
+          "runtime",
+          "profile",
+          "delete"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "profile_id",
+            "pos:0",
+            "path:profile_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:profile_id"
+        ]
+      },
+      "runtime_profile_set_path": {
+        "command": [
+          "runtime",
+          "profile",
+          "set-path"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "profile_id",
+            "pos:0",
+            "path:profile_id"
+          ],
+          [
+            "path",
+            "--path",
+            "local_control:absolute_path"
+          ]
+        ],
+        "constraints": [
+          "nonblank:profile_id",
+          "absolute:path"
+        ]
+      },
+      "runtime_profile_unset_path": {
+        "command": [
+          "runtime",
+          "profile",
+          "unset-path"
+        ],
+        "output": "none",
+        "mappings": [
+          [
+            "profile_id",
+            "pos:0",
+            "path:profile_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:profile_id"
+        ]
+      },
+      "agents_env_get": {
+        "command": [
+          "agent",
+          "env",
+          "get"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "agent_id",
+            "pos:0",
+            "path:agent_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id"
+        ]
+      },
+      "agents_env_set": {
+        "command": [
+          "agent",
+          "env",
+          "set"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "agent_id",
+            "pos:0",
+            "path:agent_id"
+          ],
+          [
+            "custom_env",
+            "--custom-env",
+            "json_body:custom_env"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id"
+        ]
+      },
+      "agents_skills_add": {
+        "command": [
+          "agent",
+          "skills",
+          "add"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "agent_id",
+            "pos:0",
+            "path:agent_id"
+          ],
+          [
+            "skill_ids",
+            "--skill-ids",
+            "json_body:skill_ids"
+          ]
+        ],
+        "constraints": [
+          "nonblank:agent_id",
+          "nonempty:skill_ids"
+        ]
+      },
+      "autopilots_trigger_list": {
+        "command": [
+          "autopilot",
+          "trigger-list"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "autopilot_id",
+            "pos:0",
+            "path:autopilot_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:autopilot_id"
+        ]
+      },
+      "squads_activity": {
+        "command": [
+          "squad",
+          "activity"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "issue_id",
+            "pos:0",
+            "path:issue_id"
+          ],
+          [
+            "outcome",
+            "pos:1",
+            "path:outcome"
+          ],
+          [
+            "reason",
+            "--reason",
+            "json_body:reason"
+          ]
+        ],
+        "constraints": [
+          "nonblank:issue_id",
+          "nonblank:outcome"
+        ]
+      },
+      "squads_create": {
+        "command": [
+          "squad",
+          "create"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "name",
+            "--name",
+            "json_body:name"
+          ],
+          [
+            "leader",
+            "--leader",
+            "json_body:leader"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ]
+        ],
+        "constraints": [
+          "nonblank:name",
+          "nonblank:leader"
+        ]
+      },
+      "squads_delete": {
+        "command": [
+          "squad",
+          "delete"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "squad_id",
+            "pos:0",
+            "path:squad_id"
+          ]
+        ],
+        "constraints": [
+          "nonblank:squad_id"
+        ]
+      },
+      "squads_members_set_role": {
+        "command": [
+          "squad",
+          "member",
+          "set-role"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "squad_id",
+            "pos:0",
+            "path:squad_id"
+          ],
+          [
+            "member_id",
+            "--member-id",
+            "json_body:member_id"
+          ],
+          [
+            "member_type",
+            "--member-type",
+            "json_body:member_type"
+          ],
+          [
+            "role",
+            "--role",
+            "json_body:role"
+          ]
+        ],
+        "constraints": [
+          "nonblank:squad_id",
+          "nonblank:member_id",
+          "nonblank:role"
+        ]
+      },
+      "squads_update": {
+        "command": [
+          "squad",
+          "update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "squad_id",
+            "pos:0",
+            "path:squad_id"
+          ],
+          [
+            "name",
+            "--name",
+            "json_body:name"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ],
+          [
+            "instructions",
+            "--instructions",
+            "json_body:instructions"
+          ],
+          [
+            "leader",
+            "--leader",
+            "json_body:leader"
+          ],
+          [
+            "avatar_url",
+            "--avatar-url",
+            "json_body:avatar_url"
+          ]
+        ],
+        "constraints": [
+          "nonblank:squad_id"
+        ]
+      },
+      "workspaces_create": {
+        "command": [
+          "workspace",
+          "create"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "name",
+            "--name",
+            "json_body:name"
+          ],
+          [
+            "slug",
+            "--slug",
+            "json_body:slug"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ],
+          [
+            "context",
+            "--context",
+            "json_body:context"
+          ],
+          [
+            "issue_prefix",
+            "--issue-prefix",
+            "json_body:issue_prefix"
+          ]
+        ],
+        "constraints": [
+          "nonblank:name",
+          "nonblank:slug"
+        ]
+      },
+      "workspaces_members_invite": {
+        "command": [
+          "workspace",
+          "member",
+          "invite"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "email",
+            "pos:0",
+            "path:email"
+          ],
+          [
+            "workspace_id",
+            "pos:1",
+            "path:workspace_id"
+          ],
+          [
+            "role",
+            "--role",
+            "json_body:role"
+          ]
+        ],
+        "constraints": [
+          "nonblank:email"
+        ]
+      },
+      "workspaces_update": {
+        "command": [
+          "workspace",
+          "update"
+        ],
+        "output": "json",
+        "mappings": [
+          [
+            "workspace_id",
+            "pos:0",
+            "path:workspace_id"
+          ],
+          [
+            "name",
+            "--name",
+            "json_body:name"
+          ],
+          [
+            "description",
+            "--description",
+            "json_body:description"
+          ],
+          [
+            "context",
+            "--context",
+            "json_body:context"
+          ],
+          [
+            "issue_prefix",
+            "--issue-prefix",
+            "json_body:issue_prefix"
+          ]
+        ],
+        "constraints": []
       }
     },
     "binding_source_refs": {
@@ -6012,6 +6899,93 @@
       ],
       "skill_labels_remove": [
         "S-SKILL-LABEL"
+      ],
+      "autopilot_trigger_rotate_url": [
+        "I-CMD-093"
+      ],
+      "chat_history": [
+        "I-CMD-133"
+      ],
+      "chat_thread": [
+        "I-CMD-134"
+      ],
+      "issue_timeline": [
+        "I-CMD-032"
+      ],
+      "issue_wakeup_events": [
+        "I-CMD-036"
+      ],
+      "issue_wakeup_list": [
+        "I-CMD-037"
+      ],
+      "issue_wakeup_get": [
+        "I-CMD-038"
+      ],
+      "issue_wakeup_disable": [
+        "I-CMD-039"
+      ],
+      "issue_wakeup_create": [
+        "I-CMD-040"
+      ],
+      "issue_wakeup_update": [
+        "I-CMD-041"
+      ],
+      "repository_checkout": [
+        "I-CMD-108"
+      ],
+      "runtime_profile_list": [
+        "I-CMD-148"
+      ],
+      "runtime_profile_create": [
+        "I-CMD-149"
+      ],
+      "runtime_profile_update": [
+        "I-CMD-150"
+      ],
+      "runtime_profile_delete": [
+        "I-CMD-151"
+      ],
+      "runtime_profile_set_path": [
+        "I-CMD-152"
+      ],
+      "runtime_profile_unset_path": [
+        "I-CMD-153"
+      ],
+      "agents_env_get": [
+        "I-CMD-074"
+      ],
+      "agents_env_set": [
+        "I-CMD-075"
+      ],
+      "agents_skills_add": [
+        "I-CMD-073"
+      ],
+      "autopilots_trigger_list": [
+        "I-CMD-090"
+      ],
+      "squads_activity": [
+        "I-CMD-132"
+      ],
+      "squads_create": [
+        "I-CMD-125"
+      ],
+      "squads_delete": [
+        "I-CMD-127"
+      ],
+      "squads_members_set_role": [
+        "I-CMD-131"
+      ],
+      "squads_update": [
+        "I-CMD-126"
+      ],
+      "workspaces_create": [
+        "I-CMD-095"
+      ],
+      "workspaces_members_invite": [
+        "I-CMD-098"
+      ],
+      "workspaces_update": [
+        "I-CMD-099"
       ]
     },
     "presence": {
@@ -6619,6 +7593,166 @@
       "skill_labels_remove": [
         "required_nonnull",
         "required_nonnull"
+      ],
+      "autopilot_trigger_rotate_url": [
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "chat_history": [
+        "omit",
+        "omit"
+      ],
+      "chat_thread": [
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "issue_timeline": [
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "issue_wakeup_events": [],
+      "issue_wakeup_list": [
+        "omit"
+      ],
+      "issue_wakeup_get": [
+        "omit",
+        "omit"
+      ],
+      "issue_wakeup_disable": [
+        "omit",
+        "omit"
+      ],
+      "issue_wakeup_create": [
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "issue_wakeup_update": [
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "repository_checkout": [
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "runtime_profile_list": [],
+      "runtime_profile_create": [
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "runtime_profile_update": [
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "runtime_profile_delete": [
+        "omit"
+      ],
+      "runtime_profile_set_path": [
+        "omit",
+        "omit"
+      ],
+      "runtime_profile_unset_path": [
+        "omit"
+      ],
+      "agents_env_get": [
+        "omit"
+      ],
+      "agents_env_set": [
+        "omit",
+        "omit"
+      ],
+      "agents_skills_add": [
+        "omit",
+        "omit"
+      ],
+      "autopilots_trigger_list": [
+        "omit"
+      ],
+      "squads_activity": [
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "squads_create": [
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "squads_delete": [
+        "omit"
+      ],
+      "squads_members_set_role": [
+        "omit",
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "squads_update": [
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "workspaces_create": [
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "workspaces_members_invite": [
+        "omit",
+        "omit",
+        "omit"
+      ],
+      "workspaces_update": [
+        "omit",
+        "omit",
+        "omit",
+        "omit",
+        "omit"
       ]
     },
     "responses": {
