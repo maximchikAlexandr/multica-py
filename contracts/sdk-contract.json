@@ -107,9 +107,14 @@
           "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L20-L84",
           "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L20-L84"
         ],
-        "fields": ["description", "resource_type"],
+        "fields": [
+          "description",
+          "resource_type"
+        ],
         "omission_policy": "Omitted resource_type preserves the server issue default; an explicit skill filter is encoded as --resource-type skill.",
-        "test_ref_ids": ["T-OPERATION"]
+        "test_ref_ids": [
+          "T-OPERATION"
+        ]
       },
       {
         "operation_id": "labels.update",
@@ -117,9 +122,13 @@
           "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_label.go#L20-L84",
           "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_label.go#L20-L84"
         ],
-        "fields": ["description"],
+        "fields": [
+          "description"
+        ],
         "omission_policy": "Unset omits --description; null and empty emit an explicit empty description to clear it; a non-empty value sets it.",
-        "test_ref_ids": ["T-OPERATION"]
+        "test_ref_ids": [
+          "T-OPERATION"
+        ]
       },
       {
         "operation_id": "runtimes.delete",
@@ -127,9 +136,16 @@
           "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_runtime.go#L60-L100",
           "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_runtime.go#L60-L100"
         ],
-        "fields": ["empty_success", "blocker_counts", "profile_identity", "cleanup_guidance"],
+        "fields": [
+          "empty_success",
+          "blocker_counts",
+          "profile_identity",
+          "cleanup_guidance"
+        ],
         "omission_policy": "Empty success remains ActionResult[None]; structured 409 context is optional and plain legacy conflicts remain readable without cascade or retry.",
-        "test_ref_ids": ["T-OPERATION"]
+        "test_ref_ids": [
+          "T-OPERATION"
+        ]
       },
       {
         "operation_id": "skills.list",
@@ -137,9 +153,14 @@
           "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_skill.go#L27-L124",
           "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_skill.go#L27-L124"
         ],
-        "fields": ["labels"],
+        "fields": [
+          "labels"
+        ],
         "omission_policy": "Skill list responses require a non-null labels array, including an explicit empty array; skill detail omits labels and leaves the relation unloaded.",
-        "test_ref_ids": ["T-OPERATION", "relation:R03"]
+        "test_ref_ids": [
+          "T-OPERATION",
+          "relation:R03"
+        ]
       },
       {
         "operation_id": "issues.run_messages",
@@ -147,9 +168,13 @@
           "https://github.com/multica-ai/multica/blob/d45aba1cd7582bef9210b921bbb7dc198b48e1ee/server/cmd/multica/cmd_issue.go#L410-L415",
           "https://github.com/multica-ai/multica/blob/ff8b285497809e084915016c40c2bc5e5991ffbc/server/cmd/multica/cmd_issue.go#L410-L415"
         ],
-        "fields": ["call_id"],
+        "fields": [
+          "call_id"
+        ],
         "omission_policy": "Optional call_id is an open string when present; omission in legacy rows decodes as None without changing sequence or truncation semantics and malformed non-string values fail typed decoding.",
-        "test_ref_ids": ["T-OPERATION"]
+        "test_ref_ids": [
+          "T-OPERATION"
+        ]
       }
     ],
     "release_artifacts": [
@@ -16467,6 +16492,1500 @@
       "symbol": "runtimeProfileCreateCmd",
       "line_start": 80,
       "line_end": 95
+    },
+    {
+      "source_ref_id": "I-CMD-001",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueListCmd",
+      "line_start": 226,
+      "line_end": 226
+    },
+    {
+      "source_ref_id": "I-CMD-002",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueGetCmd",
+      "line_start": 232,
+      "line_end": 232
+    },
+    {
+      "source_ref_id": "I-CMD-003",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issuePullRequestsCmd",
+      "line_start": 239,
+      "line_end": 239
+    },
+    {
+      "source_ref_id": "I-CMD-004",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueChildrenCmd",
+      "line_start": 247,
+      "line_end": 247
+    },
+    {
+      "source_ref_id": "I-CMD-005",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueCreateCmd",
+      "line_start": 255,
+      "line_end": 255
+    },
+    {
+      "source_ref_id": "I-CMD-006",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueUpdateCmd",
+      "line_start": 261,
+      "line_end": 261
+    },
+    {
+      "source_ref_id": "I-CMD-007",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueAssignCmd",
+      "line_start": 268,
+      "line_end": 268
+    },
+    {
+      "source_ref_id": "I-CMD-008",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueStatusCmd",
+      "line_start": 275,
+      "line_end": 275
+    },
+    {
+      "source_ref_id": "I-CMD-009",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueReorderCmd",
+      "line_start": 286,
+      "line_end": 286
+    },
+    {
+      "source_ref_id": "I-CMD-010",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueCommentListCmd",
+      "line_start": 311,
+      "line_end": 311
+    },
+    {
+      "source_ref_id": "I-CMD-011",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueCommentAddCmd",
+      "line_start": 318,
+      "line_end": 318
+    },
+    {
+      "source_ref_id": "I-CMD-012",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueCommentUpdateCmd",
+      "line_start": 325,
+      "line_end": 325
+    },
+    {
+      "source_ref_id": "I-CMD-013",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueCommentDeleteCmd",
+      "line_start": 340,
+      "line_end": 340
+    },
+    {
+      "source_ref_id": "I-CMD-014",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueCommentResolveCmd",
+      "line_start": 349,
+      "line_end": 349
+    },
+    {
+      "source_ref_id": "I-CMD-015",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueCommentUnresolveCmd",
+      "line_start": 356,
+      "line_end": 356
+    },
+    {
+      "source_ref_id": "I-CMD-016",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueSubscriberListCmd",
+      "line_start": 370,
+      "line_end": 370
+    },
+    {
+      "source_ref_id": "I-CMD-017",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueSubscriberAddCmd",
+      "line_start": 377,
+      "line_end": 377
+    },
+    {
+      "source_ref_id": "I-CMD-018",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueSubscriberRemoveCmd",
+      "line_start": 384,
+      "line_end": 384
+    },
+    {
+      "source_ref_id": "I-CMD-019",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueRunsCmd",
+      "line_start": 399,
+      "line_end": 399
+    },
+    {
+      "source_ref_id": "I-CMD-020",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueRunMessagesCmd",
+      "line_start": 411,
+      "line_end": 411
+    },
+    {
+      "source_ref_id": "I-CMD-021",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueUsageCmd",
+      "line_start": 418,
+      "line_end": 418
+    },
+    {
+      "source_ref_id": "I-CMD-022",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueRerunCmd",
+      "line_start": 428,
+      "line_end": 428
+    },
+    {
+      "source_ref_id": "I-CMD-023",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueCancelTaskCmd",
+      "line_start": 435,
+      "line_end": 435
+    },
+    {
+      "source_ref_id": "I-CMD-024",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue.go",
+      "symbol": "issueSearchCmd",
+      "line_start": 445,
+      "line_end": 445
+    },
+    {
+      "source_ref_id": "I-CMD-025",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_label.go",
+      "symbol": "issueLabelListCmd",
+      "line_start": 21,
+      "line_end": 21
+    },
+    {
+      "source_ref_id": "I-CMD-026",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_label.go",
+      "symbol": "issueLabelAddCmd",
+      "line_start": 28,
+      "line_end": 28
+    },
+    {
+      "source_ref_id": "I-CMD-027",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_label.go",
+      "symbol": "issueLabelRemoveCmd",
+      "line_start": 35,
+      "line_end": 35
+    },
+    {
+      "source_ref_id": "I-CMD-028",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_metadata.go",
+      "symbol": "issueMetadataListCmd",
+      "line_start": 66,
+      "line_end": 66
+    },
+    {
+      "source_ref_id": "I-CMD-029",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_metadata.go",
+      "symbol": "issueMetadataGetCmd",
+      "line_start": 73,
+      "line_end": 73
+    },
+    {
+      "source_ref_id": "I-CMD-030",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_metadata.go",
+      "symbol": "issueMetadataSetCmd",
+      "line_start": 80,
+      "line_end": 80
+    },
+    {
+      "source_ref_id": "I-CMD-031",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_metadata.go",
+      "symbol": "issueMetadataDeleteCmd",
+      "line_start": 93,
+      "line_end": 93
+    },
+    {
+      "source_ref_id": "I-CMD-032",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_timeline.go",
+      "symbol": "issueTimelineCmd",
+      "line_start": 30,
+      "line_end": 30
+    },
+    {
+      "source_ref_id": "I-CMD-033",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_property.go",
+      "symbol": "issuePropertyListCmd",
+      "line_start": 120,
+      "line_end": 120
+    },
+    {
+      "source_ref_id": "I-CMD-034",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_property.go",
+      "symbol": "issuePropertySetCmd",
+      "line_start": 127,
+      "line_end": 127
+    },
+    {
+      "source_ref_id": "I-CMD-035",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_property.go",
+      "symbol": "issuePropertyUnsetCmd",
+      "line_start": 144,
+      "line_end": 144
+    },
+    {
+      "source_ref_id": "I-CMD-036",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_wakeup.go",
+      "symbol": "newIssueWakeupCommand/events",
+      "line_start": 20,
+      "line_end": 59
+    },
+    {
+      "source_ref_id": "I-CMD-037",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_wakeup.go",
+      "symbol": "newIssueWakeupCommand/list",
+      "line_start": 20,
+      "line_end": 59
+    },
+    {
+      "source_ref_id": "I-CMD-038",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_wakeup.go",
+      "symbol": "newIssueWakeupCommand/get",
+      "line_start": 20,
+      "line_end": 59
+    },
+    {
+      "source_ref_id": "I-CMD-039",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_wakeup.go",
+      "symbol": "newIssueWakeupCommand/disable",
+      "line_start": 20,
+      "line_end": 59
+    },
+    {
+      "source_ref_id": "I-CMD-040",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_wakeup.go",
+      "symbol": "newIssueWakeupCommand/create",
+      "line_start": 20,
+      "line_end": 59
+    },
+    {
+      "source_ref_id": "I-CMD-041",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_issue_wakeup.go",
+      "symbol": "newIssueWakeupCommand/update",
+      "line_start": 20,
+      "line_end": 59
+    },
+    {
+      "source_ref_id": "I-CMD-042",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectListCmd",
+      "line_start": 21,
+      "line_end": 21
+    },
+    {
+      "source_ref_id": "I-CMD-043",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectGetCmd",
+      "line_start": 27,
+      "line_end": 27
+    },
+    {
+      "source_ref_id": "I-CMD-044",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectCreateCmd",
+      "line_start": 34,
+      "line_end": 34
+    },
+    {
+      "source_ref_id": "I-CMD-045",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectUpdateCmd",
+      "line_start": 40,
+      "line_end": 40
+    },
+    {
+      "source_ref_id": "I-CMD-046",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectDeleteCmd",
+      "line_start": 47,
+      "line_end": 47
+    },
+    {
+      "source_ref_id": "I-CMD-047",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectStatusCmd",
+      "line_start": 54,
+      "line_end": 54
+    },
+    {
+      "source_ref_id": "I-CMD-048",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectResourceListCmd",
+      "line_start": 66,
+      "line_end": 66
+    },
+    {
+      "source_ref_id": "I-CMD-049",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectResourceAddCmd",
+      "line_start": 73,
+      "line_end": 73
+    },
+    {
+      "source_ref_id": "I-CMD-050",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectResourceUpdateCmd",
+      "line_start": 80,
+      "line_end": 80
+    },
+    {
+      "source_ref_id": "I-CMD-051",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_project.go",
+      "symbol": "projectResourceRemoveCmd",
+      "line_start": 87,
+      "line_end": 87
+    },
+    {
+      "source_ref_id": "I-CMD-052",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_label.go",
+      "symbol": "labelListCmd",
+      "line_start": 23,
+      "line_end": 23
+    },
+    {
+      "source_ref_id": "I-CMD-053",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_label.go",
+      "symbol": "labelGetCmd",
+      "line_start": 29,
+      "line_end": 29
+    },
+    {
+      "source_ref_id": "I-CMD-054",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_label.go",
+      "symbol": "labelCreateCmd",
+      "line_start": 36,
+      "line_end": 36
+    },
+    {
+      "source_ref_id": "I-CMD-055",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_label.go",
+      "symbol": "labelUpdateCmd",
+      "line_start": 42,
+      "line_end": 42
+    },
+    {
+      "source_ref_id": "I-CMD-056",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_label.go",
+      "symbol": "labelDeleteCmd",
+      "line_start": 49,
+      "line_end": 49
+    },
+    {
+      "source_ref_id": "I-CMD-057",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_property.go",
+      "symbol": "propertyListCmd",
+      "line_start": 62,
+      "line_end": 62
+    },
+    {
+      "source_ref_id": "I-CMD-058",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_property.go",
+      "symbol": "propertyGetCmd",
+      "line_start": 69,
+      "line_end": 69
+    },
+    {
+      "source_ref_id": "I-CMD-059",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_property.go",
+      "symbol": "propertyCreateCmd",
+      "line_start": 76,
+      "line_end": 76
+    },
+    {
+      "source_ref_id": "I-CMD-060",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_property.go",
+      "symbol": "propertyUpdateCmd",
+      "line_start": 92,
+      "line_end": 92
+    },
+    {
+      "source_ref_id": "I-CMD-061",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_property.go",
+      "symbol": "propertyArchiveCmd",
+      "line_start": 101,
+      "line_end": 101
+    },
+    {
+      "source_ref_id": "I-CMD-062",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_property.go",
+      "symbol": "propertyUnarchiveCmd",
+      "line_start": 108,
+      "line_end": 108
+    },
+    {
+      "source_ref_id": "I-CMD-063",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentListCmd",
+      "line_start": 26,
+      "line_end": 26
+    },
+    {
+      "source_ref_id": "I-CMD-064",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentGetCmd",
+      "line_start": 32,
+      "line_end": 32
+    },
+    {
+      "source_ref_id": "I-CMD-065",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentCreateCmd",
+      "line_start": 39,
+      "line_end": 39
+    },
+    {
+      "source_ref_id": "I-CMD-066",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentUpdateCmd",
+      "line_start": 45,
+      "line_end": 45
+    },
+    {
+      "source_ref_id": "I-CMD-067",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentArchiveCmd",
+      "line_start": 52,
+      "line_end": 52
+    },
+    {
+      "source_ref_id": "I-CMD-068",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentRestoreCmd",
+      "line_start": 59,
+      "line_end": 59
+    },
+    {
+      "source_ref_id": "I-CMD-069",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentTasksCmd",
+      "line_start": 66,
+      "line_end": 66
+    },
+    {
+      "source_ref_id": "I-CMD-070",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentAvatarCmd",
+      "line_start": 73,
+      "line_end": 73
+    },
+    {
+      "source_ref_id": "I-CMD-071",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentSkillsListCmd",
+      "line_start": 112,
+      "line_end": 112
+    },
+    {
+      "source_ref_id": "I-CMD-072",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentSkillsSetCmd",
+      "line_start": 119,
+      "line_end": 119
+    },
+    {
+      "source_ref_id": "I-CMD-073",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentSkillsAddCmd",
+      "line_start": 126,
+      "line_end": 126
+    },
+    {
+      "source_ref_id": "I-CMD-074",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentEnvGetCmd",
+      "line_start": 98,
+      "line_end": 98
+    },
+    {
+      "source_ref_id": "I-CMD-075",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent.go",
+      "symbol": "agentEnvSetCmd",
+      "line_start": 105,
+      "line_end": 105
+    },
+    {
+      "source_ref_id": "I-CMD-076",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent_copy.go",
+      "symbol": "agentCopyCmd",
+      "line_start": 23,
+      "line_end": 23
+    },
+    {
+      "source_ref_id": "I-CMD-077",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent_mcp.go",
+      "symbol": "agentMcpListCmd",
+      "line_start": 28,
+      "line_end": 28
+    },
+    {
+      "source_ref_id": "I-CMD-078",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent_mcp.go",
+      "symbol": "agentMcpAddCmd",
+      "line_start": 35,
+      "line_end": 35
+    },
+    {
+      "source_ref_id": "I-CMD-079",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent_mcp.go",
+      "symbol": "agentMcpEnableCmd",
+      "line_start": 44,
+      "line_end": 44
+    },
+    {
+      "source_ref_id": "I-CMD-080",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent_mcp.go",
+      "symbol": "agentMcpDisableCmd",
+      "line_start": 51,
+      "line_end": 51
+    },
+    {
+      "source_ref_id": "I-CMD-081",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_agent_mcp.go",
+      "symbol": "agentMcpRemoveCmd",
+      "line_start": 60,
+      "line_end": 60
+    },
+    {
+      "source_ref_id": "I-CMD-082",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotListCmd",
+      "line_start": 24,
+      "line_end": 24
+    },
+    {
+      "source_ref_id": "I-CMD-083",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotGetCmd",
+      "line_start": 30,
+      "line_end": 30
+    },
+    {
+      "source_ref_id": "I-CMD-084",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotCreateCmd",
+      "line_start": 37,
+      "line_end": 37
+    },
+    {
+      "source_ref_id": "I-CMD-085",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotUpdateCmd",
+      "line_start": 43,
+      "line_end": 43
+    },
+    {
+      "source_ref_id": "I-CMD-086",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotDeleteCmd",
+      "line_start": 50,
+      "line_end": 50
+    },
+    {
+      "source_ref_id": "I-CMD-087",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotTriggerCmd",
+      "line_start": 57,
+      "line_end": 57
+    },
+    {
+      "source_ref_id": "I-CMD-088",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotRunsCmd",
+      "line_start": 64,
+      "line_end": 64
+    },
+    {
+      "source_ref_id": "I-CMD-089",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotTriggerAddCmd",
+      "line_start": 71,
+      "line_end": 71
+    },
+    {
+      "source_ref_id": "I-CMD-090",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotTriggerListCmd",
+      "line_start": 78,
+      "line_end": 78
+    },
+    {
+      "source_ref_id": "I-CMD-091",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotTriggerUpdateCmd",
+      "line_start": 85,
+      "line_end": 85
+    },
+    {
+      "source_ref_id": "I-CMD-092",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotTriggerDeleteCmd",
+      "line_start": 92,
+      "line_end": 92
+    },
+    {
+      "source_ref_id": "I-CMD-093",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_autopilot.go",
+      "symbol": "autopilotTriggerRotateURLCmd",
+      "line_start": 99,
+      "line_end": 99
+    },
+    {
+      "source_ref_id": "I-CMD-094",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceListCmd",
+      "line_start": 22,
+      "line_end": 22
+    },
+    {
+      "source_ref_id": "I-CMD-095",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceCreateCmd",
+      "line_start": 28,
+      "line_end": 28
+    },
+    {
+      "source_ref_id": "I-CMD-096",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceGetCmd",
+      "line_start": 42,
+      "line_end": 42
+    },
+    {
+      "source_ref_id": "I-CMD-097",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceMemberListCmd",
+      "line_start": 57,
+      "line_end": 57
+    },
+    {
+      "source_ref_id": "I-CMD-098",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceMemberInviteCmd",
+      "line_start": 64,
+      "line_end": 64
+    },
+    {
+      "source_ref_id": "I-CMD-099",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceUpdateCmd",
+      "line_start": 79,
+      "line_end": 79
+    },
+    {
+      "source_ref_id": "I-CMD-100",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceSwitchCmd",
+      "line_start": 86,
+      "line_end": 86
+    },
+    {
+      "source_ref_id": "I-CMD-101",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceMcpListCmd",
+      "line_start": 113,
+      "line_end": 113
+    },
+    {
+      "source_ref_id": "I-CMD-102",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceMcpAddCmd",
+      "line_start": 124,
+      "line_end": 124
+    },
+    {
+      "source_ref_id": "I-CMD-103",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceMcpUpdateCmd",
+      "line_start": 140,
+      "line_end": 140
+    },
+    {
+      "source_ref_id": "I-CMD-104",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_workspace.go",
+      "symbol": "workspaceMcpRemoveCmd",
+      "line_start": 150,
+      "line_end": 150
+    },
+    {
+      "source_ref_id": "I-CMD-105",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_repo.go",
+      "symbol": "repoListCmd",
+      "line_start": 24,
+      "line_end": 24
+    },
+    {
+      "source_ref_id": "I-CMD-106",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_repo.go",
+      "symbol": "repoAddCmd",
+      "line_start": 32,
+      "line_end": 32
+    },
+    {
+      "source_ref_id": "I-CMD-107",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_repo.go",
+      "symbol": "repoRemoveCmd",
+      "line_start": 41,
+      "line_end": 41
+    },
+    {
+      "source_ref_id": "I-CMD-108",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_repo.go",
+      "symbol": "repoCheckoutCmd",
+      "line_start": 50,
+      "line_end": 50
+    },
+    {
+      "source_ref_id": "I-CMD-109",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillListCmd",
+      "line_start": 27,
+      "line_end": 27
+    },
+    {
+      "source_ref_id": "I-CMD-110",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillGetCmd",
+      "line_start": 33,
+      "line_end": 33
+    },
+    {
+      "source_ref_id": "I-CMD-111",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillCreateCmd",
+      "line_start": 40,
+      "line_end": 40
+    },
+    {
+      "source_ref_id": "I-CMD-112",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillUpdateCmd",
+      "line_start": 46,
+      "line_end": 46
+    },
+    {
+      "source_ref_id": "I-CMD-113",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillDeleteCmd",
+      "line_start": 53,
+      "line_end": 53
+    },
+    {
+      "source_ref_id": "I-CMD-114",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillImportCmd",
+      "line_start": 60,
+      "line_end": 60
+    },
+    {
+      "source_ref_id": "I-CMD-115",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillRefreshCmd",
+      "line_start": 66,
+      "line_end": 66
+    },
+    {
+      "source_ref_id": "I-CMD-116",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillSearchCmd",
+      "line_start": 73,
+      "line_end": 73
+    },
+    {
+      "source_ref_id": "I-CMD-117",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillFilesListCmd",
+      "line_start": 87,
+      "line_end": 87
+    },
+    {
+      "source_ref_id": "I-CMD-118",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillFilesUpsertCmd",
+      "line_start": 94,
+      "line_end": 94
+    },
+    {
+      "source_ref_id": "I-CMD-119",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill.go",
+      "symbol": "skillFilesDeleteCmd",
+      "line_start": 101,
+      "line_end": 101
+    },
+    {
+      "source_ref_id": "I-CMD-120",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill_label.go",
+      "symbol": "skillLabelListCmd",
+      "line_start": 22,
+      "line_end": 22
+    },
+    {
+      "source_ref_id": "I-CMD-121",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill_label.go",
+      "symbol": "skillLabelAddCmd",
+      "line_start": 29,
+      "line_end": 29
+    },
+    {
+      "source_ref_id": "I-CMD-122",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_skill_label.go",
+      "symbol": "skillLabelRemoveCmd",
+      "line_start": 36,
+      "line_end": 36
+    },
+    {
+      "source_ref_id": "I-CMD-123",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadListCmd",
+      "line_start": 22,
+      "line_end": 22
+    },
+    {
+      "source_ref_id": "I-CMD-124",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadGetCmd",
+      "line_start": 76,
+      "line_end": 76
+    },
+    {
+      "source_ref_id": "I-CMD-125",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadCreateCmd",
+      "line_start": 114,
+      "line_end": 114
+    },
+    {
+      "source_ref_id": "I-CMD-126",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadUpdateCmd",
+      "line_start": 166,
+      "line_end": 166
+    },
+    {
+      "source_ref_id": "I-CMD-127",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadDeleteCmd",
+      "line_start": 226,
+      "line_end": 226
+    },
+    {
+      "source_ref_id": "I-CMD-128",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadMemberListCmd",
+      "line_start": 260,
+      "line_end": 260
+    },
+    {
+      "source_ref_id": "I-CMD-129",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadMemberAddCmd",
+      "line_start": 301,
+      "line_end": 301
+    },
+    {
+      "source_ref_id": "I-CMD-130",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadMemberRemoveCmd",
+      "line_start": 398,
+      "line_end": 398
+    },
+    {
+      "source_ref_id": "I-CMD-131",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadMemberSetRoleCmd",
+      "line_start": 348,
+      "line_end": 348
+    },
+    {
+      "source_ref_id": "I-CMD-132",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_squad.go",
+      "symbol": "squadActivityCmd",
+      "line_start": 442,
+      "line_end": 442
+    },
+    {
+      "source_ref_id": "I-CMD-133",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_chat.go",
+      "symbol": "chatHistoryCmd",
+      "line_start": 20,
+      "line_end": 20
+    },
+    {
+      "source_ref_id": "I-CMD-134",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_chat.go",
+      "symbol": "chatThreadCmd",
+      "line_start": 37,
+      "line_end": 37
+    },
+    {
+      "source_ref_id": "I-CMD-135",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_daemon.go",
+      "symbol": "daemonStartCmd",
+      "line_start": 35,
+      "line_end": 35
+    },
+    {
+      "source_ref_id": "I-CMD-136",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_daemon.go",
+      "symbol": "daemonStopCmd",
+      "line_start": 42,
+      "line_end": 42
+    },
+    {
+      "source_ref_id": "I-CMD-137",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_daemon.go",
+      "symbol": "daemonRestartCmd",
+      "line_start": 61,
+      "line_end": 61
+    },
+    {
+      "source_ref_id": "I-CMD-138",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_daemon.go",
+      "symbol": "daemonStatusCmd",
+      "line_start": 48,
+      "line_end": 48
+    },
+    {
+      "source_ref_id": "I-CMD-139",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_daemon.go",
+      "symbol": "daemonProbeRuntimesCmd",
+      "line_start": 54,
+      "line_end": 54
+    },
+    {
+      "source_ref_id": "I-CMD-140",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_daemon.go",
+      "symbol": "daemonLogsCmd",
+      "line_start": 67,
+      "line_end": 67
+    },
+    {
+      "source_ref_id": "I-CMD-141",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_daemon.go",
+      "symbol": "daemonDiskUsageCmd",
+      "line_start": 73,
+      "line_end": 73
+    },
+    {
+      "source_ref_id": "I-CMD-142",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runtimeListCmd",
+      "line_start": 23,
+      "line_end": 23
+    },
+    {
+      "source_ref_id": "I-CMD-143",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runtimeUsageCmd",
+      "line_start": 29,
+      "line_end": 29
+    },
+    {
+      "source_ref_id": "I-CMD-144",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runtimeActivityCmd",
+      "line_start": 36,
+      "line_end": 36
+    },
+    {
+      "source_ref_id": "I-CMD-145",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runtimeUpdateCmd",
+      "line_start": 43,
+      "line_end": 43
+    },
+    {
+      "source_ref_id": "I-CMD-146",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runtimeRenameCmd",
+      "line_start": 50,
+      "line_end": 50
+    },
+    {
+      "source_ref_id": "I-CMD-147",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime.go",
+      "symbol": "runtimeDeleteCmd",
+      "line_start": 60,
+      "line_end": 60
+    },
+    {
+      "source_ref_id": "I-CMD-148",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime_profile.go",
+      "symbol": "runtimeProfileListCmd",
+      "line_start": 40,
+      "line_end": 40
+    },
+    {
+      "source_ref_id": "I-CMD-149",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime_profile.go",
+      "symbol": "runtimeProfileCreateCmd",
+      "line_start": 46,
+      "line_end": 46
+    },
+    {
+      "source_ref_id": "I-CMD-150",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime_profile.go",
+      "symbol": "runtimeProfileUpdateCmd",
+      "line_start": 52,
+      "line_end": 52
+    },
+    {
+      "source_ref_id": "I-CMD-151",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime_profile.go",
+      "symbol": "runtimeProfileDeleteCmd",
+      "line_start": 59,
+      "line_end": 59
+    },
+    {
+      "source_ref_id": "I-CMD-152",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime_profile.go",
+      "symbol": "runtimeProfileSetPathCmd",
+      "line_start": 66,
+      "line_end": 66
+    },
+    {
+      "source_ref_id": "I-CMD-153",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_runtime_profile.go",
+      "symbol": "runtimeProfileUnsetPathCmd",
+      "line_start": 73,
+      "line_end": 73
+    },
+    {
+      "source_ref_id": "I-CMD-154",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_auth.go",
+      "symbol": "authStatusCmd",
+      "line_start": 49,
+      "line_end": 49
+    },
+    {
+      "source_ref_id": "I-CMD-155",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_auth.go",
+      "symbol": "authLogoutCmd",
+      "line_start": 55,
+      "line_end": 55
+    },
+    {
+      "source_ref_id": "I-CMD-156",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_user.go",
+      "symbol": "userProfileGetCmd",
+      "line_start": 34,
+      "line_end": 34
+    },
+    {
+      "source_ref_id": "I-CMD-157",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_user.go",
+      "symbol": "userProfileUpdateCmd",
+      "line_start": 40,
+      "line_end": 40
+    },
+    {
+      "source_ref_id": "I-CMD-158",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_login.go",
+      "symbol": "loginCmd",
+      "line_start": 31,
+      "line_end": 31
+    },
+    {
+      "source_ref_id": "I-CMD-159",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_setup.go",
+      "symbol": "setupCloudCmd",
+      "line_start": 39,
+      "line_end": 39
+    },
+    {
+      "source_ref_id": "I-CMD-160",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_setup.go",
+      "symbol": "setupSelfHostCmd",
+      "line_start": 53,
+      "line_end": 53
+    },
+    {
+      "source_ref_id": "I-CMD-161",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_attachment.go",
+      "symbol": "attachmentDownloadCmd",
+      "line_start": 21,
+      "line_end": 21
+    },
+    {
+      "source_ref_id": "I-CMD-162",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_attachment.go",
+      "symbol": "attachmentUploadCmd",
+      "line_start": 35,
+      "line_end": 35
+    },
+    {
+      "source_ref_id": "I-CMD-163",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_config.go",
+      "symbol": "configShowCmd",
+      "line_start": 22,
+      "line_end": 22
+    },
+    {
+      "source_ref_id": "I-CMD-164",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_config.go",
+      "symbol": "configSetCmd",
+      "line_start": 50,
+      "line_end": 50
+    },
+    {
+      "source_ref_id": "I-CMD-165",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_update.go",
+      "symbol": "updateCmd",
+      "line_start": 16,
+      "line_end": 16
+    },
+    {
+      "source_ref_id": "I-CMD-166",
+      "repository": "multica-ai/multica",
+      "commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+      "path": "server/cmd/multica/cmd_version.go",
+      "symbol": "versionCmd",
+      "line_start": 16,
+      "line_end": 16
     }
   ],
   "test_refs": [
@@ -16759,6 +18278,16 @@
       "test_ref_id": "T-ISSUE-TRIAGE-V0444",
       "path": "tests/unit/resources/test_issue_mutations.py",
       "node_id": "test_triage_parent_update_is_rejected_atomically"
+    },
+    {
+      "test_ref_id": "T-INVENTORY",
+      "path": "tests/unit/test_wp01_foundations.py",
+      "node_id": "test_inventory_contract_closed"
+    },
+    {
+      "test_ref_id": "T-WP01-PROMOTION",
+      "path": "tests/contract/test_sdk_contract.py",
+      "node_id": "test_promoted_public_operations_have_closed_binding_coverage"
     }
   ],
   "scope": {
@@ -16767,14 +18296,21 @@
       "agents.avatar",
       "agents.copy",
       "agents.create",
+      "agents.env.get",
+      "agents.env.set",
       "agents.get",
       "agents.list",
       "agents.mcp.add",
+      "agents.mcp.add_bound",
       "agents.mcp.disable",
+      "agents.mcp.disable_bound",
       "agents.mcp.enable",
+      "agents.mcp.enable_bound",
       "agents.mcp.list",
       "agents.mcp.remove",
+      "agents.mcp.remove_bound",
       "agents.restore",
+      "agents.skills.add",
       "agents.skills.list",
       "agents.skills.set",
       "agents.tasks",
@@ -16794,8 +18330,12 @@
       "autopilots.trigger",
       "autopilots.trigger_add",
       "autopilots.trigger_delete",
+      "autopilots.trigger_list",
+      "autopilots.trigger_rotate_url",
       "autopilots.trigger_update",
       "autopilots.update",
+      "chats.history",
+      "chats.thread",
       "cli.command",
       "configuration.get",
       "configuration.set",
@@ -16816,6 +18356,7 @@
       "issues.comments.reply",
       "issues.comments.resolve",
       "issues.comments.unresolve",
+      "issues.comments.update",
       "issues.create",
       "issues.get",
       "issues.labels.add",
@@ -16851,11 +18392,18 @@
       "issues.subscribers.add",
       "issues.subscribers.list",
       "issues.subscribers.remove",
+      "issues.timeline",
       "issues.unassign",
       "issues.unassign_bound",
       "issues.update",
       "issues.update_bound",
       "issues.usage",
+      "issues.wakeups.create",
+      "issues.wakeups.disable",
+      "issues.wakeups.events",
+      "issues.wakeups.get",
+      "issues.wakeups.list",
+      "issues.wakeups.update",
       "labels.create",
       "labels.delete",
       "labels.get",
@@ -16883,8 +18431,15 @@
       "properties.unarchive",
       "properties.update",
       "repositories.add",
+      "repositories.checkout",
       "repositories.list",
       "repositories.remove",
+      "runtime_profiles.create",
+      "runtime_profiles.delete",
+      "runtime_profiles.list",
+      "runtime_profiles.set_path",
+      "runtime_profiles.unset_path",
+      "runtime_profiles.update",
       "runtimes.activity",
       "runtimes.delete",
       "runtimes.list",
@@ -16900,33 +18455,36 @@
       "skills.files.upsert",
       "skills.get",
       "skills.import_from_url",
+      "skills.labels.add",
+      "skills.labels.list",
+      "skills.labels.remove",
       "skills.list",
       "skills.refresh",
       "skills.search",
       "skills.update",
+      "squads.activity",
+      "squads.create",
+      "squads.delete",
       "squads.get",
       "squads.list",
       "squads.members.add",
       "squads.members.list",
       "squads.members.remove",
+      "squads.members.set_role",
+      "squads.update",
       "users.profile_get",
       "users.profile_update",
+      "workspaces.create",
       "workspaces.get",
       "workspaces.list",
       "workspaces.mcp.add",
       "workspaces.mcp.list",
       "workspaces.mcp.remove",
       "workspaces.mcp.update",
+      "workspaces.members.invite",
       "workspaces.members.list",
       "workspaces.switch",
-      "agents.mcp.add_bound",
-      "agents.mcp.enable_bound",
-      "agents.mcp.disable_bound",
-      "agents.mcp.remove_bound",
-      "issues.comments.update",
-      "skills.labels.list",
-      "skills.labels.add",
-      "skills.labels.remove"
+      "workspaces.update"
     ],
     "ungoverned_policy": "existing_unrelated_operations_unchanged",
     "source_authority_ref": "specs/007-upstream-v0-4-9-migration/contracts/source-authority.json",
@@ -16938,8 +18496,11 @@
         "required_operation_ids": [
           "agents.avatar",
           "agents.copy",
+          "agents.env.get",
+          "agents.env.set",
           "agents.get",
           "agents.list",
+          "agents.skills.add",
           "agents.skills.list",
           "agents.skills.set",
           "agents.tasks"
@@ -16969,14 +18530,17 @@
       },
       {
         "family": "chat-read",
-        "disposition": "separate_extension_candidate",
-        "required_operation_ids": [],
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "chats.history",
+          "chats.thread"
+        ],
         "source_ref_ids": [
           "F-CHAT-HISTORY",
           "F-CHAT-READ",
           "F-CHAT-THREAD"
         ],
-        "rationale": "No governed chat operation."
+        "rationale": "Current-chat history and thread reads are promoted with reviewed paging inputs and response envelopes."
       },
       {
         "family": "issue-existing-changes",
@@ -17013,7 +18577,8 @@
           "issues.set_status",
           "issues.subscribers.add",
           "issues.subscribers.list",
-          "issues.subscribers.remove"
+          "issues.subscribers.remove",
+          "issues.timeline"
         ],
         "source_ref_ids": [
           "F-ISSUE-NEW-DECL",
@@ -17055,6 +18620,8 @@
           "autopilots.trigger",
           "autopilots.trigger_add",
           "autopilots.trigger_delete",
+          "autopilots.trigger_list",
+          "autopilots.trigger_rotate_url",
           "autopilots.trigger_update",
           "autopilots.update"
         ],
@@ -17072,11 +18639,16 @@
           "skills.files.upsert",
           "skills.get",
           "skills.list",
+          "squads.activity",
+          "squads.create",
+          "squads.delete",
           "squads.get",
           "squads.list",
           "squads.members.add",
           "squads.members.list",
-          "squads.members.remove"
+          "squads.members.remove",
+          "squads.members.set_role",
+          "squads.update"
         ],
         "source_ref_ids": [
           "F-SKILL",
@@ -17174,9 +18746,12 @@
         "required_operation_ids": [
           "labels.get",
           "labels.list",
+          "workspaces.create",
           "workspaces.get",
           "workspaces.list",
-          "workspaces.members.list"
+          "workspaces.members.invite",
+          "workspaces.members.list",
+          "workspaces.update"
         ],
         "source_ref_ids": [
           "S-LABEL",
@@ -17189,6 +18764,7 @@
         "disposition": "required_compatibility",
         "required_operation_ids": [
           "repositories.add",
+          "repositories.checkout",
           "repositories.list",
           "repositories.remove",
           "users.profile_get",
@@ -17245,106 +18821,39 @@
         "rationale": "Telemetry changes are internal and generate no public SDK symbol, parameter, relation, or adapter."
       },
       {
-      "family": "issue-wakeup",
-      "disposition": "defer",
-      "required_operation_ids": [],
-      "source_ref_ids": [
-        "S-ISSUE-WAKEUP-CLI",
-        "S-ISSUE-WAKEUP-RUN",
-        "S-ISSUE-WAKEUP-SERVICE",
-        "S-ISSUE-WAKEUP-HANDLER"
-      ],
-      "rationale": "The parent and six wakeup leaves remain reviewed candidate evidence only; no public operation, model, enum, retry, or compatibility promise is generated.",
-      "deferred_evidence": {
-        "nodes": [
-          {
-            "command": "issue wakeup",
-            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-RUN"],
-            "mapping_ids": [],
-            "constraints": ["Parent command only; child lifecycle remains deferred."],
-            "semantics": ["Candidate family boundary is evidence only; no generated operation is allowed."]
-          },
-          {
-            "command": "issue wakeup events",
-            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"],
-            "mapping_ids": ["kind", "event", "filter-agent-id", "filter-actor-type", "filter-actor-id", "task-id", "parent"],
-            "constraints": ["Event filters and task/actor selectors are source-governed candidates."],
-            "semantics": ["Event-triggered wakeups remain deferred until the complete family is approved."]
-          },
-          {
-            "command": "issue wakeup list",
-            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-RUN", "S-ISSUE-WAKEUP-HANDLER"],
-            "mapping_ids": ["agent-id", "kind", "event", "filter-agent-id", "filter-actor-type", "filter-actor-id", "task-id", "parent"],
-            "constraints": ["List filters and pagination remain candidate evidence, not a public resource promise."],
-            "semantics": ["Read/list behavior does not authorize wakeup models or relations."]
-          },
-          {
-            "command": "issue wakeup get",
-            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-RUN", "S-ISSUE-WAKEUP-HANDLER"],
-            "mapping_ids": ["agent-id", "task-id"],
-            "constraints": ["Get uses list-then-local-select behavior where required by the reviewed command path."],
-            "semantics": ["Lookup behavior remains evidence only and creates no public wakeup identity type."]
-          },
-          {
-            "command": "issue wakeup disable",
-            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE", "S-ISSUE-WAKEUP-HANDLER"],
-            "mapping_ids": ["agent-id", "task-id"],
-            "constraints": ["Disable is part of the deferred lifecycle and cannot be exposed independently."],
-            "semantics": ["Disable/re-enable behavior remains coupled to complete replacement semantics."]
-          },
-          {
-            "command": "issue wakeup create",
-            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE", "S-ISSUE-WAKEUP-HANDLER"],
-            "mapping_ids": ["agent-id", "instruction", "instruction-file", "kind", "mode", "event", "filter-agent-id", "filter-actor-type", "filter-actor-id", "task-id", "parent", "at", "after", "every", "cron", "timezone"],
-            "constraints": ["Inline and file instruction channels, event filters, and schedule modes remain source-governed candidates."],
-            "semantics": ["Create-only retry and schedule validation are evidence only; no retry promise is generated."]
-          },
-          {
-            "command": "issue wakeup update",
-            "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE", "S-ISSUE-WAKEUP-HANDLER"],
-            "mapping_ids": ["agent-id", "instruction", "instruction-file", "kind", "mode", "event", "filter-agent-id", "filter-actor-type", "filter-actor-id", "task-id", "parent", "at", "after", "every", "cron", "timezone"],
-            "constraints": ["Update is complete replacement and cannot be separated from re-enable behavior."],
-            "semantics": ["Replacement and re-enable rules remain candidate evidence only."]
-          }
+        "family": "issue-wakeup",
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "issues.wakeups.events",
+          "issues.wakeups.list",
+          "issues.wakeups.get",
+          "issues.wakeups.disable",
+          "issues.wakeups.create",
+          "issues.wakeups.update"
         ],
-        "mappings": [
-          {"mapping_id": "agent-id", "input": "agent-id", "destination": "agent_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-RUN"]},
-          {"mapping_id": "instruction", "input": "instruction", "destination": "instruction", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "instruction-file", "input": "instruction-file", "destination": "instruction", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "kind", "input": "kind", "destination": "kind", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "mode", "input": "mode", "destination": "mode", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "event", "input": "event", "destination": "event_types", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "filter-agent-id", "input": "filter-agent-id", "destination": "filter_agent_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "filter-actor-type", "input": "filter-actor-type", "destination": "filter_actor_type", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "filter-actor-id", "input": "filter-actor-id", "destination": "filter_actor_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "task-id", "input": "task-id", "destination": "filter_task_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "parent", "input": "parent", "destination": "parent_comment_id", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "at", "input": "at", "destination": "at", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "after", "input": "after", "destination": "after_seconds", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "every", "input": "every", "destination": "interval_seconds", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "cron", "input": "cron", "destination": "cron_expression", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]},
-          {"mapping_id": "timezone", "input": "timezone", "destination": "timezone", "source_ref_ids": ["S-ISSUE-WAKEUP-CLI", "S-ISSUE-WAKEUP-SERVICE"]}
+        "source_ref_ids": [
+          "S-ISSUE-WAKEUP-CLI",
+          "S-ISSUE-WAKEUP-RUN",
+          "S-ISSUE-WAKEUP-SERVICE",
+          "S-ISSUE-WAKEUP-HANDLER"
         ],
-        "semantics": {
-          "scheduling": "Absolute at, delayed after_seconds, interval every, and cron cron_expression are distinct candidate schedule modes.",
-          "timezone": "Timezone is validated with the schedule and remains a candidate input mapping.",
-          "replacement": "Update replaces the complete wakeup input rather than patching individual fields.",
-          "reenable": "Update re-enables the wakeup as part of the complete replacement lifecycle.",
-          "retry": "Create may retry once after 250 ms only for HTTP 409 wakeup_source_busy; ambiguous failures are not retried.",
-          "duration": "Delayed and interval durations are positive whole seconds within the source-defined bounds.",
-          "mutual_exclusion": "Event selectors are mutually constrained, and event scheduling is mutually exclusive with absolute/delayed/interval/cron scheduling.",
-          "loop_protection": "Event-triggered wakeups require loop-protection guidance so a wakeup cannot recursively trigger itself."
-        }
-      }
+        "rationale": "The complete dynamic wakeup family is promoted with source-factory evidence, replacement/re-enable semantics, retry policy, and canonical vectors."
       },
       {
         "family": "runtime-profile",
-        "disposition": "not_sdk_surface",
-        "required_operation_ids": [],
+        "disposition": "required_compatibility",
+        "required_operation_ids": [
+          "runtime_profiles.list",
+          "runtime_profiles.create",
+          "runtime_profiles.update",
+          "runtime_profiles.delete",
+          "runtime_profiles.set_path",
+          "runtime_profiles.unset_path"
+        ],
         "source_ref_ids": [
           "S-RUNTIME-PROFILE-TYPE"
         ],
-        "rationale": "The new runtime-type flag is retained in upstream CLI evidence and remains outside the approved SDK surface."
+        "rationale": "Runtime profile list/create/update/delete and local path controls are promoted with runtime-type/protocol-family compatibility evidence."
       },
       {
         "family": "updater-and-workdir",
