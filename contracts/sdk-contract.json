@@ -2177,7 +2177,36 @@
       "comment_update": "(comment_id: str, body: str, *, expected_revision: int, options: OperationOptions | None = None) -> Comment",
       "skill_labels_list": "(skill_id: str, *, options: OperationOptions | None = None) -> Page[Label]",
       "skill_labels_add": "(skill_id: str, label_id: str, *, options: OperationOptions | None = None) -> Page[Label]",
-      "skill_labels_remove": "(skill_id: str, label_id: str, *, options: OperationOptions | None = None) -> Page[Label] | ActionResult[None]"
+      "skill_labels_remove": "(skill_id: str, label_id: str, *, options: OperationOptions | None = None) -> Page[Label] | ActionResult[None]",
+      "autopilot_trigger_rotate_url": "(autopilot_id: str, trigger_id: str, *, yes: bool = False, options: OperationOptions | None = None) -> AutopilotTrigger",
+      "chat_history": "(*, limit: int = 0, before: str | None = None, options: OperationOptions | None = None) -> ChatHistory",
+      "chat_thread": "(thread_id: str | None = None, *, limit: int = 0, before: str | None = None, options: OperationOptions | None = None) -> ChatThread",
+      "issue_timeline": "(issue_id: str, *, activity_only: bool = False, actions: tuple[str, ...] = (), since: str | None = None, tail: int = 0, options: OperationOptions | None = None) -> IssueTimeline",
+      "issue_wakeup_events": "(*, options: OperationOptions | None = None) -> IssueWakeupEvents",
+      "issue_wakeup_list": "(issue_id: str, *, options: OperationOptions | None = None) -> IssueWakeups",
+      "issue_wakeup_get": "(issue_id: str, wakeup_id: str, *, options: OperationOptions | None = None) -> IssueWakeup",
+      "issue_wakeup_disable": "(issue_id: str, wakeup_id: str, *, options: OperationOptions | None = None) -> IssueWakeup",
+      "issue_wakeup_create": "(issue_id: str, *, agent_id: str | None = None, instruction: str, kind: str = \"event\", mode: str | None = None, event_types: tuple[str, ...] = (), filter_actor_type: str | None = None, filter_actor_id: str | None = None, filter_agent_id: str | None = None, filter_task_id: str | None = None, parent_comment_id: str | None = None, after_seconds: int | None = None, at: str | None = None, interval_seconds: int | None = None, cron_expression: str | None = None, timezone: str = \"UTC\", options: OperationOptions | None = None) -> IssueWakeup",
+      "issue_wakeup_update": "(issue_id: str, wakeup_id: str, *, agent_id: str | None = None, instruction: str, kind: str = \"event\", mode: str | None = None, event_types: tuple[str, ...] = (), filter_actor_type: str | None = None, filter_actor_id: str | None = None, filter_agent_id: str | None = None, filter_task_id: str | None = None, parent_comment_id: str | None = None, after_seconds: int | None = None, at: str | None = None, interval_seconds: int | None = None, cron_expression: str | None = None, timezone: str = \"UTC\", options: OperationOptions | None = None) -> IssueWakeup",
+      "repository_checkout": "(url: str, *, ref: str | None = None, fresh: bool = False, options: OperationOptions | None = None) -> RepositoryCheckoutResult",
+      "runtime_profile_list": "(*, options: OperationOptions | None = None) -> RuntimeProfiles",
+      "runtime_profile_create": "(*, runtime_type: str | None = None, protocol_family: str | None = None, command_name: str, display_name: str, description: str | None = None, options: OperationOptions | None = None) -> RuntimeProfile",
+      "runtime_profile_update": "(profile_id: str, *, display_name: str | None = None, command_name: str | None = None, description: str | None = None, enabled: bool | None = None, options: OperationOptions | None = None) -> RuntimeProfile",
+      "runtime_profile_delete": "(profile_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "runtime_profile_set_path": "(profile_id: str, path: Path, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "runtime_profile_unset_path": "(profile_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "agents_env_get": "(agent_id: str, *, options: OperationOptions | None = None) -> Mapping[str, str]",
+      "agents_env_set": "(agent_id: str, *, custom_env: Mapping[str, str] | None = None, options: OperationOptions | None = None) -> Mapping[str, str]",
+      "agents_skills_add": "(agent_id: str, *, skill_ids: tuple[str, ...], options: OperationOptions | None = None) -> ActionResult[None]",
+      "autopilots_trigger_list": "(autopilot_id: str, *, options: OperationOptions | None = None) -> Mapping[str, object]",
+      "squads_activity": "(issue_id: str, outcome: str, *, reason: str | None = None, options: OperationOptions | None = None) -> Mapping[str, object]",
+      "squads_create": "(*, name: str, leader: str, description: str | None = None, options: OperationOptions | None = None) -> Squad",
+      "squads_delete": "(squad_id: str, *, options: OperationOptions | None = None) -> ActionResult[None]",
+      "squads_members_set_role": "(squad_id: str, member_id: str, *, member_type: str = \"agent\", role: str, options: OperationOptions | None = None) -> ActionResult[None]",
+      "squads_update": "(squad_id: str, *, name: str | None = None, description: str | None = None, instructions: str | None = None, leader: str | None = None, avatar_url: str | None = None, options: OperationOptions | None = None) -> Squad",
+      "workspaces_create": "(*, name: str, slug: str, description: str | None = None, context: str | None = None, issue_prefix: str | None = None, options: OperationOptions | None = None) -> Workspace",
+      "workspaces_members_invite": "(email: str, workspace_id: str | None = None, *, role: str = \"member\", options: OperationOptions | None = None) -> WorkspaceMember",
+      "workspaces_update": "(workspace_id: str | None = None, *, name: str | None = None, description: str | None = None, context: str | None = None, issue_prefix: str | None = None, options: OperationOptions | None = None) -> Workspace"
     },
     "bindings": {
       "agent_avatar": {
@@ -8487,6 +8516,159 @@
           0
         ],
         "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "chat_history": {
+        "public_type_id": "ChatHistory",
+        "wire_type_id": "chat_history_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "chat_thread": {
+        "public_type_id": "ChatThread",
+        "wire_type_id": "chat_thread_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_timeline": {
+        "public_type_id": "IssueTimeline",
+        "wire_type_id": "issue_timeline_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_wakeup_events": {
+        "public_type_id": "IssueWakeupEvents",
+        "wire_type_id": "issue_wakeup_events_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "autopilot_trigger_rotate_url": {
+        "public_type_id": "AutopilotTrigger",
+        "wire_type_id": "autopilot_trigger_wire",
+        "decoder_id": "decode_autopilot_trigger",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_wakeup_list": {
+        "public_type_id": "IssueWakeups",
+        "wire_type_id": "issue_wakeups_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_wakeup_get": {
+        "public_type_id": "IssueWakeup",
+        "wire_type_id": "issue_wakeup_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "repository_checkout": {
+        "public_type_id": "RepositoryCheckoutResult",
+        "wire_type_id": "repository_checkout_result_wire",
+        "decoder_id": "decode_path",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_profile_list": {
+        "public_type_id": "RuntimeProfiles",
+        "wire_type_id": "runtime_profiles_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_profile_create": {
+        "public_type_id": "RuntimeProfile",
+        "wire_type_id": "runtime_profile_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_wakeup_disable": {
+        "public_type_id": "IssueWakeup",
+        "wire_type_id": "issue_wakeup_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_wakeup_create": {
+        "public_type_id": "IssueWakeup",
+        "wire_type_id": "issue_wakeup_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "issue_wakeup_update": {
+        "public_type_id": "IssueWakeup",
+        "wire_type_id": "issue_wakeup_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_profile_update": {
+        "public_type_id": "RuntimeProfile",
+        "wire_type_id": "runtime_profile_wire",
+        "decoder_id": "decode_mapping_config",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_profile_delete": {
+        "public_type_id": "ActionResult[None]",
+        "wire_type_id": null,
+        "decoder_id": "decode_none",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_profile_set_path": {
+        "public_type_id": "ActionResult[None]",
+        "wire_type_id": null,
+        "decoder_id": "decode_none",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
+      },
+      "runtime_profile_unset_path": {
+        "public_type_id": "ActionResult[None]",
+        "wire_type_id": null,
+        "decoder_id": "decode_none",
+        "success_exit_codes": [
+          0
+        ],
+        "malformed_output": "raise_output_shape_or_decode_error"
       }
     },
     "decoders": {
@@ -12786,6 +12968,889 @@
           "nonblank:skill_id",
           "nonblank:label_id"
         ]
+      },
+      {
+        "descriptor_id": "autopilot_trigger_rotate_url",
+        "operation_id": "autopilots.trigger_rotate_url",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "trigger-rotate-url"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          },
+          {
+            "source": "trigger_id",
+            "binding": "pos:1",
+            "destination": "path:trigger_id"
+          },
+          {
+            "source": "yes",
+            "binding": "--yes",
+            "destination": "local_control:yes"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "chat_history",
+        "operation_id": "chats.history",
+        "entrypoint_id": "default",
+        "command": [
+          "chat",
+          "history"
+        ],
+        "mappings": [
+          {
+            "source": "limit",
+            "binding": "--limit",
+            "destination": "query:limit"
+          },
+          {
+            "source": "before",
+            "binding": "--before",
+            "destination": "query:before"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "chat_thread",
+        "operation_id": "chats.thread",
+        "entrypoint_id": "default",
+        "command": [
+          "chat",
+          "thread"
+        ],
+        "mappings": [
+          {
+            "source": "thread_id",
+            "binding": "pos:0",
+            "destination": "query:id"
+          },
+          {
+            "source": "limit",
+            "binding": "--limit",
+            "destination": "query:limit"
+          },
+          {
+            "source": "before",
+            "binding": "--before",
+            "destination": "query:before"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issue_timeline",
+        "operation_id": "issues.timeline",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "timeline"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "activity_only",
+            "binding": "--activity-only",
+            "destination": "query:activity_only"
+          },
+          {
+            "source": "actions",
+            "binding": "--action",
+            "destination": "query:action"
+          },
+          {
+            "source": "since",
+            "binding": "--since",
+            "destination": "query:since"
+          },
+          {
+            "source": "tail",
+            "binding": "--tail",
+            "destination": "query:tail"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issue_wakeup_events",
+        "operation_id": "issues.wakeups.events",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "wakeup",
+          "events"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issue_wakeup_list",
+        "operation_id": "issues.wakeups.list",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "wakeup",
+          "list"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issue_wakeup_get",
+        "operation_id": "issues.wakeups.get",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "wakeup",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "wakeup_id",
+            "binding": "pos:1",
+            "destination": "path:wakeup_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issue_wakeup_disable",
+        "operation_id": "issues.wakeups.disable",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "wakeup",
+          "disable"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "wakeup_id",
+            "binding": "pos:1",
+            "destination": "path:wakeup_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issue_wakeup_create",
+        "operation_id": "issues.wakeups.create",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "wakeup",
+          "create"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "agent_id",
+            "binding": "--agent-id",
+            "destination": "json_body:agent_id"
+          },
+          {
+            "source": "instruction",
+            "binding": "--instruction",
+            "destination": "json_body:instruction"
+          },
+          {
+            "source": "kind",
+            "binding": "--kind",
+            "destination": "json_body:kind"
+          },
+          {
+            "source": "mode",
+            "binding": "--mode",
+            "destination": "json_body:mode"
+          },
+          {
+            "source": "event_types",
+            "binding": "--event",
+            "destination": "json_body:event_types"
+          },
+          {
+            "source": "filter_actor_type",
+            "binding": "--filter-actor-type",
+            "destination": "json_body:filter_actor_type"
+          },
+          {
+            "source": "filter_actor_id",
+            "binding": "--filter-actor-id",
+            "destination": "json_body:filter_actor_id"
+          },
+          {
+            "source": "filter_agent_id",
+            "binding": "--filter-agent-id",
+            "destination": "json_body:filter_agent_id"
+          },
+          {
+            "source": "filter_task_id",
+            "binding": "--task-id",
+            "destination": "json_body:filter_task_id"
+          },
+          {
+            "source": "parent_comment_id",
+            "binding": "--parent",
+            "destination": "json_body:parent_comment_id"
+          },
+          {
+            "source": "after_seconds",
+            "binding": "--after",
+            "destination": "json_body:after_seconds"
+          },
+          {
+            "source": "at",
+            "binding": "--at",
+            "destination": "json_body:at"
+          },
+          {
+            "source": "interval_seconds",
+            "binding": "--every",
+            "destination": "json_body:interval_seconds"
+          },
+          {
+            "source": "cron_expression",
+            "binding": "--cron",
+            "destination": "json_body:cron_expression"
+          },
+          {
+            "source": "timezone",
+            "binding": "--timezone",
+            "destination": "json_body:timezone"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "issue_wakeup_update",
+        "operation_id": "issues.wakeups.update",
+        "entrypoint_id": "default",
+        "command": [
+          "issue",
+          "wakeup",
+          "update"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "agent_id",
+            "binding": "--agent-id",
+            "destination": "json_body:agent_id"
+          },
+          {
+            "source": "instruction",
+            "binding": "--instruction",
+            "destination": "json_body:instruction"
+          },
+          {
+            "source": "kind",
+            "binding": "--kind",
+            "destination": "json_body:kind"
+          },
+          {
+            "source": "mode",
+            "binding": "--mode",
+            "destination": "json_body:mode"
+          },
+          {
+            "source": "event_types",
+            "binding": "--event",
+            "destination": "json_body:event_types"
+          },
+          {
+            "source": "filter_actor_type",
+            "binding": "--filter-actor-type",
+            "destination": "json_body:filter_actor_type"
+          },
+          {
+            "source": "filter_actor_id",
+            "binding": "--filter-actor-id",
+            "destination": "json_body:filter_actor_id"
+          },
+          {
+            "source": "filter_agent_id",
+            "binding": "--filter-agent-id",
+            "destination": "json_body:filter_agent_id"
+          },
+          {
+            "source": "filter_task_id",
+            "binding": "--task-id",
+            "destination": "json_body:filter_task_id"
+          },
+          {
+            "source": "parent_comment_id",
+            "binding": "--parent",
+            "destination": "json_body:parent_comment_id"
+          },
+          {
+            "source": "after_seconds",
+            "binding": "--after",
+            "destination": "json_body:after_seconds"
+          },
+          {
+            "source": "at",
+            "binding": "--at",
+            "destination": "json_body:at"
+          },
+          {
+            "source": "interval_seconds",
+            "binding": "--every",
+            "destination": "json_body:interval_seconds"
+          },
+          {
+            "source": "cron_expression",
+            "binding": "--cron",
+            "destination": "json_body:cron_expression"
+          },
+          {
+            "source": "timezone",
+            "binding": "--timezone",
+            "destination": "json_body:timezone"
+          },
+          {
+            "source": "wakeup_id",
+            "binding": "pos:1",
+            "destination": "path:wakeup_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "repository_checkout",
+        "operation_id": "repositories.checkout",
+        "entrypoint_id": "default",
+        "command": [
+          "repo",
+          "checkout"
+        ],
+        "mappings": [
+          {
+            "source": "url",
+            "binding": "pos:0",
+            "destination": "path:url"
+          },
+          {
+            "source": "ref",
+            "binding": "--ref",
+            "destination": "query:ref"
+          },
+          {
+            "source": "fresh",
+            "binding": "--fresh",
+            "destination": "local_control:fresh"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "runtime_profile_list",
+        "operation_id": "runtime_profiles.list",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "profile",
+          "list"
+        ],
+        "mappings": [],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "runtime_profile_create",
+        "operation_id": "runtime_profiles.create",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "profile",
+          "create"
+        ],
+        "mappings": [
+          {
+            "source": "runtime_type",
+            "binding": "--runtime-type",
+            "destination": "json_body:runtime_type"
+          },
+          {
+            "source": "protocol_family",
+            "binding": "--protocol-family",
+            "destination": "json_body:protocol_family"
+          },
+          {
+            "source": "command_name",
+            "binding": "--command-name",
+            "destination": "json_body:command_name"
+          },
+          {
+            "source": "display_name",
+            "binding": "--display-name",
+            "destination": "json_body:display_name"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "runtime_profile_update",
+        "operation_id": "runtime_profiles.update",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "profile",
+          "update"
+        ],
+        "mappings": [
+          {
+            "source": "profile_id",
+            "binding": "pos:0",
+            "destination": "path:profile_id"
+          },
+          {
+            "source": "display_name",
+            "binding": "--display-name",
+            "destination": "json_body:display_name"
+          },
+          {
+            "source": "command_name",
+            "binding": "--command-name",
+            "destination": "json_body:command_name"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          },
+          {
+            "source": "enabled",
+            "binding": "--enabled",
+            "destination": "json_body:enabled"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "runtime_profile_delete",
+        "operation_id": "runtime_profiles.delete",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "profile",
+          "delete"
+        ],
+        "mappings": [
+          {
+            "source": "profile_id",
+            "binding": "pos:0",
+            "destination": "path:profile_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "runtime_profile_set_path",
+        "operation_id": "runtime_profiles.set_path",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "profile",
+          "set-path"
+        ],
+        "mappings": [
+          {
+            "source": "profile_id",
+            "binding": "pos:0",
+            "destination": "path:profile_id"
+          },
+          {
+            "source": "path",
+            "binding": "--path",
+            "destination": "local_control:absolute_path"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "runtime_profile_unset_path",
+        "operation_id": "runtime_profiles.unset_path",
+        "entrypoint_id": "default",
+        "command": [
+          "runtime",
+          "profile",
+          "unset-path"
+        ],
+        "mappings": [
+          {
+            "source": "profile_id",
+            "binding": "pos:0",
+            "destination": "path:profile_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "agents_env_get",
+        "operation_id": "agents.env.get",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "env",
+          "get"
+        ],
+        "mappings": [
+          {
+            "source": "agent_id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "agents_env_set",
+        "operation_id": "agents.env.set",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "env",
+          "set"
+        ],
+        "mappings": [
+          {
+            "source": "agent_id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          },
+          {
+            "source": "custom_env",
+            "binding": "--custom-env",
+            "destination": "json_body:custom_env"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "agents_skills_add",
+        "operation_id": "agents.skills.add",
+        "entrypoint_id": "default",
+        "command": [
+          "agent",
+          "skills",
+          "add"
+        ],
+        "mappings": [
+          {
+            "source": "agent_id",
+            "binding": "pos:0",
+            "destination": "path:agent_id"
+          },
+          {
+            "source": "skill_ids",
+            "binding": "--skill-ids",
+            "destination": "json_body:skill_ids"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "autopilots_trigger_list",
+        "operation_id": "autopilots.trigger_list",
+        "entrypoint_id": "default",
+        "command": [
+          "autopilot",
+          "trigger-list"
+        ],
+        "mappings": [
+          {
+            "source": "autopilot_id",
+            "binding": "pos:0",
+            "destination": "path:autopilot_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "squads_activity",
+        "operation_id": "squads.activity",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "activity"
+        ],
+        "mappings": [
+          {
+            "source": "issue_id",
+            "binding": "pos:0",
+            "destination": "path:issue_id"
+          },
+          {
+            "source": "outcome",
+            "binding": "pos:1",
+            "destination": "path:outcome"
+          },
+          {
+            "source": "reason",
+            "binding": "--reason",
+            "destination": "json_body:reason"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "squads_create",
+        "operation_id": "squads.create",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "create"
+        ],
+        "mappings": [
+          {
+            "source": "name",
+            "binding": "--name",
+            "destination": "json_body:name"
+          },
+          {
+            "source": "leader",
+            "binding": "--leader",
+            "destination": "json_body:leader"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "squads_delete",
+        "operation_id": "squads.delete",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "delete"
+        ],
+        "mappings": [
+          {
+            "source": "squad_id",
+            "binding": "pos:0",
+            "destination": "path:squad_id"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "squads_members_set_role",
+        "operation_id": "squads.members.set_role",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "member",
+          "set-role"
+        ],
+        "mappings": [
+          {
+            "source": "squad_id",
+            "binding": "pos:0",
+            "destination": "path:squad_id"
+          },
+          {
+            "source": "member_id",
+            "binding": "--member-id",
+            "destination": "json_body:member_id"
+          },
+          {
+            "source": "member_type",
+            "binding": "--member-type",
+            "destination": "json_body:member_type"
+          },
+          {
+            "source": "role",
+            "binding": "--role",
+            "destination": "json_body:role"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "squads_update",
+        "operation_id": "squads.update",
+        "entrypoint_id": "default",
+        "command": [
+          "squad",
+          "update"
+        ],
+        "mappings": [
+          {
+            "source": "squad_id",
+            "binding": "pos:0",
+            "destination": "path:squad_id"
+          },
+          {
+            "source": "name",
+            "binding": "--name",
+            "destination": "json_body:name"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          },
+          {
+            "source": "instructions",
+            "binding": "--instructions",
+            "destination": "json_body:instructions"
+          },
+          {
+            "source": "leader",
+            "binding": "--leader",
+            "destination": "json_body:leader"
+          },
+          {
+            "source": "avatar_url",
+            "binding": "--avatar-url",
+            "destination": "json_body:avatar_url"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "workspaces_create",
+        "operation_id": "workspaces.create",
+        "entrypoint_id": "default",
+        "command": [
+          "workspace",
+          "create"
+        ],
+        "mappings": [
+          {
+            "source": "name",
+            "binding": "--name",
+            "destination": "json_body:name"
+          },
+          {
+            "source": "slug",
+            "binding": "--slug",
+            "destination": "json_body:slug"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          },
+          {
+            "source": "context",
+            "binding": "--context",
+            "destination": "json_body:context"
+          },
+          {
+            "source": "issue_prefix",
+            "binding": "--issue-prefix",
+            "destination": "json_body:issue_prefix"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "workspaces_members_invite",
+        "operation_id": "workspaces.members.invite",
+        "entrypoint_id": "default",
+        "command": [
+          "workspace",
+          "member",
+          "invite"
+        ],
+        "mappings": [
+          {
+            "source": "email",
+            "binding": "pos:0",
+            "destination": "path:email"
+          },
+          {
+            "source": "workspace_id",
+            "binding": "pos:1",
+            "destination": "path:workspace_id"
+          },
+          {
+            "source": "role",
+            "binding": "--role",
+            "destination": "json_body:role"
+          }
+        ],
+        "validator_ids": []
+      },
+      {
+        "descriptor_id": "workspaces_update",
+        "operation_id": "workspaces.update",
+        "entrypoint_id": "default",
+        "command": [
+          "workspace",
+          "update"
+        ],
+        "mappings": [
+          {
+            "source": "workspace_id",
+            "binding": "pos:0",
+            "destination": "path:workspace_id"
+          },
+          {
+            "source": "name",
+            "binding": "--name",
+            "destination": "json_body:name"
+          },
+          {
+            "source": "description",
+            "binding": "--description",
+            "destination": "json_body:description"
+          },
+          {
+            "source": "context",
+            "binding": "--context",
+            "destination": "json_body:context"
+          },
+          {
+            "source": "issue_prefix",
+            "binding": "--issue-prefix",
+            "destination": "json_body:issue_prefix"
+          }
+        ],
+        "validator_ids": []
       }
     ],
     "test_vectors": {
