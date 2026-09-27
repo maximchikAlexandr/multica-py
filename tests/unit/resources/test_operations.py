@@ -73,6 +73,10 @@ def _case_class(case: OperationCase) -> type:
         from multica_py.entities.issues import Issue
 
         return Issue
+    if case.bound_target == "task_run":
+        from multica_py.entities.issues import TaskRun
+
+        return TaskRun
     if case.bound_target == "project":
         from multica_py.entities.projects import Project
 
@@ -298,6 +302,10 @@ def _bound_target(case: OperationCase, client: MulticaClient) -> object:
         from multica_py.entities.issues import Issue
 
         return Issue(id="i1", title="Issue", status=IssueStatus.todo, _client=client)
+    if case.bound_target == "task_run":
+        from multica_py.entities.issues import TaskRun
+
+        return TaskRun(id="run_1", status="done", issue_id="i1", _client=client)
     if case.bound_target in {"project", "project_issues"}:
         from multica_py.entities.projects import Project
 
@@ -597,7 +605,7 @@ def test_discovered_public_methods() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
-    assert len(canonical) == 190
+    assert len(canonical) == 192
     assert len(canonical_cases) == len(canonical)
 
 
@@ -658,11 +666,11 @@ def test_operation_case_catalog_is_closed() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
-    assert len(OPERATION_CASES) == 350
-    assert len({c.id for c in OPERATION_CASES}) == 350
+    assert len(OPERATION_CASES) == 352
+    assert len({c.id for c in OPERATION_CASES}) == 352
     assert sum(not c.is_canonical for c in OPERATION_CASES) == 160
     assert len(generated) == 84
-    assert len(manual) == 266
+    assert len(manual) == 268
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
