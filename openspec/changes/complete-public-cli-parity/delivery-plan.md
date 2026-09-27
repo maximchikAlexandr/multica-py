@@ -301,21 +301,28 @@
   migration claims match the reconciled inventory.
 - Owned responsibility scope: approved contract inventory/operations/bindings/
   responses/vectors, schema and validator, deterministic generated projection,
-  autopilot trigger-list resource/wire/model path, canonical operation catalog,
+  autopilot trigger-list methods in `resources/autopilots.py` using the existing
+  frozen mapping decoder/result contract, canonical operation catalog,
   contract/discovery tests, and the directly coupled coverage/migration docs.
 - Critical shared files: exclusive stage-7 ownership of
   `contracts/sdk-contract.json`, contract schema/tooling, generated approved SDK,
   `resources/autopilots.py`, global operation cases, and command-inventory docs.
-  WP-10 MUST NOT edit these files.
+  WP-10 MUST NOT edit these files. WP-09 MUST NOT edit
+  `_internal/wire_models.py`, `entities/autopilots.py`, or
+  `models/autopilots.py`; those complete autopilot wire/entity/model surfaces
+  are reserved for WP-10.
 - Contract surface: command disposition semantics; symbol/binding/result/vector
   equality; `AutopilotResource.trigger_list_command` and `trigger_list`.
 - Definition of done/evidence: all 136 reviewed rows are individually
   reconciled; remaining `transport` rows name concrete controlled APIs and have
   canonical evidence; missing/ambiguous/raw-shunted mutations fail validation;
-  trigger-list passes exact argv, decoder, discovery, generated, and canonical
-  tests; deterministic output is byte-stable.
-- Parallel-safety rationale: contract/autopilot/inventory write zone is disjoint
-  from WP-10's executor, auth/setup, agent-env, and secret-representation zone.
+  trigger-list passes exact argv, existing mapping-decoder/result, discovery,
+  generated, and canonical tests without changing an autopilot wire/entity/model
+  file; deterministic output is byte-stable.
+- Parallel-safety rationale: WP-09 owns the contract, generated projection,
+  operation catalog, docs, and autopilot resource method only. Every mutable
+  autopilot wire/entity/model file is excluded and reserved for WP-10, so the
+  stage-7 siblings have no shared production write zone.
 
 ## WP-10 — Secret and interactive process boundary repair
 
@@ -326,15 +333,18 @@
   execution, and every advertised interactive operation either has working
   terminal write/close semantics on its executor or fails capability checks
   before launch.
-- Owned responsibility scope: entity/result secret policy, autopilot wire-to-
-  public secret projection excluding trigger-list, agent env resource/result/
-  channel, safe-content and redaction primitives, auth/setup terminal routing,
-  executor capability handling, managed process lifecycle, and focused sentinel
-  and backend conformance tests.
+- Owned responsibility scope: entity/result secret policy; the complete
+  autopilot wire/entity/model surfaces in `_internal/wire_models.py`,
+  `entities/autopilots.py`, and `models/autopilots.py`; agent env
+  resource/result/channel; safe-content and redaction primitives; auth/setup
+  terminal routing; executor capability handling; managed process lifecycle;
+  and focused sentinel and backend conformance tests.
 - Critical shared files: WP-10 owns executor/transport/content/redaction and
-  agent/auth/setup paths during stage 7. It MUST NOT edit the approved contract,
-  generated projection, global operation catalog, trigger-list implementation,
-  or coverage docs owned by WP-09.
+  agent/auth/setup paths plus all autopilot wire/entity/model files during stage
+  7. It MUST NOT edit the approved contract, generated projection, global
+  operation catalog, `resources/autopilots.py`, trigger-list implementation, or
+  coverage docs owned by WP-09. Any production repair later proven to require
+  both reserved zones is deferred to serialized WP-11 after stage-7 fan-in.
 - Contract surface: secret-aware repr/projection; execution-time secret channel;
   terminal capability, write, close, cancel, timeout, semaphore, and redaction.
 - Definition of done/evidence: exact sentinels are absent from repr/log/error/
@@ -342,8 +352,11 @@
   prompt login/setup use terminal mode; Local, SSH, and Microsandbox behavior is
   either conforming or rejected before process creation; focused Ruff/mypy and
   backend tests pass.
-- Parallel-safety rationale: security/process files and focused tests do not
-  overlap WP-09's contract/autopilot-list/global-catalog write zone.
+- Parallel-safety rationale: WP-10 exclusively owns every mutable autopilot
+  wire/entity/model file, while WP-09 exclusively owns the autopilot resource
+  method and contract/catalog surfaces. Mutual exclusions are explicit; any
+  newly discovered coupled repair is serialized in WP-11 rather than written by
+  both siblings.
 
 ## WP-11 — Test-policy convergence and full finding fan-in
 
