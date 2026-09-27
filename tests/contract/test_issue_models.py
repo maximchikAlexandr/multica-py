@@ -14,6 +14,7 @@ import pytest
 
 import multica_py
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py._internal.wire_models import (
     _CommentWire,
@@ -1455,17 +1456,6 @@ def test_issue_collection_row_scalar_fields_decoding() -> None:
     assert issue.creator_type == "member"
 
 
-@pytest.fixture
-def _mock_transport() -> MagicMock:
-    transport = MagicMock(spec=CliTransport)
-    transport.run_bytes.return_value = MagicMock(
-        stdout=b'{"issues":[],"has_more":false,"limit":0,"offset":0,"total":0}',
-        argv=("test",),
-    )
-    transport.run_text.return_value = MagicMock()
-    return transport
-
-
 @pytest.mark.parametrize(
     ("offset", "should_raise"),
     [
@@ -1475,16 +1465,23 @@ def _mock_transport() -> MagicMock:
     ],
 )
 def test_issue_list_filter_rejects_negative_offset(
-    offset: int, should_raise: bool, _mock_transport: MagicMock
+    offset: int,
+    should_raise: bool,
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
 ) -> None:
-    resource = IssueResource(_mock_transport, ClientConfig())
+    resource = IssueResource(mock_transport, ClientConfig())
     if should_raise:
         with pytest.raises(ValueError) as exc:
             resource.list(IssueListFilter(offset=offset))
         assert "offset" in str(exc.value)
-        _mock_transport.run_bytes.assert_not_called()
+        mock_transport.run_bytes.assert_not_called()
     else:
+        mock_transport.run_bytes.return_value = raw_result(
+            argv=("issue", "list", "--offset", "0", "--output", "json"),
+            stdout=b'{"issues":[],"has_more":false,"limit":0,"offset":0,"total":0}',
+        )
         resource.list(IssueListFilter(offset=offset))
-        _mock_transport.run_bytes.assert_called_once()
-        call_args = _mock_transport.run_bytes.call_args
+        mock_transport.run_bytes.assert_called_once()
+        call_args = mock_transport.run_bytes.call_args
         assert call_args.args == (("issue", "list", "--offset", "0", "--output", "json"),)

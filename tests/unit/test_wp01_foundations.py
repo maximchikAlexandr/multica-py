@@ -58,8 +58,8 @@ def test_wire_presence_distinguishes_missing_null_and_false() -> None:
     )
 
 
-def test_inventory_rejects_unreviewed_rows_and_reconciles_help() -> None:
-    item = {
+def _inventory_fixture() -> tuple[dict[str, object], dict[str, object], dict[str, list[str]]]:
+    item: dict[str, object] = {
         "inventory_id": "command:issue-list",
         "kind": "command",
         "identity": "issue list",
@@ -87,12 +87,24 @@ def test_inventory_rejects_unreviewed_rows_and_reconciles_help() -> None:
         "expected_identities": {"command": ["issue list"]},
         "reconciliation": reconciliation,
     }
-    inventory = parse_inventory(raw_inventory)
-    assert inventory.by_id["command:issue-list"].identity == "issue list"
-    with pytest.raises(InventoryError):
-        parse_inventory({**raw_inventory, "items": [{**item, "disposition": "unknown"}]})
+    return raw_inventory, item, reconciliation
+
+
+@pytest.mark.parametrize("disposition", ("unknown", "deferred"))
+def test_inventory_rejects_unreviewed_dispositions(disposition: str) -> None:
+    raw_inventory, item, _reconciliation = _inventory_fixture()
+    with pytest.raises(InventoryError, match="disposition"):
+        parse_inventory({**raw_inventory, "items": [{**item, "disposition": disposition}]})
+
+
+def test_inventory_rejects_incomplete_rows() -> None:
+    raw_inventory, _item, _reconciliation = _inventory_fixture()
     with pytest.raises(InventoryError, match="complete inventory"):
         parse_inventory({**raw_inventory, "complete": True, "items": []})
+
+
+def test_inventory_rejects_unresolved_source_help() -> None:
+    raw_inventory, item, reconciliation = _inventory_fixture()
     with pytest.raises(InventoryError, match="unresolved source/help"):
         extra_items = [
             {**item, "inventory_id": "input:value", "kind": "input", "identity": "value"},
@@ -132,10 +144,18 @@ def test_inventory_rejects_unreviewed_rows_and_reconciles_help() -> None:
                 },
             }
         )
-    with pytest.raises(InventoryError, match="disposition"):
-        parse_inventory({**raw_inventory, "items": [{**item, "disposition": "deferred"}]})
+
+
+def test_inventory_rejects_identity_mismatch() -> None:
+    raw_inventory, _item, _reconciliation = _inventory_fixture()
     with pytest.raises(InventoryError, match="exactly cover"):
         validate_inventory(raw_inventory, expected_identities={"command:issue-list": "wrong"})
+
+
+def test_inventory_reconciles_help_and_preserves_valid_rows() -> None:
+    raw_inventory, _item, _reconciliation = _inventory_fixture()
+    inventory = parse_inventory(raw_inventory)
+    assert inventory.by_id["command:issue-list"].identity == "issue list"
 
     help_nodes = parse_recursive_help(
         {"path": "issue", "children": [{"path": "list"}, {"path": "probe", "hidden": True}]}

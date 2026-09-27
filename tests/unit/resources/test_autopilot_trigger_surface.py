@@ -411,7 +411,6 @@ def test_autopilot_trigger_uses_only_supported_command_spelling() -> None:
     command = resource.trigger_command("a1")
 
     assert command.commands == ("multica autopilot trigger a1 --output json",)
-    assert "autopilot run" not in command.commands[0]
     assert transport.run_bytes.call_count == 0
     assert command.run().id == "run1"
     assert transport.run_bytes.call_args.args[0] == (

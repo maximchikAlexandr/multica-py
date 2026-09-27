@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from unittest.mock import MagicMock
 
 import msgspec
 import pytest
 
-from multica_py._internal.specs import RawCommandResult, TextResult
-from multica_py._internal.transport import CliTransport
+from multica_py._internal.specs import RawCommandResult
 from multica_py.config import ClientConfig
 from multica_py.enums import ProjectStatus
 from multica_py.models.common import ActionResult
@@ -30,21 +28,11 @@ from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.squads import SquadResource
 from multica_py.resources.users import UserResource
 from multica_py.resources.workspaces import WorkspaceResource
-
-
-def _transport(*, stdout: object = None, text: str = "") -> MagicMock:
-    transport = MagicMock(spec=CliTransport)
-    payload = b"" if stdout is None else msgspec.json.encode(stdout)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.return_value = RawCommandResult(
-        argv=(), exit_code=0, stdout=payload, stderr=b"", duration=datetime.timedelta()
-    )
-    transport.run_text.return_value = TextResult(text=text, stderr="", exit_code=0)
-    return transport
+from tests.unit.resources._factories import make_transport
 
 
 def test_repository_checkout_returns_frozen_path_result() -> None:
-    transport = _transport(text="/worktrees/acme\n")
+    transport = make_transport(text="/worktrees/acme\n")
     resource = RepositoryResource(transport, ClientConfig())
 
     result = resource.checkout("https://example.test/acme.git", ref="main", fresh=True)
@@ -67,7 +55,7 @@ def test_repository_checkout_returns_frozen_path_result() -> None:
 
 
 def test_agent_env_and_atomic_skill_add_use_reviewed_json_channels() -> None:
-    transport = _transport(stdout={"MODE": "safe"})
+    transport = make_transport(stdout={"MODE": "safe"})
     resource = AgentResource(transport, ClientConfig())
 
     assert resource.env_get("agent-1") == {"MODE": "safe"}
@@ -111,7 +99,7 @@ def test_agent_env_and_atomic_skill_add_use_reviewed_json_channels() -> None:
 
 
 def test_agent_wire_preserves_system_configuration_fields() -> None:
-    transport = _transport(
+    transport = make_transport(
         stdout={
             "id": "agent-1",
             "name": "Builder",
@@ -134,7 +122,7 @@ def test_agent_wire_preserves_system_configuration_fields() -> None:
 
 
 def test_workspace_mutations_decode_and_bind_existing_entities() -> None:
-    transport = _transport(stdout={"id": "ws-1", "name": "Acme", "slug": "acme"})
+    transport = make_transport(stdout={"id": "ws-1", "name": "Acme", "slug": "acme"})
     resource = WorkspaceResource(transport, ClientConfig())
 
     workspace = resource.create(name="Acme", slug="acme", context="build")
@@ -176,7 +164,7 @@ def test_workspace_mutations_decode_and_bind_existing_entities() -> None:
 
 
 def test_squad_mutations_and_member_role_share_reviewed_args() -> None:
-    transport = _transport(stdout={"id": "squad-1", "name": "Builders"})
+    transport = make_transport(stdout={"id": "squad-1", "name": "Builders"})
     resource = SquadResource(transport, ClientConfig())
 
     squad = resource.create(name="Builders", leader="agent-1")
@@ -215,7 +203,7 @@ def test_squad_mutations_and_member_role_share_reviewed_args() -> None:
 
 
 def test_runtime_profiles_support_list_create_update_and_path_validation() -> None:
-    transport = _transport(
+    transport = make_transport(
         stdout={
             "profiles": [
                 {
@@ -263,8 +251,8 @@ def test_runtime_profiles_support_list_create_update_and_path_validation() -> No
         resource.set_path_command("profile-1", pathlib.Path("relative"))
 
 
-def test_project_create_update_and_projection_preserve_reviewed_fields() -> None:
-    transport = _transport(
+def test_project_create_preserves_reviewed_fields() -> None:
+    transport = make_transport(
         stdout={
             "id": "project-1",
             "title": "Parity",
@@ -310,15 +298,16 @@ def test_project_create_update_and_projection_preserve_reviewed_fields() -> None
         "--output",
         "json",
     )
-    transport.run_bytes.return_value = RawCommandResult(
-        argv=(),
-        exit_code=0,
-        stdout=msgspec.json.encode({"id": "project-1", "title": "Parity", "status": "paused"}),
-        stderr=b"",
-        duration=datetime.timedelta(),
-    )
+
+
+def test_project_update_preserves_explicit_clear_presence() -> None:
+    transport = make_transport(stdout={"id": "project-1", "title": "Parity", "status": "paused"})
+    resource = ProjectResource(transport, ClientConfig())
     resource.update("project-1", status=ProjectStatus.paused, due_date=None)
-    assert transport.run_bytes.call_args.args[0][-6:] == (
+    assert transport.run_bytes.call_args.args[0] == (
+        "project",
+        "update",
+        "project-1",
         "--status",
         "paused",
         "--due-date",
@@ -329,7 +318,7 @@ def test_project_create_update_and_projection_preserve_reviewed_fields() -> None
 
 
 def test_project_resource_variants_labels_position_and_presence_are_mapped() -> None:
-    transport = _transport(
+    transport = make_transport(
         stdout={
             "id": "resource-1",
             "project_id": "project-1",
@@ -388,7 +377,7 @@ def test_project_resource_variants_labels_position_and_presence_are_mapped() -> 
 
 
 def test_daemon_launch_log_and_auth_controls_preserve_presence() -> None:
-    transport = _transport(text="ok")
+    transport = make_transport(text="ok")
     daemon = DaemonResource(transport, ClientConfig())
     launch = DaemonLaunchOptions(
         daemon_id="daemon-1",
@@ -404,10 +393,10 @@ def test_daemon_launch_log_and_auth_controls_preserve_presence() -> None:
         "--workspaces-root /var/lib/multica --ws-claim-poll-interval 10s "
         "--no-auto-update=true --no-auto-reload=true",
     )
-    assert (
-        daemon.restart_command(launch_options=launch)
-        .commands[0]
-        .startswith("multica daemon restart --daemon-id daemon-1")
+    assert daemon.restart_command(launch_options=launch).commands == (
+        "multica daemon restart --daemon-id daemon-1 --device-name Mac --runtime-name Codex "
+        "--workspaces-root /var/lib/multica --ws-claim-poll-interval 10s "
+        "--no-auto-update=true --no-auto-reload=true",
     )
     assert daemon.logs_command(lines=25, follow=True).commands == (
         "multica daemon logs --follow --lines 25",
@@ -424,7 +413,7 @@ def test_daemon_launch_log_and_auth_controls_preserve_presence() -> None:
 
 
 def test_runtime_rich_variants_decode_priced_usage_and_update_metadata() -> None:
-    transport = _transport(
+    transport = make_transport(
         stdout=[
             {
                 "id": "runtime-1",
@@ -468,7 +457,7 @@ def test_runtime_rich_variants_decode_priced_usage_and_update_metadata() -> None
 
 
 def test_user_profile_content_channels_preserve_safe_presence() -> None:
-    resource = UserResource(_transport(), ClientConfig())
+    resource = UserResource(make_transport(), ClientConfig())
     assert resource.profile_update_command(description_stdin="line one\nline two").commands == (
         "multica user profile update --description-stdin --output json",
     )

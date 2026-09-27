@@ -11,7 +11,6 @@ import pytest
 
 from multica_py._internal.commands import Command
 from multica_py._internal.specs import RawCommandResult, TextResult
-from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.entities.projects import Project as BoundProject
 from multica_py.enums import ProjectStatus
@@ -30,6 +29,7 @@ from multica_py.resources.repositories import RepositoryResource
 from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.workspaces import WorkspaceResource
 from tests.cases.operations import OPERATION_CASES, RESOURCE_SPECS
+from tests.unit.resources._factories import make_transport
 
 APPROVED_ACTION_METHODS = frozenset(
     {
@@ -77,14 +77,8 @@ APPROVED_ACTION_METHODS = frozenset(
 )
 
 
-def _transport() -> MagicMock:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    return transport
-
-
 def test_void_adapter_wraps_success_once_and_redacts_public_message() -> None:
-    transport = _transport()
+    transport = make_transport()
     transport.run_text.return_value = TextResult("completed token: secret-value", "", 0)
     result = BaseResource(transport, ClientConfig())._action_command(("demo", "delete")).run()
 
@@ -102,7 +96,7 @@ def test_void_adapter_wraps_success_once_and_redacts_public_message() -> None:
 def test_configuration_set_redacts_bare_secret_from_preview_and_message(
     key: str, secret: str
 ) -> None:
-    transport = _transport()
+    transport = make_transport()
     transport.run_text.return_value = TextResult(f"stored {secret}", "", 0)
 
     command = ConfigurationResource(transport, ClientConfig()).set_command(key, secret)
@@ -118,7 +112,7 @@ def test_configuration_set_redacts_bare_secret_from_preview_and_message(
 
 
 def test_configuration_get_is_a_full_config_show_alias() -> None:
-    transport = _transport()
+    transport = make_transport()
     transport.run_text.return_value = TextResult("server_url: https://example.test", "", 0)
     resource = ConfigurationResource(transport, ClientConfig())
 
@@ -145,7 +139,7 @@ def test_removed_v0428_commands_are_not_public_sdk_methods() -> None:
 def test_payload_adapters_preserve_decoded_value(
     operation: str, expected_type: type[object]
 ) -> None:
-    transport = _transport()
+    transport = make_transport()
     if operation == "repository":
         payload: object = RepositoryMutationResult(
             workspace_id="w1",
@@ -181,7 +175,7 @@ def test_payload_adapters_preserve_decoded_value(
 
 
 def test_token_login_wraps_scalar_and_interactive_login_stays_process() -> None:
-    transport = _transport()
+    transport = make_transport()
     auth = AuthResource(transport, ClientConfig())
     transport.run_text.return_value = TextResult("login successful", "", 0)
 
@@ -193,7 +187,7 @@ def test_token_login_wraps_scalar_and_interactive_login_stays_process() -> None:
 
 
 def test_token_login_redacts_echoed_bare_token_from_action_value() -> None:
-    transport = _transport()
+    transport = make_transport()
     secret = "opaque-login-secret-4Qx8"
     auth = AuthResource(transport, ClientConfig())
     transport.run_text.return_value = TextResult(f"authenticated {secret}", "", 0)
@@ -210,7 +204,7 @@ def test_token_login_redacts_echoed_bare_token_from_action_value() -> None:
 
 
 def test_interactive_login_runs_as_managed_process() -> None:
-    transport = _transport()
+    transport = make_transport()
     process = MagicMock()
     transport.spawn.return_value = process
 
@@ -221,7 +215,7 @@ def test_interactive_login_runs_as_managed_process() -> None:
 
 
 def test_action_transport_and_decode_failures_are_not_wrapped() -> None:
-    transport = _transport()
+    transport = make_transport()
     auth = AuthResource(transport, ClientConfig())
     transport.run_text.side_effect = NetworkError("transport failed")
     with pytest.raises(NetworkError, match="transport failed"):
@@ -243,7 +237,7 @@ def test_action_transport_and_decode_failures_are_not_wrapped() -> None:
 
 @pytest.mark.parametrize("success", (True, False), ids=("success", "unsuccessful"))
 def test_bound_action_mapper_preserves_identity_and_gates_invalidation(success: bool) -> None:
-    transport = _transport()
+    transport = make_transport()
     expected = ActionResult[None](success=success, value=None)
     child = BaseResource(transport, ClientConfig())._plan(
         steps=(), finalize=lambda _results: expected

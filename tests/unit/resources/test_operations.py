@@ -898,23 +898,13 @@ def test_comment_delete_keep_replies_contract() -> None:
     assert calls == [("issue", "comment", "delete", "cmt_1")]
 
 
-def test_approved_result_categories_are_closed() -> None:
-    """Keep public result shapes aligned with the approved convention matrix."""
-    from multica_py.models.relations import (
-        CursorLazyCollection,
-        LazyCollection,
-        OffsetLazyCollection,
-    )
-    from multica_py.models.system import RepositoryCheckoutResult
-
-    contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
-    responses = {response.response_id: response for response in contract.responses}
-    canonical = {
-        case.sdk_method: case
-        for case in OPERATION_CASES
-        if case.is_canonical and case.contract_operation_id is not None
-    }
-    void_actions = {
+_RESULT_CONTRACT = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
+_RESULTS = {response.response_id: response for response in _RESULT_CONTRACT.responses}
+_CANONICAL_RESULT_CASES = tuple(
+    case for case in OPERATION_CASES if case.is_canonical and case.contract_operation_id is not None
+)
+_VOID_ACTIONS = frozenset(
+    {
         "agents.archive",
         "agents.avatar",
         "agents.restore",
@@ -942,7 +932,9 @@ def test_approved_result_categories_are_closed() -> None:
         "workspaces.switch",
         "workspaces.mcp.remove",
     }
-    natural_action_exceptions = {
+)
+_NATURAL_ACTIONS = frozenset(
+    {
         "attachments.upload_bytes",
         "autopilots.trigger_rotate_url",
         "issues.wakeups.disable",
@@ -979,96 +971,148 @@ def test_approved_result_categories_are_closed() -> None:
         "issues.properties.set",
         "skills.refresh",
     }
-    page_response_ids = {
-        response.response_id
-        for response in responses.values()
-        if response.public_type_id.startswith("Page[")
-        or response.response_id
-        in {
-            "comment_page",
-            "comment_thread_page",
-            "issue_list_page",
-            "autopilot_list_page",
-            "autopilot_run_list_page",
-            "chat_history",
-            "chat_thread",
-            "issue_timeline",
-            "issue_wakeups",
-            "issue_wakeup_list",
-            "runtime_profile_list",
-        }
+)
+_PAGE_RESPONSE_IDS = {
+    response.response_id
+    for response in _RESULTS.values()
+    if response.public_type_id.startswith("Page[")
+    or response.response_id
+    in {
+        "comment_page",
+        "comment_thread_page",
+        "issue_list_page",
+        "autopilot_list_page",
+        "autopilot_run_list_page",
+        "chat_history",
+        "chat_thread",
+        "issue_timeline",
+        "issue_wakeups",
+        "issue_wakeup_list",
+        "runtime_profile_list",
     }
-    page_response_ids.add("issue_children_result")
+}
+_PAGE_RESPONSE_IDS.add("issue_children_result")
 
-    # Relation snapshots are deliberately outside the canonical Page migration.
+
+def _result_case(case: OperationCase) -> tuple[OperationCase, typing.Any, str]:
+    response_id = case.expected_response_id
+    category = case.expected_category
+    assert response_id is not None and category is not None
+    assert response_id in _RESULTS, case.sdk_method
+    return case, typing.get_type_hints(_case_method(case))["return"], response_id
+
+
+def test_relation_snapshots_are_tuple_collections() -> None:
+    from multica_py.models.relations import (
+        CursorLazyCollection,
+        LazyCollection,
+        OffsetLazyCollection,
+    )
+
     for relation_type in (LazyCollection, OffsetLazyCollection, CursorLazyCollection):
         assert typing.get_origin(typing.get_type_hints(relation_type.all)["return"]) is tuple
 
-    for sdk_method, case in canonical.items():
-        if case.contract_operation_id is None:
-            continue
-        assert case.expected_response_id in responses, sdk_method
-        annotation = typing.get_type_hints(_case_method(case))["return"]
-        category = case.expected_category
-        response_id = case.expected_response_id
-        assert category is not None and response_id is not None
-        if category == "collection":
-            if sdk_method == "daemon.disk_usage":
-                assert not _contains_type(annotation, Page), sdk_method
-            elif sdk_method == "runtime_profiles.list":
-                assert annotation.__name__ == "RuntimeProfiles", sdk_method
-            elif sdk_method == "issues.metadata.list":
-                assert annotation == dict[str, object] or typing.get_origin(annotation) is dict
-            elif sdk_method == "autopilots.trigger_list":
-                assert typing.get_origin(annotation) is Mapping
-            elif sdk_method == "issues.properties.list":
-                assert typing.get_origin(annotation) is tuple
-            elif sdk_method == "issues.usage":
-                assert annotation.__name__ == "IssueUsage"
-            else:
-                assert response_id in page_response_ids, sdk_method
-                assert _contains_type(annotation, Page) or annotation.__name__ in {
-                    "IssueListPage",
-                    "AutopilotListPage",
-                    "AutopilotRunListPage",
-                    "IssueChildrenResult",
-                }, sdk_method
-        elif category == "action":
-            if sdk_method in {
-                "runtime_profiles.delete",
-                "runtime_profiles.set_path",
-                "runtime_profiles.unset_path",
-            }:
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method == "squads.member_set_role":
-                assert response_id == "action_result_none", sdk_method
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method in {"auth.logout", "daemon.restart", "daemon.stop"}:
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method in void_actions:
-                assert response_id == "action_result_none", sdk_method
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method == "auth.login":
-                assert response_id == "action_result_str", sdk_method
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method in {"repositories.add", "repositories.remove"}:
-                assert response_id == "action_result_repository_mutation_result", sdk_method
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method == "runtimes.update":
-                assert response_id == "action_result_runtime_update_result"
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method not in natural_action_exceptions:
-                raise AssertionError(f"unapproved action category: {sdk_method}")
-            else:
-                assert not _contains_type(annotation, ActionResult), sdk_method
-        elif category == "process" and sdk_method == "repositories.checkout":
-            assert response_id == "repository_checkout", sdk_method
-            assert annotation is RepositoryCheckoutResult, sdk_method
-        elif category == "process":
-            assert response_id == "process", sdk_method
-            assert annotation is ManagedProcess, sdk_method
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(case for case in _CANONICAL_RESULT_CASES if case.expected_category == "collection"),
+    ids=lambda case: case.sdk_method,
+)
+def test_collection_result_categories_are_closed(case: OperationCase) -> None:
+    case, annotation, response_id = _result_case(case)
+    special = {
+        "daemon.disk_usage": "non-page",
+        "runtime_profiles.list": "profiles",
+        "issues.metadata.list": "mapping",
+        "autopilots.trigger_list": "mapping",
+        "issues.properties.list": "tuple",
+        "issues.usage": "usage",
+    }.get(case.sdk_method, "page")
+    if special == "non-page":
+        assert not _contains_type(annotation, Page)
+    elif special == "profiles":
+        assert annotation.__name__ == "RuntimeProfiles"
+    elif special == "mapping":
+        if case.sdk_method == "issues.metadata.list":
+            assert annotation == dict[str, object] or typing.get_origin(annotation) is dict
         else:
-            assert not _contains_type(annotation, ActionResult), sdk_method
+            assert typing.get_origin(annotation) is Mapping
+    elif special == "tuple":
+        assert typing.get_origin(annotation) is tuple
+    elif special == "usage":
+        assert annotation.__name__ == "IssueUsage"
+    else:
+        assert response_id in _PAGE_RESPONSE_IDS
+        assert _contains_type(annotation, Page) or annotation.__name__ in {
+            "IssueListPage",
+            "AutopilotListPage",
+            "AutopilotRunListPage",
+            "IssueChildrenResult",
+        }
+
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(case for case in _CANONICAL_RESULT_CASES if case.expected_category == "action"),
+    ids=lambda case: case.sdk_method,
+)
+def test_action_result_categories_are_closed(case: OperationCase) -> None:
+    case, annotation, response_id = _result_case(case)
+    if case.sdk_method in {
+        "runtime_profiles.delete",
+        "runtime_profiles.set_path",
+        "runtime_profiles.unset_path",
+        "auth.logout",
+        "daemon.restart",
+        "daemon.stop",
+    }:
+        assert _contains_type(annotation, ActionResult)
+    elif case.sdk_method == "squads.member_set_role" or case.sdk_method in _VOID_ACTIONS:
+        assert response_id == "action_result_none"
+        assert _contains_type(annotation, ActionResult)
+    elif case.sdk_method == "auth.login":
+        assert response_id == "action_result_str"
+        assert _contains_type(annotation, ActionResult)
+    elif case.sdk_method in {"repositories.add", "repositories.remove"}:
+        assert response_id == "action_result_repository_mutation_result"
+        assert _contains_type(annotation, ActionResult)
+    elif case.sdk_method == "runtimes.update":
+        assert response_id == "action_result_runtime_update_result"
+        assert _contains_type(annotation, ActionResult)
+    else:
+        assert case.sdk_method in _NATURAL_ACTIONS
+        assert not _contains_type(annotation, ActionResult)
+
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(case for case in _CANONICAL_RESULT_CASES if case.expected_category == "process"),
+    ids=lambda case: case.sdk_method,
+)
+def test_process_result_categories_are_closed(case: OperationCase) -> None:
+    from multica_py.models.system import RepositoryCheckoutResult
+
+    case, annotation, response_id = _result_case(case)
+    if case.sdk_method == "repositories.checkout":
+        assert response_id == "repository_checkout"
+        assert annotation is RepositoryCheckoutResult
+    else:
+        assert response_id == "process"
+        assert annotation is ManagedProcess
+
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(
+        case
+        for case in _CANONICAL_RESULT_CASES
+        if case.expected_category not in {"collection", "action", "process"}
+    ),
+    ids=lambda case: case.sdk_method,
+)
+def test_scalar_result_categories_are_not_actions(case: OperationCase) -> None:
+    _case, annotation, _response_id = _result_case(case)
+    assert not _contains_type(annotation, ActionResult)
 
 
 def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> None:

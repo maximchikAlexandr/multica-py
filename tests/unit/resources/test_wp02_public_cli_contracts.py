@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from unittest.mock import MagicMock
 
 import msgspec
 
-from multica_py._internal.specs import RawCommandResult, TextResult
+from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.wire_models import _ProjectResourceRecordWire, project_resource_from_wire
 from multica_py.config import ClientConfig
 from multica_py.models.project_resources import GithubRepoResourceRef
@@ -23,23 +22,14 @@ from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
 from multica_py.resources.daemon import DaemonResource
 from multica_py.resources.squad_members import SquadMemberResource
-
-
-def _transport(stdout: object, *, text: str = "") -> MagicMock:
-    transport = MagicMock()
-    payload = stdout if isinstance(stdout, bytes) else msgspec.json.encode(stdout)
-    transport.run_bytes.return_value = RawCommandResult(
-        argv=(), exit_code=0, stdout=payload, stderr=b"", duration=datetime.timedelta()
-    )
-    transport.run_text.return_value = TextResult(text=text, stderr="", exit_code=0)
-    return transport
+from tests.unit.resources._factories import make_transport
 
 
 def test_attachment_upload_and_download_use_source_argv(tmp_path: pathlib.Path) -> None:
     source = tmp_path / "file.txt"
     source.write_bytes(b"payload")
-    transport = _transport(
-        {"id": "a1", "filename": "file.txt", "markdown_url": "url", "markdown": "md"}
+    transport = make_transport(
+        stdout={"id": "a1", "filename": "file.txt", "markdown_url": "url", "markdown": "md"}
     )
     resource = AttachmentResource(transport, ClientConfig())
 
@@ -49,9 +39,7 @@ def test_attachment_upload_and_download_use_source_argv(tmp_path: pathlib.Path) 
         id="a1", filename="file.txt", markdown_url="url", markdown="md"
     )
     upload_argv = transport.run_bytes.call_args.args[0]
-    assert upload_argv[:2] == ("attachment", "upload")
-    assert upload_argv[2]
-    assert "--output" not in upload_argv
+    assert upload_argv == ("attachment", "upload", upload_argv[2])
 
     transport.run_bytes.return_value = RawCommandResult(
         argv=(),
@@ -76,7 +64,7 @@ def test_attachment_upload_and_download_use_source_argv(tmp_path: pathlib.Path) 
 
 
 def test_auth_status_is_text_and_logout_does_not_request_json() -> None:
-    transport = _transport({}, text="Authenticated as User (user@example.com)")
+    transport = make_transport(stdout={}, text="Authenticated as User (user@example.com)")
     resource = AuthResource(transport, ClientConfig())
 
     assert resource.status() == "Authenticated as User (user@example.com)"
@@ -88,8 +76,8 @@ def test_auth_status_is_text_and_logout_does_not_request_json() -> None:
 
 
 def test_daemon_health_and_disk_usage_shapes() -> None:
-    transport = _transport(
-        {
+    transport = make_transport(
+        stdout={
             "status": "running",
             "pid": 42,
             "uptime": "1m",
@@ -131,7 +119,7 @@ def test_daemon_health_and_disk_usage_shapes() -> None:
 
 
 def test_squad_member_add_remove_use_flagged_request_fields() -> None:
-    transport = _transport({"member_id": "a1", "member_type": "agent", "role": "worker"})
+    transport = make_transport(stdout={"member_id": "a1", "member_type": "agent", "role": "worker"})
     resource = SquadMemberResource(transport, ClientConfig())
 
     member = resource.add("s1", member_id="a1", member_type="agent", role="worker")

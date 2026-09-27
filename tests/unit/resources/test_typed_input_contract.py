@@ -24,6 +24,7 @@ from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.projects import ProjectResource
 from multica_py.resources.skills import SkillResource
+from tests.unit.resources._factories import make_transport
 
 
 @dataclass(frozen=True, slots=True)
@@ -249,12 +250,6 @@ def _step_shapes(command: Command[object]) -> tuple[tuple[object, ...], ...]:
     return tuple((step.argv, step.mode, step.stdin, step.timeout) for step in plan.steps)
 
 
-def _transport() -> MagicMock:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    return transport
-
-
 def test_governed_request_inventory_matches_frozen_case_table() -> None:
     assert {type(case.request) for case in TYPED_INPUT_CASES} == _GOVERNED_REQUEST_TYPES
     assert _governed_annotations() == _table_annotations()
@@ -272,7 +267,7 @@ def test_governed_overloads_have_exact_fields_and_eager_command_parity(
 def test_object_and_direct_forms_have_exact_plan_and_result_parity(
     case: TypedInputCase,
 ) -> None:
-    transport = _transport()
+    transport = make_transport()
     owner = case.owner_factory(transport)
     target_args = case.target_args
     direct_kwargs = dict(case.direct_kwargs)
@@ -303,7 +298,7 @@ def test_object_and_direct_forms_have_exact_plan_and_result_parity(
 def test_mixed_input_unknown_keyword_and_required_missing_fail_before_transport(
     case: TypedInputCase,
 ) -> None:
-    transport = _transport()
+    transport = make_transport()
     owner = case.owner_factory(transport)
     method = getattr(owner, case.command_name)
     direct_kwargs = dict(case.direct_kwargs)
@@ -330,7 +325,7 @@ def test_mixed_input_unknown_keyword_and_required_missing_fail_before_transport(
     ids=lambda case: f"{case.case_id}:empty",
 )
 def test_optional_empty_object_and_direct_forms_have_same_plan(case: TypedInputCase) -> None:
-    transport = _transport()
+    transport = make_transport()
     owner = case.owner_factory(transport)
     object_command = typing.cast(
         "Command[object]",

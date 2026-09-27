@@ -5,7 +5,9 @@ from collections.abc import Mapping
 from typing import cast
 from unittest.mock import MagicMock
 
-from multica_py._internal.specs import RawCommandResult
+import msgspec
+
+from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
@@ -112,3 +114,14 @@ def command_result(payload: bytes, *argv: str) -> RawCommandResult:
         argv=argv,
         duration=datetime.timedelta(),
     )
+
+
+def make_transport(*, stdout: object = None, text: str = "") -> MagicMock:
+    """Build the shared unit transport double with deterministic result defaults."""
+    transport = MagicMock(spec=CliTransport)
+    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    if stdout is not None:
+        payload = stdout if isinstance(stdout, bytes) else msgspec.json.encode(stdout)
+        transport.run_bytes.return_value = command_result(payload)
+    transport.run_text.return_value = TextResult(text=text, stderr="", exit_code=0)
+    return transport

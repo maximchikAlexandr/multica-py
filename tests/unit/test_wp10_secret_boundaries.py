@@ -12,6 +12,12 @@ from multica_py.execution import CommandExecutor, ProcessHandle
 from multica_py.models.autopilots import AutopilotTriggerRotateURL
 from multica_py.resources.agents import AgentResource
 
+TERMINAL_COMMAND_CASES = (
+    ("login", "--token"),
+    ("setup", "cloud"),
+    ("setup", "self-host", "--url", "https://example.test"),
+)
+
 
 def test_autopilot_secrets_are_hidden_from_ordinary_entity_surfaces() -> None:
     secret = "webhook-token-sentinel"
@@ -67,20 +73,19 @@ def test_rotate_url_model_redacts_secret_projection_and_repr() -> None:
     assert secret not in repr(result.to_dict())
 
 
-def test_interactive_auth_and_setup_commands_use_executor_terminal() -> None:
+@pytest.mark.parametrize("args", TERMINAL_COMMAND_CASES, ids=lambda args: args[0])
+def test_interactive_auth_and_setup_commands_use_executor_terminal(
+    args: tuple[str, ...],
+) -> None:
     executor = MagicMock(spec=CommandExecutor)
     executor.terminal.return_value = MagicMock(spec=ProcessHandle)
     transport = CliTransport(ClientConfig(), executor=executor)
 
-    for args in (
-        ("login", "--token"),
-        ("setup", "cloud"),
-        ("setup", "self-host", "--url", "https://example.test"),
-    ):
-        process = transport.spawn(args)
-        process.close()
+    process = transport.spawn(args)
+    process.close()
 
-    assert executor.terminal.call_count == 3
+    executor.terminal.assert_called_once()
+    assert executor.terminal.call_args.args[0].argv == ("multica", *args)
     assert executor.spawn.call_count == 0
 
 
