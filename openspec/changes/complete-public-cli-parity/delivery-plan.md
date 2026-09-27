@@ -41,10 +41,13 @@
   implementation parent to `graph_revision=2`, record the verified planning
   commit as the new planning input, and materialize exactly those four children
   with the stage/dependency map below.
-- The verified planning commit MUST have
-  `c9429d82500a961fa2bac238ff6611da7dd33ef9` as its first parent and contain
-  OpenSpec artifacts only. WP-09 and WP-10 start from that exact planning SHA;
-  no production byte at the implementation baseline is rewritten by planning.
+- The revision-2 implementation baseline
+  `c9429d82500a961fa2bac238ff6611da7dd33ef9` MUST be an ancestor of the
+  verified planning SHA. Every commit and changed path in the exclusive range
+  `c9429d82500a961fa2bac238ff6611da7dd33ef9..verified_planning_sha` MUST contain
+  OpenSpec artifacts only; the range MUST contain no production-code change.
+  WP-09 and WP-10 start from that exact verified planning SHA; no production
+  byte at the implementation baseline is rewritten by planning.
 - Accepted WP-09 and WP-10 result SHAs are integrated onto the existing feature
   branch and draft PR. WP-11 starts only from the exact two-result fan-in SHA;
   WP-12 starts only from the accepted WP-11 integration SHA.
