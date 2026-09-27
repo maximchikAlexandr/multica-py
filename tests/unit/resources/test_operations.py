@@ -6,7 +6,7 @@ import importlib
 import inspect
 import pathlib
 import typing
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import cast
 from unittest.mock import MagicMock, patch
@@ -145,11 +145,14 @@ _PAGE_CONTRACT_RETURN_NAMES = frozenset(
     {
         "AutopilotListPage",
         "AutopilotRunListPage",
+        "ChatHistory",
+        "ChatThread",
         "IssueChildrenResult",
         "IssueListPage",
+        "IssueTimeline",
         "MetadataPage",
-        "page_daemon_disk_usage",
         "page_issue_usage",
+        "IssueWakeups",
     }
 )
 
@@ -219,6 +222,12 @@ def _approved_entrypoint(case: OperationCase, contract: ContractCatalog) -> Entr
     raise AssertionError(f"case is not present in approved contract: {case.id}")
 
 
+def _assert_exact_contract_coverage(
+    canonical_keys: set[tuple[str, str]], approved_keys: set[tuple[str, str]]
+) -> None:
+    assert canonical_keys == approved_keys
+
+
 def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
     if case.sdk_method in {
         "attachments.upload",
@@ -258,9 +267,13 @@ def _configure_mock(mock_transport: MagicMock, case: OperationCase) -> None:
             mock_transport.run_text.side_effect = case.transport_side_effect
         elif case.transport_method == "spawn":
             mock_transport.spawn.side_effect = case.transport_side_effect
+        elif case.transport_method == "terminal":
+            mock_transport.terminal.side_effect = case.transport_side_effect
         return
     if case.transport_method == "spawn":
         mock_transport.spawn.return_value = MagicMock()
+    elif case.transport_method == "terminal":
+        mock_transport.terminal.return_value = MagicMock()
     elif case.transport_method == "run_bytes":
         mock_transport.run_bytes.return_value = RawCommandResult(
             argv=tuple(case.expected_argv),
@@ -405,6 +418,8 @@ def _assert_transport_call(mock_transport: MagicMock, case: OperationCase) -> No
         assert mock_transport.run_text.call_count == len(expected_argvs)
     elif case.transport_method == "spawn":
         assert mock_transport.spawn.call_count == len(expected_argvs)
+    elif case.transport_method == "terminal":
+        assert mock_transport.terminal.call_count == len(expected_argvs)
 
 
 @pytest.mark.parametrize("case", list(OPERATION_CASES), ids=lambda c: c.id)
@@ -605,11 +620,11 @@ def test_discovered_public_methods() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
-    assert len(canonical) == 192
+    assert len(canonical) == 221
     assert len(canonical_cases) == len(canonical)
 
 
-def test_discovered_public_methods_match_approved_entrypoints() -> None:
+def _assert_discovered_public_methods_match_approved_entrypoints() -> None:
     contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     contract_entrypoints = {
@@ -627,7 +642,7 @@ def test_discovered_public_methods_match_approved_entrypoints() -> None:
             else "default"
         )
         governed.add((case.contract_operation_id, entrypoint_id))
-    assert governed == set(contract_entrypoints)
+    _assert_exact_contract_coverage(governed, set(contract_entrypoints))
     assert len(contract.operation_ids) == len(contract.operations)
     presence_catalog = cast(
         "dict[str, object]",
@@ -662,15 +677,33 @@ def test_discovered_public_methods_match_approved_entrypoints() -> None:
             ), case.sdk_method
 
 
+def test_discovered_public_methods_match_approved_entrypoints() -> None:
+    _assert_discovered_public_methods_match_approved_entrypoints()
+
+
+def test_contract_coverage_rejects_missing_approved_entrypoint() -> None:
+    with pytest.raises(AssertionError):
+        _assert_exact_contract_coverage(
+            {("issues.list", "default")},
+            {("issues.list", "default"), ("issues.list", "generated:page")},
+        )
+
+
 def test_operation_case_catalog_is_closed() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
-    assert len(OPERATION_CASES) == 352
-    assert len({c.id for c in OPERATION_CASES}) == 352
+    assert len(OPERATION_CASES) == 381
+    assert len({c.id for c in OPERATION_CASES}) == 381
     assert sum(not c.is_canonical for c in OPERATION_CASES) == 160
-    assert len(generated) == 84
+    assert len(generated) == 113
     assert len(manual) == 268
+    assert len(OPERATION_CASES) == len({c.id for c in OPERATION_CASES})
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == len(OPERATION_CASES) - len(
+        canonical_cases
+    )
+    assert len(generated) == len(GENERATED_OPERATION_CASES)
+    assert len(manual) + len(generated) == len(OPERATION_CASES)
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
@@ -776,20 +809,37 @@ _CHANGED_PUBLIC_SURFACE_SIGNATURES: tuple[tuple[type[object], str, tuple[str, ..
             "description_file",
             "description_input",
             "priority",
+            "status",
+            "stage",
+            "start_date",
+            "due_date",
             "assignee_id",
             "label_ids",
             "properties",
             "project",
             "project_id",
             "parent_id",
+            "attachments",
+            "no_start",
             "options",
         ),
     ),
-    (IssueResource, "set_status", ("issue_id", "status", "options")),
+    (IssueResource, "set_status", ("issue_id", "status", "no_start", "options")),
     (
         ProjectResource,
         "create",
-        ("name", "description", "description_file", "options"),
+        (
+            "name",
+            "description",
+            "description_file",
+            "status",
+            "icon",
+            "lead",
+            "start_date",
+            "due_date",
+            "repositories",
+            "options",
+        ),
     ),
     (ProjectResource, "set_status", ("project_id", "status", "options")),
     (
@@ -808,7 +858,7 @@ _CHANGED_PUBLIC_SURFACE_SIGNATURES: tuple[tuple[type[object], str, tuple[str, ..
             "options",
         ),
     ),
-    (Issue, "set_status", ("status", "options")),
+    (Issue, "set_status", ("status", "no_start", "options")),
 )
 
 
@@ -883,26 +933,18 @@ def test_comment_delete_keep_replies_contract() -> None:
     assert calls == [("issue", "comment", "delete", "cmt_1")]
 
 
-def test_approved_result_categories_are_closed() -> None:
-    """Keep public result shapes aligned with the approved convention matrix."""
-    from multica_py.models.relations import (
-        CursorLazyCollection,
-        LazyCollection,
-        OffsetLazyCollection,
-    )
-
-    contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
-    responses = {response.response_id: response for response in contract.responses}
-    canonical = {
-        case.sdk_method: case
-        for case in OPERATION_CASES
-        if case.is_canonical and case.contract_operation_id is not None
-    }
-    void_actions = {
+_RESULT_CONTRACT = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
+_RESULTS = {response.response_id: response for response in _RESULT_CONTRACT.responses}
+_CANONICAL_RESULT_CASES = tuple(
+    case for case in OPERATION_CASES if case.is_canonical and case.contract_operation_id is not None
+)
+_VOID_ACTIONS = frozenset(
+    {
         "agents.archive",
         "agents.avatar",
         "agents.restore",
         "agents.skills.set",
+        "agents.skills_add",
         "autopilots.delete",
         "autopilots.trigger_delete",
         "configuration.set",
@@ -921,16 +963,20 @@ def test_approved_result_categories_are_closed() -> None:
         "runtimes.delete",
         "skills.delete",
         "skills.files.delete",
-        "squads.members.add",
-        "squads.members.remove",
+        "squads.delete",
         "workspaces.switch",
         "workspaces.mcp.remove",
     }
-    natural_action_exceptions = {
+)
+_NATURAL_ACTIONS = frozenset(
+    {
         "attachments.upload_bytes",
-        "auth.logout",
-        "daemon.restart",
-        "daemon.stop",
+        "autopilots.trigger_rotate_url",
+        "issues.wakeups.disable",
+        "squads.activity",
+        "squads.member_set_role",
+        "squads.members.add",
+        "squads.members.remove",
         "issues.assign",
         "issues.move_after",
         "issues.move_before",
@@ -960,73 +1006,178 @@ def test_approved_result_categories_are_closed() -> None:
         "issues.properties.set",
         "skills.refresh",
     }
-    page_response_ids = {
-        response.response_id
-        for response in responses.values()
-        if response.public_type_id.startswith("Page[")
-        or response.response_id
-        in {
-            "comment_page",
-            "comment_thread_page",
-            "issue_list_page",
-            "autopilot_list_page",
-            "autopilot_run_list_page",
-        }
+)
+_PAGE_RESPONSE_IDS = {
+    response.response_id
+    for response in _RESULTS.values()
+    if response.public_type_id.startswith("Page[")
+    or response.response_id
+    in {
+        "comment_page",
+        "comment_thread_page",
+        "issue_list_page",
+        "autopilot_list_page",
+        "autopilot_run_list_page",
+        "chat_history",
+        "chat_thread",
+        "issue_timeline",
+        "issue_wakeups",
+        "issue_wakeup_list",
+        "runtime_profile_list",
     }
-    page_response_ids.add("issue_children_result")
+}
+_PAGE_RESPONSE_IDS.add("issue_children_result")
 
-    # Relation snapshots are deliberately outside the canonical Page migration.
+
+def _result_case(case: OperationCase) -> tuple[OperationCase, typing.Any, str]:
+    response_id = case.expected_response_id
+    category = case.expected_category
+    assert response_id is not None and category is not None
+    assert response_id in _RESULTS, case.sdk_method
+    return case, typing.get_type_hints(_case_method(case))["return"], response_id
+
+
+def test_relation_snapshots_are_tuple_collections() -> None:
+    from multica_py.models.relations import (
+        CursorLazyCollection,
+        LazyCollection,
+        OffsetLazyCollection,
+    )
+
     for relation_type in (LazyCollection, OffsetLazyCollection, CursorLazyCollection):
         assert typing.get_origin(typing.get_type_hints(relation_type.all)["return"]) is tuple
 
-    for sdk_method, case in canonical.items():
-        if case.contract_operation_id is None:
-            continue
-        assert case.expected_response_id in responses, sdk_method
-        annotation = typing.get_type_hints(_case_method(case))["return"]
-        category = case.expected_category
-        response_id = case.expected_response_id
-        assert category is not None and response_id is not None
-        if category == "collection":
-            if sdk_method == "issues.metadata.list":
-                assert annotation == dict[str, object] or typing.get_origin(annotation) is dict
-            elif sdk_method == "issues.properties.list":
-                assert typing.get_origin(annotation) is tuple
-            elif sdk_method == "issues.usage":
-                assert annotation.__name__ == "IssueUsage"
-            else:
-                assert response_id in page_response_ids, sdk_method
-                assert _contains_type(annotation, Page) or annotation.__name__ in {
-                    "IssueListPage",
-                    "AutopilotListPage",
-                    "AutopilotRunListPage",
-                    "IssueChildrenResult",
-                }, sdk_method
-        elif category == "action":
-            if sdk_method in void_actions:
-                assert response_id == "action_result_none", sdk_method
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method == "auth.login":
-                assert response_id == "action_result_str", sdk_method
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method in {"repositories.add", "repositories.remove"}:
-                assert response_id == "action_result_repository_mutation_result", sdk_method
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method == "runtimes.update":
-                assert response_id == "action_result_runtime_update_result"
-                assert _contains_type(annotation, ActionResult), sdk_method
-            elif sdk_method not in natural_action_exceptions:
-                raise AssertionError(f"unapproved action category: {sdk_method}")
-            else:
-                assert not _contains_type(annotation, ActionResult), sdk_method
-        elif category == "process":
-            assert response_id == "process", sdk_method
-            assert annotation is ManagedProcess, sdk_method
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(case for case in _CANONICAL_RESULT_CASES if case.expected_category == "collection"),
+    ids=lambda case: case.sdk_method,
+)
+def _assert_collection_result_categories_are_closed(case: OperationCase) -> None:
+    case, annotation, response_id = _result_case(case)
+    special = {
+        "daemon.disk_usage": "non-page",
+        "runtime_profiles.list": "profiles",
+        "issues.metadata.list": "mapping",
+        "autopilots.trigger_list": "mapping",
+        "issues.properties.list": "tuple",
+        "issues.usage": "usage",
+    }.get(case.sdk_method, "page")
+    if special == "non-page":
+        assert not _contains_type(annotation, Page)
+    elif special == "profiles":
+        assert annotation.__name__ == "RuntimeProfiles"
+    elif special == "mapping":
+        if case.sdk_method == "issues.metadata.list":
+            assert annotation == dict[str, object] or typing.get_origin(annotation) is dict
         else:
-            assert not _contains_type(annotation, ActionResult), sdk_method
+            assert typing.get_origin(annotation) is Mapping
+    elif special == "tuple":
+        assert typing.get_origin(annotation) is tuple
+    elif special == "usage":
+        assert annotation.__name__ == "IssueUsage"
+    else:
+        assert response_id in _PAGE_RESPONSE_IDS
+        assert _contains_type(annotation, Page) or annotation.__name__ in {
+            "IssueListPage",
+            "AutopilotListPage",
+            "AutopilotRunListPage",
+            "IssueChildrenResult",
+        }
 
 
-def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> None:
+@pytest.mark.parametrize(
+    "case",
+    tuple(case for case in _CANONICAL_RESULT_CASES if case.expected_category == "collection"),
+    ids=lambda case: case.sdk_method,
+)
+def test_collection_result_categories_are_closed(case: OperationCase) -> None:
+    _assert_collection_result_categories_are_closed(case)
+
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(case for case in _CANONICAL_RESULT_CASES if case.expected_category == "action"),
+    ids=lambda case: case.sdk_method,
+)
+def _assert_action_result_categories_are_closed(case: OperationCase) -> None:
+    case, annotation, response_id = _result_case(case)
+    if case.sdk_method in {
+        "runtime_profiles.delete",
+        "runtime_profiles.set_path",
+        "runtime_profiles.unset_path",
+        "auth.logout",
+        "daemon.restart",
+        "daemon.stop",
+    }:
+        assert _contains_type(annotation, ActionResult)
+    elif case.sdk_method == "squads.member_set_role" or case.sdk_method in _VOID_ACTIONS:
+        assert response_id == "action_result_none"
+        assert _contains_type(annotation, ActionResult)
+    elif case.sdk_method == "auth.login":
+        assert response_id == "action_result_str"
+        assert _contains_type(annotation, ActionResult)
+    elif case.sdk_method in {"repositories.add", "repositories.remove"}:
+        assert response_id == "action_result_repository_mutation_result"
+        assert _contains_type(annotation, ActionResult)
+    elif case.sdk_method == "runtimes.update":
+        assert response_id == "action_result_runtime_update_result"
+        assert _contains_type(annotation, ActionResult)
+    else:
+        assert case.sdk_method in _NATURAL_ACTIONS
+        assert not _contains_type(annotation, ActionResult)
+
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(case for case in _CANONICAL_RESULT_CASES if case.expected_category == "action"),
+    ids=lambda case: case.sdk_method,
+)
+def test_action_result_categories_are_closed(case: OperationCase) -> None:
+    _assert_action_result_categories_are_closed(case)
+
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(case for case in _CANONICAL_RESULT_CASES if case.expected_category == "process"),
+    ids=lambda case: case.sdk_method,
+)
+def _assert_process_result_categories_are_closed(case: OperationCase) -> None:
+    from multica_py.models.system import RepositoryCheckoutResult
+
+    case, annotation, response_id = _result_case(case)
+    if case.sdk_method == "repositories.checkout":
+        assert response_id == "repository_checkout"
+        assert annotation is RepositoryCheckoutResult
+    else:
+        assert response_id == "process"
+        assert annotation is ManagedProcess
+
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(case for case in _CANONICAL_RESULT_CASES if case.expected_category == "process"),
+    ids=lambda case: case.sdk_method,
+)
+def test_process_result_categories_are_closed(case: OperationCase) -> None:
+    _assert_process_result_categories_are_closed(case)
+
+
+@pytest.mark.parametrize(
+    "case",
+    tuple(
+        case
+        for case in _CANONICAL_RESULT_CASES
+        if case.expected_category not in {"collection", "action", "process"}
+    ),
+    ids=lambda case: case.sdk_method,
+)
+def test_scalar_result_categories_are_not_actions(case: OperationCase) -> None:
+    _case, annotation, _response_id = _result_case(case)
+    assert not _contains_type(annotation, ActionResult)
+
+
+def _assert_approved_symbols_signatures_and_canonical_vectors_are_complete() -> None:
     contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
 
     def contract_key(case: OperationCase) -> tuple[str, str]:
@@ -1046,7 +1197,7 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
         for operation in contract.operations
         for entrypoint in operation.entrypoints
     }
-    assert contract_keys == set(canonical_by_operation)
+    _assert_exact_contract_coverage(set(canonical_by_operation), contract_keys)
     assert len(canonical_by_operation) == sum(
         case.is_canonical and case.contract_operation_id is not None for case in OPERATION_CASES
     )
@@ -1066,7 +1217,11 @@ def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> Non
             case = canonical_by_operation[(operation.operation_id, entrypoint.entrypoint_id)]
             assert case.method == method_name
 
-    assert set(canonical_by_operation) == contract_keys
+    _assert_exact_contract_coverage(set(canonical_by_operation), contract_keys)
+
+
+def test_approved_symbols_signatures_and_canonical_vectors_are_complete() -> None:
+    _assert_approved_symbols_signatures_and_canonical_vectors_are_complete()
 
 
 def _operation_payload(case: OperationCase) -> tuple[object, ...]:

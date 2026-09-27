@@ -186,6 +186,14 @@ def test_raw_boundary_documentation_is_complete(case: DocumentationCase) -> None
     assert case.required_text in case.path.read_text()
 
 
+def test_api_docs_pin_supported_issue_run_filters_and_bounded_login() -> None:
+    text = (ROOT / "docs/api.md").read_text()
+    assert "typed `active` and `siblings` filters" in text
+    assert "envelopes remain deferred" not in text
+    assert "The bounded `login --token <token>` form remains allowed" in text
+    assert "tokenless `login` or an option-like token operand" in text
+
+
 @pytest.mark.parametrize(
     "case",
     ENTITY_PROCESS_DOCUMENTATION_CASES,

@@ -175,6 +175,23 @@ class BaseResource:
             minimum_cli_version=minimum_cli_version,
         )
 
+    def _decoded_mapping_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[dict[str, str]]:
+        plan_args = (*args, "--output", "json")
+
+        def decode(stdout: bytes, command: str) -> object:
+            return decode_json(stdout, dict[str, str], command=command)
+
+        return self._plan(
+            steps=(_Step(plan_args, "run_bytes", decode=decode),),
+            finalize=lambda results: cast("dict[str, str]", results[0]),
+            options=options,
+        )
+
     def _decoded_page_command(
         self,
         args: tuple[str, ...],
@@ -276,6 +293,18 @@ class BaseResource:
     ) -> Command[ManagedProcess]:
         return self._plan(
             steps=(_Step(args, "spawn"),),
+            finalize=lambda results: cast("ManagedProcess", results[0]),
+            options=options,
+        )
+
+    def _terminal_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[ManagedProcess]:
+        return self._plan(
+            steps=(_Step(args, "terminal"),),
             finalize=lambda results: cast("ManagedProcess", results[0]),
             options=options,
         )
