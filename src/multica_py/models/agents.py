@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Mapping
 
 import msgspec
 
@@ -38,3 +39,20 @@ class AgentTask(msgspec.Struct, frozen=True, kw_only=True):
 class AgentConversationStarter(msgspec.Struct, frozen=True, kw_only=True):
     label: str
     prompt: str
+
+
+class SecretEnvironment(dict[str, str]):
+    """Mapping returned by the audited agent-env operations.
+
+    Values remain available through the approved mapping API, but accidental
+    repr/logging of the result never exposes credential material.
+    """
+
+    def __init__(self, values: Mapping[str, str]) -> None:
+        super().__init__(values)
+
+    def __repr__(self) -> str:
+        keys = ", ".join(f"{key!r}: '***'" for key in self)
+        return f"SecretEnvironment({{{keys}}})"
+
+    __str__ = __repr__

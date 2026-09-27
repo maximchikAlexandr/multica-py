@@ -37,6 +37,10 @@ def _get(obj: object, name: str) -> object:
     return cast("object", getattr(obj, name))
 
 
+def _raw_get(obj: object, name: str) -> object:
+    return cast("object", object.__getattribute__(obj, name))
+
+
 def _is_mapping(value: object) -> TypeGuard[Mapping[object, object]]:
     return isinstance(value, Mapping)
 
@@ -104,6 +108,10 @@ class _DetachField(Protocol):
 _AUTOPILOT_RUN_RUNTIME_OVERLAYS = frozenset(("trigger_payload", "result"))
 _TASK_RUN_RUNTIME_OVERLAYS = frozenset(("result",))
 
+_SECRET_FIELDS_BY_ENTITY_NAME = {
+    "Autopilot": frozenset(("webhook_token", "webhook_path", "webhook_url")),
+}
+
 
 def _overlay_names(entity_type: type[object]) -> frozenset[str]:
     """Return overlays for concrete entities with runtime JSON fields."""
@@ -115,6 +123,10 @@ def _overlay_names(entity_type: type[object]) -> frozenset[str]:
     if entity_type is TaskRun:
         return _TASK_RUN_RUNTIME_OVERLAYS
     return frozenset()
+
+
+def _secret_fields(entity_type: type[object]) -> frozenset[str]:
+    return _SECRET_FIELDS_BY_ENTITY_NAME.get(entity_type.__name__, frozenset())
 
 
 class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, weakref=True):
@@ -182,6 +194,10 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
         runtime[name] = value
 
     def __getattribute__(self, name: str) -> object:
+        if name in _secret_fields(type(self)):
+            runtime = _runtime_state(self)
+            if not runtime.get("secret_access", False):
+                return None
         if name in _entity_policy(type(self)).runtime_fields:
             runtime = _runtime_state(self)
             sentinel = object()
@@ -202,7 +218,13 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
 
     def __repr__(self) -> str:
         policy = _entity_policy(type(self))
-        fields = ", ".join(f"{field}={_get(self, field)!r}" for field in policy.public_fields)
+        secret_fields = _secret_fields(type(self))
+        fields = ", ".join(
+            f"{field}={('***' if _raw_get(self, field) is not None else None)!r}"
+            if field in secret_fields
+            else f"{field}={_get(self, field)!r}"
+            for field in policy.public_fields
+        )
         return f"{type(self).__name__}({fields})"
 
     def to_dict(self) -> dict[str, object]:
@@ -215,11 +237,21 @@ class _BoundEntity(_RuntimeHolder, msgspec.Struct, frozen=True, kw_only=True, we
             data = {name: value for name, value in projection.items() if value is not msgspec.UNSET}
         else:
             policy = _entity_policy(type(self))
-            data = {
-                field: value
-                for field in policy.public_fields
-                if (value := _get(self, field)) is not msgspec.UNSET
-            }
+            data = {}
+            for field in policy.public_fields:
+                value = (
+                    _raw_get(self, field)
+                    if field in _secret_fields(type(self))
+                    else _get(self, field)
+                )
+                if value is msgspec.UNSET:
+                    continue
+                if field in _secret_fields(type(self)) and value is not None:
+                    value = "***"
+                data[field] = value
+        for field in _secret_fields(type(self)):
+            if field in data and data[field] is not None:
+                data[field] = "***"
         materialized = _materialize_mappings(data)
         builtins = cast("dict[str, object]", msgspec.to_builtins(materialized))
         return self._normalize_to_dict(builtins)

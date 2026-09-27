@@ -9,6 +9,7 @@ import msgspec
 
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.decoders import decode_text
+from multica_py._internal.redaction import redact_bytes
 from multica_py.exceptions import (
     ProcessOutputCaptureError,
     ProcessOutputModeError,
@@ -41,11 +42,14 @@ class ManagedProcess:
         argv: tuple[str, ...] = (),
         semaphore: ProcessSemaphore | None = None,
         cleanup: Callable[[], None] | None = None,
+        secret_values: tuple[str, ...] = (),
     ) -> None:
         self._handle = handle
         self._argv = argv
         self._semaphore = semaphore
         self._cleanup = cleanup
+        self._secret_values = secret_values
+        self._written_secrets: list[bytes] = []
         self._closed = False
         self._output = OutputOwnership()
         self._result: ProcessResult | None = None
@@ -66,11 +70,21 @@ class ManagedProcess:
         self._claim_mode("streaming", consumer)
 
     def _make_result(self, result: ExecutionResult) -> ProcessResult:
+        stdout = redact_bytes(
+            result.stdout,
+            secret_values=self._secret_values,
+            secret_bytes=tuple(self._written_secrets),
+        )
+        stderr = redact_bytes(
+            result.stderr,
+            secret_values=self._secret_values,
+            secret_bytes=tuple(self._written_secrets),
+        )
         return ProcessResult(
             self._argv,
             result.exit_code,
-            decode_text(result.stdout),
-            decode_text(result.stderr),
+            decode_text(stdout),
+            decode_text(stderr),
         )
 
     def _finalize(self) -> None:
@@ -175,6 +189,8 @@ class ManagedProcess:
         """Write interactive input without taking ownership of the process."""
         if self._closed:
             raise ProcessOutputModeError("closed", "interactive stdin")
+        if data:
+            self._written_secrets.append(data)
         self._handle.write_stdin(data)
 
     def close_input(self) -> None:

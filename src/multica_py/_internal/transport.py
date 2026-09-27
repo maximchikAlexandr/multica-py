@@ -44,6 +44,14 @@ _EXIT_CODE_EXCEPTIONS: dict[int, type[CommandExecutionError]] = {
     4: NotFoundError,
     5: ValidationError,
 }
+
+_TERMINAL_COMMAND_PREFIXES = frozenset(
+    {
+        ("login", "--token"),
+        ("setup", "cloud"),
+        ("setup", "self-host"),
+    }
+)
 # ponytail: anchored to the CLI's pinned error-line prefix so echoed user
 # content (e.g. an upstream payload quoting "returned 404") cannot drive
 # classification. The CLI emits failures as "Error: <METHOD> <path>
@@ -455,14 +463,18 @@ class CliTransport:
                 argv, _effective_environment(self._config), file_contents=file_contents
             )
             diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
-            handle = self._executor.spawn(
-                ExecutionRequest(
-                    argv=execution_argv,
-                    cwd=cwd,
-                    environment=environment,
-                    timeout=self._config.timeout,
-                )
+            request = ExecutionRequest(
+                argv=execution_argv,
+                cwd=cwd,
+                environment=environment,
+                timeout=self._config.timeout,
             )
+            executor_method = (
+                self._executor.terminal
+                if tuple(command_args[:2]) in _TERMINAL_COMMAND_PREFIXES
+                else self._executor.spawn
+            )
+            handle = executor_method(request)
         except BaseException:
             staging.close()
             if self._semaphore is not None:
@@ -474,6 +486,7 @@ class CliTransport:
             argv=diagnostic_argv,
             semaphore=self._semaphore,
             cleanup=staging.close,
+            secret_values=secret_values,
         )
 
     def terminal(self, command_args: tuple[str, ...]) -> ManagedProcess:
@@ -508,6 +521,7 @@ class CliTransport:
             argv=redact_diagnostic_argv(argv, secret_values=secret_values),
             semaphore=self._semaphore,
             cleanup=staging.close,
+            secret_values=secret_values,
         )
 
     def _prepare_secret_files(

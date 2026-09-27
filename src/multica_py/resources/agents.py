@@ -2,17 +2,23 @@ from __future__ import annotations
 
 import pathlib
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
 from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
+from multica_py._internal.redaction import REDACTED, _is_secret_key
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.agents import Agent
-from multica_py.models.agents import AgentConversationStarter, AgentSkill, AgentTask
+from multica_py.models.agents import (
+    AgentConversationStarter,
+    AgentSkill,
+    AgentTask,
+    SecretEnvironment,
+)
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.workspaces import McpServer
 from multica_py.resources._base import BaseResource, _page_items, _validate_optional_string
@@ -24,6 +30,10 @@ if TYPE_CHECKING:
     from multica_py.client import MulticaClient
 
 __all__ = ["Agent", "AgentResource"]
+
+
+def _is_secret_env_key(key: str) -> bool:
+    return _is_secret_key(key)
 
 
 def _encode_conversation_starters(
@@ -165,7 +175,7 @@ class AgentResource(BaseResource):
         self, agent_id: str, *, options: OperationOptions | None = None
     ) -> Command[Mapping[str, str]]:
         validate_nonblank(agent_id)
-        return self._decoded_mapping_command(("agent", "env", "get", agent_id), options=options)
+        return self._env_mapping_command(("agent", "env", "get", agent_id), options=options)
 
     def env_get(
         self, agent_id: str, *, options: OperationOptions | None = None
@@ -189,8 +199,13 @@ class AgentResource(BaseResource):
         args = ["agent", "env", "set", agent_id]
         if custom_env is not None:
             encoded_env = dict[str, str](custom_env)
+            if any(_is_secret_env_key(key) for key in encoded_env):
+                raise ValueError(
+                    "custom_env contains secret-bearing values, but the approved CLI "
+                    f"has no safe input channel; values are redacted as {REDACTED}"
+                )
             args.extend(("--custom-env", msgspec.json.encode(encoded_env).decode()))
-        return self._decoded_mapping_command(tuple(args), options=options)
+        return self._env_mapping_command(tuple(args), options=options)
 
     def env_set(
         self,
@@ -239,6 +254,28 @@ class AgentResource(BaseResource):
         return self._plan(
             steps=(_Step((*args, "--output", "json"), "run_bytes", decode=decode),),
             finalize=lambda _results: ActionResult(value=None),
+            options=options,
+        )
+
+    def _env_mapping_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        stdin: bytes | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[Mapping[str, str]]:
+        def decode(stdout: bytes, command: str) -> object:
+            return decode_json(stdout, dict[str, str], command=command)
+
+        def finalize(results: tuple[object, ...]) -> Mapping[str, str]:
+            mapping = cast("dict[str, str]", results[0])
+            if any(_is_secret_env_key(key) for key in mapping):
+                return SecretEnvironment(mapping)
+            return mapping
+
+        return self._plan(
+            steps=(_Step((*args, "--output", "json"), "run_bytes", stdin=stdin, decode=decode),),
+            finalize=finalize,
             options=options,
         )
 
