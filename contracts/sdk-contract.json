@@ -27980,7 +27980,7 @@
   ],
   "inventory": {
     "schema_version": 1,
-    "complete": false,
+    "complete": true,
     "items": [
       {
         "inventory_id": "command:multica.agent.archive",
@@ -39384,6 +39384,570 @@
         "transport": "run_bytes",
         "compatibility": "compatible",
         "rationale": "Canonical binding `runtime_rename` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:runtime_update",
+        "kind": "transport",
+        "identity": "runtime_update",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D17"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `runtime_update` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:runtime_usage",
+        "kind": "transport",
+        "identity": "runtime_usage",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D17"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `runtime_usage` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:setup_cloud_manual",
+        "kind": "transport",
+        "identity": "setup_cloud_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `setup_cloud_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:setup_self_host_manual",
+        "kind": "transport",
+        "identity": "setup_self_host_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-CLIENT"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `setup_self_host_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_files_delete",
+        "kind": "transport",
+        "identity": "skill_files_delete",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D09"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `skill_files_delete` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_files_list",
+        "kind": "transport",
+        "identity": "skill_files_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D09"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `skill_files_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_files_upsert",
+        "kind": "transport",
+        "identity": "skill_files_upsert",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D09"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `skill_files_upsert` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_get",
+        "kind": "transport",
+        "identity": "skill_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `skill_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_labels_add",
+        "kind": "transport",
+        "identity": "skill_labels_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SKILL-LABEL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Canonical binding `skill_labels_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_labels_list",
+        "kind": "transport",
+        "identity": "skill_labels_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SKILL-LABEL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Canonical binding `skill_labels_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_labels_remove",
+        "kind": "transport",
+        "identity": "skill_labels_remove",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SKILL-LABEL"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Canonical binding `skill_labels_remove` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_list",
+        "kind": "transport",
+        "identity": "skill_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-AUTO",
+          "S-SKILL-LIST-V050"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "requires_cli>=0.5.0",
+        "rationale": "Canonical binding `skill_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_refresh",
+        "kind": "transport",
+        "identity": "skill_refresh",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SKILL-REFRESH"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `skill_refresh` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skill_search",
+        "kind": "transport",
+        "identity": "skill_search",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SKILL-SEARCH"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `skill_search` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skills_create_manual",
+        "kind": "transport",
+        "identity": "skills_create_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D09"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `skills_create_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skills_delete_manual",
+        "kind": "transport",
+        "identity": "skills_delete_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D09"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `skills_delete_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skills_import_from_url_manual",
+        "kind": "transport",
+        "identity": "skills_import_from_url_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D09"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `skills_import_from_url_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:skills_update_manual",
+        "kind": "transport",
+        "identity": "skills_update_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D09"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `skills_update_manual` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:squad_get",
+        "kind": "transport",
+        "identity": "squad_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SQUAD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `squad_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:squad_list",
+        "kind": "transport",
+        "identity": "squad_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SQUAD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `squad_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:squad_members_add",
+        "kind": "transport",
+        "identity": "squad_members_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SQUAD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `squad_members_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:squad_members_list",
+        "kind": "transport",
+        "identity": "squad_members_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SQUAD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `squad_members_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:squad_members_remove",
+        "kind": "transport",
+        "identity": "squad_members_remove",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-SQUAD"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `squad_members_remove` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:user_profile_get",
+        "kind": "transport",
+        "identity": "user_profile_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D15"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `user_profile_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:user_profile_update",
+        "kind": "transport",
+        "identity": "user_profile_update",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "D15"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `user_profile_update` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:workspace_get",
+        "kind": "transport",
+        "identity": "workspace_get",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-WORKSPACE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `workspace_get` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:workspace_list",
+        "kind": "transport",
+        "identity": "workspace_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-WORKSPACE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `workspace_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:workspace_mcp_add",
+        "kind": "transport",
+        "identity": "workspace_mcp_add",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-WORKSPACE-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `workspace_mcp_add` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:workspace_mcp_list",
+        "kind": "transport",
+        "identity": "workspace_mcp_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-WORKSPACE-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `workspace_mcp_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:workspace_mcp_remove",
+        "kind": "transport",
+        "identity": "workspace_mcp_remove",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-WORKSPACE-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_text",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `workspace_mcp_remove` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:workspace_mcp_update",
+        "kind": "transport",
+        "identity": "workspace_mcp_update",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-WORKSPACE-MCP"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "intentionally_changed",
+        "rationale": "Canonical binding `workspace_mcp_update` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:workspace_members_list",
+        "kind": "transport",
+        "identity": "workspace_members_list",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-WORKSPACE",
+          "S-WORKSPACE-MEMBERS-CLI",
+          "S-WORKSPACE-MEMBER-IDENTITY"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `workspace_members_list` records the reviewed executor channel and argv mapping."
+      },
+      {
+        "inventory_id": "transport:workspaces_switch_manual",
+        "kind": "transport",
+        "identity": "workspaces_switch_manual",
+        "disposition": "transport",
+        "source_ref_ids": [
+          "S-WORKSPACE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": "run_bytes",
+        "compatibility": "compatible",
+        "rationale": "Canonical binding `workspaces_switch_manual` records the reviewed executor channel and argv mapping."
       }
     ],
     "source_commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
