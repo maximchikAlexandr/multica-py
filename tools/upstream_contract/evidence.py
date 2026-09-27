@@ -50,6 +50,24 @@ _ARGS_MARKER = re.compile(r"\bArgs\s*:")
 _PRESENCE = re.compile(r"\b(?:Flags|PersistentFlags)\(\)\.Changed\s*\(")
 _IMPERATIVE = re.compile(r"\b(?:if|switch)\b|\b(?:ValidateFunc|MarkFlag\w+)\b")
 _DYNAMIC_ENUM = re.compile(r"\b(?:append|make)\s*\(|\b(?:Choices|Enum|Values)\s*[:=]")
+_COMMAND_VARIABLE = re.compile(
+    r"\b(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*(?::=|=)\s*&?cobra\.Command\s*\{"
+)
+
+
+def _evidence_commands(
+    source_checkout: pathlib.Path, binary: pathlib.Path
+) -> tuple[tuple[str, ...], ...]:
+    """Describe the read-only commands used to bind collected evidence."""
+
+    checkout = str(source_checkout)
+    return (
+        ("git", "-C", checkout, "rev-parse", "HEAD"),
+        ("git", "-C", checkout, "status", "--porcelain"),
+        ("git", "-C", checkout, "archive", "--format=tar", "<commit>", "--", "*.go"),
+        ("sha256", str(binary)),
+        (str(binary), "version", "--output", "json"),
+    )
 
 
 @dataclass(frozen=True)
@@ -63,6 +81,8 @@ class ReleaseIdentity:
     os: str
     arch: str
     version_output_sha256: str
+    source_dirty: bool = False
+    source_repository: str = ""
 
 
 def _sha256(path: pathlib.Path) -> str:
@@ -162,6 +182,25 @@ def _tar_member_name(member: tarfile.TarInfo) -> str:
     return member.name
 
 
+def _is_test_source(path: str) -> bool:
+    """Exclude test-only command registrations from public evidence."""
+
+    parts = pathlib.PurePosixPath(path).parts
+    return path.endswith("_test.go") or any(part in {"test", "tests", "fixtures"} for part in parts)
+
+
+def _source_files(source_root: pathlib.Path, commit: str | None) -> tuple[tuple[str, str], ...]:
+    if commit is not None:
+        return _git_go_sources(source_root, commit)
+    return tuple(
+        (
+            path.relative_to(source_root).as_posix(),
+            path.read_text(encoding="utf-8", errors="replace"),
+        )
+        for path in sorted(source_root.rglob("*.go"))
+    )
+
+
 def _collect_facts(
     source_root: pathlib.Path,
     *,
@@ -169,17 +208,10 @@ def _collect_facts(
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     facts: list[dict[str, object]] = []
     review_items: list[dict[str, object]] = []
-    if commit is None:
-        sources = tuple(
-            (
-                path.relative_to(source_root).as_posix(),
-                path.read_text(encoding="utf-8", errors="replace"),
-            )
-            for path in sorted(source_root.rglob("*.go"))
-        )
-    else:
-        sources = _git_go_sources(source_root, commit)
+    sources = _source_files(source_root, commit)
     for relative, content in sources:
+        if _is_test_source(relative):
+            continue
         lines = _without_go_comments(content)
         for number, line in enumerate(lines, start=1):
             use_match = _USE.search(line)
@@ -330,6 +362,69 @@ def _collect_facts(
     return facts, review_items
 
 
+def extract_source_facts(
+    source_checkout: pathlib.Path, *, commit: str | None = None
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """Return production source facts and fail-closed review items."""
+
+    return _collect_facts(source_checkout, commit=commit)
+
+
+def resolve_production_commands(
+    source_checkout: pathlib.Path, *, commit: str | None = None
+) -> dict[str, dict[str, object]]:
+    """Resolve command variables without promoting their imperative bodies.
+
+    The result contains only the stable variable identity and source location;
+    unresolved fields remain review-only facts from :func:`extract_source_facts`.
+    """
+
+    commands: dict[str, dict[str, object]] = {}
+    for relative, content in _source_files(source_checkout, commit):
+        if _is_test_source(relative):
+            continue
+        for number, line in enumerate(_without_go_comments(content), start=1):
+            match = _COMMAND_VARIABLE.search(line)
+            if match is None:
+                continue
+            name = match.group("name")
+            commands[name] = {
+                "name": name,
+                "source": _source_location(relative, number, name),
+            }
+    return dict(sorted(commands.items()))
+
+
+def resolve_add_command_edges(
+    source_checkout: pathlib.Path, *, commit: str | None = None
+) -> tuple[dict[str, object], ...]:
+    """Resolve literal ``AddCommand`` variable edges in production sources."""
+
+    variables = resolve_production_commands(source_checkout, commit=commit)
+    edges: list[dict[str, object]] = []
+    for relative, content in _source_files(source_checkout, commit):
+        if _is_test_source(relative):
+            continue
+        for number, line in enumerate(_without_go_comments(content), start=1):
+            match = _ADD_COMMAND.search(line)
+            if match is None:
+                continue
+            arguments = tuple(item.strip() for item in cast("str", match.group(1)).split(","))
+            if not arguments or any(argument not in variables for argument in arguments):
+                continue
+            edges.append(
+                {
+                    "arguments": arguments,
+                    "source": _source_location(relative, number, "AddCommand"),
+                }
+            )
+
+    def edge_key(item: dict[str, object]) -> tuple[str, str]:
+        return str(item["source"]), str(item["arguments"])
+
+    return tuple(sorted(edges, key=edge_key))
+
+
 def collect(
     *,
     source_checkout: pathlib.Path,
@@ -367,8 +462,21 @@ def collect(
             "sha256": identity.sha256,
             "version_output_sha256": _sha256(version_output),
         },
+        "commands": _evidence_commands(source_checkout, binary),
         "facts": facts,
         "schema_version": 1,
+        "source": {
+            "commit": actual_commit,
+            "dirty": bool(
+                subprocess.run(
+                    ["git", "-C", str(source_checkout), "status", "--porcelain"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout.strip()
+            ),
+            "repository": identity.source_repository,
+        },
         "target": {
             "commit": identity.commit,
             "release_id": identity.release_id,
