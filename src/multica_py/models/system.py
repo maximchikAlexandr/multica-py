@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import datetime
-from typing import cast
+from collections.abc import Iterator
+from typing import cast, overload
 
 import msgspec
 
@@ -19,6 +20,52 @@ class RepositoryMutationResult(msgspec.Struct, frozen=True, kw_only=True):
     updated: tuple[RepositoryRecord, ...] = ()
     removed: tuple[RepositoryRecord, ...] = ()
     repos: tuple[RepositoryRecord, ...] = ()
+
+
+class RepositoryCheckoutResult(msgspec.Struct, frozen=True, kw_only=True):
+    """The path emitted by the CLI after a native repository checkout."""
+
+    path: str
+
+    def __fspath__(self) -> str:
+        return self.path
+
+    def __str__(self) -> str:
+        return self.path
+
+
+class RuntimeProfile(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    runtime_type: str | None = None
+    protocol_family: str | None = None
+    command_name: str = ""
+    display_name: str = ""
+    description: str | None = None
+    enabled: bool | None = None
+    path: str | None = None
+
+
+class RuntimeProfiles(msgspec.Struct, frozen=True, kw_only=True):
+    items: tuple[RuntimeProfile, ...] = ()
+
+    def __iter__(self) -> Iterator[RuntimeProfile]:
+        return iter(self.items)
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    @overload
+    def __getitem__(self, index: int) -> RuntimeProfile: ...
+
+    @overload
+    def __getitem__(
+        self, index: slice[int | None, int | None, int | None]
+    ) -> tuple[RuntimeProfile, ...]: ...
+
+    def __getitem__(
+        self, index: int | slice[int | None, int | None, int | None]
+    ) -> RuntimeProfile | tuple[RuntimeProfile, ...]:
+        return self.items[index]
 
 
 class RuntimeDefinition(msgspec.Struct, frozen=True, kw_only=True):
@@ -244,6 +291,10 @@ class SquadMember(msgspec.Struct, frozen=True, kw_only=True):
     member_id: str
     member_type: str
     role: str
+    name: str | None = None
+    email: str | None = None
+    status: str | None = None
+    avatar_url: str | None = None
 
 
 class SquadMemberRemoval(msgspec.Struct, frozen=True, kw_only=True):

@@ -16,6 +16,11 @@ from multica_py.models.system import SquadMember, SquadMemberRemoval
 class Squad(_BoundEntity):  # type: ignore[misc]
     id: str
     name: str
+    description: str | None = None
+    instructions: str | None = None
+    avatar_url: str | None = None
+    workspace_id: str | None = None
+    status: str | None = None
     member_count: int = 0
     leader_id: str | None = None
     archived_at: datetime.datetime | None = None
