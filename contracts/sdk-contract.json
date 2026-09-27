@@ -18986,6 +18986,60 @@
       ]
     },
     {
+      "operation_id": "agents.env.get",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica agent env get; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-074"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agents.AgentResource.env_get",
+          "signature_id": "agents_env_get",
+          "binding_id": "agents_env_get",
+          "response_id": "mapping_config",
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agents.AgentResource.env_get_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.env.set",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica agent env set; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-075"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agents.AgentResource.env_set",
+          "signature_id": "agents_env_set",
+          "binding_id": "agents_env_set",
+          "response_id": "mapping_config",
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agents.AgentResource.env_set_command"
+        }
+      ]
+    },
+    {
       "operation_id": "agents.get",
       "compatibility": "compatible",
       "rationale": "Agent get for detail view.",
@@ -19039,6 +19093,245 @@
       ]
     },
     {
+      "operation_id": "agents.mcp.add",
+      "compatibility": "intentionally_changed",
+      "rationale": "Agent MCP add assigns workspace server to agent.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.add",
+          "signature_id": "agent_mcp_add",
+          "binding_id": "agent_mcp_add",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.add_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.add_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Bound Agent relation delegates MCP assignment to the reviewed agent command.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R37"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.entities.agents.Agent.add_mcp_server",
+          "signature_id": "agent_mcp_add_bound",
+          "binding_id": "agent_mcp_add_bound",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.entities.agents.Agent.add_mcp_server_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.disable",
+      "compatibility": "intentionally_changed",
+      "rationale": "Agent MCP disable toggles enabled=false.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.disable",
+          "signature_id": "agent_mcp_disable",
+          "binding_id": "agent_mcp_disable",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.disable_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.disable_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Bound Agent relation disables an assigned MCP server.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R37"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.entities.agents.Agent.disable_mcp_server",
+          "signature_id": "agent_mcp_disable_bound",
+          "binding_id": "agent_mcp_disable_bound",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.entities.agents.Agent.disable_mcp_server_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.enable",
+      "compatibility": "intentionally_changed",
+      "rationale": "Agent MCP enable toggles enabled=true.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.enable",
+          "signature_id": "agent_mcp_enable",
+          "binding_id": "agent_mcp_enable",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.enable_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.enable_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Bound Agent relation enables an assigned MCP server.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R37"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.entities.agents.Agent.enable_mcp_server",
+          "signature_id": "agent_mcp_enable_bound",
+          "binding_id": "agent_mcp_enable_bound",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.entities.agents.Agent.enable_mcp_server_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Agent MCP list reads /api/agents/{id}/mcp-servers.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R37"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.list",
+          "signature_id": "agent_mcp_list",
+          "binding_id": "agent_mcp_list",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.remove",
+      "compatibility": "intentionally_changed",
+      "rationale": "Agent MCP remove drops assignment only.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.remove",
+          "signature_id": "agent_mcp_remove",
+          "binding_id": "agent_mcp_remove",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.remove_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.mcp.remove_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Bound Agent relation removes an assigned MCP server.",
+      "source_ref_ids": [
+        "S-AGENT-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R37"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.entities.agents.Agent.remove_mcp_server",
+          "signature_id": "agent_mcp_remove_bound",
+          "binding_id": "agent_mcp_remove_bound",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.entities.agents.Agent.remove_mcp_server_command"
+        }
+      ]
+    },
+    {
       "operation_id": "agents.restore",
       "compatibility": "compatible",
       "rationale": "Approved canonical public method retained with explicit v0.4.20 convention and test evidence.",
@@ -19061,6 +19354,33 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.agents.AgentResource.restore_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "agents.skills.add",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica agent skills add; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-073"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.agents.AgentResource.skills_add",
+          "signature_id": "agents_skills_add",
+          "binding_id": "agents_skills_add",
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.agents.AgentResource.skills_add_command"
         }
       ]
     },
@@ -19574,6 +19894,60 @@
       ]
     },
     {
+      "operation_id": "autopilots.trigger_list",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica autopilot trigger-list is backed by the implemented typed resource method, generated binding, mapping result, and canonical vector.",
+      "source_ref_ids": [
+        "I-CMD-090"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_list",
+          "signature_id": "autopilots_trigger_list",
+          "binding_id": "autopilots_trigger_list",
+          "response_id": "mapping_config",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "autopilots.trigger_rotate_url",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for autopilot trigger-rotate-url; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-093"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_rotate_url",
+          "signature_id": "autopilot_trigger_rotate_url",
+          "binding_id": "autopilot_trigger_rotate_url",
+          "response_id": "autopilot_trigger_rotate_url",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_rotate_url_command"
+        }
+      ]
+    },
+    {
       "operation_id": "autopilots.trigger_update",
       "compatibility": "intentionally_changed",
       "rationale": "Replaced obsolete title/kind update inputs with the pinned trigger-update patch contract: cron_expression, timezone, label, and enabled, preserving explicit Unset/null/empty/boolean presence semantics (D13).",
@@ -19624,6 +19998,86 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.autopilots.AutopilotResource.update_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "chats.history",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for chat history; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-133"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.chats.ChatResource.history",
+          "signature_id": "chat_history",
+          "binding_id": "chat_history",
+          "response_id": "chat_history",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.chats.ChatResource.history_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "chats.thread",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for chat thread; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-134"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.chats.ChatResource.thread",
+          "signature_id": "chat_thread",
+          "binding_id": "chat_thread",
+          "response_id": "chat_thread",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.chats.ChatResource.thread_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "cli.command",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.cli.CliResource.command",
+          "signature_id": "cli_command",
+          "binding_id": "cli_command",
+          "response_id": "cli_result",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.cli.CliResource.command_command"
         }
       ]
     },
@@ -19890,6 +20344,32 @@
       ]
     },
     {
+      "operation_id": "issues.assign_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.assign",
+          "signature_id": "issues_assign_bound",
+          "binding_id": "issues_assign_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.assign_command"
+        }
+      ]
+    },
+    {
       "operation_id": "issues.cancel_task",
       "compatibility": "intentionally_changed",
       "rationale": "Corrected from issue + run-id to task-id + optional issue (D07).",
@@ -20143,6 +20623,32 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.unresolve_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.comments.update",
+      "compatibility": "requires_cli>=0.5.0",
+      "rationale": "Multica 0.5.0 adds revision-guarded issue comment updates with text-only content.",
+      "source_ref_ids": [
+        "S-COMMENT-UPDATE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.update",
+          "signature_id": "comment_update",
+          "binding_id": "comment_update",
+          "response_id": "comment",
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.update_command"
         }
       ]
     },
@@ -20485,6 +20991,294 @@
       ]
     },
     {
+      "operation_id": "issues.move_after",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.move_after",
+          "signature_id": "issues_move_after",
+          "binding_id": "issues_move_after",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.move_after_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_after_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved bound issue continuation alias.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.move_after",
+          "signature_id": "issues_move_after_bound",
+          "binding_id": "issues_move_after_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.move_after_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_before",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.move_before",
+          "signature_id": "issues_move_before",
+          "binding_id": "issues_move_before",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.move_before_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_before_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved bound issue continuation alias.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.move_before",
+          "signature_id": "issues_move_before_bound",
+          "binding_id": "issues_move_before_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.move_before_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_to_bottom",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.move_to_bottom",
+          "signature_id": "issues_move_to_bottom",
+          "binding_id": "issues_move_to_bottom",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.move_to_bottom_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_to_bottom_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved bound issue continuation alias.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.move_to_bottom",
+          "signature_id": "issues_move_to_bottom_bound",
+          "binding_id": "issues_move_to_bottom_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.move_to_bottom_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_to_top",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.move_to_top",
+          "signature_id": "issues_move_to_top",
+          "binding_id": "issues_move_to_top",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.move_to_top_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.move_to_top_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved bound issue continuation alias.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.move_to_top",
+          "signature_id": "issues_move_to_top_bound",
+          "binding_id": "issues_move_to_top_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.move_to_top_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.properties.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Issue property list reads issue.properties bag via issue GET.",
+      "source_ref_ids": [
+        "S-ISSUE-PROPERTY-CMD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R38"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.list",
+          "signature_id": "issue_property_list",
+          "binding_id": "issue_property_list",
+          "response_id": "property_values",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.properties.set",
+      "compatibility": "intentionally_changed",
+      "rationale": "Issue property set encodes --value per property type including actor refs.",
+      "source_ref_ids": [
+        "S-ISSUE-PROPERTY-CMD",
+        "S-PROPERTY-ACTOR"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.set",
+          "signature_id": "issue_property_set",
+          "binding_id": "issue_property_set",
+          "response_id": "property_values",
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.set_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.properties.unset",
+      "compatibility": "intentionally_changed",
+      "rationale": "Issue property unset deletes value by property name.",
+      "source_ref_ids": [
+        "S-ISSUE-PROPERTY-CMD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.unset",
+          "signature_id": "issue_property_unset",
+          "binding_id": "issue_property_unset",
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.unset_command"
+        }
+      ]
+    },
+    {
       "operation_id": "issues.pull_requests",
       "compatibility": "intentionally_changed",
       "rationale": "Adapt pull_requests envelope wrapper (D04).",
@@ -20508,6 +21302,32 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issues.IssueResource.pull_requests_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.refresh",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.refresh",
+          "signature_id": "issues_refresh",
+          "binding_id": "issues_refresh",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.refresh_command"
         }
       ]
     },
@@ -20690,6 +21510,34 @@
       ]
     },
     {
+      "operation_id": "issues.set_status_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Bound set_status forwards IssueStatus | str without local membership checks.",
+      "source_ref_ids": [
+        "S-ISSUE",
+        "S-ISSUE-STATUS-VALIDATE",
+        "S-ISSUE-STATUS-RUN"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.set_status",
+          "signature_id": "issues_set_status_bound",
+          "binding_id": "issues_set_status_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.set_status_command"
+        }
+      ]
+    },
+    {
       "operation_id": "issues.subscribers.add",
       "compatibility": "compatible",
       "rationale": "Issue subscriber add for mutation invalidation.",
@@ -20769,6 +21617,85 @@
       ]
     },
     {
+      "operation_id": "issues.timeline",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for issue timeline; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-032"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.timeline",
+          "signature_id": "issue_timeline",
+          "binding_id": "issue_timeline",
+          "response_id": "issue_timeline",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.timeline_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.unassign",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.IssueResource.unassign",
+          "signature_id": "issues_unassign",
+          "binding_id": "issues_unassign",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.IssueResource.unassign_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.unassign_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.unassign",
+          "signature_id": "issues_unassign_bound",
+          "binding_id": "issues_unassign_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.unassign_command"
+        }
+      ]
+    },
+    {
       "operation_id": "issues.update",
       "compatibility": "intentionally_changed",
       "rationale": "Retain the canonical update method and reject every present parent_issue_id on Triage with issue_in_triage before mutation; omitted parent remains ordinary update behavior.",
@@ -20791,6 +21718,32 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issues.IssueResource.update_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.update_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Retain the bound update surface while applying the same atomic Triage parent presence rule and lifecycle projection.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issues.Issue.update",
+          "signature_id": "issues_update_bound",
+          "binding_id": "issues_update_bound",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issues.Issue.update_command"
         }
       ]
     },
@@ -20820,6 +21773,168 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.issues.IssueResource.usage_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.wakeups.create",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for issue wakeup create; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-040"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.create",
+          "signature_id": "issue_wakeup_create",
+          "binding_id": "issue_wakeup_create",
+          "response_id": "issue_wakeup_create",
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.create_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.wakeups.disable",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for issue wakeup disable; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-039"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.disable",
+          "signature_id": "issue_wakeup_disable",
+          "binding_id": "issue_wakeup_disable",
+          "response_id": "issue_wakeup_disable",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.disable_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.wakeups.events",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for issue wakeup events; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-036"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.events",
+          "signature_id": "issue_wakeup_events",
+          "binding_id": "issue_wakeup_events",
+          "response_id": "issue_wakeup_events",
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.events_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.wakeups.get",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for issue wakeup get; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-038"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.get",
+          "signature_id": "issue_wakeup_get",
+          "binding_id": "issue_wakeup_get",
+          "response_id": "issue_wakeup_get",
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.get_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.wakeups.list",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for issue wakeup list; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-037"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.list",
+          "signature_id": "issue_wakeup_list",
+          "binding_id": "issue_wakeup_list",
+          "response_id": "issue_wakeup_list",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "issues.wakeups.update",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for issue wakeup update; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-041"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.update",
+          "signature_id": "issue_wakeup_update",
+          "binding_id": "issue_wakeup_update",
+          "response_id": "issue_wakeup_update",
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.update_command"
         }
       ]
     },
@@ -21085,6 +22200,32 @@
       ]
     },
     {
+      "operation_id": "projects.issues.create",
+      "compatibility": "intentionally_changed",
+      "rationale": "Project-scoped issue creation mirrors the root natural description inputs and preserves the bound project mapping, ordered labels, and result binding.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.ProjectIssueCollection.create",
+          "signature_id": "project_issue_create",
+          "binding_id": "project_issue_create",
+          "response_id": "issue",
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.projects.ProjectIssueCollection.create_command"
+        }
+      ]
+    },
+    {
       "operation_id": "projects.list",
       "compatibility": "compatible",
       "rationale": "Project list for workspace projects relation.",
@@ -21108,6 +22249,32 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.projects.ProjectResource.list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "projects.refresh",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.Project.refresh",
+          "signature_id": "projects_refresh",
+          "binding_id": "projects_refresh",
+          "response_id": "project",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.projects.Project.refresh_command"
         }
       ]
     },
@@ -21269,6 +22436,189 @@
       ]
     },
     {
+      "operation_id": "projects.update_bound",
+      "compatibility": "intentionally_changed",
+      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "source_ref_ids": [
+        "S-ISSUE"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.projects.Project.update",
+          "signature_id": "projects_update_bound",
+          "binding_id": "projects_update_bound",
+          "response_id": "project",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.projects.Project.update_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "properties.archive",
+      "compatibility": "intentionally_changed",
+      "rationale": "Property archive toggles archived=true.",
+      "source_ref_ids": [
+        "S-PROPERTY-CMD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.properties.PropertyResource.archive",
+          "signature_id": "property_archive",
+          "binding_id": "property_archive",
+          "response_id": "property_definition",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.properties.PropertyResource.archive_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "properties.create",
+      "compatibility": "intentionally_changed",
+      "rationale": "Property create requires name and type; actor types reject options.",
+      "source_ref_ids": [
+        "S-PROPERTY-CMD",
+        "S-PROPERTY-ACTOR"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.properties.PropertyResource.create",
+          "signature_id": "property_create",
+          "binding_id": "property_create",
+          "response_id": "property_definition",
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.properties.PropertyResource.create_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "properties.get",
+      "compatibility": "intentionally_changed",
+      "rationale": "Property get resolves id-or-name against catalog.",
+      "source_ref_ids": [
+        "S-PROPERTY-CMD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.properties.PropertyResource.get",
+          "signature_id": "property_get",
+          "binding_id": "property_get",
+          "response_id": "property_definition",
+          "errors": "standard",
+          "category": "retrieve",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.properties.PropertyResource.get_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "properties.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Property catalog list from /api/properties.",
+      "source_ref_ids": [
+        "S-PROPERTY-CMD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.properties.PropertyResource.list",
+          "signature_id": "property_list",
+          "binding_id": "property_list",
+          "response_id": "page_property_definitions",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.properties.PropertyResource.list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "properties.unarchive",
+      "compatibility": "intentionally_changed",
+      "rationale": "Property unarchive toggles archived=false.",
+      "source_ref_ids": [
+        "S-PROPERTY-CMD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.properties.PropertyResource.unarchive",
+          "signature_id": "property_unarchive",
+          "binding_id": "property_unarchive",
+          "response_id": "property_definition",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.properties.PropertyResource.unarchive_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "properties.update",
+      "compatibility": "intentionally_changed",
+      "rationale": "Property update uses Flags().Changed presence including empty icon clear.",
+      "source_ref_ids": [
+        "S-PROPERTY-CMD"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.properties.PropertyResource.update",
+          "signature_id": "property_update",
+          "binding_id": "property_update",
+          "response_id": "property_definition",
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.properties.PropertyResource.update_command"
+        }
+      ]
+    },
+    {
       "operation_id": "repositories.add",
       "compatibility": "intentionally_changed",
       "rationale": "Repository add accepts one or more URLs; description requires one URL (D16).",
@@ -21291,6 +22641,33 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.repositories.RepositoryResource.add_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "repositories.checkout",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for repo checkout; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-108"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.repositories.RepositoryResource.checkout",
+          "signature_id": "repository_checkout",
+          "binding_id": "repository_checkout",
+          "response_id": "repository_checkout",
+          "errors": "standard",
+          "category": "process",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.repositories.RepositoryResource.checkout_command"
         }
       ]
     },
@@ -21344,6 +22721,168 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.repositories.RepositoryResource.remove_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtime_profiles.create",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for runtime profile create; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-149"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.create",
+          "signature_id": "runtime_profile_create",
+          "binding_id": "runtime_profile_create",
+          "response_id": "runtime_profile_create",
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.create_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtime_profiles.delete",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for runtime profile delete; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-151"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.delete",
+          "signature_id": "runtime_profile_delete",
+          "binding_id": "runtime_profile_delete",
+          "response_id": "runtime_profile_delete",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.delete_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtime_profiles.list",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for runtime profile list; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-148"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.list",
+          "signature_id": "runtime_profile_list",
+          "binding_id": "runtime_profile_list",
+          "response_id": "runtime_profile_list",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtime_profiles.set_path",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for runtime profile set-path; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-152"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.set_path",
+          "signature_id": "runtime_profile_set_path",
+          "binding_id": "runtime_profile_set_path",
+          "response_id": "runtime_profile_set_path",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.set_path_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtime_profiles.unset_path",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for runtime profile unset-path; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-153"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.unset_path",
+          "signature_id": "runtime_profile_unset_path",
+          "binding_id": "runtime_profile_unset_path",
+          "response_id": "runtime_profile_unset_path",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.unset_path_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "runtime_profiles.update",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for runtime profile update; exact inputs, wire response, and canonical transport are governed for the successor typed surface.",
+      "source_ref_ids": [
+        "I-CMD-150"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.update",
+          "signature_id": "runtime_profile_update",
+          "binding_id": "runtime_profile_update",
+          "response_id": "runtime_profile_update",
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.update_command"
         }
       ]
     },
@@ -21744,6 +23283,85 @@
       ]
     },
     {
+      "operation_id": "skills.labels.add",
+      "compatibility": "requires_cli>=0.5.0",
+      "rationale": "Multica 0.5.0 adds typed skill-label attachment.",
+      "source_ref_ids": [
+        "S-SKILL-LABEL"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.add",
+          "signature_id": "skill_labels_add",
+          "binding_id": "skill_labels_add",
+          "response_id": "page_labels",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skill_labels.SkillLabelResource.add_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "skills.labels.list",
+      "compatibility": "requires_cli>=0.5.0",
+      "rationale": "Multica 0.5.0 adds typed skill-label listing.",
+      "source_ref_ids": [
+        "S-SKILL-LABEL"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.list",
+          "signature_id": "skill_labels_list",
+          "binding_id": "skill_labels_list",
+          "response_id": "page_labels",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skill_labels.SkillLabelResource.list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "skills.labels.remove",
+      "compatibility": "requires_cli>=0.5.0",
+      "rationale": "Multica 0.5.0 adds typed skill-label removal.",
+      "source_ref_ids": [
+        "S-SKILL-LABEL"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.remove",
+          "signature_id": "skill_labels_remove",
+          "binding_id": "skill_labels_remove",
+          "response_id": "page_labels",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skill_labels.SkillLabelResource.remove_command",
+          "fallback_response_id": "action_result_none"
+        }
+      ]
+    },
+    {
       "operation_id": "skills.list",
       "compatibility": "requires_cli>=0.5.0",
       "rationale": "Multica 0.5.0 skill-list responses require labels for the preloaded typed relation.",
@@ -21772,6 +23390,58 @@
       ]
     },
     {
+      "operation_id": "skills.refresh",
+      "compatibility": "intentionally_changed",
+      "rationale": "Re-downloads a skill bundle from its imported source via POST /api/skills/<id>/refresh.",
+      "source_ref_ids": [
+        "S-SKILL-REFRESH"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skills.SkillResource.refresh",
+          "signature_id": "skill_refresh",
+          "binding_id": "skill_refresh",
+          "response_id": "skill",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skills.SkillResource.refresh_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "skills.search",
+      "compatibility": "intentionally_changed",
+      "rationale": "Search installable skills; JSON rows expose name, url, source, installs, description.",
+      "source_ref_ids": [
+        "S-SKILL-SEARCH"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.skills.SkillResource.search",
+          "signature_id": "skill_search",
+          "binding_id": "skill_search",
+          "response_id": "page_skill_search_results",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.skills.SkillResource.search_command"
+        }
+      ]
+    },
+    {
       "operation_id": "skills.update",
       "compatibility": "compatible",
       "rationale": "Approved canonical public method retained with explicit v0.4.20 convention and test evidence.",
@@ -21794,6 +23464,87 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.skills.SkillResource.update_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "squads.activity",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica squads activity; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-132"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squads.SquadResource.activity",
+          "signature_id": "squads_activity",
+          "binding_id": "squads_activity",
+          "response_id": "mapping_config",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squads.SquadResource.activity_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "squads.create",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica squads create; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-125"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squads.SquadResource.create",
+          "signature_id": "squads_create",
+          "binding_id": "squads_create",
+          "response_id": "squad",
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squads.SquadResource.create_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "squads.delete",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica squads delete; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-127"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squads.SquadResource.delete",
+          "signature_id": "squads_delete",
+          "binding_id": "squads_delete",
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squads.SquadResource.delete_command"
         }
       ]
     },
@@ -21930,6 +23681,60 @@
       ]
     },
     {
+      "operation_id": "squads.members.set_role",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica squad member set-role; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-131"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squads.SquadResource.member_set_role",
+          "signature_id": "squads_members_set_role",
+          "binding_id": "squads_members_set_role",
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squads.SquadResource.member_set_role_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "squads.update",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica squads update; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-126"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.squads.SquadResource.update",
+          "signature_id": "squads_update",
+          "binding_id": "squads_update",
+          "response_id": "squad",
+          "errors": "standard",
+          "category": "update",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.squads.SquadResource.update_command"
+        }
+      ]
+    },
+    {
       "operation_id": "users.profile_get",
       "compatibility": "intentionally_changed",
       "rationale": "Replaced unsupported users.list/get with profile get (D15).",
@@ -21982,6 +23787,33 @@
       ]
     },
     {
+      "operation_id": "workspaces.create",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica workspaces create; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-095"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.create",
+          "signature_id": "workspaces_create",
+          "binding_id": "workspaces_create",
+          "response_id": "workspace",
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.create_command"
+        }
+      ]
+    },
+    {
       "operation_id": "workspaces.get",
       "compatibility": "compatible",
       "rationale": "Workspace get.",
@@ -22030,6 +23862,138 @@
           "input_mode": "direct",
           "presence_policy_ids": [],
           "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "workspaces.mcp.add",
+      "compatibility": "intentionally_changed",
+      "rationale": "Workspace MCP add requires exactly one config channel.",
+      "source_ref_ids": [
+        "S-WORKSPACE-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.add",
+          "signature_id": "workspace_mcp_add",
+          "binding_id": "workspace_mcp_add",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.add_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "workspaces.mcp.list",
+      "compatibility": "intentionally_changed",
+      "rationale": "Workspace MCP list returns write-only public fields only.",
+      "source_ref_ids": [
+        "S-WORKSPACE-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION",
+        "relation:R36"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.list",
+          "signature_id": "workspace_mcp_list",
+          "binding_id": "workspace_mcp_list",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.list_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "workspaces.mcp.remove",
+      "compatibility": "intentionally_changed",
+      "rationale": "Workspace MCP remove deletes library entry and agent assignments.",
+      "source_ref_ids": [
+        "S-WORKSPACE-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove",
+          "signature_id": "workspace_mcp_remove",
+          "binding_id": "workspace_mcp_remove",
+          "response_id": "action_result_none",
+          "errors": "standard",
+          "category": "action",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "workspaces.mcp.update",
+      "compatibility": "intentionally_changed",
+      "rationale": "Workspace MCP update renames or replaces config via resolveMcpJSONObject.",
+      "source_ref_ids": [
+        "S-WORKSPACE-MCP"
+      ],
+      "test_ref_ids": [
+        "T-OPERATION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.update",
+          "signature_id": "workspace_mcp_update",
+          "binding_id": "workspace_mcp_update",
+          "response_id": "page_mcp_servers",
+          "errors": "standard",
+          "category": "collection",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.update_command"
+        }
+      ]
+    },
+    {
+      "operation_id": "workspaces.members.invite",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica workspace member invite; successor typed binding and canonical transport are governed without implementing the family.",
+      "source_ref_ids": [
+        "I-CMD-098"
+      ],
+      "test_ref_ids": [
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
+      ],
+      "entrypoints": [
+        {
+          "entrypoint_id": "default",
+          "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.member_invite",
+          "signature_id": "workspaces_members_invite",
+          "binding_id": "workspaces_members_invite",
+          "response_id": "workspace_members",
+          "errors": "standard",
+          "category": "create",
+          "typed_input_id": null,
+          "input_mode": "direct",
+          "presence_policy_ids": [],
+          "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.member_invite_command"
         }
       ]
     },
@@ -22090,1210 +24054,29 @@
       ]
     },
     {
-      "operation_id": "issues.unassign",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
+      "operation_id": "workspaces.update",
+      "compatibility": "requires_cli>=0.5.3",
+      "rationale": "Reviewed source/help promotion for multica workspaces update; successor typed binding and canonical transport are governed without implementing the family.",
       "source_ref_ids": [
-        "S-ISSUE"
+        "I-CMD-099"
       ],
       "test_ref_ids": [
-        "T-OPERATION"
+        "T-INVENTORY",
+        "T-WP01-PROMOTION"
       ],
       "entrypoints": [
         {
           "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.IssueResource.unassign",
-          "signature_id": "issues_unassign",
-          "binding_id": "issues_unassign",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.IssueResource.unassign_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.move_to_top",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.IssueResource.move_to_top",
-          "signature_id": "issues_move_to_top",
-          "binding_id": "issues_move_to_top",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.IssueResource.move_to_top_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.move_to_bottom",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.IssueResource.move_to_bottom",
-          "signature_id": "issues_move_to_bottom",
-          "binding_id": "issues_move_to_bottom",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.IssueResource.move_to_bottom_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.move_before",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.IssueResource.move_before",
-          "signature_id": "issues_move_before",
-          "binding_id": "issues_move_before",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.IssueResource.move_before_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.move_after",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.IssueResource.move_after",
-          "signature_id": "issues_move_after",
-          "binding_id": "issues_move_after",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.IssueResource.move_after_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "projects.issues.create",
-      "compatibility": "intentionally_changed",
-      "rationale": "Project-scoped issue creation mirrors the root natural description inputs and preserves the bound project mapping, ordered labels, and result binding.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.projects.ProjectIssueCollection.create",
-          "signature_id": "project_issue_create",
-          "binding_id": "project_issue_create",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "create",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.projects.ProjectIssueCollection.create_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "cli.command",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.cli.CliResource.command",
-          "signature_id": "cli_command",
-          "binding_id": "cli_command",
-          "response_id": "cli_result",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.cli.CliResource.command_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.refresh",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.Issue.refresh",
-          "signature_id": "issues_refresh",
-          "binding_id": "issues_refresh",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.Issue.refresh_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.update_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Retain the bound update surface while applying the same atomic Triage parent presence rule and lifecycle projection.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.Issue.update",
-          "signature_id": "issues_update_bound",
-          "binding_id": "issues_update_bound",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.Issue.update_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.assign_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.Issue.assign",
-          "signature_id": "issues_assign_bound",
-          "binding_id": "issues_assign_bound",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.Issue.assign_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.unassign_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.Issue.unassign",
-          "signature_id": "issues_unassign_bound",
-          "binding_id": "issues_unassign_bound",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.Issue.unassign_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.set_status_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Bound set_status forwards IssueStatus | str without local membership checks.",
-      "source_ref_ids": [
-        "S-ISSUE",
-        "S-ISSUE-STATUS-VALIDATE",
-        "S-ISSUE-STATUS-RUN"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.Issue.set_status",
-          "signature_id": "issues_set_status_bound",
-          "binding_id": "issues_set_status_bound",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.Issue.set_status_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "projects.refresh",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.projects.Project.refresh",
-          "signature_id": "projects_refresh",
-          "binding_id": "projects_refresh",
-          "response_id": "project",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.projects.Project.refresh_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "projects.update_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved by simplify-public-sdk-experience public surface.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.projects.Project.update",
-          "signature_id": "projects_update_bound",
-          "binding_id": "projects_update_bound",
-          "response_id": "project",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.projects.Project.update_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.move_to_top_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved bound issue continuation alias.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.Issue.move_to_top",
-          "signature_id": "issues_move_to_top_bound",
-          "binding_id": "issues_move_to_top_bound",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.Issue.move_to_top_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.move_to_bottom_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved bound issue continuation alias.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.Issue.move_to_bottom",
-          "signature_id": "issues_move_to_bottom_bound",
-          "binding_id": "issues_move_to_bottom_bound",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.Issue.move_to_bottom_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.move_before_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved bound issue continuation alias.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.Issue.move_before",
-          "signature_id": "issues_move_before_bound",
-          "binding_id": "issues_move_before_bound",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.Issue.move_before_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.move_after_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Approved bound issue continuation alias.",
-      "source_ref_ids": [
-        "S-ISSUE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issues.Issue.move_after",
-          "signature_id": "issues_move_after_bound",
-          "binding_id": "issues_move_after_bound",
-          "response_id": "issue",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issues.Issue.move_after_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "properties.list",
-      "compatibility": "intentionally_changed",
-      "rationale": "Property catalog list from /api/properties.",
-      "source_ref_ids": [
-        "S-PROPERTY-CMD"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.properties.PropertyResource.list",
-          "signature_id": "property_list",
-          "binding_id": "property_list",
-          "response_id": "page_property_definitions",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.properties.PropertyResource.list_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "properties.get",
-      "compatibility": "intentionally_changed",
-      "rationale": "Property get resolves id-or-name against catalog.",
-      "source_ref_ids": [
-        "S-PROPERTY-CMD"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.properties.PropertyResource.get",
-          "signature_id": "property_get",
-          "binding_id": "property_get",
-          "response_id": "property_definition",
-          "errors": "standard",
-          "category": "retrieve",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.properties.PropertyResource.get_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "properties.create",
-      "compatibility": "intentionally_changed",
-      "rationale": "Property create requires name and type; actor types reject options.",
-      "source_ref_ids": [
-        "S-PROPERTY-CMD",
-        "S-PROPERTY-ACTOR"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.properties.PropertyResource.create",
-          "signature_id": "property_create",
-          "binding_id": "property_create",
-          "response_id": "property_definition",
-          "errors": "standard",
-          "category": "create",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.properties.PropertyResource.create_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "properties.update",
-      "compatibility": "intentionally_changed",
-      "rationale": "Property update uses Flags().Changed presence including empty icon clear.",
-      "source_ref_ids": [
-        "S-PROPERTY-CMD"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.properties.PropertyResource.update",
-          "signature_id": "property_update",
-          "binding_id": "property_update",
-          "response_id": "property_definition",
+          "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.update",
+          "signature_id": "workspaces_update",
+          "binding_id": "workspaces_update",
+          "response_id": "workspace",
           "errors": "standard",
           "category": "update",
           "typed_input_id": null,
           "input_mode": "direct",
           "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.properties.PropertyResource.update_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "properties.archive",
-      "compatibility": "intentionally_changed",
-      "rationale": "Property archive toggles archived=true.",
-      "source_ref_ids": [
-        "S-PROPERTY-CMD"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.properties.PropertyResource.archive",
-          "signature_id": "property_archive",
-          "binding_id": "property_archive",
-          "response_id": "property_definition",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.properties.PropertyResource.archive_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "properties.unarchive",
-      "compatibility": "intentionally_changed",
-      "rationale": "Property unarchive toggles archived=false.",
-      "source_ref_ids": [
-        "S-PROPERTY-CMD"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.properties.PropertyResource.unarchive",
-          "signature_id": "property_unarchive",
-          "binding_id": "property_unarchive",
-          "response_id": "property_definition",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.properties.PropertyResource.unarchive_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.properties.list",
-      "compatibility": "intentionally_changed",
-      "rationale": "Issue property list reads issue.properties bag via issue GET.",
-      "source_ref_ids": [
-        "S-ISSUE-PROPERTY-CMD"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION",
-        "relation:R38"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.list",
-          "signature_id": "issue_property_list",
-          "binding_id": "issue_property_list",
-          "response_id": "property_values",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.list_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.properties.set",
-      "compatibility": "intentionally_changed",
-      "rationale": "Issue property set encodes --value per property type including actor refs.",
-      "source_ref_ids": [
-        "S-ISSUE-PROPERTY-CMD",
-        "S-PROPERTY-ACTOR"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.set",
-          "signature_id": "issue_property_set",
-          "binding_id": "issue_property_set",
-          "response_id": "property_values",
-          "errors": "standard",
-          "category": "update",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.set_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.properties.unset",
-      "compatibility": "intentionally_changed",
-      "rationale": "Issue property unset deletes value by property name.",
-      "source_ref_ids": [
-        "S-ISSUE-PROPERTY-CMD"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.unset",
-          "signature_id": "issue_property_unset",
-          "binding_id": "issue_property_unset",
-          "response_id": "action_result_none",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.unset_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "workspaces.mcp.list",
-      "compatibility": "intentionally_changed",
-      "rationale": "Workspace MCP list returns write-only public fields only.",
-      "source_ref_ids": [
-        "S-WORKSPACE-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION",
-        "relation:R36"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.list",
-          "signature_id": "workspace_mcp_list",
-          "binding_id": "workspace_mcp_list",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.list_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "workspaces.mcp.add",
-      "compatibility": "intentionally_changed",
-      "rationale": "Workspace MCP add requires exactly one config channel.",
-      "source_ref_ids": [
-        "S-WORKSPACE-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.add",
-          "signature_id": "workspace_mcp_add",
-          "binding_id": "workspace_mcp_add",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.add_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "workspaces.mcp.update",
-      "compatibility": "intentionally_changed",
-      "rationale": "Workspace MCP update renames or replaces config via resolveMcpJSONObject.",
-      "source_ref_ids": [
-        "S-WORKSPACE-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.update",
-          "signature_id": "workspace_mcp_update",
-          "binding_id": "workspace_mcp_update",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.update_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "workspaces.mcp.remove",
-      "compatibility": "intentionally_changed",
-      "rationale": "Workspace MCP remove deletes library entry and agent assignments.",
-      "source_ref_ids": [
-        "S-WORKSPACE-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove",
-          "signature_id": "workspace_mcp_remove",
-          "binding_id": "workspace_mcp_remove",
-          "response_id": "action_result_none",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "agents.mcp.list",
-      "compatibility": "intentionally_changed",
-      "rationale": "Agent MCP list reads /api/agents/{id}/mcp-servers.",
-      "source_ref_ids": [
-        "S-AGENT-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION",
-        "relation:R37"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.list",
-          "signature_id": "agent_mcp_list",
-          "binding_id": "agent_mcp_list",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.list_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "agents.mcp.add",
-      "compatibility": "intentionally_changed",
-      "rationale": "Agent MCP add assigns workspace server to agent.",
-      "source_ref_ids": [
-        "S-AGENT-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.add",
-          "signature_id": "agent_mcp_add",
-          "binding_id": "agent_mcp_add",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.add_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "agents.mcp.enable",
-      "compatibility": "intentionally_changed",
-      "rationale": "Agent MCP enable toggles enabled=true.",
-      "source_ref_ids": [
-        "S-AGENT-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.enable",
-          "signature_id": "agent_mcp_enable",
-          "binding_id": "agent_mcp_enable",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.enable_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "agents.mcp.disable",
-      "compatibility": "intentionally_changed",
-      "rationale": "Agent MCP disable toggles enabled=false.",
-      "source_ref_ids": [
-        "S-AGENT-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.disable",
-          "signature_id": "agent_mcp_disable",
-          "binding_id": "agent_mcp_disable",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.disable_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "agents.mcp.remove",
-      "compatibility": "intentionally_changed",
-      "rationale": "Agent MCP remove drops assignment only.",
-      "source_ref_ids": [
-        "S-AGENT-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.remove",
-          "signature_id": "agent_mcp_remove",
-          "binding_id": "agent_mcp_remove",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.remove_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "agents.mcp.add_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Bound Agent relation delegates MCP assignment to the reviewed agent command.",
-      "source_ref_ids": [
-        "S-AGENT-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION",
-        "relation:R37"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.entities.agents.Agent.add_mcp_server",
-          "signature_id": "agent_mcp_add_bound",
-          "binding_id": "agent_mcp_add_bound",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.entities.agents.Agent.add_mcp_server_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "agents.mcp.enable_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Bound Agent relation enables an assigned MCP server.",
-      "source_ref_ids": [
-        "S-AGENT-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION",
-        "relation:R37"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.entities.agents.Agent.enable_mcp_server",
-          "signature_id": "agent_mcp_enable_bound",
-          "binding_id": "agent_mcp_enable_bound",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.entities.agents.Agent.enable_mcp_server_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "agents.mcp.disable_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Bound Agent relation disables an assigned MCP server.",
-      "source_ref_ids": [
-        "S-AGENT-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION",
-        "relation:R37"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.entities.agents.Agent.disable_mcp_server",
-          "signature_id": "agent_mcp_disable_bound",
-          "binding_id": "agent_mcp_disable_bound",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.entities.agents.Agent.disable_mcp_server_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "agents.mcp.remove_bound",
-      "compatibility": "intentionally_changed",
-      "rationale": "Bound Agent relation removes an assigned MCP server.",
-      "source_ref_ids": [
-        "S-AGENT-MCP"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION",
-        "relation:R37"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.entities.agents.Agent.remove_mcp_server",
-          "signature_id": "agent_mcp_remove_bound",
-          "binding_id": "agent_mcp_remove_bound",
-          "response_id": "page_mcp_servers",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.entities.agents.Agent.remove_mcp_server_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "skills.refresh",
-      "compatibility": "intentionally_changed",
-      "rationale": "Re-downloads a skill bundle from its imported source via POST /api/skills/<id>/refresh.",
-      "source_ref_ids": [
-        "S-SKILL-REFRESH"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.skills.SkillResource.refresh",
-          "signature_id": "skill_refresh",
-          "binding_id": "skill_refresh",
-          "response_id": "skill",
-          "errors": "standard",
-          "category": "action",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.skills.SkillResource.refresh_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "skills.search",
-      "compatibility": "intentionally_changed",
-      "rationale": "Search installable skills; JSON rows expose name, url, source, installs, description.",
-      "source_ref_ids": [
-        "S-SKILL-SEARCH"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.skills.SkillResource.search",
-          "signature_id": "skill_search",
-          "binding_id": "skill_search",
-          "response_id": "page_skill_search_results",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.skills.SkillResource.search_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "issues.comments.update",
-      "compatibility": "requires_cli>=0.5.0",
-      "rationale": "Multica 0.5.0 adds revision-guarded issue comment updates with text-only content.",
-      "source_ref_ids": [
-        "S-COMMENT-UPDATE"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.update",
-          "signature_id": "comment_update",
-          "binding_id": "comment_update",
-          "response_id": "comment",
-          "errors": "standard",
-          "category": "update",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.issue_comments.IssueCommentResource.update_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "skills.labels.list",
-      "compatibility": "requires_cli>=0.5.0",
-      "rationale": "Multica 0.5.0 adds typed skill-label listing.",
-      "source_ref_ids": [
-        "S-SKILL-LABEL"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.list",
-          "signature_id": "skill_labels_list",
-          "binding_id": "skill_labels_list",
-          "response_id": "page_labels",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.skill_labels.SkillLabelResource.list_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "skills.labels.add",
-      "compatibility": "requires_cli>=0.5.0",
-      "rationale": "Multica 0.5.0 adds typed skill-label attachment.",
-      "source_ref_ids": [
-        "S-SKILL-LABEL"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.add",
-          "signature_id": "skill_labels_add",
-          "binding_id": "skill_labels_add",
-          "response_id": "page_labels",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.skill_labels.SkillLabelResource.add_command"
-        }
-      ]
-    },
-    {
-      "operation_id": "skills.labels.remove",
-      "compatibility": "requires_cli>=0.5.0",
-      "rationale": "Multica 0.5.0 adds typed skill-label removal.",
-      "source_ref_ids": [
-        "S-SKILL-LABEL"
-      ],
-      "test_ref_ids": [
-        "T-OPERATION"
-      ],
-      "entrypoints": [
-        {
-          "entrypoint_id": "default",
-          "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.remove",
-          "signature_id": "skill_labels_remove",
-          "binding_id": "skill_labels_remove",
-          "response_id": "page_labels",
-          "errors": "standard",
-          "category": "collection",
-          "typed_input_id": null,
-          "input_mode": "direct",
-          "presence_policy_ids": [],
-          "command_symbol": "multica_py.resources.skill_labels.SkillLabelResource.remove_command",
-          "fallback_response_id": "action_result_none"
+          "command_symbol": "multica_py.resources.workspaces.WorkspaceResource.update_command"
         }
       ]
     }
