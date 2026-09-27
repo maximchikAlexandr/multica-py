@@ -44,6 +44,7 @@ _EXIT_CODE_EXCEPTIONS: dict[int, type[CommandExecutionError]] = {
     4: NotFoundError,
     5: ValidationError,
 }
+
 # ponytail: anchored to the CLI's pinned error-line prefix so echoed user
 # content (e.g. an upstream payload quoting "returned 404") cannot drive
 # classification. The CLI emits failures as "Error: <METHOD> <path>
@@ -455,7 +456,42 @@ class CliTransport:
                 argv, _effective_environment(self._config), file_contents=file_contents
             )
             diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
-            handle = self._executor.spawn(
+            request = ExecutionRequest(
+                argv=execution_argv,
+                cwd=cwd,
+                environment=environment,
+                timeout=self._config.timeout,
+            )
+            handle = self._executor.spawn(request)
+        except BaseException:
+            staging.close()
+            if self._semaphore is not None:
+                self._semaphore.release()
+            raise
+
+        return ManagedProcess(
+            handle,
+            argv=diagnostic_argv,
+            semaphore=self._semaphore,
+            cleanup=staging.close,
+            secret_values=secret_values,
+        )
+
+    def terminal(self, command_args: tuple[str, ...]) -> ManagedProcess:
+        """Start an interactive process through the executor boundary."""
+        self._check_compat()
+        argv = self._build_full_argv(command_args)
+        cwd = os.fspath(self._config.cwd) if self._config.cwd is not None else None
+        environment = tuple(self._config.environment)
+        if self._semaphore is not None:
+            self._semaphore.acquire()
+        staging = ExitStack()
+        try:
+            execution_argv, file_contents = self._prepare_secret_files(argv, staging)
+            secret_values = collect_diagnostic_secret_values(
+                argv, _effective_environment(self._config), file_contents=file_contents
+            )
+            handle = self._executor.terminal(
                 ExecutionRequest(
                     argv=execution_argv,
                     cwd=cwd,
@@ -468,12 +504,12 @@ class CliTransport:
             if self._semaphore is not None:
                 self._semaphore.release()
             raise
-
         return ManagedProcess(
             handle,
-            argv=diagnostic_argv,
+            argv=redact_diagnostic_argv(argv, secret_values=secret_values),
             semaphore=self._semaphore,
             cleanup=staging.close,
+            secret_values=secret_values,
         )
 
     def _prepare_secret_files(

@@ -5,6 +5,7 @@ import io
 import signal
 import subprocess
 import warnings
+from collections.abc import Iterator
 from dataclasses import dataclass
 from unittest.mock import MagicMock, call, patch
 
@@ -64,6 +65,51 @@ class ResultCase:
     stdout: bytes
     stderr: bytes
     ok: bool
+
+
+def _stream_for_name(managed: ManagedProcess, stream_name: str) -> Iterator[str]:
+    return managed.stdout_lines() if stream_name == "stdout" else managed.stderr_lines()
+
+
+@pytest.mark.parametrize("stream_name", ("stdout", "stderr"))
+@pytest.mark.parametrize("write_ending", ("\n", "\r\n"))
+def test_managed_process_redacts_written_multiline_stream_output(
+    stream_name: str, write_ending: str
+) -> None:
+    first = "first-process-secret-sentinel"
+    second = "second-process-secret-sentinel"
+    written = f"{first}{write_ending}{second}{write_ending}".encode()
+    process = _process(poll=0)
+    setattr(process, stream_name, io.BytesIO(written))
+    managed = ManagedProcess(LocalProcessHandle(process))
+
+    managed.write(written)
+    lines = _stream_for_name(managed, stream_name)
+    rendered = "\n".join(lines)
+    assert first not in rendered
+    assert second not in rendered
+    assert "***" in rendered
+
+
+@pytest.mark.parametrize("echo_ending", ("\n", "\r\n"))
+def test_managed_process_redacts_written_multiline_buffered_output(echo_ending: str) -> None:
+    first = "first-process-secret-sentinel"
+    second = "second-process-secret-sentinel"
+    written = f"{first}\n{second}\n".encode()
+    process = _process(poll=0)
+    process.communicate.return_value = (
+        f"{first}{echo_ending}{second}{echo_ending}".encode(),
+        f"{second}{echo_ending}{first}{echo_ending}".encode(),
+    )
+    managed = ManagedProcess(LocalProcessHandle(process))
+    managed.write(written)
+    result = managed.result()
+    assert first not in result.stdout
+    assert second not in result.stdout
+    assert first not in result.stderr
+    assert second not in result.stderr
+    assert "***" in result.stdout
+    assert "***" in result.stderr
 
 
 @pytest.mark.parametrize(

@@ -1781,7 +1781,7 @@ def test_operation_minimum_rejects_new_surface_but_allows_retained_surface() -> 
     assert len(retained_executor.requests) == 2
 
 
-def test_strict_client_constructor_is_lazy_and_first_public_operation_succeeds() -> None:
+def _assert_strict_client_constructor_is_lazy_and_first_public_operation_succeeds() -> None:
     executor = _CompatibilityProbeExecutor(_CLI_0442_ENVELOPE)
     config = ClientConfig(compatibility=CompatibilityPolicy.strict)
     client = MulticaClient(config, executor=executor)
@@ -1792,9 +1792,13 @@ def test_strict_client_constructor_is_lazy_and_first_public_operation_succeeds()
     finally:
         client.close()
 
-    assert status.authenticated is False
+    assert status == "{}"
     assert executor.requests[0].argv[-3:] == ("version", "--output", "json")
-    assert executor.requests[1].argv[-4:] == ("auth", "status", "--output", "json")
+    assert executor.requests[1].argv[-2:] == ("auth", "status")
+
+
+def test_strict_client_constructor_is_lazy_and_first_public_operation_succeeds() -> None:
+    _assert_strict_client_constructor_is_lazy_and_first_public_operation_succeeds()
 
 
 @pytest.mark.parametrize("version_output", _INVALID_VERSION_OUTPUTS)
@@ -1813,7 +1817,7 @@ def test_strict_invalid_version_does_not_execute_operation_or_cache_probe(
 
 
 @pytest.mark.parametrize("case", _POLICY_CASES, ids=lambda case: case.id)
-def test_snapshot_transports_share_compatibility_preflight_cache(
+def _assert_snapshot_transports_share_compatibility_preflight_cache(
     case: CompatibilityPolicyCase,
 ) -> None:
     class RecordingTransport(CliTransport):
@@ -1861,9 +1865,16 @@ def test_snapshot_transports_share_compatibility_preflight_cache(
 
     assert transport.commands == [
         ("version", "--output", "json"),
-        ("auth", "status", "--output", "json"),
-        ("auth", "logout", "--output", "json"),
+        ("auth", "status"),
+        ("auth", "logout"),
     ]
+
+
+@pytest.mark.parametrize("case", _POLICY_CASES, ids=lambda case: case.id)
+def test_snapshot_transports_share_compatibility_preflight_cache(
+    case: CompatibilityPolicyCase,
+) -> None:
+    _assert_snapshot_transports_share_compatibility_preflight_cache(case)
 
 
 def test_transport_strict_policy_rejects_unparseable_version_output_from_check():

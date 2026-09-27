@@ -236,6 +236,12 @@ class _MicrosandboxProcessHandle:
         self._output.claim("streaming")
         yield from self._lines("stderr")
 
+    def write_stdin(self, data: bytes) -> None:
+        raise NotImplementedError("microsandbox interactive stdin is provider-dependent")
+
+    def close_stdin(self) -> None:
+        raise NotImplementedError("microsandbox interactive stdin is provider-dependent")
+
     def close(self) -> None:
         return None
 
@@ -329,6 +335,10 @@ class MicrosandboxExecutor:
             timeout=_seconds(request.timeout),
         )
         return _MicrosandboxProcessHandle(self, request.argv, handle, request.timeout)
+
+    def terminal(self, request: ExecutionRequest) -> _MicrosandboxProcessHandle:
+        """Reject terminal input until the provider exposes write/close support."""
+        raise ExecutionUnavailableError("microsandbox executor does not support interactive stdin")
 
     @contextlib.contextmanager
     def stage(self, label: str, content: bytes) -> Iterator[str]:
