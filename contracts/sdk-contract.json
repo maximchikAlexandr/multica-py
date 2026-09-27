@@ -27977,5 +27977,4469 @@
         "T-CONTRACT"
       ]
     }
-  ]
+  ],
+  "inventory": {
+    "schema_version": 1,
+    "complete": false,
+    "items": [
+      {
+        "inventory_id": "command:multica.agent.archive",
+        "kind": "command",
+        "identity": "multica agent archive",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-067"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.archive",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.avatar",
+        "kind": "command",
+        "identity": "multica agent avatar",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-070"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.avatar",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.copy",
+        "kind": "command",
+        "identity": "multica agent copy",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-076"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.copy",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.create",
+        "kind": "command",
+        "identity": "multica agent create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-065"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.env.get",
+        "kind": "command",
+        "identity": "multica agent env get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-074"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.env_get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.env.set",
+        "kind": "command",
+        "identity": "multica agent env set",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-075"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.env_set",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.get",
+        "kind": "command",
+        "identity": "multica agent get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-064"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.list",
+        "kind": "command",
+        "identity": "multica agent list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-063"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.mcp.add",
+        "kind": "command",
+        "identity": "multica agent mcp add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-078"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.mcp.disable",
+        "kind": "command",
+        "identity": "multica agent mcp disable",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-080"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.disable",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.mcp.enable",
+        "kind": "command",
+        "identity": "multica agent mcp enable",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-079"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.enable",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.mcp.list",
+        "kind": "command",
+        "identity": "multica agent mcp list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-077"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.mcp.remove",
+        "kind": "command",
+        "identity": "multica agent mcp remove",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-081"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agent_mcp.AgentMcpResource.remove",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.restore",
+        "kind": "command",
+        "identity": "multica agent restore",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-068"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.restore",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.skills.add",
+        "kind": "command",
+        "identity": "multica agent skills add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-073"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.skills_add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.skills.list",
+        "kind": "command",
+        "identity": "multica agent skills list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-071"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agent_skills.AgentSkillResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.skills.set",
+        "kind": "command",
+        "identity": "multica agent skills set",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-072"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agent_skills.AgentSkillResource.set",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.tasks",
+        "kind": "command",
+        "identity": "multica agent tasks",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-069"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.tasks",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.agent.update",
+        "kind": "command",
+        "identity": "multica agent update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-066"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.agents.AgentResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.attachment.download",
+        "kind": "command",
+        "identity": "multica attachment download",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-161"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.attachments.AttachmentResource.download",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.attachment.upload",
+        "kind": "command",
+        "identity": "multica attachment upload",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-162"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.attachments.AttachmentResource.upload",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.auth.logout",
+        "kind": "command",
+        "identity": "multica auth logout",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-155"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.auth.AuthResource.logout",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.auth.status",
+        "kind": "command",
+        "identity": "multica auth status",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-154"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.auth.AuthResource.status",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.create",
+        "kind": "command",
+        "identity": "multica autopilot create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-084"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.delete",
+        "kind": "command",
+        "identity": "multica autopilot delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-086"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.get",
+        "kind": "command",
+        "identity": "multica autopilot get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-083"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.list",
+        "kind": "command",
+        "identity": "multica autopilot list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-082"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.runs",
+        "kind": "command",
+        "identity": "multica autopilot runs",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-088"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.history",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.trigger",
+        "kind": "command",
+        "identity": "multica autopilot trigger",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-087"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.trigger-add",
+        "kind": "command",
+        "identity": "multica autopilot trigger-add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-089"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.trigger-delete",
+        "kind": "command",
+        "identity": "multica autopilot trigger-delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-092"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.trigger-list",
+        "kind": "command",
+        "identity": "multica autopilot trigger-list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-090"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.trigger-rotate-url",
+        "kind": "command",
+        "identity": "multica autopilot trigger-rotate-url",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-093"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_rotate_url",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.trigger-update",
+        "kind": "command",
+        "identity": "multica autopilot trigger-update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-091"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.trigger_update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.autopilot.update",
+        "kind": "command",
+        "identity": "multica autopilot update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-085"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.autopilots.AutopilotResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.chat.history",
+        "kind": "command",
+        "identity": "multica chat history",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-133"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.chats.ChatResource.history",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.chat.thread",
+        "kind": "command",
+        "identity": "multica chat thread",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-134"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.chats.ChatResource.thread",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.config.set",
+        "kind": "command",
+        "identity": "multica config set",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-164"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.configuration.ConfigurationResource.set",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.config.show",
+        "kind": "command",
+        "identity": "multica config show",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-163"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.configuration.ConfigurationResource.show",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.daemon.disk-usage",
+        "kind": "command",
+        "identity": "multica daemon disk-usage",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-141"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.disk_usage",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.daemon.logs",
+        "kind": "command",
+        "identity": "multica daemon logs",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-140"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.logs",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.daemon.probe-runtimes",
+        "kind": "command",
+        "identity": "multica daemon probe-runtimes",
+        "disposition": "outside-public-scope",
+        "source_ref_ids": [
+          "I-CMD-139"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY"
+        ],
+        "public_symbol": null,
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Hidden daemon probe is excluded by the approved command-inventory policy."
+      },
+      {
+        "inventory_id": "command:multica.daemon.restart",
+        "kind": "command",
+        "identity": "multica daemon restart",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-137"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.restart",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.daemon.start",
+        "kind": "command",
+        "identity": "multica daemon start",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-135"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.start",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.daemon.status",
+        "kind": "command",
+        "identity": "multica daemon status",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-138"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.status",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.daemon.stop",
+        "kind": "command",
+        "identity": "multica daemon stop",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-136"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.daemon.DaemonResource.stop",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.assign",
+        "kind": "command",
+        "identity": "multica issue assign",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-007"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.assign",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.cancel-task",
+        "kind": "command",
+        "identity": "multica issue cancel-task",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-023"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.cancel_task",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.children",
+        "kind": "command",
+        "identity": "multica issue children",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-004"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.children",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.comment.add",
+        "kind": "command",
+        "identity": "multica issue comment add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-011"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.comment.delete",
+        "kind": "command",
+        "identity": "multica issue comment delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-013"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.comment.list",
+        "kind": "command",
+        "identity": "multica issue comment list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-010"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.comment.resolve",
+        "kind": "command",
+        "identity": "multica issue comment resolve",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-014"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.resolve",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.comment.unresolve",
+        "kind": "command",
+        "identity": "multica issue comment unresolve",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-015"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.unresolve",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.comment.update",
+        "kind": "command",
+        "identity": "multica issue comment update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-012"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_comments.IssueCommentResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.create",
+        "kind": "command",
+        "identity": "multica issue create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-005"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.get",
+        "kind": "command",
+        "identity": "multica issue get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-002"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.label.add",
+        "kind": "command",
+        "identity": "multica issue label add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-026"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.label.list",
+        "kind": "command",
+        "identity": "multica issue label list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-025"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.label.remove",
+        "kind": "command",
+        "identity": "multica issue label remove",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-027"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_labels.IssueLabelResource.remove",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.list",
+        "kind": "command",
+        "identity": "multica issue list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-001"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.metadata.delete",
+        "kind": "command",
+        "identity": "multica issue metadata delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-031"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.metadata.get",
+        "kind": "command",
+        "identity": "multica issue metadata get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-029"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.metadata.list",
+        "kind": "command",
+        "identity": "multica issue metadata list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-028"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.metadata.set",
+        "kind": "command",
+        "identity": "multica issue metadata set",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-030"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_metadata.IssueMetadataResource.set",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.property.list",
+        "kind": "command",
+        "identity": "multica issue property list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-033"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.property.set",
+        "kind": "command",
+        "identity": "multica issue property set",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-034"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.set",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.property.unset",
+        "kind": "command",
+        "identity": "multica issue property unset",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-035"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_properties.IssuePropertyResource.unset",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.pull-requests",
+        "kind": "command",
+        "identity": "multica issue pull-requests",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-003"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.pull_requests",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.reorder",
+        "kind": "command",
+        "identity": "multica issue reorder",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-009"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.reorder",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.rerun",
+        "kind": "command",
+        "identity": "multica issue rerun",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-022"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.rerun",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.run-messages",
+        "kind": "command",
+        "identity": "multica issue run-messages",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-020"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.run_messages",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.runs",
+        "kind": "command",
+        "identity": "multica issue runs",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-019"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.runs",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.search",
+        "kind": "command",
+        "identity": "multica issue search",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-024"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.search",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.status",
+        "kind": "command",
+        "identity": "multica issue status",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-008"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.set_status",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.subscriber.add",
+        "kind": "command",
+        "identity": "multica issue subscriber add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-017"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.subscriber.list",
+        "kind": "command",
+        "identity": "multica issue subscriber list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-016"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.subscriber.remove",
+        "kind": "command",
+        "identity": "multica issue subscriber remove",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-018"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issue_subscribers.IssueSubscriberResource.remove",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.timeline",
+        "kind": "command",
+        "identity": "multica issue timeline",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-032"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.timeline",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.update",
+        "kind": "command",
+        "identity": "multica issue update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-006"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.usage",
+        "kind": "command",
+        "identity": "multica issue usage",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-021"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.issues.IssueResource.usage",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.wakeup.create",
+        "kind": "command",
+        "identity": "multica issue wakeup create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-040"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.wakeup.disable",
+        "kind": "command",
+        "identity": "multica issue wakeup disable",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-039"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.disable",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.wakeup.events",
+        "kind": "command",
+        "identity": "multica issue wakeup events",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-036"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.events",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.wakeup.get",
+        "kind": "command",
+        "identity": "multica issue wakeup get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-038"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.wakeup.list",
+        "kind": "command",
+        "identity": "multica issue wakeup list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-037"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.issue.wakeup.update",
+        "kind": "command",
+        "identity": "multica issue wakeup update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-041"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.issue_wakeups.IssueWakeupResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.label.create",
+        "kind": "command",
+        "identity": "multica label create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-054"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.labels.LabelResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.label.delete",
+        "kind": "command",
+        "identity": "multica label delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-056"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.labels.LabelResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.label.get",
+        "kind": "command",
+        "identity": "multica label get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-053"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.labels.LabelResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.label.list",
+        "kind": "command",
+        "identity": "multica label list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-052"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.labels.LabelResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.label.update",
+        "kind": "command",
+        "identity": "multica label update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-055"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.labels.LabelResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.login",
+        "kind": "command",
+        "identity": "multica login",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-158"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.auth.AuthResource.login",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.create",
+        "kind": "command",
+        "identity": "multica project create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-044"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.projects.ProjectResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.delete",
+        "kind": "command",
+        "identity": "multica project delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-046"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.projects.ProjectResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.get",
+        "kind": "command",
+        "identity": "multica project get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-043"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.projects.ProjectResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.list",
+        "kind": "command",
+        "identity": "multica project list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-042"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.projects.ProjectResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.resource.add",
+        "kind": "command",
+        "identity": "multica project resource add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-049"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.add_local_directory",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.resource.list",
+        "kind": "command",
+        "identity": "multica project resource list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-048"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.resource.remove",
+        "kind": "command",
+        "identity": "multica project resource remove",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-051"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.remove",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.resource.update",
+        "kind": "command",
+        "identity": "multica project resource update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-050"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.project_resources.ProjectResourceCollection.update_local_directory",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.status",
+        "kind": "command",
+        "identity": "multica project status",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-047"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.projects.ProjectResource.set_status",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.project.update",
+        "kind": "command",
+        "identity": "multica project update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-045"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.projects.ProjectResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.property.archive",
+        "kind": "command",
+        "identity": "multica property archive",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-061"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.properties.PropertyResource.archive",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.property.create",
+        "kind": "command",
+        "identity": "multica property create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-059"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.properties.PropertyResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.property.get",
+        "kind": "command",
+        "identity": "multica property get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-058"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.properties.PropertyResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.property.list",
+        "kind": "command",
+        "identity": "multica property list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-057"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.properties.PropertyResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.property.unarchive",
+        "kind": "command",
+        "identity": "multica property unarchive",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-062"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.properties.PropertyResource.unarchive",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.property.update",
+        "kind": "command",
+        "identity": "multica property update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-060"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.properties.PropertyResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.repo.add",
+        "kind": "command",
+        "identity": "multica repo add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-106"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.repositories.RepositoryResource.add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.repo.checkout",
+        "kind": "command",
+        "identity": "multica repo checkout",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-108"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.repositories.RepositoryResource.checkout",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.repo.list",
+        "kind": "command",
+        "identity": "multica repo list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-105"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.repositories.RepositoryResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.repo.remove",
+        "kind": "command",
+        "identity": "multica repo remove",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-107"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.repositories.RepositoryResource.remove",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.activity",
+        "kind": "command",
+        "identity": "multica runtime activity",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-144"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.activity",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.delete",
+        "kind": "command",
+        "identity": "multica runtime delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-147"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.list",
+        "kind": "command",
+        "identity": "multica runtime list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-142"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.profile.create",
+        "kind": "command",
+        "identity": "multica runtime profile create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-149"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.profile.delete",
+        "kind": "command",
+        "identity": "multica runtime profile delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-151"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.profile.list",
+        "kind": "command",
+        "identity": "multica runtime profile list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-148"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.profile.set-path",
+        "kind": "command",
+        "identity": "multica runtime profile set-path",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-152"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.set_path",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.profile.unset-path",
+        "kind": "command",
+        "identity": "multica runtime profile unset-path",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-153"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.unset_path",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.profile.update",
+        "kind": "command",
+        "identity": "multica runtime profile update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-150"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.runtime_profiles.RuntimeProfileResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.rename",
+        "kind": "command",
+        "identity": "multica runtime rename",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-146"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.rename",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.update",
+        "kind": "command",
+        "identity": "multica runtime update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-145"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.runtime.usage",
+        "kind": "command",
+        "identity": "multica runtime usage",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-143"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.runtimes.RuntimeResource.usage",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.setup.cloud",
+        "kind": "command",
+        "identity": "multica setup cloud",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-159"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.setup.SetupResource.cloud",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.setup.self-host",
+        "kind": "command",
+        "identity": "multica setup self-host",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-160"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.setup.SetupResource.self_host",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.create",
+        "kind": "command",
+        "identity": "multica skill create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-111"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skills.SkillResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.delete",
+        "kind": "command",
+        "identity": "multica skill delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-113"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skills.SkillResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.files.delete",
+        "kind": "command",
+        "identity": "multica skill files delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-119"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skill_files.SkillFileResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.files.list",
+        "kind": "command",
+        "identity": "multica skill files list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-117"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skill_files.SkillFileResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.files.upsert",
+        "kind": "command",
+        "identity": "multica skill files upsert",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-118"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skill_files.SkillFileResource.upsert",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.get",
+        "kind": "command",
+        "identity": "multica skill get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-110"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skills.SkillResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.import",
+        "kind": "command",
+        "identity": "multica skill import",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-114"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skills.SkillResource.import_from_url",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.label.add",
+        "kind": "command",
+        "identity": "multica skill label add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-121"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.label.list",
+        "kind": "command",
+        "identity": "multica skill label list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-120"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.label.remove",
+        "kind": "command",
+        "identity": "multica skill label remove",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-122"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skill_labels.SkillLabelResource.remove",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.list",
+        "kind": "command",
+        "identity": "multica skill list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-109"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skills.SkillResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.refresh",
+        "kind": "command",
+        "identity": "multica skill refresh",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-115"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skills.SkillResource.refresh",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.search",
+        "kind": "command",
+        "identity": "multica skill search",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-116"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skills.SkillResource.search",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.skill.update",
+        "kind": "command",
+        "identity": "multica skill update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-112"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.skills.SkillResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.activity",
+        "kind": "command",
+        "identity": "multica squad activity",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-132"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.squads.SquadResource.activity",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.create",
+        "kind": "command",
+        "identity": "multica squad create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-125"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.squads.SquadResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.delete",
+        "kind": "command",
+        "identity": "multica squad delete",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-127"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.squads.SquadResource.delete",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.get",
+        "kind": "command",
+        "identity": "multica squad get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-124"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.squads.SquadResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.list",
+        "kind": "command",
+        "identity": "multica squad list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-123"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.squads.SquadResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.member.add",
+        "kind": "command",
+        "identity": "multica squad member add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-129"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.member.list",
+        "kind": "command",
+        "identity": "multica squad member list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-128"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.member.remove",
+        "kind": "command",
+        "identity": "multica squad member remove",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-130"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.squad_members.SquadMemberResource.remove",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.member.set-role",
+        "kind": "command",
+        "identity": "multica squad member set-role",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-131"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.squads.SquadResource.member_set_role",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.squad.update",
+        "kind": "command",
+        "identity": "multica squad update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-126"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.squads.SquadResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.update",
+        "kind": "command",
+        "identity": "multica update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-165"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.maintenance.MaintenanceResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.user.profile.get",
+        "kind": "command",
+        "identity": "multica user profile get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-156"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.users.UserResource.profile_get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.user.profile.update",
+        "kind": "command",
+        "identity": "multica user profile update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-157"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.users.UserResource.profile_update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.version",
+        "kind": "command",
+        "identity": "multica version",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-166"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.maintenance.MaintenanceResource.version",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.create",
+        "kind": "command",
+        "identity": "multica workspace create",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-095"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.create",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.get",
+        "kind": "command",
+        "identity": "multica workspace get",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-096"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.get",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.list",
+        "kind": "command",
+        "identity": "multica workspace list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-094"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.mcp.add",
+        "kind": "command",
+        "identity": "multica workspace mcp add",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-102"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.add",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.mcp.list",
+        "kind": "command",
+        "identity": "multica workspace mcp list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-101"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.list",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.mcp.remove",
+        "kind": "command",
+        "identity": "multica workspace mcp remove",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-104"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.remove",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.mcp.update",
+        "kind": "command",
+        "identity": "multica workspace mcp update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-103"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.workspace_mcp.WorkspaceMcpResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.member.invite",
+        "kind": "command",
+        "identity": "multica workspace member invite",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-098"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.member_invite",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.member.list",
+        "kind": "command",
+        "identity": "multica workspace member list",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-097"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.members",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.switch",
+        "kind": "command",
+        "identity": "multica workspace switch",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-100"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-OPERATION"
+        ],
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.switch",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Pinned source/help leaf is covered by the reviewed typed SDK operation, binding, response contract, and canonical vector."
+      },
+      {
+        "inventory_id": "command:multica.workspace.update",
+        "kind": "command",
+        "identity": "multica workspace update",
+        "disposition": "typed",
+        "source_ref_ids": [
+          "I-CMD-099"
+        ],
+        "test_ref_ids": [
+          "T-INVENTORY",
+          "T-WP01-PROMOTION"
+        ],
+        "public_symbol": "multica_py.resources.workspaces.WorkspaceResource.update",
+        "transport": null,
+        "compatibility": "requires_cli>=0.5.3",
+        "rationale": "Reviewed source/help promotion is backed by one approved operation, binding, response shape, and canonical vector."
+      },
+      {
+        "inventory_id": "field:agent",
+        "kind": "field",
+        "identity": "agent",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Agent",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `agent` maps to the native/public type `Agent` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:agent_skills",
+        "kind": "field",
+        "identity": "agent_skills",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "tuple[AgentSkill, ...]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `agent_skills` maps to the native/public type `tuple[AgentSkill, ...]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:agent_tasks",
+        "kind": "field",
+        "identity": "agent_tasks",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "tuple[AgentTask, ...]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `agent_tasks` maps to the native/public type `tuple[AgentTask, ...]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:agent_wire",
+        "kind": "field",
+        "identity": "agent_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AgentWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `agent_wire` maps to the native/public type `AgentWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:attachment_result",
+        "kind": "field",
+        "identity": "attachment_result",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AttachmentResult",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `attachment_result` maps to the native/public type `AttachmentResult` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:attachment_result_wire",
+        "kind": "field",
+        "identity": "attachment_result_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AttachmentResultWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `attachment_result_wire` maps to the native/public type `AttachmentResultWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot",
+        "kind": "field",
+        "identity": "autopilot",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Autopilot",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot` maps to the native/public type `Autopilot` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_list_page",
+        "kind": "field",
+        "identity": "autopilot_list_page",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotListPage",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_list_page` maps to the native/public type `AutopilotListPage` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_list_page_wire",
+        "kind": "field",
+        "identity": "autopilot_list_page_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotListWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_list_page_wire` maps to the native/public type `AutopilotListWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_run",
+        "kind": "field",
+        "identity": "autopilot_run",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotRun",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_run` maps to the native/public type `AutopilotRun` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_run_list_page",
+        "kind": "field",
+        "identity": "autopilot_run_list_page",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotRunListPage",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_run_list_page` maps to the native/public type `AutopilotRunListPage` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_run_list_page_wire",
+        "kind": "field",
+        "identity": "autopilot_run_list_page_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotRunListPageWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_run_list_page_wire` maps to the native/public type `AutopilotRunListPageWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_run_wire",
+        "kind": "field",
+        "identity": "autopilot_run_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotRunWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_run_wire` maps to the native/public type `AutopilotRunWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_subscriber",
+        "kind": "field",
+        "identity": "autopilot_subscriber",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotSubscriber",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_subscriber` maps to the native/public type `AutopilotSubscriber` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_subscriber_wire",
+        "kind": "field",
+        "identity": "autopilot_subscriber_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotSubscriberWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_subscriber_wire` maps to the native/public type `AutopilotSubscriberWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_trigger",
+        "kind": "field",
+        "identity": "autopilot_trigger",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotTrigger",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_trigger` maps to the native/public type `AutopilotTrigger` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_trigger_create",
+        "kind": "field",
+        "identity": "autopilot_trigger_create",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "TriggerCreateFields",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_trigger_create` maps to the native/public type `TriggerCreateFields` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_trigger_update",
+        "kind": "field",
+        "identity": "autopilot_trigger_update",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "TriggerUpdateFields",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_trigger_update` maps to the native/public type `TriggerUpdateFields` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_trigger_wire",
+        "kind": "field",
+        "identity": "autopilot_trigger_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotTriggerWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_trigger_wire` maps to the native/public type `AutopilotTriggerWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:autopilot_wire",
+        "kind": "field",
+        "identity": "autopilot_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "AutopilotWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `autopilot_wire` maps to the native/public type `AutopilotWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:cli_result",
+        "kind": "field",
+        "identity": "cli_result",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "CliResult",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `cli_result` maps to the native/public type `CliResult` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:comment",
+        "kind": "field",
+        "identity": "comment",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Comment",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `comment` maps to the native/public type `Comment` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:comment_page",
+        "kind": "field",
+        "identity": "comment_page",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-CLIENT",
+          "S-ISSUE"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[Comment]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `comment_page` maps to the native/public type `Page[Comment]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:comment_thread_page",
+        "kind": "field",
+        "identity": "comment_thread_page",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[CommentThread]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `comment_thread_page` maps to the native/public type `Page[CommentThread]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:comment_threads_wire",
+        "kind": "field",
+        "identity": "comment_threads_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "list[CommentThreadWire]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `comment_threads_wire` maps to the native/public type `list[CommentThreadWire]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:comment_wire",
+        "kind": "field",
+        "identity": "comment_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "CommentWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `comment_wire` maps to the native/public type `CommentWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:comments",
+        "kind": "field",
+        "identity": "comments",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "tuple[Comment, ...]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `comments` maps to the native/public type `tuple[Comment, ...]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:comments_wire",
+        "kind": "field",
+        "identity": "comments_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "list[CommentWire]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `comments_wire` maps to the native/public type `list[CommentWire]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:issue",
+        "kind": "field",
+        "identity": "issue",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Issue",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `issue` maps to the native/public type `Issue` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:issue_children_result_wire",
+        "kind": "field",
+        "identity": "issue_children_result_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "IssueChildrenResultWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `issue_children_result_wire` maps to the native/public type `IssueChildrenResultWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:issue_list_filter",
+        "kind": "field",
+        "identity": "issue_list_filter",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "IssueListFilter",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `issue_list_filter` maps to the native/public type `IssueListFilter` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:issue_list_page",
+        "kind": "field",
+        "identity": "issue_list_page",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "IssueListPage",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `issue_list_page` maps to the native/public type `IssueListPage` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:issue_list_page_wire",
+        "kind": "field",
+        "identity": "issue_list_page_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "IssueListPageWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `issue_list_page_wire` maps to the native/public type `IssueListPageWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:issue_pull_requests_result_wire",
+        "kind": "field",
+        "identity": "issue_pull_requests_result_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "IssuePullRequestsResultWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `issue_pull_requests_result_wire` maps to the native/public type `IssuePullRequestsResultWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:issue_search_result_wire",
+        "kind": "field",
+        "identity": "issue_search_result_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "IssueSearchResultWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `issue_search_result_wire` maps to the native/public type `IssueSearchResultWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:issue_wire",
+        "kind": "field",
+        "identity": "issue_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "IssueWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `issue_wire` maps to the native/public type `IssueWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:labels",
+        "kind": "field",
+        "identity": "labels",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "tuple[Label, ...]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `labels` maps to the native/public type `tuple[Label, ...]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:labels_wire",
+        "kind": "field",
+        "identity": "labels_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "list[Label]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `labels_wire` maps to the native/public type `list[Label]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:linked_pull_request",
+        "kind": "field",
+        "identity": "linked_pull_request",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "LinkedPullRequest",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `linked_pull_request` maps to the native/public type `LinkedPullRequest` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:linked_pull_requests",
+        "kind": "field",
+        "identity": "linked_pull_requests",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "tuple[LinkedPullRequest, ...]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `linked_pull_requests` maps to the native/public type `tuple[LinkedPullRequest, ...]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:mcp_server",
+        "kind": "field",
+        "identity": "mcp_server",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "McpServer",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `mcp_server` maps to the native/public type `McpServer` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:mcp_server_wire",
+        "kind": "field",
+        "identity": "mcp_server_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "McpServerWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `mcp_server_wire` maps to the native/public type `McpServerWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:mcp_servers",
+        "kind": "field",
+        "identity": "mcp_servers",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "tuple[McpServer, ...]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `mcp_servers` maps to the native/public type `tuple[McpServer, ...]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:mcp_servers_wire",
+        "kind": "field",
+        "identity": "mcp_servers_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "list[McpServerWire]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `mcp_servers_wire` maps to the native/public type `list[McpServerWire]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:metadata_entries",
+        "kind": "field",
+        "identity": "metadata_entries",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "tuple[MetadataEntry, ...]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `metadata_entries` maps to the native/public type `tuple[MetadataEntry, ...]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:metadata_entries_wire",
+        "kind": "field",
+        "identity": "metadata_entries_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "list[MetadataEntryWire]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `metadata_entries_wire` maps to the native/public type `list[MetadataEntryWire]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:none",
+        "kind": "field",
+        "identity": "none",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "None",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `none` maps to the native/public type `None` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:operation_options",
+        "kind": "field",
+        "identity": "operation_options",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "OperationOptions",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `operation_options` maps to the native/public type `OperationOptions` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:page_issues",
+        "kind": "field",
+        "identity": "page_issues",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-ISSUE-SEARCH-CMD",
+          "S-ISSUE-SEARCH-ENCODE",
+          "S-ISSUE-SEARCH-QUERY",
+          "S-ISSUE-SEARCH-RESPONSE",
+          "S-ISSUE-SEARCH-RUN"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Page[Issue]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `page_issues` maps to the native/public type `Page[Issue]` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:path",
+        "kind": "field",
+        "identity": "path",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "pathlib.Path",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `path` maps to the native/public type `pathlib.Path` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:project",
+        "kind": "field",
+        "identity": "project",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "Project",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `project` maps to the native/public type `Project` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:project_resource",
+        "kind": "field",
+        "identity": "project_resource",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "ProjectResourceRecord",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `project_resource` maps to the native/public type `ProjectResourceRecord` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:project_resource_wire",
+        "kind": "field",
+        "identity": "project_resource_wire",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "ProjectResourceRecordWire",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `project_resource_wire` maps to the native/public type `ProjectResourceRecordWire` without a fabricated default."
+      },
+      {
+        "inventory_id": "field:project_resources",
+        "kind": "field",
+        "identity": "project_resources",
+        "disposition": "typed-equivalent",
+        "source_ref_ids": [
+          "S-AUTO"
+        ],
+        "test_ref_ids": [
+          "T-OPERATION",
+          "T-INVENTORY"
+        ],
+        "public_symbol": "tuple[ProjectResourceRecord, ...]",
+        "transport": null,
+        "compatibility": "compatible",
+        "rationale": "Reviewed emitted field family `project_resources` maps to the native/public type `tuple[ProjectResourceRecord, ...]` without a fabricated default."
+      }
+    ],
+    "source_commit": "ff8b285497809e084915016c40c2bc5e5991ffbc",
+    "source_evidence_ref": "evidence:source:v0.5.3",
+    "help_evidence_ref": "evidence:help:v0.5.3",
+    "expected_identities": {
+      "command": [
+        "multica agent archive",
+        "multica agent avatar",
+        "multica agent copy",
+        "multica agent create",
+        "multica agent env get",
+        "multica agent env set",
+        "multica agent get",
+        "multica agent list",
+        "multica agent mcp add",
+        "multica agent mcp disable",
+        "multica agent mcp enable",
+        "multica agent mcp list",
+        "multica agent mcp remove",
+        "multica agent restore",
+        "multica agent skills add",
+        "multica agent skills list",
+        "multica agent skills set",
+        "multica agent tasks",
+        "multica agent update",
+        "multica attachment download",
+        "multica attachment upload",
+        "multica auth logout",
+        "multica auth status",
+        "multica autopilot create",
+        "multica autopilot delete",
+        "multica autopilot get",
+        "multica autopilot list",
+        "multica autopilot runs",
+        "multica autopilot trigger",
+        "multica autopilot trigger-add",
+        "multica autopilot trigger-delete",
+        "multica autopilot trigger-list",
+        "multica autopilot trigger-rotate-url",
+        "multica autopilot trigger-update",
+        "multica autopilot update",
+        "multica chat history",
+        "multica chat thread",
+        "multica config set",
+        "multica config show",
+        "multica daemon disk-usage",
+        "multica daemon logs",
+        "multica daemon probe-runtimes",
+        "multica daemon restart",
+        "multica daemon start",
+        "multica daemon status",
+        "multica daemon stop",
+        "multica issue assign",
+        "multica issue cancel-task",
+        "multica issue children",
+        "multica issue comment add",
+        "multica issue comment delete",
+        "multica issue comment list",
+        "multica issue comment resolve",
+        "multica issue comment unresolve",
+        "multica issue comment update",
+        "multica issue create",
+        "multica issue get",
+        "multica issue label add",
+        "multica issue label list",
+        "multica issue label remove",
+        "multica issue list",
+        "multica issue metadata delete",
+        "multica issue metadata get",
+        "multica issue metadata list",
+        "multica issue metadata set",
+        "multica issue property list",
+        "multica issue property set",
+        "multica issue property unset",
+        "multica issue pull-requests",
+        "multica issue reorder",
+        "multica issue rerun",
+        "multica issue run-messages",
+        "multica issue runs",
+        "multica issue search",
+        "multica issue status",
+        "multica issue subscriber add",
+        "multica issue subscriber list",
+        "multica issue subscriber remove",
+        "multica issue timeline",
+        "multica issue update",
+        "multica issue usage",
+        "multica issue wakeup create",
+        "multica issue wakeup disable",
+        "multica issue wakeup events",
+        "multica issue wakeup get",
+        "multica issue wakeup list",
+        "multica issue wakeup update",
+        "multica label create",
+        "multica label delete",
+        "multica label get",
+        "multica label list",
+        "multica label update",
+        "multica login",
+        "multica project create",
+        "multica project delete",
+        "multica project get",
+        "multica project list",
+        "multica project resource add",
+        "multica project resource list",
+        "multica project resource remove",
+        "multica project resource update",
+        "multica project status",
+        "multica project update",
+        "multica property archive",
+        "multica property create",
+        "multica property get",
+        "multica property list",
+        "multica property unarchive",
+        "multica property update",
+        "multica repo add",
+        "multica repo checkout",
+        "multica repo list",
+        "multica repo remove",
+        "multica runtime activity",
+        "multica runtime delete",
+        "multica runtime list",
+        "multica runtime profile create",
+        "multica runtime profile delete",
+        "multica runtime profile list",
+        "multica runtime profile set-path",
+        "multica runtime profile unset-path",
+        "multica runtime profile update",
+        "multica runtime rename",
+        "multica runtime update",
+        "multica runtime usage",
+        "multica setup cloud",
+        "multica setup self-host",
+        "multica skill create",
+        "multica skill delete",
+        "multica skill files delete",
+        "multica skill files list",
+        "multica skill files upsert",
+        "multica skill get",
+        "multica skill import",
+        "multica skill label add",
+        "multica skill label list",
+        "multica skill label remove",
+        "multica skill list",
+        "multica skill refresh",
+        "multica skill search",
+        "multica skill update",
+        "multica squad activity",
+        "multica squad create",
+        "multica squad delete",
+        "multica squad get",
+        "multica squad list",
+        "multica squad member add",
+        "multica squad member list",
+        "multica squad member remove",
+        "multica squad member set-role",
+        "multica squad update",
+        "multica update",
+        "multica user profile get",
+        "multica user profile update",
+        "multica version",
+        "multica workspace create",
+        "multica workspace get",
+        "multica workspace list",
+        "multica workspace mcp add",
+        "multica workspace mcp list",
+        "multica workspace mcp remove",
+        "multica workspace mcp update",
+        "multica workspace member invite",
+        "multica workspace member list",
+        "multica workspace switch",
+        "multica workspace update"
+      ],
+      "field": [
+        "agent",
+        "agent_skills",
+        "agent_tasks",
+        "agent_wire",
+        "attachment_result",
+        "attachment_result_wire",
+        "autopilot",
+        "autopilot_list_page",
+        "autopilot_list_page_wire",
+        "autopilot_run",
+        "autopilot_run_list_page",
+        "autopilot_run_list_page_wire",
+        "autopilot_run_wire",
+        "autopilot_subscriber",
+        "autopilot_subscriber_wire",
+        "autopilot_trigger",
+        "autopilot_trigger_create",
+        "autopilot_trigger_update",
+        "autopilot_trigger_wire",
+        "autopilot_wire",
+        "cli_result",
+        "comment",
+        "comment_page",
+        "comment_thread_page",
+        "comment_threads_wire",
+        "comment_wire",
+        "comments",
+        "comments_wire",
+        "issue",
+        "issue_children_result_wire",
+        "issue_list_filter",
+        "issue_list_page",
+        "issue_list_page_wire",
+        "issue_pull_requests_result_wire",
+        "issue_search_result_wire",
+        "issue_wire",
+        "labels",
+        "labels_wire",
+        "linked_pull_request",
+        "linked_pull_requests",
+        "mcp_server",
+        "mcp_server_wire",
+        "mcp_servers",
+        "mcp_servers_wire",
+        "metadata_entries",
+        "metadata_entries_wire",
+        "none",
+        "operation_options",
+        "page_issues",
+        "path",
+        "project",
+        "project_resource",
+        "project_resource_wire",
+        "project_resources",
+        "project_resources_wire",
+        "project_wire",
+        "property_definition",
+        "property_definition_wire",
+        "property_definitions",
+        "property_definitions_wire",
+        "property_filter",
+        "property_sort",
+        "property_value",
+        "property_value_wire",
+        "property_values",
+        "property_values_wire",
+        "repository_mutation_result",
+        "repository_mutation_result_wire",
+        "repository_record",
+        "repository_record_wire",
+        "repository_records",
+        "repository_records_wire",
+        "run_message",
+        "run_messages",
+        "run_messages_wire",
+        "runtime_activity",
+        "runtime_activity_wire",
+        "runtime_definition",
+        "runtime_definition_wire",
+        "runtime_definitions",
+        "runtime_definitions_wire",
+        "runtime_update_result",
+        "runtime_update_result_wire",
+        "runtime_usage",
+        "runtime_usage_wire",
+        "skill",
+        "skill_file",
+        "skill_files",
+        "skill_files_wire",
+        "skill_search_result",
+        "skill_search_result_wire",
+        "skill_search_results",
+        "skill_search_results_wire",
+        "skill_wire",
+        "squad",
+        "squad_member",
+        "squad_members",
+        "squad_members_wire",
+        "squad_wire",
+        "subscriber",
+        "subscribers",
+        "subscribers_wire",
+        "task_run",
+        "task_runs",
+        "task_runs_wire",
+        "user_profile",
+        "user_profile_wire",
+        "workspace",
+        "workspace_member",
+        "workspace_members",
+        "workspace_members_wire",
+        "workspace_wire"
+      ],
+      "input": [
+        "agent_avatar",
+        "agent_copy",
+        "agent_get",
+        "agent_list",
+        "agent_mcp_add",
+        "agent_mcp_add_bound",
+        "agent_mcp_disable",
+        "agent_mcp_disable_bound",
+        "agent_mcp_enable",
+        "agent_mcp_enable_bound",
+        "agent_mcp_list",
+        "agent_mcp_remove",
+        "agent_mcp_remove_bound",
+        "agent_skills_list",
+        "agent_skills_set",
+        "agent_tasks",
+        "agents_archive_manual",
+        "agents_create_manual",
+        "agents_restore_manual",
+        "agents_update_manual",
+        "attachment_download",
+        "attachment_upload",
+        "attachments_download_bytes_manual",
+        "attachments_upload_bytes_manual",
+        "auth_login_manual",
+        "auth_logout_manual",
+        "auth_status_manual",
+        "autopilot_create",
+        "autopilot_delete",
+        "autopilot_get",
+        "autopilot_history",
+        "autopilot_list",
+        "autopilot_trigger",
+        "autopilot_trigger_add",
+        "autopilot_trigger_delete",
+        "autopilot_trigger_update",
+        "autopilot_update",
+        "cli_command",
+        "comment_add",
+        "comment_delete",
+        "comment_list",
+        "comment_list_flat",
+        "comment_list_recent",
+        "comment_list_thread",
+        "comment_update",
+        "configuration_get_manual",
+        "configuration_set_manual",
+        "configuration_show_manual",
+        "daemon_disk_usage_manual",
+        "daemon_logs_manual",
+        "daemon_restart_manual",
+        "daemon_start_manual",
+        "daemon_status_manual",
+        "daemon_stop_manual",
+        "issue_cancel_task",
+        "issue_children",
+        "issue_create",
+        "issue_get",
+        "issue_labels_add",
+        "issue_labels_list",
+        "issue_labels_remove",
+        "issue_list",
+        "issue_metadata_delete",
+        "issue_metadata_get",
+        "issue_metadata_list",
+        "issue_metadata_set",
+        "issue_property_list",
+        "issue_property_set",
+        "issue_property_unset",
+        "issue_pull_requests",
+        "issue_rerun",
+        "issue_run_messages",
+        "issue_runs",
+        "issue_search",
+        "issue_status",
+        "issue_subscribers_add",
+        "issue_subscribers_list",
+        "issue_subscribers_remove",
+        "issues_assign_bound",
+        "issues_assign_manual",
+        "issues_comments_reply_manual",
+        "issues_comments_resolve_manual",
+        "issues_comments_unresolve_manual",
+        "issues_metadata_query_manual",
+        "issues_metadata_set_typed_manual",
+        "issues_move_after",
+        "issues_move_after_bound",
+        "issues_move_before",
+        "issues_move_before_bound",
+        "issues_move_to_bottom",
+        "issues_move_to_bottom_bound",
+        "issues_move_to_top",
+        "issues_move_to_top_bound",
+        "issues_refresh",
+        "issues_reorder_manual",
+        "issues_set_status_bound",
+        "issues_unassign",
+        "issues_unassign_bound",
+        "issues_update_bound",
+        "issues_update_manual",
+        "issues_usage_manual",
+        "label_get",
+        "label_list",
+        "labels_create_manual",
+        "labels_delete_manual",
+        "labels_update_manual",
+        "maintenance_update_manual",
+        "maintenance_version_manual",
+        "project_create",
+        "project_get",
+        "project_issue_create",
+        "project_list",
+        "project_resource_add",
+        "project_resource_list",
+        "project_resource_remove",
+        "project_resource_update",
+        "project_status",
+        "project_update",
+        "projects_delete_manual",
+        "projects_refresh",
+        "projects_update_bound",
+        "property_archive",
+        "property_create",
+        "property_get",
+        "property_list",
+        "property_unarchive",
+        "property_update",
+        "repositories_add",
+        "repositories_list",
+        "repositories_remove",
+        "runtime_activity",
+        "runtime_delete",
+        "runtime_list",
+        "runtime_rename",
+        "runtime_update",
+        "runtime_usage",
+        "setup_cloud_manual",
+        "setup_self_host_manual",
+        "skill_files_delete",
+        "skill_files_list",
+        "skill_files_upsert",
+        "skill_get",
+        "skill_labels_add",
+        "skill_labels_list",
+        "skill_labels_remove",
+        "skill_list",
+        "skill_refresh",
+        "skill_search",
+        "skills_create_manual",
+        "skills_delete_manual",
+        "skills_import_from_url_manual",
+        "skills_update_manual",
+        "squad_get",
+        "squad_list",
+        "squad_members_add",
+        "squad_members_list",
+        "squad_members_remove",
+        "user_profile_get",
+        "user_profile_update",
+        "workspace_get",
+        "workspace_list",
+        "workspace_mcp_add",
+        "workspace_mcp_list",
+        "workspace_mcp_remove",
+        "workspace_mcp_update",
+        "workspace_members_list",
+        "workspaces_switch_manual"
+      ],
+      "output": [
+        "action_result_none",
+        "action_result_repository_mutation_result",
+        "action_result_runtime_update_result",
+        "action_result_str",
+        "agent",
+        "agent_skills",
+        "agent_tasks",
+        "attachment_result",
+        "autopilot",
+        "autopilot_list_page",
+        "autopilot_run",
+        "autopilot_run_list_page",
+        "autopilot_trigger",
+        "bytes",
+        "cli_result",
+        "comment",
+        "comment_page",
+        "comment_thread_page",
+        "comments",
+        "issue",
+        "issue_children_result",
+        "issue_list_page",
+        "labels",
+        "linked_pull_requests",
+        "mapping_config",
+        "metadata_entries",
+        "none",
+        "page_agent",
+        "page_agent_skills",
+        "page_agent_tasks",
+        "page_comments",
+        "page_daemon_disk_usage",
+        "page_issue_usage",
+        "page_issues",
+        "page_labels",
+        "page_linked_pull_requests",
+        "page_mcp_servers",
+        "page_project",
+        "page_project_resources",
+        "page_property_definitions",
+        "page_repository_records",
+        "page_run_messages",
+        "page_runtime_activity",
+        "page_runtime_definitions",
+        "page_runtime_usage",
+        "page_skill",
+        "page_skill_files",
+        "page_skill_search_results",
+        "page_squad",
+        "page_squad_members",
+        "page_subscribers",
+        "page_task_runs",
+        "page_workspace",
+        "page_workspace_members",
+        "path",
+        "process",
+        "project",
+        "project_resource",
+        "project_resources",
+        "property_definition",
+        "property_values",
+        "repository_mutation_result",
+        "repository_records",
+        "run_messages",
+        "runtime_activity",
+        "runtime_definition",
+        "runtime_definitions",
+        "runtime_update_result",
+        "runtime_usage",
+        "scalar_str",
+        "skill",
+        "skill_file",
+        "skill_files",
+        "skill_search_result",
+        "squad",
+        "squad_members",
+        "subscribers",
+        "task_runs",
+        "user_profile",
+        "workspace",
+        "workspace_members"
+      ],
+      "transport": [
+        "agent_avatar",
+        "agent_copy",
+        "agent_get",
+        "agent_list",
+        "agent_mcp_add",
+        "agent_mcp_add_bound",
+        "agent_mcp_disable",
+        "agent_mcp_disable_bound",
+        "agent_mcp_enable",
+        "agent_mcp_enable_bound",
+        "agent_mcp_list",
+        "agent_mcp_remove",
+        "agent_mcp_remove_bound",
+        "agent_skills_list",
+        "agent_skills_set",
+        "agent_tasks",
+        "agents_archive_manual",
+        "agents_create_manual",
+        "agents_restore_manual",
+        "agents_update_manual",
+        "attachment_download",
+        "attachment_upload",
+        "attachments_download_bytes_manual",
+        "attachments_upload_bytes_manual",
+        "auth_login_manual",
+        "auth_logout_manual",
+        "auth_status_manual",
+        "autopilot_create",
+        "autopilot_delete",
+        "autopilot_get",
+        "autopilot_history",
+        "autopilot_list",
+        "autopilot_trigger",
+        "autopilot_trigger_add",
+        "autopilot_trigger_delete",
+        "autopilot_trigger_update",
+        "autopilot_update",
+        "cli_command",
+        "comment_add",
+        "comment_delete",
+        "comment_list",
+        "comment_list_flat",
+        "comment_list_recent",
+        "comment_list_thread",
+        "comment_update",
+        "configuration_get_manual",
+        "configuration_set_manual",
+        "configuration_show_manual",
+        "daemon_disk_usage_manual",
+        "daemon_logs_manual",
+        "daemon_restart_manual",
+        "daemon_start_manual",
+        "daemon_status_manual",
+        "daemon_stop_manual",
+        "issue_cancel_task",
+        "issue_children",
+        "issue_create",
+        "issue_get",
+        "issue_labels_add",
+        "issue_labels_list",
+        "issue_labels_remove",
+        "issue_list",
+        "issue_metadata_delete",
+        "issue_metadata_get",
+        "issue_metadata_list",
+        "issue_metadata_set",
+        "issue_property_list",
+        "issue_property_set",
+        "issue_property_unset",
+        "issue_pull_requests",
+        "issue_rerun",
+        "issue_run_messages",
+        "issue_runs",
+        "issue_search",
+        "issue_status",
+        "issue_subscribers_add",
+        "issue_subscribers_list",
+        "issue_subscribers_remove",
+        "issues_assign_bound",
+        "issues_assign_manual",
+        "issues_comments_reply_manual",
+        "issues_comments_resolve_manual",
+        "issues_comments_unresolve_manual",
+        "issues_metadata_query_manual",
+        "issues_metadata_set_typed_manual",
+        "issues_move_after",
+        "issues_move_after_bound",
+        "issues_move_before",
+        "issues_move_before_bound",
+        "issues_move_to_bottom",
+        "issues_move_to_bottom_bound",
+        "issues_move_to_top",
+        "issues_move_to_top_bound",
+        "issues_refresh",
+        "issues_reorder_manual",
+        "issues_set_status_bound",
+        "issues_unassign",
+        "issues_unassign_bound",
+        "issues_update_bound",
+        "issues_update_manual",
+        "issues_usage_manual",
+        "label_get",
+        "label_list",
+        "labels_create_manual",
+        "labels_delete_manual",
+        "labels_update_manual",
+        "maintenance_update_manual",
+        "maintenance_version_manual",
+        "project_create",
+        "project_get",
+        "project_issue_create",
+        "project_list",
+        "project_resource_add",
+        "project_resource_list",
+        "project_resource_remove",
+        "project_resource_update",
+        "project_status",
+        "project_update",
+        "projects_delete_manual",
+        "projects_refresh",
+        "projects_update_bound",
+        "property_archive",
+        "property_create",
+        "property_get",
+        "property_list",
+        "property_unarchive",
+        "property_update",
+        "repositories_add",
+        "repositories_list",
+        "repositories_remove",
+        "runtime_activity",
+        "runtime_delete",
+        "runtime_list",
+        "runtime_rename",
+        "runtime_update",
+        "runtime_usage",
+        "setup_cloud_manual",
+        "setup_self_host_manual",
+        "skill_files_delete",
+        "skill_files_list",
+        "skill_files_upsert",
+        "skill_get",
+        "skill_labels_add",
+        "skill_labels_list",
+        "skill_labels_remove",
+        "skill_list",
+        "skill_refresh",
+        "skill_search",
+        "skills_create_manual",
+        "skills_delete_manual",
+        "skills_import_from_url_manual",
+        "skills_update_manual",
+        "squad_get",
+        "squad_list",
+        "squad_members_add",
+        "squad_members_list",
+        "squad_members_remove",
+        "user_profile_get",
+        "user_profile_update",
+        "workspace_get",
+        "workspace_list",
+        "workspace_mcp_add",
+        "workspace_mcp_list",
+        "workspace_mcp_remove",
+        "workspace_mcp_update",
+        "workspace_members_list",
+        "workspaces_switch_manual"
+      ]
+    },
+    "reconciliation": {
+      "source_only": [],
+      "help_only": [],
+      "unresolved_factories": [],
+      "unresolved_aliases": []
+    }
+  }
 }
