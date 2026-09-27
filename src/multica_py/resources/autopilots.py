@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import shlex
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import cast
 
@@ -12,6 +12,7 @@ from multica_py._generated.approved_sdk import (
     AUTOPILOT_TRIGGER_DELETE_BINDING,
     AUTOPILOT_TRIGGER_ROTATE_URL_BINDING,
     AUTOPILOT_TRIGGER_UPDATE_BINDING,
+    AUTOPILOTS_TRIGGER_LIST_BINDING,
     validate_nonblank,
 )
 from multica_py._internal.commands import Command, _replace_plan
@@ -402,6 +403,20 @@ class AutopilotResource(BaseResource):
         self, autopilot_id: str, *, options: OperationOptions | None = None
     ) -> AutopilotRun:
         return self.trigger_command(autopilot_id, options=options).run()
+
+    def trigger_list_command(
+        self, autopilot_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Mapping[str, object]]:
+        _ = cast("object", AUTOPILOTS_TRIGGER_LIST_BINDING)
+        validate_nonblank(autopilot_id)
+        return self._decoded_mapping_command(
+            ("autopilot", "trigger-list", autopilot_id), options=options
+        )._map(lambda value: cast("Mapping[str, object]", value))
+
+    def trigger_list(
+        self, autopilot_id: str, *, options: OperationOptions | None = None
+    ) -> Mapping[str, object]:
+        return self.trigger_list_command(autopilot_id, options=options).run()
 
     def history_command(
         self,

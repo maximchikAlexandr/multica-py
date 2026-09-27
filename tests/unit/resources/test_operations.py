@@ -6,7 +6,7 @@ import importlib
 import inspect
 import pathlib
 import typing
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import cast
 from unittest.mock import MagicMock, patch
@@ -1019,6 +1019,8 @@ def test_approved_result_categories_are_closed() -> None:
                 assert annotation.__name__ == "RuntimeProfiles", sdk_method
             elif sdk_method == "issues.metadata.list":
                 assert annotation == dict[str, object] or typing.get_origin(annotation) is dict
+            elif sdk_method == "autopilots.trigger_list":
+                assert typing.get_origin(annotation) is Mapping
             elif sdk_method == "issues.properties.list":
                 assert typing.get_origin(annotation) is tuple
             elif sdk_method == "issues.usage":

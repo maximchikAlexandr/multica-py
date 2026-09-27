@@ -6,6 +6,7 @@ from typing import cast
 
 import pytest
 
+from tests.cases.operations import OPERATION_CASES
 from tools.upstream_contract.contract import validate_contract
 from tools.upstream_contract.generation import (
     RUNTIME_PATH,
@@ -141,6 +142,44 @@ def test_promoted_public_operations_have_closed_binding_coverage() -> None:
         family_row = next(row for row in dispositions if row["family"] == family)
         assert family_row["disposition"] != "defer"
         assert "deferred_evidence" not in family_row
+
+
+def test_every_typed_command_inventory_row_has_one_canonical_operation_case() -> None:
+    contract = validate_contract(APPROVED)
+    descriptors = {item.descriptor_id: item for item in contract.binding_descriptors}
+    operations = {item.operation_id: item for item in contract.operations}
+    canonical_cases = {
+        (
+            case.contract_operation_id,
+            case.id.removeprefix("generated:").rsplit(":", 2)[1]
+            if case.id.startswith("generated:")
+            else "default",
+        )
+        for case in OPERATION_CASES
+        if case.is_canonical and case.contract_operation_id is not None
+    }
+    typed_rows = (
+        item
+        for item in contract.inventory.items
+        if item.kind == "command" and item.disposition in {"typed", "typed-equivalent"}
+    )
+    for item in typed_rows:
+        command = tuple(item.identity.removeprefix("multica ").split())
+        matches = []
+        for descriptor in descriptors.values():
+            if descriptor.command != command:
+                continue
+            operation = operations[descriptor.operation_id]
+            entrypoint = next(
+                entrypoint
+                for entrypoint in operation.entrypoints
+                if entrypoint.entrypoint_id == descriptor.entrypoint_id
+            )
+            if entrypoint.public_symbol == item.public_symbol:
+                matches.append((descriptor, entrypoint))
+        assert len(matches) == 1, item.identity
+        descriptor, _entrypoint = matches[0]
+        assert (descriptor.operation_id, descriptor.entrypoint_id) in canonical_cases, item.identity
 
 
 def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -> None:
