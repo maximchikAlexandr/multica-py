@@ -3,21 +3,17 @@ from __future__ import annotations
 import datetime
 import pathlib
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, cast
 
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_since_cursor
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.json_values import _coerce_json_value
+from multica_py._internal.wire_presence import WirePresence
+from multica_py._internal.wire_presence import presence as _presence_seed
 from multica_py.enums import ProjectStatus
 from multica_py.exceptions import OutputShapeError
-from multica_py.models.autopilots import (
-    AutopilotListPage,
-    AutopilotRunListPage,
-    AutopilotSubscriber,
-    AutopilotTrigger,
-)
 from multica_py.models.issue_activity import (
     IssueUsage,
     RunMessage,
@@ -26,12 +22,15 @@ from multica_py.models.issue_activity import (
     TaskProjectResourceData,
     TaskUsageData,
 )
-from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
+from multica_py.models.project_resources import (
+    GithubRepoResourceRef,
+    LocalDirectoryResourceRef,
+    ProjectResourceRecord,
+)
 from multica_py.models.properties import PropertyDefinition
 from multica_py.types import JsonValue
 
 if TYPE_CHECKING:
-    from multica_py.entities.autopilots import Autopilot, AutopilotRun
     from multica_py.entities.comments import Comment, CommentThread
     from multica_py.entities.issues import TaskRun
     from multica_py.entities.projects import Project
@@ -42,6 +41,20 @@ from multica_py._internal.agent_wires import (
     _AgentWire,
     _task_cancellation_actor_from_wire,
     _TaskCancellationActorWire,
+)
+from multica_py._internal.autopilot_wires import (
+    _autopilot_from_wire,
+    _autopilot_get_from_wire,
+    _autopilot_list_page_from_wire,
+    _autopilot_run_from_wire,
+    _autopilot_run_list_page_from_wire,
+    _AutopilotGetWire,
+    _AutopilotListWire,
+    _AutopilotRunListPageWire,
+    _AutopilotRunWire,
+    _AutopilotTriggerWire,
+    _AutopilotWire,
+    trigger_from_wire,
 )
 from multica_py._internal.issue_wires import (
     _issue_assignee_from_wire,
@@ -61,6 +74,12 @@ from multica_py._internal.issue_wires import (
 __all__ = [
     "_AgentConversationStarterWire",
     "_AgentWire",
+    "_AutopilotGetWire",
+    "_AutopilotListWire",
+    "_AutopilotRunListPageWire",
+    "_AutopilotRunWire",
+    "_AutopilotTriggerWire",
+    "_AutopilotWire",
     "_IssueChildrenResultWire",
     "_IssueListPageWire",
     "_IssuePullRequestsResultWire",
@@ -68,53 +87,21 @@ __all__ = [
     "_IssueWire",
     "_LabelWire",
     "_agent_from_wire",
+    "_autopilot_from_wire",
+    "_autopilot_get_from_wire",
+    "_autopilot_list_page_from_wire",
+    "_autopilot_run_from_wire",
+    "_autopilot_run_list_page_from_wire",
     "_issue_assignee_from_wire",
     "_issue_children_result_from_wire",
     "_issue_from_wire",
     "_issue_list_page_from_wire",
     "_issue_pull_requests_from_wire",
     "_issue_row_from_wire",
+    "trigger_from_wire",
 ]
 
-_PresenceSeed = Literal["missing", "null", "value"]
-
-
-def _presence_seed(value: object) -> _PresenceSeed:
-    if value is msgspec.UNSET:
-        return "missing"
-    if value is None:
-        return "null"
-    return "value"
-
-
-class _AutopilotTriggerWire(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    autopilot_id: str
-    kind: str
-    enabled: bool
-    cron_expression: str | None = None
-    timezone: str | None = None
-    next_run_at: datetime.datetime | None = None
-    label: str | None = None
-    last_fired_at: datetime.datetime | None = None
-    created_at: datetime.datetime | None = None
-    updated_at: datetime.datetime | None = None
-
-
-def trigger_from_wire(wire: _AutopilotTriggerWire) -> AutopilotTrigger:
-    return AutopilotTrigger(
-        id=wire.id,
-        autopilot_id=wire.autopilot_id,
-        kind=wire.kind,
-        enabled=wire.enabled,
-        cron_expression=wire.cron_expression,
-        timezone=wire.timezone,
-        next_run_at=wire.next_run_at,
-        label=wire.label,
-        last_fired_at=wire.last_fired_at,
-        created_at=wire.created_at,
-        updated_at=wire.updated_at,
-    )
+_PresenceSeed = WirePresence
 
 
 class _ProjectWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -122,6 +109,15 @@ class _ProjectWire(msgspec.Struct, frozen=True, kw_only=True):
     title: str
     description: str | None = None
     status: ProjectStatus
+    workspace_id: str | None = None
+    icon: str | None = None
+    lead_type: str | None = None
+    lead_id: str | None = None
+    start_date: str | None = None
+    due_date: str | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
+    resource_count: int | None = None
 
 
 def _project_from_wire(wire: _ProjectWire) -> Project:
@@ -132,6 +128,15 @@ def _project_from_wire(wire: _ProjectWire) -> Project:
         name=wire.title,
         description=wire.description,
         status=wire.status,
+        workspace_id=wire.workspace_id,
+        icon=wire.icon,
+        lead_type=wire.lead_type,
+        lead_id=wire.lead_id,
+        start_date=wire.start_date,
+        due_date=wire.due_date,
+        created_at=wire.created_at,
+        updated_at=wire.updated_at,
+        resource_count=wire.resource_count,
     )
 
 
@@ -145,6 +150,14 @@ class _CommentWire(msgspec.Struct, frozen=True, kw_only=True):
     deleted_at: datetime.datetime | msgspec.UnsetType = msgspec.UNSET
     revision: int | msgspec.UnsetType = msgspec.UNSET
     issue_revision: int | msgspec.UnsetType = msgspec.UNSET
+    author_type: str | None = None
+    author_name: str | None = None
+    resolved: bool | None = None
+    reactions: object | None = None
+    attachments: tuple[object, ...] = ()
+    folded: bool | None = None
+    trigger: object | None = None
+    supplement: object | None = None
 
 
 def comment_from_wire(wire: _CommentWire) -> Comment:
@@ -160,6 +173,22 @@ def comment_from_wire(wire: _CommentWire) -> Comment:
         deleted_at=None if wire.deleted_at is msgspec.UNSET else wire.deleted_at,
         revision=None if wire.revision is msgspec.UNSET else wire.revision,
         issue_revision=(None if wire.issue_revision is msgspec.UNSET else wire.issue_revision),
+        author_type=wire.author_type,
+        author_name=wire.author_name,
+        resolved=wire.resolved,
+        reactions=None
+        if wire.reactions is None
+        else _coerce_json_value(wire.reactions, field_name="reactions"),
+        attachments=tuple(
+            _coerce_json_value(item, field_name="attachments") for item in wire.attachments
+        ),
+        folded=wire.folded,
+        trigger=None
+        if wire.trigger is None
+        else _coerce_json_value(wire.trigger, field_name="trigger"),
+        supplement=None
+        if wire.supplement is None
+        else _coerce_json_value(wire.supplement, field_name="supplement"),
     )
 
 
@@ -177,180 +206,6 @@ def comment_thread_from_wire(wire: _CommentThreadWire) -> CommentThread:
         id=wire.id,
         resolved=wire.resolved,
         updated_at=wire.updated_at,
-    )
-
-
-class _AutopilotListWire(msgspec.Struct, frozen=True, kw_only=True):
-    autopilots: tuple[_AutopilotWire, ...] = ()
-    total: int = 0
-
-
-def _autopilot_list_page_from_wire(wire: _AutopilotListWire) -> AutopilotListPage[object]:
-
-    return AutopilotListPage(
-        items=tuple(_autopilot_from_wire(a) for a in wire.autopilots),
-        total=wire.total,
-    )
-
-
-class _AutopilotSubscriberWire(msgspec.Struct, frozen=True, kw_only=True):
-    user_type: str
-    user_id: str
-    created_at: datetime.datetime | None = None
-
-
-class _AutopilotWire(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    workspace_id: str
-    title: str
-    description: str | None = None
-    project_id: str | None | msgspec.UnsetType = msgspec.UNSET
-    assignee_type: str
-    assignee_id: str
-    status: str
-    execution_mode: str
-    issue_title_template: str | None = None
-    created_by_type: str
-    created_by_id: str
-    last_run_at: datetime.datetime | None = None
-    created_at: datetime.datetime | None = None
-    updated_at: datetime.datetime | None = None
-    trigger_kinds: tuple[str, ...] = ()
-    next_run_at: datetime.datetime | None = None
-    last_run_status: str | None = None
-    subscribers: tuple[_AutopilotSubscriberWire, ...] | msgspec.UnsetType = msgspec.UNSET
-    can_write: bool | None = None
-    can_manage_access: bool | None = None
-
-
-def _autopilot_from_wire(wire: _AutopilotWire) -> Autopilot:
-    from multica_py.entities.autopilots import Autopilot
-
-    return Autopilot(
-        id=wire.id,
-        workspace_id=wire.workspace_id,
-        title=wire.title,
-        description=wire.description,
-        project_id=None if wire.project_id is msgspec.UNSET else wire.project_id,
-        assignee_type=wire.assignee_type,
-        assignee_id=wire.assignee_id,
-        status=wire.status,
-        execution_mode=wire.execution_mode,
-        issue_title_template=wire.issue_title_template,
-        created_by_type=wire.created_by_type,
-        created_by_id=wire.created_by_id,
-        last_run_at=wire.last_run_at,
-        created_at=wire.created_at,
-        updated_at=wire.updated_at,
-        trigger_kinds=wire.trigger_kinds,
-        next_run_at=wire.next_run_at,
-        last_run_status=wire.last_run_status,
-        subscriber_snapshot=tuple(
-            AutopilotSubscriber(
-                user_type=s.user_type,
-                user_id=s.user_id,
-                created_at=s.created_at,
-            )
-            for s in (() if wire.subscribers is msgspec.UNSET else wire.subscribers)
-        ),
-        can_write=wire.can_write,
-        can_manage_access=wire.can_manage_access,
-        _wire_presence=(("project_id", _presence_seed(wire.project_id)),),
-    )
-
-
-class _AutopilotGetWire(msgspec.Struct, frozen=True, kw_only=True):
-    autopilot: _AutopilotWire
-    triggers: tuple[_AutopilotTriggerWire, ...] | msgspec.UnsetType = msgspec.UNSET
-
-
-class _AutopilotGetResult:
-    def __init__(
-        self,
-        data: Autopilot,
-        *,
-        triggers: tuple[AutopilotTrigger, ...] | msgspec.UnsetType,
-        subscribers: tuple[AutopilotSubscriber, ...] | msgspec.UnsetType,
-    ) -> None:
-        self.data = data
-        self.triggers = triggers
-        self.subscribers = subscribers
-
-
-def _autopilot_subscribers(
-    wire: tuple[_AutopilotSubscriberWire, ...] | msgspec.UnsetType,
-) -> tuple[AutopilotSubscriber, ...] | msgspec.UnsetType:
-    if wire is msgspec.UNSET:
-        return msgspec.UNSET
-    return tuple(
-        AutopilotSubscriber(
-            user_type=item.user_type,
-            user_id=item.user_id,
-            created_at=item.created_at,
-        )
-        for item in wire
-    )
-
-
-def _autopilot_get_from_wire(wire: _AutopilotGetWire) -> _AutopilotGetResult:
-    return _AutopilotGetResult(
-        _autopilot_from_wire(wire.autopilot),
-        triggers=(
-            msgspec.UNSET
-            if wire.triggers is msgspec.UNSET
-            else tuple(trigger_from_wire(item) for item in wire.triggers)
-        ),
-        subscribers=_autopilot_subscribers(wire.autopilot.subscribers),
-    )
-
-
-class _AutopilotRunWire(msgspec.Struct, frozen=True, kw_only=True):
-    id: str
-    autopilot_id: str
-    trigger_id: str | None = None
-    source: str
-    status: str
-    issue_id: str | None | msgspec.UnsetType = msgspec.UNSET
-    task_id: str | None = None
-    triggered_at: datetime.datetime | None = None
-    completed_at: datetime.datetime | None = None
-    failure_reason: str | None = None
-    reason_code: str | None = None
-    # The recursive public JsonValue alias cannot be compiled by msgspec's
-    # runtime schema builder. This private wire boundary intentionally accepts
-    # the decoded tree as object; _autopilot_run_from_wire applies the strict
-    # recursive JsonValue converter before constructing the public model.
-    trigger_payload: object | None = None
-    result: object | None = None
-    created_at: datetime.datetime | None = None
-
-
-def _autopilot_run_from_wire(wire: _AutopilotRunWire) -> AutopilotRun:
-    from multica_py.entities.autopilots import AutopilotRun
-
-    trigger_payload = (
-        None
-        if wire.trigger_payload is None
-        else _coerce_json_value(wire.trigger_payload, field_name="trigger_payload")
-    )
-    result = None if wire.result is None else _coerce_json_value(wire.result, field_name="result")
-
-    return AutopilotRun(
-        id=wire.id,
-        autopilot_id=wire.autopilot_id,
-        trigger_id=wire.trigger_id,
-        source=wire.source,
-        status=wire.status,
-        issue_id=None if wire.issue_id is msgspec.UNSET else wire.issue_id,
-        task_id=wire.task_id,
-        triggered_at=wire.triggered_at,
-        completed_at=wire.completed_at,
-        failure_reason=wire.failure_reason,
-        reason_code=wire.reason_code,
-        trigger_payload=trigger_payload,
-        result=result,
-        created_at=wire.created_at,
-        _wire_presence=(("issue_id", _presence_seed(wire.issue_id)),),
     )
 
 
@@ -819,56 +674,67 @@ def decode_run_messages(stdout: bytes, command: str) -> tuple[RunMessage, ...]:
     return tuple(_run_message_from_wire(item) for item in wire_items)
 
 
-class _AutopilotRunListPageWire(msgspec.Struct, frozen=True, kw_only=True):
-    runs: tuple[_AutopilotRunWire, ...] = ()
-    total: int = 0
-
-
-def _autopilot_run_list_page_from_wire(
-    wire: _AutopilotRunListPageWire, *, limit: int | None = None, offset: int | None = None
-) -> AutopilotRunListPage[AutopilotRun]:
-
-    runs = tuple(_autopilot_run_from_wire(r) for r in wire.runs)
-    has_more = (offset or 0) + len(runs) < wire.total
-    return AutopilotRunListPage(
-        items=runs,
-        total=wire.total,
-        limit=limit,
-        offset=offset,
-        has_more=has_more,
-    )
-
-
 class _LocalDirectoryResourceRefWire(msgspec.Struct, frozen=True, kw_only=True):
     local_path: str
     daemon_id: str
     label: str | None = None
+    execution_mode: str | None = None
 
 
 class _ProjectResourceRecordWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     project_id: str
     resource_type: str
-    resource_ref: _LocalDirectoryResourceRefWire
+    resource_ref: object
+    label: str | None = None
+    position: int | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
 
 def project_resource_from_wire(wire: _ProjectResourceRecordWire) -> ProjectResourceRecord:
-    if wire.resource_type != "local_directory":
-        raise OutputShapeError(
-            f"Unsupported resource_type {wire.resource_type!r}; expected 'local_directory'"
-        )
+    if not isinstance(wire.resource_ref, Mapping):
+        raise OutputShapeError("resource_ref must be a JSON object")
     ref = wire.resource_ref
-    if not pathlib.Path(ref.local_path).is_absolute():
-        raise OutputShapeError("local_path must be an absolute path")
+    if wire.resource_type == "local_directory":
+        local_path = ref.get("local_path")
+        daemon_id = ref.get("daemon_id")
+        if not isinstance(local_path, str) or not isinstance(daemon_id, str):
+            raise OutputShapeError("local_directory resource_ref requires local_path and daemon_id")
+        if not pathlib.Path(local_path).is_absolute():
+            raise OutputShapeError("local_path must be an absolute path")
+        resource_ref: object = LocalDirectoryResourceRef(
+            local_path=str(pathlib.Path(local_path).resolve()),
+            daemon_id=daemon_id,
+            label=ref.get("label") if isinstance(ref.get("label"), str) else None,
+            execution_mode=(
+                ref.get("execution_mode") if isinstance(ref.get("execution_mode"), str) else None
+            ),
+        )
+    elif wire.resource_type == "github_repo":
+        url = ref.get("url")
+        if not isinstance(url, str):
+            raise OutputShapeError("github_repo resource_ref requires url")
+        resource_ref = GithubRepoResourceRef(
+            url=url,
+            default_branch_hint=(
+                ref.get("default_branch_hint")
+                if isinstance(ref.get("default_branch_hint"), str)
+                else None
+            ),
+            ref=ref.get("ref") if isinstance(ref.get("ref"), str) else None,
+        )
+    else:
+        resource_ref = dict(ref)
     return ProjectResourceRecord(
         id=wire.id,
         project_id=wire.project_id,
         resource_type=wire.resource_type,
-        resource_ref=LocalDirectoryResourceRef(
-            local_path=str(pathlib.Path(ref.local_path).resolve()),
-            daemon_id=ref.daemon_id,
-            label=ref.label,
-        ),
+        resource_ref=resource_ref,  # type: ignore[arg-type]
+        label=wire.label,
+        position=wire.position,
+        created_at=wire.created_at,
+        updated_at=wire.updated_at,
     )
 
 

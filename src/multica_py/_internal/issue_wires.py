@@ -3,11 +3,13 @@ from __future__ import annotations
 import datetime
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, cast
 
 import msgspec
 
 from multica_py._internal.json_values import _coerce_json_value
+from multica_py._internal.wire_presence import WirePresence
+from multica_py._internal.wire_presence import presence as _presence_seed
 from multica_py.enums import _coerce_issue_status
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.common import CommentCursor
@@ -118,15 +120,7 @@ def _attachments_from_wire(wire: _IssueWire) -> tuple[AttachmentResult, ...]:
     return () if wire.attachments is msgspec.UNSET else wire.attachments
 
 
-_PresenceSeed = Literal["missing", "null", "value"]
-
-
-def _presence_seed(value: object) -> _PresenceSeed:
-    if value is msgspec.UNSET:
-        return "missing"
-    if value is None:
-        return "null"
-    return "value"
+_PresenceSeed = WirePresence
 
 
 _ISSUE_PROJECTION_FIELDS: tuple[tuple[str, str], ...] = (

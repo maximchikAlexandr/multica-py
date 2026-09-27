@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import os
 import re
 from typing import TypeVar, cast
 
@@ -33,10 +34,12 @@ P = TypeVar("P")
 
 __all__ = ["Comment", "CommentThread", "IssueCommentResource"]
 
-_CURSOR_PATTERN = re.compile(r"(?:next[_ -]?cursor|cursor)[:=]\s*(\S+)", re.IGNORECASE)
-_BEFORE_PATTERN = re.compile(r"(?:before|next[_ -]?before)[:=]\s*(\S+)", re.IGNORECASE)
-_BEFORE_ID_PATTERN = re.compile(
-    r"(?:before[_ -]?id|next[_ -]?before[_ -]?id)[:=]\s*(\S+)", re.IGNORECASE
+_CURSOR_PATTERN = re.compile(
+    r"Next (?:thread|reply) cursor:\s+--before\s+(\S+)\s+--before-id\s+(\S+)(?=\s*$)",
+    re.IGNORECASE,
+)
+_CURSOR_MARKER_PATTERN = re.compile(
+    r"Next (?:thread|reply) cursor\b|--before(?:-id)?\b", re.IGNORECASE
 )
 
 
@@ -47,16 +50,32 @@ def _format_since(value: datetime.datetime | None) -> str | None:
 
 
 def _extract_cursor(stderr: str) -> CommentCursor | None:
-    before = _BEFORE_PATTERN.search(stderr)
-    before_id = _BEFORE_ID_PATTERN.search(stderr)
-    if before is not None or before_id is not None:
-        if before is None or before_id is None:
-            raise OutputShapeError("comment pagination response must contain a cursor pair")
-        return CommentCursor(before=before.group(1), before_id=before_id.group(1))
     match = _CURSOR_PATTERN.search(stderr)
     if match is not None:
+        return CommentCursor(before=match.group(1), before_id=match.group(2))
+    if _CURSOR_MARKER_PATTERN.search(stderr) is not None:
         raise OutputShapeError("comment pagination response must contain a cursor pair")
     return None
+
+
+def _comment_list_args(
+    args: list[str],
+    *,
+    roots_only: bool = False,
+    summary: bool = False,
+    full: bool = False,
+    compact: bool = False,
+) -> tuple[str, ...]:
+    if roots_only:
+        args.append("--roots-only")
+    if summary:
+        args.append("--summary")
+    if full:
+        args.append("--full")
+    if compact:
+        args.append("--compact")
+    args.extend(("--output", "json"))
+    return tuple(args)
 
 
 class IssueCommentResource(BaseResource):
@@ -95,11 +114,23 @@ class IssueCommentResource(BaseResource):
         )
 
     def list_command(
-        self, issue_id: str, *, options: OperationOptions | None = None
+        self,
+        issue_id: str,
+        *,
+        roots_only: bool = False,
+        summary: bool = False,
+        full: bool = False,
+        compact: bool = False,
+        options: OperationOptions | None = None,
     ) -> Command[Page[Comment]]:
-        return self._decoded_page_command(
-            ("issue", "comment", "list", issue_id), _CommentWire, options=options
-        )._map(
+        args = _comment_list_args(
+            ["issue", "comment", "list", issue_id],
+            roots_only=roots_only,
+            summary=summary,
+            full=full,
+            compact=compact,
+        )
+        return self._decoded_page_command(args[:-2], _CommentWire, options=options)._map(
             lambda page: Page(
                 items=tuple(
                     _bind_comment(comment_from_wire(item), self._client) for item in page.items
@@ -112,14 +143,34 @@ class IssueCommentResource(BaseResource):
             )
         )
 
-    def list(self, issue_id: str, *, options: OperationOptions | None = None) -> Page[Comment]:
-        return self.list_command(issue_id, options=options).run()
+    def list(
+        self,
+        issue_id: str,
+        *,
+        roots_only: bool = False,
+        summary: bool = False,
+        full: bool = False,
+        compact: bool = False,
+        options: OperationOptions | None = None,
+    ) -> Page[Comment]:
+        return self.list_command(
+            issue_id,
+            roots_only=roots_only,
+            summary=summary,
+            full=full,
+            compact=compact,
+            options=options,
+        ).run()
 
     def list_flat_command(
         self,
         *,
         issue_id: str,
         since: datetime.datetime | None = None,
+        roots_only: bool = False,
+        summary: bool = False,
+        full: bool = False,
+        compact: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Page[Comment]]:
         args = ["issue", "comment", "list", issue_id]
@@ -138,7 +189,18 @@ class IssueCommentResource(BaseResource):
             )
 
         return self._plan(
-            steps=(_Step((*args, "--output", "json"), "run_text"),),
+            steps=(
+                _Step(
+                    _comment_list_args(
+                        args,
+                        roots_only=roots_only,
+                        summary=summary,
+                        full=full,
+                        compact=compact,
+                    ),
+                    "run_text",
+                ),
+            ),
             finalize=finalize,
             options=options,
         )
@@ -148,9 +210,21 @@ class IssueCommentResource(BaseResource):
         *,
         issue_id: str,
         since: datetime.datetime | None = None,
+        roots_only: bool = False,
+        summary: bool = False,
+        full: bool = False,
+        compact: bool = False,
         options: OperationOptions | None = None,
     ) -> Page[Comment]:
-        return self.list_flat_command(issue_id=issue_id, since=since, options=options).run()
+        return self.list_flat_command(
+            issue_id=issue_id,
+            since=since,
+            roots_only=roots_only,
+            summary=summary,
+            full=full,
+            compact=compact,
+            options=options,
+        ).run()
 
     def list_thread_command(
         self,
@@ -160,6 +234,9 @@ class IssueCommentResource(BaseResource):
         cursor: CommentCursor | None = None,
         limit: int | None = None,
         since: datetime.datetime | None = None,
+        summary: bool = False,
+        full: bool = False,
+        compact: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Page[Comment]]:
         if cursor is not None and limit is None:
@@ -193,7 +270,17 @@ class IssueCommentResource(BaseResource):
             )
 
         return self._plan(
-            steps=(_Step((*args, "--output", "json"), "run_text"),),
+            steps=(
+                _Step(
+                    _comment_list_args(
+                        args,
+                        summary=summary,
+                        full=full,
+                        compact=compact,
+                    ),
+                    "run_text",
+                ),
+            ),
             finalize=finalize,
             options=options,
         )
@@ -206,6 +293,9 @@ class IssueCommentResource(BaseResource):
         cursor: CommentCursor | None = None,
         limit: int | None = None,
         since: datetime.datetime | None = None,
+        summary: bool = False,
+        full: bool = False,
+        compact: bool = False,
         options: OperationOptions | None = None,
     ) -> Page[Comment]:
         return self.list_thread_command(
@@ -214,6 +304,9 @@ class IssueCommentResource(BaseResource):
             cursor=cursor,
             limit=limit,
             since=since,
+            summary=summary,
+            full=full,
+            compact=compact,
             options=options,
         ).run()
 
@@ -224,6 +317,9 @@ class IssueCommentResource(BaseResource):
         cursor: CommentCursor | None = None,
         limit: int = 10,
         since: datetime.datetime | None = None,
+        summary: bool = False,
+        full: bool = False,
+        compact: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Page[CommentThread]]:
         if limit < 1:
@@ -239,14 +335,29 @@ class IssueCommentResource(BaseResource):
             result = cast("TextResult", results[0])
             return Page(
                 items=tuple(
-                    _bind_thread(item, self._client, issue_id)
-                    for item in self._run_decode_threads(result.text)
+                    _bind_thread(
+                        item,
+                        self._client,
+                        issue_id,
+                        comments=comments if comments else None,
+                    )
+                    for item, comments in self._run_decode_threads(result.text)
                 ),
                 next_cursor=_extract_cursor(result.stderr),
             )
 
         return self._plan(
-            steps=(_Step((*args, "--output", "json"), "run_text"),),
+            steps=(
+                _Step(
+                    _comment_list_args(
+                        args,
+                        summary=summary,
+                        full=full,
+                        compact=compact,
+                    ),
+                    "run_text",
+                ),
+            ),
             finalize=finalize,
             options=options,
         )
@@ -258,23 +369,59 @@ class IssueCommentResource(BaseResource):
         cursor: CommentCursor | None = None,
         limit: int = 10,
         since: datetime.datetime | None = None,
+        summary: bool = False,
+        full: bool = False,
+        compact: bool = False,
         options: OperationOptions | None = None,
     ) -> Page[CommentThread]:
         return self.list_recent_command(
-            issue_id=issue_id, cursor=cursor, limit=limit, since=since, options=options
+            issue_id=issue_id,
+            cursor=cursor,
+            limit=limit,
+            since=since,
+            summary=summary,
+            full=full,
+            compact=compact,
+            options=options,
         ).run()
 
     def add_command(
-        self, issue_id: str, body: str, *, options: OperationOptions | None = None
+        self,
+        issue_id: str,
+        body: str | None = None,
+        *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
+        attachment: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[Comment]:
-        return self._decoded_command(
-            ("issue", "comment", "add", issue_id, "--content", body),
-            _CommentWire,
+        return self._content_command(
+            ("issue", "comment", "add", issue_id),
+            body,
+            content_file=content_file,
+            content_stdin=content_stdin,
+            attachment=attachment,
             options=options,
-        )._map(lambda wire: _bind_comment(comment_from_wire(wire), self._client))
+        )
 
-    def add(self, issue_id: str, body: str, *, options: OperationOptions | None = None) -> Comment:
-        return self.add_command(issue_id, body, options=options).run()
+    def add(
+        self,
+        issue_id: str,
+        body: str | None = None,
+        *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
+        attachment: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Comment:
+        return self.add_command(
+            issue_id,
+            body,
+            content_file=content_file,
+            content_stdin=content_stdin,
+            attachment=attachment,
+            options=options,
+        ).run()
 
     def update_command(
         self,
@@ -323,29 +470,92 @@ class IssueCommentResource(BaseResource):
         self,
         issue_id: str,
         thread_id: str,
-        body: str,
+        body: str | None = None,
         *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
+        attachment: str | None = None,
         options: OperationOptions | None = None,
     ) -> Command[Comment]:
-        return self._decoded_command(
-            (
-                "issue",
-                "comment",
-                "add",
-                issue_id,
-                "--content",
-                body,
-                "--parent",
-                thread_id,
-            ),
-            _CommentWire,
+        return self._content_command(
+            ("issue", "comment", "add", issue_id),
+            body,
+            suffix=("--parent", thread_id),
+            content_file=content_file,
+            content_stdin=content_stdin,
+            attachment=attachment,
             options=options,
-        )._map(lambda wire: _bind_comment(comment_from_wire(wire), self._client))
+        )
 
     def reply(
-        self, issue_id: str, thread_id: str, body: str, *, options: OperationOptions | None = None
+        self,
+        issue_id: str,
+        thread_id: str,
+        body: str | None = None,
+        *,
+        content_file: str | os.PathLike[str] | None = None,
+        content_stdin: bytes | None = None,
+        attachment: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Comment:
-        return self.reply_command(issue_id, thread_id, body, options=options).run()
+        return self.reply_command(
+            issue_id,
+            thread_id,
+            body,
+            content_file=content_file,
+            content_stdin=content_stdin,
+            attachment=attachment,
+            options=options,
+        ).run()
+
+    def _content_command(
+        self,
+        args: tuple[str, ...],
+        body: str | None,
+        *,
+        suffix: tuple[str, ...] = (),
+        content_file: str | os.PathLike[str] | None,
+        content_stdin: bytes | None,
+        attachment: str | None,
+        options: OperationOptions | None,
+    ) -> Command[Comment]:
+        selected = sum(value is not None for value in (body, content_file, content_stdin))
+        if selected != 1:
+            raise TypeError("exactly one of body, content_file, or content_stdin is required")
+        command_args = list(args)
+        stdin = None
+        if body is not None:
+            if not isinstance(body, str):
+                raise TypeError("body must be a string")
+            command_args.extend(("--content", body))
+        elif content_file is not None:
+            command_args.extend(("--content-file", os.fspath(content_file)))
+        else:
+            if not isinstance(content_stdin, bytes):
+                raise TypeError("content_stdin must be bytes")
+            command_args.append("--content-stdin")
+            stdin = content_stdin
+        command_args.extend(suffix)
+        if attachment is not None:
+            if not isinstance(attachment, str) or not attachment.strip():
+                raise ValueError("attachment must be a nonblank string")
+            command_args.extend(("--attachment", attachment))
+        return self._plan(
+            steps=(
+                _Step(
+                    (*command_args, "--output", "json"),
+                    "run_bytes",
+                    stdin=stdin,
+                    decode=lambda stdout, command: decode_json(
+                        stdout, _CommentWire, command=command
+                    ),
+                ),
+            ),
+            finalize=lambda results: _bind_comment(
+                comment_from_wire(cast("_CommentWire", results[0])), self._client
+            ),
+            options=options,
+        )
 
     def delete_command(
         self, comment_id: str, *, options: OperationOptions | None = None
@@ -383,8 +593,70 @@ class IssueCommentResource(BaseResource):
             for item in decode_json(payload.encode("utf-8"), list[_CommentWire])
         )
 
-    def _run_decode_threads(self, payload: str) -> tuple[CommentThread, ...]:
-        return tuple(
-            comment_thread_from_wire(item)
-            for item in decode_json(payload.encode("utf-8"), list[_CommentThreadWire])
-        )
+    def _run_decode_threads(
+        self, payload: str
+    ) -> tuple[tuple[CommentThread, tuple[Comment, ...]], ...]:
+        raw_items = decode_json(payload.encode("utf-8"), list[dict[str, object]])
+        if not raw_items:
+            return ()
+        has_content = ["content" in item for item in raw_items]
+        has_comments = ["comments" in item for item in raw_items]
+        if all(has_content):
+            comments = tuple(
+                comment_from_wire(item)
+                for item in decode_json(payload.encode("utf-8"), list[_CommentWire])
+            )
+            return self._group_flat_comments(comments)
+        if all(has_comments):
+            return tuple(
+                (
+                    comment_thread_from_wire(item),
+                    tuple(comment_from_wire(comment) for comment in item.comments),
+                )
+                for item in decode_json(payload.encode("utf-8"), list[_CommentThreadWire])
+            )
+        raise OutputShapeError("recent comment response must contain flat comments or threads")
+
+    @staticmethod
+    def _group_flat_comments(
+        comments: tuple[Comment, ...],
+    ) -> tuple[tuple[CommentThread, tuple[Comment, ...]], ...]:
+        by_id: dict[str, Comment] = {}
+        for comment in comments:
+            if comment.id in by_id:
+                raise OutputShapeError(
+                    f"recent comment response contains duplicate id {comment.id}"
+                )
+            by_id[comment.id] = comment
+
+        def root_id(comment: Comment) -> str:
+            current = comment
+            seen: set[str] = set()
+            while current.thread_id is not None:
+                if current.id in seen:
+                    raise OutputShapeError("recent comment response contains a parent cycle")
+                seen.add(current.id)
+                parent = by_id.get(current.thread_id)
+                if parent is None:
+                    raise OutputShapeError(
+                        f"recent comment response has unknown parent {current.thread_id}"
+                    )
+                current = parent
+            return current.id
+
+        grouped: dict[str, list[Comment]] = {}
+        order: list[str] = []
+        for comment in comments:
+            thread_id = root_id(comment)
+            if thread_id not in grouped:
+                grouped[thread_id] = []
+                order.append(thread_id)
+            grouped[thread_id].append(comment)
+
+        result: list[tuple[CommentThread, tuple[Comment, ...]]] = []
+        for thread_id in order:
+            items = grouped[thread_id]
+            root = by_id[thread_id]
+            ordered = (root, *(item for item in items if item.id != thread_id))
+            result.append((CommentThread(id=thread_id), ordered))
+        return tuple(result)

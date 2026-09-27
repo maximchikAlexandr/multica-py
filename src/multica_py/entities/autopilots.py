@@ -288,6 +288,11 @@ class Autopilot(_BoundEntity):  # type: ignore[misc]
     )
     can_write: bool | None = None
     can_manage_access: bool | None = None
+    has_webhook_token: bool | None = None
+    webhook_token_hint: str | None = None
+    webhook_token: str | None = None
+    webhook_path: str | None = None
+    webhook_url: str | None = None
     _wire_presence: tuple[tuple[str, str], ...] = msgspec.field(default_factory=tuple)
 
     _triggers: LazyCollection[AutopilotTrigger] | None = msgspec.field(

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 import msgspec
 
+from multica_py._internal.redaction import REDACTED
 from multica_py.models.common import CommentCursor, Page
 
 TAutopilot = TypeVar("TAutopilot")
@@ -124,3 +125,34 @@ class AutopilotTrigger(msgspec.Struct, frozen=True, kw_only=True):
     last_fired_at: datetime.datetime | None = None
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
+
+
+class AutopilotTriggerRotateURL(msgspec.Struct, frozen=True, kw_only=True):
+    autopilot_id: str | None = None
+    trigger_id: str | None = None
+    url: str | None = None
+    path: str | None = None
+    token: str | None = None
+    warning: str | None = None
+
+    def __repr__(self) -> str:
+        return (
+            "AutopilotTriggerRotateURL("
+            f"autopilot_id={self.autopilot_id!r}, "
+            f"trigger_id={self.trigger_id!r}, "
+            f"url={REDACTED if self.url is not None else None!r}, "
+            f"path={REDACTED if self.path is not None else None!r}, "
+            f"token={REDACTED if self.token is not None else None!r}, "
+            f"warning={self.warning!r})"
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        """Return the ordinary redacted projection of a rotation result."""
+        return {
+            "autopilot_id": self.autopilot_id,
+            "trigger_id": self.trigger_id,
+            "url": REDACTED if self.url is not None else None,
+            "path": REDACTED if self.path is not None else None,
+            "token": REDACTED if self.token is not None else None,
+            "warning": self.warning,
+        }

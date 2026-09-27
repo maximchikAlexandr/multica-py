@@ -4,22 +4,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
 from multica_py.entities.autopilots import Autopilot
 from multica_py.resources.autopilots import AutopilotResource
 from multica_py.resources.users import UserResource
-
-
-def _transport() -> MagicMock:
-    transport = MagicMock(spec=CliTransport)
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    return transport
+from tests.unit.resources._factories import make_transport
 
 
 @pytest.mark.parametrize("bound", (False, True), ids=("direct", "bound"))
-def test_trigger_update_empty_request_rejects_before_transport(bound: bool) -> None:
-    transport = _transport()
+def _assert_trigger_update_empty_request_rejects_before_transport(bound: bool) -> None:
+    transport = make_transport()
     resource = AutopilotResource(transport, ClientConfig())
     if bound:
         client = MagicMock()
@@ -44,3 +38,8 @@ def test_trigger_update_empty_request_rejects_before_transport(bound: bool) -> N
 
     transport.run_bytes.assert_not_called()
     transport.run_text.assert_not_called()
+
+
+@pytest.mark.parametrize("bound", (False, True), ids=("direct", "bound"))
+def test_trigger_update_empty_request_rejects_before_transport(bound: bool) -> None:
+    _assert_trigger_update_empty_request_rejects_before_transport(bound)

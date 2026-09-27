@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import shlex
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import cast
 
@@ -10,7 +10,9 @@ import msgspec
 from multica_py._generated.approved_sdk import (
     AUTOPILOT_TRIGGER_ADD_BINDING,
     AUTOPILOT_TRIGGER_DELETE_BINDING,
+    AUTOPILOT_TRIGGER_ROTATE_URL_BINDING,
     AUTOPILOT_TRIGGER_UPDATE_BINDING,
+    AUTOPILOTS_TRIGGER_LIST_BINDING,
     validate_nonblank,
 )
 from multica_py._internal.commands import Command, _replace_plan
@@ -40,6 +42,7 @@ from multica_py.models.autopilots import (
     AutopilotRunListPage,
     AutopilotSubscriber,
     AutopilotTrigger,
+    AutopilotTriggerRotateURL,
 )
 from multica_py.models.common import ActionResult
 from multica_py.models.relations import (
@@ -155,42 +158,76 @@ class AutopilotResource(BaseResource):
         )
 
     def list_command(
-        self, *, options: OperationOptions | None = None
+        self,
+        *,
+        status: str | None = None,
+        show_secrets: bool = False,
+        options: OperationOptions | None = None,
     ) -> Command[AutopilotListPage[Autopilot]]:
+        if type(show_secrets) is not bool:
+            raise TypeError("show_secrets must be a bool")
+
         def finalize(page: _AutopilotListWire) -> AutopilotListPage[Autopilot]:
             return AutopilotListPage(
                 items=tuple(
-                    self._bind_autopilot(_autopilot_from_wire(item)) for item in page.autopilots
+                    self._bind_autopilot(_autopilot_from_wire(item, secret_access=show_secrets))
+                    for item in page.autopilots
                 ),
                 total=page.total,
             )
 
-        return self._decoded_command(
-            ("autopilot", "list"), _AutopilotListWire, options=options
-        )._map(finalize)
+        args = ["autopilot", "list"]
+        if status is not None:
+            if not isinstance(status, str) or not status.strip():
+                raise ValueError("status must be a nonblank string")
+            args.extend(("--status", status))
+        if show_secrets:
+            args.append("--show-secrets")
+        return self._decoded_command(tuple(args), _AutopilotListWire, options=options)._map(
+            finalize
+        )
 
-    def list(self, *, options: OperationOptions | None = None) -> AutopilotListPage[Autopilot]:
-        return self.list_command(options=options).run()
+    def list(
+        self,
+        *,
+        status: str | None = None,
+        show_secrets: bool = False,
+        options: OperationOptions | None = None,
+    ) -> AutopilotListPage[Autopilot]:
+        return self.list_command(status=status, show_secrets=show_secrets, options=options).run()
 
     def get_command(
-        self, autopilot_id: str, *, options: OperationOptions | None = None
+        self,
+        autopilot_id: str,
+        *,
+        show_secrets: bool = False,
+        options: OperationOptions | None = None,
     ) -> Command[Autopilot]:
         validate_nonblank(autopilot_id)
+        if type(show_secrets) is not bool:
+            raise TypeError("show_secrets must be a bool")
 
         def finalize(wire: _AutopilotGetWire) -> Autopilot:
-            result = _autopilot_get_from_wire(wire)
+            result = _autopilot_get_from_wire(wire, secret_access=show_secrets)
             return self._bind_autopilot(
                 result.data,
                 triggers=result.triggers,
                 subscribers=result.subscribers,
             )
 
-        return self._decoded_command(
-            ("autopilot", "get", autopilot_id), _AutopilotGetWire, options=options
-        )._map(finalize)
+        args = ["autopilot", "get", autopilot_id]
+        if show_secrets:
+            args.append("--show-secrets")
+        return self._decoded_command(tuple(args), _AutopilotGetWire, options=options)._map(finalize)
 
-    def get(self, autopilot_id: str, *, options: OperationOptions | None = None) -> Autopilot:
-        return self.get_command(autopilot_id, options=options).run()
+    def get(
+        self,
+        autopilot_id: str,
+        *,
+        show_secrets: bool = False,
+        options: OperationOptions | None = None,
+    ) -> Autopilot:
+        return self.get_command(autopilot_id, show_secrets=show_secrets, options=options).run()
 
     def create_command(
         self,
@@ -367,6 +404,20 @@ class AutopilotResource(BaseResource):
         self, autopilot_id: str, *, options: OperationOptions | None = None
     ) -> AutopilotRun:
         return self.trigger_command(autopilot_id, options=options).run()
+
+    def trigger_list_command(
+        self, autopilot_id: str, *, options: OperationOptions | None = None
+    ) -> Command[Mapping[str, object]]:
+        _ = cast("object", AUTOPILOTS_TRIGGER_LIST_BINDING)
+        validate_nonblank(autopilot_id)
+        return self._decoded_mapping_command(
+            ("autopilot", "trigger-list", autopilot_id), options=options
+        )._map(lambda value: cast("Mapping[str, object]", value))
+
+    def trigger_list(
+        self, autopilot_id: str, *, options: OperationOptions | None = None
+    ) -> Mapping[str, object]:
+        return self.trigger_list_command(autopilot_id, options=options).run()
 
     def history_command(
         self,
@@ -563,6 +614,40 @@ class AutopilotResource(BaseResource):
         self, autopilot_id: str, trigger_id: str, *, options: OperationOptions | None = None
     ) -> ActionResult[None]:
         return self.trigger_delete_command(autopilot_id, trigger_id, options=options).run()
+
+    def trigger_rotate_url_command(
+        self,
+        autopilot_id: str,
+        trigger_id: str,
+        *,
+        yes: bool = False,
+        options: OperationOptions | None = None,
+    ) -> Command[AutopilotTriggerRotateURL]:
+        _ = cast("object", AUTOPILOT_TRIGGER_ROTATE_URL_BINDING)
+        validate_nonblank(autopilot_id)
+        validate_nonblank(trigger_id)
+        if type(yes) is not bool:
+            raise TypeError("yes must be a bool")
+        if not yes:
+            raise ValueError("trigger URL rotation requires explicit yes=True confirmation")
+        return self._decoded_command(
+            ("autopilot", "trigger-rotate-url", autopilot_id, trigger_id, "--yes"),
+            AutopilotTriggerRotateURL,
+            options=options,
+            minimum_cli_version="0.5.3",
+        )
+
+    def trigger_rotate_url(
+        self,
+        autopilot_id: str,
+        trigger_id: str,
+        *,
+        yes: bool = False,
+        options: OperationOptions | None = None,
+    ) -> AutopilotTriggerRotateURL:
+        return self.trigger_rotate_url_command(
+            autopilot_id, trigger_id, yes=yes, options=options
+        ).run()
 
     def _bind_autopilot(
         self,
