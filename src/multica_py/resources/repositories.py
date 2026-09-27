@@ -1,13 +1,67 @@
 from __future__ import annotations
 
-from multica_py._internal.commands import Command
+from typing import cast
+
+from multica_py._generated.approved_sdk import validate_nonblank
+from multica_py._internal.commands import Command, _Step
+from multica_py._internal.decoders import decode_text
 from multica_py.config import OperationOptions
 from multica_py.models.common import ActionResult, Page
-from multica_py.models.system import RepositoryMutationResult, RepositoryRecord
+from multica_py.models.system import (
+    RepositoryCheckoutResult,
+    RepositoryMutationResult,
+    RepositoryRecord,
+)
 from multica_py.resources._base import BaseResource
 
 
 class RepositoryResource(BaseResource):
+    def checkout_command(
+        self,
+        url: str,
+        *,
+        ref: str | None = None,
+        fresh: bool = False,
+        options: OperationOptions | None = None,
+    ) -> Command[RepositoryCheckoutResult]:
+        validate_nonblank(url)
+        if ref is not None and not ref.strip():
+            raise ValueError("ref must be nonblank when provided")
+        args = ["repo", "checkout", url]
+        if ref is not None:
+            args.extend(("--ref", ref))
+        if fresh:
+            args.append("--fresh")
+
+        def decode(stdout: bytes, _command: str) -> RepositoryCheckoutResult:
+            path = decode_text(stdout).strip()
+            if not path:
+                raise ValueError("repository checkout returned an empty path")
+            return RepositoryCheckoutResult(path=path)
+
+        return self._plan(
+            steps=(
+                _Step(
+                    tuple(args),
+                    "run_text",
+                    decode=decode,
+                    minimum_cli_version="0.5.3",
+                ),
+            ),
+            finalize=lambda results: cast("RepositoryCheckoutResult", results[0]),
+            options=options,
+        )
+
+    def checkout(
+        self,
+        url: str,
+        *,
+        ref: str | None = None,
+        fresh: bool = False,
+        options: OperationOptions | None = None,
+    ) -> RepositoryCheckoutResult:
+        return self.checkout_command(url, ref=ref, fresh=fresh, options=options).run()
+
     def list_command(
         self, *, options: OperationOptions | None = None
     ) -> Command[Page[RepositoryRecord]]:

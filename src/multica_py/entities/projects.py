@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import pathlib
 from typing import TYPE_CHECKING, cast
 
@@ -31,6 +32,15 @@ class Project(_BoundEntity):  # type: ignore[misc]
     name: str
     status: ProjectStatus
     description: str | None = None
+    workspace_id: str | None = None
+    icon: str | None = None
+    lead_type: str | None = None
+    lead_id: str | None = None
+    start_date: str | None = None
+    due_date: str | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
+    resource_count: int | None = None
 
     _resources: LazyCollection[ProjectResourceRecord] | None = msgspec.field(
         default=None, name="_resources"

@@ -5,20 +5,13 @@ from typing import TYPE_CHECKING
 
 import msgspec
 
+from multica_py._internal.wire_presence import presence as _presence_seed
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.agents import AgentConversationStarter, AgentSkill, AgentTask
 from multica_py.models.issue_activity import TaskCancellationActor
 
 if TYPE_CHECKING:
     from multica_py.entities.agents import Agent
-
-
-def _presence_seed(value: object) -> str:
-    if value is msgspec.UNSET:
-        return "missing"
-    if value is None:
-        return "null"
-    return "value"
 
 
 class _AgentConversationStarterWire(msgspec.Struct, frozen=True, kw_only=True):
@@ -132,6 +125,12 @@ class _AgentWire(msgspec.Struct, frozen=True, kw_only=True):
     runtime_id: str | None | msgspec.UnsetType = msgspec.UNSET
     model: str | None | msgspec.UnsetType = msgspec.UNSET
     thinking_level: str | None | msgspec.UnsetType = msgspec.UNSET
+    service_tier: str | None | msgspec.UnsetType = msgspec.UNSET
+    permission_mode: str | None | msgspec.UnsetType = msgspec.UNSET
+    public_to_workspace: bool | None | msgspec.UnsetType = msgspec.UNSET
+    public_to_member_ids: tuple[str, ...] | msgspec.UnsetType = msgspec.UNSET
+    max_concurrent_tasks: int | None | msgspec.UnsetType = msgspec.UNSET
+    custom_args: tuple[str, ...] | msgspec.UnsetType = msgspec.UNSET
 
 
 def _agent_from_wire(wire: _AgentWire) -> Agent:
@@ -153,9 +152,27 @@ def _agent_from_wire(wire: _AgentWire) -> Agent:
         runtime_id=None if wire.runtime_id is msgspec.UNSET else wire.runtime_id,
         model=None if wire.model is msgspec.UNSET else wire.model,
         thinking_level=None if wire.thinking_level is msgspec.UNSET else wire.thinking_level,
+        service_tier=None if wire.service_tier is msgspec.UNSET else wire.service_tier,
+        permission_mode=None if wire.permission_mode is msgspec.UNSET else wire.permission_mode,
+        public_to_workspace=(
+            None if wire.public_to_workspace is msgspec.UNSET else wire.public_to_workspace
+        ),
+        public_to_member_ids=(
+            () if wire.public_to_member_ids is msgspec.UNSET else wire.public_to_member_ids
+        ),
+        max_concurrent_tasks=(
+            None if wire.max_concurrent_tasks is msgspec.UNSET else wire.max_concurrent_tasks
+        ),
+        custom_args=() if wire.custom_args is msgspec.UNSET else wire.custom_args,
         _wire_presence=(
             ("runtime_id", _presence_seed(wire.runtime_id)),
             ("model", _presence_seed(wire.model)),
             ("thinking_level", _presence_seed(wire.thinking_level)),
+            ("service_tier", _presence_seed(wire.service_tier)),
+            ("permission_mode", _presence_seed(wire.permission_mode)),
+            ("public_to_workspace", _presence_seed(wire.public_to_workspace)),
+            ("public_to_member_ids", _presence_seed(wire.public_to_member_ids)),
+            ("max_concurrent_tasks", _presence_seed(wire.max_concurrent_tasks)),
+            ("custom_args", _presence_seed(wire.custom_args)),
         ),
     )

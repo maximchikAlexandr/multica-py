@@ -185,6 +185,123 @@ class WorkspaceResource(BaseResource):
     def get(self, workspace_id: str, *, options: OperationOptions | None = None) -> Workspace:
         return self.get_command(workspace_id, options=options).run()
 
+    def create_command(
+        self,
+        *,
+        name: str,
+        slug: str,
+        description: str | None = None,
+        context: str | None = None,
+        issue_prefix: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[Workspace]:
+        validate_nonblank(name)
+        validate_nonblank(slug)
+        args = ["workspace", "create", "--name", name, "--slug", slug]
+        for flag, value in (
+            ("--description", description),
+            ("--context", context),
+            ("--issue-prefix", issue_prefix),
+        ):
+            if value is not None:
+                args.extend((flag, value))
+        return self._decoded_command(tuple(args), Workspace, options=options)._map(
+            lambda workspace: workspace._with_client(self._client)
+        )
+
+    def create(
+        self,
+        *,
+        name: str,
+        slug: str,
+        description: str | None = None,
+        context: str | None = None,
+        issue_prefix: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Workspace:
+        return self.create_command(
+            name=name,
+            slug=slug,
+            description=description,
+            context=context,
+            issue_prefix=issue_prefix,
+            options=options,
+        ).run()
+
+    def update_command(
+        self,
+        workspace_id: str | None = None,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        context: str | None = None,
+        issue_prefix: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[Workspace]:
+        args = ["workspace", "update"]
+        if workspace_id is not None:
+            validate_nonblank(workspace_id)
+            args.append(workspace_id)
+        for flag, value in (
+            ("--name", name),
+            ("--description", description),
+            ("--context", context),
+            ("--issue-prefix", issue_prefix),
+        ):
+            if value is not None:
+                args.extend((flag, value))
+        return self._decoded_command(tuple(args), Workspace, options=options)._map(
+            lambda workspace: workspace._with_client(self._client)
+        )
+
+    def update(
+        self,
+        workspace_id: str | None = None,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        context: str | None = None,
+        issue_prefix: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Workspace:
+        return self.update_command(
+            workspace_id,
+            name=name,
+            description=description,
+            context=context,
+            issue_prefix=issue_prefix,
+            options=options,
+        ).run()
+
+    def member_invite_command(
+        self,
+        email: str,
+        workspace_id: str | None = None,
+        *,
+        role: str = "member",
+        options: OperationOptions | None = None,
+    ) -> Command[WorkspaceMember]:
+        validate_nonblank(email)
+        validate_nonblank(role)
+        args = ["workspace", "member", "invite", email]
+        if workspace_id is not None:
+            validate_nonblank(workspace_id)
+            args.append(workspace_id)
+        args.extend(("--role", role))
+        return self._decoded_command(tuple(args), WorkspaceMember, options=options)._map(
+            lambda member: member._with_client(self._client)
+        )
+
+    def member_invite(
+        self,
+        email: str,
+        workspace_id: str | None = None,
+        *,
+        role: str = "member",
+        options: OperationOptions | None = None,
+    ) -> WorkspaceMember:
+        return self.member_invite_command(email, workspace_id, role=role, options=options).run()
+
     def members_command(
         self, workspace_id: str, *, options: OperationOptions | None = None
     ) -> Command[Page[WorkspaceMember]]:

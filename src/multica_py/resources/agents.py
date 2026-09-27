@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 import pathlib
-from collections.abc import Callable
-from typing import TYPE_CHECKING
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, cast
 
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
-from multica_py._internal.commands import Command
+from multica_py._internal.commands import Command, _Step
+from multica_py._internal.decoders import decode_json
+from multica_py._internal.redaction import REDACTED
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.agents import Agent
-from multica_py.models.agents import AgentConversationStarter, AgentSkill, AgentTask
+from multica_py.models.agents import (
+    AgentConversationStarter,
+    AgentSkill,
+    AgentTask,
+    SecretEnvironment,
+)
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.workspaces import McpServer
 from multica_py.resources._base import BaseResource, _page_items, _validate_optional_string
@@ -159,6 +166,112 @@ class AgentResource(BaseResource):
 
     def get(self, agent_id: str, *, options: OperationOptions | None = None) -> Agent:
         return self.get_command(agent_id, options=options).run()
+
+    def env_get_command(
+        self, agent_id: str, *, options: OperationOptions | None = None
+    ) -> Command[SecretEnvironment]:
+        validate_nonblank(agent_id)
+        return self._env_mapping_command(("agent", "env", "get", agent_id), options=options)
+
+    def env_get(
+        self, agent_id: str, *, options: OperationOptions | None = None
+    ) -> SecretEnvironment:
+        return self.env_get_command(agent_id, options=options).run()
+
+    def env_set_command(
+        self,
+        agent_id: str,
+        *,
+        custom_env: Mapping[str, str] | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[SecretEnvironment]:
+        validate_nonblank(agent_id)
+        if custom_env is not None:
+            if any(
+                not isinstance(key, str) or not isinstance(value, str)
+                for key, value in custom_env.items()
+            ):
+                raise TypeError("custom_env must map strings to strings")
+        args = ["agent", "env", "set", agent_id]
+        if custom_env:
+            raise ValueError(
+                "custom_env is rejected because the approved CLI has no safe input channel; "
+                f"values are redacted as {REDACTED}"
+            )
+        if custom_env is not None:
+            encoded_env = dict[str, str](custom_env)
+            args.extend(("--custom-env", msgspec.json.encode(encoded_env).decode()))
+        return self._env_mapping_command(tuple(args), options=options)
+
+    def env_set(
+        self,
+        agent_id: str,
+        *,
+        custom_env: Mapping[str, str] | None = None,
+        options: OperationOptions | None = None,
+    ) -> SecretEnvironment:
+        return self.env_set_command(agent_id, custom_env=custom_env, options=options).run()
+
+    def skills_add_command(
+        self,
+        agent_id: str,
+        *,
+        skill_ids: tuple[str, ...],
+        options: OperationOptions | None = None,
+    ) -> Command[ActionResult[None]]:
+        validate_nonblank(agent_id)
+        if not skill_ids or any(not skill_id.strip() for skill_id in skill_ids):
+            raise ValueError("skill_ids must contain nonblank values")
+        args = (
+            "agent",
+            "skills",
+            "add",
+            agent_id,
+            "--skill-ids",
+            msgspec.json.encode(skill_ids).decode(),
+        )
+        return self._json_action_none_command(args, options=options)
+
+    def skills_add(
+        self,
+        agent_id: str,
+        *,
+        skill_ids: tuple[str, ...],
+        options: OperationOptions | None = None,
+    ) -> ActionResult[None]:
+        return self.skills_add_command(agent_id, skill_ids=skill_ids, options=options).run()
+
+    def _json_action_none_command(
+        self, args: tuple[str, ...], *, options: OperationOptions | None
+    ) -> Command[ActionResult[None]]:
+        def decode(stdout: bytes, command: str) -> object:
+            return decode_json(stdout, dict[str, object], command=command)
+
+        return self._plan(
+            steps=(_Step((*args, "--output", "json"), "run_bytes", decode=decode),),
+            finalize=lambda _results: ActionResult(value=None),
+            options=options,
+        )
+
+    def _env_mapping_command(
+        self,
+        args: tuple[str, ...],
+        *,
+        stdin: bytes | None = None,
+        options: OperationOptions | None = None,
+    ) -> Command[SecretEnvironment]:
+        def decode(stdout: bytes, command: str) -> object:
+            return decode_json(stdout, dict[str, str], command=command)
+
+        def finalize(results: tuple[object, ...]) -> SecretEnvironment:
+            mapping = cast("dict[str, str]", results[0])
+            return SecretEnvironment(mapping)
+
+        return self._plan(
+            steps=(_Step((*args, "--output", "json"), "run_bytes", stdin=stdin, decode=decode),),
+            finalize=finalize,
+            options=options,
+        )
 
     def copy_command(
         self,
