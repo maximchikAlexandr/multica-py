@@ -475,7 +475,9 @@ OPERATION_OPTIONS_CASES = (
         (("skill_id", "s1"), ("path", "README.md"), ("content", "x")),
     ),
     OperationOptionsCase(
-        SquadMemberResource, "add_command", (("squad_id", "sq1"), ("member_id", "m1"))
+        SquadMemberResource,
+        "add_command",
+        (("squad_id", "sq1"), ("member_id", "m1"), ("member_type", "agent")),
     ),
     OperationOptionsCase(SquadResource, "get_command", (("squad_id", "sq1"),)),
     OperationOptionsCase(WorkspaceResource, "switch_command", (("workspace_id", "ws1"),)),

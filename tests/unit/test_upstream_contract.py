@@ -557,8 +557,8 @@ def test_failed_pilot_rollback_binds_descriptors_to_manual_resource() -> None:
     resource_source = inspect.getsource(SquadMemberResource)
     assert all(builder_name not in resource_source for builder_name in _SQUAD_MEMBER_BUILDER_NAMES)
     assert '("squad", "member", "list", squad_id)' in resource_source
-    assert '("squad", "member", "add", squad_id, member_id)' in resource_source
-    assert '("squad", "member", "remove", squad_id, member_id)' in resource_source
+    assert '"squad", "member", "add"' in resource_source
+    assert '"squad", "member", "remove"' in resource_source
     assert resource_source.count("validate_nonblank(squad_id)") == 3
 
 

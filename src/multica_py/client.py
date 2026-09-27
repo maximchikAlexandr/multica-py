@@ -17,6 +17,7 @@ from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
 from multica_py.resources.autopilots import AutopilotResource
+from multica_py.resources.chats import ChatResource
 from multica_py.resources.cli import CliResource
 from multica_py.resources.configuration import ConfigurationResource
 from multica_py.resources.daemon import DaemonResource
@@ -26,6 +27,7 @@ from multica_py.resources.maintenance import MaintenanceResource
 from multica_py.resources.projects import ProjectResource
 from multica_py.resources.properties import PropertyResource
 from multica_py.resources.repositories import RepositoryResource
+from multica_py.resources.runtime_profiles import RuntimeProfileResource
 from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.setup import SetupResource
 from multica_py.resources.skills import SkillResource
@@ -65,7 +67,9 @@ class MulticaClient:
         self.agents = AgentResource(self._transport, config)
         self.skills = SkillResource(self._transport, config)
         self.autopilots = AutopilotResource(self._transport, config)
+        self.chats = ChatResource(self._transport, config)
         self.repositories = RepositoryResource(self._transport, config)
+        self.runtime_profiles = RuntimeProfileResource(self._transport, config)
         self.runtimes = RuntimeResource(self._transport, config)
         self.attachments = AttachmentResource(self._transport, config)
         self.cli = CliResource(self._transport, config)
@@ -85,7 +89,9 @@ class MulticaClient:
             self.agents,
             self.skills,
             self.autopilots,
+            self.chats,
             self.repositories,
+            self.runtime_profiles,
             self.runtimes,
             self.attachments,
             self.cli,

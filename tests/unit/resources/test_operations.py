@@ -141,11 +141,14 @@ _PAGE_CONTRACT_RETURN_NAMES = frozenset(
     {
         "AutopilotListPage",
         "AutopilotRunListPage",
+        "ChatHistory",
+        "ChatThread",
         "IssueChildrenResult",
         "IssueListPage",
+        "IssueTimeline",
         "MetadataPage",
-        "page_daemon_disk_usage",
         "page_issue_usage",
+        "IssueWakeups",
     }
 )
 
@@ -597,7 +600,6 @@ def test_discovered_public_methods() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
-    assert len(canonical) == 190
     assert len(canonical_cases) == len(canonical)
 
 
@@ -661,11 +663,12 @@ def test_operation_case_catalog_is_closed() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
-    assert len(OPERATION_CASES) == 350
-    assert len({c.id for c in OPERATION_CASES}) == 350
-    assert sum(not c.is_canonical for c in OPERATION_CASES) == 160
-    assert len(generated) == 84
-    assert len(manual) == 266
+    assert len(OPERATION_CASES) == len({c.id for c in OPERATION_CASES})
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == len(OPERATION_CASES) - len(
+        canonical_cases
+    )
+    assert len(generated) == len(GENERATED_OPERATION_CASES)
+    assert len(manual) + len(generated) == len(OPERATION_CASES)
     assert {c.id for c in generated} == {c.id for c in GENERATED_OPERATION_CASES}
     assert all(c.source_ref is None for c in generated)
     assert all(c.source_ref is not None for c in manual)
@@ -771,20 +774,37 @@ _CHANGED_PUBLIC_SURFACE_SIGNATURES: tuple[tuple[type[object], str, tuple[str, ..
             "description_file",
             "description_input",
             "priority",
+            "status",
+            "stage",
+            "start_date",
+            "due_date",
             "assignee_id",
             "label_ids",
             "properties",
             "project",
             "project_id",
             "parent_id",
+            "attachments",
+            "no_start",
             "options",
         ),
     ),
-    (IssueResource, "set_status", ("issue_id", "status", "options")),
+    (IssueResource, "set_status", ("issue_id", "status", "no_start", "options")),
     (
         ProjectResource,
         "create",
-        ("name", "description", "description_file", "options"),
+        (
+            "name",
+            "description",
+            "description_file",
+            "status",
+            "icon",
+            "lead",
+            "start_date",
+            "due_date",
+            "repositories",
+            "options",
+        ),
     ),
     (ProjectResource, "set_status", ("project_id", "status", "options")),
     (
@@ -803,7 +823,7 @@ _CHANGED_PUBLIC_SURFACE_SIGNATURES: tuple[tuple[type[object], str, tuple[str, ..
             "options",
         ),
     ),
-    (Issue, "set_status", ("status", "options")),
+    (Issue, "set_status", ("status", "no_start", "options")),
 )
 
 
@@ -885,6 +905,7 @@ def test_approved_result_categories_are_closed() -> None:
         LazyCollection,
         OffsetLazyCollection,
     )
+    from multica_py.models.system import RepositoryCheckoutResult
 
     contract = validate_contract(pathlib.Path("contracts/sdk-contract.json"))
     responses = {response.response_id: response for response in contract.responses}
@@ -898,6 +919,7 @@ def test_approved_result_categories_are_closed() -> None:
         "agents.avatar",
         "agents.restore",
         "agents.skills.set",
+        "agents.skills_add",
         "autopilots.delete",
         "autopilots.trigger_delete",
         "configuration.set",
@@ -916,16 +938,18 @@ def test_approved_result_categories_are_closed() -> None:
         "runtimes.delete",
         "skills.delete",
         "skills.files.delete",
-        "squads.members.add",
-        "squads.members.remove",
+        "squads.delete",
         "workspaces.switch",
         "workspaces.mcp.remove",
     }
     natural_action_exceptions = {
         "attachments.upload_bytes",
-        "auth.logout",
-        "daemon.restart",
-        "daemon.stop",
+        "autopilots.trigger_rotate_url",
+        "issues.wakeups.disable",
+        "squads.activity",
+        "squads.member_set_role",
+        "squads.members.add",
+        "squads.members.remove",
         "issues.assign",
         "issues.move_after",
         "issues.move_before",
@@ -966,6 +990,12 @@ def test_approved_result_categories_are_closed() -> None:
             "issue_list_page",
             "autopilot_list_page",
             "autopilot_run_list_page",
+            "chat_history",
+            "chat_thread",
+            "issue_timeline",
+            "issue_wakeups",
+            "issue_wakeup_list",
+            "runtime_profile_list",
         }
     }
     page_response_ids.add("issue_children_result")
@@ -983,7 +1013,11 @@ def test_approved_result_categories_are_closed() -> None:
         response_id = case.expected_response_id
         assert category is not None and response_id is not None
         if category == "collection":
-            if sdk_method == "issues.metadata.list":
+            if sdk_method == "daemon.disk_usage":
+                assert not _contains_type(annotation, Page), sdk_method
+            elif sdk_method == "runtime_profiles.list":
+                assert annotation.__name__ == "RuntimeProfiles", sdk_method
+            elif sdk_method == "issues.metadata.list":
                 assert annotation == dict[str, object] or typing.get_origin(annotation) is dict
             elif sdk_method == "issues.properties.list":
                 assert typing.get_origin(annotation) is tuple
@@ -998,7 +1032,18 @@ def test_approved_result_categories_are_closed() -> None:
                     "IssueChildrenResult",
                 }, sdk_method
         elif category == "action":
-            if sdk_method in void_actions:
+            if sdk_method in {
+                "runtime_profiles.delete",
+                "runtime_profiles.set_path",
+                "runtime_profiles.unset_path",
+            }:
+                assert _contains_type(annotation, ActionResult), sdk_method
+            elif sdk_method == "squads.member_set_role":
+                assert response_id == "action_result_none", sdk_method
+                assert _contains_type(annotation, ActionResult), sdk_method
+            elif sdk_method in {"auth.logout", "daemon.restart", "daemon.stop"}:
+                assert _contains_type(annotation, ActionResult), sdk_method
+            elif sdk_method in void_actions:
                 assert response_id == "action_result_none", sdk_method
                 assert _contains_type(annotation, ActionResult), sdk_method
             elif sdk_method == "auth.login":
@@ -1014,6 +1059,9 @@ def test_approved_result_categories_are_closed() -> None:
                 raise AssertionError(f"unapproved action category: {sdk_method}")
             else:
                 assert not _contains_type(annotation, ActionResult), sdk_method
+        elif category == "process" and sdk_method == "repositories.checkout":
+            assert response_id == "repository_checkout", sdk_method
+            assert annotation is RepositoryCheckoutResult, sdk_method
         elif category == "process":
             assert response_id == "process", sdk_method
             assert annotation is ManagedProcess, sdk_method

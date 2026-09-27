@@ -153,7 +153,7 @@ def test_path_upload_stages_exact_bytes_on_target_and_preview_stays_filesystem_p
     client = MulticaClient(executor=executor)
     command = client.attachments.upload_command(source)
 
-    assert command.commands == ("multica attachment upload '${temp.path}' --output json",)
+    assert command.commands == ("multica attachment upload '${temp.path}'",)
     assert executor.staged == []
 
     assert command.run() == AttachmentResult(id="a1", filename="file.txt")

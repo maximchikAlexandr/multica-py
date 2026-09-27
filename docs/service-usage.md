@@ -29,6 +29,13 @@ Application code should depend on a narrow adapter that owns this client.
 This keeps SDK exceptions, retry policy, and CLI compatibility checks at one
 boundary. Do not construct a new client for every operation.
 
+The public parity families are available from the same client: use
+`client.chats.history()`, `client.issues.wakeups.list(issue_id)`,
+`client.repositories.checkout(url)`, and `client.runtime_profiles.list()`.
+Their `*_command()` siblings provide redacted, side-effect-free previews; keep
+tokens and custom environment values out of logs and rely on the SDK's preview
+redaction.
+
 Use a derived view when a unit of work is scoped to a workspace:
 
 ```python

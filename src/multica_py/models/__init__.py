@@ -1,9 +1,18 @@
 from multica_py.models.autopilots import (
     AutopilotListPage,
     AutopilotRunListPage,
+    AutopilotTriggerRotateURL,
 )
+from multica_py.models.chats import ChatMessage, ChatPage
 from multica_py.models.common import ActionResult, CommentCursor, Page
 from multica_py.models.issue_activity import MetadataPage
+from multica_py.models.issue_timeline import IssueTimelineEvent, IssueTimelinePage
+from multica_py.models.issue_wakeups import (
+    IssueWakeup,
+    IssueWakeupEvent,
+    IssueWakeupEvents,
+    IssueWakeupPage,
+)
 from multica_py.models.issues import (
     DuplicateIssueReference,
     IssueChildrenResult,
@@ -21,12 +30,20 @@ from multica_py.models.relations import (
     OffsetPage,
     RelationMetadata,
 )
-from multica_py.models.system import RuntimeUpdateResult
+from multica_py.models.system import (
+    RepositoryCheckoutResult,
+    RuntimeProfile,
+    RuntimeProfiles,
+    RuntimeUpdateResult,
+)
 
 __all__ = [
     "ActionResult",
     "AutopilotListPage",
     "AutopilotRunListPage",
+    "AutopilotTriggerRotateURL",
+    "ChatMessage",
+    "ChatPage",
     "CommentCursor",
     "CursorLazyCollection",
     "CursorPage",
@@ -35,6 +52,12 @@ __all__ = [
     "IssueListFilter",
     "IssueListPage",
     "IssuePropertyAssignment",
+    "IssueTimelineEvent",
+    "IssueTimelinePage",
+    "IssueWakeup",
+    "IssueWakeupEvent",
+    "IssueWakeupEvents",
+    "IssueWakeupPage",
     "LazyCollection",
     "LazyMapping",
     "LocalDirectoryResourceRef",
@@ -44,5 +67,8 @@ __all__ = [
     "Page",
     "ProjectResourceRecord",
     "RelationMetadata",
+    "RepositoryCheckoutResult",
+    "RuntimeProfile",
+    "RuntimeProfiles",
     "RuntimeUpdateResult",
 ]
