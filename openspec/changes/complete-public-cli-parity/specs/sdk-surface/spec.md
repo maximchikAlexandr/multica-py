@@ -45,9 +45,25 @@ URL rotation; chat history/thread; issue wakeups; and runtime profiles. Existing
 equivalent typed operations SHALL be reused and duplicate wrappers SHALL NOT be
 added without a semantic difference.
 
+The approved `multica autopilot trigger-list` leaf SHALL be implemented as
+`AutopilotResource.trigger_list_command` and `AutopilotResource.trigger_list`.
+The command method SHALL accept the reviewed autopilot identity and operation
+options, use the exact native argv and approved mapping decoder/result, and
+the eager method SHALL execute that same plan and return the approved mapping
+result. The approved entry SHALL NOT be
+removed, deferred, or hidden by subset-only discovery tests.
+
 #### Scenario: Typed discovery matches the approved inventory
 - **WHEN** public method discovery is compared with all `typed` and `typed-equivalent` inventory rows
 - **THEN** each row resolves exactly once and no public domain capability relies only on raw argv
+
+#### Scenario: Trigger list is an exact public operation
+- **WHEN** callers list triggers for a valid autopilot identity
+- **THEN** the SDK executes `multica autopilot trigger-list <autopilot-id>` through the approved decoded transport and returns the reviewed mapping result without changing the approved symbol or disposition
+
+#### Scenario: Missing approved methods fail closure
+- **WHEN** an approved public symbol, command companion, or canonical vector is absent from runtime discovery
+- **THEN** strict contract and operation-case equality fail before release
 
 ### Requirement: Existing operations expose all behavior-affecting inputs
 Every existing typed operation SHALL expose or cite a proven typed equivalent

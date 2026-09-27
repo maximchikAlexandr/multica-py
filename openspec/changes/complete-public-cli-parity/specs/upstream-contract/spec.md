@@ -55,6 +55,12 @@ only the 164 currently approved operations and 167 currently reviewed response
 entrypoints. Every public leaf, effective input, emitted response variant, and
 nested field SHALL link to pinned source/help evidence, disposition, public
 symbol or transport equivalent, compatibility policy, and test references.
+For command rows, `typed` and `typed-equivalent` SHALL both resolve to an
+approved operation entrypoint and exactly one canonical vector. `transport`
+SHALL resolve to a reviewed concrete controlled transport API and SHALL NOT use
+generic raw argv as the asserted coverage mechanism. Validation SHALL derive
+and compare expected coverage from command identity and approved bindings; it
+SHALL NOT skip a command merely because its stored disposition is non-typed.
 
 #### Scenario: Approved-subset counts cannot certify parity
 - **WHEN** the current approved operation and response counts match their historical baselines but source/help inventory contains additional public items
@@ -63,6 +69,10 @@ symbol or transport equivalent, compatibility policy, and test references.
 #### Scenario: Unreviewed source patterns fail closed
 - **WHEN** extraction reports an unresolved helper, dynamic enum, imperative constraint, presence-sensitive branch, or unknown output mapping relevant to the public CLI
 - **THEN** the item remains a blocking review record and changes no generated behavior
+
+#### Scenario: Stored transport labels cannot bypass semantic validation
+- **WHEN** a public domain command row is labelled `transport` but a typed binding exists or the row names only generic CLI argv
+- **THEN** strict validation fails until the row is reconciled to `typed`, proven `typed-equivalent`, or a concrete genuine transport-only entrypoint
 
 ### Requirement: Complete response review follows actual CLI output
 The approved contract SHALL review every public response-producing entrypoint

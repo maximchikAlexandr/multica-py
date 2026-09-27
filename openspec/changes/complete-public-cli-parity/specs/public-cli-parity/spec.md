@@ -33,6 +33,14 @@ the field is server-only and never emitted by the public CLI.
 - **WHEN** a public domain capability is reachable only through `client.cli.command_command(...)`
 - **THEN** the item remains incomplete unless the inventory classifies it as a genuinely transport-only operation
 
+#### Scenario: Public command dispositions resolve to executable contracts
+- **WHEN** strict validation inspects any public runnable command row
+- **THEN** `typed` and `typed-equivalent` rows resolve to one public symbol, approved binding, result contract, and canonical vector, while `transport` rows resolve to one reviewed controlled process, terminal, text, or bytes entrypoint and never to generic dynamic argv
+
+#### Scenario: Existing typed methods cannot remain transport-only
+- **WHEN** public discovery or an approved operation already provides semantic coverage for a command leaf
+- **THEN** the row is classified as `typed` or evidence-backed `typed-equivalent`, and a generic `cli:<command>` transport disposition fails validation
+
 ### Requirement: Parity covers behavior and data rather than method names
 Typed parity SHALL preserve positional arity, input destinations, five-state
 presence where applicable, constraints, atomic timing, output envelope,

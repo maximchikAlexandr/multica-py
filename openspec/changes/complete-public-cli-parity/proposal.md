@@ -7,6 +7,13 @@ missing, and emitted fields are discarded. GitHub issue #93 supersedes prior
 deferrals and requires a source- and help-reconciled parity contract before
 implementation can be considered complete.
 
+Review of the integrated implementation at
+`c9429d82500a961fa2bac238ff6611da7dd33ef9` found that the inventory still
+certifies 136 public domain command leaves as generic raw transport and that an
+approved `AutopilotResource.trigger_list` entry has no public implementation.
+This revision closes those planning ambiguities without weakening the original
+parity boundary.
+
 ## What Changes
 
 - Establish a complete inventory of every public runnable CLI leaf, positional
@@ -35,6 +42,17 @@ implementation can be considered complete.
   reconciled, and CI fails on unclassified public drift.
 - Add offline, source-linked public-operation regression coverage and update
   API, coverage, compatibility, migration, and release documentation.
+- Reclassify every public command leaf against the actual SDK surface: a domain
+  leaf MUST resolve to a typed or proven typed-equivalent public operation;
+  `transport` is reserved for genuinely process-, terminal-, text-, or
+  byte-oriented leaves whose public contract is the controlled transport
+  abstraction itself. Generic `client.cli.command_command(...)` is never a
+  parity disposition.
+- Implement the already approved `AutopilotResource.trigger_list` and
+  `trigger_list_command` surface, with an exact canonical vector and strict
+  symbol/discovery equality; removing or deferring this entry is not approved.
+- Preserve all remaining round-one review findings as required remediation on
+  the existing implementation parent and draft PR before release readiness.
 - **BREAKING**: correct public return types and models where the existing SDK
   promises shapes the pinned CLI cannot emit; retain compatibility only where
   it does not perpetuate a false transport or data contract.

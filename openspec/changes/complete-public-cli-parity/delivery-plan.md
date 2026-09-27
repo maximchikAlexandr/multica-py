@@ -1,18 +1,22 @@
 ## Delivery contract
 
 - `delivery_mode`: `dag`
+- `graph_revision`: `2`
 - Planning issue: `MYL-303`
 - OpenSpec change: `complete-public-cli-parity`
 - Approved base: `d1b5f0e154c5587eca4cebd8bd2a6d39ae3d4d06`
+- Revision-2 implementation baseline:
+  `c9429d82500a961fa2bac238ff6611da7dd33ef9`.
 - Estimate authority: planning-issue properties `Estimate, hours`,
   `Estimate min, hours`, and `Estimate max, hours`. The estimate covers
-  remaining work for one experienced developer familiar with Python SDK and
-  CLI contract tooling, without AI acceleration. Confidence is medium and the
-  estimate is uncalibrated because no comparable measured execution history is
-  available. Material uncertainty comes from the unresolved absolute
-  CLI-to-SDK inventory, interactive transport behavior, response-variant
-  breadth, and strict cross-inventory closure. Tests were not run for the
-  estimate.
+  revision-2 remaining work from the exact implementation baseline for one
+  experienced developer familiar with Python SDK and CLI contract tooling,
+  without AI acceleration. Confidence is medium and the estimate is
+  uncalibrated because no comparable measured execution history is available.
+  Material uncertainty comes from evidence-backed reconciliation of 136 command
+  rows, secure environment transport allowed by the pinned CLI, executor
+  capability differences, and strict cross-inventory closure. Tests were not
+  run for the estimate.
 - Numeric totals are intentionally stored only in the authoritative issue
   properties. The `Estimate, hours` property exceeds the multi-WP threshold.
 - Topology rule: stages are topological layers, not WIP limits. Stage 2 first
@@ -26,6 +30,32 @@
   file allowlist. Directly related tests, fixtures, snapshots, and local docs
   are included unless assigned to an active sibling below.
 
+### Revision-2 migration and resume contract
+
+- Existing implementation parent `MYL-313` and draft PR #95 remain authoritative;
+  Manager MUST NOT create a replacement parent or PR.
+- The accepted WP-01 through WP-08 results and their stage-1 through stage-6
+  topology remain immutable `graph_revision=1` history. They MUST NOT be
+  reopened, rematerialized, or reassigned.
+- Revision 2 appends WP-09 through WP-12 only. Manager SHALL update the existing
+  implementation parent to `graph_revision=2`, record the verified planning
+  commit as the new planning input, and materialize exactly those four children
+  with the stage/dependency map below.
+- The verified planning commit MUST have
+  `c9429d82500a961fa2bac238ff6611da7dd33ef9` as its first parent and contain
+  OpenSpec artifacts only. WP-09 and WP-10 start from that exact planning SHA;
+  no production byte at the implementation baseline is rewritten by planning.
+- Accepted WP-09 and WP-10 result SHAs are integrated onto the existing feature
+  branch and draft PR. WP-11 starts only from the exact two-result fan-in SHA;
+  WP-12 starts only from the accepted WP-11 integration SHA.
+- The round-one findings ledger is complete: `R1-spec-01` through
+  `R1-spec-07`, `R1-security-01` through `R1-security-03`, `R1-quality-01`, and
+  `R1-tests-01` through `R1-tests-03`. No finding may be dropped because this
+  revision makes `R1-spec-02` and `R1-spec-03` unambiguous.
+- After WP-12, Manager SHALL publish one clean exact review SHA on PR #95 and
+  run a new parent-level four-profile review. Release readiness remains blocked
+  until that review accepts every ledger item.
+
 ### Stage map
 
 | WP | Stage | Direct `depends_on` |
@@ -38,6 +68,10 @@
 | WP-06 | 4 | WP-04 |
 | WP-07 | 5 | WP-05, WP-06 |
 | WP-08 | 6 | WP-07 |
+| WP-09 | 7 | WP-08 |
+| WP-10 | 7 | WP-08 |
+| WP-11 | 8 | WP-09, WP-10 |
+| WP-12 | 9 | WP-11 |
 
 ## WP-01 — Closed inventory, approved contract, and shared primitives
 
@@ -256,6 +290,106 @@
 - Parallel-safety rationale: terminal integration gate. It follows WP-07 and
   serializes any final repair against the complete tree; no sibling writes exist.
 
+## WP-09 — Public command inventory and trigger-list closure
+
+- `stage`: 7
+- `depends_on`: WP-08
+- OpenSpec task coverage: `9.1`–`9.5`.
+- Deliverable: every public command row has its evidence-backed semantic
+  disposition and executable contract; generic raw transport certification is
+  impossible; the approved autopilot trigger-list API exists; coverage and
+  migration claims match the reconciled inventory.
+- Owned responsibility scope: approved contract inventory/operations/bindings/
+  responses/vectors, schema and validator, deterministic generated projection,
+  autopilot trigger-list resource/wire/model path, canonical operation catalog,
+  contract/discovery tests, and the directly coupled coverage/migration docs.
+- Critical shared files: exclusive stage-7 ownership of
+  `contracts/sdk-contract.json`, contract schema/tooling, generated approved SDK,
+  `resources/autopilots.py`, global operation cases, and command-inventory docs.
+  WP-10 MUST NOT edit these files.
+- Contract surface: command disposition semantics; symbol/binding/result/vector
+  equality; `AutopilotResource.trigger_list_command` and `trigger_list`.
+- Definition of done/evidence: all 136 reviewed rows are individually
+  reconciled; remaining `transport` rows name concrete controlled APIs and have
+  canonical evidence; missing/ambiguous/raw-shunted mutations fail validation;
+  trigger-list passes exact argv, decoder, discovery, generated, and canonical
+  tests; deterministic output is byte-stable.
+- Parallel-safety rationale: contract/autopilot/inventory write zone is disjoint
+  from WP-10's executor, auth/setup, agent-env, and secret-representation zone.
+
+## WP-10 — Secret and interactive process boundary repair
+
+- `stage`: 7
+- `depends_on`: WP-08
+- OpenSpec task coverage: `9.7`–`9.9`.
+- Deliverable: webhook and environment secrets are safe in representation and
+  execution, and every advertised interactive operation either has working
+  terminal write/close semantics on its executor or fails capability checks
+  before launch.
+- Owned responsibility scope: entity/result secret policy, autopilot wire-to-
+  public secret projection excluding trigger-list, agent env resource/result/
+  channel, safe-content and redaction primitives, auth/setup terminal routing,
+  executor capability handling, managed process lifecycle, and focused sentinel
+  and backend conformance tests.
+- Critical shared files: WP-10 owns executor/transport/content/redaction and
+  agent/auth/setup paths during stage 7. It MUST NOT edit the approved contract,
+  generated projection, global operation catalog, trigger-list implementation,
+  or coverage docs owned by WP-09.
+- Contract surface: secret-aware repr/projection; execution-time secret channel;
+  terminal capability, write, close, cancel, timeout, semaphore, and redaction.
+- Definition of done/evidence: exact sentinels are absent from repr/log/error/
+  ordinary projection and process-visible argv; explicit approved access remains;
+  prompt login/setup use terminal mode; Local, SSH, and Microsandbox behavior is
+  either conforming or rejected before process creation; focused Ruff/mypy and
+  backend tests pass.
+- Parallel-safety rationale: security/process files and focused tests do not
+  overlap WP-09's contract/autopilot-list/global-catalog write zone.
+
+## WP-11 — Test-policy convergence and full finding fan-in
+
+- `stage`: 8
+- `depends_on`: WP-09, WP-10
+- OpenSpec task coverage: `9.6`, `9.10`.
+- Deliverable: the integrated contract and security changes use repository-wide
+  shared fixtures, exact argv assertions, frozen tables, and focused tests; all
+  round-one spec/standards, quality, security, and test findings have traceable
+  closure evidence.
+- Owned responsibility scope: shared test factories/case types and affected
+  WP02/WP05/WP06, operation, inventory, entity, transport, and executor tests;
+  only directly necessary integrated production repair after fan-in.
+- Critical shared files: sole owner of cross-family test consolidation after both
+  stage-7 results integrate. No sibling exists at this stage.
+- Contract surface: exact command assertions, test-discovery equality, shared
+  fixture policy, focused failure diagnosis, and per-finding evidence ledger.
+- Definition of done/evidence: no duplicated local transport/result factories,
+  partial argv assertions, repeated equivalent shapes, or F-grade changed tests
+  remain; every ledger item maps to a passing focused regression and exact
+  source location; Ruff and mypy pass for affected source/tests.
+- Parallel-safety rationale: serialized join package after both stage-7 owners;
+  it resolves shared-test overlap without concurrent writes.
+
+## WP-12 — Revision-2 exact-SHA release and review gate
+
+- `stage`: 9
+- `depends_on`: WP-11
+- OpenSpec task coverage: `9.11`.
+- Deliverable: one clean revision-2 implementation SHA on the existing branch
+  and PR with the complete original and remediation acceptance gates passing,
+  ready for a new parent-level four-profile review.
+- Owned responsibility scope: final task-evidence reconciliation, verification
+  evidence, and only directly necessary serialized repairs found by mandatory
+  gates; no new scope, disposition, or contract decision.
+- Critical shared files: terminal integration owner after WP-11; no sibling.
+- Contract surface: full public command/operation equality, generated freshness,
+  security/process conformance, package contents, documentation truthfulness,
+  and exact delivery SHA.
+- Definition of done/evidence: tasks 1–9 match verified evidence; all strict
+  OpenSpec, contract, generation, style, type, non-live test/coverage, live
+  exclusion, build, package, dependency, and content commands pass at one clean
+  SHA; the SHA is published on PR #95 and the new four-profile review is
+  requested with the complete ledger.
+- Parallel-safety rationale: final serial gate after all remediation fan-in.
+
 ## Coverage audit
 
 Every task in `tasks.md` is assigned exactly once:
@@ -269,9 +403,18 @@ Every task in `tasks.md` is assigned exactly once:
 - WP-06: `5.5`–`5.8`, `6.2`, `6.3`, `6.5`, `6.6`, `7.5`, `7.7`, `7.8`.
 - WP-07: `6.9`, `8.1`–`8.5`.
 - WP-08: `8.6`–`8.8`.
+- WP-09: `9.1`–`9.5`.
+- WP-10: `9.7`–`9.9`.
+- WP-11: `9.6`, `9.10`.
+- WP-12: `9.11`.
 
 Stage 2 (`WP-02`, `WP-03`) is the correction frontier. Stage 3 (`WP-04`)
 joins it and proves A1–A10 before any section-5 task begins. Stage 4 (`WP-05`,
 `WP-06`) is the new-family frontier. Both frontiers have disjoint production
 write zones and family-local tests; critical shared integration files are
 isolated in predecessor WP-01 or successor WP-07.
+
+Revision 2 adds one real parallel frontier at stage 7 (`WP-09`, `WP-10`). It
+preserves all revision-1 stages and dependencies, then joins the disjoint
+contract/API and security/process repairs in WP-11 before the WP-12 exact-SHA
+release gate.

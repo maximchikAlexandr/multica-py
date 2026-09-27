@@ -11,6 +11,15 @@ Recursive source/help review found existing typed operations with invalid argv
 or incompatible output shapes, public leaves without typed APIs, omitted
 behavioral inputs, and public records whose nested fields are discarded.
 
+Planning revision 2 is based on the integrated, clean implementation snapshot
+`c9429d82500a961fa2bac238ff6611da7dd33ef9`. Round-one review proved two
+planning defects: all 136 remaining public command leaves were given the same
+generic `transport` disposition even when typed SDK methods already exist, and
+the approved/generated `AutopilotResource.trigger_list` contract was not
+implemented. The existing draft PR and implementation parent remain the
+delivery vehicles; production changes at the snapshot are not rewritten by
+this planning commit.
+
 The current architecture is a sound foundation: immutable public models,
 resource classes, `Command[T]` plans, one controlled `CliTransport`, explicit
 execution modes, frozen table-driven operation cases, and an approved contract
@@ -185,6 +194,44 @@ Alternative: ship compatibility shims that preserve known false results.
 Rejected because false JSON flags, rejected argv, and data loss cannot be made
 safe by deprecation warnings.
 
+### Decision 9: Classify command leaves by public semantic coverage
+
+Every public runnable command leaf is reconciled against discovered public SDK
+methods and approved entrypoints. A domain command is `typed` when one public
+method maps directly to it, or `typed-equivalent` when a different public method
+is proven equivalent in inputs, timing, side effects, output, errors, and
+lifecycle. Both dispositions require a resolvable public symbol, approved
+binding, response/result contract, and exactly one canonical vector.
+
+`transport` is allowed only when the reviewed public API is intentionally a
+controlled process/terminal/text/bytes abstraction rather than a domain method;
+the row must name that concrete typed transport entrypoint and its canonical
+evidence. A raw dynamic argv escape hatch is never sufficient. Validation checks
+all public command rows, not only rows pre-labelled `typed`, and rejects generic
+`cli:...` shunting, missing symbols, ambiguous bindings, and subset comparisons.
+
+Alternative: keep the 136 rows as transport coverage because the CLI can still
+be invoked. Rejected because reachability is not the typed semantic parity
+required by the proposal and specs.
+
+### Decision 10: Implement the approved trigger-list API
+
+`AutopilotResource.trigger_list_command(autopilot_id, *, options=None)` returns
+the approved command plan for `multica autopilot trigger-list <autopilot_id>`;
+`trigger_list(...)` executes it and returns the reviewed mapping result already
+named by the approved contract. Both methods use the approved mapping decoder,
+appear in public discovery, and have one exact canonical
+argv/transport/response vector.
+
+Removing, deferring, renaming, or weakening the approved entry is not an
+implementation choice. If native evidence contradicts the current response
+catalog, implementation stops for a new planning revision rather than silently
+changing the public disposition.
+
+Alternative: delete the contract entry because implementation omitted it.
+Rejected because the pinned public leaf is in scope and the existing resource
+already implements the adjacent trigger lifecycle.
+
 ## Risks / Trade-offs
 
 - **Inventory breadth can hide an unresolved helper** → validation rejects every
@@ -222,6 +269,15 @@ safe by deprecation warnings.
    the exact delivery SHA.
 7. Publish migration and coverage documentation. Roll back by reverting the
    atomic implementation delivery if a release gate fails.
+8. For planning revision 2, retain `c9429d82500a961fa2bac238ff6611da7dd33ef9`
+   as the immutable implementation baseline, append only the remediation WPs
+   defined in `delivery-plan.md`, and resume the existing implementation parent
+   and draft PR from the verified planning-revision SHA.
+9. Reconcile all public command rows before changing generated output; then
+   implement trigger-list and the independent security/process repairs, join
+   them through the shared test-conformance package, and rerun the exact-SHA
+   release gate. Rollback is a revert of post-baseline remediation commits; the
+   original integrated snapshot remains an ancestor.
 
 ## Open Questions
 

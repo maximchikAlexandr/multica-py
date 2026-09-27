@@ -45,6 +45,12 @@ package exports. The comparison SHALL fail on missing rows, duplicates,
 unresolved aliases/factories, false equivalent claims, stale deferrals,
 unmapped emitted fields, or public symbols lacking test evidence.
 
+For public command leaves, the gate SHALL compare the complete command set to
+approved bindings and public discovery with exact equality. It SHALL reject a
+stored `transport` label that bypasses symbol, binding, response, or canonical
+vector validation, and SHALL reject operation-case subset assertions that hide
+an approved but absent method.
+
 #### Scenario: Unknown source pattern remains blocking
 - **WHEN** a relevant extractor review item has no reviewed resolution
 - **THEN** strict validation fails and generated behavior remains unchanged
@@ -52,6 +58,10 @@ unmapped emitted fields, or public symbols lacking test evidence.
 #### Scenario: Public method without canonical evidence fails
 - **WHEN** discovery finds a CLI-executing method without one canonical argv/transport/response case
 - **THEN** offline completeness validation fails
+
+#### Scenario: Approved method missing from runtime fails
+- **WHEN** the approved contract names `AutopilotResource.trigger_list` or any other public method that runtime discovery or canonical operation cases omit
+- **THEN** the exact-equality closure gate fails and release readiness is withheld
 
 ### Requirement: Verification is safe and layered
 Unit and contract tests SHALL prove exact mappings, presence, validation,
