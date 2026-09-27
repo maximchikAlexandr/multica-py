@@ -80,6 +80,6 @@
 - [x] 8.3 Extend component fake-CLI coverage across JSON, text, bytes, stdin/file, spawn, streaming, foreground, terminal-safe, redaction, cleanup, and cancellation paths.
 - [x] 8.4 Close public method, contract inventory, generated-binding, response field, docs, `__all__`, bound surface, package artifact, and exclusion bijections with no allowlist for unknown public items.
 - [x] 8.5 Update README, API, CLI coverage, compatibility, service usage, migration, changelog, and examples with corrected signatures/results, coverage dimensions, secret/interactive safety, and breaking migrations.
-- [ ] 8.6 Run focused tests after each resource slice, then Ruff check/format, mypy source/tests/scripts/tools, full non-live pytest with coverage, and live-node collection exclusion.
-- [ ] 8.7 Run strict OpenSpec validation, pinned-source approved-contract validation, two-render determinism, generated freshness, source-link/content audits, build, wheel/sdist package tests, and dependency checks.
-- [ ] 8.8 Verify one exact clean delivery SHA, record optional prepared-live status separately, and confirm no downloaded binary, source checkout, evidence, transient report, secret, or visual HTML is tracked or packaged.
+- [x] 8.6 Run focused tests after each resource slice, then Ruff check/format, mypy source/tests/scripts/tools, full non-live pytest with coverage, and live-node collection exclusion.
+- [x] 8.7 Run strict OpenSpec validation, pinned-source approved-contract validation, two-render determinism, generated freshness, source-link/content audits, build, wheel/sdist package tests, and dependency checks.
+- [x] 8.8 Verify one exact clean delivery SHA, record optional prepared-live status separately, and confirm no downloaded binary, source checkout, evidence, transient report, secret, or visual HTML is tracked or packaged.

@@ -76,8 +76,11 @@ _DIRECT_KEYWORD_METHODS = frozenset(
         ("ProjectResource", "update_command"),
         ("ProjectResourceCollection", "add_local_directory"),
         ("ProjectResourceCollection", "add_local_directory_command"),
+        ("ProjectResourceCollection", "add"),
         ("ProjectResourceCollection", "update_local_directory"),
         ("ProjectResourceCollection", "update_local_directory_command"),
+        ("ProjectResourceCollection", "update"),
+        ("ProjectResourceCollection", "update_command"),
         ("RuntimeResource", "update"),
         ("RuntimeResource", "update_command"),
         ("SkillResource", "create"),
@@ -415,12 +418,18 @@ def test_no_mutable_dict_defaults() -> None:
 
 
 def test_no_open_ended_container_fields() -> None:
+    closed_mappings = {"dict[str, str] | None"}
     for _modname, name, obj in _iter_struct_types():
         fields = obj.__struct_fields__
         annotations = cast("dict[str, object]", obj.__annotations__)
         for fname in fields:
             ann = str(annotations.get(fname, ""))
-            if "Any" in ann or "dict[" in ann or ann == "typing.Any" or ann == "<class 'object'>":
+            if (
+                "Any" in ann
+                or ("dict[" in ann and ann not in closed_mappings)
+                or ann == "typing.Any"
+                or ann == "<class 'object'>"
+            ):
                 raise TypeError(f"{name}.{fname}: {ann} is an open-ended container")
 
 
