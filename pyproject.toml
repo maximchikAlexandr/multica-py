@@ -25,7 +25,11 @@ classifiers = [
 ]
 dependencies = [
     "msgspec>=0.19,<2",
+    "typer>=0.12,<1",
 ]
+
+[project.scripts]
+multica-py = "multica_py.cli:app"
 
 [project.optional-dependencies]
 microsandbox = ["microsandbox>=0.6,<0.7"]
@@ -171,7 +175,17 @@ pytest_add_cli_args_test_selection = [
   "-m",
   "not live and not serial",
 ]
-also_copy = [".zeroshot", "Makefile", "openspec", "scripts", "contracts", "tools", "src"]
+also_copy = [
+    ".agents",
+    ".github",
+    ".zeroshot",
+    "Makefile",
+    "openspec",
+    "scripts",
+    "contracts",
+    "tools",
+    "src",
+]
 
 [[tool.mypy.overrides]]
 module = ["msgspec"]

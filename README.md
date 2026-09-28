@@ -212,6 +212,21 @@ The full pattern catalog is in [docs/service-usage.md](docs/service-usage.md).
 See also the [API surface](docs/api.md), [migration guide](docs/migration.md),
 and [CLI coverage](docs/cli-coverage.md).
 
+### Report an SDK bug
+
+The bundled CLI keeps reports private until an independent review approves the
+exact payload:
+
+```bash
+multica-py bug-report init --title "Short reproducible failure" --kind bug
+# Fill the returned report.md and have an independent agent write reviews/1.json.
+multica-py bug-report submit REPORT_ID --dry-run --json
+multica-py bug-report submit REPORT_ID
+```
+
+Drafts live under `~/.multica-py/bug-reports/`. Submission always targets this
+repository with the `bug` label; there is no review-bypass flag.
+
 Raw CLI commands are deliberately bounded. `login --token <token>` remains a
 supported raw form; interactive auth, setup, daemon,
 and maintenance process forms must use their typed SDK methods. Unknown
