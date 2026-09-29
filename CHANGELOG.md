@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.0
+
+- Approved target: Multica CLI `0.6.0`, release `398016451`, source commit
+  `ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02`, with compatibility bounds
+  `[0.5.3, 0.6.1)` and direct migration from `0.5.3`.
+- Covers 205 target command nodes, 193 operations, and 196 response entrypoints;
+  18 responses change and 178 remain unchanged from the approved baseline.
+- Evolves wakeups in place with v2 presence semantics and typed trigger, delete,
+  checkin, and runs actions; adds task cursors and ordered issue attachments.
+- Preserves comment supplements, pull-request auto-complete target status,
+  workspace MCP zero counts, open timeline values, and explicit live-status
+  separation. Contract, generated runtime, code, fixtures, docs, and package
+  claims roll back together if an offline gate fails.
+
 ## 0.5.3
 
 - Approved target: Multica CLI `0.5.3`, release `395523214`, source commit

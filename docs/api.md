@@ -6,16 +6,24 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
-## Approved v0.5.3 target
+## Approved v0.6.0 target
 
-This SDK contract supports Multica CLI `0.5.3` at commit
-`ff8b285497809e084915016c40c2bc5e5991ffbc` (release `395523214`), with the
-tested interval `[0.4.42, 0.5.4)`. Migrate directly from `0.5.2`; no
+This SDK contract supports Multica CLI `0.6.0` at commit
+`ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02` (release `398016451`), with the
+tested interval `[0.5.3, 0.6.1)`. Migrate directly from `0.5.3`; no
 intermediate SDK release is required. The complete public CLI parity surface
-is represented by typed eager and `*_command()` methods, including chat
-history/thread, issue wakeups, repository checkout, runtime profiles, and
-inherited global options. The `0.5.2` duplicate/supplement/property gates
-remain in force.
+is represented by typed eager and `*_command()` methods: 205 target command
+nodes, 193 operations, and 196 response entrypoints, including wakeup v2,
+task cursors, issue attachments, comment supplements, pull-request
+auto-complete status, and workspace MCP agent counts.
+
+The six existing wakeup entrypoints evolve in place and add typed
+`trigger`, `delete`, `checkin`, and `runs` actions. Task cursors remain scoped
+to `AgentResource.tasks`; issue runs retain their existing pagination. Issue
+attachments are ordered local paths, use a minimum effective timeout of 60
+seconds, and never retry a failure after upload. Omitted, null, and empty
+response values retain their approved presence semantics; live backend status
+is a separate gate and is not implied by offline validation.
 
 The `Comment.deleted_at` field is `None` only when the wire field is omitted;
 valid target timestamps are preserved, while explicit null and malformed values

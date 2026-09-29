@@ -15,6 +15,31 @@ There is no provider registry or automatic provider discovery. See
 target-path/environment/staging rules, process-control guarantees, and the
 provider-adapter contract.
 
+## v0.6.0 direct migration
+
+The approved target is Multica CLI `0.6.0` at source commit
+`ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02` (release `398016451`). The direct
+compatibility interval is `[0.5.3, 0.6.1)`; the baseline is
+`c1842ae2dfcd0cc5e739b7785d3209d5e72d01ed`, with no intermediate SDK release.
+The refreshed contract covers 205 command nodes, 193 operations, and 196
+response entrypoints, including 18 changed and 178 unchanged responses.
+
+Existing wakeups gain v2 deadline, condition, fire-limit, pause, and provenance
+fields plus typed `trigger`, `delete`, `checkin`, and `runs` actions. Agent task
+history accepts an opaque `before` cursor; the cursor is not added to issue
+runs. Issue updates accept ordered local attachments, an explicit external-file
+opt-in, attach-only execution, a 60-second minimum effective timeout, and
+redacted post-upload failures without automatic retry. Comment supplements,
+pull-request auto-complete target status, workspace MCP `agent_count`, and
+wakeup timeline actions preserve omission/null/open-value semantics.
+
+The four lifecycle leaves are target-only and do not duplicate the 193-operation
+registry. Offline contract, source-link, typing, lint, test, build, package,
+and forbidden-content gates are required; live backend status is reported
+separately. If a gate fails, roll back the contract, generated projection,
+handwritten code, fixtures, docs, and package claims together to the approved
+`0.5.3` baseline.
+
 ## Complete public CLI parity
 
 The 0.5.3 parity release adds typed command plans for chat history/thread,
@@ -273,7 +298,7 @@ use immutable snapshots: object nodes implement the public
 when data crosses into a serializer; callers should use those methods rather
 than serializing an internal snapshot node directly.
 
-## v0.5.3 SDK patch migration
+## Historical v0.5.3 SDK patch migration
 
 ### Direct 0.5.2 → 0.5.3 migration
 
