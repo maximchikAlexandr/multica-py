@@ -347,11 +347,36 @@ class SkillResource(BaseResource):
         return self.delete_command(skill_id, options=options).run()
 
     def import_from_url_command(
-        self, url: str, *, options: OperationOptions | None = None
+        self,
+        url: str | None = None,
+        *,
+        file: str | None = None,
+        on_conflict: str = "fail",
+        options: OperationOptions | None = None,
     ) -> Command[Skill]:
-        return self._decoded_command(
-            ("skill", "import", "--url", url), _SkillWire, options=options
-        )._map(lambda skill: _skill_from_wire(skill)._with_client(self._client))
+        if (url is None) == (file is None):
+            raise TypeError("exactly one of url or file is required")
+        if on_conflict not in {"fail", "overwrite", "rename", "skip"}:
+            raise ValueError("on_conflict must be fail, overwrite, rename, or skip")
+        if url is not None:
+            args = ["skill", "import", "--url", url]
+        else:
+            assert file is not None
+            args = ["skill", "import", "--file", file]
+        if on_conflict != "fail":
+            args.extend(("--on-conflict", on_conflict))
+        return self._decoded_command(tuple(args), _SkillWire, options=options)._map(
+            lambda skill: _skill_from_wire(skill)._with_client(self._client)
+        )
 
-    def import_from_url(self, url: str, *, options: OperationOptions | None = None) -> Skill:
-        return self.import_from_url_command(url, options=options).run()
+    def import_from_url(
+        self,
+        url: str | None = None,
+        *,
+        file: str | None = None,
+        on_conflict: str = "fail",
+        options: OperationOptions | None = None,
+    ) -> Skill:
+        return self.import_from_url_command(
+            url, file=file, on_conflict=on_conflict, options=options
+        ).run()

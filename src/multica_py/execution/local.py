@@ -147,6 +147,19 @@ class LocalProcessHandle:
     def stderr_lines(self) -> Iterator[str]:
         return self._stream_lines("stderr")
 
+    def write_stdin(self, data: bytes) -> None:
+        stdin = self._pipe("stdin")
+        if stdin is None:
+            raise ProcessOutputCaptureError("Process stdin was not captured")
+        stdin.write(data)
+        stdin.flush()
+
+    def close_stdin(self) -> None:
+        stdin = self._pipe("stdin")
+        if stdin is not None:
+            stdin.close()
+            self._process.stdin = None
+
     def close(self) -> None:
         close_process_pipes(self._process)
         with self._stream_lock:
@@ -192,6 +205,10 @@ class LocalExecutor:
             raise ExecutableNotRunnableError(
                 f"Executable not runnable: {request.argv[0]}"
             ) from error
+
+    def terminal(self, request: ExecutionRequest) -> LocalProcessHandle:
+        """Start a process while retaining its interactive stdin channel."""
+        return self.spawn(request)
 
     @contextlib.contextmanager
     def stage(self, label: str, content: bytes) -> Iterator[str]:

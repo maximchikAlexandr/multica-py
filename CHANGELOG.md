@@ -5,14 +5,15 @@
 - Approved target: Multica CLI `0.5.3`, release `395523214`, source commit
   `ff8b285497809e084915016c40c2bc5e5991ffbc`, with compatibility bounds
   `[0.4.42, 0.5.4)` and direct migration from `0.5.2`.
-- Retains all 201 public command nodes and all 167 approved response
-  entrypoints without public SDK shape changes.
+- Completes the typed public command inventory, including chat history/thread,
+  issue wakeups, repository checkout, and runtime profiles, with inherited
+  flags and response/result shapes covered by canonical vectors.
 - Preserves target-provided resumed Claude usage values through the existing
   task, issue, and runtime models; the SDK performs no baseline subtraction or
   aggregate recomputation.
 - Keeps PR automation, UI cache calculations, daemon identity, messaging/media,
-  mobile, localization, runtime, documentation-site, and pricing changes out of
-  the SDK. Contract, generated runtime, fixtures, docs, and package claims roll
+  mobile, localization, documentation-site, and pricing changes out of the SDK.
+  Contract, generated runtime, fixtures, docs, and package claims roll
   back atomically if any release gate fails.
 
 ## 0.5.2

@@ -248,6 +248,13 @@ class _SshProcessHandle:
         self._output.claim("streaming")
         yield from (decode_text(line) for line in self._stderr)
 
+    def write_stdin(self, data: bytes) -> None:
+        self._stdin.write(data)
+        self._stdin.flush()
+
+    def close_stdin(self) -> None:
+        self._stdin.close()
+
     def close(self) -> None:
         self._stdin.close()
         self._channel.close()
@@ -330,6 +337,18 @@ class SshExecutor:
             raise ExecutableNotRunnableError(
                 f"Executable not runnable: {request.argv[0]}"
             ) from error
+        except Exception as error:
+            raise self._map_error(error) from error
+
+    def terminal(self, request: ExecutionRequest) -> _SshProcessHandle:
+        """Open a PTY-backed managed channel for interactive CLI leaves."""
+        try:
+            stdin, stdout, stderr = self._client.exec_command(
+                _serialize_ssh_command(request.cwd, request.environment, request.argv),
+                timeout=_seconds(request.timeout),
+                get_pty=True,
+            )
+            return _SshProcessHandle(self, request.argv, stdin, stdout, stderr, request.timeout)
         except Exception as error:
             raise self._map_error(error) from error
 

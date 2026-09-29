@@ -12,11 +12,11 @@ The current reviewed interval is `[0.4.42, 0.5.4)`. This direct `0.5.2` →
 commit `ff8b285497809e084915016c40c2bc5e5991ffbc`; it does not publish an
 intermediate SDK release. The target is release `395523214`. Existing
 operation-level gates remain unchanged; the global `0.4.42` floor applies where
-already approved. The public command and response shapes are unchanged, while
-resumed Claude usage values are corrected by the target and passed through the
-existing models without SDK arithmetic. Unrelated PR automation, UI, daemon,
-messaging/media, mobile, localization, runtime, documentation-site, and pricing
-changes remain outside the SDK.
+already approved. The typed SDK maintains a closed parity inventory for the
+public command tree, including inherited flags and the chat, wakeup,
+repository-checkout, and runtime-profile families. Unrelated PR automation, UI,
+daemon, messaging/media, mobile, localization, runtime, documentation-site,
+and pricing changes remain outside the SDK.
 Historical note: the superseded `0.5.0` → `0.5.1` review is retained only as
 historical comparison evidence, not as the current compatibility claim.
 

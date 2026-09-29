@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+import datetime
+from collections.abc import Iterator
+from typing import cast, overload
+
 import msgspec
+
+from multica_py.sentinels import Unset, UnsetType
 
 
 class RepositoryRecord(msgspec.Struct, frozen=True, kw_only=True):
@@ -16,10 +22,68 @@ class RepositoryMutationResult(msgspec.Struct, frozen=True, kw_only=True):
     repos: tuple[RepositoryRecord, ...] = ()
 
 
+class RepositoryCheckoutResult(msgspec.Struct, frozen=True, kw_only=True):
+    """The path emitted by the CLI after a native repository checkout."""
+
+    path: str
+
+    def __fspath__(self) -> str:
+        return self.path
+
+    def __str__(self) -> str:
+        return self.path
+
+
+class RuntimeProfile(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    runtime_type: str | None = None
+    protocol_family: str | None = None
+    command_name: str = ""
+    display_name: str = ""
+    description: str | None = None
+    enabled: bool | None = None
+    path: str | None = None
+
+
+class RuntimeProfiles(msgspec.Struct, frozen=True, kw_only=True):
+    items: tuple[RuntimeProfile, ...] = ()
+
+    def __iter__(self) -> Iterator[RuntimeProfile]:
+        return iter(self.items)
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    @overload
+    def __getitem__(self, index: int) -> RuntimeProfile: ...
+
+    @overload
+    def __getitem__(
+        self, index: slice[int | None, int | None, int | None]
+    ) -> tuple[RuntimeProfile, ...]: ...
+
+    def __getitem__(
+        self, index: int | slice[int | None, int | None, int | None]
+    ) -> RuntimeProfile | tuple[RuntimeProfile, ...]:
+        return self.items[index]
+
+
 class RuntimeDefinition(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     name: str
     version: str | None = None
+    runtime_type: str | None = None
+    provider: str | None = None
+    profile_id: str | None = None
+    profile_name: str | None = None
+    device_id: str | None = None
+    device_name: str | None = None
+    owner_id: str | None = None
+    status: str | None = None
+    protocol_family: str | None = None
+    command_name: str | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
 
 class RuntimeUsage(msgspec.Struct, frozen=True, kw_only=True):
@@ -30,6 +94,15 @@ class RuntimeUsage(msgspec.Struct, frozen=True, kw_only=True):
     output_tokens: int
     cache_read_tokens: int
     cache_write_tokens: int
+    total_tokens: int | None = None
+    input_cost: float | None = None
+    output_cost: float | None = None
+    cache_read_cost: float | None = None
+    cache_write_cost: float | None = None
+    total_cost: float | None = None
+    currency: str | None = None
+    duration_seconds: float | None = None
+    created_at: datetime.datetime | None = None
 
 
 class RuntimeActivity(msgspec.Struct, frozen=True, kw_only=True):
@@ -42,23 +115,226 @@ class RuntimeUpdateResult(msgspec.Struct, frozen=True, kw_only=True):
     status: str
     output: str | None = None
     error: str | None = None
+    target_version: str | None = None
+    current_version: str | None = None
+    started_at: datetime.datetime | None = None
+    completed_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
 
 class AttachmentResult(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     filename: str
     url: str | None = None
+    markdown_url: str | None = None
+    markdown: str | None = None
+
+
+class AttachmentDownloadResult(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    filename: str
+    path: str
+    size: str | None = None
+
+
+class DaemonWorkspace(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    runtimes: tuple[str, ...] = ()
+    path: str | None = None
+    status: str | None = None
+    size_bytes: int | None = None
+    artifact_size_bytes: int | None = None
 
 
 class DaemonStatus(msgspec.Struct, frozen=True, kw_only=True):
-    running: bool = False
+    status: str = ""
     pid: int | None = None
-    uptime: float | None = None
+    uptime: str | None = None
+    os: str | None = None
+    profile: str | None = None
+    daemon_id: str | None = None
+    device_name: str | None = None
+    server_url: str | None = None
+    cli_version: str | None = None
+    launched_by: str | None = None
+    active_task_count: int | None = None
+    running_task_count: int | None = None
+    resource_wait_task_count: int | None = None
+    repo_maintenance_active: int | None = None
+    repo_checkout_waiters: int | None = None
+    pending_terminal_report_count: int | None = None
+    pending_terminal_report_bytes: int | None = None
+    failed_terminal_report_count: int | None = None
+    failed_terminal_report_bytes: int | None = None
+    agents: tuple[str, ...] | None = None
+    skipped_agents: dict[str, str] | None = None
+    reload_pending_reason: str | None = None
+    workspaces: tuple[DaemonWorkspace, ...] | None = None
+    # Kept only for decoding pre-health-endpoint SDK fixtures. The pinned CLI
+    # emits ``status`` and never fabricates this boolean.
+    running: bool | None = None
 
 
-class DaemonDiskUsageEntry(msgspec.Struct, frozen=True, kw_only=True):
+class DaemonLaunchOptions(msgspec.Struct, frozen=True, kw_only=True):
+    """Presence-aware controls shared by daemon start and restart."""
+
+    foreground: bool | UnsetType = Unset
+    identity: str | UnsetType = Unset
+    data_dir: str | UnsetType = Unset
+    pid_file: str | UnsetType = Unset
+    poll_interval: str | float | UnsetType = Unset
+    heartbeat_interval: str | float | UnsetType = Unset
+    watchdog_interval: str | float | UnsetType = Unset
+    max_concurrent_tasks: int | UnsetType = Unset
+    update: bool | UnsetType = Unset
+    reload: bool | UnsetType = Unset
+    daemon_id: str | UnsetType = Unset
+    device_name: str | UnsetType = Unset
+    runtime_name: str | UnsetType = Unset
+    workspaces_root: str | UnsetType = Unset
+    ws_claim_poll_interval: str | float | UnsetType = Unset
+    agent_timeout: str | float | UnsetType = Unset
+    codex_semantic_inactivity_timeout: str | float | UnsetType = Unset
+    codex_handshake_timeout: str | float | UnsetType = Unset
+    no_auto_update: bool | UnsetType = Unset
+    auto_update_interval: str | float | UnsetType = Unset
+    no_auto_reload: bool | UnsetType = Unset
+
+    def __post_init__(self) -> None:
+        for name in ("foreground", "update", "reload", "no_auto_update", "no_auto_reload"):
+            value = cast("object", getattr(self, name))
+            if value is not Unset and not isinstance(value, bool):
+                raise TypeError(f"{name} must be a bool or Unset")
+        for name in (
+            "identity",
+            "data_dir",
+            "pid_file",
+            "daemon_id",
+            "device_name",
+            "runtime_name",
+            "workspaces_root",
+        ):
+            value = cast("object", getattr(self, name))
+            if value is not Unset and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"{name} must be nonblank when provided")
+        for name in (
+            "poll_interval",
+            "heartbeat_interval",
+            "watchdog_interval",
+            "ws_claim_poll_interval",
+            "agent_timeout",
+            "codex_semantic_inactivity_timeout",
+            "codex_handshake_timeout",
+            "auto_update_interval",
+        ):
+            value = cast("object", getattr(self, name))
+            if value is not Unset and (
+                not isinstance(value, (str, float, int)) or isinstance(value, bool)
+            ):
+                raise TypeError(f"{name} must be a duration string or number")
+        concurrency = cast("object", self.max_concurrent_tasks)
+        if concurrency is not Unset and (
+            not isinstance(concurrency, int) or isinstance(concurrency, bool) or concurrency < 1
+        ):
+            raise ValueError("max_concurrent_tasks must be a positive integer")
+
+    def to_argv(self) -> tuple[str, ...]:
+        """Render only present controls in the reviewed daemon flag order."""
+
+        args: list[str] = []
+        for name, flag in (
+            ("foreground", "--foreground"),
+            ("daemon_id", "--daemon-id"),
+            ("device_name", "--device-name"),
+            ("runtime_name", "--runtime-name"),
+            ("workspaces_root", "--workspaces-root"),
+            ("poll_interval", "--poll-interval"),
+            ("ws_claim_poll_interval", "--ws-claim-poll-interval"),
+            ("heartbeat_interval", "--heartbeat-interval"),
+            ("agent_timeout", "--agent-timeout"),
+            ("codex_semantic_inactivity_timeout", "--codex-semantic-inactivity-timeout"),
+            ("codex_handshake_timeout", "--codex-handshake-timeout"),
+            ("max_concurrent_tasks", "--max-concurrent-tasks"),
+            ("no_auto_update", "--no-auto-update"),
+            ("auto_update_interval", "--auto-update-interval"),
+            ("no_auto_reload", "--no-auto-reload"),
+            ("identity", "--identity"),
+            ("data_dir", "--data-dir"),
+            ("pid_file", "--pid-file"),
+            ("watchdog_interval", "--watchdog-interval"),
+            ("update", "--update"),
+            ("reload", "--reload"),
+        ):
+            value = cast("object", getattr(self, name))
+            if value is Unset:
+                continue
+            if isinstance(value, bool):
+                args.append(f"{flag}={'true' if value else 'false'}")
+                continue
+            args.extend((flag, str(value)))
+        return tuple(args)
+
+
+class DaemonTaskDiskUsage(msgspec.Struct, frozen=True, kw_only=True):
+    workspace_id: str
+    workspace_short: str
+    task_short: str
     path: str
+    kind: str
+    parent_id: str | None = None
+    parent_status: str = ""
+    age_seconds: int = 0
     size_bytes: int = 0
+    artifact_size_bytes: int = 0
+
+
+# Compatibility name for callers that imported the pre-report row model.
+DaemonDiskUsageEntry = DaemonTaskDiskUsage
+
+
+class DaemonWorkspaceDiskUsage(msgspec.Struct, frozen=True, kw_only=True):
+    workspace_id: str
+    workspace_short: str
+    task_count: int = 0
+    size_bytes: int = 0
+    artifact_size_bytes: int = 0
+    artifact_ratio: float = 0.0
+    oldest_age_seconds: int = 0
+
+
+class DaemonDiskUsageReport(msgspec.Struct, frozen=True, kw_only=True):
+    workspaces_root: str
+    generated_at: datetime.datetime
+    artifact_patterns: tuple[str, ...] = ()
+    managed_artifact_subpaths: tuple[str, ...] = ()
+    tasks: tuple[DaemonTaskDiskUsage, ...] = ()
+    workspaces: tuple[DaemonWorkspaceDiskUsage, ...] = ()
+    total_task_count: int = 0
+    total_workspace_count: int = 0
+    total_size_bytes: int = 0
+    total_artifact_size_bytes: int = 0
+    total_artifact_ratio: float = 0.0
+    repo_cache_size_bytes: int = 0
+    repo_cache_count: int = 0
+
+
+class DaemonDiskUsageRoot(msgspec.Struct, frozen=True, kw_only=True):
+    profile: str
+    report: DaemonDiskUsageReport
+
+
+class DaemonAggregateDiskUsageReport(msgspec.Struct, frozen=True, kw_only=True):
+    generated_at: datetime.datetime
+    artifact_patterns: tuple[str, ...] = ()
+    managed_artifact_subpaths: tuple[str, ...] = ()
+    roots: tuple[DaemonDiskUsageRoot, ...] = ()
+    total_task_count: int = 0
+    total_workspace_count: int = 0
+    total_size_bytes: int = 0
+    total_artifact_size_bytes: int = 0
+    total_artifact_ratio: float = 0.0
+    total_repo_cache_size_bytes: int = 0
+    total_repo_cache_count: int = 0
 
 
 class AuthenticationStatus(msgspec.Struct, frozen=True, kw_only=True):
@@ -84,6 +360,16 @@ class SquadMember(msgspec.Struct, frozen=True, kw_only=True):
     member_id: str
     member_type: str
     role: str
+    name: str | None = None
+    email: str | None = None
+    status: str | None = None
+    avatar_url: str | None = None
+
+
+class SquadMemberRemoval(msgspec.Struct, frozen=True, kw_only=True):
+    squad_id: str
+    member_id: str
+    removed: bool
 
 
 class MaintenanceVersion(msgspec.Struct, frozen=True, kw_only=True):

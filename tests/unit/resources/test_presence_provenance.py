@@ -102,7 +102,7 @@ def test_autopilot_project_presence_preserves_public_value(
         ).encode(),
         _AutopilotWire,
     )
-    autopilot = _autopilot_from_wire(wire)
+    autopilot = _autopilot_from_wire(wire, secret_access=True)
 
     assert autopilot.project_id == (None if case.wire_value is msgspec.UNSET else case.wire_value)
     assert ("project_id", case.seed) in autopilot._wire_presence

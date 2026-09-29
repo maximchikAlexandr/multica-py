@@ -11,14 +11,11 @@ singular-reference example is in
 This SDK contract supports Multica CLI `0.5.3` at commit
 `ff8b285497809e084915016c40c2bc5e5991ffbc` (release `395523214`), with the
 tested interval `[0.4.42, 0.5.4)`. Migrate directly from `0.5.2`; no
-intermediate SDK release is required. All 201 public command nodes and all 167
-approved response entrypoints retain their existing shape. Multica `0.5.3`
-corrects resumed Claude session usage accounting behind the existing task,
-issue, and runtime usage models; the SDK preserves returned values without
-provider-session reads or client-side subtraction. The `issue wakeup` family,
-runtime profiles, PR automation, UI cache calculations, daemon identity,
-messaging/media, mobile, localization, and pricing changes remain outside the
-SDK surface. The `0.5.2` duplicate/supplement/property gates remain in force.
+intermediate SDK release is required. The complete public CLI parity surface
+is represented by typed eager and `*_command()` methods, including chat
+history/thread, issue wakeups, repository checkout, runtime profiles, and
+inherited global options. The `0.5.2` duplicate/supplement/property gates
+remain in force.
 
 The `Comment.deleted_at` field is `None` only when the wire field is omitted;
 valid target timestamps are preserved, while explicit null and malformed values
@@ -90,7 +87,7 @@ reviewed process-oriented forms are rejected locally before transport:
 | Raw form | Typed replacement |
 |---|---|
 | root `login` (with or without suffixes) | `client.auth.login()` → `ManagedProcess` |
-| `login --token` or an option-like token operand | `client.auth.login(token)` → `ActionResult[str]` |
+| tokenless `login` or an option-like token operand | `client.auth.login(token)` → `ActionResult[str]` |
 | `setup cloud` | `client.setup.cloud()` → `ManagedProcess` |
 | `setup self-host` | `client.setup.self_host(url)` → `ManagedProcess` |
 | `daemon start` | `client.daemon.start()` → `ManagedProcess` |
@@ -220,7 +217,7 @@ All resources accessed as attributes of `MulticaClient`:
 - **skills.files**: `list/upsert/delete`
 - **properties**: `list/get/create/update/archive/unarchive` for the workspace property catalog
 - **workspaces.mcp**: `list/add/update/remove` for workspace MCP servers
-- **autopilots**: `list/get/create/update/delete/trigger/history/trigger_add/trigger_update/trigger_delete`
+- **autopilots**: `list/get/create/update/delete/trigger/trigger_list/history/trigger_add/trigger_update/trigger_delete`
 - **repositories**: `list/add/remove/checkout`
 - **runtimes**: `list/usage/activity/update/rename/delete`; delete preserves
   empty success and raises the centralized conflict with optional reviewed
@@ -248,9 +245,12 @@ Skill bodies are projections: `skills.get()` explicitly requests full content,
 with_content=True)` opts into file bodies. Omitted content is not fabricated as
 an empty string.
 
-The target's `issue timeline`, `autopilot trigger-list`, and compact
-`issue runs --active/--siblings` envelopes remain deferred. Existing default
-issue run history continues to return the full TaskRun page.
+The target's `issue timeline` and `autopilot trigger-list` leaves have typed
+coverage. `client.autopilots.trigger_list(autopilot_id)` returns the reviewed
+mapping result, and `trigger_list_command()` exposes the exact
+`multica autopilot trigger-list <autopilot-id> --output json` plan. Compact
+`issue runs` envelopes support the typed `active` and `siblings` filters; existing
+default issue run history continues to return the full TaskRun page.
 
 ### Schedule triggers
 

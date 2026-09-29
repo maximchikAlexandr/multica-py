@@ -9,6 +9,7 @@ import msgspec
 
 from multica_py._internal.concurrency import ProcessSemaphore
 from multica_py._internal.decoders import decode_text
+from multica_py._internal.redaction import redact_bytes, redact_text
 from multica_py.exceptions import (
     ProcessOutputCaptureError,
     ProcessOutputModeError,
@@ -33,6 +34,21 @@ class ProcessResult(msgspec.Struct, frozen=True, forbid_unknown_fields=True):
         return not self.ok
 
 
+def _written_secret_variants(data: bytes) -> tuple[bytes, ...]:
+    variants: list[bytes] = [data]
+    for line in data.splitlines():
+        if line:
+            variants.extend((line, line + b"\n", line + b"\r\n"))
+    stripped = data.rstrip(b"\r\n")
+    if stripped:
+        variants.append(stripped)
+    unique: list[bytes] = []
+    for variant in variants:
+        if variant and variant not in unique:
+            unique.append(variant)
+    return tuple(unique)
+
+
 # ponytail: MUST be closed (use `with`) to release the process semaphore; __del__ is a backstop, not a primary path
 class ManagedProcess:
     def __init__(
@@ -41,11 +57,14 @@ class ManagedProcess:
         argv: tuple[str, ...] = (),
         semaphore: ProcessSemaphore | None = None,
         cleanup: Callable[[], None] | None = None,
+        secret_values: tuple[str, ...] = (),
     ) -> None:
         self._handle = handle
         self._argv = argv
         self._semaphore = semaphore
         self._cleanup = cleanup
+        self._secret_values = secret_values
+        self._written_secrets: list[bytes] = []
         self._closed = False
         self._output = OutputOwnership()
         self._result: ProcessResult | None = None
@@ -66,12 +85,37 @@ class ManagedProcess:
         self._claim_mode("streaming", consumer)
 
     def _make_result(self, result: ExecutionResult) -> ProcessResult:
+        stdout = redact_bytes(
+            result.stdout,
+            secret_values=self._secret_values,
+            secret_bytes=tuple(self._written_secrets),
+        )
+        stderr = redact_bytes(
+            result.stderr,
+            secret_values=self._secret_values,
+            secret_bytes=tuple(self._written_secrets),
+        )
         return ProcessResult(
             self._argv,
             result.exit_code,
-            decode_text(result.stdout),
-            decode_text(result.stderr),
+            decode_text(stdout),
+            decode_text(stderr),
         )
+
+    def _stream_secret_values(self) -> tuple[str, ...]:
+        written = tuple(value.decode("utf-8", errors="replace") for value in self._written_secrets)
+        values = (*self._secret_values, *written)
+        normalized = tuple(value.rstrip("\r\n") for value in values if value.rstrip("\r\n"))
+        seen: set[str] = set()
+        result: list[str] = []
+        for value in (*values, *normalized):
+            if value not in seen:
+                seen.add(value)
+                result.append(value)
+        return tuple(result)
+
+    def _redact_stream_line(self, line: str) -> str:
+        return redact_text(line, secret_values=self._stream_secret_values())
 
     def _finalize(self) -> None:
         if self._closed:
@@ -156,7 +200,7 @@ class ManagedProcess:
         self._active_streams.add("stdout")
         try:
             for line in self._handle.stdout_lines():
-                yield line.rstrip("\n")
+                yield self._redact_stream_line(line).rstrip("\n")
         finally:
             self._active_streams.discard("stdout")
             self._maybe_finalize()
@@ -166,10 +210,22 @@ class ManagedProcess:
         self._active_streams.add("stderr")
         try:
             for line in self._handle.stderr_lines():
-                yield line.rstrip("\n")
+                yield self._redact_stream_line(line).rstrip("\n")
         finally:
             self._active_streams.discard("stderr")
             self._maybe_finalize()
+
+    def write(self, data: bytes) -> None:
+        """Write interactive input without taking ownership of the process."""
+        if self._closed:
+            raise ProcessOutputModeError("closed", "interactive stdin")
+        if data:
+            self._written_secrets.extend(_written_secret_variants(data))
+        self._handle.write_stdin(data)
+
+    def close_input(self) -> None:
+        if not self._closed:
+            self._handle.close_stdin()
 
     def _kill_immediate(self) -> None:
         self._handle.kill_immediate()

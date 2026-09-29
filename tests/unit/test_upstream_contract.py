@@ -277,8 +277,8 @@ def test_closed_contract_rejects_invalid_rows(
 
 def test_v3_catalogs_are_closed() -> None:
     contract = validate_contract(APPROVED)
-    assert len(contract.test_vectors) == 84
-    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 70
+    assert len(contract.test_vectors) == 113
+    assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 99
     assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 14
     assert {item.public_name for item in contract.enum_definitions} == {
         "IssueSort",
@@ -554,12 +554,12 @@ def test_failed_pilot_rollback_binds_descriptors_to_manual_resource() -> None:
         assert builder_name not in rendered_runtime
         assert not hasattr(approved_sdk, builder_name)
 
-    resource_source = inspect.getsource(SquadMemberResource)
+    resource_source = " ".join(inspect.getsource(SquadMemberResource).split())
     assert all(builder_name not in resource_source for builder_name in _SQUAD_MEMBER_BUILDER_NAMES)
     assert '("squad", "member", "list", squad_id)' in resource_source
-    assert '("squad", "member", "add", squad_id, member_id)' in resource_source
-    assert '("squad", "member", "remove", squad_id, member_id)' in resource_source
-    assert resource_source.count("validate_nonblank(squad_id)") == 3
+    assert '"squad", "member", "add"' in resource_source
+    assert '"squad", "member", "remove"' in resource_source
+    assert resource_source.count("validate_nonblank(squad_id)") == 4
 
 
 def test_public_conventions_and_response_catalog_are_typed_and_closed() -> None:
@@ -936,6 +936,54 @@ def test_command_inventory_rejects_duplicate_delta_entries(
         load_contract(path)
 
 
+def test_public_inventory_is_mandatory(tmp_path: pathlib.Path) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    document.pop("inventory")
+    path = tmp_path / "missing-inventory.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ContractError, match="missing fields"):
+        load_contract(path)
+
+
+def test_public_inventory_rejects_stale_deferral_and_duplicate_identity(
+    tmp_path: pathlib.Path,
+) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    document["inventory"]["items"][0]["disposition"] = "deferred"
+    stale = tmp_path / "stale-inventory.json"
+    stale.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(ContractError, match="disposition is not approved"):
+        load_contract(stale)
+
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    duplicate = dict(document["inventory"]["items"][0])
+    document["inventory"]["items"].append(duplicate)
+    duplicate_path = tmp_path / "duplicate-inventory.json"
+    duplicate_path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(ContractError, match="IDs must be unique"):
+        load_contract(duplicate_path)
+
+
+def test_public_inventory_rejects_incomplete_identity_coverage(tmp_path: pathlib.Path) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    document["inventory"]["expected_identities"]["command"].pop()
+    path = tmp_path / "incomplete-inventory.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ContractError, match="expected public identities"):
+        load_contract(path)
+
+
+def test_generated_runtime_contains_reviewed_inventory() -> None:
+    assert len(approved_sdk.PUBLIC_INVENTORY) == 693
+    assert approved_sdk.PUBLIC_INVENTORY[0].disposition in {
+        "typed",
+        "typed-equivalent",
+        "transport",
+    }
+
+
 def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     tmp_path: pathlib.Path,
 ) -> None:
@@ -1150,6 +1198,8 @@ def test_collect_writes_review_items_and_never_contract(tmp_path: pathlib.Path) 
     assert (output / "evidence.json").is_file()
     evidence = json.loads((output / "evidence.json").read_text(encoding="utf-8"))
     assert {item["kind"] for item in evidence["facts"]} == {"cobra_use"}
+    assert ["git", "-C", str(source), "rev-parse", "HEAD"] in evidence["commands"]
+    assert ["git", "-C", str(source), "status", "--porcelain"] in evidence["commands"]
     review = json.loads((output / "review-items.json").read_text(encoding="utf-8"))
     assert review["items"]
     assert {item["code"] for item in review["items"]} <= {

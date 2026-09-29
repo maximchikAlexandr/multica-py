@@ -17,7 +17,7 @@ from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.execution import LocalExecutor
-from multica_py.models.system import AttachmentResult
+from multica_py.models.system import AttachmentDownloadResult, AttachmentResult
 from multica_py.resources import attachments
 from multica_py.resources.attachments import AttachmentResource, UploadSource
 
@@ -40,22 +40,24 @@ ATTACHMENT_CASES = (
         "upload",
         (_UPLOAD_PATH,),
         (),
-        ("attachment", "upload", str(_UPLOAD_PATH), "--output", "json"),
+        ("attachment", "upload", str(_UPLOAD_PATH)),
         _PAYLOAD,
     ),
     AttachmentCase(
         "upload",
         (_UPLOAD_PATH,),
         (("task_id", "task_1"),),
-        ("attachment", "upload", str(_UPLOAD_PATH), "--task", "task_1", "--output", "json"),
+        ("attachment", "upload", str(_UPLOAD_PATH), "--task", "task_1"),
         _PAYLOAD,
     ),
     AttachmentCase(
         "download",
         ("a1",),
         (("output_dir", _OUTPUT_DIR),),
-        ("attachment", "download", "a1", "--output-dir", str(_OUTPUT_DIR), "--output", "json"),
-        msgspec.json.encode(str(_OUTPUT_DIR / "file.txt")),
+        ("attachment", "download", "a1", "--output-dir", str(_OUTPUT_DIR)),
+        msgspec.json.encode(
+            {"id": "a1", "filename": "file.txt", "path": str(_OUTPUT_DIR / "file.txt"), "size": "0"}
+        ),
     ),
 )
 
@@ -110,7 +112,7 @@ ATTACHMENT_SIGNATURE_CASES = (
             ("output_dir", inspect.Parameter.KEYWORD_ONLY, pathlib.Path),
             ("options", inspect.Parameter.KEYWORD_ONLY, OperationOptions | None),
         ),
-        pathlib.Path,
+        AttachmentDownloadResult,
     ),
 )
 
@@ -129,7 +131,7 @@ ATTACHMENT_UNSAFE_CASES = tuple(
 
 
 @pytest.mark.parametrize("case", ATTACHMENT_CASES)
-def test_attachment_surface_uses_governed_argv(
+def _assert_attachment_surface_uses_governed_argv(
     case: AttachmentCase, mock_transport: MagicMock
 ) -> None:
     transport = mock_transport
@@ -149,7 +151,9 @@ def test_attachment_surface_uses_governed_argv(
     if case.method == "upload":
         assert isinstance(result, AttachmentResult)
     else:
-        assert result == _OUTPUT_DIR / "file.txt"
+        assert result == AttachmentDownloadResult(
+            id="a1", filename="file.txt", path=str(_OUTPUT_DIR / "file.txt"), size="0"
+        )
     if case.method == "upload":
         expected_argv = (
             *case.expected_argv[:2],
@@ -161,6 +165,13 @@ def test_attachment_surface_uses_governed_argv(
         expected_argv = case.expected_argv
     transport.run_bytes.assert_called_once_with(expected_argv, stdin=None, timeout=None)
     transport.run_text.assert_not_called()
+
+
+@pytest.mark.parametrize("case", ATTACHMENT_CASES)
+def test_attachment_surface_uses_governed_argv(
+    case: AttachmentCase, mock_transport: MagicMock
+) -> None:
+    _assert_attachment_surface_uses_governed_argv(case, mock_transport)
 
 
 @pytest.mark.parametrize("case", ATTACHMENT_VALIDATION_CASES)
@@ -228,9 +239,7 @@ def test_unified_upload_accepts_bytes_and_binary_streams_lazily(mock_transport: 
 
     assert stream.read_calls == 0
     assert not stream.closed
-    assert command.commands == (
-        "multica attachment upload '${temp.path}' --task task_1 --output json",
-    )
+    assert command.commands == ("multica attachment upload '${temp.path}' --task task_1",)
     assert transport.run_bytes.call_count == 0
 
     result = command.run()
@@ -256,9 +265,9 @@ def test_unified_upload_derives_safe_stream_name_and_preserves_path_sources(
     stream_command = resource.upload_command(stream)
     path_command = resource.upload_command("relative/file.txt")
 
-    assert stream_command.commands == ("multica attachment upload '${temp.path}' --output json",)
+    assert stream_command.commands == ("multica attachment upload '${temp.path}'",)
     assert stream.tell() == 0
-    assert path_command.commands == ("multica attachment upload '${temp.path}' --output json",)
+    assert path_command.commands == ("multica attachment upload '${temp.path}'",)
     assert path_command._plan._stage_provider is not None
     assert transport.run_bytes.call_count == 0
 
@@ -349,7 +358,7 @@ def test_unified_upload_accepts_double_dot_basename(mock_transport: MagicMock) -
 
     command = resource.upload_command(b"payload", filename="report..txt")
 
-    assert command.commands == ("multica attachment upload '${temp.path}' --output json",)
+    assert command.commands == ("multica attachment upload '${temp.path}'",)
 
 
 def test_unified_upload_failure_cleans_stream_temp_directory(mock_transport: MagicMock) -> None:
@@ -373,7 +382,7 @@ def test_unified_upload_failure_cleans_stream_temp_directory(mock_transport: Mag
 
 
 @pytest.mark.parametrize("case", ATTACHMENT_BYTES_CASES)
-def test_attachment_byte_helpers_preserve_content_and_clean_temporary_files(
+def _assert_attachment_byte_helpers_preserve_content_and_clean_temporary_files(
     case: AttachmentBytesCase,
     mock_transport: MagicMock,
 ) -> None:
@@ -392,7 +401,14 @@ def test_attachment_byte_helpers_preserve_content_and_clean_temporary_files(
             path = directory / case.name
             path.write_bytes(case.payload)
             temporary_directories.append(directory)
-            stdout = msgspec.json.encode(str(path))
+            stdout = msgspec.json.encode(
+                {
+                    "id": "a1",
+                    "filename": case.name,
+                    "path": str(path),
+                    "size": str(len(case.payload)),
+                }
+            )
         return RawCommandResult(argv, 0, stdout, b"", datetime.timedelta())
 
     transport.run_bytes.side_effect = complete
@@ -410,6 +426,14 @@ def test_attachment_byte_helpers_preserve_content_and_clean_temporary_files(
     transport.run_bytes.assert_called_once()
     transport.run_text.assert_not_called()
     assert not temporary_directories[0].exists()
+
+
+@pytest.mark.parametrize("case", ATTACHMENT_BYTES_CASES)
+def test_attachment_byte_helpers_preserve_content_and_clean_temporary_files(
+    case: AttachmentBytesCase,
+    mock_transport: MagicMock,
+) -> None:
+    _assert_attachment_byte_helpers_preserve_content_and_clean_temporary_files(case, mock_transport)
 
 
 @pytest.mark.parametrize("case", ATTACHMENT_BYTES_CASES)
@@ -460,7 +484,7 @@ def test_attachment_byte_helpers_reject_unsafe_names_before_transport(
 
 
 @pytest.mark.parametrize("kind", ("outside", "parent", "symlink"))
-def test_download_bytes_rejects_untrusted_cli_paths(
+def _assert_download_bytes_rejects_untrusted_cli_paths(
     kind: str, tmp_path: pathlib.Path, mock_transport: MagicMock
 ) -> None:
     transport = mock_transport
@@ -478,7 +502,13 @@ def test_download_bytes_rejects_untrusted_cli_paths(
             link.symlink_to(external)
             returned = link
         return RawCommandResult(
-            argv, 0, msgspec.json.encode(str(returned)), b"", datetime.timedelta()
+            argv,
+            0,
+            msgspec.json.encode(
+                {"id": "a1", "filename": "attachment.bin", "path": str(returned), "size": "6"}
+            ),
+            b"",
+            datetime.timedelta(),
         )
 
     transport.run_bytes.side_effect = complete
@@ -488,3 +518,10 @@ def test_download_bytes_rejects_untrusted_cli_paths(
         resource.download_bytes("a1")
 
     transport.run_bytes.assert_called_once()
+
+
+@pytest.mark.parametrize("kind", ("outside", "parent", "symlink"))
+def test_download_bytes_rejects_untrusted_cli_paths(
+    kind: str, tmp_path: pathlib.Path, mock_transport: MagicMock
+) -> None:
+    _assert_download_bytes_rejects_untrusted_cli_paths(kind, tmp_path, mock_transport)

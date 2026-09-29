@@ -23,7 +23,7 @@ T_mapped = TypeVar("T_mapped")
 T_source = TypeVar("T_source")
 T_result = TypeVar("T_result")
 
-_StepMode = Literal["run_bytes", "run_text", "spawn"]
+_StepMode = Literal["run_bytes", "run_text", "spawn", "terminal"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,6 +152,8 @@ class _CommandPlan(Generic[T_co]):
             if step.decode is None:
                 return text_result
             return step.decode(text_result.text.encode("utf-8"), " ".join(argv))
+        if step.mode == "terminal":
+            return self.transport.terminal(argv)
         return self.transport.spawn(argv)
 
     def _resolve_ref(

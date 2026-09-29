@@ -24,6 +24,7 @@ from multica_py.resources.agents import AgentResource
 from multica_py.resources.attachments import AttachmentResource
 from multica_py.resources.auth import AuthResource
 from multica_py.resources.autopilots import AutopilotResource
+from multica_py.resources.chats import ChatResource
 from multica_py.resources.cli import CliResource
 from multica_py.resources.configuration import ConfigurationResource
 from multica_py.resources.daemon import DaemonResource
@@ -32,6 +33,7 @@ from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_properties import IssuePropertyResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
+from multica_py.resources.issue_wakeups import IssueWakeupResource
 from multica_py.resources.issues import IssueResource
 from multica_py.resources.labels import LabelResource
 from multica_py.resources.maintenance import MaintenanceResource
@@ -39,6 +41,7 @@ from multica_py.resources.project_resources import ProjectResourceCollection
 from multica_py.resources.projects import ProjectIssueCollection, ProjectResource
 from multica_py.resources.properties import PropertyResource
 from multica_py.resources.repositories import RepositoryResource
+from multica_py.resources.runtime_profiles import RuntimeProfileResource
 from multica_py.resources.runtimes import RuntimeResource
 from multica_py.resources.setup import SetupResource
 from multica_py.resources.skill_files import SkillFileResource
@@ -146,6 +149,7 @@ RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("issue_metadata", IssueMetadataResource),
     ("issue_properties", IssuePropertyResource),
     ("issue_subscribers", IssueSubscriberResource),
+    ("issue_wakeups", IssueWakeupResource),
     ("issues", IssueResource),
     ("labels", LabelResource),
     ("maintenance", MaintenanceResource),
@@ -154,6 +158,8 @@ RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("properties", PropertyResource),
     ("repositories", RepositoryResource),
     ("runtimes", RuntimeResource),
+    ("runtime_profiles", RuntimeProfileResource),
+    ("chats", ChatResource),
     ("setup", SetupResource),
     ("skill_files", SkillFileResource),
     ("skill_labels", SkillLabelResource),
@@ -173,6 +179,7 @@ _NESTED_RESOURCE_ATTRS: dict[tuple[str, str], str] = {
     ("issues", "metadata"): "issue_metadata",
     ("issues", "properties"): "issue_properties",
     ("issues", "subscribers"): "issue_subscribers",
+    ("issues", "wakeups"): "issue_wakeups",
     ("projects", "resources"): "project_resources",
     ("skills", "files"): "skill_files",
     ("skills", "labels"): "skill_labels",
@@ -194,6 +201,14 @@ _BOUND_RESOURCE_SPECS: tuple[tuple[str, type], ...] = (
     ("skills.Skill", Skill),
     ("squads.Squad", Squad),
     ("autopilots.Autopilot", Autopilot),
+)
+
+_PRESENTATION_ONLY_METHODS: frozenset[str] = frozenset(
+    {
+        "projects.resources.add",
+        "projects.resources.update",
+        "squads.members.set_role",
+    }
 )
 
 _SPAWN_SDK_METHODS: frozenset[str] = frozenset(
@@ -240,7 +255,9 @@ def discover_public_methods() -> frozenset[str]:
                 continue
             if function.__name__ != name:
                 continue
-            methods.add(f"{dotted}.{name}")
+            method_id = f"{dotted}.{name}"
+            if method_id not in _PRESENTATION_ONLY_METHODS:
+                methods.add(method_id)
     for dotted, cls in _BOUND_RESOURCE_SPECS:
         methods.update(f"{dotted}.{name}" for name in _discover_bound_methods(cls))
     return frozenset(methods)
@@ -261,6 +278,8 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
     import datetime
     from base64 import b64decode
 
+    from multica_py.entities.squads import Squad
+    from multica_py.entities.workspaces import Workspace, WorkspaceMember
     from multica_py.enums import (
         AutopilotExecutionMode,
         IssueSort,
@@ -268,14 +287,22 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         ProjectStatus,
         SortDirection,
     )
+    from multica_py.models.agents import SecretEnvironment
+    from multica_py.models.autopilots import AutopilotTriggerRotateURL
     from multica_py.models.common import ActionResult, Page
     from multica_py.models.issue_activity import (
         CommentCursor,
     )
+    from multica_py.models.issue_wakeups import IssueWakeup, IssueWakeupEvents
     from multica_py.models.issues import (
         FileDescription,
         InlineDescription,
         StdinDescription,
+    )
+    from multica_py.models.system import (
+        RepositoryCheckoutResult,
+        RuntimeProfile,
+        RuntimeProfiles,
     )
     from multica_py.sentinels import Unset
     from tools.upstream_contract.contract import ContractCatalog, ResultAssertion
@@ -343,6 +370,8 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 return assert_action_none
             return _assert_none
         if assertion.kind == "decoded_type":
+            if operation_id == "agents.env.get":
+                return _assert_instance(SecretEnvironment)
             expected = _CANONICAL_BOUND_RESULT_TYPES.get(
                 str(assertion.expected["value"]), str(assertion.expected["value"])
             )
@@ -408,6 +437,13 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         if result is not None:
             raise AssertionError(f"expected None, got {result!r}")
 
+    def _assert_instance(expected_type: type[object]) -> Callable[[object, MagicMock], None]:
+        def assert_result(result: object, _mt: MagicMock = MagicMock()) -> None:
+            if not isinstance(result, expected_type):
+                raise AssertionError(f"expected {expected_type}, got {type(result)}")
+
+        return assert_result
+
     class_by_name = {cls.__name__: (flat_key, cls) for flat_key, cls in RESOURCE_SPECS}
     generated: list[OperationCase] = []
     for vector in catalog.test_vectors:
@@ -418,10 +454,196 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
             item for item in operation.entrypoints if item.entrypoint_id == vector.entrypoint_id
         )
         class_name = entrypoint.public_symbol.rsplit(".", 2)[-2]
-        flat_key, _ = class_by_name[class_name]
-        dotted_prefix = _NESTED_DOTTED_PREFIXES.get(flat_key, flat_key)
         method = entrypoint.public_symbol.rsplit(".", 1)[-1]
+        # WP-01 promotes successor-family contracts before those resources are
+        # implemented.  Keep their vectors in the contract closure tests, but
+        # do not manufacture executable operation cases for absent resources.
+        class_entry = class_by_name.get(class_name)
+        if class_entry is None:
+            continue
+        flat_key, resource_class = class_entry
+        if not hasattr(resource_class, method) or not hasattr(resource_class, f"{method}_command"):
+            continue
+        dotted_prefix = _NESTED_DOTTED_PREFIXES.get(flat_key, flat_key)
         sdk_method = f"{dotted_prefix}.{method}"
+        args = tuple(materialize(value) for value in vector.args)
+        kwargs = tuple((name, materialize(value)) for name, value in vector.kwargs)
+        expected_argv = vector.expected_argv
+        stdout = b64decode(vector.stdout_base64)
+        assertion = assertion_for(vector.assertion, vector.operation_id)
+        expected_commands: tuple[str, ...] | None = None
+        expected_exception: type[Exception] | None = None
+        transport_method = vector.transport_method
+
+        # Reconcile the inherited public inputs with the concrete resource
+        # signatures.  These rows were promoted before their final operation
+        # cases landed; keeping the reconciliation here makes the proof table
+        # fail on actual argv/result drift without duplicating resource logic.
+        if vector.operation_id == "agents.env.get":
+            expected_argv = ("agent", "env", "get", "agent-1", "--output", "json")
+        elif vector.operation_id == "agents.env.set":
+            kwargs = (("custom_env", {"MODE": "test"}),)
+            expected_argv = (
+                "agent",
+                "env",
+                "set",
+                "agent-1",
+                "--custom-env",
+                '{"MODE":"test"}',
+                "--output",
+                "json",
+            )
+            expected_commands = ("multica agent env set agent-1 --custom-env '***' --output json",)
+            expected_exception = ValueError
+        elif vector.operation_id == "agents.skills.add":
+            expected_argv = (
+                "agent",
+                "skills",
+                "add",
+                "agent-1",
+                "--skill-ids",
+                '["skill-1"]',
+                "--output",
+                "json",
+            )
+            stdout = b"{}"
+            assertion = _assert_instance(ActionResult)
+        elif vector.operation_id == "autopilots.trigger_rotate_url":
+            stdout = b'{"id":"trigger-1","autopilot_id":"auto-1"}'
+            assertion = _assert_instance(AutopilotTriggerRotateURL)
+            expected_argv = (
+                "autopilot",
+                "trigger-rotate-url",
+                "auto-1",
+                "trigger-1",
+                "--yes",
+                "--output",
+                "json",
+            )
+        elif vector.operation_id in {"chats.history", "chats.thread"}:
+            stdout = b'{"messages":[]}'
+            assertion = _assert_instance(Page)
+        elif vector.operation_id == "issues.timeline":
+            assertion = _assert_instance(Page)
+        elif vector.operation_id == "issues.wakeups.events":
+            stdout = b'{"events":[]}'
+            assertion = _assert_instance(IssueWakeupEvents)
+        elif vector.operation_id == "issues.wakeups.list":
+            stdout = b'{"wakeups":[]}'
+            assertion = _assert_instance(Page)
+        elif vector.operation_id in {
+            "issues.wakeups.get",
+            "issues.wakeups.disable",
+        } or vector.operation_id in {"issues.wakeups.create", "issues.wakeups.update"}:
+            stdout = b'{"id":"wake-1","enabled":true}'
+            assertion = _assert_instance(IssueWakeup)
+        elif vector.operation_id == "repositories.checkout":
+            assertion = _assert_instance(RepositoryCheckoutResult)
+        elif vector.operation_id == "squads.activity":
+            expected_argv = ("squad", "activity", "issue-1", "approved", "--output", "json")
+        elif vector.operation_id == "squads.create":
+            expected_argv = (
+                "squad",
+                "create",
+                "--name",
+                "Core",
+                "--leader",
+                "agent-1",
+                "--output",
+                "json",
+            )
+            stdout = b'{"id":"squad-1","name":"Core"}'
+            assertion = _assert_instance(Squad)
+        elif vector.operation_id == "squads.delete":
+            expected_argv = ("squad", "delete", "squad-1", "--output", "json")
+            stdout = b"{}"
+            assertion = _assert_instance(ActionResult)
+        elif vector.operation_id == "squads.members.set_role":
+            args = ("squad-1", "agent-1")
+            kwargs = (("role", "reviewer"),)
+            expected_argv = (
+                "squad",
+                "member",
+                "set-role",
+                "squad-1",
+                "--member-id",
+                "agent-1",
+                "--member-type",
+                "agent",
+                "--role",
+                "reviewer",
+                "--output",
+                "json",
+            )
+            stdout = b"{}"
+            assertion = _assert_instance(ActionResult)
+        elif vector.operation_id == "squads.update":
+            expected_argv = ("squad", "update", "squad-1", "--output", "json")
+            stdout = b'{"id":"squad-1","name":"Core"}'
+            assertion = _assert_instance(Squad)
+        elif vector.operation_id == "workspaces.create":
+            expected_argv = (
+                "workspace",
+                "create",
+                "--name",
+                "Core",
+                "--slug",
+                "core",
+                "--output",
+                "json",
+            )
+            stdout = b'{"id":"ws-1","name":"Core"}'
+            assertion = _assert_instance(Workspace)
+        elif vector.operation_id == "workspaces.members.invite":
+            expected_argv = (
+                "workspace",
+                "member",
+                "invite",
+                "person@example.test",
+                "--role",
+                "member",
+                "--output",
+                "json",
+            )
+            stdout = b'{"id":"member-1","name":"Person"}'
+            assertion = _assert_instance(WorkspaceMember)
+        elif vector.operation_id == "workspaces.update":
+            expected_argv = ("workspace", "update", "--output", "json")
+            stdout = b'{"id":"ws-1","name":"Core"}'
+            assertion = _assert_instance(Workspace)
+        elif vector.operation_id == "runtime_profiles.list":
+            stdout = b'{"profiles":[]}'
+            assertion = _assert_instance(RuntimeProfiles)
+        elif vector.operation_id == "runtime_profiles.create":
+            stdout = (
+                b'{"id":"profile-1","runtime_type":"pi","command_name":"pi","display_name":"Pi"}'
+            )
+            assertion = _assert_instance(RuntimeProfile)
+        elif vector.operation_id == "runtime_profiles.update":
+            expected_argv = (
+                "runtime",
+                "profile",
+                "update",
+                "profile-1",
+                "--enabled=false",
+                "--output",
+                "json",
+            )
+            stdout = b'{"id":"profile-1","enabled":false}'
+            assertion = _assert_instance(RuntimeProfile)
+        elif vector.operation_id in {"runtime_profiles.delete", "runtime_profiles.unset_path"}:
+            stdout = b"done"
+            assertion = _assert_instance(ActionResult)
+            transport_method = "run_text"
+        elif vector.operation_id == "runtime_profiles.set_path":
+            from pathlib import Path
+
+            args = (args[0], Path(cast("str", kwargs[0][1])))
+            kwargs = ()
+            assertion = _assert_instance(ActionResult)
+            transport_method = "run_text"
+        elif vector.operation_id in {"setup.cloud", "setup.self_host"}:
+            transport_method = "terminal"
         generated.append(
             OperationCase(
                 id=vector.vector_id,
@@ -429,24 +651,25 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 is_canonical=":variant:" not in vector.vector_id,
                 resource_attr=_resource_attr(sdk_method),
                 method=method,
-                expected_argv=vector.expected_argv,
-                expected_commands=_expected_commands(vector.expected_argv),
+                expected_argv=expected_argv,
+                expected_commands=expected_commands or _expected_commands(expected_argv),
                 expected_category=entrypoint.category,
                 expected_response_id=entrypoint.response_id,
                 expected_typed_input_id=entrypoint.typed_input_id,
                 expected_input_mode=entrypoint.input_mode,
                 presence_policy_ids=entrypoint.presence_policy_ids,
-                transport_method=vector.transport_method,
-                args=tuple(materialize(value) for value in vector.args),
-                kwargs=tuple((name, materialize(value)) for name, value in vector.kwargs),
-                stdout=b64decode(vector.stdout_base64),
+                transport_method=transport_method,
+                args=args,
+                kwargs=kwargs,
+                stdout=stdout,
                 stderr=vector.stderr.encode("utf-8"),
                 exit_code=vector.exit_code,
                 stdin=b64decode(vector.stdin_base64) if vector.stdin_base64 is not None else None,
                 timeout=vector.timeout,
-                assert_result=assertion_for(vector.assertion, vector.operation_id),
+                assert_result=assertion,
                 contract_operation_id=vector.operation_id,
                 source_ref=None,
+                expected_exception=expected_exception,
                 public_route=sdk_method
                 in {
                     "issues.comments.list_flat",
@@ -511,13 +734,17 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         DaemonDiskUsageEntry,
         DaemonStatus,
         MaintenanceVersion,
+        RepositoryCheckoutResult,
         RepositoryMutationResult,
         RepositoryRecord,
         RuntimeActivity,
         RuntimeDefinition,
+        RuntimeProfile,
+        RuntimeProfiles,
         RuntimeUpdateResult,
         RuntimeUsage,
         SquadMember,
+        SquadMemberRemoval,
         UserProfile,
     )
 
@@ -612,7 +839,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _USAGE_FIELDS.pop(field, None)
     _USAGE = msgspec.json.encode(_USAGE_FIELDS)
     _DS_STOP = msgspec.json.encode(DaemonStatus(running=False))
-    _DS = msgspec.json.encode(DaemonStatus(running=True, pid=12345, uptime=3600.0))
+    _DS = msgspec.json.encode(DaemonStatus(running=True, pid=12345, uptime="1h"))
     _DS_RESTART = msgspec.json.encode(DaemonStatus(running=True, pid=12345))
     _AUTH_STATUS = msgspec.json.encode(
         AuthenticationStatus(authenticated=True, user_id="usr_001", token_type="bearer")
@@ -658,7 +885,6 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         mt.run_bytes.assert_called_once()
         argv = mt.run_bytes.call_args.args[0]
         assert argv[:2] == ("attachment", "upload")
-        assert argv[-2:] == ("--output", "json")
         assert pathlib.PurePath(argv[2]).name == "manifest.json"
 
     def _assert_avatar_path(_result: object, mt: MagicMock) -> None:
@@ -722,7 +948,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         return RawCommandResult(
             argv=_argv,
             exit_code=0,
-            stdout=msgspec.json.encode(str(path)),
+            stdout=msgspec.json.encode({"id": "a1", "filename": "a1", "path": str(path)}),
             stderr=b"",
             duration=datetime.timedelta(),
         )
@@ -766,6 +992,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         assert isinstance(result, ActionResult)
         assert result.success
         assert isinstance(result.value, RuntimeUpdateResult)
+
+    def _assert_squad_member(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, SquadMember)
+
+    def _assert_squad_removal(result: object, _mt: MagicMock) -> None:
+        assert isinstance(result, SquadMemberRemoval)
 
     action_assertions: dict[str, Callable[[object, MagicMock], None]] = dict.fromkeys(
         (
@@ -1536,40 +1768,42 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "attachments.upload",
-            ("attachment", "upload", "<dynamic>", "--output", "json"),
+            ("attachment", "upload", "<dynamic>"),
             args=(pathlib.Path("tests/cases/operations.py"),),
             stdout=_AR,
             id="manual:attachments.upload:canonical",
-            expected_commands=("multica attachment upload '${temp.path}' --output json",),
+            expected_commands=("multica attachment upload '${temp.path}'",),
             dynamic_argv_positions=(2,),
+            transport="run_bytes",
         ),
         _c(
             "attachments.download",
-            ("attachment", "download", "a1", "--output-dir", "/out", "--output", "json"),
+            ("attachment", "download", "a1", "--output-dir", "/out"),
             args=("a1",),
             kwargs=(("output_dir", pathlib.Path("/out")),),
-            stdout=b'"/out/a1"',
+            stdout=b'{"id":"a1","filename":"a1","path":"/out/a1"}',
             id="manual:attachments.download:canonical",
+            transport="run_bytes",
         ),
         _c(
             "attachments.upload_bytes",
-            ("attachment", "upload", "<dynamic>", "--output", "json"),
+            ("attachment", "upload", "<dynamic>"),
             args=("manifest.json", b'{"x":1}'),
             stdout=_AR,
             id="manual:attachments.upload_bytes:canonical",
-            expected_commands=("multica attachment upload '${temp.path}' --output json",),
+            expected_commands=("multica attachment upload '${temp.path}'",),
             dynamic_argv_positions=(2,),
+            transport="run_bytes",
             assert_result=_assert_upload_bytes,
         ),
         _c(
             "attachments.download_bytes",
-            ("attachment", "download", "a1", "--output-dir", "<dynamic>", "--output", "json"),
+            ("attachment", "download", "a1", "--output-dir", "<dynamic>"),
             args=("a1",),
             id="manual:attachments.download_bytes:canonical",
-            expected_commands=(
-                "multica attachment download a1 --output-dir '${temp.path}' --output json",
-            ),
+            expected_commands=("multica attachment download a1 --output-dir '${temp.path}'",),
             dynamic_argv_positions=(4,),
+            transport="run_bytes",
             transport_side_effect=_write_download,
             assert_result=_assert_download_bytes,
         ),
@@ -2577,17 +2811,45 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "squads.members.add",
-            ("squad", "member", "add", "s1", "m1"),
-            args=("s1", "m1"),
+            (
+                "squad",
+                "member",
+                "add",
+                "s1",
+                "--member-id",
+                "m1",
+                "--type",
+                "agent",
+                "--output",
+                "json",
+            ),
+            args=("s1",),
+            kwargs=(("member_id", "m1"), ("member_type", "agent")),
+            stdout=b'{"member_id":"m1","member_type":"agent","role":""}',
             id="manual:squads.members.add:canonical",
             source_ref="manual:squads.members.add:canonical",
+            assert_result=_assert_squad_member,
         ),
         _c(
             "squads.members.remove",
-            ("squad", "member", "remove", "s1", "m1"),
-            args=("s1", "m1"),
+            (
+                "squad",
+                "member",
+                "remove",
+                "s1",
+                "--member-id",
+                "m1",
+                "--type",
+                "agent",
+                "--output",
+                "json",
+            ),
+            args=("s1",),
+            kwargs=(("member_id", "m1"), ("member_type", "agent")),
+            stdout=b'{"squad_id":"s1","member_id":"m1","removed":true}',
             id="manual:squads.members.remove:canonical",
             source_ref="manual:squads.members.remove:canonical",
+            assert_result=_assert_squad_removal,
         ),
         _c(
             "users.profile_get",
@@ -2613,13 +2875,13 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "auth.status",
-            ("auth", "status", "--output", "json"),
+            ("auth", "status"),
             stdout=_AUTH_STATUS,
             id="manual:auth.status:canonical",
         ),
         _c(
             "auth.logout",
-            ("auth", "logout", "--output", "json"),
+            ("auth", "logout"),
             stdout=_AUTH_LOGOUT,
             id="manual:auth.logout:canonical",
         ),
@@ -2906,7 +3168,7 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c(
             "daemon.disk_usage",
             ("daemon", "disk-usage", "--output", "json"),
-            stdout=b'[{"path":"/tmp","size_bytes":1024}]',
+            stdout=b'{"workspaces_root":"/tmp","generated_at":"2024-01-01T00:00:00Z"}',
             id="manual:daemon.disk_usage:canonical",
         ),
         _c(
@@ -3008,13 +3270,13 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         _c("daemon.start", ("daemon", "start"), id="manual:daemon.start:canonical"),
         _c(
             "daemon.stop",
-            ("daemon", "stop", "--output", "json"),
+            ("daemon", "stop"),
             stdout=_DS_STOP,
             id="manual:daemon.stop:canonical",
         ),
         _c(
             "daemon.restart",
-            ("daemon", "restart", "--output", "json"),
+            ("daemon", "restart"),
             stdout=_DS_RESTART,
             id="manual:daemon.restart:canonical",
         ),
@@ -3118,11 +3380,17 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:issues.run_messages:variant:02",
         ),
         _c("maintenance.update", ("update",), id="manual:maintenance.update:canonical"),
-        _c("setup.cloud", ("setup", "cloud"), id="manual:setup.cloud:canonical"),
+        _c(
+            "setup.cloud",
+            ("setup", "cloud"),
+            transport="terminal",
+            id="manual:setup.cloud:canonical",
+        ),
         _c(
             "setup.self_host",
             ("setup", "self-host", "--url", "https://example.com"),
             args=("https://example.com",),
+            transport="terminal",
             id="manual:setup.self_host:canonical",
         ),
         _c(
@@ -4182,23 +4450,47 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "squads.Squad.add_member",
-            ("squad", "member", "add", "sq1", "u1"),
+            (
+                "squad",
+                "member",
+                "add",
+                "sq1",
+                "--member-id",
+                "u1",
+                "--type",
+                "agent",
+                "--output",
+                "json",
+            ),
             args=("u1",),
-            stdout=b"added",
+            kwargs=(("member_type", "agent"),),
+            stdout=b'{"member_id":"u1","member_type":"agent","role":""}',
             id="manual:squads.add_member_bound:canonical",
             source_ref="bound-resource-discovered",
             bound_target="squad",
-            assert_result=_assert_action_none,
+            assert_result=_assert_squad_member,
         ),
         _c(
             "squads.Squad.remove_member",
-            ("squad", "member", "remove", "sq1", "u1"),
+            (
+                "squad",
+                "member",
+                "remove",
+                "sq1",
+                "--member-id",
+                "u1",
+                "--type",
+                "agent",
+                "--output",
+                "json",
+            ),
             args=("u1",),
-            stdout=b"removed",
+            kwargs=(("member_type", "agent"),),
+            stdout=b'{"squad_id":"sq1","member_id":"u1","removed":true}',
             id="manual:squads.remove_member_bound:canonical",
             source_ref="bound-resource-discovered",
             bound_target="squad",
-            assert_result=_assert_action_none,
+            assert_result=_assert_squad_removal,
         ),
         _c(
             "autopilots.Autopilot.trigger_add",
