@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import pathlib
+import re
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, cast
 
 import msgspec
 
 from multica_py._generated.approved_sdk import validate_nonblank
+from multica_py._internal.agent_wires import _agent_task_from_wire, _AgentTaskWire
 from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.redaction import REDACTED
+from multica_py._internal.specs import TextResult
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.entities.agents import Agent
@@ -30,6 +33,15 @@ if TYPE_CHECKING:
     from multica_py.client import MulticaClient
 
 __all__ = ["Agent", "AgentResource"]
+
+_TASK_CURSOR_PATTERN = re.compile(
+    r'^More runs available; use --before "([^"]+)" to fetch the next page\.$', re.MULTILINE
+)
+
+
+def _extract_task_cursor(stderr: str) -> str | None:
+    match = _TASK_CURSOR_PATTERN.search(stderr)
+    return match.group(1) if match is not None else None
 
 
 def _encode_conversation_starters(
@@ -581,13 +593,50 @@ class AgentResource(BaseResource):
         return self.restore_command(agent_id, options=options).run()
 
     def tasks_command(
-        self, agent_id: str, *, options: OperationOptions | None = None
+        self,
+        agent_id: str,
+        *,
+        limit: int = 200,
+        before: str | None = None,
+        options: OperationOptions | None = None,
     ) -> Command[Page[AgentTask]]:
         validate_nonblank(agent_id)
-        return self._decoded_page_command(("agent", "tasks", agent_id), AgentTask, options=options)
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise ValueError("limit must be an integer between 1 and 200")
+        if before is not None and not isinstance(before, str):
+            raise TypeError("before must be a string or None")
+        args = ["agent", "tasks", agent_id, "--limit", str(limit)]
+        if before is not None:
+            args.extend(("--before", before))
+        args.append("--output")
+        args.append("json")
 
-    def tasks(self, agent_id: str, *, options: OperationOptions | None = None) -> Page[AgentTask]:
-        return self.tasks_command(agent_id, options=options).run()
+        def finalize(results: tuple[object, ...]) -> Page[AgentTask]:
+            result = results[0]
+            if not isinstance(result, TextResult):
+                raise TypeError("agent tasks command did not return text output")
+            rows = decode_json(result.text.encode("utf-8"), list[_AgentTaskWire])
+            return Page(
+                items=tuple(_agent_task_from_wire(row) for row in rows),
+                total=len(rows),
+                next_cursor=_extract_task_cursor(result.stderr),
+            )
+
+        return self._plan(
+            steps=(_Step(tuple(args), "run_text"),),
+            finalize=finalize,
+            options=options,
+        )
+
+    def tasks(
+        self,
+        agent_id: str,
+        *,
+        limit: int = 200,
+        before: str | None = None,
+        options: OperationOptions | None = None,
+    ) -> Page[AgentTask]:
+        return self.tasks_command(agent_id, limit=limit, before=before, options=options).run()
 
     def avatar_command(
         self, agent_id: str, file: pathlib.Path, *, options: OperationOptions | None = None

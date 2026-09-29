@@ -42,6 +42,8 @@ class _AgentTaskWire(msgspec.Struct, frozen=True, kw_only=True):
     status: str
     issue_id: str
     wakeup_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    wakeup_system_rule: str | None | msgspec.UnsetType = msgspec.UNSET
+    wakeup_joined: bool | None | msgspec.UnsetType = msgspec.UNSET
     supplement_capability: str | None | msgspec.UnsetType = msgspec.UNSET
     supplement_comment_ids: tuple[str, ...] | msgspec.UnsetType = msgspec.UNSET
     can_supplement: bool | None | msgspec.UnsetType = msgspec.UNSET
@@ -64,6 +66,10 @@ def _agent_task_from_wire(wire: _AgentTaskWire) -> AgentTask:
         status=wire.status,
         issue_id=wire.issue_id,
         wakeup_id=None if wire.wakeup_id is msgspec.UNSET else wire.wakeup_id,
+        wakeup_system_rule=(
+            None if wire.wakeup_system_rule is msgspec.UNSET else wire.wakeup_system_rule
+        ),
+        wakeup_joined=None if wire.wakeup_joined is msgspec.UNSET else wire.wakeup_joined,
         supplement_capability=(
             None if wire.supplement_capability is msgspec.UNSET else wire.supplement_capability
         ),
@@ -98,6 +104,8 @@ def _agent_task_from_wire(wire: _AgentTaskWire) -> AgentTask:
         ),
         _wire_presence=(
             ("wakeup_id", _presence_seed(wire.wakeup_id)),
+            ("wakeup_system_rule", _presence_seed(wire.wakeup_system_rule)),
+            ("wakeup_joined", _presence_seed(wire.wakeup_joined)),
             ("supplement_capability", _presence_seed(wire.supplement_capability)),
             ("supplement_comment_ids", _presence_seed(wire.supplement_comment_ids)),
             ("can_supplement", _presence_seed(wire.can_supplement)),

@@ -158,10 +158,35 @@ class _CommentWire(msgspec.Struct, frozen=True, kw_only=True):
     folded: bool | None = None
     trigger: object | None = None
     supplement: object | None = None
+    supplements: tuple[_CommentSupplementWire, ...] = ()
+
+
+class _CommentSupplementWire(msgspec.Struct, frozen=True, kw_only=True):
+    task_id: str
+    status: str
+    agent_id: str | None = None
+    failure_reason: str | None = None
+    delivered_at: datetime.datetime | None = None
 
 
 def comment_from_wire(wire: _CommentWire) -> Comment:
-    from multica_py.entities.comments import Comment
+    from multica_py.entities.comments import Comment, CommentSupplement
+
+    supplements = []
+    for item in wire.supplements:
+        if not item.task_id.strip():
+            raise OutputShapeError("comment supplement task_id must be nonblank")
+        if not item.status.strip():
+            raise OutputShapeError("comment supplement status must be nonblank")
+        supplements.append(
+            CommentSupplement(
+                task_id=item.task_id,
+                status=item.status,
+                agent_id=item.agent_id,
+                failure_reason=item.failure_reason,
+                delivered_at=item.delivered_at,
+            )
+        )
 
     return Comment(
         id=wire.id,
@@ -189,6 +214,7 @@ def comment_from_wire(wire: _CommentWire) -> Comment:
         supplement=None
         if wire.supplement is None
         else _coerce_json_value(wire.supplement, field_name="supplement"),
+        supplements=tuple(supplements),
     )
 
 
@@ -245,6 +271,8 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
     id: str
     status: str
     wakeup_id: str | None | msgspec.UnsetType = msgspec.UNSET
+    wakeup_system_rule: str | None | msgspec.UnsetType = msgspec.UNSET
+    wakeup_joined: bool | None | msgspec.UnsetType = msgspec.UNSET
     supplement_capability: str | None | msgspec.UnsetType = msgspec.UNSET
     supplement_comment_ids: tuple[str, ...] | msgspec.UnsetType = msgspec.UNSET
     can_supplement: bool | None | msgspec.UnsetType = msgspec.UNSET
@@ -388,6 +416,10 @@ def _task_run_from_wire(
         id=wire.id,
         status=wire.status,
         wakeup_id=None if wire.wakeup_id is msgspec.UNSET else wire.wakeup_id,
+        wakeup_system_rule=(
+            None if wire.wakeup_system_rule is msgspec.UNSET else wire.wakeup_system_rule
+        ),
+        wakeup_joined=None if wire.wakeup_joined is msgspec.UNSET else wire.wakeup_joined,
         supplement_capability=(
             None if wire.supplement_capability is msgspec.UNSET else wire.supplement_capability
         ),
@@ -512,6 +544,8 @@ def _task_run_from_wire(
                 + (
                     ("workspace_slug", _presence_seed(wire.workspace_slug)),
                     ("wakeup_id", _presence_seed(wire.wakeup_id)),
+                    ("wakeup_system_rule", _presence_seed(wire.wakeup_system_rule)),
+                    ("wakeup_joined", _presence_seed(wire.wakeup_joined)),
                     ("supplement_capability", _presence_seed(wire.supplement_capability)),
                     ("supplement_comment_ids", _presence_seed(wire.supplement_comment_ids)),
                     ("can_supplement", _presence_seed(wire.can_supplement)),

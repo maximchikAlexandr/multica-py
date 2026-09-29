@@ -10,3 +10,4 @@ class McpServer(msgspec.Struct, frozen=True, kw_only=True):
     name: str
     transport: str
     enabled: bool | None = None
+    agent_count: int | None = None
