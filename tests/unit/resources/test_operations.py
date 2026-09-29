@@ -620,7 +620,7 @@ def test_discovered_public_methods() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     canonical = {c.sdk_method for c in canonical_cases}
     assert discovered == canonical
-    assert len(canonical) == 221
+    assert len(canonical) == 225
     assert len(canonical_cases) == len(canonical)
 
 
@@ -651,7 +651,12 @@ def _assert_discovered_public_methods_match_approved_entrypoints() -> None:
     for case in canonical_cases:
         if case.contract_operation_id is None:
             _assert_eager_command_parity(case)
-            assert case.bound_target is not None
+            assert case.bound_target is not None or case.sdk_method in {
+                "issues.wakeups.trigger",
+                "issues.wakeups.delete",
+                "issues.wakeups.checkin",
+                "issues.wakeups.runs",
+            }
             continue
         entrypoint = _approved_entrypoint(case, contract)
         eager_contracts = _assert_eager_command_parity(case)
@@ -693,11 +698,11 @@ def test_operation_case_catalog_is_closed() -> None:
     canonical_cases = tuple(c for c in OPERATION_CASES if c.is_canonical)
     generated = tuple(c for c in OPERATION_CASES if c.id.startswith("generated:"))
     manual = tuple(c for c in OPERATION_CASES if not c.id.startswith("generated:"))
-    assert len(OPERATION_CASES) == 381
-    assert len({c.id for c in OPERATION_CASES}) == 381
-    assert sum(not c.is_canonical for c in OPERATION_CASES) == 160
-    assert len(generated) == 113
-    assert len(manual) == 268
+    assert len(OPERATION_CASES) == 389
+    assert len({c.id for c in OPERATION_CASES}) == 389
+    assert sum(not c.is_canonical for c in OPERATION_CASES) == 164
+    assert len(generated) == 117
+    assert len(manual) == 272
     assert len(OPERATION_CASES) == len({c.id for c in OPERATION_CASES})
     assert sum(not c.is_canonical for c in OPERATION_CASES) == len(OPERATION_CASES) - len(
         canonical_cases

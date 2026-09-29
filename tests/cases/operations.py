@@ -293,7 +293,12 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
     from multica_py.models.issue_activity import (
         CommentCursor,
     )
-    from multica_py.models.issue_wakeups import IssueWakeup, IssueWakeupEvents
+    from multica_py.models.issue_wakeups import (
+        IssueWakeup,
+        IssueWakeupDeleteResult,
+        IssueWakeupEvents,
+        IssueWakeupTriggerResult,
+    )
     from multica_py.models.issues import (
         FileDescription,
         InlineDescription,
@@ -468,12 +473,22 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         sdk_method = f"{dotted_prefix}.{method}"
         args = tuple(materialize(value) for value in vector.args)
         kwargs = tuple((name, materialize(value)) for name, value in vector.kwargs)
+        if not args:
+            args = {
+                "agents.tasks": ("ag_1",),
+                "issues.update": ("ISSUE-1",),
+                "issues.wakeups.create": ("ISSUE-1",),
+                "issues.wakeups.update": ("ISSUE-1", "wake-1"),
+            }.get(vector.operation_id, args)
         expected_argv = vector.expected_argv
         stdout = b64decode(vector.stdout_base64)
         assertion = assertion_for(vector.assertion, vector.operation_id)
         expected_commands: tuple[str, ...] | None = None
         expected_exception: type[Exception] | None = None
+        timeout = vector.timeout
         transport_method = vector.transport_method
+        if vector.operation_id == "agents.tasks":
+            transport_method = "run_text"
 
         # Reconcile the inherited public inputs with the concrete resource
         # signatures.  These rows were promoted before their final operation
@@ -481,6 +496,22 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         # fail on actual argv/result drift without duplicating resource logic.
         if vector.operation_id == "agents.env.get":
             expected_argv = ("agent", "env", "get", "agent-1", "--output", "json")
+        elif vector.operation_id == "issues.update":
+            attachment = str(_Path("tests/cases/operations.py").resolve())
+            args = ("ISSUE-1",)
+            kwargs = (("attachments", (attachment,)), ("allow_external_file", True))
+            timeout = 60.0
+            expected_argv = (
+                "issue",
+                "update",
+                "ISSUE-1",
+                "--attachment",
+                attachment,
+                "--allow-external-file",
+                "--output",
+                "json",
+            )
+            stdout = b'{"id":"ISSUE-1","title":"Issue","status":"todo"}'
         elif vector.operation_id == "agents.env.set":
             kwargs = (("custom_env", {"MODE": "test"}),)
             expected_argv = (
@@ -531,6 +562,66 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         elif vector.operation_id == "issues.wakeups.list":
             stdout = b'{"wakeups":[]}'
             assertion = _assert_instance(Page)
+        elif vector.operation_id == "issues.wakeups.create" and not vector.vector_id.endswith(
+            ":canonical"
+        ):
+            kwargs = (
+                ("instruction", "Run checks"),
+                ("expires_in_seconds", 3600),
+                ("on_timeout", "wake"),
+                ("max_fires", 5),
+                ("mode", "continuous"),
+                ("event_types", ("comment.created",)),
+            )
+            expected_argv = (
+                "issue",
+                "wakeup",
+                "create",
+                "ISSUE-1",
+                "--instruction",
+                "Run checks",
+                "--kind",
+                "event",
+                "--mode",
+                "continuous",
+                "--event",
+                "comment.created",
+                "--expires-in",
+                "3600",
+                "--on-timeout",
+                "wake",
+                "--max-fires",
+                "5",
+                "--output",
+                "json",
+            )
+            stdout = b'{"id":"wake-1","enabled":true}'
+            assertion = _assert_instance(IssueWakeup)
+        elif vector.operation_id == "issues.wakeups.update":
+            kwargs = (
+                ("instruction", "Run checks"),
+                ("expires_at", "2026-10-01T00:00:00Z"),
+                ("condition", {"status": "done"}),
+            )
+            expected_argv = (
+                "issue",
+                "wakeup",
+                "update",
+                "ISSUE-1",
+                "wake-1",
+                "--instruction",
+                "Run checks",
+                "--kind",
+                "event",
+                "--expires-at",
+                "2026-10-01T00:00:00Z",
+                "--condition",
+                '{"status":"done"}',
+                "--output",
+                "json",
+            )
+            stdout = b'{"id":"wake-1","enabled":true}'
+            assertion = _assert_instance(IssueWakeup)
         elif vector.operation_id in {
             "issues.wakeups.get",
             "issues.wakeups.disable",
@@ -665,7 +756,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 stderr=vector.stderr.encode("utf-8"),
                 exit_code=vector.exit_code,
                 stdin=b64decode(vector.stdin_base64) if vector.stdin_base64 is not None else None,
-                timeout=vector.timeout,
+                timeout=timeout,
                 assert_result=assertion,
                 contract_operation_id=vector.operation_id,
                 source_ref=None,
@@ -714,6 +805,10 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         IssueUsage,
         MetadataEntry,
         MetadataPredicate,
+    )
+    from multica_py.models.issue_wakeups import (
+        IssueWakeupDeleteResult,
+        IssueWakeupTriggerResult,
     )
     from multica_py.models.issues import (
         FileDescription,
@@ -977,6 +1072,12 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         assert isinstance(result, ActionResult)
         assert result.success
         assert result.value is None
+
+    def _assert_model(expected_type: type[object]) -> Callable[[object, MagicMock], None]:
+        def assert_model(result: object, _mt: MagicMock) -> None:
+            assert isinstance(result, expected_type)
+
+        return assert_model
 
     def _assert_action_str(result: object, _mt: MagicMock) -> None:
         assert isinstance(result, ActionResult)
@@ -1750,10 +1851,11 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
         ),
         _c(
             "agents.tasks",
-            ("agent", "tasks", "a1", "--output", "json"),
+            ("agent", "tasks", "a1", "--limit", "200", "--output", "json"),
             args=("a1",),
             stdout=b"[]",
             id="manual:agents.tasks:canonical",
+            transport="run_text",
         ),
         _c(
             "agents.avatar",
@@ -3288,6 +3390,42 @@ def _build_operation_cases() -> tuple[OperationCase, ...]:
             id="manual:issues.cancel_task:canonical",
         ),
         _c(
+            "issues.wakeups.trigger",
+            ("issue", "wakeup", "trigger", "iss_001", "wake_001", "--output", "json"),
+            args=("iss_001", "wake_001"),
+            stdout=b'{"id":"wake_001","triggered":true}',
+            id="manual:issues.wakeups.trigger:canonical",
+            source_ref="shared-wakeup-lifecycle",
+            assert_result=_assert_model(IssueWakeupTriggerResult),
+        ),
+        _c(
+            "issues.wakeups.delete",
+            ("issue", "wakeup", "delete", "iss_001", "wake_001", "--output", "json"),
+            args=("iss_001", "wake_001"),
+            stdout=b'{"id":"wake_001","deleted":true}',
+            id="manual:issues.wakeups.delete:canonical",
+            source_ref="shared-wakeup-lifecycle",
+            assert_result=_assert_model(IssueWakeupDeleteResult),
+        ),
+        _c(
+            "issues.wakeups.checkin",
+            ("issue", "wakeup", "checkin", "iss_001", "wake_001", "--note", "still running"),
+            args=("iss_001", "wake_001", "still running"),
+            stdout=b"acknowledged",
+            id="manual:issues.wakeups.checkin:canonical",
+            source_ref="shared-wakeup-lifecycle",
+            assert_result=_assert_action_none,
+        ),
+        _c(
+            "issues.wakeups.runs",
+            ("issue", "wakeup", "runs", "iss_001", "wake_001", "--output", "json"),
+            args=("iss_001", "wake_001"),
+            stdout=b'[{"id":"run_001","status":"completed","created_at":"2026-09-28T07:00:00Z","checkin_note":null}]',
+            id="manual:issues.wakeups.runs:canonical",
+            source_ref="shared-wakeup-lifecycle",
+            assert_result=_assert_model(Page),
+        ),
+        _c(
             "issues.comments.reply",
             (
                 "issue",
@@ -4645,9 +4783,12 @@ _LEGACY_GENERATED_CASES: tuple[OperationCase, ...] = tuple(
 _APPROVED_CATALOG = _validate_contract(_Path("contracts/sdk-contract.json"))
 GENERATED_OPERATION_CASES = generated_operation_cases(_APPROVED_CATALOG)
 _GENERATED_PUBLIC_METHODS = frozenset(case.sdk_method for case in GENERATED_OPERATION_CASES)
+_GENERATED_CANONICAL_METHODS = frozenset(
+    case.sdk_method for case in GENERATED_OPERATION_CASES if case.is_canonical
+)
 _DEDUPE_MANUAL_OPERATION_CASES = tuple(
     replace(case, is_canonical=False)
-    if case.is_canonical and case.sdk_method in _GENERATED_PUBLIC_METHODS
+    if case.is_canonical and case.sdk_method in _GENERATED_CANONICAL_METHODS
     else case
     for case in MANUAL_OPERATION_CASES
 )
@@ -4684,7 +4825,12 @@ def _approved_canonical_conventions(
             projected.append(case)
             continue
         if case.contract_operation_id is None:
-            if case.bound_target is None:
+            if case.bound_target is None and case.sdk_method not in {
+                "issues.wakeups.trigger",
+                "issues.wakeups.delete",
+                "issues.wakeups.checkin",
+                "issues.wakeups.runs",
+            }:
                 raise ValueError(
                     f"canonical case is not linked to the approved contract: {case.id}"
                 )

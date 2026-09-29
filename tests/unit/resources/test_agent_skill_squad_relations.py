@@ -520,7 +520,7 @@ def test_agent_relation_commands_use_public_resource_plans(
 
     assert tuple(command.commands[0] for command in commands) == (
         "multica agent skills list ag_1 --output json",
-        "multica agent tasks ag_1 --output json",
+        "multica agent tasks ag_1 --limit 200 --output json",
         "multica issue list --assignee-id ag_1 --limit 50 --offset 0 --output json",
     )
     assert all_issues.commands == (

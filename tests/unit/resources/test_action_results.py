@@ -46,6 +46,7 @@ APPROVED_ACTION_METHODS = frozenset(
         "daemon.stop",
         "configuration.set",
         "issues.cancel_task",
+        "issues.wakeups.checkin",
         "issues.comments.delete",
         "issues.comments.resolve",
         "issues.comments.unresolve",
