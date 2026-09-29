@@ -157,6 +157,18 @@ def _runtime(
             "    transport: str | None",
             "    compatibility: str",
             "",
+            "@dataclass(frozen=True)",
+            "class GeneratedLifecycleContract:",
+            "    lifecycle_id: str",
+            "    command: tuple[str, ...]",
+            "    http_method: str",
+            "    http_path: str",
+            "    mappings: tuple[GeneratedMapping, ...]",
+            "    request_body: dict[str, object]",
+            "    result_envelope: str",
+            "    result_fields: tuple[tuple[str, str, str], ...]",
+            "    retry_policy: str",
+            "",
         ]
     )
     minimums = {
@@ -184,6 +196,28 @@ def _runtime(
     lines.append("OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (")
     for descriptor in sorted(binding_descriptors, key=binding_operation_key):
         lines.append(f"    {binding_names[descriptor.descriptor_id]},")
+    lines.extend((")", ""))
+    lines.append("_LIFECYCLE_CONTRACTS: tuple[GeneratedLifecycleContract, ...] = (")
+    for lifecycle in catalog.lifecycle_contracts:
+        mappings = ", ".join(
+            f"GeneratedMapping({mapping.source!r}, {mapping.binding!r}, {mapping.destination!r})"
+            for mapping in lifecycle.mappings
+        )
+        mappings_tup = f"({mappings},)" if mappings else "()"
+        result_fields = tuple(
+            (field.name, field.type_id, field.presence) for field in lifecycle.result_fields
+        )
+        lines.extend(
+            [
+                "    GeneratedLifecycleContract(",
+                f"        {lifecycle.lifecycle_id!r}, {lifecycle.command!r},",
+                f"        {lifecycle.http_method!r}, {lifecycle.http_path!r},",
+                f"        {mappings_tup}, {lifecycle.request_body!r},",
+                f"        {lifecycle.result_envelope!r}, {result_fields!r},",
+                f"        {lifecycle.retry_policy!r},",
+                "    ),",
+            ]
+        )
     lines.extend((")", ""))
     lines.append("PUBLIC_INVENTORY: tuple[GeneratedInventoryItem, ...] = (")
     inventory_items: tuple[InventoryItem, ...] = catalog.inventory.items

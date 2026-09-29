@@ -40,8 +40,8 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "d45aba1cd7582bef9210b921bbb7dc198b48e1ee"
-_TARGET_COMMIT = "ff8b285497809e084915016c40c2bc5e5991ffbc"
+_BASELINE_COMMIT = "ff8b285497809e084915016c40c2bc5e5991ffbc"
+_TARGET_COMMIT = "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02"
 _TAG_KINDS = frozenset(
     {
         "primitive",
@@ -988,6 +988,16 @@ class Target:
 
 
 @dataclass(frozen=True)
+class BaselineIdentity:
+    commit: str
+    tree_sha: str
+    contract_blob_sha: str
+    version: str
+    operation_count: int
+    response_entrypoint_count: int
+
+
+@dataclass(frozen=True)
 class VerifiedBinary:
     version: str
     commit: str
@@ -1212,7 +1222,38 @@ class TestVector:
 
 
 @dataclass(frozen=True)
+class LifecycleMapping:
+    source: str
+    binding: str
+    destination: str
+
+
+@dataclass(frozen=True)
+class LifecycleResultField:
+    name: str
+    type_id: str
+    presence: str
+
+
+@dataclass(frozen=True)
+class LifecycleContract:
+    lifecycle_id: str
+    command: tuple[str, ...]
+    http_method: str
+    http_path: str
+    mappings: tuple[LifecycleMapping, ...]
+    request_body: dict[str, object]
+    result_envelope: str
+    result_fields: tuple[LifecycleResultField, ...]
+    retry_policy: str
+    source_ref_ids: tuple[str, ...]
+    test_ref_ids: tuple[str, ...]
+    vectors: tuple[dict[str, object], ...]
+
+
+@dataclass(frozen=True)
 class ContractCatalog:
+    baseline: BaselineIdentity
     target: Target
     compatibility: Compatibility
     operations: tuple[Operation, ...]
@@ -1224,6 +1265,7 @@ class ContractCatalog:
     responses: tuple[ResponseCatalogEntry, ...]
     update_field_policies: tuple[UpdateModelPolicy, ...]
     test_vectors: tuple[TestVector, ...]
+    lifecycle_contracts: tuple[LifecycleContract, ...]
     raw: dict[str, object]
     inventory: PublicInventory
 
@@ -1697,6 +1739,183 @@ def _relative_posix_path(value: object, label: str) -> str:
     if "\\" in path:
         raise ContractError(f"{label} must use POSIX separators")
     return path
+
+
+def _baseline_identity(value: object) -> BaselineIdentity:
+    item = _dict(value, "baseline")
+    fields = frozenset(
+        {
+            "commit",
+            "tree_sha",
+            "contract_blob_sha",
+            "version",
+            "operation_count",
+            "response_entrypoint_count",
+        }
+    )
+    _exact_keys(item, fields, "baseline")
+    commit = _str(item["commit"], "baseline.commit")
+    tree_sha = _str(item["tree_sha"], "baseline.tree_sha")
+    contract_blob_sha = _str(item["contract_blob_sha"], "baseline.contract_blob_sha")
+    if not _COMMIT.fullmatch(commit):
+        raise ContractError("baseline.commit must be a full lowercase hexadecimal commit")
+    for name, value in (("tree_sha", tree_sha), ("contract_blob_sha", contract_blob_sha)):
+        if not _COMMIT.fullmatch(value):
+            raise ContractError(f"baseline.{name} must be a full Git object ID")
+    version = _str(item["version"], "baseline.version")
+    if not re.fullmatch(r"^[0-9]+\.[0-9]+\.[0-9]+$", version):
+        raise ContractError("baseline.version must be a semantic version")
+    operation_count = _int(item["operation_count"], "baseline.operation_count")
+    response_entrypoint_count = _int(
+        item["response_entrypoint_count"], "baseline.response_entrypoint_count"
+    )
+    if operation_count < 0 or response_entrypoint_count < 0:
+        raise ContractError("baseline catalog counts must be non-negative")
+    return BaselineIdentity(
+        commit,
+        tree_sha,
+        contract_blob_sha,
+        version,
+        operation_count,
+        response_entrypoint_count,
+    )
+
+
+def _lifecycle_contracts(value: object) -> tuple[LifecycleContract, ...]:
+    contracts = _dict(value, "catalogs.lifecycle")
+    expected_ids = {
+        "issue_wakeup_trigger",
+        "issue_wakeup_delete",
+        "issue_wakeup_checkin",
+        "issue_wakeup_runs",
+    }
+    if set(contracts) != expected_ids:
+        raise ContractError("catalogs.lifecycle must contain exactly the four target-only leaves")
+    parsed: list[LifecycleContract] = []
+    for lifecycle_id in sorted(expected_ids):
+        item = _dict(contracts[lifecycle_id], f"catalogs.lifecycle[{lifecycle_id!r}]")
+        _exact_keys(
+            item,
+            frozenset(
+                {
+                    "command",
+                    "http_method",
+                    "http_path",
+                    "mappings",
+                    "request_body",
+                    "result_envelope",
+                    "result_fields",
+                    "retry_policy",
+                    "source_ref_ids",
+                    "test_ref_ids",
+                    "vectors",
+                }
+            ),
+            f"catalogs.lifecycle[{lifecycle_id!r}]",
+        )
+        command = tuple(
+            _str(part, f"catalogs.lifecycle[{lifecycle_id!r}].command")
+            for part in _list(item["command"], "lifecycle.command")
+        )
+        if not command:
+            raise ContractError(f"{lifecycle_id} command must not be empty")
+        http_method = _str(item["http_method"], f"{lifecycle_id}.http_method")
+        if http_method not in {"GET", "POST", "DELETE"}:
+            raise ContractError(f"{lifecycle_id}.http_method is not closed")
+        http_path = _str(item["http_path"], f"{lifecycle_id}.http_path")
+        if not http_path.startswith("/api/"):
+            raise ContractError(f"{lifecycle_id}.http_path must be an API path")
+        mappings: list[LifecycleMapping] = []
+        for index, raw_mapping in enumerate(_list(item["mappings"], f"{lifecycle_id}.mappings")):
+            mapping = _dict(raw_mapping, f"{lifecycle_id}.mappings[{index}]")
+            _exact_keys(
+                mapping, frozenset({"source", "binding", "destination"}), "lifecycle.mapping"
+            )
+            mappings.append(
+                LifecycleMapping(
+                    _str(mapping["source"], "lifecycle.mapping.source"),
+                    _str(mapping["binding"], "lifecycle.mapping.binding"),
+                    _str(mapping["destination"], "lifecycle.mapping.destination"),
+                )
+            )
+        request_body = _dict(item["request_body"], f"{lifecycle_id}.request_body")
+        result_envelope = _str(item["result_envelope"], f"{lifecycle_id}.result_envelope")
+        result_fields: list[LifecycleResultField] = []
+        for index, raw_field in enumerate(
+            _list(item["result_fields"], f"{lifecycle_id}.result_fields")
+        ):
+            field = _dict(raw_field, f"{lifecycle_id}.result_fields[{index}]")
+            _exact_keys(field, frozenset({"name", "type", "presence"}), "lifecycle.result_field")
+            result_fields.append(
+                LifecycleResultField(
+                    _str(field["name"], "lifecycle.result_field.name"),
+                    _str(field["type"], "lifecycle.result_field.type"),
+                    _str(field["presence"], "lifecycle.result_field.presence"),
+                )
+            )
+        retry_policy = _str(item["retry_policy"], f"{lifecycle_id}.retry_policy")
+        if retry_policy != "none":
+            raise ContractError(f"{lifecycle_id} must disable SDK retries")
+        source_ref_ids = tuple(
+            _str(ref, f"{lifecycle_id}.source_ref_ids")
+            for ref in _list(item["source_ref_ids"], f"{lifecycle_id}.source_ref_ids")
+        )
+        test_ref_ids = tuple(
+            _str(ref, f"{lifecycle_id}.test_ref_ids")
+            for ref in _list(item["test_ref_ids"], f"{lifecycle_id}.test_ref_ids")
+        )
+        if not source_ref_ids or not test_ref_ids:
+            raise ContractError(f"{lifecycle_id} requires source and test references")
+        vectors: list[dict[str, object]] = []
+        for index, raw_vector in enumerate(_list(item["vectors"], f"{lifecycle_id}.vectors")):
+            vector = _dict(raw_vector, f"{lifecycle_id}.vectors[{index}]")
+            polarity = _str(vector.get("polarity"), f"{lifecycle_id}.vectors[{index}].polarity")
+            if polarity == "positive":
+                _exact_keys(
+                    vector,
+                    frozenset({"vector_id", "polarity", "argv", "request_body", "result"}),
+                    f"{lifecycle_id}.vectors[{index}]",
+                )
+                argv = _list(vector["argv"], f"{lifecycle_id}.vectors[{index}].argv")
+                if not argv or not all(isinstance(part, str) for part in argv):
+                    raise ContractError(f"{lifecycle_id} positive argv must be non-empty strings")
+                _dict(vector["request_body"], f"{lifecycle_id}.vectors[{index}].request_body")
+            elif polarity == "negative":
+                _exact_keys(
+                    vector,
+                    frozenset({"vector_id", "polarity", "input", "error"}),
+                    f"{lifecycle_id}.vectors[{index}]",
+                )
+                if not _str(vector["error"], f"{lifecycle_id}.vectors[{index}].error").strip():
+                    raise ContractError(f"{lifecycle_id} negative vector error must be nonblank")
+            else:
+                raise ContractError(f"{lifecycle_id} vector polarity must be positive or negative")
+            vector_id = _contract_identifier(
+                vector["vector_id"], f"{lifecycle_id}.vectors[{index}].vector_id"
+            )
+            vectors.append(dict(vector, vector_id=vector_id))
+        polarities = {vector["polarity"] for vector in vectors}
+        if polarities != {"positive", "negative"}:
+            raise ContractError(f"{lifecycle_id} requires positive and negative vectors")
+        if len({vector["vector_id"] for vector in vectors}) != len(vectors):
+            raise ContractError(f"{lifecycle_id} vector IDs must be unique")
+        parsed.append(
+            LifecycleContract(
+                lifecycle_id,
+                command,
+                http_method,
+                http_path,
+                tuple(mappings),
+                dict(request_body),
+                result_envelope,
+                tuple(result_fields),
+                retry_policy,
+                source_ref_ids,
+                test_ref_ids,
+                tuple(vectors),
+            )
+        )
+    return tuple(parsed)
 
 
 def _source_refs(value: object) -> tuple[SourceRef, ...]:
@@ -2209,6 +2428,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     required = frozenset(
         {
             "schema_version",
+            "baseline",
             "target",
             "compatibility",
             "catalogs",
@@ -2222,6 +2442,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     _exact_keys(raw, required | {"inventory"}, "contract")
     if _int(raw["schema_version"], "schema_version") != 3:
         raise ContractError("approved contract schema_version must be 3")
+    baseline = _baseline_identity(raw["baseline"])
     target_raw = _dict(raw["target"], "target")
     _exact_keys(
         target_raw,
@@ -2472,13 +2693,13 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             response_audit["supported_entrypoints"],
             "compatibility.response_audit.supported_entrypoints",
         )
-        != 167
+        != 196
     ):
-        raise ContractError("response audit must cover exactly 167 supported entrypoints")
-    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 0:
-        raise ContractError("response audit must contain no changed entrypoints")
-    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 167:
-        raise ContractError("response audit must contain exactly 167 unchanged entrypoints")
+        raise ContractError("response audit must cover exactly 196 supported entrypoints")
+    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 18:
+        raise ContractError("response audit must contain exactly 18 changed entrypoints")
+    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 178:
+        raise ContractError("response audit must contain exactly 178 unchanged entrypoints")
     changed_entrypoints = tuple(
         _str(value, "compatibility.response_audit.changed_entrypoints")
         for value in _list(
@@ -2486,8 +2707,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "compatibility.response_audit.changed_entrypoints",
         )
     )
-    if changed_entrypoints:
-        raise ContractError("response audit must not list changed entrypoints")
+    if len(changed_entrypoints) != 18:
+        raise ContractError("response audit must list exactly 18 changed entrypoints")
     compatibility = Compatibility(
         min_cli_version=bounds[0],
         max_tested_cli_version=bounds[1],
@@ -2516,6 +2737,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "validator_definitions",
             "binding_descriptors",
             "test_vectors",
+            "lifecycle",
         }
     )
     _exact_keys(catalogs, catalog_required, "catalogs")
@@ -2526,10 +2748,11 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     binding_descriptors = _binding_descriptors(catalogs["binding_descriptors"])
     vectors_raw = _dict(catalogs["test_vectors"], "catalogs.test_vectors")
     vectors = tuple(_parse_vector(value, key) for key, value in vectors_raw.items())
-    if len(vectors) != 113:
-        raise ContractError(f"expected 113 test vectors, got {len(vectors)}")
+    if len(vectors) != 117:
+        raise ContractError(f"expected 117 test vectors, got {len(vectors)}")
     if len({vector.assertion.assertion_id for vector in vectors}) != len(vectors):
         raise ContractError("test vector assertion IDs must be unique")
+    lifecycle_contracts = _lifecycle_contracts(catalogs["lifecycle"])
     scope = _dict(raw["scope"], "scope")
     _exact_keys(
         scope,
@@ -2613,6 +2836,24 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         raise ContractError("every source_refs commit must match target.commit")
     test_refs = _test_refs(raw["test_refs"])
     known_test_refs = {item.test_ref_id for item in test_refs}
+    lifecycle_source_refs = {
+        source_ref_id
+        for lifecycle in lifecycle_contracts
+        for source_ref_id in lifecycle.source_ref_ids
+    }
+    if not lifecycle_source_refs <= source_ref_ids:
+        raise ContractError(
+            "lifecycle contracts reference unknown source refs: "
+            + ", ".join(sorted(lifecycle_source_refs - source_ref_ids))
+        )
+    lifecycle_test_refs = {
+        test_ref_id for lifecycle in lifecycle_contracts for test_ref_id in lifecycle.test_ref_ids
+    }
+    if not lifecycle_test_refs <= known_test_refs:
+        raise ContractError(
+            "lifecycle contracts reference unknown test refs: "
+            + ", ".join(sorted(lifecycle_test_refs - known_test_refs))
+        )
     unknown_reviewed_test_refs = {
         test_ref
         for response in compatibility.reviewed_responses
@@ -2635,6 +2876,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     if public_inventory.source_commit != target.commit:
         raise ContractError("inventory.source_commit must match target.commit")
     return ContractCatalog(
+        baseline=baseline,
         target=target,
         compatibility=compatibility,
         operations=operations,
@@ -2646,6 +2888,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         responses=responses,
         update_field_policies=update_field_policies,
         test_vectors=vectors,
+        lifecycle_contracts=lifecycle_contracts,
         raw=raw,
         inventory=public_inventory,
     )
@@ -2653,45 +2896,66 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
 
 def validate_contract(path: pathlib.Path) -> ContractCatalog:
     contract = load_contract(path)
+    if contract.baseline != BaselineIdentity(
+        commit="c1842ae2dfcd0cc5e739b7785d3209d5e72d01ed",
+        tree_sha="843aa7629380582b06c9e84d29c2ba1fdb051d89",
+        contract_blob_sha="8e61bbb74af760c8caf232c4eb51170f3e03ec77",
+        version="0.5.3",
+        operation_count=193,
+        response_entrypoint_count=196,
+    ):
+        raise ContractError("approved contract baseline identity is not the merged PR #95 baseline")
     if (
         contract.target.version,
         contract.target.tag,
         contract.target.commit,
         contract.target.release_id,
     ) != (
-        "0.5.3",
-        "v0.5.3",
-        "ff8b285497809e084915016c40c2bc5e5991ffbc",
-        "395523214",
+        "0.6.0",
+        "v0.6.0",
+        "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02",
+        "398016451",
     ):
-        raise ContractError("approved contract must target Multica v0.5.3")
+        raise ContractError("approved contract must target Multica v0.6.0")
     if contract.compatibility.command_inventory != CommandInventory(
         baseline_nodes=201,
-        target_nodes=201,
-        unchanged=201,
-        changed=0,
-        added=0,
+        target_nodes=205,
+        unchanged=195,
+        changed=6,
+        added=4,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
-        added_commands=(),
-        changed_commands=(),
-    ):
-        raise ContractError("command inventory does not match the approved 0.5.2/0.5.3 review")
-    expected_artifacts = {
-        "0.5.2": (
-            "v0.5.2",
-            "394535503",
-            "multica-cli-0.5.2-darwin-arm64.tar.gz",
-            "7893b31e23cb58ef897b8d44c01b736acc33786aae70aa5d167f7a674b713cc3",
-            "9f735a52685a958b739a616ec77d3003b3665e5686609d8e050bcd6dcb279984",
+        added_commands=(
+            "issue wakeup trigger",
+            "issue wakeup delete",
+            "issue wakeup checkin",
+            "issue wakeup runs",
         ),
+        changed_commands=(
+            "agent tasks",
+            "issue update",
+            "issue wakeup",
+            "issue wakeup events",
+            "issue wakeup create",
+            "issue wakeup update",
+        ),
+    ):
+        raise ContractError("command inventory does not match the approved 0.5.3/0.6.0 review")
+    expected_artifacts = {
         "0.5.3": (
             "v0.5.3",
             "395523214",
             "multica-cli-0.5.3-darwin-arm64.tar.gz",
             "c41428158b87a8dba409542d55c869d5d86ca738a01ba6e0b4698b49cc94d718",
             "576fe10229b95a624bbdf12ae54054c5d7a58156ea4cffa41ccae6d161729565",
+        ),
+        "0.6.0": (
+            "v0.6.0",
+            "398016451",
+            "multica-cli-0.6.0-darwin-arm64.tar.gz",
+            "b0d90f9eda1080b924520fc1fa0b72912e27134e856b0ce6f4a04231d126651a",
+            "c8b1c13590b28fcc591268658d139a1eb426f3cc54d5c9abbd50558d65fed2c4",
         ),
     }
     actual_artifacts = {
@@ -2710,9 +2974,9 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
     if not contract.compatibility.response_review_complete:
         raise ContractError("response review must be complete")
-    if len(contract.compatibility.response_registry) != 167:
-        raise ContractError("response registry must contain exactly 167 response entrypoints")
-    if len({item.work_item_id for item in contract.compatibility.response_registry}) != 167:
+    if len(contract.compatibility.response_registry) != 196:
+        raise ContractError("response registry must contain exactly 196 response entrypoints")
+    if len({item.work_item_id for item in contract.compatibility.response_registry}) != 196:
         raise ContractError("response registry work item IDs must be unique")
     dispositions = {
         disposition: sum(
@@ -2720,15 +2984,213 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
         for disposition in ("unchanged", "changed")
     }
-    if dispositions != {"unchanged": 167, "changed": 0}:
-        raise ContractError("response registry must contain 167 unchanged items")
-    changed_work_items = {
-        item.work_item_id
-        for item in contract.compatibility.response_registry
-        if item.disposition == "changed"
+    if dispositions != {"unchanged": 178, "changed": 18}:
+        raise ContractError("response registry must contain 178 unchanged and 18 changed items")
+    expected_lifecycle = {
+        "issue_wakeup_trigger": (
+            ("issue", "wakeup", "trigger"),
+            "POST",
+            "/api/issues/{issue_id}/wakeups/{wakeup_id}/trigger",
+            (
+                ("issue_id", "pos:0", "path:issue_id"),
+                ("wakeup_id", "pos:1", "path:wakeup_id"),
+            ),
+            {},
+            "object",
+            (("id", "string", "required"), ("triggered", "boolean", "required")),
+            "none",
+            ("I-CMD-167", "I-CMD-168"),
+            ("T-WP01-LIFECYCLE-POSITIVE", "T-WP01-LIFECYCLE-NEGATIVE"),
+            (
+                {
+                    "vector_id": "issue_wakeup_trigger_positive",
+                    "polarity": "positive",
+                    "argv": (
+                        "issue",
+                        "wakeup",
+                        "trigger",
+                        "ISSUE-1",
+                        "wake-1",
+                        "--output",
+                        "json",
+                    ),
+                    "request_body": {},
+                    "result": {"id": "wake-1", "triggered": True},
+                },
+                {
+                    "vector_id": "issue_wakeup_trigger_negative",
+                    "polarity": "negative",
+                    "input": ["ISSUE-1"],
+                    "error": "requires positional issue_id and wakeup_id",
+                },
+            ),
+        ),
+        "issue_wakeup_delete": (
+            ("issue", "wakeup", "delete"),
+            "DELETE",
+            "/api/issues/{issue_id}/wakeups/{wakeup_id}",
+            (
+                ("issue_id", "pos:0", "path:issue_id"),
+                ("wakeup_id", "pos:1", "path:wakeup_id"),
+            ),
+            {},
+            "object",
+            (("id", "string", "required"), ("deleted", "boolean", "required")),
+            "none",
+            ("I-CMD-169", "I-CMD-170"),
+            ("T-WP01-LIFECYCLE-POSITIVE", "T-WP01-LIFECYCLE-NEGATIVE"),
+            (
+                {
+                    "vector_id": "issue_wakeup_delete_positive",
+                    "polarity": "positive",
+                    "argv": (
+                        "issue",
+                        "wakeup",
+                        "delete",
+                        "ISSUE-1",
+                        "wake-1",
+                        "--output",
+                        "json",
+                    ),
+                    "request_body": {},
+                    "result": {"id": "wake-1", "deleted": True},
+                },
+                {
+                    "vector_id": "issue_wakeup_delete_negative",
+                    "polarity": "negative",
+                    "input": ["ISSUE-1"],
+                    "error": "requires positional issue_id and wakeup_id",
+                },
+            ),
+        ),
+        "issue_wakeup_checkin": (
+            ("issue", "wakeup", "checkin"),
+            "POST",
+            "/api/issues/{issue_id}/wakeups/{wakeup_id}/checkin",
+            (
+                ("issue_id", "pos:0", "path:issue_id"),
+                ("wakeup_id", "pos:1", "path:wakeup_id"),
+                ("note", "--note", "json_body:note"),
+            ),
+            {"note": "string"},
+            "action_result_none",
+            (),
+            "none",
+            ("I-CMD-171", "I-CMD-172"),
+            ("T-WP01-LIFECYCLE-POSITIVE", "T-WP01-LIFECYCLE-NEGATIVE"),
+            (
+                {
+                    "vector_id": "issue_wakeup_checkin_positive",
+                    "polarity": "positive",
+                    "argv": (
+                        "issue",
+                        "wakeup",
+                        "checkin",
+                        "ISSUE-1",
+                        "wake-1",
+                        "--note",
+                        "CI still running",
+                    ),
+                    "request_body": {"note": "CI still running"},
+                    "result": None,
+                },
+                {
+                    "vector_id": "issue_wakeup_checkin_negative",
+                    "polarity": "negative",
+                    "input": {"note": ""},
+                    "error": "note must be a nonblank string",
+                },
+            ),
+        ),
+        "issue_wakeup_runs": (
+            ("issue", "wakeup", "runs"),
+            "GET",
+            "/api/issues/{issue_id}/wakeups/{wakeup_id}/runs",
+            (
+                ("issue_id", "pos:0", "path:issue_id"),
+                ("wakeup_id", "pos:1", "path:wakeup_id"),
+            ),
+            {},
+            "bare_array_page",
+            (
+                ("id", "string", "required"),
+                ("status", "string", "required"),
+                ("created_at", "datetime", "required"),
+                ("checkin_note", "string|null", "optional_nullable"),
+            ),
+            "none",
+            ("I-CMD-173", "I-CMD-174"),
+            ("T-WP01-LIFECYCLE-POSITIVE", "T-WP01-LIFECYCLE-NEGATIVE"),
+            (
+                {
+                    "vector_id": "issue_wakeup_runs_positive",
+                    "polarity": "positive",
+                    "argv": (
+                        "issue",
+                        "wakeup",
+                        "runs",
+                        "ISSUE-1",
+                        "wake-1",
+                        "--output",
+                        "json",
+                    ),
+                    "request_body": {},
+                    "result": [
+                        {
+                            "id": "run-1",
+                            "status": "completed",
+                            "created_at": "2026-09-28T07:00:00Z",
+                            "checkin_note": None,
+                        }
+                    ],
+                },
+                {
+                    "vector_id": "issue_wakeup_runs_negative",
+                    "polarity": "negative",
+                    "input": {"rows": [{"id": "run-1", "created_at": 7}]},
+                    "error": "created_at must be an RFC3339 timestamp",
+                },
+            ),
+        ),
     }
-    if changed_work_items:
-        raise ContractError("response registry must not mark wire-compatible items changed")
+    actual_lifecycle = {
+        lifecycle.lifecycle_id: (
+            lifecycle.command,
+            lifecycle.http_method,
+            lifecycle.http_path,
+            tuple(
+                (mapping.source, mapping.binding, mapping.destination)
+                for mapping in lifecycle.mappings
+            ),
+            lifecycle.request_body,
+            lifecycle.result_envelope,
+            tuple((field.name, field.type_id, field.presence) for field in lifecycle.result_fields),
+            lifecycle.retry_policy,
+            lifecycle.source_ref_ids,
+            lifecycle.test_ref_ids,
+            tuple(
+                dict(
+                    vector,
+                    argv=tuple(cast("list[object]", vector["argv"]))
+                    if vector.get("polarity") == "positive"
+                    else vector.get("argv"),
+                )
+                if vector.get("polarity") == "positive"
+                else vector
+                for vector in lifecycle.vectors
+            ),
+        )
+        for lifecycle in contract.lifecycle_contracts
+    }
+    if actual_lifecycle != expected_lifecycle:
+        raise ContractError("target-only wakeup lifecycle catalog does not match v0.6.0")
+    if any(
+        operation.operation_id.startswith("issues.wakeups.")
+        and operation.operation_id.removeprefix("issues.wakeups.")
+        in {"trigger", "delete", "checkin", "runs"}
+        for operation in contract.operations
+    ):
+        raise ContractError("target-only wakeup lifecycle leaves must remain outside operations")
     _validate_direct_bindings(contract)
     _validate_promoted_inventory_closure(contract)
     if {item.enum_id for item in contract.enum_definitions} != {
@@ -2948,9 +3410,9 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
                 )
     base_count = sum(":canonical" in vector.vector_id for vector in contract.test_vectors)
     variant_count = len(contract.test_vectors) - base_count
-    if (base_count, variant_count) != (99, 14):
+    if (base_count, variant_count) != (99, 18):
         raise ContractError(
-            f"expected 99 entrypoint-base and 14 variant vectors, got {base_count}/{variant_count}"
+            f"expected 99 entrypoint-base and 18 variant vectors, got {base_count}/{variant_count}"
         )
     return contract
 

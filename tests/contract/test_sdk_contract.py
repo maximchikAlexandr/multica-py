@@ -27,12 +27,37 @@ def test_sdk_contract() -> None:
     assert len(contract.binding_descriptors) == sum(
         len(operation.entrypoints) for operation in contract.operations
     )
-    assert len(contract.test_vectors) == 113
+    assert len(contract.test_vectors) == 117
     assert (
         tuple((item.operation_id, item.entrypoint_id) for item in contract.binding_descriptors)
         != ()
     )
     assert all("state" not in str(item.path) for item in files)
+
+
+def test_approved_inventory_and_response_audit_are_complete() -> None:
+    contract = validate_contract(APPROVED)
+    inventory = contract.compatibility.command_inventory
+    compatibility = cast("dict[str, object]", contract.raw["compatibility"])
+    response_audit = cast("dict[str, int]", compatibility["response_audit"])
+
+    assert inventory.target_nodes == 205
+    assert inventory.baseline_nodes == 201
+    assert inventory.added == 4
+    assert inventory.changed == 6
+    assert inventory.removed == 0
+    assert len(contract.operations) == 193
+    assert len(contract.compatibility.response_registry) == 196
+    assert response_audit["supported_entrypoints"] == 196
+    assert response_audit["changed"] == 18
+    assert response_audit["unchanged"] == 178
+
+    typed_rows = [
+        item
+        for item in contract.inventory.items
+        if item.kind == "command" and item.disposition in {"typed", "typed-equivalent"}
+    ]
+    assert len({item.identity for item in typed_rows}) == len(typed_rows)
 
 
 def test_transient_output_rejects_tracked_paths(tmp_path: pathlib.Path) -> None:
@@ -55,9 +80,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.5.3'" in runtime
-    assert b"MIN_CLI_VERSION = '0.4.42'" in runtime
-    assert b"MAX_CLI_VERSION = '0.5.4'" in runtime
+    assert b"TARGET_VERSION = '0.6.0'" in runtime
+    assert b"MIN_CLI_VERSION = '0.5.3'" in runtime
+    assert b"MAX_CLI_VERSION = '0.6.1'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -70,6 +95,25 @@ def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
             f"{descriptor.operation_id!r}, {descriptor.entrypoint_id!r}, {descriptor.command!r}"
         ).encode()
         assert descriptor_header in runtime
+
+
+def test_target_only_wakeup_lifecycle_catalog() -> None:
+    contract = validate_contract(APPROVED)
+    lifecycle = {item.lifecycle_id: item for item in contract.lifecycle_contracts}
+    assert set(lifecycle) == {
+        "issue_wakeup_trigger",
+        "issue_wakeup_delete",
+        "issue_wakeup_checkin",
+        "issue_wakeup_runs",
+    }
+    assert len(contract.operations) == 193
+    assert len(contract.compatibility.response_registry) == 196
+    assert lifecycle["issue_wakeup_trigger"].result_envelope == "object"
+    assert lifecycle["issue_wakeup_delete"].result_fields[-1].name == "deleted"
+    assert lifecycle["issue_wakeup_checkin"].request_body == {"note": "string"}
+    assert lifecycle["issue_wakeup_runs"].result_fields[-1].presence == "optional_nullable"
+    runtime = render_files(APPROVED)[0].content
+    assert b"_LIFECYCLE_CONTRACTS" in runtime
 
 
 _PROMOTED_COMMAND_OPERATIONS = {
@@ -215,11 +259,11 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
 def test_prior_binary_provenance_and_reviewed_responses_are_exact() -> None:
     contract = validate_contract(APPROVED)
     binary = next(
-        item for item in contract.compatibility.verified_binaries if item.version == "0.5.2"
+        item for item in contract.compatibility.verified_binaries if item.version == "0.5.3"
     )
-    assert binary.commit.startswith("d45aba1cd")
+    assert binary.commit.startswith("ff8b285497")
     assert (binary.build_date, binary.go_version, binary.os, binary.arch) == (
-        "2026-09-23T10:42:33Z",
+        "2026-09-24T10:07:17Z",
         "go1.26.8",
         "darwin",
         "arm64",
@@ -251,13 +295,14 @@ def test_retained_inventory_is_reconciled() -> None:
     assert len(operation_ids) == 193
     assert operation_ids == scoped_operation_ids
     assert len(contract.responses) == 98
-    assert len(contract.compatibility.response_registry) == 167
+    assert len(contract.compatibility.response_registry) == 196
     assert (
         sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
-        == 167
+        == 178
     )
     assert (
-        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 0
+        sum(item.disposition == "changed" for item in contract.compatibility.response_registry)
+        == 18
     )
     assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
 
