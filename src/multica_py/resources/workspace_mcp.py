@@ -23,10 +23,23 @@ class _McpServerWire(msgspec.Struct, frozen=True, kw_only=True):
     name: str
     transport: str
     enabled: bool | None = None
+    agent_count: int | None | msgspec.UnsetType = msgspec.UNSET
 
 
-def _mcp_server_from_wire(row: _McpServerWire) -> McpServer:
-    return McpServer(id=row.id, name=row.name, transport=row.transport, enabled=row.enabled)
+def _mcp_server_from_wire(
+    row: _McpServerWire,
+    *,
+    include_agent_count: bool = False,
+) -> McpServer:
+    return McpServer(
+        id=row.id,
+        name=row.name,
+        transport=row.transport,
+        enabled=row.enabled,
+        agent_count=(
+            None if not include_agent_count or row.agent_count is msgspec.UNSET else row.agent_count
+        ),
+    )
 
 
 class WorkspaceMcpResource(BaseResource):
@@ -34,18 +47,27 @@ class WorkspaceMcpResource(BaseResource):
         super().__init__(transport, config)
 
     @staticmethod
-    def _decode_mcp_servers(stdout: bytes, command: str) -> Page[McpServer]:
+    def _decode_mcp_servers(
+        stdout: bytes,
+        command: str,
+        *,
+        include_agent_count: bool = False,
+    ) -> Page[McpServer]:
         try:
             rows = decode_json(stdout, list[_McpServerWire], command=command)
-            items = tuple(_mcp_server_from_wire(row) for row in rows)
+            items = tuple(
+                _mcp_server_from_wire(row, include_agent_count=include_agent_count) for row in rows
+            )
             return Page(items=items, total=len(items))
         except msgspec.ValidationError:
             row = decode_json(stdout, _McpServerWire, command=command)
-            item = _mcp_server_from_wire(row)
+            item = _mcp_server_from_wire(row, include_agent_count=include_agent_count)
             return Page(items=(item,), total=1)
 
     def list_command(self, *, options: OperationOptions | None = None) -> Command[Page[McpServer]]:
-        return self._mcp_page_command(("workspace", "mcp", "list"), options=options)
+        return self._mcp_page_command(
+            ("workspace", "mcp", "list"), include_agent_count=True, options=options
+        )
 
     def list(self, *, options: OperationOptions | None = None) -> Page[McpServer]:
         return self.list_command(options=options).run()
@@ -162,12 +184,15 @@ class WorkspaceMcpResource(BaseResource):
         args: tuple[str, ...],
         *,
         stdin: bytes | None = None,
+        include_agent_count: bool = False,
         options: OperationOptions | None,
     ) -> Command[Page[McpServer]]:
         plan_args = (*args, "--output", "json")
 
         def decode(stdout: bytes, command: str) -> object:
-            return self._decode_mcp_servers(stdout, command)
+            return self._decode_mcp_servers(
+                stdout, command, include_agent_count=include_agent_count
+            )
 
         return self._plan(
             steps=(_Step(plan_args, "run_bytes", decode=decode, stdin=stdin),),

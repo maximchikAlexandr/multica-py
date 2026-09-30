@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-TARGET_VERSION = '0.5.3'
-MIN_CLI_VERSION = '0.4.42'
-MAX_CLI_VERSION = '0.5.4'
+TARGET_VERSION = '0.6.0'
+MIN_CLI_VERSION = '0.5.3'
+MAX_CLI_VERSION = '0.6.1'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'
@@ -63,6 +63,18 @@ class GeneratedInventoryItem:
     public_symbol: str | None
     transport: str | None
     compatibility: str
+
+@dataclass(frozen=True)
+class GeneratedLifecycleContract:
+    lifecycle_id: str
+    command: tuple[str, ...]
+    http_method: str
+    http_path: str
+    mappings: tuple[GeneratedMapping, ...]
+    request_body: dict[str, object]
+    result_envelope: str
+    result_fields: tuple[tuple[str, str, str], ...]
+    retry_policy: str
 
 AGENTS_ARCHIVE_MANUAL_BINDING = GeneratedBinding(
     'agents.archive', 'default', ('agent', 'archive'),
@@ -174,7 +186,7 @@ AGENT_SKILLS_SET_BINDING = GeneratedBinding(
 
 AGENT_TASKS_BINDING = GeneratedBinding(
     'agents.tasks', 'default', ('agent', 'tasks'),
-    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'),), ('nonblank:agent_id',),
+    (GeneratedMapping('agent_id', 'pos:0', 'path:agent_id'), GeneratedMapping('limit', '--limit', 'query:limit'), GeneratedMapping('before', '--before', 'query:before'),), ('nonblank:agent_id',),
 )
 
 AGENTS_UPDATE_MANUAL_BINDING = GeneratedBinding(
@@ -607,7 +619,7 @@ ISSUES_UNASSIGN_BOUND_BINDING = GeneratedBinding(
 
 ISSUES_UPDATE_MANUAL_BINDING = GeneratedBinding(
     'issues.update', 'default', ('issue', 'update'),
-    (), (),
+    (GeneratedMapping('attachments', 'repeat:--attachment', 'local_control:attachment_paths'), GeneratedMapping('allow_external_file', '--allow-external-file', 'local_control:allow_external_file'),), (),
 )
 
 ISSUES_UPDATE_BOUND_BINDING = GeneratedBinding(
@@ -622,7 +634,7 @@ ISSUES_USAGE_MANUAL_BINDING = GeneratedBinding(
 
 ISSUE_WAKEUP_CREATE_BINDING = GeneratedBinding(
     'issues.wakeups.create', 'default', ('issue', 'wakeup', 'create'),
-    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('agent_id', '--agent-id', 'json_body:agent_id'), GeneratedMapping('instruction', '--instruction', 'json_body:instruction'), GeneratedMapping('kind', '--kind', 'json_body:kind'), GeneratedMapping('mode', '--mode', 'json_body:mode'), GeneratedMapping('event_types', '--event', 'json_body:event_types'), GeneratedMapping('filter_actor_type', '--filter-actor-type', 'json_body:filter_actor_type'), GeneratedMapping('filter_actor_id', '--filter-actor-id', 'json_body:filter_actor_id'), GeneratedMapping('filter_agent_id', '--filter-agent-id', 'json_body:filter_agent_id'), GeneratedMapping('filter_task_id', '--task-id', 'json_body:filter_task_id'), GeneratedMapping('parent_comment_id', '--parent', 'json_body:parent_comment_id'), GeneratedMapping('after_seconds', '--after', 'json_body:after_seconds'), GeneratedMapping('at', '--at', 'json_body:at'), GeneratedMapping('interval_seconds', '--every', 'json_body:interval_seconds'), GeneratedMapping('cron_expression', '--cron', 'json_body:cron_expression'), GeneratedMapping('timezone', '--timezone', 'json_body:timezone'),), (),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('agent_id', '--agent-id', 'json_body:agent_id'), GeneratedMapping('instruction', '--instruction', 'json_body:instruction'), GeneratedMapping('kind', '--kind', 'json_body:kind'), GeneratedMapping('mode', '--mode', 'json_body:mode'), GeneratedMapping('event_types', '--event', 'json_body:event_types'), GeneratedMapping('filter_actor_type', '--filter-actor-type', 'json_body:filter_actor_type'), GeneratedMapping('filter_actor_id', '--filter-actor-id', 'json_body:filter_actor_id'), GeneratedMapping('filter_agent_id', '--filter-agent-id', 'json_body:filter_agent_id'), GeneratedMapping('filter_task_id', '--task-id', 'json_body:filter_task_id'), GeneratedMapping('parent_comment_id', '--parent', 'json_body:parent_comment_id'), GeneratedMapping('after_seconds', '--after', 'json_body:after_seconds'), GeneratedMapping('at', '--at', 'json_body:at'), GeneratedMapping('interval_seconds', '--every', 'json_body:interval_seconds'), GeneratedMapping('cron_expression', '--cron', 'json_body:cron_expression'), GeneratedMapping('timezone', '--timezone', 'json_body:timezone'), GeneratedMapping('expires_in_seconds', '--expires-in', 'json_body:expires_in_seconds'), GeneratedMapping('expires_at', '--expires-at', 'json_body:expires_at'), GeneratedMapping('on_timeout', '--on-timeout', 'json_body:on_timeout'), GeneratedMapping('max_fires', '--max-fires', 'json_body:max_fires'), GeneratedMapping('condition', 'condition', 'json_body:condition'),), (),
     minimum_cli_version='0.5.3',
 )
 
@@ -652,7 +664,7 @@ ISSUE_WAKEUP_LIST_BINDING = GeneratedBinding(
 
 ISSUE_WAKEUP_UPDATE_BINDING = GeneratedBinding(
     'issues.wakeups.update', 'default', ('issue', 'wakeup', 'update'),
-    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('agent_id', '--agent-id', 'json_body:agent_id'), GeneratedMapping('instruction', '--instruction', 'json_body:instruction'), GeneratedMapping('kind', '--kind', 'json_body:kind'), GeneratedMapping('mode', '--mode', 'json_body:mode'), GeneratedMapping('event_types', '--event', 'json_body:event_types'), GeneratedMapping('filter_actor_type', '--filter-actor-type', 'json_body:filter_actor_type'), GeneratedMapping('filter_actor_id', '--filter-actor-id', 'json_body:filter_actor_id'), GeneratedMapping('filter_agent_id', '--filter-agent-id', 'json_body:filter_agent_id'), GeneratedMapping('filter_task_id', '--task-id', 'json_body:filter_task_id'), GeneratedMapping('parent_comment_id', '--parent', 'json_body:parent_comment_id'), GeneratedMapping('after_seconds', '--after', 'json_body:after_seconds'), GeneratedMapping('at', '--at', 'json_body:at'), GeneratedMapping('interval_seconds', '--every', 'json_body:interval_seconds'), GeneratedMapping('cron_expression', '--cron', 'json_body:cron_expression'), GeneratedMapping('timezone', '--timezone', 'json_body:timezone'), GeneratedMapping('wakeup_id', 'pos:1', 'path:wakeup_id'),), (),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('agent_id', '--agent-id', 'json_body:agent_id'), GeneratedMapping('instruction', '--instruction', 'json_body:instruction'), GeneratedMapping('kind', '--kind', 'json_body:kind'), GeneratedMapping('mode', '--mode', 'json_body:mode'), GeneratedMapping('event_types', '--event', 'json_body:event_types'), GeneratedMapping('filter_actor_type', '--filter-actor-type', 'json_body:filter_actor_type'), GeneratedMapping('filter_actor_id', '--filter-actor-id', 'json_body:filter_actor_id'), GeneratedMapping('filter_agent_id', '--filter-agent-id', 'json_body:filter_agent_id'), GeneratedMapping('filter_task_id', '--task-id', 'json_body:filter_task_id'), GeneratedMapping('parent_comment_id', '--parent', 'json_body:parent_comment_id'), GeneratedMapping('after_seconds', '--after', 'json_body:after_seconds'), GeneratedMapping('at', '--at', 'json_body:at'), GeneratedMapping('interval_seconds', '--every', 'json_body:interval_seconds'), GeneratedMapping('cron_expression', '--cron', 'json_body:cron_expression'), GeneratedMapping('timezone', '--timezone', 'json_body:timezone'), GeneratedMapping('wakeup_id', 'pos:1', 'path:wakeup_id'), GeneratedMapping('expires_in_seconds', '--expires-in', 'json_body:expires_in_seconds'), GeneratedMapping('expires_at', '--expires-at', 'json_body:expires_at'), GeneratedMapping('on_timeout', '--on-timeout', 'json_body:on_timeout'), GeneratedMapping('max_fires', '--max-fires', 'json_body:max_fires'), GeneratedMapping('condition', 'condition', 'json_body:condition'),), (),
     minimum_cli_version='0.5.3',
 )
 
@@ -1280,6 +1292,37 @@ OPERATION_BINDINGS: tuple[GeneratedBinding, ...] = (
     WORKSPACE_MEMBERS_LIST_BINDING,
     WORKSPACES_SWITCH_MANUAL_BINDING,
     WORKSPACES_UPDATE_BINDING,
+)
+
+_LIFECYCLE_CONTRACTS: tuple[GeneratedLifecycleContract, ...] = (
+    GeneratedLifecycleContract(
+        'issue_wakeup_checkin', ('issue', 'wakeup', 'checkin'),
+        'POST', '/api/issues/{issue_id}/wakeups/{wakeup_id}/checkin',
+        (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('wakeup_id', 'pos:1', 'path:wakeup_id'), GeneratedMapping('note', '--note', 'json_body:note'),), {'note': 'string'},
+        'action_result_none', (),
+        'none',
+    ),
+    GeneratedLifecycleContract(
+        'issue_wakeup_delete', ('issue', 'wakeup', 'delete'),
+        'DELETE', '/api/issues/{issue_id}/wakeups/{wakeup_id}',
+        (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('wakeup_id', 'pos:1', 'path:wakeup_id'),), {},
+        'object', (('id', 'string', 'required'), ('deleted', 'boolean', 'required')),
+        'none',
+    ),
+    GeneratedLifecycleContract(
+        'issue_wakeup_runs', ('issue', 'wakeup', 'runs'),
+        'GET', '/api/issues/{issue_id}/wakeups/{wakeup_id}/runs',
+        (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('wakeup_id', 'pos:1', 'path:wakeup_id'),), {},
+        'bare_array_page', (('id', 'string', 'required'), ('status', 'string', 'required'), ('created_at', 'datetime', 'required'), ('checkin_note', 'string|null', 'optional_nullable')),
+        'none',
+    ),
+    GeneratedLifecycleContract(
+        'issue_wakeup_trigger', ('issue', 'wakeup', 'trigger'),
+        'POST', '/api/issues/{issue_id}/wakeups/{wakeup_id}/trigger',
+        (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('wakeup_id', 'pos:1', 'path:wakeup_id'),), {},
+        'object', (('id', 'string', 'required'), ('triggered', 'boolean', 'required')),
+        'none',
+    ),
 )
 
 PUBLIC_INVENTORY: tuple[GeneratedInventoryItem, ...] = (

@@ -277,9 +277,9 @@ def test_closed_contract_rejects_invalid_rows(
 
 def test_v3_catalogs_are_closed() -> None:
     contract = validate_contract(APPROVED)
-    assert len(contract.test_vectors) == 113
+    assert len(contract.test_vectors) == 117
     assert sum(":variant:" not in vector.vector_id for vector in contract.test_vectors) == 99
-    assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 14
+    assert sum(":variant:" in vector.vector_id for vector in contract.test_vectors) == 18
     assert {item.public_name for item in contract.enum_definitions} == {
         "IssueSort",
         "SortDirection",
@@ -473,17 +473,17 @@ def test_issue_operation_rationales_stay_with_their_operations() -> None:
 def test_response_registry_has_target_ranges_and_explicit_removals() -> None:
     contract = validate_contract(APPROVED)
     registry = contract.compatibility.response_registry
-    assert len(registry) == 167
-    assert {item.disposition for item in registry} == {"unchanged"}
+    assert len(registry) == 196
+    assert {item.disposition for item in registry} == {"unchanged", "changed"}
     assert {
         url.split("/blob/")[1].split("/")[0] for item in registry for url in item.source_urls
     } == {
-        "d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
         "ff8b285497809e084915016c40c2bc5e5991ffbc",
+        "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02",
     }
     assert all("#L1-L1" not in url for item in registry for url in item.source_urls)
     assert not any(item.operation_id.startswith("plugins.") for item in registry)
-    assert sum(item.disposition == "changed" for item in registry) == 0
+    assert sum(item.disposition == "changed" for item in registry) == 18
     assert all(
         all(token in item.action for token in ("model=", "fixture=", "docs=")) for item in registry
     )
@@ -747,15 +747,15 @@ def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     )
 
 
-def test_current_target_and_source_refs_are_pinned_to_v053() -> None:
+def test_current_target_and_source_refs_are_pinned_to_v060() -> None:
     contract = load_contract(APPROVED)
-    assert contract.target.version == "0.5.3"
-    assert contract.target.tag == "v0.5.3"
-    assert contract.target.commit == "ff8b285497809e084915016c40c2bc5e5991ffbc"
-    assert contract.target.release_id == "395523214"
+    assert contract.target.version == "0.6.0"
+    assert contract.target.tag == "v0.6.0"
+    assert contract.target.commit == "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02"
+    assert contract.target.release_id == "398016451"
     assert (
         contract.target.release_provenance_ref
-        == ".devlocal/upstream-contract/v0.5.2..v0.5.3/release/release-verification.json"
+        == ".devlocal/upstream-contract/v0.5.3..v0.6.0/release/release-verification.json"
     )
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
     stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
@@ -766,18 +766,89 @@ def test_current_target_and_source_refs_are_pinned_to_v053() -> None:
     )
 
 
+def test_refreshed_sdk_baseline_identity_is_exact() -> None:
+    contract = load_contract(APPROVED)
+    assert contract.baseline.commit == "c1842ae2dfcd0cc5e739b7785d3209d5e72d01ed"
+    assert contract.baseline.tree_sha == "843aa7629380582b06c9e84d29c2ba1fdb051d89"
+    assert contract.baseline.contract_blob_sha == "8e61bbb74af760c8caf232c4eb51170f3e03ec77"
+    assert (contract.baseline.version, contract.baseline.operation_count) == ("0.5.3", 193)
+    assert contract.baseline.response_entrypoint_count == 196
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        pytest.param(
+            lambda document: document["catalogs"]["lifecycle"]["issue_wakeup_trigger"]["mappings"][
+                0
+            ].update(destination="query:issue_id"),
+            id="mapping",
+        ),
+        pytest.param(
+            lambda document: document["catalogs"]["lifecycle"]["issue_wakeup_checkin"][
+                "request_body"
+            ].update(note="integer"),
+            id="request-body",
+        ),
+        pytest.param(
+            lambda document: document["catalogs"]["lifecycle"]["issue_wakeup_trigger"][
+                "source_ref_ids"
+            ].__setitem__(0, "I-CMD-999"),
+            id="source-references",
+        ),
+        pytest.param(
+            lambda document: document["catalogs"]["lifecycle"]["issue_wakeup_trigger"][
+                "test_ref_ids"
+            ].__setitem__(0, "T-WP01-UNKNOWN"),
+            id="test-references",
+        ),
+        pytest.param(
+            lambda document: document["catalogs"]["lifecycle"]["issue_wakeup_trigger"].update(
+                retry_policy="safe"
+            ),
+            id="retry-policy",
+        ),
+        pytest.param(
+            lambda document: document["catalogs"]["lifecycle"]["issue_wakeup_trigger"]["vectors"][
+                0
+            ]["argv"].__setitem__(-1, "text"),
+            id="positive-argv",
+        ),
+        pytest.param(
+            lambda document: document["catalogs"]["lifecycle"]["issue_wakeup_trigger"]["vectors"][
+                0
+            ]["result"].update(triggered=False),
+            id="positive-result",
+        ),
+        pytest.param(
+            lambda document: document["catalogs"]["lifecycle"]["issue_wakeup_trigger"]["vectors"][
+                1
+            ].update(input=["ISSUE-1", "wake-1"]),
+            id="negative-input",
+        ),
+        pytest.param(
+            lambda document: document["catalogs"]["lifecycle"]["issue_wakeup_trigger"]["vectors"][
+                1
+            ].update(error="wrong boundary"),
+            id="negative-error",
+        ),
+    ],
+)
+def test_target_only_wakeup_lifecycle_rejects_governed_mutations(
+    tmp_path: pathlib.Path, mutate: Any
+) -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    mutate(document)
+    path = tmp_path / "invalid-lifecycle.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(ContractError):
+        validate_contract(path)
+
+
 def test_compatibility_binary_and_release_provenance_are_exact() -> None:
     contract = load_contract(APPROVED)
     compatibility = contract.compatibility
     assert compatibility.verified_binaries == (
-        VerifiedBinary(
-            version="0.5.2",
-            commit="d45aba1cd7582bef9210b921bbb7dc198b48e1ee",
-            build_date="2026-09-23T10:42:33Z",
-            go_version="go1.26.8",
-            os="darwin",
-            arch="arm64",
-        ),
         VerifiedBinary(
             version="0.5.3",
             commit="ff8b285497809e084915016c40c2bc5e5991ffbc",
@@ -786,17 +857,16 @@ def test_compatibility_binary_and_release_provenance_are_exact() -> None:
             os="darwin",
             arch="arm64",
         ),
+        VerifiedBinary(
+            version="0.6.0",
+            commit="ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02",
+            build_date="2026-09-28T07:03:47Z",
+            go_version="go1.26.8",
+            os="darwin",
+            arch="arm64",
+        ),
     )
     assert compatibility.release_artifacts == (
-        ReleaseArtifact(
-            version="0.5.2",
-            tag="v0.5.2",
-            release_id="394535503",
-            asset_name="multica-cli-0.5.2-darwin-arm64.tar.gz",
-            archive_sha256="7893b31e23cb58ef897b8d44c01b736acc33786aae70aa5d167f7a674b713cc3",
-            executable_sha256="9f735a52685a958b739a616ec77d3003b3665e5686609d8e050bcd6dcb279984",
-            version_output_sha256="4f3bd93112beb2c90090e9a8bef396d4c72db97e1e7f377a2bf7b00bc32c03cd",
-        ),
         ReleaseArtifact(
             version="0.5.3",
             tag="v0.5.3",
@@ -806,6 +876,15 @@ def test_compatibility_binary_and_release_provenance_are_exact() -> None:
             executable_sha256="576fe10229b95a624bbdf12ae54054c5d7a58156ea4cffa41ccae6d161729565",
             version_output_sha256="67194f3de511d86a206d7656894705352f9c555794eb6c40166247a213163d9b",
         ),
+        ReleaseArtifact(
+            version="0.6.0",
+            tag="v0.6.0",
+            release_id="398016451",
+            asset_name="multica-cli-0.6.0-darwin-arm64.tar.gz",
+            archive_sha256="b0d90f9eda1080b924520fc1fa0b72912e27134e856b0ce6f4a04231d126651a",
+            executable_sha256="c8b1c13590b28fcc591268658d139a1eb426f3cc54d5c9abbd50558d65fed2c4",
+            version_output_sha256="8116e8c0c49f74127fc72dd90baf4dae0b27f0ad94a21905e0d153b7dd1bffdb",
+        ),
     )
 
 
@@ -814,13 +893,27 @@ def test_compatibility_command_inventory_is_reconciled() -> None:
     assert compatibility.command_inventory == replace(
         compatibility.command_inventory,
         baseline_nodes=201,
-        target_nodes=201,
-        unchanged=201,
-        changed=0,
-        added=0,
+        target_nodes=205,
+        unchanged=195,
+        changed=6,
+        added=4,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
+        changed_commands=(
+            "agent tasks",
+            "issue update",
+            "issue wakeup",
+            "issue wakeup events",
+            "issue wakeup create",
+            "issue wakeup update",
+        ),
+        added_commands=(
+            "issue wakeup trigger",
+            "issue wakeup delete",
+            "issue wakeup checkin",
+            "issue wakeup runs",
+        ),
     )
     assert (
         len(compatibility.command_inventory.added_commands) == compatibility.command_inventory.added
@@ -839,7 +932,7 @@ def test_compatibility_reviewed_response_bounds_are_exact() -> None:
     assert (
         compatibility.min_cli_version,
         compatibility.max_tested_cli_version,
-    ) == ("0.4.42", "0.5.3")
+    ) == ("0.5.3", "0.6.0")
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
         "agents.tasks",
         "labels.create",
@@ -1000,7 +1093,7 @@ def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     assert json.loads(files[2].content) == {
         "max_cli_version": "0.4.36",
         "min_cli_version": "0.4.27",
-        "target_version": "0.5.3",
+        "target_version": "0.6.0",
     }
 
 

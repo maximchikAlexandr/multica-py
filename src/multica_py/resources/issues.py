@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import json
 import os
+import pathlib
 from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast, overload
@@ -91,6 +92,56 @@ __all__ = ["Issue", "IssueResource", "TaskRun"]
 
 _NO_DESCRIPTION_TYPE: type[object] = type(NoDescription())
 _STDIN_DESCRIPTION_TYPE: type[object] = type(StdinDescription())
+
+
+def _normalize_update_attachments(
+    value: tuple[str, ...] | UnsetType,
+    *,
+    allow_external_file: bool,
+    cwd: str | os.PathLike[str] | None,
+) -> tuple[str, ...]:
+    if type(allow_external_file) is not bool:
+        raise TypeError("allow_external_file must be a bool")
+    if value is Unset:
+        return ()
+    if type(value) is not tuple:
+        raise TypeError("attachments must be a tuple of local file paths or Unset")
+    root = pathlib.Path(cwd or os.getcwd()).resolve()
+    normalized: list[str] = []
+    for item in value:
+        if not isinstance(item, (str, os.PathLike)):
+            raise TypeError("attachments must contain only path-like values")
+        raw_value: object = os.fspath(item)
+        if not isinstance(raw_value, str):
+            raise TypeError("attachments must contain text paths, not bytes")
+        raw = raw_value
+        if raw.startswith(("http://", "https://")):
+            raise ValueError("attachments must be local file paths, not URLs")
+        path = pathlib.Path(raw)
+        resolved = (path if path.is_absolute() else root / path).resolve()
+        if not resolved.is_file():
+            raise ValueError(f"attachment must be an existing local file: {raw}")
+        if not allow_external_file:
+            try:
+                resolved.relative_to(root)
+            except ValueError as error:
+                raise ValueError(
+                    f"attachment path resolves outside the working directory: {raw!r}"
+                ) from error
+        normalized.append(raw)
+    return tuple(normalized)
+
+
+def _attachment_timeout(
+    config: ClientConfig,
+    *,
+    has_attachments: bool,
+) -> datetime.timedelta | None:
+    if not has_attachments:
+        return None
+    minimum = datetime.timedelta(seconds=60)
+    return max(config.timeout or minimum, minimum)
+
 
 _VALID_ISSUE_FIELDS = frozenset(
     {
@@ -441,6 +492,9 @@ def _decode_issue_timeline(stdout: bytes, command: str) -> IssueTimelinePage:
                 created_at=created_at,
                 data=_coerce_json_value(item.get("data"), field_name="timeline.data")
                 if item.get("data") is not None
+                else None,
+                details=_coerce_json_value(item.get("details"), field_name="timeline.details")
+                if item.get("details") is not None
                 else None,
                 metadata=_coerce_json_value(item.get("metadata"), field_name="timeline.metadata")
                 if item.get("metadata") is not None
@@ -1195,10 +1249,17 @@ class IssueResource(BaseResource):
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
         attachments: tuple[str, ...] | UnsetType = Unset,
+        allow_external_file: bool = False,
         no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
+        effective_config = self._effective_config(options)
+        normalized_attachments = _normalize_update_attachments(
+            attachments,
+            allow_external_file=allow_external_file,
+            cwd=effective_config.cwd,
+        )
         if title is None:
             raise TypeError("title must be non-null")
         if priority is None:
@@ -1218,6 +1279,7 @@ class IssueResource(BaseResource):
             and assignee_id is Unset
             and project_id is Unset
             and parent_id is Unset
+            and attachments is Unset
         ):
             return self.get_command(issue_id, options=options)
         args = ["issue", "update", issue_id]
@@ -1248,9 +1310,10 @@ class IssueResource(BaseResource):
         if parent_id is not Unset:
             args.extend(["--parent", "" if parent_id is None else parent_id])
         if attachments is not Unset:
-            for attachment in attachments:
-                validate_nonblank(attachment)
+            for attachment in normalized_attachments:
                 args.extend(["--attachment", attachment])
+            if normalized_attachments and allow_external_file:
+                args.append("--allow-external-file")
         if no_start:
             args.append("--no-start")
 
@@ -1258,7 +1321,15 @@ class IssueResource(BaseResource):
         if len(args) > 3:
             update_args, update_decode = self._plan_decode(tuple(args), _IssueWire)
             steps.append(
-                _Step(update_args, "run_bytes", decode=update_decode, result_alias="update")
+                _Step(
+                    update_args,
+                    "run_bytes",
+                    decode=update_decode,
+                    result_alias="update",
+                    timeout=_attachment_timeout(
+                        effective_config, has_attachments=bool(normalized_attachments)
+                    ),
+                )
             )
 
         if assignee_id is None:
@@ -1294,6 +1365,7 @@ class IssueResource(BaseResource):
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
         attachments: tuple[str, ...] | UnsetType = Unset,
+        allow_external_file: bool = False,
         no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Issue:
@@ -1311,6 +1383,7 @@ class IssueResource(BaseResource):
             project_id=project_id,
             parent_id=parent_id,
             attachments=attachments,
+            allow_external_file=allow_external_file,
             no_start=no_start,
             options=options,
         ).run()

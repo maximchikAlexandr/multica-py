@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 import time
 from collections.abc import Callable, Mapping
 from typing import TypeVar, cast
@@ -19,65 +20,114 @@ from multica_py._internal.decoders import decode_json
 from multica_py._internal.json_values import _coerce_json_value
 from multica_py.config import OperationOptions
 from multica_py.exceptions import CommandExecutionError, OutputShapeError
+from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_wakeups import (
     IssueWakeup,
+    IssueWakeupDeleteResult,
     IssueWakeupEvent,
     IssueWakeupEvents,
     IssueWakeupPage,
+    IssueWakeupRun,
+    IssueWakeupRunsPage,
+    IssueWakeupTriggerResult,
 )
 from multica_py.resources._base import BaseResource, _operation_minimum_cli_version
 
 __all__ = [
     "IssueWakeup",
+    "IssueWakeupDeleteResult",
     "IssueWakeupEvent",
     "IssueWakeupEvents",
     "IssueWakeupPage",
     "IssueWakeupResource",
+    "IssueWakeupRun",
+    "IssueWakeupRunsPage",
+    "IssueWakeupTriggerResult",
 ]
 
 T = TypeVar("T")
 
 
 def _wakeup(value: Mapping[str, object]) -> IssueWakeup:
-    def timestamp(raw: object) -> datetime.datetime | None:
+    def timestamp(raw: object, *, field_name: str) -> datetime.datetime | None:
+        if raw is None:
+            return None
         if isinstance(raw, datetime.datetime):
             return raw
         if isinstance(raw, str):
             try:
                 return datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
             except ValueError:
-                return None
-        return None
+                pass
+        raise TypeError(f"{field_name} must be an RFC3339 timestamp or null")
+
+    def optional_string(field_name: str) -> str | None:
+        raw = value.get(field_name)
+        if raw is not None and not isinstance(raw, str):
+            raise TypeError(f"wakeup {field_name} must be a string or null")
+        return raw
+
+    def optional_int(field_name: str) -> int | None:
+        raw = value.get(field_name)
+        if raw is not None and (type(raw) is not int):
+            raise TypeError(f"wakeup {field_name} must be an integer or null")
+        return raw
+
+    def optional_bool(field_name: str) -> bool | None:
+        raw = value.get(field_name)
+        if raw is not None and type(raw) is not bool:
+            raise TypeError(f"wakeup {field_name} must be a boolean or null")
+        return raw
+
+    raw_id = value.get("id")
+    if not isinstance(raw_id, str) or not raw_id:
+        raise TypeError("wakeup id must be a nonblank string")
 
     raw_events = value.get("event_types", ()) or ()
     if not isinstance(raw_events, (list, tuple)):
         raise TypeError("wakeup event_types must be an array")
+    if any(not isinstance(event, str) for event in raw_events):
+        raise TypeError("wakeup event_types must contain strings")
     return IssueWakeup(
-        id=str(value.get("id", "")),
-        issue_id=cast("str | None", value.get("issue_id")),
-        agent_id=cast("str | None", value.get("agent_id")),
-        instruction=cast("str | None", value.get("instruction")),
-        kind=cast("str | None", value.get("kind")),
-        mode=cast("str | None", value.get("mode")),
-        event_types=tuple(str(event) for event in raw_events),
-        filter_actor_type=cast("str | None", value.get("filter_actor_type")),
-        filter_actor_id=cast("str | None", value.get("filter_actor_id")),
-        filter_agent_id=cast("str | None", value.get("filter_agent_id")),
-        filter_task_id=cast("str | None", value.get("filter_task_id")),
-        parent_comment_id=cast("str | None", value.get("parent_comment_id")),
-        after_seconds=cast("int | None", value.get("after_seconds")),
-        at=timestamp(value.get("at")),
-        interval_seconds=cast("int | None", value.get("interval_seconds")),
-        cron_expression=cast("str | None", value.get("cron_expression")),
-        timezone=cast("str | None", value.get("timezone")),
-        enabled=cast("bool | None", value.get("enabled")),
-        status=cast("str | None", value.get("status")),
-        next_run_at=timestamp(value.get("next_run_at", value.get("next_fire_at"))),
-        last_run_at=timestamp(value.get("last_run_at")),
-        created_at=timestamp(value.get("created_at")),
-        updated_at=timestamp(value.get("updated_at")),
+        id=raw_id,
+        issue_id=optional_string("issue_id"),
+        agent_id=optional_string("agent_id"),
+        instruction=optional_string("instruction"),
+        kind=optional_string("kind"),
+        mode=optional_string("mode"),
+        event_types=tuple(raw_events),
+        filter_actor_type=optional_string("filter_actor_type"),
+        filter_actor_id=optional_string("filter_actor_id"),
+        filter_agent_id=optional_string("filter_agent_id"),
+        filter_task_id=optional_string("filter_task_id"),
+        parent_comment_id=optional_string("parent_comment_id"),
+        after_seconds=optional_int("after_seconds"),
+        at=timestamp(value.get("at"), field_name="wakeup.at"),
+        interval_seconds=optional_int("interval_seconds"),
+        cron_expression=optional_string("cron_expression"),
+        timezone=optional_string("timezone"),
+        enabled=optional_bool("enabled"),
+        status=optional_string("status"),
+        next_run_at=timestamp(
+            value.get("next_run_at", value.get("next_fire_at")), field_name="wakeup.next_run_at"
+        ),
+        last_run_at=timestamp(value.get("last_run_at"), field_name="wakeup.last_run_at"),
+        created_at=timestamp(value.get("created_at"), field_name="wakeup.created_at"),
+        updated_at=timestamp(value.get("updated_at"), field_name="wakeup.updated_at"),
         metadata=_coerce_json_value(value.get("metadata"), field_name="wakeup.metadata")
         if value.get("metadata") is not None
+        else None,
+        expires_in_seconds=optional_int("expires_in_seconds"),
+        expires_at=timestamp(value.get("expires_at"), field_name="wakeup.expires_at"),
+        on_timeout=optional_string("on_timeout"),
+        max_fires=optional_int("max_fires"),
+        fire_count=optional_int("fire_count"),
+        paused=optional_bool("paused"),
+        condition=_coerce_json_value(value.get("condition"), field_name="wakeup.condition")
+        if value.get("condition") is not None
+        else None,
+        provenance=_coerce_json_value(value.get("provenance"), field_name="wakeup.provenance")
+        if value.get("provenance") is not None
         else None,
     )
 
@@ -160,15 +210,90 @@ def _decode_events(stdout: bytes, command: str) -> IssueWakeupEvents:
         if isinstance(item, str):
             events.append(IssueWakeupEvent(name=item))
         elif isinstance(item, Mapping):
+            raw_name = item.get("name", item.get("event_type"))
+            if not isinstance(raw_name, str) or not raw_name:
+                raise TypeError("wakeup event name must be a nonblank string")
+            raw_description = item.get("description", "")
+            if not isinstance(raw_description, str):
+                raise TypeError("wakeup event description must be a string")
+            raw_loop_protection = item.get("loop_protection")
+            if raw_loop_protection is not None and not isinstance(raw_loop_protection, str):
+                raise TypeError("wakeup event loop_protection must be a string or null")
             events.append(
                 IssueWakeupEvent(
-                    name=str(item.get("name", item.get("event_type", ""))),
-                    description=str(item.get("description", "")),
+                    name=raw_name,
+                    description=raw_description,
+                    condition=_coerce_json_value(
+                        item.get("condition"), field_name="wakeup.condition"
+                    )
+                    if item.get("condition") is not None
+                    else None,
+                    loop_protection=raw_loop_protection,
                 )
             )
         else:
             raise TypeError("wakeup event entries must be strings or objects")
     return IssueWakeupEvents(events=tuple(events), loop_protection=loop_protection)
+
+
+def _decode_ack(
+    stdout: bytes, command: str, *, field_name: str
+) -> IssueWakeupTriggerResult | IssueWakeupDeleteResult:
+    raw = decode_json(stdout, dict[str, object], command=command)
+    raw_id = raw.get("id")
+    acknowledged = raw.get(field_name)
+    if not isinstance(raw_id, str) or not raw_id:
+        raise TypeError("wakeup acknowledgement id must be a nonblank string")
+    if type(acknowledged) is not bool:
+        raise TypeError(f"wakeup acknowledgement {field_name} must be a boolean")
+    if acknowledged is not True:
+        raise OutputShapeError(f"wakeup acknowledgement {field_name} must be true")
+    if field_name == "triggered":
+        return IssueWakeupTriggerResult(id=raw_id, triggered=acknowledged)
+    return IssueWakeupDeleteResult(id=raw_id, deleted=acknowledged)
+
+
+def _decode_trigger(stdout: bytes, command: str) -> IssueWakeupTriggerResult:
+    result = _decode_ack(stdout, command, field_name="triggered")
+    return cast("IssueWakeupTriggerResult", result)
+
+
+def _decode_delete(stdout: bytes, command: str) -> IssueWakeupDeleteResult:
+    result = _decode_ack(stdout, command, field_name="deleted")
+    return cast("IssueWakeupDeleteResult", result)
+
+
+def _decode_runs(stdout: bytes, command: str) -> IssueWakeupRunsPage:
+    raw = decode_json(stdout, list[object], command=command)
+    runs: list[IssueWakeupRun] = []
+    for item in raw:
+        if not isinstance(item, Mapping):
+            raise TypeError("wakeup run rows must be objects")
+        raw_id = item.get("id")
+        raw_status = item.get("status")
+        if not isinstance(raw_id, str) or not raw_id:
+            raise TypeError("wakeup run id must be a nonblank string")
+        if not isinstance(raw_status, str) or not raw_status:
+            raise TypeError("wakeup run status must be a nonblank string")
+        raw_created_at = item.get("created_at")
+        if not isinstance(raw_created_at, str):
+            raise TypeError("wakeup run created_at must be an RFC3339 timestamp")
+        try:
+            created_at = datetime.datetime.fromisoformat(raw_created_at.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise TypeError("wakeup run created_at must be an RFC3339 timestamp") from error
+        raw_note = item.get("checkin_note")
+        if raw_note is not None and not isinstance(raw_note, str):
+            raise TypeError("wakeup run checkin_note must be a string or null")
+        runs.append(
+            IssueWakeupRun(
+                id=raw_id,
+                status=raw_status,
+                created_at=created_at,
+                checkin_note=raw_note,
+            )
+        )
+    return Page(items=tuple(runs), total=len(runs))
 
 
 def _is_wakeup_source_busy(error: CommandExecutionError) -> bool:
@@ -209,6 +334,11 @@ def _validate_wakeup_inputs(
     at: str | None,
     interval_seconds: int | None,
     cron_expression: str | None,
+    expires_in_seconds: int | None,
+    expires_at: str | None,
+    on_timeout: str | None,
+    max_fires: int | None,
+    condition: Mapping[str, object] | None,
 ) -> None:
     if kind not in {"event", "at", "every", "cron"}:
         raise ValueError("kind must be event, at, every or cron")
@@ -224,6 +354,42 @@ def _validate_wakeup_inputs(
         if value is not None and (type(value) is not int or value <= 0):
             raise ValueError(f"{name} must be a positive whole number of seconds")
 
+    if expires_in_seconds is not None and (
+        type(expires_in_seconds) is not int or not 60 <= expires_in_seconds <= 31_536_000
+    ):
+        raise ValueError("expires_in_seconds must be an integer from 60 to 31536000")
+    expiry: datetime.datetime | None = None
+    if expires_at is not None:
+        if not isinstance(expires_at, str) or not expires_at.strip():
+            raise ValueError("expires_at must be a nonblank RFC3339 timestamp")
+        try:
+            expiry = datetime.datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise ValueError("expires_at must be an RFC3339 timestamp") from error
+        if expiry.tzinfo is None:
+            raise ValueError("expires_at must include a timezone")
+        now = datetime.datetime.now(datetime.UTC)
+        if not now < expiry <= now + datetime.timedelta(days=365):
+            raise ValueError("expires_at must be in the future and no more than one year ahead")
+    if expires_in_seconds is not None and expires_at is not None:
+        raise ValueError("expires_in_seconds and expires_at are mutually exclusive")
+    if on_timeout is not None:
+        if not isinstance(on_timeout, str) or on_timeout not in {"end", "wake"}:
+            raise ValueError("on_timeout must be end or wake")
+        if expires_in_seconds is None and expires_at is None:
+            raise ValueError("on_timeout requires a deadline")
+        if on_timeout == "wake" and kind != "event":
+            raise ValueError("on_timeout wake requires event kind")
+    if max_fires is not None:
+        if type(max_fires) is not int or not 1 <= max_fires <= 1000:
+            raise ValueError("max_fires must be an integer from 1 to 1000")
+        if mode != "continuous":
+            raise ValueError("max_fires requires continuous mode")
+    if kind == "at" and any(
+        value is not None for value in (expires_in_seconds, expires_at, on_timeout, max_fires)
+    ):
+        raise ValueError("at wakeups cannot contain deadline or fire-limit fields")
+
     has_schedule = any(
         value is not None for value in (after_seconds, at, interval_seconds, cron_expression)
     )
@@ -231,6 +397,71 @@ def _validate_wakeup_inputs(
         value is not None
         for value in (filter_actor_type, filter_actor_id, filter_agent_id, filter_task_id)
     )
+
+    if condition is not None:
+        if not isinstance(condition, Mapping):
+            raise TypeError("condition must be a mapping")
+        families = {
+            "status",
+            "assignee",
+            "label",
+            "property",
+            "children_done",
+            "pull_request",
+            "referenced_issue",
+        }
+        keys = set(condition)
+        if len(keys) != 1 or not keys <= families:
+            raise ValueError("condition must contain exactly one approved condition family")
+        family = next(iter(keys))
+        raw_condition = condition[family]
+        if family in {"status", "label"}:
+            if not isinstance(raw_condition, str) or not raw_condition.strip():
+                raise ValueError(f"condition {family} must be a nonblank string")
+        elif family == "assignee":
+            if not isinstance(raw_condition, str) or not raw_condition.strip():
+                raise ValueError("condition assignee must be nonblank")
+            assignee_type, separator, assignee_id = raw_condition.partition(":")
+            if (
+                assignee_type not in {"member", "agent", "squad"}
+                or not separator
+                or not assignee_id
+            ):
+                raise ValueError("condition assignee must be member|agent|squad:ID")
+        elif family == "property":
+            if raw_condition is None:
+                raise ValueError("condition property must be non-null JSON")
+            if isinstance(raw_condition, str) and len(raw_condition) > 1024:
+                raise ValueError("condition property string must be at most 1 KiB")
+            _coerce_json_value(raw_condition, field_name="condition.property")
+        elif family == "children_done":
+            if not isinstance(raw_condition, Mapping):
+                raise TypeError("condition children_done must be an object")
+            stage = raw_condition.get("stage")
+            if type(stage) is not int or not 1 <= stage <= 1000:
+                raise ValueError("condition children_done stage must be an integer from 1 to 1000")
+        elif family == "pull_request":
+            pull_request_status = (
+                raw_condition.get("status") if isinstance(raw_condition, Mapping) else raw_condition
+            )
+            if pull_request_status not in {"checks", "merged"}:
+                raise ValueError("condition pull_request status must be checks or merged")
+        else:
+            if not isinstance(raw_condition, Mapping):
+                raise TypeError("condition referenced_issue must be an object")
+            referenced_state = raw_condition.get("state")
+            referenced_id = raw_condition.get("id")
+            if referenced_state not in {"done", "ended", "in_review"}:
+                raise ValueError(
+                    "condition referenced_issue state must be done, ended or in_review"
+                )
+            if not isinstance(referenced_id, str) or not referenced_id.strip():
+                raise ValueError("condition referenced_issue id must be nonblank")
+        if kind != "event":
+            raise ValueError("conditions require event kind")
+        if event_types or has_schedule or has_filter:
+            raise ValueError("conditions cannot be combined with events, filters or schedules")
+
     if filter_actor_type is not None or filter_actor_id is not None:
         if filter_actor_type not in {"member", "agent"} or not filter_actor_id:
             raise ValueError("actor filters require member|agent and a nonblank actor ID")
@@ -242,7 +473,7 @@ def _validate_wakeup_inputs(
         raise ValueError("task filter requires only task events")
 
     if kind == "event":
-        if not event_types:
+        if not event_types and condition is None:
             raise ValueError("event wakeups require at least one event type")
         if has_schedule:
             raise ValueError("event wakeups cannot contain a schedule")
@@ -278,12 +509,28 @@ def _validate_wakeup_inputs(
             raise ValueError("cron wakeups require cron_expression")
 
 
+def _condition_arg(condition: Mapping[str, object]) -> str:
+    normalized = _coerce_json_value(condition, field_name="condition")
+
+    def plain(value: object) -> object:
+        if isinstance(value, Mapping):
+            return {str(key): plain(item) for key, item in value.items()}
+        if isinstance(value, tuple):
+            return [plain(item) for item in value]
+        return value
+
+    return json.dumps(plain(normalized), separators=(",", ":"), sort_keys=True)
+
+
 class IssueWakeupResource(BaseResource):
     def events_command(
         self, *, options: OperationOptions | None = None
     ) -> Command[IssueWakeupEvents]:
         return self._json_command(
-            ("issue", "wakeup", "events"), _decode_events, ISSUE_WAKEUP_EVENTS_BINDING, options
+            ("issue", "wakeup", "events"),
+            _decode_events,
+            cast("object", ISSUE_WAKEUP_EVENTS_BINDING),
+            options,
         )
 
     def events(self, *, options: OperationOptions | None = None) -> IssueWakeupEvents:
@@ -296,7 +543,7 @@ class IssueWakeupResource(BaseResource):
         return self._json_command(
             ("issue", "wakeup", "list", issue_id),
             _decode_wakeups,
-            ISSUE_WAKEUP_LIST_BINDING,
+            cast("object", ISSUE_WAKEUP_LIST_BINDING),
             options,
         )
 
@@ -311,7 +558,7 @@ class IssueWakeupResource(BaseResource):
         return self._json_command(
             ("issue", "wakeup", "get", issue_id, wakeup_id),
             _decode_wakeup,
-            ISSUE_WAKEUP_GET_BINDING,
+            cast("object", ISSUE_WAKEUP_GET_BINDING),
             options,
         )
 
@@ -328,7 +575,7 @@ class IssueWakeupResource(BaseResource):
         return self._json_command(
             ("issue", "wakeup", "disable", issue_id, wakeup_id),
             _decode_wakeup,
-            ISSUE_WAKEUP_DISABLE_BINDING,
+            cast("object", ISSUE_WAKEUP_DISABLE_BINDING),
             options,
         )
 
@@ -336,6 +583,81 @@ class IssueWakeupResource(BaseResource):
         self, issue_id: str, wakeup_id: str, *, options: OperationOptions | None = None
     ) -> IssueWakeup:
         return self.disable_command(issue_id, wakeup_id, options=options).run()
+
+    def trigger_command(
+        self, issue_id: str, wakeup_id: str, *, options: OperationOptions | None = None
+    ) -> Command[IssueWakeupTriggerResult]:
+        validate_nonblank(issue_id)
+        validate_nonblank(wakeup_id)
+        return self._json_command(
+            ("issue", "wakeup", "trigger", issue_id, wakeup_id),
+            _decode_trigger,
+            None,
+            options,
+        )
+
+    def trigger(
+        self, issue_id: str, wakeup_id: str, *, options: OperationOptions | None = None
+    ) -> IssueWakeupTriggerResult:
+        return self.trigger_command(issue_id, wakeup_id, options=options).run()
+
+    def delete_command(
+        self, issue_id: str, wakeup_id: str, *, options: OperationOptions | None = None
+    ) -> Command[IssueWakeupDeleteResult]:
+        validate_nonblank(issue_id)
+        validate_nonblank(wakeup_id)
+        return self._json_command(
+            ("issue", "wakeup", "delete", issue_id, wakeup_id),
+            _decode_delete,
+            None,
+            options,
+        )
+
+    def delete(
+        self, issue_id: str, wakeup_id: str, *, options: OperationOptions | None = None
+    ) -> IssueWakeupDeleteResult:
+        return self.delete_command(issue_id, wakeup_id, options=options).run()
+
+    def checkin_command(
+        self,
+        issue_id: str,
+        wakeup_id: str,
+        note: str,
+        *,
+        options: OperationOptions | None = None,
+    ) -> Command[ActionResult[None]]:
+        validate_nonblank(issue_id)
+        validate_nonblank(wakeup_id)
+        if not isinstance(note, str) or not note.strip():
+            raise ValueError("note must be a nonblank string")
+        return self._action_command(
+            ("issue", "wakeup", "checkin", issue_id, wakeup_id, "--note", note),
+            options=options,
+        )
+
+    def checkin(
+        self,
+        issue_id: str,
+        wakeup_id: str,
+        note: str,
+        *,
+        options: OperationOptions | None = None,
+    ) -> ActionResult[None]:
+        return self.checkin_command(issue_id, wakeup_id, note, options=options).run()
+
+    def runs_command(
+        self, issue_id: str, wakeup_id: str, *, options: OperationOptions | None = None
+    ) -> Command[IssueWakeupRunsPage]:
+        validate_nonblank(issue_id)
+        validate_nonblank(wakeup_id)
+        return self._json_command(
+            ("issue", "wakeup", "runs", issue_id, wakeup_id), _decode_runs, None, options
+        )
+
+    def runs(
+        self, issue_id: str, wakeup_id: str, *, options: OperationOptions | None = None
+    ) -> IssueWakeupRunsPage:
+        return self.runs_command(issue_id, wakeup_id, options=options).run()
 
     def create_command(
         self,
@@ -356,6 +678,11 @@ class IssueWakeupResource(BaseResource):
         interval_seconds: int | None = None,
         cron_expression: str | None = None,
         timezone: str = "UTC",
+        expires_in_seconds: int | None = None,
+        expires_at: str | None = None,
+        on_timeout: str | None = None,
+        max_fires: int | None = None,
+        condition: Mapping[str, object] | None = None,
         options: OperationOptions | None = None,
     ) -> Command[IssueWakeup]:
         args = self._build_args(
@@ -377,9 +704,16 @@ class IssueWakeupResource(BaseResource):
             interval_seconds=interval_seconds,
             cron_expression=cron_expression,
             timezone=timezone,
+            expires_in_seconds=expires_in_seconds,
+            expires_at=expires_at,
+            on_timeout=on_timeout,
+            max_fires=max_fires,
+            condition=condition,
         )
         return _with_busy_retry(
-            self._json_command(args, _decode_wakeup, ISSUE_WAKEUP_CREATE_BINDING, options)
+            self._json_command(
+                args, _decode_wakeup, cast("object", ISSUE_WAKEUP_CREATE_BINDING), options
+            )
         )
 
     def create(
@@ -401,6 +735,11 @@ class IssueWakeupResource(BaseResource):
         interval_seconds: int | None = None,
         cron_expression: str | None = None,
         timezone: str = "UTC",
+        expires_in_seconds: int | None = None,
+        expires_at: str | None = None,
+        on_timeout: str | None = None,
+        max_fires: int | None = None,
+        condition: Mapping[str, object] | None = None,
         options: OperationOptions | None = None,
     ) -> IssueWakeup:
         return self.create_command(
@@ -420,6 +759,11 @@ class IssueWakeupResource(BaseResource):
             interval_seconds=interval_seconds,
             cron_expression=cron_expression,
             timezone=timezone,
+            expires_in_seconds=expires_in_seconds,
+            expires_at=expires_at,
+            on_timeout=on_timeout,
+            max_fires=max_fires,
+            condition=condition,
             options=options,
         ).run()
 
@@ -443,6 +787,11 @@ class IssueWakeupResource(BaseResource):
         interval_seconds: int | None = None,
         cron_expression: str | None = None,
         timezone: str = "UTC",
+        expires_in_seconds: int | None = None,
+        expires_at: str | None = None,
+        on_timeout: str | None = None,
+        max_fires: int | None = None,
+        condition: Mapping[str, object] | None = None,
         options: OperationOptions | None = None,
     ) -> Command[IssueWakeup]:
         """Replace the full configuration; the service re-enables it atomically."""
@@ -465,9 +814,14 @@ class IssueWakeupResource(BaseResource):
             interval_seconds=interval_seconds,
             cron_expression=cron_expression,
             timezone=timezone,
+            expires_in_seconds=expires_in_seconds,
+            expires_at=expires_at,
+            on_timeout=on_timeout,
+            max_fires=max_fires,
+            condition=condition,
         )
         return self._json_command(
-            args, _decode_reenabled_wakeup, ISSUE_WAKEUP_UPDATE_BINDING, options
+            args, _decode_reenabled_wakeup, cast("object", ISSUE_WAKEUP_UPDATE_BINDING), options
         )
 
     def update(
@@ -490,6 +844,11 @@ class IssueWakeupResource(BaseResource):
         interval_seconds: int | None = None,
         cron_expression: str | None = None,
         timezone: str = "UTC",
+        expires_in_seconds: int | None = None,
+        expires_at: str | None = None,
+        on_timeout: str | None = None,
+        max_fires: int | None = None,
+        condition: Mapping[str, object] | None = None,
         options: OperationOptions | None = None,
     ) -> IssueWakeup:
         return self.update_command(
@@ -510,6 +869,11 @@ class IssueWakeupResource(BaseResource):
             interval_seconds=interval_seconds,
             cron_expression=cron_expression,
             timezone=timezone,
+            expires_in_seconds=expires_in_seconds,
+            expires_at=expires_at,
+            on_timeout=on_timeout,
+            max_fires=max_fires,
+            condition=condition,
             options=options,
         ).run()
 
@@ -548,6 +912,11 @@ class IssueWakeupResource(BaseResource):
         interval_seconds: int | None,
         cron_expression: str | None,
         timezone: str,
+        expires_in_seconds: int | None,
+        expires_at: str | None,
+        on_timeout: str | None,
+        max_fires: int | None,
+        condition: Mapping[str, object] | None,
     ) -> tuple[str, ...]:
         validate_nonblank(issue_id)
         validate_nonblank(instruction)
@@ -568,6 +937,11 @@ class IssueWakeupResource(BaseResource):
             at=at,
             interval_seconds=interval_seconds,
             cron_expression=cron_expression,
+            expires_in_seconds=expires_in_seconds,
+            expires_at=expires_at,
+            on_timeout=on_timeout,
+            max_fires=max_fires,
+            condition=condition,
         )
         if wakeup_id is not None:
             validate_nonblank(wakeup_id)
@@ -601,4 +975,15 @@ class IssueWakeupResource(BaseResource):
                 args.extend((f"--{flag}", str(value)))
         if timezone != "UTC":
             args.extend(("--timezone", timezone))
+        tail_v2: tuple[tuple[str, object], ...] = (
+            ("expires-in", expires_in_seconds),
+            ("expires-at", expires_at),
+            ("on-timeout", on_timeout),
+            ("max-fires", max_fires),
+        )
+        for flag, value in tail_v2:
+            if value is not None:
+                args.extend((f"--{flag}", str(value)))
+        if condition is not None:
+            args.extend(("--condition", _condition_arg(condition)))
         return tuple(args)

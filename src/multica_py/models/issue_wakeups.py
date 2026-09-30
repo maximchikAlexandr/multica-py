@@ -7,7 +7,16 @@ import msgspec
 from multica_py.models.common import Page
 from multica_py.types import JsonValue
 
-__all__ = ["IssueWakeup", "IssueWakeupEvent", "IssueWakeupEvents", "IssueWakeupPage"]
+__all__ = [
+    "IssueWakeup",
+    "IssueWakeupDeleteResult",
+    "IssueWakeupEvent",
+    "IssueWakeupEvents",
+    "IssueWakeupPage",
+    "IssueWakeupRun",
+    "IssueWakeupRunsPage",
+    "IssueWakeupTriggerResult",
+]
 
 
 class IssueWakeup(msgspec.Struct, frozen=True, kw_only=True):
@@ -35,11 +44,21 @@ class IssueWakeup(msgspec.Struct, frozen=True, kw_only=True):
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
     metadata: JsonValue | None = None
+    expires_in_seconds: int | None = None
+    expires_at: datetime.datetime | None = None
+    on_timeout: str | None = None
+    max_fires: int | None = None
+    fire_count: int | None = None
+    paused: bool | None = None
+    condition: JsonValue | None = None
+    provenance: JsonValue | None = None
 
 
 class IssueWakeupEvent(msgspec.Struct, frozen=True, kw_only=True):
     name: str
     description: str = ""
+    condition: JsonValue | None = None
+    loop_protection: str | None = None
 
 
 class IssueWakeupEvents(msgspec.Struct, frozen=True, kw_only=True):
@@ -48,3 +67,23 @@ class IssueWakeupEvents(msgspec.Struct, frozen=True, kw_only=True):
 
 
 IssueWakeupPage = Page[IssueWakeup]
+
+
+class IssueWakeupRun(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    status: str
+    created_at: datetime.datetime
+    checkin_note: str | None = None
+
+
+class IssueWakeupTriggerResult(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    triggered: bool
+
+
+class IssueWakeupDeleteResult(msgspec.Struct, frozen=True, kw_only=True):
+    id: str
+    deleted: bool
+
+
+IssueWakeupRunsPage = Page[IssueWakeupRun]

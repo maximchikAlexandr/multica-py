@@ -31,15 +31,17 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
-The approved SDK target is Multica CLI `0.5.3` at commit
-`ff8b285497809e084915016c40c2bc5e5991ffbc` (release `395523214`), with
-compatibility interval `[0.4.42, 0.5.4)`. Migrate directly from CLI/SDK
-`0.5.2`; no intermediate SDK release is supported. The typed surface now
-covers the complete public command inventory, including chat history/thread,
-issue wakeups, repository checkout, and runtime profiles. Inherited global
-flags and interactive login inputs are represented by typed command plans; use
-`command.commands` to inspect redacted previews before execution. The
-exclusive `0.5.4` ceiling keeps the reviewed contract bounded.
+The approved SDK target is Multica CLI `0.6.0` at commit
+`ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02` (release `398016451`), with
+compatibility interval `[0.5.3, 0.6.1)`. Migrate directly from CLI/SDK
+`0.5.3`; no intermediate SDK release is supported. The typed surface covers
+205 target command nodes, 193 operations, and 196 response entrypoints,
+including wakeup v2 lifecycle actions, task cursors, issue attachments,
+comment supplements, pull-request auto-complete status, and workspace MCP
+agent counts. Inherited global flags and interactive login inputs remain
+represented by typed command plans; use `command.commands` to inspect
+redacted previews before execution. The exclusive `0.6.1` ceiling keeps the
+reviewed contract bounded.
 
 Issue responses expose the immutable `duplicate_of` snapshot when supplied;
 omitted and explicit-null values remain distinguishable through wire presence.
@@ -84,7 +86,7 @@ page = client.issues.list(
 
 from multica_py.models.issues import IssuePropertyAssignment
 
-# Atomic create-time properties are sent in caller order; CLI 0.5.2 owns
+# Atomic create-time properties are sent in caller order; CLI 0.6.0 owns
 # catalog lookup, value canonicalization, and server-side atomicity.
 issue = client.issues.create(
     title="Release checklist",

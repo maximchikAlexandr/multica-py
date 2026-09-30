@@ -15,6 +15,14 @@ if TYPE_CHECKING:
     from multica_py.client import MulticaClient
 
 
+class CommentSupplement(msgspec.Struct, frozen=True, kw_only=True):
+    task_id: str
+    status: str
+    agent_id: str | None = None
+    failure_reason: str | None = None
+    delivered_at: datetime.datetime | None = None
+
+
 class Comment(_BoundEntity):  # type: ignore[misc]
     id: str
     body: str
@@ -33,6 +41,7 @@ class Comment(_BoundEntity):  # type: ignore[misc]
     folded: bool | None = None
     trigger: object | None = None
     supplement: object | None = None
+    supplements: tuple[CommentSupplement, ...] = ()
 
 
 class CommentThread(_BoundEntity):  # type: ignore[misc]

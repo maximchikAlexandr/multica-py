@@ -9,9 +9,13 @@ from multica_py.models.issue_activity import MetadataPage
 from multica_py.models.issue_timeline import IssueTimelineEvent, IssueTimelinePage
 from multica_py.models.issue_wakeups import (
     IssueWakeup,
+    IssueWakeupDeleteResult,
     IssueWakeupEvent,
     IssueWakeupEvents,
     IssueWakeupPage,
+    IssueWakeupRun,
+    IssueWakeupRunsPage,
+    IssueWakeupTriggerResult,
 )
 from multica_py.models.issues import (
     DuplicateIssueReference,
@@ -19,6 +23,8 @@ from multica_py.models.issues import (
     IssueListFilter,
     IssueListPage,
     IssuePropertyAssignment,
+    LinkedPullRequest,
+    PullRequestAutoComplete,
 )
 from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
 from multica_py.models.relations import (
@@ -36,6 +42,7 @@ from multica_py.models.system import (
     RuntimeProfiles,
     RuntimeUpdateResult,
 )
+from multica_py.models.workspaces import McpServer
 
 __all__ = [
     "ActionResult",
@@ -55,17 +62,24 @@ __all__ = [
     "IssueTimelineEvent",
     "IssueTimelinePage",
     "IssueWakeup",
+    "IssueWakeupDeleteResult",
     "IssueWakeupEvent",
     "IssueWakeupEvents",
     "IssueWakeupPage",
+    "IssueWakeupRun",
+    "IssueWakeupRunsPage",
+    "IssueWakeupTriggerResult",
     "LazyCollection",
     "LazyMapping",
+    "LinkedPullRequest",
     "LocalDirectoryResourceRef",
+    "McpServer",
     "MetadataPage",
     "OffsetLazyCollection",
     "OffsetPage",
     "Page",
     "ProjectResourceRecord",
+    "PullRequestAutoComplete",
     "RelationMetadata",
     "RepositoryCheckoutResult",
     "RuntimeProfile",

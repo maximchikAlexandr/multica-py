@@ -63,10 +63,16 @@ class IssuePropertyAssignment(msgspec.Struct, frozen=True, kw_only=True):
             raise TypeError("value must be a string")
 
 
+class PullRequestAutoComplete(msgspec.Struct, frozen=True, kw_only=True):
+    target_status: str
+    state: str | None = None
+
+
 class LinkedPullRequest(msgspec.Struct, frozen=True, kw_only=True):
     url: str
     title: str | None = None
     state: str | None = None
+    pr_auto_complete: PullRequestAutoComplete | None = None
 
 
 class IssueChildStageGroup(msgspec.Struct, frozen=True, kw_only=True):

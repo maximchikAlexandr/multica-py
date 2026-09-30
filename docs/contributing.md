@@ -39,9 +39,9 @@ It never edits the approved contract or repository runtime code. Review and Git
 merge are the sole promotion decision; candidate state, journals, upgrade
 bundles, and golden generated copies are not used.
 
-For the current direct `0.5.2` → `0.5.3` review, the target source is pinned
-to `ff8b285497809e084915016c40c2bc5e5991ffbc` (release `395523214`) and the
-compatibility interval is `[0.4.42, 0.5.4)`. Verify the `0.5.2` and `0.5.3` release archives
+For the current direct `0.5.3` → `0.6.0` review, the target source is pinned
+to `ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02` (release `398016451`) and the
+compatibility interval is `[0.5.3, 0.6.1)`. Verify the `0.5.3` and `0.6.0` release archives
 against the official manifests before hashing their extracted executables;
 pass only the executable digest to `collect --sha256`. Run the source-link
 audit after validation:
@@ -51,7 +51,7 @@ describe the current release workflow.
 
 ```bash
 uv run python scripts/audit_source_links.py \
-  --source-checkout .devlocal/upstream-contract/v0.5.2..v0.5.3/source/multica
+  --source-checkout .devlocal/upstream-contract/v0.5.3..v0.6.0/source/multica
 ```
 
 The generated runtime projection is

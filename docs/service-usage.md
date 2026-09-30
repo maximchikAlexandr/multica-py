@@ -46,6 +46,42 @@ issue = workspace_client.issues.get("issue_456")
 Derived views keep independent immutable configuration and share the original
 process semaphore. Closing one view does not close another.
 
+## Use the v0.6.0 response and lifecycle surfaces
+
+The approved direct upgrade from CLI/SDK `0.5.3` to `0.6.0` keeps offline
+compatibility separate from live backend status. Wakeups expose v2 fields and
+typed lifecycle actions through the existing resource:
+
+```python
+wakeup = client.issues.wakeups.get("issue_123", "wakeup_123")
+triggered = client.issues.wakeups.trigger("issue_123", wakeup.id)
+client.issues.wakeups.checkin("issue_123", wakeup.id, note="still running")
+runs = client.issues.wakeups.runs("issue_123", wakeup.id)
+```
+
+Use `client.agents.tasks(agent_id, limit=50, before=cursor)` for opaque task
+history pagination; `issue.runs` deliberately retains its existing pagination
+contract. Issue attachments are ordered local paths and can be sent without
+other update fields:
+
+```python
+from datetime import timedelta
+
+from multica_py import OperationOptions
+
+issue = client.issues.update(
+    "issue_123",
+    attachments=("artifacts/report.json",),
+    options=OperationOptions(timeout=timedelta(seconds=120)),
+)
+```
+
+The SDK validates local attachment paths before I/O, requires explicit
+`allow_external_file=True` for paths outside the working directory, and does
+not retry a target failure after upload. Omitted and explicit-null response
+fields remain distinct, and unknown forward-compatible status/action values are
+preserved.
+
 ## Collect or stream a managed process
 
 Buffered process APIs provide one immutable `ProcessResult` for the complete

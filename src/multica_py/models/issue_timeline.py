@@ -19,6 +19,7 @@ class IssueTimelineEvent(msgspec.Struct, frozen=True, kw_only=True):
     summary: str | None = None
     created_at: datetime.datetime | None = None
     data: JsonValue | None = None
+    details: JsonValue | None = None
     metadata: JsonValue | None = None
 
 

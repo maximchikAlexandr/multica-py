@@ -277,6 +277,8 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
     id: str
     status: str
     wakeup_id: str | None = None
+    wakeup_system_rule: str | None = None
+    wakeup_joined: bool | None = None
     supplement_capability: str | None = None
     supplement_comment_ids: tuple[str, ...] = ()
     can_supplement: bool | None = None
@@ -351,6 +353,10 @@ class TaskRun(_BoundEntity):  # type: ignore[misc]
             data.pop("cancelled_by", None)
         if self.wakeup_id is None:
             data.pop("wakeup_id", None)
+        if self.wakeup_system_rule is None:
+            data.pop("wakeup_system_rule", None)
+        if self.wakeup_joined is None:
+            data.pop("wakeup_joined", None)
         if self.supplement_capability is None:
             data.pop("supplement_capability", None)
         if self.can_supplement is None:
@@ -1047,6 +1053,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
         attachments: tuple[str, ...] | UnsetType = Unset,
+        allow_external_file: bool = False,
         no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
@@ -1067,6 +1074,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             project_id=project_id,
             parent_id=parent_id,
             attachments=attachments,
+            allow_external_file=allow_external_file,
             no_start=no_start,
             options=options,
         )
@@ -1086,6 +1094,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         project_id: str | None | UnsetType = Unset,
         parent_id: str | None | UnsetType = Unset,
         attachments: tuple[str, ...] | UnsetType = Unset,
+        allow_external_file: bool = False,
         no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Issue:
@@ -1102,6 +1111,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             project_id=project_id,
             parent_id=parent_id,
             attachments=attachments,
+            allow_external_file=allow_external_file,
             no_start=no_start,
             options=options,
         ).run()
