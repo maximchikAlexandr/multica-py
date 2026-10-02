@@ -520,27 +520,56 @@ def test_duplicate_mutations_emit_one_flag_and_require_target_cli(
     transport.run_bytes.assert_not_called()
 
 
-@pytest.mark.parametrize("duplicate_of", ("", " \t"), ids=("empty", "whitespace"))
-@pytest.mark.parametrize("method_name", ("set_status", "update"))
-@pytest.mark.parametrize("bound", (False, True), ids=("resource", "bound"))
+BlankDuplicateInvocation = Callable[[IssueResource, Issue, str], object]
+
+
+def _invoke_resource_set_status(resource: IssueResource, issue: Issue, duplicate_of: str) -> object:
+    return resource.set_status("issue-1", "cancelled", duplicate_of=duplicate_of)
+
+
+def _invoke_bound_set_status(resource: IssueResource, issue: Issue, duplicate_of: str) -> object:
+    return issue.set_status("cancelled", duplicate_of=duplicate_of)
+
+
+def _invoke_resource_update(resource: IssueResource, issue: Issue, duplicate_of: str) -> object:
+    return resource.update("issue-1", duplicate_of=duplicate_of)
+
+
+def _invoke_bound_update(resource: IssueResource, issue: Issue, duplicate_of: str) -> object:
+    return issue.update(duplicate_of=duplicate_of)
+
+
+@dataclass(frozen=True)
+class BlankDuplicateCase:
+    name: str
+    duplicate_of: str
+    invoke: BlankDuplicateInvocation
+
+
+_BLANK_DUPLICATE_INVOCATIONS = (
+    ("resource-set-status", _invoke_resource_set_status),
+    ("bound-set-status", _invoke_bound_set_status),
+    ("resource-update", _invoke_resource_update),
+    ("bound-update", _invoke_bound_update),
+)
+_BLANK_DUPLICATE_CASES = tuple(
+    BlankDuplicateCase(f"{operation}-{label}", duplicate_of, invoke)
+    for label, duplicate_of in (("empty", ""), ("whitespace", " \t"))
+    for operation, invoke in _BLANK_DUPLICATE_INVOCATIONS
+)
+
+
+@pytest.mark.parametrize("case", _BLANK_DUPLICATE_CASES, ids=lambda case: case.name)
 def test_blank_duplicate_reference_fails_before_transport_or_upload(
-    duplicate_of: str,
-    method_name: str,
-    bound: bool,
+    case: BlankDuplicateCase,
     client_with_transport: tuple[MulticaClient, MagicMock],
 ) -> None:
     client, transport = client_with_transport
     resource = client.issues
     issue = _issue(_issue_payload(parent_id=None, project_id=None, assignee=None), client)
-    target = getattr(issue if bound else resource, method_name)
-    args: tuple[str, ...] = ("cancelled",) if method_name == "set_status" and bound else ()
-    if method_name == "set_status" and not bound:
-        args = ("issue-1", "cancelled")
-    if method_name == "update" and not bound:
-        args = ("issue-1",)
 
     with pytest.raises(ValueError, match="nonblank"):
-        target(*args, duplicate_of=duplicate_of)
+        case.invoke(resource, issue, case.duplicate_of)
     transport.run_bytes.assert_not_called()
 
 
