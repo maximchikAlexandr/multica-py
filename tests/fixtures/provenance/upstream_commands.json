@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "pinned_sha": "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02",
-    "tag": "v0.6.0",
+  "pinned_sha": "2ea01ae4ef55de4310b99af192d2dbd367832883",
+  "tag": "v0.6.1",
     "visible_leaf_count": 170
   },
   "commands": [

@@ -829,7 +829,11 @@ _CHANGED_PUBLIC_SURFACE_SIGNATURES: tuple[tuple[type[object], str, tuple[str, ..
             "options",
         ),
     ),
-    (IssueResource, "set_status", ("issue_id", "status", "no_start", "options")),
+    (
+        IssueResource,
+        "set_status",
+        ("issue_id", "status", "duplicate_of", "no_start", "options"),
+    ),
     (
         ProjectResource,
         "create",
@@ -863,7 +867,7 @@ _CHANGED_PUBLIC_SURFACE_SIGNATURES: tuple[tuple[type[object], str, tuple[str, ..
             "options",
         ),
     ),
-    (Issue, "set_status", ("status", "no_start", "options")),
+    (Issue, "set_status", ("status", "duplicate_of", "no_start", "options")),
 )
 
 

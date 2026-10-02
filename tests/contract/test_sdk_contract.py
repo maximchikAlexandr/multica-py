@@ -42,15 +42,15 @@ def test_approved_inventory_and_response_audit_are_complete() -> None:
     response_audit = cast("dict[str, int]", compatibility["response_audit"])
 
     assert inventory.target_nodes == 205
-    assert inventory.baseline_nodes == 201
-    assert inventory.added == 4
-    assert inventory.changed == 6
+    assert inventory.baseline_nodes == 205
+    assert inventory.added == 0
+    assert inventory.changed == 2
     assert inventory.removed == 0
     assert len(contract.operations) == 193
     assert len(contract.compatibility.response_registry) == 196
     assert response_audit["supported_entrypoints"] == 196
-    assert response_audit["changed"] == 18
-    assert response_audit["unchanged"] == 178
+    assert response_audit["changed"] == 9
+    assert response_audit["unchanged"] == 187
 
     typed_rows = [
         item
@@ -80,9 +80,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.6.0'" in runtime
-    assert b"MIN_CLI_VERSION = '0.5.3'" in runtime
-    assert b"MAX_CLI_VERSION = '0.6.1'" in runtime
+    assert b"TARGET_VERSION = '0.6.1'" in runtime
+    assert b"MIN_CLI_VERSION = '0.6.0'" in runtime
+    assert b"MAX_CLI_VERSION = '0.6.2'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -259,11 +259,11 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
 def test_prior_binary_provenance_and_reviewed_responses_are_exact() -> None:
     contract = validate_contract(APPROVED)
     binary = next(
-        item for item in contract.compatibility.verified_binaries if item.version == "0.5.3"
+        item for item in contract.compatibility.verified_binaries if item.version == "0.6.0"
     )
-    assert binary.commit.startswith("ff8b285497")
+    assert binary.commit.startswith("ea94c7cd5b")
     assert (binary.build_date, binary.go_version, binary.os, binary.arch) == (
-        "2026-09-24T10:07:17Z",
+        "2026-09-28T07:03:47Z",
         "go1.26.8",
         "darwin",
         "arm64",
@@ -298,11 +298,10 @@ def test_retained_inventory_is_reconciled() -> None:
     assert len(contract.compatibility.response_registry) == 196
     assert (
         sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
-        == 178
+        == 187
     )
     assert (
-        sum(item.disposition == "changed" for item in contract.compatibility.response_registry)
-        == 18
+        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 9
     )
     assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
 

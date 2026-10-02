@@ -46,9 +46,9 @@ issue = workspace_client.issues.get("issue_456")
 Derived views keep independent immutable configuration and share the original
 process semaphore. Closing one view does not close another.
 
-## Use the v0.6.0 response and lifecycle surfaces
+## Use the v0.6.1 response and lifecycle surfaces
 
-The approved direct upgrade from CLI/SDK `0.5.3` to `0.6.0` keeps offline
+The approved direct upgrade from CLI/SDK `0.6.0` to `0.6.1` keeps offline
 compatibility separate from live backend status. Wakeups expose v2 fields and
 typed lifecycle actions through the existing resource:
 
@@ -81,6 +81,16 @@ The SDK validates local attachment paths before I/O, requires explicit
 not retry a target failure after upload. Omitted and explicit-null response
 fields remain distinct, and unknown forward-compatible status/action values are
 preserved.
+
+Duplicate issue transitions are explicit and atomic:
+
+```python
+client.issues.update("issue_123", duplicate_of="issue_456")
+issue.set_status("cancelled", duplicate_of="issue_456")
+```
+
+The reference must be nonblank and the status must be `cancelled`; descriptions
+and emitted attachments cannot accompany a duplicate transition.
 
 ## Collect or stream a managed process
 

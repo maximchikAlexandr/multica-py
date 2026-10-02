@@ -477,7 +477,7 @@ def test_deadline_exclusivity_timeout_ownership_and_omitted_target_cap() -> None
             resource,
             event_types=("comment.created",),
             expires_in_seconds=60,
-            expires_at="2026-10-01T00:00:00Z",
+            expires_at="2026-11-01T00:00:00Z",
         )
     with pytest.raises(ValueError, match="requires a deadline"):
         create_args(resource, event_types=("comment.created",), on_timeout="end")
@@ -539,7 +539,7 @@ _V2_NULL_WAKEUP = wakeup_payload(
 )
 _V2_VALID_WAKEUP = wakeup_payload(
     expires_in_seconds=3600,
-    expires_at="2026-10-01T00:00:00Z",
+    expires_at="2026-11-01T00:00:00Z",
     on_timeout="wake",
     max_fires=5,
     fire_count=2,

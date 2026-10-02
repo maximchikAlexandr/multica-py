@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import pathlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal, cast
@@ -472,6 +473,82 @@ def test_issue_update_preserves_triage_parent_presence_and_complete_argv(
         "--output",
         "json",
     )
+    transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize("bound", (False, True), ids=("resource", "bound"))
+def test_duplicate_mutations_emit_one_flag_and_require_target_cli(
+    bound: bool,
+    client_with_transport: tuple[MulticaClient, MagicMock],
+) -> None:
+    client, transport = client_with_transport
+    resource = client.issues
+    if bound:
+        issue = _issue(_issue_payload(parent_id=None, project_id=None, assignee=None), client)
+        status_command = issue.set_status_command(
+            "cancelled", duplicate_of="ISSUE-42", no_start=True
+        )
+        update_command = issue.update_command(duplicate_of="ISSUE-42")
+    else:
+        status_command = resource.set_status_command(
+            "issue-1", "cancelled", duplicate_of="ISSUE-42", no_start=True
+        )
+        update_command = resource.update_command("issue-1", duplicate_of="ISSUE-42")
+
+    assert status_command._plan.steps[0].argv == (
+        "issue",
+        "status",
+        "issue-1",
+        "cancelled",
+        "--duplicate-of",
+        "ISSUE-42",
+        "--no-start",
+        "--output",
+        "json",
+    )
+    assert update_command._plan.steps[0].argv == (
+        "issue",
+        "update",
+        "issue-1",
+        "--duplicate-of",
+        "ISSUE-42",
+        "--output",
+        "json",
+    )
+    assert status_command._plan.steps[0].minimum_cli_version == "0.6.1"
+    assert update_command._plan.steps[0].minimum_cli_version == "0.6.1"
+    transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize("bound", (False, True), ids=("resource", "bound"))
+def test_duplicate_mutation_conflicts_fail_before_transport_or_upload(
+    bound: bool,
+    tmp_path: pathlib.Path,
+    client_with_transport: tuple[MulticaClient, MagicMock],
+) -> None:
+    client, transport = client_with_transport
+    resource = client.issues
+    issue = _issue(_issue_payload(parent_id=None, project_id=None, assignee=None), client)
+    update = issue.update if bound else resource.update
+    update_args = () if bound else ("issue-1",)
+    attachment = tmp_path / "attachment.txt"
+    attachment.write_text("payload", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate_of requires"):
+        if bound:
+            issue.set_status("todo", duplicate_of="ISSUE-42")
+        else:
+            resource.set_status("issue-1", "todo", duplicate_of="ISSUE-42")
+    for description in (None, ""):
+        with pytest.raises(ValueError, match="present description"):
+            update(*update_args, description=description, duplicate_of="ISSUE-42")
+    with pytest.raises(ValueError, match="attachments"):
+        update(
+            *update_args,
+            duplicate_of="ISSUE-42",
+            attachments=(str(attachment),),
+            allow_external_file=True,
+        )
     transport.run_bytes.assert_not_called()
 
 

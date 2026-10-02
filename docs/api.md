@@ -6,14 +6,14 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
-## Approved v0.6.0 target
+## Approved v0.6.1 target
 
-This SDK contract supports Multica CLI `0.6.0` at commit
-`ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02` (release `398016451`), with the
-tested interval `[0.5.3, 0.6.1)`. Migrate directly from `0.5.3`; no
+This SDK contract supports Multica CLI `0.6.1` at commit
+`2ea01ae4ef55de4310b99af192d2dbd367832883` (release `400860726`), with the
+tested interval `[0.6.0, 0.6.2)`. Migrate directly from `0.6.0`; no
 intermediate SDK release is required. The complete public CLI parity surface
 is represented by typed eager and `*_command()` methods: 205 target command
-nodes, 193 operations, and 196 response entrypoints, including wakeup v2,
+nodes (203 unchanged and two adapted), 193 operations, and 196 response entrypoints, including wakeup v2,
 task cursors, issue attachments, comment supplements, pull-request
 auto-complete status, and workspace MCP agent counts.
 

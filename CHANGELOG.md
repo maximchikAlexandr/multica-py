@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.1
+
+- Approved target: Multica CLI `0.6.1`, release `400860726`, source commit
+  `2ea01ae4ef55de4310b99af192d2dbd367832883`, with compatibility bounds
+  `[0.6.0, 0.6.2)` and direct migration from `0.6.0`.
+- Keeps all 205 command nodes, adapting only `issue status` and `issue update`
+  for presence-aware duplicate transitions with conditional CLI `0.6.1` gating.
+- Reconciles 196 response entrypoints as nine changed and 187 unchanged;
+  usage, provider-quota, checkout, and open-string semantics remain server/CLI owned.
+
+`duplicate_of` is accepted by direct and bound issue status/update methods. It
+maps once to `--duplicate-of`, requires `cancelled`, and conflicts atomically
+with present descriptions and emitted attachments.
+
 ## 0.6.0
 
 - Approved target: Multica CLI `0.6.0`, release `398016451`, source commit
