@@ -91,6 +91,11 @@ INVALID_CONTRACT_CASES = (
     InvalidContractCase("unapproved-response-alias", "unapproved_response_alias"),
     InvalidContractCase("raw-command-category", "raw_command_category"),
     InvalidContractCase("convention-command", "convention_command"),
+    InvalidContractCase("target-annotated-tag-object", "target_annotated_tag_object"),
+    InvalidContractCase("target-peeled-commit", "target_peeled_commit"),
+    InvalidContractCase("target-release-provenance-ref", "target_release_provenance_ref"),
+    InvalidContractCase("artifact-baseline-version-output", "artifact_baseline_version_output"),
+    InvalidContractCase("artifact-target-version-output", "artifact_target_version_output"),
     InvalidContractCase("response-extra", "response_extra"),
     InvalidContractCase("response-any", "response_any"),
     InvalidContractCase("response-category", "response_category"),
@@ -188,6 +193,26 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
             entrypoint["presence_policy_ids"] = []
         elif mutation == "convention_command":
             entrypoint["command_symbol"] = "not_a_command"
+    elif mutation == "target_annotated_tag_object":
+        document["target"]["annotated_tag_object"] = "0" * 40
+    elif mutation == "target_peeled_commit":
+        document["target"]["peeled_commit"] = "0" * 40
+    elif mutation == "target_release_provenance_ref":
+        document["target"]["release_provenance_ref"] = "untrusted.json"
+    elif mutation == "artifact_baseline_version_output":
+        artifact = next(
+            item
+            for item in document["compatibility"]["release_artifacts"]
+            if item["version"] == "0.6.0"
+        )
+        artifact["version_output_sha256"] = "0" * 64
+    elif mutation == "artifact_target_version_output":
+        artifact = next(
+            item
+            for item in document["compatibility"]["release_artifacts"]
+            if item["version"] == "0.6.1"
+        )
+        artifact["version_output_sha256"] = "0" * 64
     elif mutation == "stale_request_dto":
         operation = next(
             item for item in document["operations"] if item["operation_id"] == "agents.create"

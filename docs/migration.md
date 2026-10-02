@@ -25,9 +25,10 @@ The refreshed contract covers 205 command nodes, 193 operations, and 196
 response entrypoints, including nine changed and 187 unchanged responses.
 
 Issue `set_status` and `update` accept `duplicate_of` on both direct and bound
-surfaces. A nonblank reference maps once to `--duplicate-of`, requires
-`cancelled`, and is gated to CLI `0.6.1`; update rejects present descriptions
-and emitted attachments with the same atomic pre-transport validation.
+surfaces. A nonblank reference maps once to `--duplicate-of` and is gated to
+CLI `0.6.1`; `set_status` requires `cancelled`, while `update` permits omitted
+status or explicit `cancelled`. Update rejects present descriptions and
+emitted attachments with the same atomic pre-transport validation.
 
 Existing wakeups gain v2 deadline, condition, fire-limit, pause, and provenance
 fields plus typed `trigger`, `delete`, `checkin`, and `runs` actions. Agent task

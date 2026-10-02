@@ -40,7 +40,7 @@ including wakeup v2 lifecycle actions, task cursors, issue attachments,
 comment supplements, pull-request auto-complete status, and workspace MCP
 agent counts. Inherited global flags and interactive login inputs remain
 represented by typed command plans; use `command.commands` to inspect
-redacted previews before execution. The exclusive `0.6.1` ceiling keeps the
+redacted previews before execution. The exclusive `0.6.2` ceiling keeps the
 reviewed contract bounded.
 
 Issue responses expose the immutable `duplicate_of` snapshot when supplied;

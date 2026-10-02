@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import ast
+import importlib
+import inspect
 import pathlib
 import re
+from types import FunctionType
 from typing import cast
 
 import pytest
@@ -95,6 +99,50 @@ def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
             f"{descriptor.operation_id!r}, {descriptor.entrypoint_id!r}, {descriptor.command!r}"
         ).encode()
         assert descriptor_header in runtime
+
+
+def _signature_parameter_names(signature: str) -> tuple[str, ...]:
+    function = ast.parse(f"def _signature{signature}:\n    pass\n").body[0]
+    assert isinstance(function, ast.FunctionDef)
+    arguments = function.args
+    return tuple(
+        argument.arg
+        for argument in (*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs)
+    )
+
+
+def _inspected_parameter_names(function: FunctionType) -> tuple[str, ...]:
+    parameters = tuple(inspect.signature(function).parameters.values())
+    if parameters and parameters[0].name in {"self", "cls"}:
+        parameters = parameters[1:]
+    return tuple(parameter.name for parameter in parameters)
+
+
+def test_issue_mutation_contract_signatures_match_public_and_command_methods() -> None:
+    contract = validate_contract(APPROVED)
+    raw_catalogs = cast("dict[str, object]", contract.raw["catalogs"])
+    signatures = cast("dict[str, str]", raw_catalogs["signatures"])
+    operations = {
+        operation.operation_id: operation
+        for operation in contract.operations
+        if operation.operation_id
+        in {
+            "issues.set_status",
+            "issues.set_status_bound",
+            "issues.update",
+            "issues.update_bound",
+        }
+    }
+
+    for operation in operations.values():
+        entrypoint = operation.entrypoints[0]
+        expected = _signature_parameter_names(signatures[entrypoint.signature_id])
+        for symbol in (entrypoint.public_symbol, entrypoint.command_symbol):
+            assert symbol is not None
+            module_name, owner_name, method_name = symbol.rsplit(".", 2)
+            owner = cast("type[object]", getattr(importlib.import_module(module_name), owner_name))
+            method = cast("FunctionType", getattr(owner, method_name))
+            assert _inspected_parameter_names(method) == expected
 
 
 def test_target_only_wakeup_lifecycle_catalog() -> None:
@@ -256,7 +304,7 @@ def test_generated_trigger_contract_is_pinned_and_obsolete_inputs_are_absent() -
     assert "kind" not in str(update_binding)
 
 
-def test_prior_binary_provenance_and_reviewed_responses_are_exact() -> None:
+def test_prior_binary_provenance_is_exact() -> None:
     contract = validate_contract(APPROVED)
     binary = next(
         item for item in contract.compatibility.verified_binaries if item.version == "0.6.0"
@@ -268,6 +316,10 @@ def test_prior_binary_provenance_and_reviewed_responses_are_exact() -> None:
         "darwin",
         "arm64",
     )
+
+
+def test_reviewed_response_operation_set_is_exact() -> None:
+    contract = validate_contract(APPROVED)
     assert {item.operation_id for item in contract.compatibility.reviewed_responses} == {
         "agents.tasks",
         "labels.create",

@@ -520,6 +520,30 @@ def test_duplicate_mutations_emit_one_flag_and_require_target_cli(
     transport.run_bytes.assert_not_called()
 
 
+@pytest.mark.parametrize("duplicate_of", ("", " \t"), ids=("empty", "whitespace"))
+@pytest.mark.parametrize("method_name", ("set_status", "update"))
+@pytest.mark.parametrize("bound", (False, True), ids=("resource", "bound"))
+def test_blank_duplicate_reference_fails_before_transport_or_upload(
+    duplicate_of: str,
+    method_name: str,
+    bound: bool,
+    client_with_transport: tuple[MulticaClient, MagicMock],
+) -> None:
+    client, transport = client_with_transport
+    resource = client.issues
+    issue = _issue(_issue_payload(parent_id=None, project_id=None, assignee=None), client)
+    target = getattr(issue if bound else resource, method_name)
+    args: tuple[str, ...] = ("cancelled",) if method_name == "set_status" and bound else ()
+    if method_name == "set_status" and not bound:
+        args = ("issue-1", "cancelled")
+    if method_name == "update" and not bound:
+        args = ("issue-1",)
+
+    with pytest.raises(ValueError, match="nonblank"):
+        target(*args, duplicate_of=duplicate_of)
+    transport.run_bytes.assert_not_called()
+
+
 @pytest.mark.parametrize("bound", (False, True), ids=("resource", "bound"))
 def test_duplicate_mutation_conflicts_fail_before_transport_or_upload(
     bound: bool,

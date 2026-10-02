@@ -2943,13 +2943,21 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.tag,
         contract.target.commit,
         contract.target.release_id,
+        contract.target.release_provenance_ref,
+        contract.target.annotated_tag_object,
+        contract.target.peeled_commit,
     ) != (
         "0.6.1",
         "v0.6.1",
         "2ea01ae4ef55de4310b99af192d2dbd367832883",
         "400860726",
+        ".devlocal/upstream-contract/v0.6.0..v0.6.1/release/release-verification.json",
+        "09e5d78ad340c46dec83839e858632e96c2b07a0",
+        "2ea01ae4ef55de4310b99af192d2dbd367832883",
     ):
         raise ContractError("approved contract must target Multica v0.6.1")
+    if contract.target.peeled_commit != contract.target.commit:
+        raise ContractError("target.peeled_commit must equal target.commit")
     if contract.compatibility.command_inventory != CommandInventory(
         baseline_nodes=205,
         target_nodes=205,
@@ -2973,6 +2981,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             "multica-cli-0.6.0-darwin-arm64.tar.gz",
             "b0d90f9eda1080b924520fc1fa0b72912e27134e856b0ce6f4a04231d126651a",
             "c8b1c13590b28fcc591268658d139a1eb426f3cc54d5c9abbd50558d65fed2c4",
+            "8116e8c0c49f74127fc72dd90baf4dae0b27f0ad94a21905e0d153b7dd1bffdb",
         ),
         "0.6.1": (
             "v0.6.1",
@@ -2980,6 +2989,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             "multica-cli-0.6.1-darwin-arm64.tar.gz",
             "f2cc3ef1a142bbf5f419d625cd98323602ca96007b4b29f2e0068439be32a2e9",
             "a6a73b6c13a8da4fe9591b0884ee24aaac8a8f0913f1dfb3d8d34eda6a23371e",
+            "c6f360978000921093c3232e866003ac0038a80cfcb801707c52021981eec086",
         ),
     }
     actual_artifacts = {
@@ -2989,6 +2999,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             item.asset_name,
             item.archive_sha256,
             item.executable_sha256,
+            item.version_output_sha256,
         )
         for item in contract.compatibility.release_artifacts
     }

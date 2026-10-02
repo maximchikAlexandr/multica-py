@@ -11,8 +11,9 @@
   usage, provider-quota, checkout, and open-string semantics remain server/CLI owned.
 
 `duplicate_of` is accepted by direct and bound issue status/update methods. It
-maps once to `--duplicate-of`, requires `cancelled`, and conflicts atomically
-with present descriptions and emitted attachments.
+maps once to `--duplicate-of`; `set_status` requires `cancelled`, while
+`update` permits omitted status or explicit `cancelled`. Update conflicts
+atomically with present descriptions and emitted attachments.
 
 ## 0.6.0
 

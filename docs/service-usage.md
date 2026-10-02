@@ -89,8 +89,9 @@ client.issues.update("issue_123", duplicate_of="issue_456")
 issue.set_status("cancelled", duplicate_of="issue_456")
 ```
 
-The reference must be nonblank and the status must be `cancelled`; descriptions
-and emitted attachments cannot accompany a duplicate transition.
+The reference must be nonblank. `set_status` requires status `cancelled`, while
+`update` permits omitted status or explicit `cancelled`; descriptions and emitted
+attachments cannot accompany a duplicate transition.
 
 ## Collect or stream a managed process
 
