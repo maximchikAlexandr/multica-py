@@ -9,6 +9,7 @@ import stat
 import subprocess
 import tempfile
 import threading
+import time
 from collections.abc import Iterator
 from typing import BinaryIO, cast
 
@@ -31,15 +32,38 @@ from multica_py.execution.base import ExecutionRequest, ExecutionResult, OutputO
 
 
 class LocalProcessHandle:
+    _MAX_CAPTURE_CHUNKS = 256
+    _CAPTURE_CHUNK_SIZE = 4096
+    _WORKER_JOIN_TIMEOUT = 1.0
+
     def __init__(
-        self, process: subprocess.Popen[bytes], *, default_timeout: datetime.timedelta | None = None
+        self,
+        process: subprocess.Popen[bytes],
+        *,
+        default_timeout: datetime.timedelta | None = None,
+        initial_stdin: bytes | None = None,
     ) -> None:
         self._process = process
         self._default_timeout = default_timeout
+        self._pumped_io = initial_stdin is not None
         self._output = OutputOwnership()
         self._stream_lock = threading.Lock()
-        self._stream_queues: dict[str, queue.SimpleQueue[bytes | None]] = {}
+        self._stream_queues: dict[str, queue.Queue[bytes | None]] = {}
         self._stream_threads: list[threading.Thread] = []
+        self._stream_buffers = {"stdout": bytearray(), "stderr": bytearray()}
+        self._stream_done = {"stdout": False, "stderr": False}
+        self._stdin_thread: threading.Thread | None = None
+        self._stdin_cancel = threading.Event()
+        self._capture_error: str | None = None
+        if initial_stdin is not None:
+            self._ensure_stream_pumps()
+            self._stdin_thread = threading.Thread(
+                target=self._deliver_initial_stdin,
+                args=(initial_stdin,),
+                name="multica-py-stream-stdin",
+                daemon=True,
+            )
+            self._stdin_thread.start()
 
     @property
     def id(self) -> int:
@@ -60,6 +84,8 @@ class LocalProcessHandle:
     def collect(self, timeout: datetime.timedelta | None = None) -> ExecutionResult:
         self._output.claim("buffered")
         effective_timeout = timeout if timeout is not None else self._default_timeout
+        if self._pumped_io:
+            return self._collect_pumped(effective_timeout)
         try:
             stdout, stderr = self._process.communicate(
                 timeout=None if effective_timeout is None else effective_timeout.total_seconds()
@@ -75,6 +101,48 @@ class LocalProcessHandle:
             raise ProcessOutputCaptureError("Process output pipes were not captured")
         return ExecutionResult(exit_code, stdout, stderr)
 
+    def _collect_pumped(self, timeout: datetime.timedelta | None) -> ExecutionResult:
+        deadline = None if timeout is None else time.monotonic() + timeout.total_seconds()
+        self._drain_pumped_stream("stdout", deadline)
+        self._drain_pumped_stream("stderr", deadline)
+        remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+        try:
+            self._process.wait(timeout=remaining)
+        except subprocess.TimeoutExpired as error:
+            raise ProcessTimeoutError("Process wait timed out") from error
+        exit_code = self._process.returncode
+        if exit_code is None:
+            raise ProcessOutputCaptureError("Process completed without an exit code")
+        return ExecutionResult(
+            exit_code,
+            bytes(self._stream_buffers["stdout"]),
+            bytes(self._stream_buffers["stderr"]),
+        )
+
+    def _drain_pumped_stream(self, name: str, deadline: float | None) -> None:
+        if self._stream_done[name]:
+            return
+        chunks = self._stream_queues[name]
+        while True:
+            self._raise_capture_error()
+            remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+            if remaining == 0.0:
+                raise ProcessTimeoutError("Process wait timed out")
+            try:
+                wait_for = 0.1 if remaining is None else min(remaining, 0.1)
+                chunk = chunks.get(timeout=wait_for)
+            except queue.Empty as error:
+                self._raise_capture_error()
+                if deadline is None:
+                    continue
+                if time.monotonic() >= deadline:
+                    raise ProcessTimeoutError("Process wait timed out") from error
+                continue
+            if chunk is None:
+                self._stream_done[name] = True
+                return
+            self._stream_buffers[name].extend(chunk)
+
     def terminate(self) -> None:
         terminate_process(self._process)
 
@@ -87,24 +155,70 @@ class LocalProcessHandle:
     def _pipe(self, name: str) -> BinaryIO | None:
         return cast("BinaryIO | None", cast("object", getattr(self._process, name)))
 
-    def _pump_pipe(self, pipe: BinaryIO, chunks: queue.SimpleQueue[bytes | None]) -> None:
+    def _raise_capture_error(self) -> None:
+        if self._capture_error is not None:
+            raise ProcessOutputCaptureError(self._capture_error)
+
+    def _fail_capture(self, message: str) -> None:
+        if self._capture_error is None:
+            self._capture_error = message
+            kill_process_immediate(self._process)
+
+    def _pump_pipe(self, pipe: BinaryIO, chunks: queue.Queue[bytes | None]) -> None:
         try:
             while True:
-                chunk = pipe.read(4096)
+                chunk = pipe.read(self._CAPTURE_CHUNK_SIZE)
                 if not chunk:
                     break
-                chunks.put(chunk)
+                if chunks.qsize() >= self._MAX_CAPTURE_CHUNKS:
+                    self._fail_capture("Process output exceeded the bounded capture limit")
+                    return
+                try:
+                    chunks.put_nowait(chunk)
+                except queue.Full:
+                    self._fail_capture("Process output exceeded the bounded capture limit")
+                    return
         except (OSError, ValueError):
             pass
         finally:
-            chunks.put(None)
+            if self._capture_error is None:
+                try:
+                    chunks.put_nowait(None)
+                except queue.Full:
+                    self._fail_capture("Process output exceeded the bounded capture limit")
+
+    def _deliver_initial_stdin(self, data: bytes) -> None:
+        stdin = self._pipe("stdin")
+        if stdin is None:
+            return
+        try:
+            try:
+                fd = stdin.fileno()
+                os.set_blocking(fd, False)
+            except (AttributeError, OSError, ValueError):
+                stdin.write(data)
+                stdin.flush()
+            else:
+                offset = 0
+                view = memoryview(data)
+                while offset < len(data) and not self._stdin_cancel.is_set():
+                    try:
+                        offset += os.write(fd, view[offset:])
+                    except BlockingIOError:
+                        time.sleep(0.01)
+        except (OSError, ValueError):
+            pass
+        finally:
+            with contextlib.suppress(OSError, ValueError):
+                stdin.close()
+            self._process.stdin = None
 
     def _ensure_stream_pumps(self) -> None:
         with self._stream_lock:
             if self._stream_queues:
                 return
             for name in ("stdout", "stderr"):
-                chunks: queue.SimpleQueue[bytes | None] = queue.SimpleQueue()
+                chunks: queue.Queue[bytes | None] = queue.Queue(self._MAX_CAPTURE_CHUNKS + 1)
                 self._stream_queues[name] = chunks
                 pipe = self._pipe(name)
                 if pipe is None or not isinstance(pipe, io.IOBase):
@@ -131,7 +245,12 @@ class LocalProcessHandle:
         self._ensure_stream_pumps()
         leftover = b""
         while True:
-            chunk = self._stream_queues[name].get()
+            self._raise_capture_error()
+            try:
+                chunk = self._stream_queues[name].get(timeout=0.1)
+            except queue.Empty:
+                self._raise_capture_error()
+                continue
             if chunk is None:
                 if leftover:
                     yield decode_text(leftover)
@@ -154,16 +273,57 @@ class LocalProcessHandle:
         stdin.write(data)
         stdin.flush()
 
-    def close_stdin(self) -> None:
+    def _close_owned_stdin(self) -> None:
         stdin = self._pipe("stdin")
         if stdin is not None:
-            stdin.close()
-            self._process.stdin = None
+            with contextlib.suppress(OSError, ValueError):
+                stdin.close()
+        self._process.stdin = None
+
+    def _stop_stdin_worker(self, *, require_process_exit: bool) -> None:
+        thread = self._stdin_thread
+        if thread is None or not thread.is_alive():
+            if require_process_exit and self._process.poll() is None:
+                terminate_process(self._process)
+                if self._process.poll() is None:
+                    kill_process(self._process)
+                if self._process.poll() is None:
+                    raise ProcessOutputCaptureError("Process remained alive after stdin close")
+            return
+        self._stdin_cancel.set()
+        thread.join(timeout=self._WORKER_JOIN_TIMEOUT)
+        if thread.is_alive():
+            self._close_owned_stdin()
+            thread.join(timeout=self._WORKER_JOIN_TIMEOUT)
+        if thread.is_alive():
+            terminate_process(self._process)
+            self._close_owned_stdin()
+            thread.join(timeout=self._WORKER_JOIN_TIMEOUT)
+        if thread.is_alive():
+            kill_process(self._process)
+            self._close_owned_stdin()
+            thread.join(timeout=self._WORKER_JOIN_TIMEOUT)
+        if require_process_exit and self._process.poll() is None:
+            terminate_process(self._process)
+            if self._process.poll() is None:
+                kill_process(self._process)
+        if thread.is_alive() or (require_process_exit and self._process.poll() is None):
+            raise ProcessOutputCaptureError("Initial stdin worker or process remained alive")
+
+    def close_stdin(self) -> None:
+        if self._stdin_thread is not None:
+            self._stop_stdin_worker(require_process_exit=False)
+            return
+        self._close_owned_stdin()
 
     def close(self) -> None:
+        if self._stdin_thread is not None:
+            self._stop_stdin_worker(require_process_exit=True)
         close_process_pipes(self._process)
         with self._stream_lock:
             threads = list(self._stream_threads)
+        if self._stdin_thread is not None:
+            self._stdin_thread.join(timeout=5.0)
         for thread in threads:
             thread.join(timeout=5.0)
 
@@ -194,11 +354,13 @@ class LocalExecutor:
             if request.stdin is not None:
                 stdin = cast("BinaryIO | None", cast("object", process.stdin))
                 if stdin is None:
+                    close_process_pipes(process)
                     raise ProcessOutputCaptureError("Process stdin was not captured")
-                stdin.write(request.stdin)
-                stdin.close()
-                process.stdin = None
-            return LocalProcessHandle(process, default_timeout=request.timeout)
+            return LocalProcessHandle(
+                process,
+                default_timeout=request.timeout,
+                initial_stdin=request.stdin,
+            )
         except FileNotFoundError as error:
             raise ExecutableNotFoundError(f"Executable not found: {request.argv[0]}") from error
         except PermissionError as error:
