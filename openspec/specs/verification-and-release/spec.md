@@ -43,11 +43,14 @@ equal the lengths computed from the final case tables; historic literals
 - **THEN** the offline completeness gate fails
 
 ### Requirement: Focused process and offline checks
-Offline tests MUST use stdlib and pytest, keep exact argv assertions including operations with dynamic temporary paths, retain exactly three real-process cases, and use deterministic synchronization or subprocess test doubles for additional lifecycle branches.
+Offline tests MUST use stdlib and pytest, keep exact argv assertions including operations with dynamic temporary paths, retain the focused real-process cases listed below, and use deterministic synchronization or subprocess test doubles for additional lifecycle branches.
 
 #### Scenario: Offline checks keep focused process cases
 - **WHEN** the process module is collected
-- **THEN** IDs are `bytes-env`, `text-stdin`, and `timeout-tree-cleanup`.
+- **THEN** IDs are `bytes-env`, `text-stdin`, `pipe-capacity-stdin`,
+  `spawn-gated-stdin`, `close-stdin-gated`, `close-gated`,
+  `bounded-spawn-capture`, `timeout-gated-stdin`, and
+  `timeout-tree-cleanup`.
 <!-- Source IDs: 004:FR-006,FR-015,FR-016,005:FR-002,FR-005,FR-006,006:FR-009 -->
 
 #### Scenario: Dynamic argv remains exact
