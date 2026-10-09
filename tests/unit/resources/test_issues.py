@@ -802,6 +802,44 @@ def test_issue_list_projection_preserves_absence_and_properties_without_get(
     assert client.issues.get.call_count == 0
 
 
+@pytest.mark.parametrize(
+    ("properties", "expected_raw"),
+    (
+        (b'{"priority":"high"}', {"priority": "high"}),
+        (b'{"priority":{"value":1}}', {"priority": {"value": 1}}),
+    ),
+    ids=("scalar", "structured"),
+)
+def test_issue_get_preserves_raw_properties_and_loads_typed_relation(
+    properties: bytes,
+    expected_raw: dict[str, object],
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=("issue", "get", "i1", "--output", "json"),
+        exit_code=0,
+        stdout=(b'{"id":"i1","title":"Issue","status":"todo","properties":' + properties + b"}"),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    typed_value = PropertyValue(
+        property_id="p1", name="Priority", type="select", value="high", display="High"
+    )
+    client = MagicMock()
+    resource = IssueResource(mock_transport, ClientConfig())
+    resource._set_client(client)
+    client.issues._properties_relation_command.return_value = _cached_value_command(
+        lambda: {typed_value.name: typed_value}
+    )
+
+    issue = resource.get("i1")
+
+    assert issue._property_projection == expected_raw
+    assert dict(issue.properties.all()) == {"Priority": typed_value}
+    client.issues._properties_relation_command.assert_called_once_with("i1")
+    client.issues.get.assert_not_called()
+
+
 def test_issue_list_fields_preserve_core_and_dynamic_projection_without_get(
     mock_transport: MagicMock,
 ) -> None:

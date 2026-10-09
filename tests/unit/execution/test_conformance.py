@@ -141,6 +141,32 @@ def _assert_local_spawn_request(executor: CommandExecutor) -> None:
     timed.close()
 
 
+def test_local_spawn_initial_stdin_collection_timeout_is_retryable() -> None:
+    payload = b"retryable\x00stdin"
+    with LocalExecutor() as executor:
+        handle = executor.spawn(
+            ExecutionRequest(
+                argv=(
+                    sys.executable,
+                    "-c",
+                    (
+                        "import sys,time; time.sleep(0.2); data=sys.stdin.buffer.read(); "
+                        "sys.stdout.buffer.write(data); sys.stderr.buffer.write(data)"
+                    ),
+                ),
+                stdin=payload,
+            )
+        )
+
+        with pytest.raises(ProcessTimeoutError):
+            handle.collect(datetime.timedelta(milliseconds=10))
+
+        result = handle.collect(datetime.timedelta(seconds=2))
+        assert result.stdout == payload
+        assert result.stderr == payload
+        handle.close()
+
+
 def _local_runtime() -> _ConformanceRuntime:
     cwd = os.fspath(Path.cwd())
 
