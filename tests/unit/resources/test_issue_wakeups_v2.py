@@ -469,27 +469,56 @@ def test_deadline_and_fire_limit_boundaries_and_types(case: _DeadlineCase) -> No
     case.check(case, wakeups(transport), transport)
 
 
-def test_deadline_exclusivity_timeout_ownership_and_omitted_target_cap() -> None:
+@dataclass(frozen=True)
+class _InvalidWakeupCase:
+    name: str
+    kwargs: Mapping[str, object]
+    message: str
+
+
+_INVALID_WAKEUP_CASES = (
+    _InvalidWakeupCase(
+        "deadline-exclusive",
+        {
+            "event_types": ("comment.created",),
+            "expires_in_seconds": 60,
+            "expires_at": "2026-11-01T00:00:00Z",
+        },
+        "mutually exclusive",
+    ),
+    _InvalidWakeupCase(
+        "timeout-requires-deadline",
+        {"event_types": ("comment.created",), "on_timeout": "end"},
+        "requires a deadline",
+    ),
+    _InvalidWakeupCase(
+        "continuous-timeout-requires-event-kind",
+        {
+            "kind": "every",
+            "mode": "continuous",
+            "interval_seconds": 60,
+            "expires_in_seconds": 60,
+            "on_timeout": "wake",
+        },
+        "requires event kind",
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _INVALID_WAKEUP_CASES, ids=lambda case: case.name)
+def test_invalid_deadline_and_timeout_cases_fail_before_transport(
+    case: _InvalidWakeupCase,
+) -> None:
     transport = make_transport()
     resource = wakeups(transport)
-    with pytest.raises(ValueError, match="mutually exclusive"):
-        create_args(
-            resource,
-            event_types=("comment.created",),
-            expires_in_seconds=60,
-            expires_at="2026-10-01T00:00:00Z",
-        )
-    with pytest.raises(ValueError, match="requires a deadline"):
-        create_args(resource, event_types=("comment.created",), on_timeout="end")
-    with pytest.raises(ValueError, match="requires event kind"):
-        create_args(
-            resource,
-            kind="every",
-            mode="continuous",
-            interval_seconds=60,
-            expires_in_seconds=60,
-            on_timeout="wake",
-        )
+    with pytest.raises(ValueError, match=case.message):
+        create_args(resource, **case.kwargs)
+    transport.run_bytes.assert_not_called()
+
+
+def test_omitted_target_cap_is_server_owned() -> None:
+    transport = make_transport()
+    resource = wakeups(transport)
     continuous = create_args(resource, event_types=("comment.created",), mode="continuous")
     assert "--max-fires" not in continuous.commands[0]
     # The server-owned continuous-target cap is intentionally omitted from SDK argv.
@@ -539,7 +568,7 @@ _V2_NULL_WAKEUP = wakeup_payload(
 )
 _V2_VALID_WAKEUP = wakeup_payload(
     expires_in_seconds=3600,
-    expires_at="2026-10-01T00:00:00Z",
+    expires_at="2026-11-01T00:00:00Z",
     on_timeout="wake",
     max_fires=5,
     fire_count=2,

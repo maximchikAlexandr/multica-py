@@ -40,8 +40,8 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "ff8b285497809e084915016c40c2bc5e5991ffbc"
-_TARGET_COMMIT = "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02"
+_BASELINE_COMMIT = "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02"
+_TARGET_COMMIT = "2ea01ae4ef55de4310b99af192d2dbd367832883"
 _TAG_KINDS = frozenset(
     {
         "primitive",
@@ -153,7 +153,15 @@ _UPDATE_POLICY_FIELDS = {
     ),
     "skills.update": frozenset({"name", "description"}),
     "issues.update": frozenset(
-        {"title", "description", "priority", "assignee_id", "project_id", "parent_id"}
+        {
+            "title",
+            "description",
+            "priority",
+            "assignee_id",
+            "project_id",
+            "parent_id",
+            "duplicate_of",
+        }
     ),
     "autopilots.update": frozenset(
         {
@@ -985,6 +993,8 @@ class Target:
     commit: str
     release_id: str
     release_provenance_ref: str
+    annotated_tag_object: str
+    peeled_commit: str
 
 
 @dataclass(frozen=True)
@@ -2446,17 +2456,40 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     target_raw = _dict(raw["target"], "target")
     _exact_keys(
         target_raw,
-        frozenset({"version", "tag", "commit", "release_id", "release_provenance_ref"}),
+        frozenset(
+            {
+                "version",
+                "tag",
+                "commit",
+                "release_id",
+                "release_provenance_ref",
+                "annotated_tag_object",
+                "peeled_commit",
+            }
+        ),
         "target",
     )
     target = Target(
-        *(
-            _str(target_raw[key], f"target.{key}")
-            for key in ("version", "tag", "commit", "release_id", "release_provenance_ref")
-        )
+        version=_str(target_raw["version"], "target.version"),
+        tag=_str(target_raw["tag"], "target.tag"),
+        commit=_str(target_raw["commit"], "target.commit"),
+        release_id=_str(target_raw["release_id"], "target.release_id"),
+        release_provenance_ref=_str(
+            target_raw["release_provenance_ref"], "target.release_provenance_ref"
+        ),
+        annotated_tag_object=_str(
+            target_raw["annotated_tag_object"], "target.annotated_tag_object"
+        ),
+        peeled_commit=_str(target_raw["peeled_commit"], "target.peeled_commit"),
     )
     if not _COMMIT.fullmatch(target.commit):
         raise ContractError("target.commit must be a full lowercase hexadecimal commit")
+    if not _COMMIT.fullmatch(target.annotated_tag_object):
+        raise ContractError(
+            "target.annotated_tag_object must be a full lowercase hexadecimal object"
+        )
+    if not _COMMIT.fullmatch(target.peeled_commit):
+        raise ContractError("target.peeled_commit must be a full lowercase hexadecimal commit")
     compatibility_raw = _dict(raw["compatibility"], "compatibility")
     _exact_keys(
         compatibility_raw,
@@ -2696,10 +2729,10 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         != 196
     ):
         raise ContractError("response audit must cover exactly 196 supported entrypoints")
-    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 18:
-        raise ContractError("response audit must contain exactly 18 changed entrypoints")
-    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 178:
-        raise ContractError("response audit must contain exactly 178 unchanged entrypoints")
+    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 9:
+        raise ContractError("response audit must contain exactly 9 changed entrypoints")
+    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 187:
+        raise ContractError("response audit must contain exactly 187 unchanged entrypoints")
     changed_entrypoints = tuple(
         _str(value, "compatibility.response_audit.changed_entrypoints")
         for value in _list(
@@ -2707,8 +2740,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "compatibility.response_audit.changed_entrypoints",
         )
     )
-    if len(changed_entrypoints) != 18:
-        raise ContractError("response audit must list exactly 18 changed entrypoints")
+    if len(changed_entrypoints) != 9:
+        raise ContractError("response audit must list exactly 9 changed entrypoints")
     compatibility = Compatibility(
         min_cli_version=bounds[0],
         max_tested_cli_version=bounds[1],
@@ -2897,10 +2930,10 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
 def validate_contract(path: pathlib.Path) -> ContractCatalog:
     contract = load_contract(path)
     if contract.baseline != BaselineIdentity(
-        commit="c1842ae2dfcd0cc5e739b7785d3209d5e72d01ed",
-        tree_sha="843aa7629380582b06c9e84d29c2ba1fdb051d89",
-        contract_blob_sha="8e61bbb74af760c8caf232c4eb51170f3e03ec77",
-        version="0.5.3",
+        commit="48745d2fe9e80ee9c027293ef22971ff5723f5f5",
+        tree_sha="3afc72c975052cfb92506e5d20df95a5b925da92",
+        contract_blob_sha="18572a5125ebc029b65b2e99eaeffa128e107276",
+        version="0.6.0",
         operation_count=193,
         response_entrypoint_count=196,
     ):
@@ -2910,52 +2943,53 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.tag,
         contract.target.commit,
         contract.target.release_id,
+        contract.target.release_provenance_ref,
+        contract.target.annotated_tag_object,
+        contract.target.peeled_commit,
     ) != (
-        "0.6.0",
-        "v0.6.0",
-        "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02",
-        "398016451",
+        "0.6.1",
+        "v0.6.1",
+        "2ea01ae4ef55de4310b99af192d2dbd367832883",
+        "400860726",
+        ".devlocal/upstream-contract/v0.6.0..v0.6.1/release/release-verification.json",
+        "09e5d78ad340c46dec83839e858632e96c2b07a0",
+        "2ea01ae4ef55de4310b99af192d2dbd367832883",
     ):
-        raise ContractError("approved contract must target Multica v0.6.0")
+        raise ContractError("approved contract must target Multica v0.6.1")
+    if contract.target.peeled_commit != contract.target.commit:
+        raise ContractError("target.peeled_commit must equal target.commit")
     if contract.compatibility.command_inventory != CommandInventory(
-        baseline_nodes=201,
+        baseline_nodes=205,
         target_nodes=205,
-        unchanged=195,
-        changed=6,
-        added=4,
+        unchanged=203,
+        changed=2,
+        added=0,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
-        added_commands=(
-            "issue wakeup trigger",
-            "issue wakeup delete",
-            "issue wakeup checkin",
-            "issue wakeup runs",
-        ),
+        added_commands=(),
         changed_commands=(
-            "agent tasks",
+            "issue status",
             "issue update",
-            "issue wakeup",
-            "issue wakeup events",
-            "issue wakeup create",
-            "issue wakeup update",
         ),
     ):
-        raise ContractError("command inventory does not match the approved 0.5.3/0.6.0 review")
+        raise ContractError("command inventory does not match the approved 0.6.0/0.6.1 review")
     expected_artifacts = {
-        "0.5.3": (
-            "v0.5.3",
-            "395523214",
-            "multica-cli-0.5.3-darwin-arm64.tar.gz",
-            "c41428158b87a8dba409542d55c869d5d86ca738a01ba6e0b4698b49cc94d718",
-            "576fe10229b95a624bbdf12ae54054c5d7a58156ea4cffa41ccae6d161729565",
-        ),
         "0.6.0": (
             "v0.6.0",
             "398016451",
             "multica-cli-0.6.0-darwin-arm64.tar.gz",
             "b0d90f9eda1080b924520fc1fa0b72912e27134e856b0ce6f4a04231d126651a",
             "c8b1c13590b28fcc591268658d139a1eb426f3cc54d5c9abbd50558d65fed2c4",
+            "8116e8c0c49f74127fc72dd90baf4dae0b27f0ad94a21905e0d153b7dd1bffdb",
+        ),
+        "0.6.1": (
+            "v0.6.1",
+            "400860726",
+            "multica-cli-0.6.1-darwin-arm64.tar.gz",
+            "f2cc3ef1a142bbf5f419d625cd98323602ca96007b4b29f2e0068439be32a2e9",
+            "a6a73b6c13a8da4fe9591b0884ee24aaac8a8f0913f1dfb3d8d34eda6a23371e",
+            "c6f360978000921093c3232e866003ac0038a80cfcb801707c52021981eec086",
         ),
     }
     actual_artifacts = {
@@ -2965,6 +2999,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             item.asset_name,
             item.archive_sha256,
             item.executable_sha256,
+            item.version_output_sha256,
         )
         for item in contract.compatibility.release_artifacts
     }
@@ -2984,8 +3019,8 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
         for disposition in ("unchanged", "changed")
     }
-    if dispositions != {"unchanged": 178, "changed": 18}:
-        raise ContractError("response registry must contain 178 unchanged and 18 changed items")
+    if dispositions != {"unchanged": 187, "changed": 9}:
+        raise ContractError("response registry must contain 187 unchanged and 9 changed items")
     expected_lifecycle = {
         "issue_wakeup_trigger": (
             ("issue", "wakeup", "trigger"),

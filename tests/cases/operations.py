@@ -600,7 +600,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
         elif vector.operation_id == "issues.wakeups.update":
             kwargs = (
                 ("instruction", "Run checks"),
-                ("expires_at", "2026-10-01T00:00:00Z"),
+                ("expires_at", "2026-11-01T00:00:00Z"),
                 ("condition", {"status": "done"}),
             )
             expected_argv = (
@@ -614,7 +614,7 @@ def generated_operation_cases(catalog: object) -> tuple[OperationCase, ...]:
                 "--kind",
                 "event",
                 "--expires-at",
-                "2026-10-01T00:00:00Z",
+                "2026-11-01T00:00:00Z",
                 "--condition",
                 '{"status":"done"}',
                 "--output",

@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-TARGET_VERSION = '0.6.0'
-MIN_CLI_VERSION = '0.5.3'
-MAX_CLI_VERSION = '0.6.1'
+TARGET_VERSION = '0.6.1'
+MIN_CLI_VERSION = '0.6.0'
+MAX_CLI_VERSION = '0.6.2'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'
@@ -578,12 +578,12 @@ ISSUE_SEARCH_BINDING = GeneratedBinding(
 
 ISSUE_STATUS_BINDING = GeneratedBinding(
     'issues.set_status', 'default', ('issue', 'status'),
-    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('status', 'pos:1', 'json_body:status'),), (),
+    (GeneratedMapping('issue_id', 'pos:0', 'path:issue_id'), GeneratedMapping('status', 'pos:1', 'json_body:status'), GeneratedMapping('duplicate_of', '--duplicate-of', 'json_body:duplicate_of_issue_id'),), (),
 )
 
 ISSUES_SET_STATUS_BOUND_BINDING = GeneratedBinding(
     'issues.set_status_bound', 'default', (),
-    (), (),
+    (GeneratedMapping('duplicate_of', '--duplicate-of', 'json_body:duplicate_of_issue_id'),), (),
 )
 
 ISSUE_SUBSCRIBERS_ADD_BINDING = GeneratedBinding(
@@ -619,12 +619,12 @@ ISSUES_UNASSIGN_BOUND_BINDING = GeneratedBinding(
 
 ISSUES_UPDATE_MANUAL_BINDING = GeneratedBinding(
     'issues.update', 'default', ('issue', 'update'),
-    (GeneratedMapping('attachments', 'repeat:--attachment', 'local_control:attachment_paths'), GeneratedMapping('allow_external_file', '--allow-external-file', 'local_control:allow_external_file'),), (),
+    (GeneratedMapping('attachments', 'repeat:--attachment', 'local_control:attachment_paths'), GeneratedMapping('allow_external_file', '--allow-external-file', 'local_control:allow_external_file'), GeneratedMapping('duplicate_of', '--duplicate-of', 'json_body:duplicate_of_issue_id'),), (),
 )
 
 ISSUES_UPDATE_BOUND_BINDING = GeneratedBinding(
     'issues.update_bound', 'default', (),
-    (), (),
+    (GeneratedMapping('duplicate_of', '--duplicate-of', 'json_body:duplicate_of_issue_id'),), (),
 )
 
 ISSUES_USAGE_MANUAL_BINDING = GeneratedBinding(

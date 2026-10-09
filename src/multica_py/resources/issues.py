@@ -259,6 +259,16 @@ def _issue_status_token(value: IssueStatus | str) -> str:
     raise TypeError("status must be an IssueStatus or status string")
 
 
+def _normalize_duplicate_reference(value: str | None) -> str | None:
+    if value is None:
+        return None
+    if type(value) is not str:
+        raise TypeError("duplicate_of must be a string or None")
+    if not value.strip():
+        raise ValueError("duplicate_of must be nonblank when set")
+    return value
+
+
 def _assignee_assign_args(assignee: AssignmentTarget) -> tuple[str, ...]:
     from multica_py.entities.agents import Agent
     from multica_py.entities.squads import Squad
@@ -1241,6 +1251,7 @@ class IssueResource(BaseResource):
         description: str | None | UnsetType = Unset,
         priority: str | UnsetType = Unset,
         status: IssueStatus | str | UnsetType = Unset,
+        duplicate_of: str | None = None,
         stage: int | None | UnsetType = Unset,
         start_date: str | None | UnsetType = Unset,
         due_date: str | None | UnsetType = Unset,
@@ -1255,11 +1266,19 @@ class IssueResource(BaseResource):
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
         effective_config = self._effective_config(options)
+        duplicate_reference = _normalize_duplicate_reference(duplicate_of)
+        if duplicate_reference is not None:
+            if status is not Unset and _issue_status_token(status) != "cancelled":
+                raise ValueError("duplicate_of requires status='cancelled' when status is set")
+            if description is not Unset:
+                raise ValueError("duplicate_of conflicts with a present description")
         normalized_attachments = _normalize_update_attachments(
             attachments,
             allow_external_file=allow_external_file,
             cwd=effective_config.cwd,
         )
+        if duplicate_reference is not None and normalized_attachments:
+            raise ValueError("duplicate_of conflicts with attachments")
         if title is None:
             raise TypeError("title must be non-null")
         if priority is None:
@@ -1272,6 +1291,7 @@ class IssueResource(BaseResource):
             and description is Unset
             and priority is Unset
             and status is Unset
+            and duplicate_reference is None
             and stage is Unset
             and start_date is Unset
             and due_date is Unset
@@ -1291,6 +1311,8 @@ class IssueResource(BaseResource):
             args.extend(["--priority", priority])
         if status is not Unset:
             args.extend(["--status", _issue_status_token(status)])
+        if duplicate_reference is not None:
+            args.extend(["--duplicate-of", duplicate_reference])
         if stage is not Unset:
             if stage is not None and (type(stage) is not int or stage < 0):
                 raise ValueError("stage must be a nonnegative integer")
@@ -1347,7 +1369,12 @@ class IssueResource(BaseResource):
         def finalize(results: tuple[object, ...]) -> Issue:
             return self._bind_issue(cast("_IssueWire", results[-1]))
 
-        return self._plan(steps=tuple(steps), finalize=finalize, options=options)
+        return self._plan(
+            steps=tuple(steps),
+            finalize=finalize,
+            options=options,
+            minimum_cli_version="0.6.1" if duplicate_reference is not None else None,
+        )
 
     def update(
         self,
@@ -1357,6 +1384,7 @@ class IssueResource(BaseResource):
         description: str | None | UnsetType = Unset,
         priority: str | UnsetType = Unset,
         status: IssueStatus | str | UnsetType = Unset,
+        duplicate_of: str | None = None,
         stage: int | None | UnsetType = Unset,
         start_date: str | None | UnsetType = Unset,
         due_date: str | None | UnsetType = Unset,
@@ -1375,6 +1403,7 @@ class IssueResource(BaseResource):
             description=description,
             priority=priority,
             status=status,
+            duplicate_of=duplicate_of,
             stage=stage,
             start_date=start_date,
             due_date=due_date,
@@ -1432,29 +1461,45 @@ class IssueResource(BaseResource):
         issue_id: str,
         status: IssueStatus | str,
         *,
+        duplicate_of: str | None = None,
         no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
         validate_nonblank(issue_id)
         status_token = _issue_status_token(status)
+        duplicate_reference = _normalize_duplicate_reference(duplicate_of)
+        if duplicate_reference is not None and status_token != "cancelled":
+            raise ValueError("duplicate_of requires status='cancelled'")
         if type(no_start) is not bool:
             raise TypeError("no_start must be a bool")
         args = ["issue", "status", issue_id, status_token]
+        if duplicate_reference is not None:
+            args.extend(["--duplicate-of", duplicate_reference])
         if no_start:
             args.append("--no-start")
-        return self._decoded_command(tuple(args), _IssueWire, options=options)._map(
-            self._bind_issue
-        )
+        return self._decoded_command(
+            tuple(args),
+            _IssueWire,
+            options=options,
+            minimum_cli_version="0.6.1" if duplicate_reference is not None else None,
+        )._map(self._bind_issue)
 
     def set_status(
         self,
         issue_id: str,
         status: IssueStatus | str,
         *,
+        duplicate_of: str | None = None,
         no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Issue:
-        return self.set_status_command(issue_id, status, no_start=no_start, options=options).run()
+        return self.set_status_command(
+            issue_id,
+            status,
+            duplicate_of=duplicate_of,
+            no_start=no_start,
+            options=options,
+        ).run()
 
     def reorder_command(
         self,

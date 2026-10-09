@@ -104,9 +104,9 @@ def test_installed_artifact_version(
         """
 from multica_py._generated import approved_sdk as generated
 
-assert generated.TARGET_VERSION == "0.6.0"
-assert generated.MIN_CLI_VERSION == "0.5.3"
-assert generated.MAX_CLI_VERSION == "0.6.1"
+assert generated.TARGET_VERSION == "0.6.1"
+assert generated.MIN_CLI_VERSION == "0.6.0"
+assert generated.MAX_CLI_VERSION == "0.6.2"
 """,
     )
 

@@ -1045,6 +1045,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         description: str | None | UnsetType = Unset,
         priority: str | UnsetType = Unset,
         status: IssueStatus | str | UnsetType = Unset,
+        duplicate_of: str | None = None,
         stage: int | None | UnsetType = Unset,
         start_date: str | None | UnsetType = Unset,
         due_date: str | None | UnsetType = Unset,
@@ -1066,6 +1067,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             description=description,
             priority=priority,
             status=status,
+            duplicate_of=duplicate_of,
             stage=stage,
             start_date=start_date,
             due_date=due_date,
@@ -1086,6 +1088,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         description: str | None | UnsetType = Unset,
         priority: str | UnsetType = Unset,
         status: IssueStatus | str | UnsetType = Unset,
+        duplicate_of: str | None = None,
         stage: int | None | UnsetType = Unset,
         start_date: str | None | UnsetType = Unset,
         due_date: str | None | UnsetType = Unset,
@@ -1103,6 +1106,7 @@ class Issue(_BoundEntity):  # type: ignore[misc]
             description=description,
             priority=priority,
             status=status,
+            duplicate_of=duplicate_of,
             stage=stage,
             start_date=start_date,
             due_date=due_date,
@@ -1150,22 +1154,35 @@ class Issue(_BoundEntity):  # type: ignore[misc]
         self,
         status: IssueStatus | str,
         *,
+        duplicate_of: str | None = None,
         no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Command[Issue]:
         client = self._require_client(
             entity_type="Issue", entity_id=self.id, relation_name="set_status"
         )
-        return client.issues.set_status_command(self.id, status, no_start=no_start, options=options)
+        return client.issues.set_status_command(
+            self.id,
+            status,
+            duplicate_of=duplicate_of,
+            no_start=no_start,
+            options=options,
+        )
 
     def set_status(
         self,
         status: IssueStatus | str,
         *,
+        duplicate_of: str | None = None,
         no_start: bool = False,
         options: OperationOptions | None = None,
     ) -> Issue:
-        return self.set_status_command(status, no_start=no_start, options=options).run()
+        return self.set_status_command(
+            status,
+            duplicate_of=duplicate_of,
+            no_start=no_start,
+            options=options,
+        ).run()
 
     def move_to_top_command(self, *, options: OperationOptions | None = None) -> Command[Issue]:
         client = self._require_client(

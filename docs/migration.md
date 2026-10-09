@@ -15,14 +15,20 @@ There is no provider registry or automatic provider discovery. See
 target-path/environment/staging rules, process-control guarantees, and the
 provider-adapter contract.
 
-## v0.6.0 direct migration
+## v0.6.1 direct migration
 
-The approved target is Multica CLI `0.6.0` at source commit
-`ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02` (release `398016451`). The direct
-compatibility interval is `[0.5.3, 0.6.1)`; the baseline is
-`c1842ae2dfcd0cc5e739b7785d3209d5e72d01ed`, with no intermediate SDK release.
+The approved target is Multica CLI `0.6.1` at source commit
+`2ea01ae4ef55de4310b99af192d2dbd367832883` (release `400860726`). The direct
+compatibility interval is `[0.6.0, 0.6.2)`; the baseline is
+`48745d2fe9e80ee9c027293ef22971ff5723f5f5`, with no intermediate SDK release.
 The refreshed contract covers 205 command nodes, 193 operations, and 196
-response entrypoints, including 18 changed and 178 unchanged responses.
+response entrypoints, including nine changed and 187 unchanged responses.
+
+Issue `set_status` and `update` accept `duplicate_of` on both direct and bound
+surfaces. A nonblank reference maps once to `--duplicate-of` and is gated to
+CLI `0.6.1`; `set_status` requires `cancelled`, while `update` permits omitted
+status or explicit `cancelled`. Update rejects present descriptions and
+emitted attachments with the same atomic pre-transport validation.
 
 Existing wakeups gain v2 deadline, condition, fire-limit, pause, and provenance
 fields plus typed `trigger`, `delete`, `checkin`, and `runs` actions. Agent task
@@ -38,7 +44,7 @@ registry. Offline contract, source-link, typing, lint, test, build, package,
 and forbidden-content gates are required; live backend status is reported
 separately. If a gate fails, roll back the contract, generated projection,
 handwritten code, fixtures, docs, and package claims together to the approved
-`0.5.3` baseline.
+`0.6.0` baseline.
 
 ## Complete public CLI parity
 

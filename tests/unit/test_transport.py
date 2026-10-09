@@ -179,7 +179,7 @@ _CLI_0442_ENVELOPE = (
     b'{"arch":"arm64","commit":"76f59f5f1","date":"2026-09-09T11:06:33Z",'
     b'"go":"go1.26.8","os":"darwin","version":"0.4.42"}'
 )
-_CLI_053_ENVELOPE = _CLI_0442_ENVELOPE.replace(b'"0.4.42"', b'"0.5.3"')
+_CLI_060_ENVELOPE = _CLI_0442_ENVELOPE.replace(b'"0.4.42"', b'"0.6.0"')
 
 
 _INVALID_VERSION_OUTPUTS = (
@@ -1722,7 +1722,7 @@ def test_transport_warn_policy_rejects_unparseable_version_output_from_check():
 
 
 def test_strict_preflight_is_lazy_uses_exact_json_argv_and_preserves_global_order() -> None:
-    executor = _CompatibilityProbeExecutor(_CLI_053_ENVELOPE)
+    executor = _CompatibilityProbeExecutor(_CLI_060_ENVELOPE)
     config = ClientConfig(
         executable="/opt/multica",
         server_url="https://example.test",
@@ -1766,15 +1766,15 @@ def test_strict_preflight_is_lazy_uses_exact_json_argv_and_preserves_global_orde
 
 
 def test_operation_minimum_rejects_new_surface_but_allows_retained_surface() -> None:
-    old_executor = _CompatibilityProbeExecutor(_CLI_053_ENVELOPE)
+    old_executor = _CompatibilityProbeExecutor(_CLI_060_ENVELOPE)
     old_transport = CliTransport(
         ClientConfig(compatibility=CompatibilityPolicy.strict), executor=old_executor
     )
-    with pytest.raises(UnsupportedCliVersionError, match=r"below minimum 0\.6\.0"):
-        old_transport.run_bytes(("issue", "comment", "update"), minimum_cli_version="0.6.0")
+    with pytest.raises(UnsupportedCliVersionError, match=r"below minimum 0\.6\.1"):
+        old_transport.run_bytes(("issue", "comment", "update"), minimum_cli_version="0.6.1")
     assert len(old_executor.requests) == 1
 
-    retained_executor = _CompatibilityProbeExecutor(_CLI_053_ENVELOPE)
+    retained_executor = _CompatibilityProbeExecutor(_CLI_060_ENVELOPE)
     retained_transport = CliTransport(
         ClientConfig(compatibility=CompatibilityPolicy.strict), executor=retained_executor
     )
@@ -1783,7 +1783,7 @@ def test_operation_minimum_rejects_new_surface_but_allows_retained_surface() -> 
 
 
 def _assert_strict_client_constructor_is_lazy_and_first_public_operation_succeeds() -> None:
-    executor = _CompatibilityProbeExecutor(_CLI_053_ENVELOPE)
+    executor = _CompatibilityProbeExecutor(_CLI_060_ENVELOPE)
     config = ClientConfig(compatibility=CompatibilityPolicy.strict)
     client = MulticaClient(config, executor=executor)
 
