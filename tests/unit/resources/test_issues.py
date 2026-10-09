@@ -11,6 +11,7 @@ import msgspec
 import pytest
 
 from multica_py._internal.argv import build_global_args
+from multica_py._internal.commands import _cached_value_command
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
@@ -130,6 +131,7 @@ class _IssuePropertyProjectionCase:
     payload: bytes
     expected: tuple[PropertyValue, ...]
     partial: bool = False
+    expect_relation_loader_call: bool = False
 
 
 @dataclass(frozen=True)
@@ -781,6 +783,12 @@ def test_issue_list_projection_preserves_absence_and_properties_without_get(
         duration=datetime.timedelta(),
     )
     client = MagicMock()
+    typed_value = PropertyValue(
+        property_id="p1", name="Priority", type="select", value="high", display="High"
+    )
+    client.issues._properties_relation_command.return_value = _cached_value_command(
+        lambda: {typed_value.name: typed_value}
+    )
     resource = IssueResource(mock_transport, ClientConfig())
     resource._set_client(client)
 
@@ -789,8 +797,49 @@ def test_issue_list_projection_preserves_absence_and_properties_without_get(
     assert row.id == "i1"
     assert cast("object", row.title) is msgspec.UNSET
     assert cast("object", row.status) is msgspec.UNSET
-    assert cast("object", row.properties) == {"prop-1": "raw", "prop-2": {"value": 1}}
+    assert row.to_dict()["properties"] == {"prop-1": "raw", "prop-2": {"value": 1}}
+    assert dict(row.properties.all()) == {"Priority": typed_value}
+    client.issues._properties_relation_command.assert_called_once_with("i1")
     assert client.issues.get.call_count == 0
+
+
+@pytest.mark.parametrize(
+    ("properties", "expected_raw"),
+    (
+        (b'{"priority":"high"}', {"priority": "high"}),
+        (b'{"priority":{"value":1}}', {"priority": {"value": 1}}),
+    ),
+    ids=("scalar", "structured"),
+)
+def test_issue_get_preserves_raw_properties_and_loads_typed_relation(
+    properties: bytes,
+    expected_raw: dict[str, object],
+    mock_transport: MagicMock,
+) -> None:
+    mock_transport.run_bytes.return_value = RawCommandResult(
+        argv=("issue", "get", "i1", "--output", "json"),
+        exit_code=0,
+        stdout=(b'{"id":"i1","title":"Issue","status":"todo","properties":' + properties + b"}"),
+        stderr=b"",
+        duration=datetime.timedelta(),
+    )
+    typed_value = PropertyValue(
+        property_id="p1", name="Priority", type="select", value="high", display="High"
+    )
+    client = MagicMock()
+    resource = IssueResource(mock_transport, ClientConfig())
+    resource._set_client(client)
+    client.issues._properties_relation_command.return_value = _cached_value_command(
+        lambda: {typed_value.name: typed_value}
+    )
+
+    issue = resource.get("i1")
+
+    assert issue._property_projection == expected_raw
+    assert issue.to_dict()["properties"] == expected_raw
+    assert dict(issue.properties.all()) == {"Priority": typed_value}
+    client.issues._properties_relation_command.assert_called_once_with("i1")
+    client.issues.get.assert_not_called()
 
 
 def test_issue_list_fields_preserve_core_and_dynamic_projection_without_get(
@@ -881,10 +930,41 @@ _ISSUE_PROPERTY_PROJECTION_CASES = (
         partial=True,
     ),
     _IssuePropertyProjectionCase(
+        name="value-less-resolved-rows",
+        payload=(
+            b'{"issues":[{"id":"i1","properties":[{"property_id":"p1",'
+            b'"name":"Impact","type":"select"}]}]}'
+        ),
+        expected=(
+            PropertyValue(
+                property_id="p1", name="Impact", type="select", value="high", display="High"
+            ),
+        ),
+        expect_relation_loader_call=True,
+    ),
+    _IssuePropertyProjectionCase(
+        name="explicit-null-resolved-row",
+        payload=(
+            b'{"issues":[{"id":"i1","properties":[{"property_id":"p1",'
+            b'"name":"Impact","type":"select","value":null}]}]}'
+        ),
+        expected=(PropertyValue(property_id="p1", name="Impact", type="select", value=None),),
+    ),
+    _IssuePropertyProjectionCase(
         name="raw-uuid-map",
         payload=b'{"issues":[{"id":"i1","title":"Issue","status":"todo",'
         b'"properties":{"p1":"high"}}]}',
-        expected=(),
+        expected=(
+            PropertyValue(
+                property_id="p1",
+                name="Impact",
+                type="select",
+                value="high",
+                display="High",
+                archived=False,
+            ),
+        ),
+        expect_relation_loader_call=True,
     ),
 )
 
@@ -894,16 +974,21 @@ def test_issue_property_projection_decodes_full_and_partial_target_rows(
     case: _IssuePropertyProjectionCase,
 ) -> None:
     page = _issue_list_page_from_wire(decode_json(case.payload, _IssueListPageWire))
-    issue = page.items[0]._with_client(MagicMock())
+    client = MagicMock()
+    client.issues._properties_relation_command.return_value = _cached_value_command(
+        lambda: {row.name: row for row in case.expected}
+    )
+    issue = page.items[0]._with_client(client)
 
     assert isinstance(issue, Issue)
     if case.partial:
         assert cast("object", issue.title) is msgspec.UNSET
         assert cast("object", issue.status) is msgspec.UNSET
-    if case.expected:
-        assert tuple(issue.properties.all().values()) == case.expected
+    assert tuple(issue.properties.all().values()) == case.expected
+    if case.expect_relation_loader_call:
+        client.issues._properties_relation_command.assert_called_once_with("i1")
     else:
-        assert cast("object", dict(issue.properties.all())) == {"p1": "high"}
+        client.issues._properties_relation_command.assert_not_called()
 
 
 def test_issue_projection_preserves_full_allowlist_and_omitted_vs_null() -> None:
