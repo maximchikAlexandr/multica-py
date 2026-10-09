@@ -178,6 +178,39 @@ def _run_stdin_echo_mode() -> int:
     return 0
 
 
+def _run_stdin_pipe_capacity_mode() -> int:
+    chunk = int(os.environ.get("MULTICA_CHILD_CHUNK_SIZE", "4096"))
+    chunks = int(os.environ.get("MULTICA_CHILD_CHUNKS", "64"))
+    stdout = cast("BinaryIO", sys.stdout.buffer)
+    stderr = cast("BinaryIO", sys.stderr.buffer)
+    for _ in range(chunks):
+        stdout.write(b"o" * chunk)
+        stdout.flush()
+        stderr.write(b"e" * chunk)
+        stderr.flush()
+    data = cast("BinaryIO", sys.stdin.buffer).read()
+    stdout.write(data)
+    stdout.flush()
+    stderr.write(data)
+    stderr.flush()
+    return _exit_code()
+
+
+def _run_gated_stdin_mode() -> int:
+    ready_file = os.environ.get("MULTICA_CHILD_READY_FILE", "")
+    if ready_file:
+        _write_text(ready_file, "ready")
+    release_file = os.environ.get("MULTICA_CHILD_RELEASE_FILE", "")
+    if release_file:
+        _wait_for_release(release_file)
+    data = cast("BinaryIO", sys.stdin.buffer).read()
+    sys.stdout.buffer.write(data)  # type: ignore[misc]
+    sys.stdout.buffer.flush()  # type: ignore[misc]
+    sys.stderr.buffer.write(data)  # type: ignore[misc]
+    sys.stderr.buffer.flush()  # type: ignore[misc]
+    return _exit_code()
+
+
 def main() -> int:
     mode = os.environ.get("MULTICA_CHILD_MODE", "")
     if mode == "sleep":
@@ -198,6 +231,10 @@ def main() -> int:
         return _run_descendant_mode()
     if mode == "stdin-echo":
         return _run_stdin_echo_mode()
+    if mode == "stdin-pipe-capacity":
+        return _run_stdin_pipe_capacity_mode()
+    if mode == "gated-stdin":
+        return _run_gated_stdin_mode()
 
     pid_file = os.environ.get("MULTICA_CHILD_PID_FILE", "")
     if pid_file:

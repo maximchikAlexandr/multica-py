@@ -11,6 +11,7 @@ import msgspec
 import pytest
 
 from multica_py._internal.argv import build_global_args
+from multica_py._internal.commands import _cached_value_command
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
@@ -781,6 +782,12 @@ def test_issue_list_projection_preserves_absence_and_properties_without_get(
         duration=datetime.timedelta(),
     )
     client = MagicMock()
+    typed_value = PropertyValue(
+        property_id="p1", name="Priority", type="select", value="high", display="High"
+    )
+    client.issues._properties_relation_command.return_value = _cached_value_command(
+        lambda: {typed_value.name: typed_value}
+    )
     resource = IssueResource(mock_transport, ClientConfig())
     resource._set_client(client)
 
@@ -789,7 +796,9 @@ def test_issue_list_projection_preserves_absence_and_properties_without_get(
     assert row.id == "i1"
     assert cast("object", row.title) is msgspec.UNSET
     assert cast("object", row.status) is msgspec.UNSET
-    assert cast("object", row.properties) == {"prop-1": "raw", "prop-2": {"value": 1}}
+    assert row.to_dict()["properties"] == {"prop-1": "raw", "prop-2": {"value": 1}}
+    assert dict(row.properties.all()) == {"Priority": typed_value}
+    client.issues._properties_relation_command.assert_called_once_with("i1")
     assert client.issues.get.call_count == 0
 
 
@@ -884,7 +893,16 @@ _ISSUE_PROPERTY_PROJECTION_CASES = (
         name="raw-uuid-map",
         payload=b'{"issues":[{"id":"i1","title":"Issue","status":"todo",'
         b'"properties":{"p1":"high"}}]}',
-        expected=(),
+        expected=(
+            PropertyValue(
+                property_id="p1",
+                name="Impact",
+                type="select",
+                value="high",
+                display="High",
+                archived=False,
+            ),
+        ),
     ),
 )
 
@@ -894,16 +912,19 @@ def test_issue_property_projection_decodes_full_and_partial_target_rows(
     case: _IssuePropertyProjectionCase,
 ) -> None:
     page = _issue_list_page_from_wire(decode_json(case.payload, _IssueListPageWire))
-    issue = page.items[0]._with_client(MagicMock())
+    client = MagicMock()
+    client.issues._properties_relation_command.return_value = _cached_value_command(
+        lambda: {row.name: row for row in case.expected}
+    )
+    issue = page.items[0]._with_client(client)
 
     assert isinstance(issue, Issue)
     if case.partial:
         assert cast("object", issue.title) is msgspec.UNSET
         assert cast("object", issue.status) is msgspec.UNSET
-    if case.expected:
-        assert tuple(issue.properties.all().values()) == case.expected
-    else:
-        assert cast("object", dict(issue.properties.all())) == {"p1": "high"}
+    assert tuple(issue.properties.all().values()) == case.expected
+    if case.name == "raw-uuid-map":
+        client.issues._properties_relation_command.assert_called_once_with("i1")
 
 
 def test_issue_projection_preserves_full_allowlist_and_omitted_vs_null() -> None:

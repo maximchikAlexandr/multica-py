@@ -84,55 +84,35 @@ def _page_items(page: Page[S] | tuple[S, ...]) -> tuple[S, ...]:
 def _property_relation_initial(
     value: object | None,
 ) -> Mapping[str, PropertyValue] | None:
-    # Raw issue projections are UUID-keyed JSON maps. Keep them as the
-    # already-loaded relation snapshot; resolved rows continue through the
-    # reviewed property resource projection.
     if isinstance(value, Mapping):
-        if all(isinstance(row, Mapping) for row in value.values()):
-            resolved: dict[str, PropertyValue] = {}
-            for row in value.values():
-                assert isinstance(row, Mapping)
-                property_id = row.get("property_id", row.get("id"))
-                name = row.get("name")
-                property_type = row.get("type")
-                if not all(isinstance(item, str) for item in (property_id, name, property_type)):
-                    return cast("Mapping[str, PropertyValue]", value)
-                property_id = cast("str", property_id)
-                name = cast("str", name)
-                property_type = cast("str", property_type)
-                resolved[name] = PropertyValue(
-                    property_id=property_id,
-                    name=name,
-                    type=property_type,
-                    value=cast("MetadataValue", row.get("value")),
-                    display=cast("str", row.get("display", "")),
-                    archived=cast("bool", row.get("archived", False)),
-                )
-            return resolved
-        return cast("Mapping[str, PropertyValue]", value)
-    if isinstance(value, tuple):
-        resolved = {}
-        for row in value:
-            if not isinstance(row, Mapping):
-                return None
-            property_id = row.get("property_id", row.get("id"))
-            name = row.get("name")
-            property_type = row.get("type")
-            if not all(isinstance(item, str) for item in (property_id, name, property_type)):
-                return None
-            property_id = cast("str", property_id)
-            name = cast("str", name)
-            property_type = cast("str", property_type)
-            resolved[name] = PropertyValue(
-                property_id=property_id,
-                name=name,
-                type=property_type,
-                value=cast("MetadataValue", row.get("value")),
-                display=cast("str", row.get("display", "")),
-                archived=cast("bool", row.get("archived", False)),
-            )
-        return resolved
-    return None
+        rows: tuple[object, ...] = tuple(cast("Mapping[object, object]", value).values())
+    elif isinstance(value, tuple):
+        rows = cast("tuple[object, ...]", value)
+    else:
+        return None
+
+    if not rows or not all(isinstance(row, Mapping) for row in rows):
+        return None
+    resolved: dict[str, PropertyValue] = {}
+    for raw_row in rows:
+        row = cast("Mapping[object, object]", raw_row)
+        property_id = row.get("property_id", row.get("id"))
+        name = row.get("name")
+        property_type = row.get("type")
+        if not all(isinstance(item, str) for item in (property_id, name, property_type)):
+            return None
+        property_id = cast("str", property_id)
+        name = cast("str", name)
+        property_type = cast("str", property_type)
+        resolved[name] = PropertyValue(
+            property_id=property_id,
+            name=name,
+            type=property_type,
+            value=cast("MetadataValue", row.get("value")),
+            display=cast("str", row.get("display", "")),
+            archived=cast("bool", row.get("archived", False)),
+        )
+    return resolved
 
 
 def _validate_poll_interval(value: float) -> None:
