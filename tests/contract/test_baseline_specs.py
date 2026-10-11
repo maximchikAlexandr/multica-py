@@ -176,10 +176,10 @@ BASELINE_CASES: tuple[BaselineCase, ...] = (
     BaselineCase(
         "openspec/specs/verification-and-release/spec.md",
         "Focused process and offline checks",
-        "Offline tests MUST use stdlib and pytest, keep exact argv assertions including operations with dynamic temporary paths, retain exactly three real-process cases, and use deterministic synchronization or subprocess test doubles for additional lifecycle branches.",
+        "Offline tests MUST use stdlib and pytest, keep exact argv assertions including operations with dynamic temporary paths, retain the focused real-process cases listed below, and use deterministic synchronization or subprocess test doubles for additional lifecycle branches.",
         "Offline checks keep focused process cases",
         "the process module is collected",
-        "IDs are `bytes-env`, `text-stdin`, and `timeout-tree-cleanup`.",
+        "IDs are `bytes-env`, `text-stdin`, `pipe-capacity-stdin`,\n  `spawn-gated-stdin`, `close-stdin-gated`, `close-gated`,\n  `bounded-spawn-capture`, `timeout-gated-stdin`, and\n  `timeout-tree-cleanup`.",
         "004:FR-006,FR-015,FR-016,005:FR-002,FR-005,FR-006,006:FR-009",
     ),
     BaselineCase(

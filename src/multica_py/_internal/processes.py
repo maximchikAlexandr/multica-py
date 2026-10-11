@@ -154,6 +154,7 @@ def kill_process(process: subprocess.Popen[bytes]) -> None:
 def _communicate_until_exit(
     process: subprocess.Popen[bytes],
     *,
+    stdin: bytes | None,
     poll_interval: float,
     timeout_deadline: float | None,
     cancel: CancellationToken | None,
@@ -166,12 +167,16 @@ def _communicate_until_exit(
 
     while True:
         try:
-            stdout_data, stderr_data = process.communicate(timeout=poll_interval)
+            input_data = stdin
+            stdin = None
+            if input_data is None:
+                stdout_data, stderr_data = process.communicate(timeout=poll_interval)
+            else:
+                stdout_data, stderr_data = process.communicate(
+                    input=input_data,
+                    timeout=poll_interval,
+                )
         except subprocess.TimeoutExpired:
-            stdin = _stdin_pipe(process)
-            if stdin is not None:
-                stdin.close()
-                setattr(process, "stdin", None)
             now = time.monotonic()
             cancel_hit = cancel is not None and cancel.cancelled
             timeout_due = timeout_deadline is not None and now >= timeout_deadline
@@ -216,13 +221,9 @@ def run_with_timeout(
     timeout_deadline = time.monotonic() + timeout.total_seconds() if timeout is not None else None
 
     try:
-        stdin_pipe = _stdin_pipe(process)
-        if stdin is not None and stdin_pipe is not None:
-            stdin_pipe.write(stdin)
-            stdin_pipe.close()
-            setattr(process, "stdin", None)
         stdout_data, stderr_data, timeout_hit = _communicate_until_exit(
             process,
+            stdin=stdin,
             poll_interval=0.1,
             timeout_deadline=timeout_deadline,
             cancel=cancel,

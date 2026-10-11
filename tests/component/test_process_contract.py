@@ -6,6 +6,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -19,9 +20,11 @@ from multica_py.entities import Issue
 from multica_py.enums import CompatibilityPolicy
 from multica_py.exceptions import (
     CommandTimeoutError,
+    ProcessOutputCaptureError,
     ProcessOutputModeError,
     ProcessTimeoutError,
 )
+from multica_py.execution import ExecutionRequest, LocalExecutor
 from multica_py.execution.local import LocalProcessHandle
 from multica_py.process import ManagedProcess, ProcessResult
 from tests.fixtures.fake_multica import FakeMultica
@@ -56,6 +59,11 @@ def _wait_for_file(path: pathlib.Path) -> None:
             return
         time.sleep(0.01)
     raise AssertionError(f"child did not create {path} within five seconds")
+
+
+def _wait_for_thread_exit(thread: threading.Thread) -> None:
+    thread.join(timeout=5)
+    assert not thread.is_alive()
 
 
 def _read_pid(path: pathlib.Path) -> int | None:
@@ -275,7 +283,17 @@ def test_resource_command_keeps_domain_result_type(
 @pytest.mark.timeout(20)
 @pytest.mark.parametrize(
     "contract_id",
-    ("bytes-env", "text-stdin", "timeout-tree-cleanup"),
+    (
+        "bytes-env",
+        "text-stdin",
+        "pipe-capacity-stdin",
+        "spawn-gated-stdin",
+        "close-stdin-gated",
+        "close-gated",
+        "bounded-spawn-capture",
+        "timeout-gated-stdin",
+        "timeout-tree-cleanup",
+    ),
 )
 def test_process_contract(contract_id: str, tmp_path: pathlib.Path) -> None:
     ps = ProcessState()
@@ -311,6 +329,151 @@ def test_process_contract(contract_id: str, tmp_path: pathlib.Path) -> None:
         assert result.stdout == stdin_data
         assert result.stdout.decode("utf-8") == "hello stdin"
         assert result.returncode == 0
+
+    elif contract_id == "pipe-capacity-stdin":
+        chunk_size = 4096
+        chunks = 64
+        payload = b"i" * chunk_size * chunks
+        local_result = LocalExecutor().run(
+            ExecutionRequest(
+                argv=_child_argv(),
+                environment=(
+                    ("MULTICA_CHILD_MODE", "stdin-pipe-capacity"),
+                    ("MULTICA_CHILD_CHUNK_SIZE", str(chunk_size)),
+                    ("MULTICA_CHILD_CHUNKS", str(chunks)),
+                ),
+                stdin=payload,
+                timeout=datetime.timedelta(seconds=10),
+            )
+        )
+        assert local_result.stdout == b"o" * len(payload) + payload
+        assert local_result.stderr == b"e" * len(payload) + payload
+        assert local_result.exit_code == 0
+
+    elif contract_id == "spawn-gated-stdin":
+        ready = tmp_path / "spawn-ready"
+        release = tmp_path / "spawn-release"
+        payload = b"i" * (4096 * 64)
+        handle = LocalExecutor().spawn(
+            ExecutionRequest(
+                argv=_child_argv(),
+                environment=(
+                    ("MULTICA_CHILD_MODE", "gated-stdin"),
+                    ("MULTICA_CHILD_READY_FILE", str(ready)),
+                    ("MULTICA_CHILD_RELEASE_FILE", str(release)),
+                ),
+                stdin=payload,
+                timeout=datetime.timedelta(seconds=10),
+            )
+        )
+        try:
+            _wait_for_file(ready)
+            release.touch()
+            spawn_result = handle.collect(datetime.timedelta(seconds=10))
+        finally:
+            handle.close()
+        assert spawn_result.stdout == payload
+        assert spawn_result.stderr == payload
+        assert spawn_result.exit_code == 0
+
+    elif contract_id == "close-stdin-gated":
+        ready = tmp_path / "close-stdin-ready"
+        release = tmp_path / "close-stdin-release"
+        handle = LocalExecutor().spawn(
+            ExecutionRequest(
+                argv=_child_argv(),
+                environment=(
+                    ("MULTICA_CHILD_MODE", "gated-stdin"),
+                    ("MULTICA_CHILD_READY_FILE", str(ready)),
+                    ("MULTICA_CHILD_RELEASE_FILE", str(release)),
+                ),
+                stdin=b"i" * (4096 * 64),
+                timeout=datetime.timedelta(seconds=10),
+            )
+        )
+        try:
+            _wait_for_file(ready)
+            started = time.monotonic()
+            handle.close_stdin()
+            assert time.monotonic() - started < 2
+            assert handle._stdin_thread is not None
+            assert not handle._stdin_thread.is_alive()
+            release.touch()
+            close_result = handle.collect(datetime.timedelta(seconds=5))
+        finally:
+            handle.close()
+        assert close_result.stdout == close_result.stderr
+        assert len(close_result.stdout) <= 4096 * 64
+
+    elif contract_id == "close-gated":
+        ready = tmp_path / "close-ready"
+        handle = LocalExecutor().spawn(
+            ExecutionRequest(
+                argv=_child_argv(),
+                environment=(
+                    ("MULTICA_CHILD_MODE", "gated-stdin"),
+                    ("MULTICA_CHILD_READY_FILE", str(ready)),
+                    ("MULTICA_CHILD_RELEASE_FILE", str(tmp_path / "never-release")),
+                ),
+                stdin=b"input",
+                timeout=datetime.timedelta(seconds=10),
+            )
+        )
+        try:
+            _wait_for_file(ready)
+            assert handle._stdin_thread is not None
+            _wait_for_thread_exit(handle._stdin_thread)
+            started = time.monotonic()
+            handle.close()
+            assert time.monotonic() - started < 4
+            exit_code = handle.wait(datetime.timedelta(seconds=5))
+            assert exit_code < 0
+            assert not handle._stdin_thread.is_alive()
+            assert all(not thread.is_alive() for thread in handle._stream_threads)
+        finally:
+            handle.close()
+
+    elif contract_id == "bounded-spawn-capture":
+        ready = tmp_path / "noisy-ready"
+        handle = LocalExecutor().spawn(
+            ExecutionRequest(
+                argv=_child_argv(),
+                environment=(
+                    ("MULTICA_CHILD_MODE", "noisy-gated-stdin"),
+                    ("MULTICA_CHILD_READY_FILE", str(ready)),
+                    ("MULTICA_CHILD_RELEASE_FILE", str(tmp_path / "never-release")),
+                    ("MULTICA_CHILD_CHUNKS", "512"),
+                ),
+                stdin=b"input",
+                timeout=datetime.timedelta(seconds=10),
+            )
+        )
+        try:
+            _wait_for_file(ready)
+            with pytest.raises(ProcessOutputCaptureError, match="bounded capture"):
+                handle.collect(datetime.timedelta(seconds=5))
+        finally:
+            handle.close()
+        exit_code = handle.wait(datetime.timedelta(seconds=5))
+        assert exit_code < 0
+        assert handle._stdin_thread is not None
+        assert not handle._stdin_thread.is_alive()
+        assert all(not thread.is_alive() for thread in handle._stream_threads)
+
+    elif contract_id == "timeout-gated-stdin":
+        payload = b"i" * (4096 * 64)
+        started = time.monotonic()
+        with pytest.raises(CommandTimeoutError):
+            run_with_timeout(
+                _child_argv(),
+                stdin=payload,
+                timeout=datetime.timedelta(seconds=0.2),
+                env={
+                    "MULTICA_CHILD_MODE": "gated-stdin",
+                    "MULTICA_CHILD_RELEASE_FILE": str(tmp_path / "never-release"),
+                },
+            )
+        assert time.monotonic() - started < 5
 
     elif contract_id == "timeout-tree-cleanup":
         signal_log = tmp_path / "signals"

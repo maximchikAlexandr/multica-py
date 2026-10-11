@@ -7,6 +7,7 @@ import subprocess
 import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import cast
 from unittest.mock import MagicMock, call, patch
 
 import msgspec
@@ -65,6 +66,32 @@ class ResultCase:
     stdout: bytes
     stderr: bytes
     ok: bool
+
+
+class _RecordingStdin(io.BytesIO):
+    def __init__(self) -> None:
+        super().__init__()
+        self.writes: list[bytes] = []
+
+    def write(self, data: object) -> int:
+        payload = cast("bytes", data)
+        self.writes.append(payload)
+        return super().write(payload)
+
+
+class _PartialWriteStdin(io.BytesIO):
+    def fileno(self) -> int:
+        return 42
+
+
+class _BrokenStdin(io.BytesIO):
+    def __init__(self) -> None:
+        super().__init__()
+        self.attempts = 0
+
+    def write(self, data: object) -> int:
+        self.attempts += 1
+        raise BrokenPipeError("stdin closed by child")
 
 
 def _stream_for_name(managed: ManagedProcess, stream_name: str) -> Iterator[str]:
@@ -149,6 +176,73 @@ def test_close_process_pipes_closes_every_attached_pipe() -> None:
     stdin.close.assert_called_once_with()
     process.stdout.close.assert_called_once_with()
     process.stderr.close.assert_called_once_with()
+
+
+def test_local_process_handle_delivers_initial_stdin_once_and_cleans_worker() -> None:
+    process = _process(poll=0)
+    stdin = _RecordingStdin()
+    process.stdin = stdin
+    process.stdout = io.BytesIO()
+    process.stderr = io.BytesIO()
+    handle = LocalProcessHandle(process, initial_stdin=b"exact-once")
+
+    assert handle._stdin_thread is not None
+    handle._stdin_thread.join(timeout=1.0)
+
+    assert not handle._stdin_thread.is_alive()
+    assert stdin.writes == [b"exact-once"]
+    assert stdin.closed
+    assert process.stdin is None
+    handle.close()
+
+
+def test_local_process_handle_partial_initial_stdin_writes_reuse_memoryview() -> None:
+    process = _process(poll=0)
+    stdin = _PartialWriteStdin()
+    process.stdin = stdin
+    process.stdout = io.BytesIO()
+    process.stderr = io.BytesIO()
+    payload = b"partial-write-payload"
+    writes: list[memoryview] = []
+    delivered: list[bytes] = []
+
+    def partial_write(fd: int, data: memoryview) -> int:
+        assert fd == 42
+        writes.append(data)
+        written = min(3, len(data))
+        delivered.append(bytes(data[:written]))
+        return written
+
+    with (
+        patch("multica_py.execution.local.os.set_blocking"),
+        patch("multica_py.execution.local.os.write", side_effect=partial_write),
+    ):
+        handle = LocalProcessHandle(process, initial_stdin=payload)
+        assert handle._stdin_thread is not None
+        handle._stdin_thread.join(timeout=1.0)
+
+    assert not handle._stdin_thread.is_alive()
+    assert b"".join(delivered) == payload
+    assert all(data.obj is payload for data in writes)
+    handle.close()
+
+
+def test_local_process_handle_initial_stdin_error_closes_pipe_safely() -> None:
+    process = _process(poll=0)
+    stdin = _BrokenStdin()
+    process.stdin = stdin
+    process.stdout = io.BytesIO()
+    process.stderr = io.BytesIO()
+    handle = LocalProcessHandle(process, initial_stdin=b"will-fail")
+
+    assert handle._stdin_thread is not None
+    handle._stdin_thread.join(timeout=1.0)
+
+    assert not handle._stdin_thread.is_alive()
+    assert stdin.closed
+    assert stdin.attempts == 1
+    assert process.stdin is None
+    handle.close()
 
 
 @pytest.mark.parametrize(
