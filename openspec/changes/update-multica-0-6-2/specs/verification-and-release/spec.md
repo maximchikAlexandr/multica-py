@@ -2,7 +2,7 @@
 
 ### Requirement: Multica 0.6.2 coverage extends existing case tables
 
-Verification SHALL extend the existing frozen unit, contract, and component case tables for every changed `0.6.2` contract. It SHALL cover list-property JSON and comma forms, ambiguity, bounds, de-duplication, text and URL validation, null/unset, exact-element filtering, literal display values, daemon commit full/empty/missing states, wakeup diagnostic round trips and recovery, upload interruption, digit-prefix and cancellation search, project omission/null concurrency, and redacted server errors.
+Verification SHALL extend the existing frozen unit, contract, and component case tables for every changed `0.6.2` contract. It SHALL cover both list-property public inputs; omitted, valid, unsupported, and conflicting discriminators; JSON, comma, and sequence forms; ambiguity, bounds, de-duplication, type-specific text and URL validation before command construction, null/unset, exact-element filtering, literal display values, daemon commit full/empty/missing states, wakeup diagnostic round trips and recovery, upload interruption, digit-prefix and cancellation search, project omission/null concurrency, and redacted server errors.
 
 #### Scenario: Changed behavior has positive and negative rows
 - **WHEN** the affected case tables are inspected
@@ -11,6 +11,10 @@ Verification SHALL extend the existing frozen unit, contract, and component case
 #### Scenario: Legacy compatibility remains covered
 - **WHEN** legacy `0.6.1` payloads omit newly introduced fields
 - **THEN** focused fixtures prove compatible decoding without fabricated target values
+
+#### Scenario: Invalid list-property input performs no I/O
+- **WHEN** either direct set or create-time assignment receives a sequence without a discriminator, an unsupported/conflicting discriminator, overlong text, or an invalid/overlong URL
+- **THEN** a table-driven case proves failure before command-plan execution and zero transport calls
 
 ### Requirement: Complete inventories and source links are release gates
 

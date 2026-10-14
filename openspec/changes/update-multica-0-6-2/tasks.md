@@ -11,9 +11,10 @@
 
 - [ ] 2.1 Extend property definition policy for open `multi_text` and `multi_url` strings, reject nonempty options for them, and add table rows for definition get/list/create behavior.
 - [ ] 2.2 Add a property-only immutable list value type without widening `MetadataValue`; decode `multi_text` and `multi_url` rows by property type and reject scalar/object/null/non-string collection payloads with the existing typed output error.
-- [ ] 2.3 Extend issue-property set and create-time property assignment to accept reviewed string forms and typed string sequences, serialize sequences as compact JSON arrays, stably de-duplicate, and validate nonempty/max-20/text/URL/null rules before I/O.
-- [ ] 2.4 Add exact-element list-property filter encoding and literal display-value decoding that never resolves member-shaped text; cover raw issue projections and authoritative resolved relations.
-- [ ] 2.5 Extend existing frozen unit/contract/component case tables for JSON-array/comma input, comma/bracket ambiguity, empty/over-limit/duplicate items, text/URL bounds, HTTP(S), null versus unset, filtering, display values, and malformed response rows.
+- [ ] 2.3 Add the same keyword-only `property_type: Literal["multi_text", "multi_url"] | None` discriminator to direct issue-property set and create-time `IssuePropertyAssignment`; preserve undiscriminated scalar-string compatibility and reject sequences, unsupported types, conflicting scalar values, and null before I/O.
+- [ ] 2.4 Route both public inputs through one shared normalizer that parses discriminated comma/JSON strings or string sequences, emits compact JSON, stably de-duplicates, and enforces nonempty/max-20 plus type-specific text length and HTTP(S) URL scheme/length rules before command construction.
+- [ ] 2.5 Add exact-element list-property filter encoding and literal display-value decoding that never resolves member-shaped text; cover raw issue projections and authoritative resolved relations.
+- [ ] 2.6 Extend existing frozen unit/contract/component case tables for discriminator presence/conflict, both public boundaries, JSON-array/comma input, comma/bracket ambiguity, empty/over-limit/duplicate items, text/URL bounds, HTTP(S), null versus unset, filtering, display values, malformed response rows, and zero transport calls on every invalid case.
 
 ## 3. Target response models and retained operations
 

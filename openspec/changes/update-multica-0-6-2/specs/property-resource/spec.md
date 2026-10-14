@@ -12,17 +12,27 @@ The property catalog SHALL accept and decode `multi_text` and `multi_url` defini
 - **WHEN** create is called for `multi_text` or `multi_url` with one or more options
 - **THEN** validation raises before transport
 
-### Requirement: Multi-value property input is canonical and bounded
+### Requirement: Multi-value property input is discriminated, canonical, and bounded
 
-Issue property set and create-time property assignment SHALL accept reviewed comma-form input or JSON string-array input. SDK sequence input SHALL serialize as a compact JSON string array. A list value SHALL contain 1 through 20 strings after stable first-occurrence de-duplication; `multi_text` items SHALL be nonblank and at most 2000 characters; `multi_url` items SHALL be HTTP(S) URLs of at most 2048 characters. Null SHALL be invalid and removal SHALL remain the separate unset operation.
+`IssuePropertyResource.set` and `set_command` and create-time `IssuePropertyAssignment` SHALL expose the same keyword-only `property_type` discriminator. The discriminator SHALL be omitted or exactly `multi_text` or `multi_url`. A string or string sequence intended as a list property SHALL require the matching discriminator; a sequence without it, an unsupported discriminator, a discriminator with a scalar non-string value, or null SHALL fail before I/O. Omitting the discriminator SHALL preserve the existing scalar-string input contract.
 
-#### Scenario: Sequence input uses JSON without comma ambiguity
-- **WHEN** a caller supplies list items including a comma or an item beginning with `[` through the typed sequence input
+For discriminated input, the SDK SHALL parse target comma-form strings or JSON string-array strings, accept Python string sequences, stably de-duplicate by first occurrence, validate by the declared type before command construction, and serialize one compact JSON string array. A list value SHALL contain 1 through 20 strings; `multi_text` items SHALL be nonblank and at most 2000 characters; `multi_url` items SHALL be HTTP(S) URLs of at most 2048 characters. Removal SHALL remain the separate unset operation.
+
+#### Scenario: Discriminated sequence input uses JSON without comma ambiguity
+- **WHEN** a caller supplies `property_type="multi_text"` or `property_type="multi_url"` with sequence items including a comma or an item beginning with `[`
 - **THEN** the command emits one compact JSON string array and preserves item text and first-occurrence order
 
-#### Scenario: Simple comma input remains accepted
-- **WHEN** a caller supplies a valid simple comma-separated value supported by the CLI
-- **THEN** the existing string form is passed as one `--value` without SDK reordering
+#### Scenario: Discriminated string forms are parsed before I/O
+- **WHEN** a caller supplies a matching list-property discriminator with a valid comma-form or JSON-array string
+- **THEN** the SDK parses and validates the declared list type before command construction and emits one canonical compact JSON string array
+
+#### Scenario: Legacy scalar string remains compatible
+- **WHEN** a caller supplies a string and omits `property_type`
+- **THEN** the existing scalar/raw string behavior is preserved without claiming local list-property validation
+
+#### Scenario: Missing or conflicting discriminator fails before I/O
+- **WHEN** a caller supplies a string sequence without `property_type`, supplies a discriminator outside `multi_text|multi_url`, or combines a list discriminator with a scalar non-string value
+- **THEN** both direct set and create-time assignment reject the input before transport or command-plan construction
 
 #### Scenario: Bounds and element validation fail before I/O
 - **WHEN** a list is empty, exceeds 20 unique items, contains blank or overlong text, contains a non-HTTP(S) or overlong URL, contains a non-string item, or is null

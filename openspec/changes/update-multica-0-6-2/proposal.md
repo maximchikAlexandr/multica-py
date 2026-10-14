@@ -7,6 +7,7 @@ Multica `0.6.2` changes supported CLI, property, daemon-status, wakeup, error, s
 - Advance the approved upstream target and maximum-tested CLI to the exact Multica `0.6.2` release commit, with `0.6.3` as the exclusive compatibility ceiling and full release/binary provenance.
 - Reconcile all 209 target CLI nodes and all 196 supported response entrypoints against pinned `0.6.1` and `0.6.2` source, preserving explicit reviewed exceptions for dynamic `issue wakeup checkin` discovery and hidden `daemon probe-runtimes`.
 - Extend property definitions and issue property values with open `multi_text` and `multi_url` types, including parsing, validation, filtering, stable de-duplication, and display-value semantics.
+- Add a keyword-only list-property type discriminator to direct set and create-time assignment inputs so `multi_text` and `multi_url` strings/sequences receive type-specific validation before any I/O while legacy scalar input remains source-compatible.
 - Expose `DaemonStatus.cli_commit` with legacy omission and explicit-empty handling, without falling back to `cli_version`.
 - Expose nullable wakeup `last_error` diagnostics and their recovery clearing semantics across supported wakeup operations.
 - Align upload transport-error classification, issue-search digit-prefix/cancellation behavior, project omitted-versus-null concurrency semantics, and redacted HTTP 500 errors with `0.6.2`.
@@ -31,7 +32,7 @@ None.
 ## Impact
 
 - Approved contract and generated projection: `contracts/sdk-contract.json`, `src/multica_py/_generated/approved_sdk.py`, contract schema/validation/render checks.
-- Public models and adapters: property types/values, issue projections, daemon status, wakeups, project updates, search, attachments, and command-error mapping.
+- Public models and adapters: the additive list-property discriminator on direct set/create-time assignment, property types/values, issue projections, daemon status, wakeups, project updates, search, attachments, and command-error mapping.
 - Existing table-driven unit, contract, component, packaging, and gated live-smoke coverage; no new test framework.
 - User-facing compatibility, API, service-usage, CLI-coverage, migration, changelog, contributing, and release documentation.
 - No production dependency addition, no checked-in collector/audit evidence, and no public daemon-autostart methods.

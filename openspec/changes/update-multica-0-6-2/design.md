@@ -2,7 +2,7 @@
 
 The repository currently approves Multica `0.6.1` at source commit `2ea01ae4ef55de4310b99af192d2dbd367832883`, renders a single generated runtime module from `contracts/sdk-contract.json`, and accepts CLI versions in the reviewed direct-patch interval. Multica `0.6.2` is the next stable release at `7ab92d7622ecd81d179a8d83ae2dea74835a5069`. The reviewed delta contains four new CLI nodes under `daemon autostart`, no removals, changes to property list types, and response/behavior changes across daemon status, wakeups, upload failures, search, project updates, and HTTP error text.
 
-The upstream dossier establishes 209 target CLI nodes and 196 supported response entrypoints. Evidence and generated suggestions remain review-only; the approved contract remains the sole production generator input. This planning change edits no production code, tests, or main specs.
+The upstream dossier establishes 209 target CLI nodes and 196 supported response entrypoints. Evidence and generated suggestions remain review-only; the approved contract remains the sole production generator input. Graph revision 2 follows independent rejection of candidate `adc56e3cb9a7c057f5b71efa1e120a073941df77`: it accepted `value=("not-a-url",)` because neither public tuple boundary carried the property type needed for URL-specific pre-I/O validation. The candidate is diagnostic evidence only, is not an approved implementation baseline, and SHALL NOT be merged. This planning change edits no production code, tests, or main specs.
 
 ## Goals / Non-Goals
 
@@ -28,13 +28,13 @@ Update the existing contract target to `0.6.2`, retain the repository minimum CL
 
 Alternative considered: generate directly from the collected target evidence. Rejected because evidence does not approve public names, mappings, presence semantics, validators, or compatibility policy.
 
-### 2. Model list-valued properties explicitly without closing the upstream type enum
+### 2. Require an explicit discriminator for list-property input
 
-Keep `PropertyDefinition.type` open as `str`, add `multi_text` and `multi_url` to documented accepted definitions, and extend property value typing to immutable `tuple[str, ...]` only for these list types. The issue-property setter accepts a string or a sequence of strings and emits one canonical JSON array for sequences; callers may still pass an already encoded CLI string when they intentionally need the CLI's comma form. Decoding uses the row's property type: list types require arrays of strings, while scalar property and metadata types keep their existing contracts.
+Keep `PropertyDefinition.type` open as `str`, add `multi_text` and `multi_url` to documented accepted definitions, and extend property value typing to immutable `tuple[str, ...]` only for these list types. Add the same keyword-only `property_type: Literal["multi_text", "multi_url"] | None = None` discriminator to `IssuePropertyResource.set[_command]` and `IssuePropertyAssignment`. A string or string sequence intended as a list property requires the discriminator. Omitting it preserves the existing scalar-string contract; passing it with a scalar non-string or with any other type name fails before I/O.
 
-Validation mirrors target rules before I/O: 1–20 nonempty items, stable first-occurrence de-duplication, nonblank text up to 2000 characters, and HTTP(S) URLs up to 2048 characters. `None` is rejected; unset remains the separate unset operation. Exact-element filtering keeps one list element as one predicate token, and display values remain literal strings without actor resolution.
+One shared list-value normalizer parses a discriminated string using the target grammar (JSON array when it begins with `[`, otherwise comma form), accepts a discriminated Python sequence, validates before command construction, applies stable first-occurrence de-duplication, and emits one compact JSON array. `multi_text` requires 1–20 nonblank strings of at most 2000 characters. `multi_url` requires 1–20 HTTP(S) URL strings of at most 2048 characters. `None` is rejected; unset remains the separate unset operation. Exact-element filtering keeps one list element as one predicate token, and display values remain literal strings without actor resolution.
 
-Alternative considered: widen the global `MetadataValue` alias to lists. Rejected because issue metadata is a distinct API and widening it would silently change unrelated public contracts.
+Alternatives considered: infer property type with a server read, apply URL rules to every tuple, add tagged wrapper classes, or widen the global `MetadataValue` alias. Server lookup violates pre-I/O validation; tuple-wide URL rules reject valid text; wrappers add avoidable public concepts; widening metadata changes an unrelated API. The discriminator reuses the existing property type vocabulary and one shared validation path.
 
 ### 3. Add target fields with explicit legacy semantics
 
@@ -58,7 +58,7 @@ Alternative considered: expose read-only status now. Rejected because splitting 
 
 ### 6. Ponytail full gate
 
-No new subsystem is necessary. The existing approved contract, deterministic generator, frozen models, resource adapters, shared transport exceptions, frozen case tables, and repository verification commands cover every required change. The alternative for each area is the named existing layer; the decision is to extend it in place and remove all proposed parallel registries, parsers, wrappers, or test frameworks from scope.
+No new subsystem is necessary. The existing approved contract, deterministic generator, frozen models, resource adapters, shared transport exceptions, frozen case tables, and repository verification commands cover every required change. For the confirmed ambiguity, the existing public keyword/model field plus one shared normalizer is sufficient; tagged value wrappers, property-definition lookups, parallel parsers, registries, and new test frameworks are removed from scope.
 
 ### 7. E2E decision
 
@@ -68,6 +68,7 @@ No new subsystem is necessary. The existing approved contract, deterministic gen
 
 - **Wide upstream source diff can hide SDK-relevant behavior** → Reconcile every target CLI node and supported response entrypoint, retain full-SHA source links, and fail closed on unresolved mappings.
 - **List-property parsing can conflate commas, brackets, and literal values** → Canonicalize SDK sequences as JSON arrays and test both accepted CLI forms plus ambiguous/invalid inputs.
+- **Callers can omit the discriminator for a string whose remote property is list-valued** → Treat that call as the unchanged legacy scalar/raw string contract; only discriminated input receives SDK list parsing and validation, and documentation makes this boundary explicit.
 - **Open property types reduce static exhaustiveness** → Preserve forward-compatible `str` definitions while applying type-specific decoding only to the two reviewed list types.
 - **Legacy fixtures omit new fields** → Use explicit optional defaults and test missing, empty, null, and populated states separately.
 - **Backend error wording may drift** → Assert typed/redacted classification and stable safe detail, never raw server messages.
@@ -77,11 +78,11 @@ No new subsystem is necessary. The existing approved contract, deterministic gen
 
 1. Update the approved contract provenance, compatibility metadata, inventory, mappings, schemas, response catalog, and source/test references.
 2. Run contract validation, render the committed runtime projection, and prove check-mode freshness from the approved contract alone.
-3. Extend existing public models, decoders, validators, resource adapters, and transport classification.
+3. Extend existing public models, decoders, validators, resource adapters, and transport classification; add the same optional discriminator to direct set and create-time assignment and route both through one normalizer.
 4. Add table rows and focused regressions, then run all repository offline, typing, lint, contract, documentation, packaging, and collect-only gates.
 5. Update user documentation for the direct `0.6.1` to `0.6.2` migration and deferred autostart family.
 6. Roll back as one commit range: contract, generated projection, models/adapters, tests, and docs revert together to the reviewed `0.6.1` ceiling.
 
 ## Open Questions
 
-None. Daemon autostart is explicitly deferred rather than left for implementation judgment.
+None. The list-property input discriminator and daemon-autostart deferral are explicit rather than left for implementation judgment.
