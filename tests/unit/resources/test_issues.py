@@ -54,6 +54,12 @@ from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.resources.issues import IssueResource, _decode_issue_search
+from tests.unit.resources.property_cases import (
+    PROPERTY_ACCEPTED_CASES,
+    PROPERTY_INVALID_CASES,
+    AcceptedPropertyInputCase,
+    PropertyInputCase,
+)
 
 _DESCRIPTION_INPUT_IMPOSTORS = (
     type("NoDescription", (), {})(),
@@ -606,8 +612,10 @@ def test_issue_create_properties_are_ordered_atomic_and_version_gated() -> None:
     assert len(command._plan.steps) == 1
 
 
-def test_issue_create_list_property_values_are_json_encoded_and_deduplicated() -> None:
-    resource = IssueResource(MagicMock(), ClientConfig())
+def test_issue_create_list_property_values_are_json_encoded_and_deduplicated(
+    mock_transport: MagicMock,
+) -> None:
+    resource = IssueResource(mock_transport, ClientConfig())
     command = resource.create_command(
         title="Test",
         properties=(
@@ -630,32 +638,48 @@ def test_issue_create_list_property_values_are_json_encoded_and_deduplicated() -
     )
 
 
-@pytest.mark.parametrize(
-    ("property_type", "value", "message"),
-    (
-        ("multi_text", ("a" * 2001,), "2000 characters"),
-        ("multi_url", ("not-a-url",), r"HTTP\(S\) URLs"),
-        ("multi_url", ("https://" + "a" * 2041,), "2048 characters"),
-        (None, ("alpha",), "property_type is required"),
-    ),
-    ids=("text-too-long", "url-scheme", "url-too-long", "sequence-without-type"),
-)
-def test_issue_create_rejects_invalid_values_before_io(
-    property_type: str | None, value: tuple[str, ...], message: str
+@pytest.mark.parametrize("case", PROPERTY_ACCEPTED_CASES, ids=lambda case: case.id)
+def test_issue_create_accepts_property_boundaries(
+    case: AcceptedPropertyInputCase, mock_transport: MagicMock
 ) -> None:
-    transport = MagicMock()
-    with pytest.raises((TypeError, ValueError), match=message):
-        IssueResource(transport, ClientConfig()).create_command(
+    command = IssueResource(mock_transport, ClientConfig()).create_command(
+        title="Test",
+        properties=(
+            IssuePropertyAssignment(
+                reference="Tags",
+                value=case.value,  # type: ignore[arg-type]
+                property_type=case.property_type,  # type: ignore[arg-type]
+            ),
+        ),
+    )
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "create",
+        "--title",
+        "Test",
+        "--property",
+        f"Tags={case.encoded}",
+        "--output",
+        "json",
+    )
+
+
+@pytest.mark.parametrize("case", PROPERTY_INVALID_CASES, ids=lambda case: case.id)
+def test_issue_create_rejects_invalid_values_before_io(
+    case: PropertyInputCase, mock_transport: MagicMock
+) -> None:
+    with pytest.raises(case.error_type, match=case.message):
+        IssueResource(mock_transport, ClientConfig()).create_command(
             title="Test",
             properties=(
                 IssuePropertyAssignment(
                     reference="Tags",
-                    value=value,
-                    property_type=property_type,  # type: ignore[arg-type]
+                    value=case.value,  # type: ignore[arg-type]
+                    property_type=case.property_type,  # type: ignore[arg-type]
                 ),
             ),
         )
-    transport.run_bytes.assert_not_called()
+    mock_transport.run_bytes.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -1041,6 +1065,35 @@ def test_issue_property_projection_decodes_full_and_partial_target_rows(
         client.issues._properties_relation_command.assert_called_once_with("i1")
     else:
         client.issues._properties_relation_command.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "value",
+    ("scalar", {"nested": "value"}, None, ["ok", 1]),
+    ids=("scalar", "object", "null", "non-string-item"),
+)
+def test_issue_property_projection_rejects_malformed_list_values(value: object) -> None:
+    payload = json.dumps(
+        {
+            "issues": [
+                {
+                    "id": "i1",
+                    "properties": [
+                        {
+                            "property_id": "p1",
+                            "name": "Tags",
+                            "type": "multi_text",
+                            "value": value,
+                        }
+                    ],
+                }
+            ]
+        }
+    ).encode()
+    page = _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire))
+    issue = page.items[0]._with_client(MagicMock())
+    with pytest.raises(OutputShapeError, match="array of strings"):
+        issue.properties.all()
 
 
 def test_issue_projection_preserves_full_allowlist_and_omitted_vs_null() -> None:

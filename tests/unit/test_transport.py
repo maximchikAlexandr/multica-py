@@ -6,6 +6,7 @@ import pathlib
 import stat
 import sys
 import time
+import traceback
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -288,8 +289,11 @@ class _EchoExecutor(LocalExecutor):
 
 
 class _CaptureFailExecutor(LocalExecutor):
+    def __init__(self, diagnostic: str = "bounded capture") -> None:
+        self.diagnostic = diagnostic
+
     def run(self, request: ExecutionRequest) -> ExecutionResult:
-        raise ProcessOutputCaptureError("bounded capture")
+        raise ProcessOutputCaptureError(self.diagnostic)
 
 
 class _CompatibilityProbeExecutor(LocalExecutor):
@@ -831,15 +835,62 @@ def test_transport_redacts_split_token_args():
     assert redacted[-1] == "***"
 
 
-def test_attachment_upload_capture_interruption_is_network_error() -> None:
-    transport = CliTransport(
-        ClientConfig(compatibility=CompatibilityPolicy.ignore),
-        executor=_CaptureFailExecutor(),
+def test_attachment_upload_capture_interruption_is_network_error(tmp_path: pathlib.Path) -> None:
+    env_secret = "env-" + "secret"
+    argv_secret = "argv-" + "secret"
+    stdin_secret = "stdin-" + "secret"
+    file_secret = "file-" + "secret"
+    original_secret = "super-" + "secret-value"
+    file_path = tmp_path / "credential.json"
+    file_path.write_text(f'{{"token":"{file_secret}"}}', encoding="utf-8")
+    diagnostic = "capture failed for " + " ".join(
+        (env_secret, argv_secret, stdin_secret, file_secret, original_secret)
     )
+    transport = CliTransport(
+        ClientConfig(
+            compatibility=CompatibilityPolicy.ignore,
+            environment=(
+                ("MULTICA_TOKEN", env_secret),
+                ("MULTICA_CAPTURE_SECRET", original_secret),
+            ),
+        ),
+        executor=_CaptureFailExecutor(diagnostic),
+    )
+    args = (
+        "attachment",
+        "upload",
+        "--token",
+        argv_secret,
+        "--credential-file",
+        str(file_path),
+        "--credential-stdin",
+    )
+    stdin_payload = f'{{"token":"{stdin_secret}"}}'.encode()
     with pytest.raises(NetworkError, match="Attachment upload failed") as excinfo:
-        transport.run_bytes(("attachment", "upload"))
-    assert excinfo.value.exit_code == 2
-    assert "bounded capture" in excinfo.value.stderr
+        transport.run_bytes(args, stdin=stdin_payload)
+    exc = excinfo.value
+    assert exc.exit_code == 2
+    assert "capture failed for ***" in exc.stderr
+    assert exc.__cause__ is None
+    assert exc.__context__ is None
+    rendered_traceback = "".join(traceback.format_exception(exc))
+    for secret in (
+        env_secret,
+        argv_secret,
+        stdin_secret,
+        file_secret,
+        original_secret,
+    ):
+        for surface in (
+            str(exc),
+            exc.stderr,
+            repr(exc),
+            rendered_traceback,
+            repr(exc.__cause__),
+            repr(exc.__context__),
+            repr(exc.argv),
+        ):
+            assert secret not in surface
 
 
 @pytest.mark.parametrize("case", _SECRET_REDACTION_CASES, ids=lambda case: case.id)

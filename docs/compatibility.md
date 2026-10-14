@@ -6,9 +6,9 @@ The generated runtime constants in
 - `TARGET_VERSION` remains the exact source checkout pinned by every source reference;
 - `MIN_CLI_VERSION` and exclusive `MAX_CLI_VERSION` come from the approved compatibility block.
 
-The current reviewed interval is `[0.6.0, 0.6.3)`. This direct `0.6.0` →
-`0.6.2` migration compares baseline `0.6.0` at source commit
-`48745d2fe9e80ee9c027293ef22971ff5723f5f5` with target `0.6.2` at source
+The current reviewed interval is `[0.6.0, 0.6.3)`. This direct `0.6.1` →
+`0.6.2` migration compares baseline `0.6.1` at source commit
+`2ea01ae4ef55de4310b99af192d2dbd367832883` with target `0.6.2` at source
 commit `7ab92d7622ecd81d179a8d83ae2dea74835a5069`; it does not publish an
 intermediate SDK release. The target is release `411568605`. The typed SDK
 maintains a closed 209-node inventory, 193-operation registry, and 196-entrypoint
@@ -18,7 +18,7 @@ remain outside the SDK.
 Historical note: the superseded `0.5.0` → `0.5.1` review is retained only as
 historical comparison evidence, not as the current compatibility claim.
 
-The baseline comparison is the approved `0.6.0` release asset
+The retained lower-bound `0.6.0` release asset is
 `multica-cli-0.6.0-darwin-arm64.tar.gz`: archive digest
 `b0d90f9eda1080b924520fc1fa0b72912e27134e856b0ce6f4a04231d126651a`, executable
 digest `c8b1c13590b28fcc591268658d139a1eb426f3cc54d5c9abbd50558d65fed2c4`,

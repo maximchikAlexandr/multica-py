@@ -34,7 +34,7 @@ Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`
 The approved SDK target is Multica CLI `0.6.2` at commit
 `7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`), with
 compatibility interval `[0.6.0, 0.6.3)`. Migrate directly from CLI/SDK
-`0.6.0`; no intermediate SDK release is supported. The typed surface covers
+`0.6.1`; no intermediate SDK release is supported. The typed surface covers
 209 target command nodes (203 unchanged, two adapted, and four CLI-only daemon-autostart leaves), 193 operations, and 196 response entrypoints,
 including wakeup v2 lifecycle actions, task cursors, issue attachments,
 comment supplements, pull-request auto-complete status, and workspace MCP

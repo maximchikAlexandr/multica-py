@@ -48,7 +48,7 @@ process semaphore. Closing one view does not close another.
 
 ## Use the v0.6.2 response and lifecycle surfaces
 
-The approved direct upgrade from CLI/SDK `0.6.0` to `0.6.2` keeps offline
+The approved direct upgrade from CLI/SDK `0.6.1` to `0.6.2` keeps offline
 compatibility separate from live backend status. Wakeups expose v2 fields and
 typed lifecycle actions through the existing resource:
 

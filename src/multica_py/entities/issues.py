@@ -51,7 +51,7 @@ from multica_py.models.issues import (
     IssueReference,
     LinkedPullRequest,
 )
-from multica_py.models.properties import PropertyValue, PropertyValueType
+from multica_py.models.properties import PropertyValue, decode_property_value
 from multica_py.models.relations import (
     _GENERATION_UNSET,
     CursorLazyCollection,
@@ -111,21 +111,11 @@ def _property_relation_initial(
             property_id=property_id,
             name=name,
             type=property_type,
-            value=_property_value_from_row(property_type, row.get("value")),
+            value=decode_property_value(property_type, row.get("value")),
             display=cast("str", row.get("display", "")),
             archived=cast("bool", row.get("archived", False)),
         )
     return resolved
-
-
-def _property_value_from_row(property_type: str, value: object) -> PropertyValueType:
-    if property_type in {"multi_text", "multi_url"}:
-        if not isinstance(value, (list, tuple)) or any(type(item) is not str for item in value):
-            raise OutputShapeError("list property value must be an array of strings")
-        return tuple(cast("str", item) for item in value)
-    if value is None or type(value) in {str, int, float, bool}:
-        return cast("MetadataValue", value)
-    raise OutputShapeError("scalar property value must be a scalar")
 
 
 def _validate_poll_interval(value: float) -> None:

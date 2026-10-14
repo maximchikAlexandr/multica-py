@@ -2,8 +2,9 @@
 
 Pinned target upstream: `multica-ai/multica@7ab92d7622ecd81d179a8d83ae2dea74835a5069` (tag `v0.6.2`)
 
-The reviewed compatibility interval is `[0.6.0, 0.6.3)`: baseline `v0.6.0`
-is the direct comparison and `v0.6.2` is the maximum tested target. The
+The reviewed compatibility interval is `[0.6.0, 0.6.3)`: baseline `v0.6.1`
+at source commit `2ea01ae4ef55de4310b99af192d2dbd367832883` is the direct
+comparison and `v0.6.2` is the maximum tested target. The
 approved inventory covers all 209 target command nodes, including wakeup v2
 lifecycle actions, task pagination, issue attachments, and retained public
 parity families from PR #95.

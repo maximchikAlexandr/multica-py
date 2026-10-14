@@ -39,8 +39,9 @@ It never edits the approved contract or repository runtime code. Review and Git
 merge are the sole promotion decision; candidate state, journals, upgrade
 bundles, and golden generated copies are not used.
 
-For the current direct `0.6.0` → `0.6.2` review, the target source is pinned
-to `7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`) and the
+For the current direct `0.6.1` → `0.6.2` review, the baseline source is pinned
+to `2ea01ae4ef55de4310b99af192d2dbd367832883`; the target source is pinned to
+`7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`) and the
 compatibility interval is `[0.6.0, 0.6.3)`. Verify the `0.6.0` and `0.6.2` release archives
 against the official manifests before hashing their extracted executables;
 pass only the executable digest to `collect --sha256`. Run the source-link

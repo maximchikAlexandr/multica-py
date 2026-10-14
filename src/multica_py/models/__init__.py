@@ -29,6 +29,7 @@ from multica_py.models.issues import (
 from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
 from multica_py.models.properties import (
     PropertyDefinition,
+    PropertyInputValue,
     PropertyListType,
     PropertyListValue,
     PropertyOption,
@@ -88,6 +89,7 @@ __all__ = [
     "Page",
     "ProjectResourceRecord",
     "PropertyDefinition",
+    "PropertyInputValue",
     "PropertyListType",
     "PropertyListValue",
     "PropertyOption",

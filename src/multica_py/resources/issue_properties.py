@@ -9,12 +9,12 @@ from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
-from multica_py.exceptions import OutputShapeError
 from multica_py.models.common import ActionResult
 from multica_py.models.properties import (
+    PropertyInputValue,
     PropertyListType,
     PropertyValue,
-    PropertyValueType,
+    decode_property_value,
     normalize_property_input,
 )
 from multica_py.resources._base import BaseResource
@@ -43,7 +43,7 @@ class IssuePropertyResource(BaseResource):
                 property_id=row.property_id,
                 name=row.name,
                 type=row.type,
-                value=_decode_property_value(row.type, row.value),
+                value=decode_property_value(row.type, row.value),
                 display=row.display,
                 archived=row.archived,
             )
@@ -68,7 +68,7 @@ class IssuePropertyResource(BaseResource):
         issue_id: str,
         *,
         name: str,
-        value: str | tuple[str, ...],
+        value: PropertyInputValue,
         property_type: PropertyListType | None = None,
         options: OperationOptions | None = None,
     ) -> Command[tuple[PropertyValue, ...]]:
@@ -94,7 +94,7 @@ class IssuePropertyResource(BaseResource):
         issue_id: str,
         *,
         name: str,
-        value: str | tuple[str, ...],
+        value: PropertyInputValue,
         property_type: PropertyListType | None = None,
         options: OperationOptions | None = None,
     ) -> tuple[PropertyValue, ...]:
@@ -151,13 +151,3 @@ class IssuePropertyResource(BaseResource):
             finalize=lambda results: cast("tuple[PropertyValue, ...]", results[0]),
             options=options,
         )
-
-
-def _decode_property_value(property_type: str, value: object) -> PropertyValueType:
-    if property_type in {"multi_text", "multi_url"}:
-        if not isinstance(value, (list, tuple)) or any(type(item) is not str for item in value):
-            raise OutputShapeError("list property value must be an array of strings")
-        return tuple(value)
-    if value is None or type(value) in {str, int, float, bool}:
-        return cast("PropertyValueType", value)
-    raise ValueError("scalar property value must be a scalar")

@@ -19,8 +19,9 @@ provider-adapter contract.
 
 The approved target is Multica CLI `0.6.2` at source commit
 `7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`). The direct
-compatibility interval is `[0.6.0, 0.6.3)`; the baseline is
-`48745d2fe9e80ee9c027293ef22971ff5723f5f5`, with no intermediate SDK release.
+compatibility interval is `[0.6.0, 0.6.3)`; the direct baseline is Multica
+`0.6.1` at source commit `2ea01ae4ef55de4310b99af192d2dbd367832883`, with no
+intermediate SDK release.
 The refreshed contract covers 209 command nodes, 193 operations, and 196
 response entrypoints, including eight changed and 188 unchanged responses.
 

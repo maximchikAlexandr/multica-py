@@ -346,6 +346,7 @@ class CliTransport:
                     argv, stdin=stdin, file_contents=file_contents
                 )
                 diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
+                capture_error: str | None = None
                 try:
                     completed = self._executor.run(
                         ExecutionRequest(
@@ -359,12 +360,15 @@ class CliTransport:
                 except ProcessOutputCaptureError as error:
                     if command_args[:2] != ("attachment", "upload"):
                         raise
+                    capture_error = redact_text(str(error), secret_values=secret_values)
+
+                if capture_error is not None:
                     raise NetworkError(
                         "Attachment upload failed while capturing CLI output",
                         exit_code=2,
-                        stderr=str(error),
+                        stderr=capture_error,
                         argv=diagnostic_argv,
-                    ) from error
+                    )
 
             duration = datetime.datetime.now(tz=datetime.UTC) - t0
             return RawCommandResult(

@@ -2,24 +2,29 @@ from __future__ import annotations
 
 import datetime
 import json
+from collections.abc import Sequence
 from typing import Literal, cast
 from urllib.parse import urlsplit
 
 import msgspec
 
+from multica_py.exceptions import OutputShapeError
 from multica_py.types import MetadataValue
 
 PropertyListValue = tuple[str, ...]
 PropertyListType = Literal["multi_text", "multi_url"]
 PropertyValueType = MetadataValue | PropertyListValue
+PropertyInputValue = str | Sequence[str]
 
 __all__ = [
     "PropertyDefinition",
+    "PropertyInputValue",
     "PropertyListType",
     "PropertyListValue",
     "PropertyOption",
     "PropertyValue",
     "PropertyValueType",
+    "decode_property_value",
     "normalize_property_input",
 ]
 
@@ -29,19 +34,19 @@ def normalize_property_input(value: object, property_type: PropertyListType | No
     if property_type is None:
         if type(value) is str:
             return value
-        if type(value) is not tuple:
-            raise TypeError("value must be a string")
-        raise TypeError("property_type is required for sequence values")
+        if isinstance(value, Sequence) and not isinstance(value, str):
+            raise TypeError("property_type is required for sequence values")
+        raise TypeError("value must be a string")
     if property_type not in {"multi_text", "multi_url"}:
         raise ValueError("property_type must be multi_text or multi_url")
     if value is None:
         raise TypeError("value cannot be null")
     if type(value) is str:
         items = _parse_property_list_string(value)
-    elif type(value) is tuple:
-        items = value
+    elif isinstance(value, Sequence):
+        items = tuple(value)
     else:
-        raise TypeError("discriminated value must be a string or tuple of strings")
+        raise TypeError("discriminated value must be a string or sequence of strings")
     if not items:
         raise ValueError("value must contain at least one string")
     if any(type(item) is not str for item in items):
@@ -69,6 +74,17 @@ def normalize_property_input(value: object, property_type: PropertyListType | No
             ):
                 raise ValueError("multi_url values must be HTTP(S) URLs")
     return json.dumps(unique, ensure_ascii=False, separators=(",", ":"))
+
+
+def decode_property_value(property_type: str, value: object) -> PropertyValueType:
+    """Decode one wire property value into the typed public representation."""
+    if property_type in {"multi_text", "multi_url"}:
+        if not isinstance(value, (list, tuple)) or any(type(item) is not str for item in value):
+            raise OutputShapeError("list property value must be an array of strings")
+        return tuple(cast("str", item) for item in value)
+    if value is None or type(value) in {str, int, float, bool}:
+        return cast("MetadataValue", value)
+    raise OutputShapeError("scalar property value must be a scalar")
 
 
 def _parse_property_list_string(value: str) -> tuple[str, ...]:

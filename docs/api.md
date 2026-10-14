@@ -11,7 +11,7 @@ singular-reference example is in
 This SDK contract supports Multica CLI `0.6.2` at commit
 `7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`), with the
 reviewed/compatible interval `[0.6.0, 0.6.3)` and `0.6.2` as the maximum
-tested CLI version. Migrate directly from `0.6.0`; no intermediate SDK release
+tested CLI version. Migrate directly from `0.6.1`; no intermediate SDK release
 is required. The complete public CLI parity surface
 is represented by typed eager and `*_command()` methods: 209 target command
 nodes (203 unchanged, two adapted, and four CLI-only daemon-autostart leaves), 193 operations, and 196 response entrypoints, including wakeup v2,

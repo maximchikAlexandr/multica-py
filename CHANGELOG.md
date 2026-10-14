@@ -4,7 +4,7 @@
 
 - Approved target: Multica CLI `0.6.2`, release `411568605`, source commit
   `7ab92d7622ecd81d179a8d83ae2dea74835a5069`, with compatibility bounds
-  `[0.6.0, 0.6.3)` and direct migration from `0.6.0`.
+  `[0.6.0, 0.6.3)` and direct migration from `0.6.1`.
 - Adds immutable multi-value property tuples with compact JSON-array wire
   encoding, typed `DaemonStatus.cli_commit`, and optional wakeup `last_error`.
 - Preserves the 209-node upstream inventory while deferring daemon autostart

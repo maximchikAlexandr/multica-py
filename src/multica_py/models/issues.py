@@ -7,8 +7,8 @@ import msgspec
 from multica_py.enums import IssueStatus
 from multica_py.models.common import CommentCursor, Page
 from multica_py.models.properties import (
+    PropertyInputValue,
     PropertyListType,
-    PropertyListValue,
     normalize_property_input,
 )
 from multica_py.types import MetadataValue
@@ -57,7 +57,7 @@ class IssuePropertyAssignment(msgspec.Struct, frozen=True, kw_only=True):
     """One ordered, atomic property assignment for issue creation."""
 
     reference: str
-    value: str | PropertyListValue
+    value: PropertyInputValue
     property_type: PropertyListType | None = None
 
     def __post_init__(self) -> None:
