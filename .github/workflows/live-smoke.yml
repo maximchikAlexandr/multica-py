@@ -52,9 +52,9 @@ jobs:
 
           environment_payload="$(gh api "repos/$REPOSITORY/environments/multica-live")"
           if ! printf '%s' "$environment_payload" | jq -e --arg expected "$EXPECTED_REVIEWER_ID" '
-            .prevent_self_review == true
-            and any(.protection_rules[]?;
+            any(.protection_rules[]?;
               .type == "required_reviewers"
+              and .prevent_self_review == true
               and any((.reviewers // [])[]?;
                 ((.reviewer.id // .actor_id // .id) | tostring) == $expected))
             and (.deployment_branch_policy.protected_branches == true)
