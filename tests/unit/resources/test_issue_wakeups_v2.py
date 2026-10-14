@@ -738,23 +738,25 @@ _V2_RECOVERY_DIAGNOSTICS = tuple(
     _V2_RECOVERY_DIAGNOSTICS,
     ids=("snapshots-unavailable", "not-linked", "snapshot-pending"),
 )
+@pytest.mark.parametrize(
+    "healthy_payload",
+    (wakeup_payload(last_error=None), wakeup_payload()),
+    ids=("explicit-null", "omitted"),
+)
 def test_wakeup_last_error_clears_after_recovery(
-    diagnostic: str, mock_transport: MagicMock
+    diagnostic: str, healthy_payload: bytes, mock_transport: MagicMock
 ) -> None:
     mock_transport.run_bytes.side_effect = [
         command_result(wakeup_payload(last_error=diagnostic)),
-        command_result(wakeup_payload(last_error=None)),
-        command_result(wakeup_payload()),
+        command_result(healthy_payload),
     ]
     resource = wakeups(mock_transport)
 
     pending = resource.get("iss-1", "wake-1")
     healthy = resource.get("iss-1", "wake-1")
-    healthy_omitted = resource.get("iss-1", "wake-1")
 
     assert pending.last_error == diagnostic
     assert healthy.last_error is None
-    assert healthy_omitted.last_error is None
 
 
 @dataclass(frozen=True)
