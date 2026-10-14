@@ -71,7 +71,10 @@ jobs:
               and any((.rules // [])[]?;
                 .type == "required_deployments"
                 and any((.parameters.required_deployment_environments // [])[]?;
-                  . == "multica-live" or .name == "multica-live")))
+                  (if type == "string" then . == "multica-live"
+                   elif type == "object" then .name == "multica-live"
+                   else false
+                   end))))
           ' >/dev/null; then
             echo 'active default-branch multica-live deployment ruleset is absent' >&2
             exit 1
