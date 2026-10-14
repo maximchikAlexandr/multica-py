@@ -30,7 +30,7 @@ Release verification SHALL prove all 209 target CLI nodes and all 196 supported 
 
 ### Requirement: Repository and packaging gates remain offline-first
 
-The implementation SHALL pass focused affected tests, the full non-live suite, non-live collection audit, Ruff check and format check, mypy for source and tests, approved-contract validate/render/check and freshness assertions, strict OpenSpec validation, documentation contract checks, source-link audit, wheel/sdist build, artifact packaging tests, and import verification before a CLI invocation. Live smoke SHALL remain separately credential-gated and SHALL NOT weaken offline acceptance.
+The implementation SHALL pass focused affected tests, the full non-live suite, non-live collection audit, Ruff check and format check, mypy for source and tests, approved-contract validate/render/check and freshness assertions, strict OpenSpec validation, documentation contract checks, source-link audit, wheel/sdist build, artifact packaging tests, and import verification before a CLI invocation. Live smoke SHALL remain separately credential-gated in GitHub CI and SHALL NOT weaken offline acceptance.
 
 #### Scenario: Offline suite excludes live tests
 - **WHEN** the non-live suite and collect-only audit run
@@ -52,10 +52,24 @@ Documentation SHALL describe one direct `0.6.1` to `0.6.2` upgrade, the `0.6.3` 
 - **WHEN** API, compatibility, service usage, CLI coverage, migration, changelog, contributing, and release documents are checked
 - **THEN** examples and claims agree with actual signatures, types, version gates, and deferred scope
 
-### Requirement: Local E2E is not required for structured SDK deltas
+### Requirement: Live verification is split by trust boundary
 
-This change SHALL use deterministic lower-level and existing gated coverage instead of a new local E2E stand because no changed human-facing table, log, progress view, browser UI, or otherwise untestable cross-component interaction remains. No before/after image SHALL be required for product verification.
+Release verification SHALL keep the exact-head GitHub CI live smoke separate from the isolated local artifact walkthrough. The CI job SHALL use CLI `0.6.2`, SHALL resolve an open same-repository pull request to a full approved head SHA before entering the protected environment, SHALL check out and test that exact SHA, and SHALL retain a run URL plus SHA comparison evidence. It SHALL NOT treat a default-branch checkout, a mutable branch name, or a mismatched dispatch SHA as evidence for the reviewed head. Credentials SHALL remain in the protected GitHub environment and SHALL NOT be printed, committed, attached, or moved to the local stand.
 
-#### Scenario: Every scenario maps to sufficient non-E2E evidence
-- **WHEN** the delivery verification matrix is reviewed
-- **THEN** each affected scenario maps to contract, unit, component, packaging, documentation, or existing gated live-smoke evidence with no unresolved local interaction gap
+#### Scenario: Exact reviewed PR head passes live smoke
+- **WHEN** the protected live workflow is approved for an open same-repository pull request and full reviewed head SHA
+- **THEN** the resolved PR head, approved input, checked-out Git commit, and tested product revision are identical, CLI `0.6.2` passes strict compatibility preflight, and the live suite result is linked to that exact SHA
+
+#### Scenario: Default branch or mismatched head is rejected as evidence
+- **WHEN** the dispatch input does not equal the open PR head or the checkout resolves to the default branch instead of the approved head
+- **THEN** the protected live test does not run and no resulting workflow execution satisfies the live-smoke release gate
+
+#### Scenario: Local artifact walkthrough remains isolated
+- **WHEN** an independent tester runs the repository-native walkthrough in the designated local test context
+- **THEN** the SDK invokes only wrapper-owned `multica-test` without profile/server/workspace overrides, the primary Multica and its credentials remain untouched, representative public SDK results are captured as sanitized JSON/text artifacts, and all uniquely named test resources are cleaned on success or failure
+
+#### Scenario: Evidence contains no credentials
+- **WHEN** CI logs and local artifacts are inspected before publication
+- **THEN** they contain tested revisions, commands, exit codes, assertions, resource IDs or hashes as needed, but no token, password, profile contents, private server setting, or reusable credential
+
+No before/after image SHALL be required because the product's human-facing CLI, log, progress, and browser output is unchanged.

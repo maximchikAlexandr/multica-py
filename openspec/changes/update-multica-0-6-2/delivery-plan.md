@@ -2,67 +2,95 @@
 
 - Planning issue: `MYL-474`
 - Change: `update-multica-0-6-2`
-- Graph revision: `2`; supersedes graph revision 1 without replacing or restarting `WP-1`.
-- Approved base: `6ef02a4b0f879cd4d5726433a803745fe57be547`
-- Revision parent: `c16423beb6cba18c5d824967b429dc4db8d592fa`
+- Graph revision: `3`; supersedes graph revision 2 only for verification routing.
+- Approved product base: `6ef02a4b0f879cd4d5726433a803745fe57be547`
+- Revision-2 planning authority: `e51f2090ead255b9cc854aaf5101a2837f75aa09`
+- Accepted `WP-1` result: `386bc365cfbe55f0c82636d58120a2c6768d359b`
+- Revision-3 parent and reviewed product head: `63ad61fadc8d9f4aadabe8e2df39ea8f7dcef6e6`
+- Existing pull request: `https://github.com/maximchikAlexandr/multica-py/pull/101`
 - Target branch: `feat/MYL-474-update-multica-0.6.2`
-- Implementation gate: the recorded human approval for the `0.6.2` upgrade remains applicable because revision 2 makes the already-approved pre-I/O validation contract implementable through one additive optional discriminator. WP-1 SHALL remain paused until revision 2 receives independent planning verification and Manager records the revised SHA; no new child or restart is authorized.
+- Implementation gate: the recorded human approval remains applicable. Revision 3 changes no product API or daemon-autostart decision. The completed `WP-1`, existing PR, accepted implementation, and review findings/fixes remain valid and SHALL NOT be replaced, restarted, or replayed. The detailed review ledger remains authoritative in Multica rather than being copied into Git.
 - Estimate source: the authoritative `Estimate, hours`, `Estimate min, hours`, and `Estimate max, hours` custom properties on the planning issue. Numeric totals are intentionally not duplicated here.
-- Confidence: medium. The public delta is bounded and evidence is already reconciled, while the large approved contract and exhaustive registry checks make mechanical-edit and integration variance material.
-- Calibration: estimate includes implementation, table-driven tests, deterministic regeneration, docs, packaging, full offline gates, and review fixes; it excludes planning already completed, CI queue time, and deferred daemon autostart.
-- Non-authoritative candidate: `adc56e3cb9a7c057f5b71efa1e120a073941df77` is rejected diagnostic evidence only. It SHALL NOT be merged, treated as the implementation base, or credited as completed OpenSpec work; useful inspected code/tests can be re-authored only against the approved revision SHA.
+- Estimate basis: remaining work from the reviewed product head to the revised acceptance criteria, including the CI/live-fixture adjustment, the local artifact script, execution evidence, and likely delta review/fixes. Completed product implementation and accepted review work are not re-estimated.
+- Confidence: medium. The affected workflow, fixture, SDK configuration, and test stand are inspectable, but protected-environment approval and the wrapper-owned local execution context are external gates.
+- Calibration: uncalibrated for one experienced developer familiar with the repository; unattended GitHub queue time, environment approval delay, and human response time are excluded.
+- Non-authoritative candidate: `adc56e3cb9a7c057f5b71efa1e120a073941df77` remains rejected diagnostic evidence only. It SHALL NOT be merged, treated as a base, or credited as completed work.
+
+## Ponytail-full decision
+
+No new subsystem is required. Reuse the existing `tests/live` suite, its protected GitHub workflow, the public SDK, the `multica-test` wrapper, pytest/stdlib conventions, and Multica attachments. Add only the smallest missing pieces: an exact-head authorization/check-out path, the target-version fixture update, and one repository-native local walkthrough script. Do not add a second live suite, generic E2E framework, credential broker, target-discovery service, container controller, screenshot harness, or new dependency.
 
 ## E2E decision
 
-`e2e_required=false`.
+`e2e_required=true` for the owner-required local manual/scripted artifact walkthrough. This does not move V-12 out of GitHub CI and does not make the local stand a credential source for CI.
 
-All changed product behavior is structured CLI JSON decoded by the SDK or typed transport failure behavior. Existing contract validation, unit decoder/validator tests, fake-CLI component tests, packaging checks, documentation assertions, and separately gated live smoke fully observe it. There is no changed CLI table, log, progress display, browser UI, or real lifecycle interaction that requires a new local stand. Consequently:
+### V-12 — exact-head GitHub CI live smoke
 
-- Local E2E scripts: none.
-- Independent Tester stand: none; Tester independently inspects planned automated evidence and performs the public SDK walkthroughs below against disposable fixtures when the normal verification workflow reaches that gate.
-- Before/after images: none; visible terminal output is unchanged and decorative captures are prohibited.
-- Generated evidence files: none committed. Commands, exit codes, tested revision, logs, hashes, assertions, and any diagnostic JSON belong only in the final Multica verification comment.
-- Test repository URL: use the project description resource at execution time; do not copy private repository or host details into public artifacts.
-- Cleanup: dispose of temporary CLI profiles/resources while preserving the evidence branch/MR/commits; do not merge, close, or delete them without separate authorization.
+- Extend `.github/workflows/live-smoke.yml`, `tests/live/conftest.py`, and `tests/live/README.md`; reuse `tests/live/test_smoke.py` unless a missing `0.6.2` public-path assertion is demonstrated.
+- The dispatch accepts a PR number and full candidate SHA. An uncredentialed authorization job resolves the open PR through GitHub, requires a same-repository/non-fork head, and requires `candidate_sha == pull_request.head.sha` before the protected job can start.
+- The protected `multica-live` job checks out the authorized full SHA with persisted Git credentials disabled, records `git rev-parse HEAD`, verifies the prepared CLI reports `0.6.2`, then runs the existing `live_smoke` marker under strict compatibility.
+- The workflow definition may be loaded from the repository's trusted default branch, but a default-branch checkout or the dispatch event's default-branch SHA is not product-head evidence. Acceptance requires the resolved PR head, approved input, checkout HEAD, and tested product revision to be identical.
+- GitHub environment variables/secrets remain in the protected job. The workflow SHALL NOT print, artifact, commit, or transfer tokens, profile contents, server settings, workspace credentials, or other reusable credentials.
+- Required evidence: workflow/run URL, PR URL, exact SHA comparison, CLI version result, test command and exit status, cleanup result, and sanitized failure diagnostics. No live credential value is evidence.
+
+### V-13 — isolated `multica-test` artifact walkthrough
+
+- Repository script: `scripts/e2e/verify_multica_test.py`.
+- Entry command: `uv run python scripts/e2e/verify_multica_test.py --output <run-owned-directory-outside-git>` from the tested checkout. The script fixes the executable to `multica-test` and offers no profile, server, workspace, token, or primary-CLI override.
+- Execution context: a fresh independent Tester process authorized for the isolated project test stand. It SHALL NOT run through the primary Multica agent context, invoke the primary `multica` executable, alter primary profiles, or inspect/copy credential files.
+- Initial state: wrapper-prepared test profile/workspace plus unique run prefix. The script performs a sanitized `0.6.2` preflight; reads daemon status; creates uniquely named disposable project/issue/property resources; exercises direct and create-time `multi_text`/`multi_url` assignment, canonical decoded tuples, exact-element filtering, and project update presence; then deletes all test-owned resources in failure-safe cleanup.
+- Generated evidence outside Git: `manifest.json` with tested Git SHA, CLI version, scenario results, resource IDs, commands, exit codes, cleanup state, and artifact hashes; `stdout.txt`; `stderr.txt`; and `cleanup.json`. Artifacts SHALL be sanitized before attachment and SHALL contain no environment dump, profile contents, server URL, token, password, or reusable credential.
+- Independent check: the Tester inspects the created/read-back values through separate public SDK reads, verifies the exact tested checkout, confirms cleanup with a not-found/read-back check, and does not treat a second invocation of the script as the manual inspection.
+- Images: none. Human-facing terminal tables, logs, progress, and browser UI are unchanged, so PNG capture would be decorative. Actual source-language JSON/text output is retained instead.
+
+### Publication and cleanup
+
+- The test repository is `https://github.com/maximchikAlexandr/multica-py`, as supplied by the project description.
+- Tester publishes PR, exact commit, workflow-run, workflow-file, live-fixture, and local-script links plus the sanitized local files as attachments in the final Multica comment, then reads back the comment/attachments.
+- Commands, exit codes, assertions, actual output/logs, hashes, diagnostic JSON, provenance, and cleanup results live only in Multica. Only the reusable workflow/fixture/script and ordinary tests belong in Git.
+- Cleanup removes run-owned local output and disposable test resources but preserves PR #101, its branch/commits, workflow run, and attached evidence. Closing, merging, or deleting the PR/branch is outside this plan.
 
 ## Verification matrix
 
-| Case | OpenSpec requirement / scenario | Gap and decision | Public action / independent check | CI disposition | Assertions and evidence |
-|---|---|---|---|---|---|
-| V-01 | 0.6.2 source authority; provenance mismatch | Lower-level contract checks are sufficient | Run approved validate/render/check against pinned source; inspect exact target and interval | Extend existing contract tests and source-link audit | Full commits, release/archive/executable/version identities, deterministic bytes, exit codes |
-| V-02 | Complete command/response reconciliation; dynamic and hidden nodes | Lower-level manifest audit is sufficient | Compare approved 209-node and 196-entrypoint manifests; inspect `checkin`, `probe-runtimes`, and autostart disposition | Extend existing inventory/response registry tests | Bijective totals, semantic dimensions, changed/unchanged reconciliation, full-SHA links |
-| V-03 | Deferred autostart | Public-surface audit is sufficient | Inspect `client.daemon`, exports, generated bindings, and operation cases | Extend public-invariant tests | Three inventory rows exist; zero SDK methods/bindings/models/examples |
-| V-04 | List-property definitions, discriminator, and values | Unit + fake CLI close the parsing/typing gap | Create/list definitions; exercise both direct set and create-time assignment with omitted/valid/invalid discriminator, JSON/comma/sequence values; independently inspect exact argv, pre-I/O failure, and immutable decoded tuples | Extend property resource/operation case tables | Options rejection, discriminator policy, 1–20, stable de-dup, text/URL bounds, HTTP(S), null/unset, malformed rows, zero transport on invalid input |
-| V-05 | List-property filtering/display | Component fixture is sufficient | Search/list issues with exact element predicate; inspect literal member-shaped display string | Extend issue list/property fixtures | No assignment splitting, no actor resolution, raw and resolved projections remain separate |
-| V-06 | Daemon `cli_commit` | Decoder cases are sufficient | Decode full, empty, and omitted fixtures through eager/command paths | Extend system model/daemon cases | Exact SHA, empty string, `None`, no version fallback |
-| V-07 | Wakeup `last_error` and recovery | Decoder/component lifecycle fixtures are sufficient | Exercise create/get/list/update/disable fixtures and independent pending→healthy inspection | Extend wakeup resource and response cases | Three diagnostic strings, null/omission, clearing with no stale cache |
-| V-08 | Interrupted upload response | Transport fault injection is sufficient | Inject reviewed body-read interruption; inspect exception and absence of result | Extend transport and attachment cases | `NetworkError`, safe redaction/chaining, no partial `AttachmentResult` |
-| V-09 | Search, project presence/concurrency, redacted 500 | Existing public boundaries plus fixtures are sufficient | Search digit key/cancel; preview omitted/null project update; simulate revision conflict and redacted 500 | Extend resource/transport component cases | Exact argv, typed cancellation/conflict/error, no raw backend text |
-| V-10 | Offline and packaging gates | Existing CI jobs are sufficient | Run non-live suite/collect-only, Ruff, mypy, contract checks, docs, build and artifact imports | Extend current repository jobs; no new framework/job unless current job cannot host a required command | Commands, exit codes, no live collection, wheel/sdist contents, import before CLI |
-| V-11 | Direct migration documentation | Documentation contract tests are sufficient | Independently compare docs examples/claims to actual signatures and contract | Extend docs/public-surface tests | `0.6.1→0.6.2`, `0.6.3` ceiling, new fields/types/errors, autostart defer |
-| V-12 | Existing gated live smoke | Existing live suite only; no new local E2E | In configured disposable environment, call representative property, daemon-status, wakeup, search, project, and upload paths without editing tests | Existing separately gated live-smoke job | Tested product SHA, actual command outcomes, cleanup result; findings published only in Multica |
+| Case | Requirement / scenario | Verification gap and decision | OpenAPI operation/schema | Local script | Independent steps | CI disposition | Assertions | Artifacts / images |
+|---|---|---|---|---|---|---|---|---|
+| V-01 | `0.6.2` source authority; provenance mismatch | Existing lower-level contract checks are sufficient | N/A: CLI/SDK contract | None | Inspect exact target and compatibility interval | Existing contract checks/source-link audit | Full immutable provenance; deterministic bytes | Commands/exits in Multica; no images |
+| V-02 | Complete command/response reconciliation | Existing manifest audit is sufficient | N/A: CLI inventory/responses | None | Inspect dynamic `checkin`, hidden `probe-runtimes`, autostart disposition | Existing inventory/registry tests | 209 nodes and 196 entrypoints reconcile | Audit result in Multica; no images |
+| V-03 | Deferred daemon autostart | Existing public-surface audit is sufficient | N/A: local CLI control | None | Inspect client surface, exports, bindings, operation cases | Existing public-invariant tests | Three deferred rows; zero public methods/models/examples | Assertion summary; no images |
+| V-04 | List-property definitions/discriminator/values | Existing unit/component coverage plus V-13 live read-back | N/A: CLI resource boundary | V-13 property lifecycle | Independently read direct/create-time values and invalid-input behavior | Existing tables; no duplicate CI E2E | Canonical tuples, bounds, dedupe, HTTP(S), null/unset, zero I/O | Sanitized manifest/text; no images |
+| V-05 | List-property filtering/display | Existing component coverage plus V-13 exact-element query | N/A: CLI resource boundary | V-13 property lifecycle | Query exact element and inspect literal member-shaped value | Existing issue/property fixtures | No splitting or actor resolution | Sanitized manifest/text; no images |
+| V-06 | Daemon `cli_commit` | Existing decoder coverage plus isolated live read | N/A: daemon status CLI | V-13 daemon read | Compare typed field with sanitized live response state | Existing system/daemon cases | Full/empty/omitted semantics; no version fallback | Sanitized manifest; no images |
+| V-07 | Wakeup `last_error` recovery | Deterministic fixture lifecycle remains sufficient | N/A: wakeup CLI | None | Inspect pending-to-healthy fixture assertions | Existing wakeup tables | Diagnostics round-trip and clear without cache | Test link/result; no images |
+| V-08 | Interrupted upload response | Transport fault injection remains sufficient | N/A: upload CLI transport | None | Inspect exception and absence of result | Existing transport/attachment cases | `NetworkError`, redaction/chaining, no partial result | Test link/result; no images |
+| V-09 | Search, project presence/concurrency, redacted 500 | Existing fixtures plus V-13 project presence read-back | N/A: CLI resources | V-13 project lifecycle | Compare omitted and explicit update result | Existing resource/transport cases | Exact argv; typed errors; safe detail | Sanitized manifest/text; no images |
+| V-10 | Offline and packaging gates | Existing CI checks are sufficient | N/A | None | Inspect collection and package contents | Existing CI/package jobs | No live collection; wheel/sdist/public typing valid | Existing run links; no images |
+| V-11 | Direct migration documentation | Existing documentation contract checks are sufficient | N/A | None | Compare docs with actual signatures/contract | Existing docs/public-surface tests | Direct upgrade, ceiling, fields/types/errors, autostart defer | File/test links; no images |
+| V-12 | Credential-gated live smoke at reviewed head | Current workflow tests only default branch and fixture pins an old CLI; exact-head CI is required | N/A: public SDK over CLI | None | Verify PR/head/input/checkout identity and sanitized cleanup | Extend protected `live-smoke` workflow/fixture for `0.6.2` | Same-repo open PR; all full SHAs equal; strict preflight; suite passes | Run/PR/SHA/exit/cleanup links; no credentials or images |
+| V-13 | Owner-required isolated SDK walkthrough | Real wrapper/SDK/CLI/backend interaction and retained artifacts are not covered by lower-level tests | N/A: public SDK over CLI | `scripts/e2e/verify_multica_test.py` | Separate SDK reads and cleanup inspection in test context | Local-only; CI V-12 is not duplicated | Only `multica-test`; `0.6.2`; representative results; primary Multica untouched; cleanup complete | Attached sanitized JSON/text/hash files; no images |
 
-## Evidence and ownership
+## Evidence ownership and review impact
 
-The Implementer owns all tasks in `tasks.md`, including contract/test fixtures, documentation assertions, packaging changes, and any required extension to existing GitHub CI coverage. Tester does not edit implementation tests or fixtures; Tester verifies their coverage, performs independent public-path inspections, and reports findings with MR/commit/file links and command/exit-code evidence in Multica. No diagnostic output, evidence JSON, screenshots, provenance bundle, or logs are committed unless their generation is itself the product behavior under test, which is not the case here. Revision 2 resumes the existing `WP-1` only after its revised planning SHA is independently approved and handed to Manager; no new WP child or restart is permitted.
+The existing `WP-1` implementation and review ledger remain accepted evidence for unchanged product code. Manager owns the bounded implementation-parent continuation on PR #101: route only the workflow, fixture/readme, local script, and directly coupled test/documentation delta for review. Security review focuses on exact-SHA authorization, protected-environment ordering, fork rejection, log/artifact redaction, and target isolation. Test review focuses on fixture `0.6.2`, script cleanup, deterministic assertions, and non-duplication. Existing findings/fixes and approvals remain valid for untouched files; do not replay the completed four-profile ledger solely because the verification route changed.
 
-The implementation shall keep functional changes and test changes reviewable in ordinary commits. If a verified Git utility creates a functional-result commit, preserve that commit and link it as produced; do not rename it for evidence conventions. There is no Mac terminal before/after capture because user-visible output does not change.
+Implementer owns repository changes to CI, fixtures, scripts, and their tests. Tester SHALL NOT edit them: Tester runs the approved exact-head workflow and isolated walkthrough, performs independent reads, publishes links/files with read-back, and reports findings. Any finding that changes product API or stable requirements returns to planning; a defect confined to the verification delta returns to Manager's existing PR review/fix loop.
 
 ## Work package topology
 
 - Delivery mode: `single_wp_no_dag`.
 - `WP-1` — Implement and verify the complete `update-multica-0-6-2` change.
-  - Task coverage: tasks `1.1` through `5.4`, including new task `2.6`, exactly once.
-  - Deliverable: one reviewable implementation that advances the approved SDK contract to `0.6.2`, adapts typed behavior, extends all required tests/docs, and passes the specified release gates while leaving daemon autostart absent.
+  - Task coverage: tasks `1.1` through `5.5`, including `2.6`, exactly once.
+  - Lifecycle preservation: the existing child and its accepted implementation remain complete. Revision 3 SHALL NOT create, replace, restage, or restart a WP child. Tasks `5.4` and `5.5` are the remaining acceptance delta and are routed through the existing implementation parent/PR review-fix and Tester continuation.
+  - Deliverable: the already accepted product implementation plus an exact-head protected live run and an isolated local artifact walkthrough, with no product-API change.
   - `depends_on`: none.
-  - Owned responsibility scope: approved contract/schema/generator projection; affected models/resources/transport; directly related tests, fixtures, docs, packaging metadata, snapshots, and repository service files. No exhaustive file allowlist is imposed.
-  - Contract surface: `contracts/sdk-contract.json`; generated approved SDK module; public property/daemon/wakeup/issue/project/attachment/error APIs; the shared list-property discriminator and pre-I/O normalizer contract; compatibility/version policy; offline and packaging verification commands.
-  - Definition of done: every task checkbox has implementation evidence; V-01 through V-12 have their planned assertions; strict OpenSpec and repository gates pass; Git contains no review-only evidence; autostart remains deferred.
-  - Parallel safety: one WP intentionally owns the cross-cutting contract and generated projection, avoiding conflicting writes and synchronization overhead. No stages or managed DAG are created.
+  - Owned responsibility scope: approved contract/schema/generator projection; affected models/resources/transport; directly related tests, fixtures, docs, packaging metadata, workflow, local verification script, and repository service files. This is not an exhaustive allowlist.
+  - Contract surface: existing product APIs and compatibility policy; `.github/workflows/live-smoke.yml`; `tests/live`; `scripts/e2e/verify_multica_test.py`; evidence-publication and cleanup rules.
+  - Definition of done: tasks `1.1` through `5.3` retain accepted evidence; V-01 through V-11 retain valid reviewed evidence; V-12 proves the exact reviewed PR head in protected GitHub CI; V-13 proves isolated `multica-test` operation with attached sanitized artifacts and cleanup; daemon autostart remains deferred.
+  - Parallel safety: one WP continues to own the cross-cutting contract. No stage, dependency edge, frontier, sibling write zone, or managed DAG is created.
 
 ## Assumptions and risks
 
-- The reviewed upstream dossier and exact pinned source remain available to the implementer outside tracked directories.
-- Existing repository case-table and fake-CLI infrastructure can express all new cases without a new dependency.
-- The live environment may be unavailable; that blocks only the separately gated live result, not substitution with invented evidence or weakening of offline acceptance.
-- The dominant uncertainty is exhaustive contract/registry reconciliation and resulting fixture updates, not new architecture.
+- The protected GitHub environment can approve the exact same-repository PR head without exposing credentials to the authorization job. If repository policy cannot support this, V-12 is blocked; a default-branch run is not a substitute.
+- The prepared CI runner can supply or build CLI `0.6.2` and the prepared target accepts the existing live suite. Environment approval/queue delay is external waiting, not developer effort.
+- A Tester process can run in the isolated `multica-test` context described by the project. If the wrapper still rejects that test-context process, V-13 is blocked; bypassing the wrapper or using primary credentials is forbidden.
+- The local stand may contain shared test data. Every mutation uses unique names and failure-safe cleanup; the script does not reset containers, databases, profiles, or other users' resources.
+- No changed visible output requires images. If implementation changes a human-facing table, log, progress state, or browser UI, this decision is invalid and the plan must add genuine before/after capture.

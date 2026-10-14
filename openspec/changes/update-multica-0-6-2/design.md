@@ -2,7 +2,7 @@
 
 The repository currently approves Multica `0.6.1` at source commit `2ea01ae4ef55de4310b99af192d2dbd367832883`, renders a single generated runtime module from `contracts/sdk-contract.json`, and accepts CLI versions in the reviewed direct-patch interval. Multica `0.6.2` is the next stable release at `7ab92d7622ecd81d179a8d83ae2dea74835a5069`. The reviewed delta contains four new CLI nodes under `daemon autostart`, no removals, changes to property list types, and response/behavior changes across daemon status, wakeups, upload failures, search, project updates, and HTTP error text.
 
-The upstream dossier establishes 209 target CLI nodes and 196 supported response entrypoints. Evidence and generated suggestions remain review-only; the approved contract remains the sole production generator input. Graph revision 2 follows independent rejection of candidate `adc56e3cb9a7c057f5b71efa1e120a073941df77`: it accepted `value=("not-a-url",)` because neither public tuple boundary carried the property type needed for URL-specific pre-I/O validation. The candidate is diagnostic evidence only, is not an approved implementation baseline, and SHALL NOT be merged. This planning change edits no production code, tests, or main specs.
+The upstream dossier establishes 209 target CLI nodes and 196 supported response entrypoints. Evidence and generated suggestions remain review-only; the approved contract remains the sole production generator input. Graph revision 2 followed independent rejection of candidate `adc56e3cb9a7c057f5b71efa1e120a073941df77`: it accepted `value=("not-a-url",)` because neither public tuple boundary carried the property type needed for URL-specific pre-I/O validation. The accepted implementation and subsequent review fixes now exist on PR #101 at reviewed head `63ad61fadc8d9f4aadabe8e2df39ea8f7dcef6e6`. Graph revision 3 changes only the verification contract: it preserves the completed `WP-1`, product API, PR, and external review ledger while separating exact-head GitHub CI live smoke from isolated local artifact scenarios. The rejected candidate remains diagnostic evidence only and SHALL NOT be merged. This planning revision edits no production code, tests, main specs, or review records.
 
 ## Goals / Non-Goals
 
@@ -62,7 +62,9 @@ No new subsystem is necessary. The existing approved contract, deterministic gen
 
 ### 7. E2E decision
 
-`e2e_required=false`. The affected outputs are structured JSON decoded behind the Python SDK, and every externally observable change can be proven by deterministic contract validation, table-driven argv/decoder/error tests, fake-CLI component tests, packaging checks, and the existing separately gated live smoke. No changed human-facing table, log, progress display, browser UI, real multi-process lifecycle, or environment-only interaction leaves a verification gap. Therefore no local E2E script, independent live stand, or before/after PNG is required; the delivery plan maps every scenario to lower-level or existing gated coverage.
+`e2e_required=true` because the owner explicitly requires independent manual/scripted SDK operation against the isolated local Multica `0.6.2` stand with retained artifacts. This is distinct from V-12: the credential-gated live suite SHALL run in GitHub CI against the exact reviewed PR head, not in the local stand and not from a default-branch checkout. The CI route SHALL resolve an open same-repository PR head, compare its full SHA with the approved input, check out that immutable SHA, prove CLI `0.6.2`, and expose credentials only inside the protected environment after approval. A run whose tested checkout is the default branch or whose reported SHA does not equal the reviewed PR head is not evidence for V-12.
+
+The local V-13 walkthrough SHALL run from a process authorized for the test context, use only the `multica-test` executable and its wrapper-owned target, and SHALL NOT pass or copy the primary Multica profile, server, workspace, token, or credentials. One repository-native script is sufficient: it records a sanitized preflight, exercises representative public SDK reads and disposable create/update/list-property flows, captures machine-readable results, and performs failure-safe cleanup. The actual JSON/text artifacts, hashes, commands, exit codes, and observations are attached in Multica rather than committed. No before/after PNG is required because the product's human-facing output is unchanged.
 
 ## Risks / Trade-offs
 
@@ -73,6 +75,8 @@ No new subsystem is necessary. The existing approved contract, deterministic gen
 - **Legacy fixtures omit new fields** → Use explicit optional defaults and test missing, empty, null, and populated states separately.
 - **Backend error wording may drift** → Assert typed/redacted classification and stable safe detail, never raw server messages.
 - **Deferred autostart leaves a CLI capability without SDK coverage** → Record the defer decision and all nodes in the inventory so omission is intentional and auditable.
+- **A manual dispatch can test the default branch while appearing related to the PR** → Resolve and compare the full same-repository PR head before the protected job, check out that SHA explicitly, and reject any evidence whose tested checkout differs.
+- **Live credentials could leak into a PR or local artifact** → Keep CI credentials in the protected GitHub environment, keep the local target inside the `multica-test` wrapper, sanitize artifacts, and never echo or transfer profiles, tokens, server settings, or workspace credentials.
 
 ## Migration Plan
 
@@ -81,7 +85,9 @@ No new subsystem is necessary. The existing approved contract, deterministic gen
 3. Extend existing public models, decoders, validators, resource adapters, and transport classification; add the same optional discriminator to direct set and create-time assignment and route both through one normalizer.
 4. Add table rows and focused regressions, then run all repository offline, typing, lint, contract, documentation, packaging, and collect-only gates.
 5. Update user documentation for the direct `0.6.1` to `0.6.2` migration and deferred autostart family.
-6. Roll back as one commit range: contract, generated projection, models/adapters, tests, and docs revert together to the reviewed `0.6.1` ceiling.
+6. Update the existing live fixture/workflow so a protected GitHub CI dispatch validates and tests an approved exact PR-head SHA with CLI `0.6.2`; a default-branch checkout is invalid evidence.
+7. Add one repository-native local verification script for the wrapper-owned `multica-test` target, run it independently in the isolated test context, attach sanitized artifacts in Multica, and clean only test-owned resources.
+8. Roll back product implementation as one commit range: contract, generated projection, models/adapters, tests, and docs revert together to the reviewed `0.6.1` ceiling. Verification-route changes may be reverted independently because they do not alter the product API.
 
 ## Open Questions
 

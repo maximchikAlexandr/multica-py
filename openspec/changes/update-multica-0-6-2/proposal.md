@@ -33,6 +33,6 @@ None.
 
 - Approved contract and generated projection: `contracts/sdk-contract.json`, `src/multica_py/_generated/approved_sdk.py`, contract schema/validation/render checks.
 - Public models and adapters: the additive list-property discriminator on direct set/create-time assignment, property types/values, issue projections, daemon status, wakeups, project updates, search, attachments, and command-error mapping.
-- Existing table-driven unit, contract, component, packaging, and gated live-smoke coverage; no new test framework.
+- Existing table-driven unit, contract, component, and packaging coverage; an exact-PR-head GitHub CI live smoke; and one isolated `multica-test` local artifact walkthrough, with no new test framework.
 - User-facing compatibility, API, service-usage, CLI-coverage, migration, changelog, contributing, and release documentation.
 - No production dependency addition, no checked-in collector/audit evidence, and no public daemon-autostart methods.
