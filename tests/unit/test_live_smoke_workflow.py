@@ -35,10 +35,10 @@ def test_environment_gate_rejects_wrong_reviewer_and_self_review() -> None:
     marker = 'jq -e --arg expected "$EXPECTED_REVIEWER_ID" \''
     filter_text = _jq_filter(text, marker)
     protected = {
-        "prevent_self_review": True,
         "protection_rules": [
             {
                 "type": "required_reviewers",
+                "prevent_self_review": True,
                 "reviewers": [{"reviewer": {"id": 17, "type": "User"}}],
             }
         ],
@@ -47,8 +47,18 @@ def test_environment_gate_rejects_wrong_reviewer_and_self_review() -> None:
 
     assert _run_jq(filter_text, protected, expected="17") == 0
     assert _run_jq(filter_text, protected, expected="18") != 0
-    protected["prevent_self_review"] = False
-    assert _run_jq(filter_text, protected, expected="17") != 0
+
+    rule_false = json.loads(json.dumps(protected))
+    rule_false["protection_rules"][0]["prevent_self_review"] = False
+    assert _run_jq(filter_text, rule_false, expected="17") != 0
+
+    rule_missing = json.loads(json.dumps(protected))
+    del rule_missing["protection_rules"][0]["prevent_self_review"]
+    assert _run_jq(filter_text, rule_missing, expected="17") != 0
+
+    root_true = json.loads(json.dumps(rule_missing))
+    root_true["prevent_self_review"] = True
+    assert _run_jq(filter_text, root_true, expected="17") != 0
 
     assert "EXPECTED_REVIEWER_ID: ${{ vars.MULTICA_LIVE_EXPECTED_REVIEWER_ID }}" in text
     assert 'test -n "$EXPECTED_REVIEWER_ID"' in text
