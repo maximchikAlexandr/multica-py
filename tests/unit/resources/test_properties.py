@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from multica_py._internal.transport import CliTransport
@@ -83,6 +85,83 @@ def test_issue_property_set_passes_actor_value_through_argv() -> None:
         "--output",
         "json",
     )
+
+
+def test_issue_property_set_encodes_discriminated_list_values() -> None:
+    resource = IssuePropertyResource(MagicMock(), ClientConfig())
+    command = resource.set_command(
+        "iss_001",
+        name="Tags",
+        value=("alpha", "beta", "alpha"),
+        property_type="multi_text",
+    )
+    assert command._plan.steps[0].argv[-4:] == (
+        "--value",
+        '["alpha","beta"]',
+        "--output",
+        "json",
+    )
+
+
+@pytest.mark.parametrize(
+    ("property_type", "value"),
+    (
+        ("multi_text", ("a" * 2000,)),
+        ("multi_url", ("https://" + "a" * (2048 - len("https://")),)),
+    ),
+    ids=("text-at-limit", "url-at-limit"),
+)
+def test_issue_property_set_accepts_type_specific_boundary_values(
+    property_type: str, value: tuple[str, ...]
+) -> None:
+    resource = IssuePropertyResource(MagicMock(), ClientConfig())
+    command = resource.set_command(
+        "iss_001",
+        name="Tags",
+        value=value,
+        property_type=property_type,  # type: ignore[arg-type]
+    )
+    assert command._plan.steps[0].argv[-3] == f'["{value[0]}"]'
+
+
+@pytest.mark.parametrize(
+    ("property_type", "value", "message"),
+    (
+        ("multi_text", ("a" * 2001,), "2000 characters"),
+        ("multi_url", ("not-a-url",), r"HTTP\(S\) URLs"),
+        ("multi_url", ("https://" + "a" * 2041,), "2048 characters"),
+        (None, ("alpha",), "property_type is required"),
+    ),
+    ids=("text-too-long", "url-scheme", "url-too-long", "sequence-without-type"),
+)
+def test_issue_property_set_rejects_invalid_values_before_io(
+    property_type: str | None, value: tuple[str, ...], message: str
+) -> None:
+    transport = MagicMock()
+    resource = IssuePropertyResource(transport, ClientConfig())
+    with pytest.raises((TypeError, ValueError), match=message):
+        resource.set(
+            "iss_001",
+            name="Tags",
+            value=value,
+            property_type=property_type,  # type: ignore[arg-type]
+        )
+    transport.run_bytes.assert_not_called()
+
+
+def test_issue_property_set_accepts_discriminated_string_forms() -> None:
+    resource = IssuePropertyResource(MagicMock(), ClientConfig())
+    comma = resource.set_command(
+        "iss_001", name="Tags", value="alpha,beta,alpha", property_type="multi_text"
+    )
+    json_array = resource.set_command(
+        "iss_001",
+        name="Tags",
+        value='["alpha,beta","[beta]"]',
+        property_type="multi_text",
+    )
+    assert comma._plan.steps[0].argv[-3] == '["alpha","beta"]'
+    assert json_array._plan.steps[0].argv[-3] == '["alpha,beta","[beta]"]'
 
 
 def test_issue_property_unset_omits_value_flag() -> None:

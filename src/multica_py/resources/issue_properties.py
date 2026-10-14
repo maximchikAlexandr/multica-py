@@ -10,9 +10,13 @@ from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.models.common import ActionResult
-from multica_py.models.properties import PropertyValue
+from multica_py.models.properties import (
+    PropertyListType,
+    PropertyValue,
+    PropertyValueType,
+    normalize_property_input,
+)
 from multica_py.resources._base import BaseResource
-from multica_py.types import MetadataValue
 
 __all__ = ["IssuePropertyResource", "PropertyValue"]
 
@@ -21,7 +25,7 @@ class _PropertyValueWire(msgspec.Struct, frozen=True, kw_only=True):
     property_id: str
     name: str
     type: str
-    value: MetadataValue
+    value: object
     display: str = ""
     archived: bool = False
 
@@ -38,7 +42,7 @@ class IssuePropertyResource(BaseResource):
                 property_id=row.property_id,
                 name=row.name,
                 type=row.type,
-                value=row.value,
+                value=_decode_property_value(row.type, row.value),
                 display=row.display,
                 archived=row.archived,
             )
@@ -63,11 +67,13 @@ class IssuePropertyResource(BaseResource):
         issue_id: str,
         *,
         name: str,
-        value: str,
+        value: str | tuple[str, ...],
+        property_type: PropertyListType | None = None,
         options: OperationOptions | None = None,
     ) -> Command[tuple[PropertyValue, ...]]:
         validate_nonblank(issue_id)
         validate_nonblank(name)
+        encoded_value = normalize_property_input(value, property_type)
         return self._property_values_command(
             (
                 "issue",
@@ -77,7 +83,7 @@ class IssuePropertyResource(BaseResource):
                 "--name",
                 name,
                 "--value",
-                value,
+                encoded_value,
             ),
             options=options,
         )
@@ -87,10 +93,17 @@ class IssuePropertyResource(BaseResource):
         issue_id: str,
         *,
         name: str,
-        value: str,
+        value: str | tuple[str, ...],
+        property_type: PropertyListType | None = None,
         options: OperationOptions | None = None,
     ) -> tuple[PropertyValue, ...]:
-        return self.set_command(issue_id, name=name, value=value, options=options).run()
+        return self.set_command(
+            issue_id,
+            name=name,
+            value=value,
+            property_type=property_type,
+            options=options,
+        ).run()
 
     def unset_command(
         self,
@@ -137,3 +150,13 @@ class IssuePropertyResource(BaseResource):
             finalize=lambda results: cast("tuple[PropertyValue, ...]", results[0]),
             options=options,
         )
+
+
+def _decode_property_value(property_type: str, value: object) -> PropertyValueType:
+    if property_type in {"multi_text", "multi_url"}:
+        if not isinstance(value, (list, tuple)) or any(type(item) is not str for item in value):
+            raise ValueError("list property value must be an array of strings")
+        return tuple(value)
+    if value is None or type(value) in {str, int, float, bool}:
+        return cast("PropertyValueType", value)
+    raise ValueError("scalar property value must be a scalar")

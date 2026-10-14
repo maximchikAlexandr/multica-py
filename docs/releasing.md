@@ -16,11 +16,11 @@ runtime, and run the deterministic check:
 collect → validate --source-checkout → render → check
 ```
 
-The current approved target is `v0.6.1` with compatibility interval
-`[0.6.0, 0.6.2)`. The pinned commit, release asset/checksum, and exact
+The current approved target is `v0.6.2` with compatibility interval
+`[0.6.0, 0.6.3)`. The pinned commit, release asset/checksum, and exact
 commands for this review are maintained in [docs/compatibility.md](compatibility.md).
 The target source commit is
-`2ea01ae4ef55de4310b99af192d2dbd367832883`; the `0.6.0` source commit
+`7ab92d7622ecd81d179a8d83ae2dea74835a5069`; the `0.6.0` source commit
 `48745d2fe9e80ee9c027293ef22971ff5723f5f5` is comparison provenance only.
 Release archive SHA-256 values must be checked against official manifests
 separately from extracted executable SHA-256 values. Run

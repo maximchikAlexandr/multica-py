@@ -536,6 +536,12 @@ def test_update_is_full_replacement_and_reenables_with_valid_response() -> None:
         update_args(wakeups(transport), event_types=("comment.created",)).run()
 
 
+def test_wakeup_decodes_optional_last_error() -> None:
+    transport = make_transport(stdout={"id": "wake-1", "enabled": True, "last_error": "failed"})
+    result = wakeups(transport).get("iss-1", "wake-1")
+    assert result.last_error == "failed"
+
+
 def _wakeup_identity_and_expiry(result: object) -> object:
     wakeup = cast("IssueWakeup", result)
     return wakeup.id, wakeup.expires_in_seconds
@@ -575,6 +581,7 @@ _V2_VALID_WAKEUP = wakeup_payload(
     paused=False,
     condition={"status": "done"},
     provenance={"source": "system"},
+    last_error="last run failed",
 )
 _V2_OMITTED_EVENTS = b'{"event_types":[{"name":"comment.created"}]}'
 _V2_NULL_EVENTS = (

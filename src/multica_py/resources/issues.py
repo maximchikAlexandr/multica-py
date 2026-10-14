@@ -1163,7 +1163,7 @@ class IssueResource(BaseResource):
         if no_start:
             args.append("--no-start")
         for assignment in properties:
-            args.extend(["--property", f"{assignment.reference}={assignment.value}"])
+            args.extend(["--property", f"{assignment.reference}={assignment.encoded_value}"])
         create_args, create_decode = self._plan_decode(tuple(args), _IssueWire)
         steps = [_Step(create_args, "run_bytes", decode=create_decode, result_alias="create")]
         for label_id in label_ids:

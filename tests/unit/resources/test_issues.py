@@ -606,6 +606,58 @@ def test_issue_create_properties_are_ordered_atomic_and_version_gated() -> None:
     assert len(command._plan.steps) == 1
 
 
+def test_issue_create_list_property_values_are_json_encoded_and_deduplicated() -> None:
+    resource = IssueResource(MagicMock(), ClientConfig())
+    command = resource.create_command(
+        title="Test",
+        properties=(
+            IssuePropertyAssignment(
+                reference="Tags",
+                value=("alpha", "beta", "alpha"),
+                property_type="multi_text",
+            ),
+        ),
+    )
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "create",
+        "--title",
+        "Test",
+        "--property",
+        'Tags=["alpha","beta"]',
+        "--output",
+        "json",
+    )
+
+
+@pytest.mark.parametrize(
+    ("property_type", "value", "message"),
+    (
+        ("multi_text", ("a" * 2001,), "2000 characters"),
+        ("multi_url", ("not-a-url",), r"HTTP\(S\) URLs"),
+        ("multi_url", ("https://" + "a" * 2041,), "2048 characters"),
+        (None, ("alpha",), "property_type is required"),
+    ),
+    ids=("text-too-long", "url-scheme", "url-too-long", "sequence-without-type"),
+)
+def test_issue_create_rejects_invalid_values_before_io(
+    property_type: str | None, value: tuple[str, ...], message: str
+) -> None:
+    transport = MagicMock()
+    with pytest.raises((TypeError, ValueError), match=message):
+        IssueResource(transport, ClientConfig()).create_command(
+            title="Test",
+            properties=(
+                IssuePropertyAssignment(
+                    reference="Tags",
+                    value=value,
+                    property_type=property_type,  # type: ignore[arg-type]
+                ),
+            ),
+        )
+    transport.run_bytes.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "case",
     (

@@ -38,6 +38,7 @@ from multica_py.exceptions import (
     ExecutableNotRunnableError,
     NetworkError,
     NotFoundError,
+    ProcessOutputCaptureError,
     UnsupportedCliVersionError,
     ValidationError,
 )
@@ -284,6 +285,11 @@ class _EchoExecutor(LocalExecutor):
         output = b"stdout " + self.echoed
         error = b"stderr " + self.echoed
         return ExecutionResult(self.exit_code, output, error)
+
+
+class _CaptureFailExecutor(LocalExecutor):
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        raise ProcessOutputCaptureError("bounded capture")
 
 
 class _CompatibilityProbeExecutor(LocalExecutor):
@@ -823,6 +829,17 @@ def test_transport_redacts_split_token_args():
     redacted = redact_argv(("multica", "auth", "login", "--token", "secret123"))
     assert "secret123" not in " ".join(redacted)
     assert redacted[-1] == "***"
+
+
+def test_attachment_upload_capture_interruption_is_network_error() -> None:
+    transport = CliTransport(
+        ClientConfig(compatibility=CompatibilityPolicy.ignore),
+        executor=_CaptureFailExecutor(),
+    )
+    with pytest.raises(NetworkError, match="Attachment upload failed") as excinfo:
+        transport.run_bytes(("attachment", "upload"))
+    assert excinfo.value.exit_code == 2
+    assert "bounded capture" in excinfo.value.stderr
 
 
 @pytest.mark.parametrize("case", _SECRET_REDACTION_CASES, ids=lambda case: case.id)
