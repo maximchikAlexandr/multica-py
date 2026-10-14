@@ -63,3 +63,22 @@ checks direct and create-time list-property assignments plus public read-back,
 and archives/deletes only those resources on success or error. It writes
 sanitized `manifest.json`, `stdout.txt`, `stderr.txt`, and `cleanup.json`
 artifacts; it never writes credentials or raw target output.
+
+## Required protected-controller setup
+
+The controller is fail-closed unless dispatched from the trusted default
+branch with repository variable
+`MULTICA_LIVE_TRUSTED_WORKFLOW_REF=refs/heads/<default-branch>`. Before the
+protected job starts it verifies that `multica-live` exists with at least one
+named required reviewer, protected-branch deployment policy, and an active
+default-branch ruleset requiring deployments. The runner label must resolve to
+a repository-restricted isolated `multica-live` runner group; credentialed
+execution requires an ephemeral runner. The required-reviewer identity must be
+recorded by the repository owner/admin; this repository assumes none.
+
+The current repository has no `multica-live` environment. This PR also cannot
+supply a trusted default-branch controller before merge: a dispatch from the
+PR ref is rejected, while a dispatch from the current default branch uses the
+pre-merge workflow file. Therefore the protected job and V-12 evidence remain
+blocked until the owner provisions the environment, reviewer, branch/ruleset
+restrictions, isolated runner group, and trusted workflow variable above.

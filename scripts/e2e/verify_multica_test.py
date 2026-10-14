@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -22,18 +23,51 @@ from multica_py.models.issues import IssuePropertyAssignment
 
 _WRAPPER_EXECUTABLE = "multica-test"
 _EXPECTED_CLI_VERSION = "0.6.2"
+_COMMANDS = (
+    "multica-test version --output json",
+    "projects.create",
+    "properties.create",
+    "issues.create",
+    "issues.properties.set",
+    "issues.properties.list",
+    "issues.get(resolve_properties=true)",
+    "issues.list(property_filters=exact-element)",
+    "projects.update",
+    "projects.delete",
+    "properties.archive",
+)
 _SECRET_PATTERNS = (
-    re.compile(r"(?i)(?:token|password|secret|api[_-]?key|authorization)(?:[=:]|\s+)[^\s,;]+"),
-    re.compile(r"(?i)https?://[^\s]+"),
-    re.compile(r"(?i)(?:profile|server[_-]?url|workspace[_-]?id)(?:[=:]|\s+)[^\s,;]+"),
+    re.compile(
+        r"(?is)([\"']?(?:token|password|secret|api[_-]?key|authorization)[\"']?\s*[:=]\s*)(?:\"[^\"]*\"|'[^']*'|[^,;}\r\n]+)"
+    ),
+    re.compile(r"(?im)(?:authorization\s*:\s*)(?:bearer|basic)\s+[^\s\r\n]+"),
+    re.compile(r"(?i)\b(?:Bearer|Basic)\s+[^\s,;]+"),
+    re.compile(r"(?i)https?://[^\s\"'<>]+"),
+    re.compile(r"(?i)(?:profile|server[_-]?url|workspace[_-]?id)(?:[=:]|\s+)[^\s,;}]+"),
 )
 
 
+class _CliVersionMismatch(RuntimeError):
+    def __init__(self, observed: str) -> None:
+        self.observed = observed
+        super().__init__("CLI version gate failed")
+
+
 def _sanitize(value: object) -> str:
+    """Redact common serialized/header forms for diagnostics kept in memory."""
+
     text = str(value)
     for pattern in _SECRET_PATTERNS:
         text = pattern.sub("<redacted>", text)
     return text
+
+
+def _error_record(
+    step: str, error: BaseException, *, code: str = "operation_failed"
+) -> dict[str, str]:
+    """Keep diagnostics allowlisted; exception text may contain target secrets."""
+
+    return {"step": step, "type": type(error).__name__, "code": code}
 
 
 def _repo_root() -> Path | None:
@@ -87,9 +121,12 @@ def _write_artifacts(
     output: Path,
     *,
     sdk_sha: str | None,
+    observed_cli_version: str | None,
     events: list[dict[str, Any]],
     errors: list[dict[str, str]],
+    resources: dict[str, str],
     cleanup: list[dict[str, str]],
+    final_exit_code: int,
 ) -> None:
     stdout_path = output / "stdout.txt"
     stderr_path = output / "stderr.txt"
@@ -103,17 +140,28 @@ def _write_artifacts(
         + ("\n" if errors else ""),
         encoding="utf-8",
     )
-    _write_json(
-        cleanup_path,
-        {"items": cleanup, "all_succeeded": all(item["status"] == "ok" for item in cleanup)},
-    )
+    cleanup_state = {
+        "items": cleanup,
+        "state": "not_needed"
+        if not cleanup
+        else "passed"
+        if all(item["status"] == "ok" for item in cleanup)
+        else "failed",
+    }
+    _write_json(cleanup_path, cleanup_state)
     manifest = {
-        "schema": "multica-py-e2e-v1",
+        "schema": "multica-py-e2e-v2",
         "sdk_sha": sdk_sha,
         "cli_executable": _WRAPPER_EXECUTABLE,
         "cli_expected_version": _EXPECTED_CLI_VERSION,
+        "cli_observed_version": observed_cli_version,
+        "scenario_outcomes": events,
+        "resource_ids": resources,
+        "commands": list(_COMMANDS),
+        "final_exit_code": final_exit_code,
+        "cleanup": cleanup_state,
         "credentials": "not collected",
-        "artifacts": {
+        "artifact_hashes": {
             name: _hash(output / name) for name in ("stdout.txt", "stderr.txt", "cleanup.json")
         },
     }
@@ -134,22 +182,22 @@ def _walkthrough(
     resources["text_property_id"] = text_definition.id
     url_definition = client.properties.create(name=url_name, property_type="multi_url")
     resources["url_property_id"] = url_definition.id
-    create_text = ("alpha,comma", "[literal]")
-    create_urls = ("https://example.com/a?x=1", "https://example.com/b")
     issue = client.issues.create(
         title=f"multica-py-e2e-{suffix}",
         project_id=project.id,
         properties=(
             IssuePropertyAssignment(
-                reference=text_name, value=create_text, property_type="multi_text"
+                reference=text_name, value=("alpha,comma", "[literal]"), property_type="multi_text"
             ),
             IssuePropertyAssignment(
-                reference=url_name, value=create_urls, property_type="multi_url"
+                reference=url_name,
+                value=("https://example.com/a?x=1", "https://example.com/b"),
+                property_type="multi_url",
             ),
         ),
     )
     events.append(
-        {"step": "create", "status": "ok", "issue_id": issue.id, "project_id": project.id}
+        {"step": "create", "status": "passed", "issue_id": issue.id, "project_id": project.id}
     )
 
     direct_text = ("direct,comma", "direct-second")
@@ -185,10 +233,10 @@ def _walkthrough(
     events.append(
         {
             "step": "read-back",
-            "status": "ok",
+            "status": "passed",
             "issue_id": issue.id,
             "property_ids": [text_definition.id, url_definition.id],
-            "filtered_issue_ids": [item.id for item in filtered.items],
+            "filtered_issue_count": len(filtered.items),
         }
     )
 
@@ -213,7 +261,7 @@ def _cleanup(
                 client.properties.archive(resource_id)
                 _require_archived_property(client, resource_id)
         except Exception as error:  # pragma: no cover - exercised by isolated stand
-            cleanup.append({"resource": key, "status": "error", "error": _sanitize(error)})
+            cleanup.append(_error_record(key, error, code="cleanup_failed") | {"status": "error"})
         else:
             cleanup.append({"resource": key, "status": "ok"})
 
@@ -224,10 +272,14 @@ def _require_archived_property(client: MulticaClient, property_id: str) -> None:
 
 
 def _build_client() -> MulticaClient:
-    if shutil.which(_WRAPPER_EXECUTABLE) is None:
+    wrapper_path = shutil.which(_WRAPPER_EXECUTABLE)
+    if wrapper_path is None:
         raise RuntimeError("wrapper-owned multica-test is not installed")
+    resolved_path = Path(wrapper_path).resolve()
+    if not resolved_path.is_file() or not os.access(resolved_path, os.X_OK):
+        raise RuntimeError("wrapper-owned multica-test is not executable")
     config = ClientConfig(
-        executable=_WRAPPER_EXECUTABLE,
+        executable=str(resolved_path),
         compatibility=CompatibilityPolicy.strict,
     )
     if (
@@ -239,10 +291,19 @@ def _build_client() -> MulticaClient:
     return MulticaClient(config)
 
 
-def _require_cli_version(client: MulticaClient) -> None:
+def _observe_cli_version(client: MulticaClient) -> str:
     status = client.daemon.status()
-    if status.cli_version != _EXPECTED_CLI_VERSION:
-        raise RuntimeError("CLI version gate failed")
+    observed = status.cli_version
+    if observed is None:
+        raise RuntimeError("CLI version was omitted")
+    return observed
+
+
+def _require_cli_version(client: MulticaClient) -> str:
+    observed = _observe_cli_version(client)
+    if observed != _EXPECTED_CLI_VERSION:
+        raise _CliVersionMismatch(observed)
+    return observed
 
 
 def run(output: Path) -> int:
@@ -250,53 +311,66 @@ def run(output: Path) -> int:
     errors: list[dict[str, str]] = []
     cleanup: list[dict[str, str]] = []
     sdk_sha: str | None = None
+    observed_cli_version: str | None = None
     resources: dict[str, str] = {}
     prepared_output: Path | None = None
-    failure: Exception | None = None
+    failed = False
     try:
         prepared_output = _prepare_output(output)
         sdk_sha = _current_sha()
         with _build_client() as client:
             try:
-                _require_cli_version(client)
+                observed_cli_version = _require_cli_version(client)
                 events.append(
-                    {"step": "preflight", "status": "ok", "cli_version": _EXPECTED_CLI_VERSION}
+                    {
+                        "step": "preflight",
+                        "status": "passed",
+                        "cli_version": observed_cli_version,
+                    }
                 )
                 _walkthrough(client, events, resources)
             except Exception as error:
-                failure = error
-                errors.append({"type": type(error).__name__, "detail": _sanitize(error)})
+                failed = True
+                if isinstance(error, _CliVersionMismatch):
+                    observed_cli_version = error.observed
+                code = (
+                    "cli_version_mismatch"
+                    if isinstance(error, _CliVersionMismatch)
+                    else "operation_failed"
+                )
+                errors.append(_error_record("walkthrough", error, code=code))
             finally:
                 if resources:
                     _cleanup(client, resources, cleanup)
     except Exception as error:
-        if failure is None:
-            failure = error
-            errors.append({"type": type(error).__name__, "detail": _sanitize(error)})
-    finally:
-        if resources and not cleanup:
-            errors.append({"type": "CleanupError", "detail": "cleanup did not run"})
-        if prepared_output is not None:
-            try:
-                _write_artifacts(
-                    prepared_output,
-                    sdk_sha=sdk_sha,
-                    events=events,
-                    errors=errors,
-                    cleanup=cleanup,
-                )
-            except Exception as error:
-                failure = failure or error
-                print(f"artifact write failed: {_sanitize(error)}", file=sys.stderr)
-    if failure is not None:
-        print(
-            f"walkthrough failed: {type(failure).__name__}: {_sanitize(failure)}", file=sys.stderr
-        )
-        return 1
+        failed = True
+        errors.append(_error_record("initialization", error))
+    if resources and not cleanup:
+        failed = True
+        errors.append({"step": "cleanup", "type": "CleanupError", "code": "cleanup_not_run"})
     if any(item["status"] != "ok" for item in cleanup):
-        print("walkthrough cleanup failed", file=sys.stderr)
+        failed = True
+    final_exit_code = 1 if failed else 0
+    if prepared_output is not None:
+        try:
+            _write_artifacts(
+                prepared_output,
+                sdk_sha=sdk_sha,
+                observed_cli_version=observed_cli_version,
+                events=events,
+                errors=errors,
+                resources=resources,
+                cleanup=cleanup,
+                final_exit_code=final_exit_code,
+            )
+        except Exception:
+            failed = True
+            final_exit_code = 1
+            print("artifact_write_failed", file=sys.stderr)
+    if failed:
+        print("walkthrough_failed", file=sys.stderr)
         return 1
-    return 0
+    return final_exit_code
 
 
 def main(argv: list[str] | None = None) -> int:
