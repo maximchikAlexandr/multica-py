@@ -640,12 +640,14 @@ def test_issue_create_list_property_values_are_json_encoded_and_deduplicated(
     )
 
 
-def test_issue_create_snapshots_list_property_assignment_before_caller_mutation() -> None:
+def test_issue_create_snapshots_list_property_assignment_before_caller_mutation(
+    mock_transport: MagicMock,
+) -> None:
     values = ["alpha", "beta"]
     assignment = IssuePropertyAssignment(reference="Tags", value=values, property_type="multi_text")
     values.append("mutated")
 
-    command = IssueResource(MagicMock(), ClientConfig()).create_command(
+    command = IssueResource(mock_transport, ClientConfig()).create_command(
         title="Test", properties=(assignment,)
     )
 
