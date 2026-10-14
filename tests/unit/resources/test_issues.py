@@ -640,6 +640,27 @@ def test_issue_create_list_property_values_are_json_encoded_and_deduplicated(
     )
 
 
+def test_issue_create_snapshots_list_property_assignment_before_caller_mutation() -> None:
+    values = ["alpha", "beta"]
+    assignment = IssuePropertyAssignment(reference="Tags", value=values, property_type="multi_text")
+    values.append("mutated")
+
+    command = IssueResource(MagicMock(), ClientConfig()).create_command(
+        title="Test", properties=(assignment,)
+    )
+
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "create",
+        "--title",
+        "Test",
+        "--property",
+        'Tags=["alpha","beta"]',
+        "--output",
+        "json",
+    )
+
+
 @pytest.mark.parametrize("case", PROPERTY_ACCEPTED_CASES, ids=lambda case: case.id)
 def test_issue_create_accepts_property_boundaries(
     case: AcceptedPropertyInputCase, mock_transport: MagicMock

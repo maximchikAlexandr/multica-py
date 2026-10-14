@@ -42,10 +42,11 @@ bundles, and golden generated copies are not used.
 For the current direct `0.6.1` → `0.6.2` review, the baseline source is pinned
 to `2ea01ae4ef55de4310b99af192d2dbd367832883`; the target source is pinned to
 `7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`) and the
-compatibility interval is `[0.6.0, 0.6.3)`. Verify the `0.6.0` and `0.6.2` release archives
-against the official manifests before hashing their extracted executables;
-pass only the executable digest to `collect --sha256`. Run the source-link
-audit after validation:
+compatibility interval is `[0.6.0, 0.6.3)`. Verify the directly reviewed `0.6.1`
+and `0.6.2` release archives against the official manifests before hashing their
+extracted executables; the retained compatibility floor `0.6.0` is a separate
+floor check, not the direct migration baseline. Pass only the executable digest
+to `collect --sha256`. Run the source-link audit after validation:
 
 The earlier `0.5.0` → `0.5.1` instructions are historical and no longer
 describe the current release workflow.

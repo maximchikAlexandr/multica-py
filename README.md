@@ -40,8 +40,8 @@ including wakeup v2 lifecycle actions, task cursors, issue attachments,
 comment supplements, pull-request auto-complete status, and workspace MCP
 agent counts. Inherited global flags and interactive login inputs remain
 represented by typed command plans; use `command.commands` to inspect
-redacted previews before execution. The exclusive `0.6.2` ceiling keeps the
-reviewed contract bounded.
+redacted previews before execution. The exclusive `0.6.3` ceiling keeps the
+reviewed contract bounded; `0.6.2` is the maximum tested release.
 
 Issue responses expose the immutable `duplicate_of` snapshot when supplied;
 omitted and explicit-null values remain distinguishable through wire presence.
@@ -60,7 +60,7 @@ Task-supplement mutation/receipt APIs, duplicate receipt and PR automation,
 UI cache calculations, daemon identity, messaging/media, mobile, localization,
 and pricing changes remain outside this SDK. On a failed target acceptance,
 roll back the contract, generated runtime, fixtures, docs, and package claims
-together to the prior `0.6.0` state.
+together to the directly reviewed prior `0.6.1` state.
 See [the migration guide](docs/migration.md) for presence/error semantics,
 version gates, deferred surfaces, checksum roles, and rollback guidance.
 

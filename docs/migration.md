@@ -53,8 +53,8 @@ The four lifecycle leaves are target-only and do not duplicate the 193-operation
 registry. Offline contract, source-link, typing, lint, test, build, package,
 and forbidden-content gates are required; live backend status is reported
 separately. If a gate fails, roll back the contract, generated projection,
-handwritten code, fixtures, docs, and package claims together to the approved
-`0.6.0` baseline.
+handwritten code, fixtures, docs, and package claims together to the directly
+reviewed `0.6.1` baseline. The supported compatibility floor remains `0.6.0`.
 
 ## Complete public CLI parity
 

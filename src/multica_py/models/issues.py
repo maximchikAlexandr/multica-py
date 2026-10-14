@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast, overload
 
 import msgspec
@@ -61,6 +62,9 @@ class IssuePropertyAssignment(msgspec.Struct, frozen=True, kw_only=True):
     property_type: PropertyListType | None = None
 
     def __post_init__(self) -> None:
+        if type(self.value) is not str and isinstance(self.value, Sequence):
+            sequence_value: Sequence[str] = self.value
+            object.__setattr__(self, "value", tuple[str, ...](sequence_value))
         if type(self.reference) is not str:
             raise TypeError("reference must be a string")
         if not self.reference.strip():
