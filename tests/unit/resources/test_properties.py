@@ -14,9 +14,11 @@ from multica_py.resources.properties import PropertyResource
 from multica_py.sentinels import Unset
 from tests.unit.resources._factories import command_result
 from tests.unit.resources.property_cases import (
+    MALFORMED_SCALAR_PROPERTY_CASES,
     PROPERTY_ACCEPTED_CASES,
     PROPERTY_INVALID_CASES,
     AcceptedPropertyInputCase,
+    MalformedScalarPropertyCase,
     PropertyInputCase,
 )
 
@@ -218,6 +220,27 @@ def test_issue_property_list_rejects_malformed_list_values(
     )
     resource = IssuePropertyResource(mock_transport, ClientConfig())
     with pytest.raises(OutputShapeError, match="array of strings"):
+        resource.list("iss_001")
+
+
+@pytest.mark.parametrize("case", MALFORMED_SCALAR_PROPERTY_CASES, ids=lambda case: case.id)
+def test_issue_property_list_rejects_malformed_scalar_values(
+    case: MalformedScalarPropertyCase, mock_transport: MagicMock
+) -> None:
+    mock_transport.run_bytes.return_value = command_result(
+        json.dumps(
+            [
+                {
+                    "property_id": "prop_001",
+                    "name": "Impact",
+                    "type": case.property_type,
+                    "value": case.value,
+                }
+            ]
+        ).encode()
+    )
+    resource = IssuePropertyResource(mock_transport, ClientConfig())
+    with pytest.raises(OutputShapeError, match=f"^{case.message}$"):
         resource.list("iss_001")
 
 

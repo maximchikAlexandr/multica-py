@@ -571,6 +571,7 @@ _V2_NULL_WAKEUP = wakeup_payload(
     paused=None,
     condition=None,
     provenance=None,
+    last_error=None,
 )
 _V2_VALID_WAKEUP = wakeup_payload(
     expires_in_seconds=3600,
@@ -743,14 +744,17 @@ def test_wakeup_last_error_clears_after_recovery(
     mock_transport.run_bytes.side_effect = [
         command_result(wakeup_payload(last_error=diagnostic)),
         command_result(wakeup_payload(last_error=None)),
+        command_result(wakeup_payload()),
     ]
     resource = wakeups(mock_transport)
 
     pending = resource.get("iss-1", "wake-1")
     healthy = resource.get("iss-1", "wake-1")
+    healthy_omitted = resource.get("iss-1", "wake-1")
 
     assert pending.last_error == diagnostic
     assert healthy.last_error is None
+    assert healthy_omitted.last_error is None
 
 
 @dataclass(frozen=True)

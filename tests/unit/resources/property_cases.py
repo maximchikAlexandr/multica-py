@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 
@@ -18,6 +19,14 @@ class AcceptedPropertyInputCase:
     property_type: str
     value: object
     encoded: str
+
+
+@dataclass(frozen=True)
+class MalformedScalarPropertyCase:
+    id: str
+    property_type: str
+    value: object
+    message: str
 
 
 PROPERTY_INVALID_CASES = (
@@ -70,5 +79,26 @@ PROPERTY_ACCEPTED_CASES = (
         "multi_text",
         ["alpha", "beta", "alpha"],
         '["alpha","beta"]',
+    ),
+    AcceptedPropertyInputCase(
+        "text-element-at-limit",
+        "multi_text",
+        ("a" * 2000,),
+        json.dumps(["a" * 2000], separators=(",", ":")),
+    ),
+    AcceptedPropertyInputCase(
+        "url-element-at-limit",
+        "multi_url",
+        ("https://" + "a" * (2048 - len("https://")),),
+        json.dumps(["https://" + "a" * (2048 - len("https://"))], separators=(",", ":")),
+    ),
+)
+
+MALFORMED_SCALAR_PROPERTY_CASES = (
+    MalformedScalarPropertyCase(
+        "scalar-nonscalar",
+        "select",
+        {"nested": "value"},
+        "scalar property value must be a scalar",
     ),
 )

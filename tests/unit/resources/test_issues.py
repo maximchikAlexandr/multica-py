@@ -55,9 +55,11 @@ from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.resources.issues import IssueResource, _decode_issue_search
 from tests.unit.resources.property_cases import (
+    MALFORMED_SCALAR_PROPERTY_CASES,
     PROPERTY_ACCEPTED_CASES,
     PROPERTY_INVALID_CASES,
     AcceptedPropertyInputCase,
+    MalformedScalarPropertyCase,
     PropertyInputCase,
 )
 
@@ -1093,6 +1095,33 @@ def test_issue_property_projection_rejects_malformed_list_values(value: object) 
     page = _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire))
     issue = page.items[0]._with_client(MagicMock())
     with pytest.raises(OutputShapeError, match="array of strings"):
+        issue.properties.all()
+
+
+@pytest.mark.parametrize("case", MALFORMED_SCALAR_PROPERTY_CASES, ids=lambda case: case.id)
+def test_issue_property_projection_rejects_malformed_scalar_values(
+    case: MalformedScalarPropertyCase,
+) -> None:
+    payload = json.dumps(
+        {
+            "issues": [
+                {
+                    "id": "i1",
+                    "properties": [
+                        {
+                            "property_id": "p1",
+                            "name": "Impact",
+                            "type": case.property_type,
+                            "value": case.value,
+                        }
+                    ],
+                }
+            ]
+        }
+    ).encode()
+    page = _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire))
+    issue = page.items[0]._with_client(MagicMock())
+    with pytest.raises(OutputShapeError, match=f"^{case.message}$"):
         issue.properties.all()
 
 
