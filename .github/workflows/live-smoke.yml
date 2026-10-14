@@ -37,6 +37,7 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           WORKFLOW_REF: ${{ github.workflow_ref }}
           TRUSTED_WORKFLOW_REF: ${{ vars.MULTICA_LIVE_TRUSTED_WORKFLOW_REF }}
+          EXPECTED_REVIEWER_ID: ${{ vars.MULTICA_LIVE_EXPECTED_REVIEWER_ID }}
         run: |
           set -eu
           test -n "$DEFAULT_BRANCH"
@@ -44,14 +45,21 @@ jobs:
           test -n "$TRUSTED_WORKFLOW_REF"
           test "$TRUSTED_WORKFLOW_REF" = "refs/heads/$DEFAULT_BRANCH"
           test "$WORKFLOW_REF" = "$REPOSITORY/.github/workflows/live-smoke.yml@$TRUSTED_WORKFLOW_REF"
+          test -n "$EXPECTED_REVIEWER_ID"
+          case "$EXPECTED_REVIEWER_ID" in
+            ''|*[!0-9]*) echo 'MULTICA_LIVE_EXPECTED_REVIEWER_ID must be numeric' >&2; exit 1 ;;
+          esac
 
           environment_payload="$(gh api "repos/$REPOSITORY/environments/multica-live")"
-          if ! printf '%s' "$environment_payload" | jq -e '
-            any(.protection_rules[]?;
-              .type == "required_reviewers" and ((.reviewers // []) | length > 0))
+          if ! printf '%s' "$environment_payload" | jq -e --arg expected "$EXPECTED_REVIEWER_ID" '
+            .prevent_self_review == true
+            and any(.protection_rules[]?;
+              .type == "required_reviewers"
+              and any((.reviewers // [])[]?;
+                ((.reviewer.id // .actor_id // .id) | tostring) == $expected))
             and (.deployment_branch_policy.protected_branches == true)
           ' >/dev/null; then
-            echo 'multica-live environment protection is absent or incomplete' >&2
+            echo 'multica-live protection or configured reviewer identity is absent or incomplete' >&2
             exit 1
           fi
 
@@ -60,9 +68,12 @@ jobs:
             any(.[];
               .enforcement == "active"
               and ((.conditions.ref_name.include // []) | index($branch) != null)
-              and any((.rules // [])[]?; .type == "required_deployments"))
+              and any((.rules // [])[]?;
+                .type == "required_deployments"
+                and any((.parameters.required_deployment_environments // [])[]?;
+                  . == "multica-live" or .name == "multica-live")))
           ' >/dev/null; then
-            echo 'active default-branch deployment ruleset is absent' >&2
+            echo 'active default-branch multica-live deployment ruleset is absent' >&2
             exit 1
           fi
 
@@ -106,7 +117,11 @@ jobs:
   multica-live:
     needs: authorize
     if: ${{ needs.authorize.result == 'success' }}
-    runs-on: [self-hosted, multica-live]
+    runs-on:
+      group: multica-live
+      labels:
+        - self-hosted
+        - multica-live
     environment: multica-live
     timeout-minutes: 10
     permissions:
@@ -175,6 +190,10 @@ jobs:
           umask 077
           raw_log="$RUNNER_TEMP/multica-live-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.log"
           exit_file="$RUNNER_TEMP/multica-live-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.exit"
+          cleanup_raw_log() {
+            rm -f -- "$raw_log"
+          }
+          trap cleanup_raw_log EXIT HUP INT TERM
           make live > "$raw_log" 2>&1
           test_status=$?
           printf '%s\n' "$test_status" > "$exit_file"
@@ -232,7 +251,7 @@ jobs:
 
       - name: Upload sanitized evidence allowlist
         if: always() && steps.evidence.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: live-smoke-evidence-${{ needs.authorize.outputs.head_sha }}
           path: |
