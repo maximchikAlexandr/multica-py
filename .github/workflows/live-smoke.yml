@@ -2,12 +2,67 @@ name: Live smoke
 
 on:
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open same-repository PR number to verify
+        required: true
+        type: string
+      candidate_sha:
+        description: Full 40-character candidate SHA to verify
+        required: true
+        type: string
+
+permissions: {}
 
 jobs:
-  live-smoke:
-    # The environment is protected in repository settings and requires approval.
-    # Never run prepared credentials against a contributor-selected dispatch ref.
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+  authorize:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+      head_sha: ${{ steps.resolve.outputs.head_sha }}
+    steps:
+      - name: Resolve and authorize PR head
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          CANDIDATE_PR: ${{ inputs.pr_number }}
+        run: |
+          set -eu
+          if [ "${#CANDIDATE_SHA}" -ne 40 ]; then
+            echo 'candidate_sha must be a full commit SHA' >&2
+            exit 1
+          fi
+          case "$CANDIDATE_SHA" in
+            *[!0-9a-fA-F]*) echo 'candidate_sha must be a full commit SHA' >&2; exit 1 ;;
+          esac
+          case "$CANDIDATE_PR" in
+            ''|*[!0-9]*) echo 'pr_number must be numeric' >&2; exit 1 ;;
+          esac
+          payload="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${CANDIDATE_PR}")"
+          state="$(printf '%s' "$payload" | jq -r '.state // empty')"
+          head_repo="$(printf '%s' "$payload" | jq -r '.head.repo.full_name // empty')"
+          head_sha="$(printf '%s' "$payload" | jq -r '.head.sha // empty')"
+          if [ "$state" != open ]; then
+            echo 'candidate PR is not open' >&2
+            exit 1
+          fi
+          if [ "$head_repo" != "$GITHUB_REPOSITORY" ]; then
+            echo 'candidate PR must have a same-repository head' >&2
+            exit 1
+          fi
+          if [ "$head_sha" != "$CANDIDATE_SHA" ]; then
+            echo 'candidate SHA is not the current PR head' >&2
+            exit 1
+          fi
+          printf 'pr_number=%s\n' "$CANDIDATE_PR" >> "$GITHUB_OUTPUT"
+          printf 'head_sha=%s\n' "$head_sha" >> "$GITHUB_OUTPUT"
+
+  multica-live:
+    needs: authorize
+    if: ${{ needs.authorize.result == 'success' }}
     runs-on: [self-hosted, multica-live]
     environment: multica-live
     timeout-minutes: 10
@@ -15,24 +70,54 @@ jobs:
       contents: read
     env:
       MULTICA_LIVE_CLI: ${{ vars.MULTICA_LIVE_CLI }}
-      MULTICA_LIVE_EXPECTED_VERSION: ${{ vars.MULTICA_LIVE_EXPECTED_VERSION }}
+      MULTICA_LIVE_EXPECTED_VERSION: 0.6.2
       MULTICA_LIVE_SERVER_URL: ${{ vars.MULTICA_LIVE_SERVER_URL }}
       MULTICA_LIVE_WORKSPACE_ID: ${{ vars.MULTICA_LIVE_WORKSPACE_ID }}
       MULTICA_LIVE_PROFILE: ${{ vars.MULTICA_LIVE_PROFILE }}
+      AUTHORIZED_PR_NUMBER: ${{ needs.authorize.outputs.pr_number }}
+      AUTHORIZED_HEAD_SHA: ${{ needs.authorize.outputs.head_sha }}
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ needs.authorize.outputs.head_sha }}
+          persist-credentials: false
       - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: "3.12"
       - run: uv sync --frozen --all-groups
-      - name: Verify prepared environment
+      - name: Verify immutable authorized checkout
         run: |
           set -eu
+          test "$(git rev-parse HEAD)" = "$AUTHORIZED_HEAD_SHA"
           test -n "$MULTICA_LIVE_CLI"
-          test -n "$MULTICA_LIVE_EXPECTED_VERSION"
           test -n "$MULTICA_LIVE_SERVER_URL"
           test -n "$MULTICA_LIVE_WORKSPACE_ID"
           test -n "$MULTICA_LIVE_PROFILE"
-      - run: make live
+      - name: Run strict CLI 0.6.2 live suite
+        id: live
+        run: |
+          set +e
+          mkdir -p .artifacts/live-smoke
+          make live > .artifacts/live-smoke/test.log 2>&1
+          status=$?
+          set -e
+          printf '%s\n' "$status" > .artifacts/live-smoke/test-exit-code.txt
+          exit "$status"
+      - name: Write sanitized exact-SHA evidence
+        if: always()
+        run: |
+          set -eu
+          mkdir -p .artifacts/live-smoke
+          checkout_sha="$(git rev-parse HEAD)"
+          test_status="$(cat .artifacts/live-smoke/test-exit-code.txt 2>/dev/null || printf '%s' 125)"
+          cat > .artifacts/live-smoke/manifest.json <<EOF
+          {"workflow_run":"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID","pr_number":"$AUTHORIZED_PR_NUMBER","approved_head_sha":"$AUTHORIZED_HEAD_SHA","checkout_sha":"$checkout_sha","cli_version":"0.6.2","test_exit_code":$test_status,"credentials":"not recorded","cleanup":"resource-scoped live fixtures execute cleanup callbacks on success and error"}
+          EOF
+          printf '%s\n' 'No raw command output is retained; the live suite owns cleanup through ExitStack/finally callbacks.' > .artifacts/live-smoke/cleanup.txt
+          rm -f .artifacts/live-smoke/test.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-smoke-evidence-${{ needs.authorize.outputs.head_sha }}
+          path: .artifacts/live-smoke/
+          retention-days: 14
