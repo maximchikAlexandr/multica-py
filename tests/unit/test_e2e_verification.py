@@ -204,10 +204,10 @@ def _run_authorization(
         "FAKE_ENV_JSON": json.dumps(
             environment_payload
             or {
-                "prevent_self_review": True,
                 "protection_rules": [
                     {
                         "type": "required_reviewers",
+                        "prevent_self_review": True,
                         "reviewers": [{"reviewer": {"id": 17, "type": "User"}}],
                     }
                 ],
