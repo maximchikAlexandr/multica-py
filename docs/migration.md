@@ -15,18 +15,25 @@ There is no provider registry or automatic provider discovery. See
 target-path/environment/staging rules, process-control guarantees, and the
 provider-adapter contract.
 
-## v0.6.1 direct migration
+## v0.6.2 direct migration
 
-The approved target is Multica CLI `0.6.1` at source commit
-`2ea01ae4ef55de4310b99af192d2dbd367832883` (release `400860726`). The direct
-compatibility interval is `[0.6.0, 0.6.2)`; the baseline is
+The approved target is Multica CLI `0.6.2` at source commit
+`7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`). The direct
+compatibility interval is `[0.6.0, 0.6.3)`; the baseline is
 `48745d2fe9e80ee9c027293ef22971ff5723f5f5`, with no intermediate SDK release.
 The refreshed contract covers 205 command nodes, 193 operations, and 196
-response entrypoints, including nine changed and 187 unchanged responses.
+response entrypoints, including eight changed and 188 unchanged responses.
+
+Multi-value text and URL properties now use immutable `tuple[str, ...]` values;
+the SDK validates nonblank strings and a maximum of 20 unique values, then
+encodes them as compact JSON arrays with stable first-occurrence deduplication.
+`DaemonStatus.cli_commit` and `IssueWakeup.last_error` preserve omitted versus
+explicit values. The four daemon autostart command nodes remain CLI-only and
+are intentionally outside the SDK public API.
 
 Issue `set_status` and `update` accept `duplicate_of` on both direct and bound
 surfaces. A nonblank reference maps once to `--duplicate-of` and is gated to
-CLI `0.6.1`; `set_status` requires `cancelled`, while `update` permits omitted
+CLI `0.6.2`; `set_status` requires `cancelled`, while `update` permits omitted
 status or explicit `cancelled`. Update rejects present descriptions and
 emitted attachments with the same atomic pre-transport validation.
 

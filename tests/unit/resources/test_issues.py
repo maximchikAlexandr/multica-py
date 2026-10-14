@@ -606,6 +606,24 @@ def test_issue_create_properties_are_ordered_atomic_and_version_gated() -> None:
     assert len(command._plan.steps) == 1
 
 
+def test_issue_create_list_property_values_are_json_encoded_and_deduplicated() -> None:
+    resource = IssueResource(MagicMock(), ClientConfig())
+    command = resource.create_command(
+        title="Test",
+        properties=(IssuePropertyAssignment(reference="Tags", value=("alpha", "beta", "alpha")),),
+    )
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "create",
+        "--title",
+        "Test",
+        "--property",
+        'Tags=["alpha","beta"]',
+        "--output",
+        "json",
+    )
+
+
 @pytest.mark.parametrize(
     "case",
     (

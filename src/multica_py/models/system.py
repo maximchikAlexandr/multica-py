@@ -156,6 +156,7 @@ class DaemonStatus(msgspec.Struct, frozen=True, kw_only=True):
     device_name: str | None = None
     server_url: str | None = None
     cli_version: str | None = None
+    cli_commit: str | None = None
     launched_by: str | None = None
     active_task_count: int | None = None
     running_task_count: int | None = None

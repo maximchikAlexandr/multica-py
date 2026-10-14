@@ -108,6 +108,7 @@ def _wakeup(value: Mapping[str, object]) -> IssueWakeup:
         timezone=optional_string("timezone"),
         enabled=optional_bool("enabled"),
         status=optional_string("status"),
+        last_error=optional_string("last_error"),
         next_run_at=timestamp(
             value.get("next_run_at", value.get("next_fire_at")), field_name="wakeup.next_run_at"
         ),

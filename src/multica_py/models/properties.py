@@ -6,7 +6,16 @@ import msgspec
 
 from multica_py.types import MetadataValue
 
-__all__ = ["PropertyDefinition", "PropertyOption", "PropertyValue"]
+PropertyListValue = tuple[str, ...]
+PropertyValueType = MetadataValue | PropertyListValue
+
+__all__ = [
+    "PropertyDefinition",
+    "PropertyListValue",
+    "PropertyOption",
+    "PropertyValue",
+    "PropertyValueType",
+]
 
 
 class PropertyOption(msgspec.Struct, frozen=True, kw_only=True):
@@ -33,6 +42,6 @@ class PropertyValue(msgspec.Struct, frozen=True, kw_only=True):
     property_id: str
     name: str
     type: str
-    value: MetadataValue
+    value: PropertyValueType
     display: str = ""
     archived: bool = False

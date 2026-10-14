@@ -39,6 +39,7 @@ class IssueWakeup(msgspec.Struct, frozen=True, kw_only=True):
     timezone: str | None = None
     enabled: bool | None = None
     status: str | None = None
+    last_error: str | None = None
     next_run_at: datetime.datetime | None = None
     last_run_at: datetime.datetime | None = None
     created_at: datetime.datetime | None = None

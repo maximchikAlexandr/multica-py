@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, cast, overload
 
 import msgspec
 
 from multica_py.enums import IssueStatus
 from multica_py.models.common import CommentCursor, Page
+from multica_py.models.properties import PropertyListValue
 from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
@@ -52,15 +54,35 @@ class IssuePropertyAssignment(msgspec.Struct, frozen=True, kw_only=True):
     """One ordered, atomic property assignment for issue creation."""
 
     reference: str
-    value: str
+    value: str | PropertyListValue
 
     def __post_init__(self) -> None:
         if type(self.reference) is not str:
             raise TypeError("reference must be a string")
         if not self.reference.strip():
             raise ValueError("reference must be nonblank")
-        if type(self.value) is not str:
+        if type(self.value) is str:
+            return
+        if type(self.value) is not tuple:
             raise TypeError("value must be a string")
+        if not self.value:
+            raise ValueError("value must contain at least one string")
+        if any(type(item) is not str for item in self.value):
+            raise TypeError("value tuple must contain only strings")
+        if any(not item.strip() for item in self.value):
+            raise ValueError("value tuple cannot contain blank strings")
+        if len(set(self.value)) > 20:
+            raise ValueError("value cannot contain more than 20 unique strings")
+
+    @property
+    def encoded_value(self) -> str:
+        if type(self.value) is str:
+            return self.value
+        unique: list[str] = []
+        for item in self.value:
+            if item not in unique:
+                unique.append(item)
+        return json.dumps(unique, ensure_ascii=False, separators=(",", ":"))
 
 
 class PullRequestAutoComplete(msgspec.Struct, frozen=True, kw_only=True):

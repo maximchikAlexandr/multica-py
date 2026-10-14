@@ -66,6 +66,12 @@ class PropertyResource(BaseResource):
         validate_nonblank(property_type)
         if options_values is not Unset and property_type in _ACTOR_TYPES:
             raise ValueError("options_values are not supported for actor property types")
+        if (
+            options_values is not Unset
+            and property_type in {"multi_text", "multi_url"}
+            and options_values
+        ):
+            raise ValueError("options_values are not supported for list property types")
         args = ["property", "create", "--name", name, "--type", property_type]
         if description is not Unset:
             _validate_optional_string(description, "description")
