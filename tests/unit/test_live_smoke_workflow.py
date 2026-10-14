@@ -75,6 +75,11 @@ def test_ruleset_gate_rejects_unrelated_required_deployment_environment() -> Non
         "other-environment",
         "multica-live",
     ]
+    object_entries = json.loads(json.dumps(valid))
+    object_entries[0]["rules"][0]["parameters"]["required_deployment_environments"] = [
+        {"name": "other-environment"},
+        {"name": "multica-live"},
+    ]
     unrelated = json.loads(json.dumps(valid))
     unrelated[0]["rules"][0]["parameters"]["required_deployment_environments"] = [
         "other-environment"
@@ -82,6 +87,7 @@ def test_ruleset_gate_rejects_unrelated_required_deployment_environment() -> Non
 
     assert _run_jq(filter_text, valid, branch="refs/heads/main") == 0
     assert _run_jq(filter_text, ordered, branch="refs/heads/main") == 0
+    assert _run_jq(filter_text, object_entries, branch="refs/heads/main") == 0
     assert _run_jq(filter_text, unrelated, branch="refs/heads/main") != 0
     assert "required_deployment_environments" in text
 
