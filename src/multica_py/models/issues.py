@@ -64,7 +64,7 @@ class IssuePropertyAssignment(msgspec.Struct, frozen=True, kw_only=True):
     def __post_init__(self) -> None:
         if type(self.value) is not str and isinstance(self.value, Sequence):
             sequence_value: Sequence[str] = self.value
-            object.__setattr__(self, "value", tuple[str, ...](sequence_value))
+            msgspec.structs.force_setattr(self, "value", tuple[str, ...](sequence_value))
         if type(self.reference) is not str:
             raise TypeError("reference must be a string")
         if not self.reference.strip():
