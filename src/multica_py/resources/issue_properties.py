@@ -9,6 +9,7 @@ from multica_py._internal.commands import Command, _Step
 from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
+from multica_py.exceptions import OutputShapeError
 from multica_py.models.common import ActionResult
 from multica_py.models.properties import (
     PropertyListType,
@@ -155,7 +156,7 @@ class IssuePropertyResource(BaseResource):
 def _decode_property_value(property_type: str, value: object) -> PropertyValueType:
     if property_type in {"multi_text", "multi_url"}:
         if not isinstance(value, (list, tuple)) or any(type(item) is not str for item in value):
-            raise ValueError("list property value must be an array of strings")
+            raise OutputShapeError("list property value must be an array of strings")
         return tuple(value)
     if value is None or type(value) in {str, int, float, bool}:
         return cast("PropertyValueType", value)

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 
 import pytest
 
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.exceptions import OutputShapeError
 from multica_py.resources.issue_properties import IssuePropertyResource
 from multica_py.resources.properties import PropertyResource
 from multica_py.sentinels import Unset
+from tests.unit.resources._factories import command_result
 
 
 def test_create_rejects_options_for_actor_types() -> None:
@@ -162,6 +165,30 @@ def test_issue_property_set_accepts_discriminated_string_forms() -> None:
     )
     assert comma._plan.steps[0].argv[-3] == '["alpha","beta"]'
     assert json_array._plan.steps[0].argv[-3] == '["alpha,beta","[beta]"]'
+
+
+@pytest.mark.parametrize(
+    "value",
+    ("scalar", {"nested": "value"}, None, ["ok", 1]),
+    ids=("scalar", "object", "null", "non-string-item"),
+)
+def test_issue_property_list_rejects_malformed_list_values(value: object) -> None:
+    transport = MagicMock()
+    transport.run_bytes.return_value = command_result(
+        json.dumps(
+            [
+                {
+                    "property_id": "prop_001",
+                    "name": "Tags",
+                    "type": "multi_text",
+                    "value": value,
+                }
+            ]
+        ).encode()
+    )
+    resource = IssuePropertyResource(transport, ClientConfig())
+    with pytest.raises(OutputShapeError, match="array of strings"):
+        resource.list("iss_001")
 
 
 def test_issue_property_unset_omits_value_flag() -> None:
