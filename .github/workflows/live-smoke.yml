@@ -2,37 +2,250 @@ name: Live smoke
 
 on:
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open same-repository PR number to verify
+        required: true
+        type: string
+      candidate_sha:
+        description: Full 40-character candidate SHA to verify
+        required: true
+        type: string
+
+permissions: {}
 
 jobs:
-  live-smoke:
-    # The environment is protected in repository settings and requires approval.
-    # Never run prepared credentials against a contributor-selected dispatch ref.
+  # This controller is intentionally dispatchable only from the trusted default
+  # branch. The candidate SHA is data for checkout, never a workflow source.
+  authorize:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      deployments: read
+      pull-requests: read
+    outputs:
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+      head_sha: ${{ steps.resolve.outputs.head_sha }}
+    steps:
+      - name: Verify trusted controller and protected target
+        id: trust
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          TRUSTED_WORKFLOW_REF: ${{ vars.MULTICA_LIVE_TRUSTED_WORKFLOW_REF }}
+        run: |
+          set -eu
+          test -n "$DEFAULT_BRANCH"
+          test "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH"
+          test -n "$TRUSTED_WORKFLOW_REF"
+          test "$TRUSTED_WORKFLOW_REF" = "refs/heads/$DEFAULT_BRANCH"
+          test "$WORKFLOW_REF" = "$REPOSITORY/.github/workflows/live-smoke.yml@$TRUSTED_WORKFLOW_REF"
+
+          environment_payload="$(gh api "repos/$REPOSITORY/environments/multica-live")"
+          if ! printf '%s' "$environment_payload" | jq -e '
+            any(.protection_rules[]?;
+              .type == "required_reviewers" and ((.reviewers // []) | length > 0))
+            and (.deployment_branch_policy.protected_branches == true)
+          ' >/dev/null; then
+            echo 'multica-live environment protection is absent or incomplete' >&2
+            exit 1
+          fi
+
+          rulesets="$(gh api "repos/$REPOSITORY/rulesets?includes_parents=true")"
+          if ! printf '%s' "$rulesets" | jq -e --arg branch "refs/heads/$DEFAULT_BRANCH" '
+            any(.[];
+              .enforcement == "active"
+              and ((.conditions.ref_name.include // []) | index($branch) != null)
+              and any((.rules // [])[]?; .type == "required_deployments"))
+          ' >/dev/null; then
+            echo 'active default-branch deployment ruleset is absent' >&2
+            exit 1
+          fi
+
+      - name: Resolve and authorize current PR head
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          CANDIDATE_PR: ${{ inputs.pr_number }}
+        run: |
+          set -eu
+          if [ "${#CANDIDATE_SHA}" -ne 40 ]; then
+            echo 'candidate_sha must be a full commit SHA' >&2
+            exit 1
+          fi
+          case "$CANDIDATE_SHA" in
+            *[!0-9a-fA-F]*) echo 'candidate_sha must be a full commit SHA' >&2; exit 1 ;;
+          esac
+          case "$CANDIDATE_PR" in
+            ''|*[!0-9]*) echo 'pr_number must be numeric' >&2; exit 1 ;;
+          esac
+          payload="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${CANDIDATE_PR}")"
+          state="$(printf '%s' "$payload" | jq -r '.state // empty')"
+          head_repo="$(printf '%s' "$payload" | jq -r '.head.repo.full_name // empty')"
+          head_sha="$(printf '%s' "$payload" | jq -r '.head.sha // empty')"
+          if [ "$state" != open ]; then
+            echo 'candidate PR is not open' >&2
+            exit 1
+          fi
+          if [ "$head_repo" != "$GITHUB_REPOSITORY" ]; then
+            echo 'candidate PR must have a same-repository head' >&2
+            exit 1
+          fi
+          if [ "$head_sha" != "$CANDIDATE_SHA" ]; then
+            echo 'candidate SHA is not the current PR head' >&2
+            exit 1
+          fi
+          printf 'pr_number=%s\n' "$CANDIDATE_PR" >> "$GITHUB_OUTPUT"
+          printf 'head_sha=%s\n' "$head_sha" >> "$GITHUB_OUTPUT"
+
+  multica-live:
+    needs: authorize
+    if: ${{ needs.authorize.result == 'success' }}
     runs-on: [self-hosted, multica-live]
     environment: multica-live
     timeout-minutes: 10
     permissions:
       contents: read
+      pull-requests: read
     env:
       MULTICA_LIVE_CLI: ${{ vars.MULTICA_LIVE_CLI }}
-      MULTICA_LIVE_EXPECTED_VERSION: ${{ vars.MULTICA_LIVE_EXPECTED_VERSION }}
       MULTICA_LIVE_SERVER_URL: ${{ vars.MULTICA_LIVE_SERVER_URL }}
       MULTICA_LIVE_WORKSPACE_ID: ${{ vars.MULTICA_LIVE_WORKSPACE_ID }}
       MULTICA_LIVE_PROFILE: ${{ vars.MULTICA_LIVE_PROFILE }}
+      AUTHORIZED_PR_NUMBER: ${{ needs.authorize.outputs.pr_number }}
+      AUTHORIZED_HEAD_SHA: ${{ needs.authorize.outputs.head_sha }}
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Revalidate current PR head before candidate setup
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -eu
+          payload="$(gh api "repos/$REPOSITORY/pulls/$AUTHORIZED_PR_NUMBER")"
+          state="$(printf '%s' "$payload" | jq -r '.state // empty')"
+          head_repo="$(printf '%s' "$payload" | jq -r '.head.repo.full_name // empty')"
+          head_sha="$(printf '%s' "$payload" | jq -r '.head.sha // empty')"
+          test "$state" = open
+          test "$head_repo" = "$REPOSITORY"
+          test "$head_sha" = "$AUTHORIZED_HEAD_SHA"
+
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ needs.authorize.outputs.head_sha }}
+          persist-credentials: false
+
+      - name: Check immutable checkout before setup
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$AUTHORIZED_HEAD_SHA"
+
       - uses: astral-sh/setup-uv@ecd24dd710f2fb0dca1693a67af11fc4a5c5ec84
         with:
           python-version: "3.12"
+
       - run: uv sync --frozen --all-groups
-      - name: Verify prepared environment
+
+      - name: Verify protected target and observed CLI version
+        id: cli
         run: |
           set -eu
           test -n "$MULTICA_LIVE_CLI"
-          test -n "$MULTICA_LIVE_EXPECTED_VERSION"
           test -n "$MULTICA_LIVE_SERVER_URL"
           test -n "$MULTICA_LIVE_WORKSPACE_ID"
           test -n "$MULTICA_LIVE_PROFILE"
-      - run: make live
+          cli_path="$(command -v "$MULTICA_LIVE_CLI" || true)"
+          test -n "$cli_path"
+          test -x "$cli_path"
+          observed_json="$("$cli_path" version --output json 2>/dev/null)"
+          observed_version="$(printf '%s' "$observed_json" | jq -r '.version // empty')"
+          test "$observed_version" = "0.6.2"
+          printf 'observed_cli_version=%s\n' "$observed_version" >> "$GITHUB_OUTPUT"
+          printf 'resolved_cli_path=%s\n' "$cli_path" >> "$GITHUB_OUTPUT"
+          printf 'MULTICA_LIVE_CLI=%s\n' "$cli_path" >> "$GITHUB_ENV"
+
+      - name: Run strict CLI 0.6.2 live suite
+        id: live
+        run: |
+          set +e
+          umask 077
+          raw_log="$RUNNER_TEMP/multica-live-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.log"
+          exit_file="$RUNNER_TEMP/multica-live-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.exit"
+          make live > "$raw_log" 2>&1
+          test_status=$?
+          printf '%s\n' "$test_status" > "$exit_file"
+          exit "$test_status"
+
+      - name: Revalidate PR head after suite
+        id: postcheck
+        if: always()
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -eu
+          payload="$(gh api "repos/$REPOSITORY/pulls/$AUTHORIZED_PR_NUMBER")"
+          state="$(printf '%s' "$payload" | jq -r '.state // empty')"
+          head_repo="$(printf '%s' "$payload" | jq -r '.head.repo.full_name // empty')"
+          head_sha="$(printf '%s' "$payload" | jq -r '.head.sha // empty')"
+          test "$state" = open
+          test "$head_repo" = "$REPOSITORY"
+          test "$head_sha" = "$AUTHORIZED_HEAD_SHA"
+          test "$(git rev-parse HEAD)" = "$AUTHORIZED_HEAD_SHA"
+
+      - name: Write sanitized exact-SHA evidence
+        id: evidence
+        if: always()
+        env:
+          OBSERVED_CLI_VERSION: ${{ steps.cli.outputs.observed_cli_version }}
+          POSTCHECK_RESULT: ${{ steps.postcheck.outcome }}
+          CLI_RESULT: ${{ steps.cli.outcome }}
+          LIVE_RESULT: ${{ steps.live.outcome }}
+        run: |
+          set -eu
+          evidence_dir="$RUNNER_TEMP/multica-live-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$evidence_dir"
+          checkout_sha="$(git rev-parse HEAD 2>/dev/null || printf '%s' unknown)"
+          exit_file="$RUNNER_TEMP/multica-live-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.exit"
+          test_status="$(cat "$exit_file" 2>/dev/null || printf '%s' 125)"
+          case "$test_status" in ''|*[!0-9]*) test_status=125 ;; esac
+          jq -n \
+            --arg run_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg pr_number "$AUTHORIZED_PR_NUMBER" \
+            --arg candidate_sha "$AUTHORIZED_HEAD_SHA" \
+            --arg checkout_sha "$checkout_sha" \
+            --arg observed_cli_version "${OBSERVED_CLI_VERSION:-unavailable}" \
+            --arg cli_result "$CLI_RESULT" \
+            --arg live_result "$LIVE_RESULT" \
+            --arg postcheck_result "$POSTCHECK_RESULT" \
+            --argjson test_exit_code "$test_status" \
+            --argjson commands '["make live"]' \
+            '{schema:"multica-live-v2",workflow_run:$run_url,pr_number:$pr_number,candidate_sha:$candidate_sha,checkout_sha:$checkout_sha,cli_version_expected:"0.6.2",cli_version_observed:$observed_cli_version,scenario_outcomes:{authorization:"passed",cli_preflight:$cli_result,suite:$live_result,post_suite_revalidation:$postcheck_result},commands:$commands,test_exit_code:$test_exit_code,cleanup:{raw_log:"runner-temp-only",upload_allowlist:"manifest.json,cleanup.txt",raw_log_removed:"pending"},credentials:"not recorded"}' \
+            > "$evidence_dir/manifest.json"
+          printf '%s\n' 'Raw logs remain outside the upload allowlist and are removed by the final cleanup step.' > "$evidence_dir/cleanup.txt"
+          test -s "$evidence_dir/manifest.json"
+          test -s "$evidence_dir/cleanup.txt"
+          printf 'evidence_dir=%s\n' "$evidence_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Upload sanitized evidence allowlist
+        if: always() && steps.evidence.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoke-evidence-${{ needs.authorize.outputs.head_sha }}
+          path: |
+            ${{ steps.evidence.outputs.evidence_dir }}/manifest.json
+            ${{ steps.evidence.outputs.evidence_dir }}/cleanup.txt
+          retention-days: 14
+
+      - name: Remove runner-owned raw log and evidence
+        if: always()
+        run: |
+          set -eu
+          rm -f "$RUNNER_TEMP/multica-live-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.log"
+          rm -f "$RUNNER_TEMP/multica-live-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.exit"
+          rm -f "$RUNNER_TEMP/multica-live-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/manifest.json"
+          rm -f "$RUNNER_TEMP/multica-live-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/cleanup.txt"
+          rmdir "$RUNNER_TEMP/multica-live-evidence-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" 2>/dev/null || true
