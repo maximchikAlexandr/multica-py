@@ -197,14 +197,19 @@ def _run_authorization(
         "DEFAULT_BRANCH": "main",
         "WORKFLOW_REF": "acme/multica/.github/workflows/live-smoke.yml@refs/heads/main",
         "TRUSTED_WORKFLOW_REF": "refs/heads/main",
+        "EXPECTED_REVIEWER_ID": "17",
         "CANDIDATE_SHA": _SHA,
         "CANDIDATE_PR": "101",
         "FAKE_PR_JSON": json.dumps(pr_payload),
         "FAKE_ENV_JSON": json.dumps(
             environment_payload
             or {
+                "prevent_self_review": True,
                 "protection_rules": [
-                    {"type": "required_reviewers", "reviewers": [{"login": "reviewer"}]}
+                    {
+                        "type": "required_reviewers",
+                        "reviewers": [{"reviewer": {"id": 17, "type": "User"}}],
+                    }
                 ],
                 "deployment_branch_policy": {"protected_branches": True},
             }
@@ -214,7 +219,12 @@ def _run_authorization(
                 {
                     "enforcement": "active",
                     "conditions": {"ref_name": {"include": ["refs/heads/main"]}},
-                    "rules": [{"type": "required_deployments"}],
+                    "rules": [
+                        {
+                            "type": "required_deployments",
+                            "parameters": {"required_deployment_environments": ["multica-live"]},
+                        }
+                    ],
                 }
             ]
         ),
