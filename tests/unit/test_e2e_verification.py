@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
-import yaml
 
 from multica_py.exceptions import NotFoundError
 from multica_py.models.issues import IssuePropertyAssignment
@@ -160,11 +160,26 @@ def _manifest(output: Path) -> dict[str, Any]:
 
 
 def _workflow_run(step_id: str) -> str:
-    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
-    for step in workflow["jobs"]["authorize"]["steps"]:
-        if step.get("id") == step_id:
-            return step["run"]
-    raise AssertionError(f"missing workflow step {step_id}")
+    lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
+    step_marker = f"        id: {step_id}"
+    try:
+        step_index = lines.index(step_marker)
+    except ValueError as exc:
+        raise AssertionError(f"missing workflow step {step_id}") from exc
+
+    try:
+        run_index = next(
+            index for index in range(step_index + 1, len(lines)) if lines[index] == "        run: |"
+        )
+    except StopIteration as exc:
+        raise AssertionError(f"missing run block for workflow step {step_id}") from exc
+
+    block: list[str] = []
+    for line in lines[run_index + 1 :]:
+        if line.startswith("      - ") or (line.startswith("  ") and not line.startswith("    ")):
+            break
+        block.append(line)
+    return textwrap.dedent("\n".join(block)).strip() + "\n"
 
 
 def _run_authorization(
@@ -248,20 +263,20 @@ def _run_authorization(
     return resolved, output.read_text(encoding="utf-8") if output.exists() else ""
 
 
-def test_sanitize_redacts_serialized_and_header_credentials() -> None:
-    values = (
-        '{"token":"quoted-secret"}',
-        '{"Authorization":"Bearer bearer-secret"}',
-        "Authorization: Bearer header-secret",
-        "https://user:password@example.test/private",
-    )
-    for value in values:
-        redacted = verifier._sanitize(value)
-        assert all(
-            secret not in redacted
-            for secret in ("quoted-secret", "bearer-secret", "header-secret", "password")
-        )
-        assert "example.test" not in redacted
+_SANITIZER_CASES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ('{"token":"quoted-secret"}', ("quoted-secret",)),
+    ('{"Authorization":"Bearer bearer-secret"}', ("bearer-secret",)),
+    ("Authorization: Bearer header-secret", ("header-secret",)),
+    ("https://user:password@example.test/private", ("password", "example.test")),
+)
+
+
+@pytest.mark.parametrize(("value", "secrets"), _SANITIZER_CASES)
+def test_sanitize_redacts_serialized_and_header_credentials(
+    value: str, secrets: tuple[str, ...]
+) -> None:
+    redacted = verifier._sanitize(value)
+    assert all(secret not in redacted for secret in secrets)
 
 
 def test_artifact_output_rejects_git_checkout(tmp_path: Path) -> None:
@@ -377,6 +392,7 @@ def test_live_workflow_authorizes_trusted_exact_head_and_sanitized_graph() -> No
     assert "github.event.repository.default_branch" in workflow
     assert "github.workflow_ref" in workflow
     assert "MULTICA_LIVE_TRUSTED_WORKFLOW_REF" in workflow
+    assert 'MULTICA_LIVE_EXPECTED_VERSION: "0.6.2"' in workflow
     assert "environments/multica-live" in workflow
     assert "required_reviewers" in workflow
     assert "required_deployments" in workflow

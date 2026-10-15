@@ -622,7 +622,6 @@ test = [
     { name = "pytest-cov" },
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
-    { name = "pyyaml" },
 ]
 type-check = [
     { name = "mypy" },
@@ -646,7 +645,6 @@ test = [
     { name = "pytest-cov", specifier = ">=5" },
     { name = "pytest-timeout", specifier = ">=2.4,<3" },
     { name = "pytest-xdist", specifier = ">=3,<4" },
-    { name = "pyyaml", specifier = ">=6.0,<7" },
 ]
 type-check = [{ name = "mypy", specifier = ">=1.8" }]
 
