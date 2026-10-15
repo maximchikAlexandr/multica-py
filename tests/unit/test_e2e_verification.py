@@ -14,6 +14,7 @@ import pytest
 from multica_py.exceptions import NotFoundError
 from multica_py.models.issues import IssuePropertyAssignment
 from scripts.e2e import verify_multica_test as verifier
+from tests.unit.resources.e2e_cases import SANITIZER_CASES, SanitizerCase
 
 ROOT = Path(__file__).parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "live-smoke.yml"
@@ -182,6 +183,14 @@ def _workflow_run(step_id: str) -> str:
     return textwrap.dedent("\n".join(block)).strip() + "\n"
 
 
+def _protected_job_env() -> str:
+    text = WORKFLOW.read_text(encoding="utf-8")
+    job_start = text.index("\n  multica-live:\n")
+    env_start = text.index("\n    env:\n", job_start)
+    env_end = text.index("\n    steps:\n", env_start)
+    return text[env_start:env_end]
+
+
 def _run_authorization(
     tmp_path: Path,
     *,
@@ -263,20 +272,10 @@ def _run_authorization(
     return resolved, output.read_text(encoding="utf-8") if output.exists() else ""
 
 
-_SANITIZER_CASES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ('{"token":"quoted-secret"}', ("quoted-secret",)),
-    ('{"Authorization":"Bearer bearer-secret"}', ("bearer-secret",)),
-    ("Authorization: Bearer header-secret", ("header-secret",)),
-    ("https://user:password@example.test/private", ("password", "example.test")),
-)
-
-
-@pytest.mark.parametrize(("value", "secrets"), _SANITIZER_CASES)
-def test_sanitize_redacts_serialized_and_header_credentials(
-    value: str, secrets: tuple[str, ...]
-) -> None:
-    redacted = verifier._sanitize(value)
-    assert all(secret not in redacted for secret in secrets)
+@pytest.mark.parametrize("case", SANITIZER_CASES, ids=lambda case: case.name)
+def test_sanitize_redacts_serialized_and_header_credentials(case: SanitizerCase) -> None:
+    redacted = verifier._sanitize(case.value)
+    assert all(secret not in redacted for secret in case.secrets)
 
 
 def test_artifact_output_rejects_git_checkout(tmp_path: Path) -> None:
@@ -389,6 +388,7 @@ def test_walkthrough_uses_pinned_wrapper_and_strict_target() -> None:
 
 def test_live_workflow_authorizes_trusted_exact_head_and_sanitized_graph() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
+    protected_env = _protected_job_env()
     assert "github.event.repository.default_branch" in workflow
     assert "github.workflow_ref" in workflow
     assert "MULTICA_LIVE_TRUSTED_WORKFLOW_REF" in workflow
@@ -399,8 +399,8 @@ def test_live_workflow_authorizes_trusted_exact_head_and_sanitized_graph() -> No
         "MULTICA_LIVE_WORKSPACE_ID",
         "MULTICA_LIVE_PROFILE",
     ):
-        assert variable in workflow
-    assert 'MULTICA_LIVE_EXPECTED_VERSION: "0.6.2"' in workflow
+        assert f"      {variable}:" in protected_env
+    assert '      MULTICA_LIVE_EXPECTED_VERSION: "0.6.2"' in protected_env
     assert "environments/multica-live" in workflow
     assert "required_reviewers" in workflow
     assert "required_deployments" in workflow
