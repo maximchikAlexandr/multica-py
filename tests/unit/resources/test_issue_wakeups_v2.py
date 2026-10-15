@@ -536,14 +536,20 @@ def test_update_is_full_replacement_and_reenables_with_valid_response() -> None:
         update_args(wakeups(transport), event_types=("comment.created",)).run()
 
 
-def _wakeup_identity_and_expiry(result: object) -> object:
+def test_wakeup_decodes_optional_last_error(mock_transport: MagicMock) -> None:
+    mock_transport.run_bytes.return_value = command_result(wakeup_payload(last_error="failed"))
+    result = wakeups(mock_transport).get("iss-1", "wake-1")
+    assert result.last_error == "failed"
+
+
+def _wakeup_identity_expiry_and_error(result: object) -> object:
     wakeup = cast("IssueWakeup", result)
-    return wakeup.id, wakeup.expires_in_seconds
+    return wakeup.id, wakeup.expires_in_seconds, wakeup.last_error
 
 
-def _list_wakeup_expiry(result: object) -> object:
+def _list_wakeup_identity_expiry_and_error(result: object) -> object:
     wakeup = cast("IssueWakeupPage", result).items[0]
-    return wakeup.id, wakeup.expires_in_seconds
+    return wakeup.id, wakeup.expires_in_seconds, wakeup.last_error
 
 
 def _event_optional_fields(result: object) -> object:
@@ -565,6 +571,7 @@ _V2_NULL_WAKEUP = wakeup_payload(
     paused=None,
     condition=None,
     provenance=None,
+    last_error=None,
 )
 _V2_VALID_WAKEUP = wakeup_payload(
     expires_in_seconds=3600,
@@ -575,6 +582,7 @@ _V2_VALID_WAKEUP = wakeup_payload(
     paused=False,
     condition={"status": "done"},
     provenance={"source": "system"},
+    last_error="last run failed",
 )
 _V2_OMITTED_EVENTS = b'{"event_types":[{"name":"comment.created"}]}'
 _V2_NULL_EVENTS = (
@@ -615,16 +623,69 @@ def _identity_payload(payload: bytes) -> bytes:
 
 
 _V2_WAKEUP_VARIANTS = (
-    _V2Variant("omitted", _V2_OMITTED_WAKEUP, ("wake-1", None)),
-    _V2Variant("null", _V2_NULL_WAKEUP, ("wake-1", None)),
-    _V2Variant("valid", _V2_VALID_WAKEUP, ("wake-1", 3600)),
+    _V2Variant("omitted", _V2_OMITTED_WAKEUP, ("wake-1", None, None)),
+    _V2Variant("null", _V2_NULL_WAKEUP, ("wake-1", None, None)),
+    _V2Variant("valid", _V2_VALID_WAKEUP, ("wake-1", 3600, "last run failed")),
+    _V2Variant(
+        "diagnostic-snapshots-unavailable",
+        wakeup_payload(
+            last_error=(
+                "Condition pending: PR checks cannot be evaluated: GitHub snapshot refresh "
+                "is unavailable on this server; ask the server administrator to configure "
+                "the GitHub App snapshot client"
+            )
+        ),
+        (
+            "wake-1",
+            None,
+            "Condition pending: PR checks cannot be evaluated: GitHub snapshot refresh "
+            "is unavailable on this server; ask the server administrator to configure "
+            "the GitHub App snapshot client",
+        ),
+    ),
+    _V2Variant(
+        "diagnostic-not-linked",
+        wakeup_payload(
+            last_error=(
+                "Condition pending: No pull request is linked to this issue; link the PR "
+                "to this issue (a parent issue's PR is not included), or wait for the "
+                "linking webhook"
+            )
+        ),
+        (
+            "wake-1",
+            None,
+            "Condition pending: No pull request is linked to this issue; link the PR "
+            "to this issue (a parent issue's PR is not included), or wait for the "
+            "linking webhook",
+        ),
+    ),
+    _V2Variant(
+        "diagnostic-snapshot-pending",
+        wakeup_payload(
+            last_error=(
+                "Condition pending: PR check snapshot is not available yet; inspect this "
+                "issue's pull-requests snapshot_available field and ask the server "
+                "administrator to check snapshot refresh if it persists"
+            )
+        ),
+        (
+            "wake-1",
+            None,
+            "Condition pending: PR check snapshot is not available yet; inspect this "
+            "issue's pull-requests snapshot_available field and ask the server "
+            "administrator to check snapshot refresh if it persists",
+        ),
+    ),
 )
 _V2_WAKEUP_ENTRYPOINTS = (
-    _V2Entrypoint("create", _create_command, _wakeup_identity_and_expiry, _identity_payload),
-    _V2Entrypoint("update", _update_command, _wakeup_identity_and_expiry, _identity_payload),
-    _V2Entrypoint("list", _list_command, _list_wakeup_expiry, _list_response),
-    _V2Entrypoint("get", _get_command, _wakeup_identity_and_expiry, _identity_payload),
-    _V2Entrypoint("disable", _disable_command, _wakeup_identity_and_expiry, _identity_payload),
+    _V2Entrypoint("create", _create_command, _wakeup_identity_expiry_and_error, _identity_payload),
+    _V2Entrypoint("update", _update_command, _wakeup_identity_expiry_and_error, _identity_payload),
+    _V2Entrypoint("list", _list_command, _list_wakeup_identity_expiry_and_error, _list_response),
+    _V2Entrypoint("get", _get_command, _wakeup_identity_expiry_and_error, _identity_payload),
+    _V2Entrypoint(
+        "disable", _disable_command, _wakeup_identity_expiry_and_error, _identity_payload
+    ),
 )
 _V2_EVENT_VARIANTS = (
     _V2Variant("omitted", _V2_OMITTED_EVENTS, ("comment.created", None, None)),
@@ -658,12 +719,44 @@ _V2_DECODE_CASES = tuple(
 
 @pytest.mark.parametrize("case", _V2_DECODE_CASES, ids=lambda case: case.name)
 def test_six_evolved_entrypoints_decode_optional_v2_response_states(
-    case: _V2DecodeCase,
+    case: _V2DecodeCase, mock_transport: MagicMock
 ) -> None:
-    transport = make_transport()
-    transport.run_bytes.return_value = command_result(case.payload)
-    result = cast("Command[object]", case.command_builder(wakeups(transport))).run()
+    mock_transport.run_bytes.return_value = command_result(case.payload)
+    result = cast("Command[object]", case.command_builder(wakeups(mock_transport))).run()
     assert case.extract(result) == case.expected
+
+
+_V2_RECOVERY_DIAGNOSTICS = tuple(
+    cast("tuple[str, object, str]", variant.expected)[2]
+    for variant in _V2_WAKEUP_VARIANTS
+    if variant.name.startswith("diagnostic-")
+)
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    _V2_RECOVERY_DIAGNOSTICS,
+    ids=("snapshots-unavailable", "not-linked", "snapshot-pending"),
+)
+@pytest.mark.parametrize(
+    "healthy_payload",
+    (wakeup_payload(last_error=None), wakeup_payload()),
+    ids=("explicit-null", "omitted"),
+)
+def test_wakeup_last_error_clears_after_recovery(
+    diagnostic: str, healthy_payload: bytes, mock_transport: MagicMock
+) -> None:
+    mock_transport.run_bytes.side_effect = [
+        command_result(wakeup_payload(last_error=diagnostic)),
+        command_result(healthy_payload),
+    ]
+    resource = wakeups(mock_transport)
+
+    pending = resource.get("iss-1", "wake-1")
+    healthy = resource.get("iss-1", "wake-1")
+
+    assert pending.last_error == diagnostic
+    assert healthy.last_error is None
 
 
 @dataclass(frozen=True)

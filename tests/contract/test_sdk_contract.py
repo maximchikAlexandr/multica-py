@@ -45,16 +45,16 @@ def test_approved_inventory_and_response_audit_are_complete() -> None:
     compatibility = cast("dict[str, object]", contract.raw["compatibility"])
     response_audit = cast("dict[str, int]", compatibility["response_audit"])
 
-    assert inventory.target_nodes == 205
+    assert inventory.target_nodes == 209
     assert inventory.baseline_nodes == 205
-    assert inventory.added == 0
+    assert inventory.added == 4
     assert inventory.changed == 2
     assert inventory.removed == 0
     assert len(contract.operations) == 193
     assert len(contract.compatibility.response_registry) == 196
     assert response_audit["supported_entrypoints"] == 196
-    assert response_audit["changed"] == 9
-    assert response_audit["unchanged"] == 187
+    assert response_audit["changed"] == 8
+    assert response_audit["unchanged"] == 188
 
     typed_rows = [
         item
@@ -84,9 +84,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.6.1'" in runtime
+    assert b"TARGET_VERSION = '0.6.2'" in runtime
     assert b"MIN_CLI_VERSION = '0.6.0'" in runtime
-    assert b"MAX_CLI_VERSION = '0.6.2'" in runtime
+    assert b"MAX_CLI_VERSION = '0.6.3'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -350,10 +350,10 @@ def test_retained_inventory_is_reconciled() -> None:
     assert len(contract.compatibility.response_registry) == 196
     assert (
         sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
-        == 187
+        == 188
     )
     assert (
-        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 9
+        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 8
     )
     assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
 

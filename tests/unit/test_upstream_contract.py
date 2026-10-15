@@ -503,12 +503,12 @@ def test_response_registry_has_target_ranges_and_explicit_removals() -> None:
     assert {
         url.split("/blob/")[1].split("/")[0] for item in registry for url in item.source_urls
     } == {
-        "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02",
         "2ea01ae4ef55de4310b99af192d2dbd367832883",
+        "7ab92d7622ecd81d179a8d83ae2dea74835a5069",
     }
     assert all("#L1-L1" not in url for item in registry for url in item.source_urls)
     assert not any(item.operation_id.startswith("plugins.") for item in registry)
-    assert sum(item.disposition == "changed" for item in registry) == 9
+    assert sum(item.disposition == "changed" for item in registry) == 8
     assert all(
         all(token in item.action for token in ("model=", "fixture=", "docs=")) for item in registry
     )
@@ -772,15 +772,15 @@ def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     )
 
 
-def test_current_target_and_source_refs_are_pinned_to_v061() -> None:
+def test_current_target_and_source_refs_are_pinned_to_v062() -> None:
     contract = load_contract(APPROVED)
-    assert contract.target.version == "0.6.1"
-    assert contract.target.tag == "v0.6.1"
-    assert contract.target.commit == "2ea01ae4ef55de4310b99af192d2dbd367832883"
-    assert contract.target.release_id == "400860726"
+    assert contract.target.version == "0.6.2"
+    assert contract.target.tag == "v0.6.2"
+    assert contract.target.commit == "7ab92d7622ecd81d179a8d83ae2dea74835a5069"
+    assert contract.target.release_id == "411568605"
     assert (
         contract.target.release_provenance_ref
-        == ".devlocal/upstream-contract/v0.6.0..v0.6.1/release/release-verification.json"
+        == ".devlocal/upstream-contract/v0.6.1..v0.6.2/release/release-verification.json"
     )
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
     stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
@@ -890,6 +890,14 @@ def test_compatibility_binary_and_release_provenance_are_exact() -> None:
             os="darwin",
             arch="arm64",
         ),
+        VerifiedBinary(
+            version="0.6.2",
+            commit="7ab92d7622ecd81d179a8d83ae2dea74835a5069",
+            build_date="2026-10-13T10:45:01Z",
+            go_version="go1.26.9",
+            os="darwin",
+            arch="arm64",
+        ),
     )
     assert compatibility.release_artifacts == (
         ReleaseArtifact(
@@ -910,6 +918,15 @@ def test_compatibility_binary_and_release_provenance_are_exact() -> None:
             executable_sha256="a6a73b6c13a8da4fe9591b0884ee24aaac8a8f0913f1dfb3d8d34eda6a23371e",
             version_output_sha256="c6f360978000921093c3232e866003ac0038a80cfcb801707c52021981eec086",
         ),
+        ReleaseArtifact(
+            version="0.6.2",
+            tag="v0.6.2",
+            release_id="411568605",
+            asset_name="multica-cli-0.6.2-darwin-arm64.tar.gz",
+            archive_sha256="fc6651c46bfe11724d38f8cfea4bf421d8c61d00e9cfc3e7766d20b992694f31",
+            executable_sha256="dd33644e6b6860cd618bb8407e9213649e0bf1c9bb23ef30a5f9b39ac851bb27",
+            version_output_sha256="82fbdffce4eab90f6e08e462a77dddcf1ef5a7663f8f033585a4c5123577b9eb",
+        ),
     )
 
 
@@ -918,15 +935,20 @@ def test_compatibility_command_inventory_is_reconciled() -> None:
     assert compatibility.command_inventory == replace(
         compatibility.command_inventory,
         baseline_nodes=205,
-        target_nodes=205,
+        target_nodes=209,
         unchanged=203,
         changed=2,
-        added=0,
+        added=4,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
         changed_commands=("issue status", "issue update"),
-        added_commands=(),
+        added_commands=(
+            "daemon autostart",
+            "daemon autostart enable",
+            "daemon autostart disable",
+            "daemon autostart status",
+        ),
     )
     assert (
         len(compatibility.command_inventory.added_commands) == compatibility.command_inventory.added
@@ -945,7 +967,7 @@ def test_compatibility_reviewed_response_bounds_are_exact() -> None:
     assert (
         compatibility.min_cli_version,
         compatibility.max_tested_cli_version,
-    ) == ("0.6.0", "0.6.1")
+    ) == ("0.6.0", "0.6.2")
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
         "agents.tasks",
         "labels.create",
@@ -1082,7 +1104,7 @@ def test_public_inventory_rejects_incomplete_identity_coverage(tmp_path: pathlib
 
 
 def test_generated_runtime_contains_reviewed_inventory() -> None:
-    assert len(approved_sdk.PUBLIC_INVENTORY) == 693
+    assert len(approved_sdk.PUBLIC_INVENTORY) == 696
     assert approved_sdk.PUBLIC_INVENTORY[0].disposition in {
         "typed",
         "typed-equivalent",
@@ -1106,7 +1128,7 @@ def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     assert json.loads(files[2].content) == {
         "max_cli_version": "0.4.36",
         "min_cli_version": "0.4.27",
-        "target_version": "0.6.1",
+        "target_version": "0.6.2",
     }
 
 

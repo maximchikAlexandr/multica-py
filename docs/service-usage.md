@@ -46,9 +46,9 @@ issue = workspace_client.issues.get("issue_456")
 Derived views keep independent immutable configuration and share the original
 process semaphore. Closing one view does not close another.
 
-## Use the v0.6.1 response and lifecycle surfaces
+## Use the v0.6.2 response and lifecycle surfaces
 
-The approved direct upgrade from CLI/SDK `0.6.0` to `0.6.1` keeps offline
+The approved direct upgrade from CLI/SDK `0.6.1` to `0.6.2` keeps offline
 compatibility separate from live backend status. Wakeups expose v2 fields and
 typed lifecycle actions through the existing resource:
 
@@ -80,7 +80,9 @@ The SDK validates local attachment paths before I/O, requires explicit
 `allow_external_file=True` for paths outside the working directory, and does
 not retry a target failure after upload. Omitted and explicit-null response
 fields remain distinct, and unknown forward-compatible status/action values are
-preserved.
+preserved. Multi-value text and URL properties are passed as immutable tuples;
+the SDK emits compact JSON arrays, deduplicated in first-seen order. Wakeups
+expose `last_error` when present, while daemon status exposes `cli_commit`.
 
 Duplicate issue transitions are explicit and atomic:
 

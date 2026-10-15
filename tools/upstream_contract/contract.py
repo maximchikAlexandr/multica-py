@@ -40,8 +40,8 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "ea94c7cd5bbce9c8e1f28c5fa049c47ee7651d02"
-_TARGET_COMMIT = "2ea01ae4ef55de4310b99af192d2dbd367832883"
+_BASELINE_COMMIT = "2ea01ae4ef55de4310b99af192d2dbd367832883"
+_TARGET_COMMIT = "7ab92d7622ecd81d179a8d83ae2dea74835a5069"
 _TAG_KINDS = frozenset(
     {
         "primitive",
@@ -2729,10 +2729,10 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         != 196
     ):
         raise ContractError("response audit must cover exactly 196 supported entrypoints")
-    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 9:
-        raise ContractError("response audit must contain exactly 9 changed entrypoints")
-    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 187:
-        raise ContractError("response audit must contain exactly 187 unchanged entrypoints")
+    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 8:
+        raise ContractError("response audit must contain exactly 8 changed entrypoints")
+    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 188:
+        raise ContractError("response audit must contain exactly 188 unchanged entrypoints")
     changed_entrypoints = tuple(
         _str(value, "compatibility.response_audit.changed_entrypoints")
         for value in _list(
@@ -2740,8 +2740,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "compatibility.response_audit.changed_entrypoints",
         )
     )
-    if len(changed_entrypoints) != 9:
-        raise ContractError("response audit must list exactly 9 changed entrypoints")
+    if len(changed_entrypoints) != 8:
+        raise ContractError("response audit must list exactly 8 changed entrypoints")
     compatibility = Compatibility(
         min_cli_version=bounds[0],
         max_tested_cli_version=bounds[1],
@@ -2947,33 +2947,38 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.annotated_tag_object,
         contract.target.peeled_commit,
     ) != (
-        "0.6.1",
-        "v0.6.1",
-        "2ea01ae4ef55de4310b99af192d2dbd367832883",
-        "400860726",
-        ".devlocal/upstream-contract/v0.6.0..v0.6.1/release/release-verification.json",
-        "09e5d78ad340c46dec83839e858632e96c2b07a0",
-        "2ea01ae4ef55de4310b99af192d2dbd367832883",
+        "0.6.2",
+        "v0.6.2",
+        "7ab92d7622ecd81d179a8d83ae2dea74835a5069",
+        "411568605",
+        ".devlocal/upstream-contract/v0.6.1..v0.6.2/release/release-verification.json",
+        "0854695681139a5b0dce03aaf3583752a65409ed",
+        "7ab92d7622ecd81d179a8d83ae2dea74835a5069",
     ):
-        raise ContractError("approved contract must target Multica v0.6.1")
+        raise ContractError("approved contract must target Multica v0.6.2")
     if contract.target.peeled_commit != contract.target.commit:
         raise ContractError("target.peeled_commit must equal target.commit")
     if contract.compatibility.command_inventory != CommandInventory(
         baseline_nodes=205,
-        target_nodes=205,
+        target_nodes=209,
         unchanged=203,
         changed=2,
-        added=0,
+        added=4,
         removed=0,
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
-        added_commands=(),
+        added_commands=(
+            "daemon autostart",
+            "daemon autostart enable",
+            "daemon autostart disable",
+            "daemon autostart status",
+        ),
         changed_commands=(
             "issue status",
             "issue update",
         ),
     ):
-        raise ContractError("command inventory does not match the approved 0.6.0/0.6.1 review")
+        raise ContractError("command inventory does not match the approved 0.6.1/0.6.2 review")
     expected_artifacts = {
         "0.6.0": (
             "v0.6.0",
@@ -2990,6 +2995,14 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             "f2cc3ef1a142bbf5f419d625cd98323602ca96007b4b29f2e0068439be32a2e9",
             "a6a73b6c13a8da4fe9591b0884ee24aaac8a8f0913f1dfb3d8d34eda6a23371e",
             "c6f360978000921093c3232e866003ac0038a80cfcb801707c52021981eec086",
+        ),
+        "0.6.2": (
+            "v0.6.2",
+            "411568605",
+            "multica-cli-0.6.2-darwin-arm64.tar.gz",
+            "fc6651c46bfe11724d38f8cfea4bf421d8c61d00e9cfc3e7766d20b992694f31",
+            "dd33644e6b6860cd618bb8407e9213649e0bf1c9bb23ef30a5f9b39ac851bb27",
+            "82fbdffce4eab90f6e08e462a77dddcf1ef5a7663f8f033585a4c5123577b9eb",
         ),
     }
     actual_artifacts = {
@@ -3019,8 +3032,8 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
         for disposition in ("unchanged", "changed")
     }
-    if dispositions != {"unchanged": 187, "changed": 9}:
-        raise ContractError("response registry must contain 187 unchanged and 9 changed items")
+    if dispositions != {"unchanged": 188, "changed": 8}:
+        raise ContractError("response registry must contain 188 unchanged and 8 changed items")
     expected_lifecycle = {
         "issue_wakeup_trigger": (
             ("issue", "wakeup", "trigger"),

@@ -31,17 +31,17 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
-The approved SDK target is Multica CLI `0.6.1` at commit
-`2ea01ae4ef55de4310b99af192d2dbd367832883` (release `400860726`), with
-compatibility interval `[0.6.0, 0.6.2)`. Migrate directly from CLI/SDK
-`0.6.0`; no intermediate SDK release is supported. The typed surface covers
-205 target command nodes (203 unchanged and two adapted), 193 operations, and 196 response entrypoints,
+The approved SDK target is Multica CLI `0.6.2` at commit
+`7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`), with
+compatibility interval `[0.6.0, 0.6.3)`. Migrate directly from CLI/SDK
+`0.6.1`; no intermediate SDK release is supported. The typed surface covers
+209 target command nodes (203 unchanged, two adapted, and four CLI-only daemon-autostart leaves), 193 operations, and 196 response entrypoints,
 including wakeup v2 lifecycle actions, task cursors, issue attachments,
 comment supplements, pull-request auto-complete status, and workspace MCP
 agent counts. Inherited global flags and interactive login inputs remain
 represented by typed command plans; use `command.commands` to inspect
-redacted previews before execution. The exclusive `0.6.2` ceiling keeps the
-reviewed contract bounded.
+redacted previews before execution. The exclusive `0.6.3` ceiling keeps the
+reviewed contract bounded; `0.6.2` is the maximum tested release.
 
 Issue responses expose the immutable `duplicate_of` snapshot when supplied;
 omitted and explicit-null values remain distinguishable through wire presence.
@@ -50,14 +50,17 @@ omitted and explicit-null values remain distinguishable through wire presence.
 Issue creation accepts ordered atomic properties through
 `IssuePropertyAssignment`; the pinned CLI remains responsible for property
 catalog, type, canonicalization, duplicate, archived, capability, atomicity,
-and post-create validation. Existing label attachment remains a separate
-post-create workflow.
+and post-create validation. Multi-value text and URL properties use immutable
+tuples and compact JSON-array wire values with stable first-occurrence
+deduplication. Existing label attachment remains a separate post-create
+workflow. Wakeup responses expose optional `last_error`; daemon status exposes
+the CLI commit when the binary reports it.
 
 Task-supplement mutation/receipt APIs, duplicate receipt and PR automation,
 UI cache calculations, daemon identity, messaging/media, mobile, localization,
 and pricing changes remain outside this SDK. On a failed target acceptance,
 roll back the contract, generated runtime, fixtures, docs, and package claims
-together to the prior `0.6.0` state.
+together to the directly reviewed prior `0.6.1` state.
 See [the migration guide](docs/migration.md) for presence/error semantics,
 version gates, deferred surfaces, checksum roles, and rollback guidance.
 
@@ -86,7 +89,7 @@ page = client.issues.list(
 
 from multica_py.models.issues import IssuePropertyAssignment
 
-# Atomic create-time properties are sent in caller order; CLI 0.6.1 owns
+# Atomic create-time properties are sent in caller order; CLI 0.6.2 owns
 # catalog lookup, value canonicalization, and server-side atomicity.
 issue = client.issues.create(
     title="Release checklist",

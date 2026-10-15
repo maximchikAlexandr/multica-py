@@ -27,6 +27,15 @@ from multica_py.models.issues import (
     PullRequestAutoComplete,
 )
 from multica_py.models.project_resources import LocalDirectoryResourceRef, ProjectResourceRecord
+from multica_py.models.properties import (
+    PropertyDefinition,
+    PropertyInputValue,
+    PropertyListType,
+    PropertyListValue,
+    PropertyOption,
+    PropertyValue,
+    PropertyValueType,
+)
 from multica_py.models.relations import (
     CursorLazyCollection,
     CursorPage,
@@ -79,6 +88,13 @@ __all__ = [
     "OffsetPage",
     "Page",
     "ProjectResourceRecord",
+    "PropertyDefinition",
+    "PropertyInputValue",
+    "PropertyListType",
+    "PropertyListValue",
+    "PropertyOption",
+    "PropertyValue",
+    "PropertyValueType",
     "PullRequestAutoComplete",
     "RelationMetadata",
     "RepositoryCheckoutResult",

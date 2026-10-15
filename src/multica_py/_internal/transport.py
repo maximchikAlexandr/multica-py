@@ -33,6 +33,7 @@ from multica_py.exceptions import (
     ConflictError,
     NetworkError,
     NotFoundError,
+    ProcessOutputCaptureError,
     ValidationError,
 )
 from multica_py.execution import CommandExecutor, ExecutionRequest, LocalExecutor
@@ -345,15 +346,29 @@ class CliTransport:
                     argv, stdin=stdin, file_contents=file_contents
                 )
                 diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
-                completed = self._executor.run(
-                    ExecutionRequest(
-                        argv=execution_argv,
-                        cwd=cwd,
-                        environment=environment,
-                        stdin=stdin,
-                        timeout=effective_timeout,
+                capture_error: str | None = None
+                try:
+                    completed = self._executor.run(
+                        ExecutionRequest(
+                            argv=execution_argv,
+                            cwd=cwd,
+                            environment=environment,
+                            stdin=stdin,
+                            timeout=effective_timeout,
+                        )
                     )
-                )
+                except ProcessOutputCaptureError as error:
+                    if command_args[:2] != ("attachment", "upload"):
+                        raise
+                    capture_error = redact_text(str(error), secret_values=secret_values)
+
+                if capture_error is not None:
+                    raise NetworkError(
+                        "Attachment upload failed while capturing CLI output",
+                        exit_code=2,
+                        stderr=capture_error,
+                        argv=diagnostic_argv,
+                    )
 
             duration = datetime.datetime.now(tz=datetime.UTC) - t0
             return RawCommandResult(
