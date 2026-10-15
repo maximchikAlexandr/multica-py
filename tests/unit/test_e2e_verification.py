@@ -392,6 +392,14 @@ def test_live_workflow_authorizes_trusted_exact_head_and_sanitized_graph() -> No
     assert "github.event.repository.default_branch" in workflow
     assert "github.workflow_ref" in workflow
     assert "MULTICA_LIVE_TRUSTED_WORKFLOW_REF" in workflow
+    for variable in (
+        "MULTICA_LIVE_CLI",
+        "MULTICA_LIVE_EXPECTED_VERSION",
+        "MULTICA_LIVE_SERVER_URL",
+        "MULTICA_LIVE_WORKSPACE_ID",
+        "MULTICA_LIVE_PROFILE",
+    ):
+        assert variable in workflow
     assert 'MULTICA_LIVE_EXPECTED_VERSION: "0.6.2"' in workflow
     assert "environments/multica-live" in workflow
     assert "required_reviewers" in workflow
