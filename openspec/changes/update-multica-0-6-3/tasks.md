@@ -21,6 +21,7 @@
 - [ ] 3.3 Extend existing daemon, wakeup, transport, attachment, and redaction tables for full/legacy CLI commit, reviewed diagnostics, stable safe errors, upload partial effects, and unchanged retained responses.
 - [ ] 3.4 Extend public discovery, signatures, canonical vectors, approved bindings, response closure, source-link, compatibility, and forbidden-content assertions so excluded surfaces remain absent and all 209/196 dispositions reconcile exactly.
 - [ ] 3.5 Update the protected live-smoke controller and existing public-SDK smoke cases to require exact CLI 0.6.3 and cover only the cross-component workflow/property behavior not proven by offline tests; do not add a parallel E2E framework.
+- [ ] 3.6 Add repository-owned `scripts/e2e/myl495_verify.sh` and `scripts/render_terminal.swift`: the shell driver SHALL acquire checksum-pinned baseline/target CLI archives, create isolated SDK checkouts/profiles/daemons/Compose state, provision and verify disposable property/workflow/project/issue fixtures through documented test-only server setup calls, run the approved C02-C04 walkthrough, and clean all disposable state on success or failure; the Swift renderer SHALL deterministically convert captured UTF-8 terminal text to PNG on macOS without an external repository or package.
 
 ## 4. Documentation and Release Coherence
 

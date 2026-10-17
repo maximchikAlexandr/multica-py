@@ -54,13 +54,13 @@ Alternative: create new diagnostic exception types. Rejected because callers nee
 
 ### 6. Keep verification layered and evidence external
 
-Implement exact table rows in existing unit/contract/component suites, extend live smoke only for cross-component behavior that lower layers cannot prove, and preserve all runtime outputs/images in Multica comments. Git contains reusable scripts/fixtures only when needed for the verified function, never captured evidence.
+Implement exact table rows in existing unit/contract/component suites, extend live smoke only for cross-component behavior that lower layers cannot prove, and preserve all runtime outputs/images in Multica comments. Git contains two small reusable verification tools required to make the independent run self-contained: one shell driver for pinned acquisition, fixture lifecycle, isolation, and cleanup, and one dependency-free macOS Swift text renderer. Captured evidence remains outside Git.
 
-Alternative: add a bespoke E2E harness. Rejected because current fake CLI, contract checks, package tests, and protected live workflow already cover the required layers.
+Alternative: depend on an unlisted `openspec-e2e-testing` repository or leave fixture setup to Tester judgment. Rejected because neither is a versioned project resource and neither is reproducible. A second test framework is still rejected: the driver invokes the existing live-smoke/public SDK surface and documented server setup endpoints; it does not replace pytest or own assertions already covered there.
 
 ## Ponytail Gate
 
-No new subsystem is required. The only plausible additions were a workflow client, property enum/conversion layer, daemon identity service, diagnostic exception hierarchy, and E2E framework; existing approved-contract, resource, wire-model, exception, and test-table mechanisms cover each need, so all are removed from scope.
+No new product subsystem is required. A workflow client, property enum/conversion layer, daemon identity service, diagnostic exception hierarchy, and second E2E framework all have existing alternatives in the approved-contract, resource, wire-model, exception, test-table, and protected live-smoke mechanisms, so they remain removed from scope. Two non-product verification artifacts are necessary: `scripts/e2e/myl495_verify.sh` has no existing owner/mechanism for pinned acquisition, isolated fixture lifecycle, and failure cleanup, so it stays as one thin orchestrator; `scripts/render_terminal.swift` replaces the unavailable external renderer and stays because macOS before/after PNGs are mandatory. Neither artifact introduces a dependency or product API.
 
 ## Risks / Trade-offs
 

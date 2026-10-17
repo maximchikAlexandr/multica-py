@@ -25,6 +25,8 @@ Maintainer evidence SHALL reproduce both official release identities, archives, 
 ### Requirement: Delivery gates use one clean exact SHA
 Strict OpenSpec validation, source-aware approved-contract validation, deterministic render comparison, generated freshness, source-link audit, Ruff check and format, mypy source and tests, complete non-live pytest and live-node exclusion, build, wheel/sdist package tests, and forbidden-content audits SHALL pass at one exact clean implementation SHA. GitHub CI fixtures required by this change SHALL be implemented by the Implementer; the independent Tester SHALL inspect and execute them without editing them.
 
+The repository SHALL provide a versioned, dependency-free verification driver and macOS terminal-text renderer. The driver SHALL verify checksum-pinned baseline and target CLI binaries, use detached SDK revisions, allocate a run-unique Compose project, database, ports, profiles, daemons, and fixture names, provision named/default workflow fixtures through authenticated test-only server endpoints without exposing those endpoints as SDK operations, and remove all disposable state through a failure-safe trap. Captured text, PNGs, logs, credentials, and private locations MUST remain outside Git.
+
 #### Scenario: Offline acceptance is complete
 - **WHEN** the implementation is presented for review
 - **THEN** every mandatory offline command exits successfully at the reported SHA and the worktree remains clean
@@ -32,6 +34,10 @@ Strict OpenSpec validation, source-aware approved-contract validation, determini
 #### Scenario: Live verification is separately evidenced
 - **WHEN** the prepared 0.6.3 target and human-approved live gate are available
 - **THEN** the trusted workflow and independent Tester record the candidate SHA, observed CLI identity, commands, exit codes, assertions, and Multica-only evidence without committing logs or images
+
+#### Scenario: Independent setup and cleanup are reproducible
+- **WHEN** Tester invokes the repository-owned verification driver with an exact candidate SHA and an empty run directory
+- **THEN** the driver verifies all revisions and binary checksums before mutation, creates and independently reads back every disposable fixture, executes C02-C04 against isolated state, and removes the Compose project, database volumes, profiles, daemons, fixtures, and staging files on success, assertion failure, or interruption
 
 ### Requirement: Documentation describes one direct migration and rollback
 README, API, CLI coverage, compatibility, migration, contributing, service-usage, and release guidance SHALL describe one direct upgrade from effective baseline `0.6.1` to maximum-tested `0.6.3`, the interval `[0.6.0,0.6.4)`, approved additions, retained behavior, and explicit exclusions. Contract, generated projection, handwritten code, fixtures, tests, docs, and package claims SHALL roll back together to exact SDK baseline `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`.
