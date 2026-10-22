@@ -2,7 +2,7 @@
 
 - `planning_issue`: `MYL-534`
 - `change_id`: `update-multica-0-6-5`
-- `graph_revision`: `2`
+- `graph_revision`: `3`
 - `delivery_mode`: `dag`
 - `approved_base`: `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`
 - `test_repository_url`: `https://github.com/maximchikAlexandr/multica-py`
@@ -127,8 +127,8 @@ owns that write zone.
   surfaces implement the approved additive values without new subsystems.
 - `owned responsibility scope`: property/project/system wire and entity models;
   issue-property and project/issue resource adapters; daemon status decoder;
-  direct companion typing and immediately related fixtures needed during
-  implementation, excluding the consolidated test matrices owned by WP-04.
+  direct C02/C03 companion typing and immediately related implementation
+  fixtures, excluding the consolidated test matrices owned by WP-04.
 - `critical shared files`: `src/multica_py/models/properties.py`,
   `src/multica_py/resources/issue_properties.py`, project wire/entity/resource
   modules, `src/multica_py/models/system.py`, and daemon resource decoding.
@@ -151,8 +151,8 @@ owns that write zone.
   redaction boundaries implement provider-safe conditions and atomic safe errors.
 - `owned responsibility scope`: issue-wakeup models/resources, runtime and agent
   resource error handling, attachment/process transport and centralized exception
-  decoding, plus immediately related fixtures excluding WP-04's consolidated
-  matrices, including every reclassified C02–C06 feature scenario.
+  decoding, plus direct C04–C06 companion fixtures needed during implementation;
+  consolidated C02–C06 test matrices remain exclusively WP-04-owned.
 - `critical shared files`: `src/multica_py/models/issue_wakeups.py`,
   `src/multica_py/resources/issue_wakeups.py`, runtime/agent/attachment resources,
   `_internal/transport.py`, and `exceptions.py` only where the approved existing
@@ -163,8 +163,10 @@ owns that write zone.
 - `definition_of_done/evidence`: focused checks prove authoritative decode,
   atomic rejected state, safe context, zero retry, temp cleanup, and retained
   public exception types.
-- `parallel_safety`: write zone is disjoint from WP-02's property/project/daemon
-  models; generated contract files remain exclusively WP-01-owned.
+- `parallel_safety`: WP-03 writes only wakeup/runtime/agent/attachment/transport
+  seams and direct C04–C06 companion fixtures; WP-02 exclusively owns property/
+  project/daemon seams and direct C02/C03 companion fixtures. Neither sibling
+  writes WP-04's consolidated matrices or WP-01's generated contract files.
 
 ### WP-04 — Closed automated verification matrices
 
@@ -174,9 +176,9 @@ owns that write zone.
 - `task_coverage`: `3.1`, `3.2`, `3.3`, `3.4`
 - `deliverable`: existing unit/contract/component tables close every changed and
   retained mapping, model, error, discovery, source-link, and exclusion scenario.
-- `owned responsibility scope`: focused tests under `tests/unit/`,
-  `tests/contract/`, and `tests/component/`; shared operation cases and approved
-  contract fixtures; no live-smoke, E2E script, workflow, or public docs edits.
+- `owned responsibility scope`: consolidated C02–C06 focused matrices under
+  `tests/unit/`, `tests/contract/`, and `tests/component/`; shared operation cases
+  and approved contract fixtures; no live-smoke, workflow, or public docs edits.
 - `critical shared files`: `tests/cases/operations.py`, relevant resource/model
   tables, `tests/contract/test_sdk_contract.py`, contract/source-link/compatibility
   assertions, and transport error cases.
@@ -186,8 +188,10 @@ owns that write zone.
 - `definition_of_done/evidence`: all focused tables pass with one canonical case
   per approved operation, positive/negative presence coverage, and zero hidden
   allowlist or duplicate fixture hierarchy.
-- `parallel_safety`: owns automated non-live tests only; siblings WP-05 and WP-06
-  own the trusted live workflow and documentation respectively.
+- `parallel_safety`: begins only after WP-02 and WP-03 complete their disjoint
+  implementation seams and companion fixtures, then exclusively consolidates
+  C02–C06 matrices; stage-3 siblings WP-05 and WP-06 own the trusted live
+  workflow and documentation respectively.
 
 ### WP-05 — Trusted GitHub PR live-smoke gate
 
