@@ -2,7 +2,7 @@
 
 - `planning_issue`: `MYL-534`
 - `change_id`: `update-multica-0-6-5`
-- `graph_revision`: `1`
+- `graph_revision`: `2`
 - `delivery_mode`: `dag`
 - `approved_base`: `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`
 - `test_repository_url`: `https://github.com/maximchikAlexandr/multica-py`
@@ -14,8 +14,8 @@
   not run to manufacture estimating evidence.
 - `estimate_confidence`: medium; scope and source seams are inspectable and a
   lower-target planning package plus earlier upgrade history provide strong
-  analogues, while the complete registry reconciliation, provider-backed E2E,
-  and repair loops have no comparable measured execution history.
+  analogues, while the complete registry reconciliation, trusted live-gate
+  alignment, and repair loops have no comparable measured execution history.
 - `estimate_calibration`: uncalibrated; no historical active-hour measurements
   were available, so custom properties remain the sole numeric authority.
 
@@ -24,72 +24,67 @@ state, and operational WIP remain in Multica issues.
 
 ## E2E verification contract
 
-- `e2e_required`: `true`
-- `reason`: real project-workflow remap/handoff, self-hosted pull-request wakeup,
-  runtime privacy/binding atomicity, and partial upload behavior span CLI,
-  backend state, subprocess/filesystem, and provider boundaries that lower-level
-  fixtures cannot prove. Changed daemon/property/project output also requires
-  genuine macOS before/after captures.
-- `execution_gate`: planning SHALL NOT execute these cases. An independent
-  Tester SHALL run them only after implementation and human approval.
-- `environment`: the repository-owned driver SHALL use the project-described
-  isolated Multica test stand through injected `MULTICA_E2E_*` parameters. It
-  SHALL allocate run-unique SDK checkouts, CLI profiles, daemon instances,
-  Compose project, database, ports, and fixture names and SHALL NOT use the main
-  Multica profile, daemon, containers, or reference checkout.
-- `repository_assets`: Implementer owns `scripts/e2e/myl534_verify.sh`,
-  `scripts/render_terminal.swift`, required fixtures, and CI/live-smoke changes.
-  Tester only executes and inspects them and reports findings.
-- `publication`: development commits contain scripts, fixtures, generated
-  product output, tests, and documentation only. Actual text, PNGs, logs,
-  diagnostic JSON, hashes, commands/exits, assertions, private locations, and
-  credentials SHALL be published only in the final Multica Tester comment.
-  Tester SHALL read the comment back and verify attachments and links.
+- `e2e_required`: `false`
+- `reason`: every changed feature boundary owned by this Python SDK is
+  deterministic command construction, validation, result decoding, redaction,
+  or cleanup. The declared stand has no workflow-administration fixture,
+  self-hosted VCS provider, alternate actors, or failure injector, so a live
+  feature assertion would invent prerequisites. Exact lower-level fixtures are
+  sufficient and mandatory. The existing prepared-target workflow remains a
+  separate compatibility regression gate, not feature-specific E2E evidence.
+- `visual_evidence`: none. The change adds typed SDK values, argv, and errors;
+  it changes no SDK-owned terminal table, UI, progress display, or log layout.
+  If implementation introduces such a presentation delta, planning SHALL be
+  revised before implementation continues.
+- `execution_gate`: planning SHALL run neither feature E2E nor live smoke. After
+  implementation and human approval, an independent Tester SHALL dispatch only
+  the provisioned trusted regression workflow.
+- `actual_environment`: `.github/workflows/live-smoke.yml` SHALL be dispatched
+  from the trusted default branch with `pr_number` for an open same-repository
+  GitHub PR and `candidate_sha` equal to its current full head SHA. The protected
+  repository configuration supplies `MULTICA_LIVE_TRUSTED_WORKFLOW_REF` and
+  `MULTICA_LIVE_EXPECTED_REVIEWER_ID`; the protected `multica-live` runner
+  supplies `MULTICA_LIVE_CLI`,
+  `MULTICA_LIVE_SERVER_URL`, `MULTICA_LIVE_WORKSPACE_ID`, and
+  `MULTICA_LIVE_PROFILE`. The trusted workflow SHALL set
+  `MULTICA_LIVE_EXPECTED_VERSION` to the literal `0.6.5`, and
+  `tests/live/conftest.py` SHALL enforce the same constant. No other parameter
+  or fixture is assumed. The workflow SHALL continue to call `make live`.
+- `setup_reset_failure`: the prepared profile is preauthenticated and the
+  prepared workspace already contains the resources documented in
+  `tests/live/README.md`. The suite creates uniquely named project/issue/comment/
+  metadata records and deletes its project graph. The workflow traps and removes
+  its raw runner log on success, assertion failure, or interruption. No actor,
+  workflow, provider, network, or server-failure injection is available.
+- `publication`: the trusted workflow SHALL preserve its existing sanitized
+  artifact allowlist. Tester SHALL link the GitHub PR, candidate commit, workflow
+  run, artifact, and relevant files in one English Multica comment and verify
+  read-back. Private locations, credentials, raw logs, diagnostic JSON, and
+  hashes remain outside Git and Multica attachments. All review and evidence
+  links SHALL use GitHub PR terminology; no automation merges, closes, or
+  deletes the PR or its branch.
 
 ### Coverage matrix
 
-| Case | OpenSpec requirement/scenario | Verification gap / local E2E decision | Affected public boundary | Local test script | Independent Tester steps | CI disposition | Assertions | Artifacts / images |
-|---|---|---|---|---|---|---|---|---|
-| C01 | Upstream contract: exact provenance, closed 209/196 inventories, normalized constraints; verification: reproducible audits | No local E2E. Source-aware validation, mutation/closure tests, deterministic render, and source-link audit are sufficient because behavior is repository-local and deterministic. | `contracts/sdk-contract.json`, generator, public discovery | `make contract`, focused contract/unit commands invoked by the driver preflight | Inspect baseline/target identities and counts; independently run strict validation, double render, generated check, and source-link audit at candidate SHA. | Extend `contract-check`, compatibility matrix, and existing mutation/closure fixtures. | Exact release/tag/archive/executable/source facts; 209 nodes; 57+139 response closure; byte-identical renders; excluded surfaces absent. | Multica-only command/exit summary and candidate SHA; no image. |
-| C02 | SDK surface: multi-value property presence/order; daemon CLI commit; changed-output evidence | Local E2E required for actual CLI encoding/decoding and visible output across CLI/backend/SDK; fixtures cannot prove the installed binary and backend agree. | Existing issue-property create/set/list commands and daemon status local-control response | `scripts/e2e/myl534_verify.sh c02` plus focused pytest tables | With equivalent disposable issue/property fixtures, run baseline CLI/SDK and candidate CLI/SDK; set values containing order, duplicate, comma, empty/null cases; read back through public SDK; run daemon status; inspect public state separately from automatic assertions. | Extend property/daemon unit-resource tables and protected live smoke; no new framework/job. | One compact JSON array reaches CLI; immutable order/duplicates preserved; invalid member has zero I/O; target full `cli_commit`; legacy omission/null/empty becomes `None`. | `c02-properties-before.txt/png`, `c02-properties-after.txt/png`, `c02-daemon-before.txt/png`, `c02-daemon-after.txt/png`; actual tested language preserved. |
-| C03 | SDK surface: project workflow UUID/null and workflow-aware issue mutation/remap/handoff | Local E2E required because workflow validation and task handoff are an atomic server transaction not observable from offline adapters alone. | Existing project get/list and issue create/status/update/project-move CLI-backed operations | `scripts/e2e/myl534_verify.sh c03` | Provision one default-workflow and one named-workflow disposable project using the stand's documented fixture mechanism; execute public SDK get/create/status/update/move actions; independently list/get issue and task state; reset between baseline/candidate. | Extend project/issue unit/component tables and protected live smoke. | UUID vs null/omission; no signature/argv drift; allowed transition remaps once; invalid transition has one typed error, no retry; returned status/assignee/run handoff matches independent read. | `c03-project-before.txt/png`, `c03-project-after.txt/png`, IDs and assertions in Multica only. |
-| C04 | SDK surface: stale wakeup diagnostic clearing and self-hosted `--until-pr` | Local E2E required because provider resolution and persisted wakeup state cross backend and VCS integration boundaries. | Existing issue-wakeup create/update/check-in/get/list operations and condition input | `scripts/e2e/myl534_verify.sh c04` | Create disposable issue/wakeup against a disposable self-hosted test PR fixture; observe a controlled failing check and `last_error`; make the condition pass; independently get/list the wakeup and verify error clearing; disable/delete fixture. | Extend wakeup unit/resource tables; add a protected live-smoke row only when the trusted runner supplies the provider fixture. | Self-hosted reference is not rejected by SDK; passing check is authoritative; stale error clears; no SDK polling, provider rewrite, or synthesized pass. | Commands/exits, provider-safe references, before/after sanitized JSON in Multica; no decorative image because user-facing layout is unchanged. |
-| C05 | SDK surface: runtime privacy structured conflict and agent binding lock | Local E2E required because blocker counts, authorization, and atomic cancel/pause/unbind behavior depend on persisted runtime/agent/task state. | Existing runtime update/delete and agent create/update CLI-backed operations | `scripts/e2e/myl534_verify.sh c05` | Create a disposable runtime/agent/task binding with unique names; attempt public-to-private and locked binding mutations as allowed and unauthorized test actors; independently read runtime, agent, and task state; clean only run-owned resources. | Extend runtime/agent/error unit tables; protected live smoke may consume only pre-authorized disposable fixtures. | Structured 409/busy/auth details are safe; no automatic confirm, unbind, cancel, pause, retry, or partial repeat; authoritative state is unchanged after rejection. | Sanitized error text, state assertions, commands/exits in Multica; no image. |
-| C06 | SDK surface: upload/network/stable 500 errors and partial-side-effect boundary | Local E2E required for real multipart/filesystem/process cleanup and observable post-failure server state. | Existing attachment upload/download and issue/comment attachment mutation paths | `scripts/e2e/myl534_verify.sh c06` | Use a disposable issue and stand-supported failure fixture to produce pre-upload rejection, upload/network failure, and stable server error; inspect issue/attachment state separately; verify temp cleanup and no retry; remove run-owned records. | Extend attachment/transport/component error tables and existing package/forbidden-content gates. | Safe error context only; zero I/O for local validation; one attempted upload where expected; no retry; actual partial effect is reported accurately; temp files removed. | Sanitized actual error text, state reads, commands/exits in Multica; no image unless final user-visible summary changes during implementation. |
-| C07 | Verification: all retained behavior and excluded surfaces | No local E2E. Existing contract, discovery, canonical vectors, full non-live pytest, type/style, package, and forbidden-content gates are sufficient. | Public Python namespace, package contents, all retained operations | Driver preflight invokes repository gates | Inspect excluded workflow/autostart/confirm/internal symbols and package contents independently. | Existing CI, package-test, and compatibility jobs extended with required assertions. | 139 unchanged response items retain behavior; deferred/non-SDK surfaces absent; distributions contain no evidence. | Multica-only gate summary; no image. |
-
-### Script, capture, and cleanup contract
-
-`scripts/e2e/myl534_verify.sh` SHALL accept an exact candidate SHA, an empty
-run directory, checksum-pinned CLI `0.6.1` and `0.6.5` inputs, and injected test
-environment parameters. It SHALL verify repository and binary identities before
-mutation, record the exact product revision separately from the script/evidence
-revision, refuse the main profile/daemon/Compose project, run only selected case
-IDs, and install a trap before creating state. Assertions SHALL use public SDK/
-CLI reads; setup-only calls SHALL use the stand's documented authenticated test
-fixture mechanism and SHALL NOT become SDK surface.
-
-`scripts/render_terminal.swift` SHALL render captured UTF-8 text deterministically
-on macOS. Baseline and candidate captures SHALL use the same fixture semantics,
-locale, width, and output mode. Redirection limitations for ANSI, TTY, and
-progress SHALL be reported honestly. Text and images SHALL preserve the tested
-output language; planning and Tester explanations SHALL be English.
-
-Cleanup SHALL remove the run-owned Compose project and volumes, database,
-profiles, daemons, ports, fixtures, and staging directory on success, assertion
-failure, or interruption. It SHALL preserve the test branch, MR, commits,
-repository scripts, and linked product artifacts. No automation SHALL close,
-merge, or delete that branch/MR without a separate instruction.
+| Case | Decision and executable mechanism | Assertions and ownership | Evidence |
+|---|---|---|---|
+| C01 — provenance and closed inventories | Lower-level only: existing contract validator, mutation/closure tables, double render, generated check, and source-link audit. | Implementer proves exact identities, 209 nodes, 57 changed plus 139 retained responses, byte equality, and exclusions. | Candidate SHA and command/exit summary in Multica; no image. |
+| C02 — property arrays and daemon commit | Lower-level only: frozen property/resource/system fixtures provide exact scalar/array argv, wire values, malformed/legacy responses, and a spy transport. The stand has no declared multi-value property-definition fixture. | Implementer proves order, duplicates, commas, presence, zero-I/O validation, full `cli_commit`, and legacy `None`. | Focused test and fixture links; no image because the SDK owns no presentation layer. |
+| C03 — workflow identity and issue mutations | Lower-level only: project/issue component fixtures return UUID/null/omission, remap/handoff success, and typed conflict payloads; spies record complete argv and call count. The stand cannot create or reset workflows. | Implementer proves unchanged signatures, one call, authoritative decode, and no retry/client simulation. Backend transaction semantics are explicitly outside SDK acceptance. | Focused test and fixture links; no image. |
+| C04 — wakeup diagnostics and self-hosted PR input | Lower-level only: wakeup command/response fixtures use literal self-hosted references plus failing/passing payloads. The SDK forwards and decodes; the stand's only provisioned PR gate is GitHub and supplies no self-hosted provider. | Implementer proves no provider rewrite/polling/synthesized pass and stale-error clearing from authoritative responses. | Focused test and fixture links; no image. |
+| C05 — runtime privacy and binding conflicts | Lower-level only: table-driven 409/busy/auth transport responses and state-neutral spy transports; no alternate actor or bound-task fixture exists on the stand. | Implementer proves safe structured details, one call, no confirm/unbind/cancel/pause/retry, and no client-side mutation after rejection. | Focused test and fixture links; no image. |
+| C06 — upload/network/server failures | Lower-level only: existing fake subprocess/transport/filesystem fixtures inject preflight, upload, network, and stable 500 failures and inspect call counts/temp paths. The stand provides no failure injector. | Implementer proves zero or one I/O as specified, no retry, redaction, accurate partial-effect boundary, and temp cleanup. | Focused test and fixture links; no image. |
+| C07 — retained behavior and package exclusions | Lower-level only: discovery, canonical vectors, full non-live pytest, type/style, build/package, and forbidden-content gates. | Implementer proves retained behavior and absence of deferred/non-SDK surfaces and evidence files. | Gate summary in Multica; no image. |
+| C08 — provisioned compatibility regression | Existing protected `live-smoke.yml` only, after implementation and human approval. Trusted default-branch controller verifies the open same-repository GitHub PR/current head, protected runner inputs, observed CLI `0.6.5`, then runs `make live`. | Implementer updates target/version assertions and workflow tests; Tester dispatches and inspects without editing. This smoke proves only its documented prepared-target public operations, not C02–C06 feature semantics. | GitHub PR/commit/workflow/artifact links plus commands/exits/assertions in Multica with read-back; no image. |
 
 ### Evidence acceptance
 
 Tester SHALL post one final English Multica comment containing the candidate SHA,
-test-code SHA, exact case commands and exit codes, per-case assertions, failures
-or limitations, and links to the MR/commits/files. The required PNG files SHALL
-be actual attachments, not local paths. Raw logs, diagnostic JSON, hashes, and
-sanitized text MAY be attachments; none enters Git. Tester SHALL read back the
-comment and confirm every required attachment/link is accessible before claiming
-verification complete.
+test-code SHA, exact offline and trusted-live commands and exit codes, assertions,
+failures or limitations, and GitHub PR/commit/workflow/artifact/file links. Tester
+SHALL read back the comment and confirm each link is accessible before claiming
+verification complete. No screenshots or generated HTML are required because
+there is no approved user-visible presentation delta.
 
 ## Work package DAG
 
@@ -157,7 +152,7 @@ owns that write zone.
 - `owned responsibility scope`: issue-wakeup models/resources, runtime and agent
   resource error handling, attachment/process transport and centralized exception
   decoding, plus immediately related fixtures excluding WP-04's consolidated
-  matrices.
+  matrices, including every reclassified C02–C06 feature scenario.
 - `critical shared files`: `src/multica_py/models/issue_wakeups.py`,
   `src/multica_py/resources/issue_wakeups.py`, runtime/agent/attachment resources,
   `_internal/transport.py`, and `exceptions.py` only where the approved existing
@@ -192,30 +187,30 @@ owns that write zone.
   per approved operation, positive/negative presence coverage, and zero hidden
   allowlist or duplicate fixture hierarchy.
 - `parallel_safety`: owns automated non-live tests only; siblings WP-05 and WP-06
-  own live/scripts/workflow and documentation respectively.
+  own the trusted live workflow and documentation respectively.
 
-### WP-05 — Independent E2E and CI live-smoke assets
+### WP-05 — Trusted GitHub PR live-smoke gate
 
 - `id`: `WP-05`
 - `stage`: `3`
 - `depends_on`: `WP-02`, `WP-03`
-- `task_coverage`: `3.5`, `3.6`, `3.7`
-- `deliverable`: one repository-owned isolated verification driver, real macOS
-  text renderer, and protected live-smoke extensions capable of producing the
-  C02–C06 evidence contract after human approval.
-- `owned responsibility scope`: `scripts/e2e/myl534_verify.sh`,
-  `scripts/render_terminal.swift`, their deterministic tests/fixtures,
-  `tests/live/`, `tests/unit/test_live_smoke_workflow.py`, and the trusted
+- `task_coverage`: `3.5`
+- `deliverable`: the existing protected live-smoke controller and prepared-target
+  suite are aligned to CLI `0.6.5` and retain an executable, fail-closed GitHub
+  PR/current-head compatibility regression after human approval.
+- `owned responsibility scope`: `tests/live/conftest.py`,
+  `tests/live/README.md`, directly related live-suite fixtures,
+  `tests/unit/test_live_smoke_workflow.py`, and the trusted
   `.github/workflows/live-smoke.yml` controller adjustments.
 - `critical shared files`: live-smoke workflow/controller and prepared-target
   fixtures; no unit/contract/component matrix or docs ownership.
-- `contract_surface`: exact revision/binary verification, isolated profiles/
-  daemons/Compose/database/ports/fixtures, selected-case execution, real text/PNG
-  capture, evidence provenance, failure-safe cleanup, and trusted candidate gate.
-- `definition_of_done/evidence`: script self-checks and protected workflow tests
-  prove fail-closed candidate identity, main-environment refusal, trap cleanup,
-  deterministic rendering, case selection, and no evidence committed. Actual
-  live cases remain unrun until human approval.
+- `contract_surface`: trusted default-branch dispatch; open same-repository GitHub
+  PR and current full head SHA; fixed protected runner inputs; observed CLI
+  `0.6.5`; existing `make live`; sanitized artifact; raw-log and run-owned project
+  cleanup. No C02–C06 provider/actor/failure fixture is claimed.
+- `definition_of_done/evidence`: controller tests prove fail-closed candidate
+  identity, fixed parameter names, protected target/version, raw-log cleanup, and
+  artifact allowlist. Actual live smoke remains unrun until human approval.
 - `parallel_safety`: files are disjoint from WP-04 test matrices and WP-06 docs;
   Implementer owns all GitHub workflow/fixture edits, Tester edits none.
 
@@ -232,7 +227,7 @@ owns that write zone.
   contributing/service-usage/releasing docs, examples, public export checks,
   generated documentation checks, and package-content assertions.
 - `critical shared files`: public documentation and packaging metadata/assertions;
-  no runtime, contract generator, non-live matrix, live workflow, or E2E script
+  no runtime, contract generator, non-live matrix, or live workflow
   edits.
 - `contract_surface`: direct `0.6.1 → 0.6.5` guidance, version bounds, new typed
   values, server-owned behavior, safe errors, exclusions, evidence handling, and
@@ -250,23 +245,23 @@ owns that write zone.
 - `depends_on`: `WP-04`, `WP-05`, `WP-06`
 - `task_coverage`: `5.1`, `5.2`, `5.3`
 - `deliverable`: one clean candidate SHA passes the complete offline gate and,
-  after human approval, receives independently read-back C02–C06 evidence with
-  scoped cleanup and preserved MR/commits.
+  after human approval, receives independently read-back trusted GitHub PR
+  compatibility-smoke evidence with scoped cleanup.
 - `owned responsibility scope`: final integration repairs, complete repository
   gates, Git/package forbidden-content audit, exact command/exit evidence, Tester
-  execution coordination, Multica comment/attachment read-back, and disposable
-  stand cleanup. Directly related repair files remain within the originating WP's
+  execution coordination, Multica link read-back, and documented live-suite
+  cleanup. Directly related repair files remain within the originating WP's
   responsibility and SHALL be coordinated rather than silently cross-owned.
 - `critical shared files`: repository-wide acceptance surface; no implementation
   begins and no live case runs before the explicit gates in this plan.
 - `contract_surface`: strict OpenSpec, source-aware contract, deterministic
-  generation, source links, type/style/tests/build/package, live evidence,
-  attachment/link accessibility, and non-destructive cleanup.
+  generation, source links, type/style/tests/build/package, trusted live evidence,
+  link accessibility, and non-destructive cleanup.
 - `definition_of_done/evidence`: all mandatory offline commands succeed at one
   clean exact SHA; independent Tester publishes the required Multica-only
-  evidence and verifies read-back; cleanup removes disposable state while the
-  evidence MR/branch/commits remain; no merge/close/delete occurs without separate
-  authorization.
+  evidence and verifies read-back; cleanup removes the run-owned project graph
+  and raw log while the GitHub PR/branch/commits and sanitized artifact remain;
+  no merge/close/delete occurs without separate authorization.
 - `parallel_safety`: final integration starts only after all stage-3 deliverables
   complete and therefore owns no parallel sibling write zone.
 
@@ -278,7 +273,7 @@ owns that write zone.
 | `WP-02` | 2 | `WP-01` | `2.1–2.5` |
 | `WP-03` | 2 | `WP-01` | `2.6–2.8` |
 | `WP-04` | 3 | `WP-02`, `WP-03` | `3.1–3.4` |
-| `WP-05` | 3 | `WP-02`, `WP-03` | `3.5–3.7` |
+| `WP-05` | 3 | `WP-02`, `WP-03` | `3.5` |
 | `WP-06` | 3 | `WP-02`, `WP-03` | `4.1–4.2` |
 | `WP-07` | 4 | `WP-04`, `WP-05`, `WP-06` | `5.1–5.3` |
 

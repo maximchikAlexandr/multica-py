@@ -24,9 +24,7 @@
 - [ ] 3.2 Extend existing project/issue unit and component tables for workflow UUID/null/omission, create/status/update/move success and conflicts, status remap, assignment/run handoff, partial updates, exact call counts, and no retry.
 - [ ] 3.3 Extend daemon, wakeup, runtime/agent, transport, attachment, and redaction tables for full/legacy CLI commit, stale-error clearing, self-hosted pull requests, structured 409/busy/auth, stable safe errors, upload partial effects, and retained responses.
 - [ ] 3.4 Extend public discovery, signatures, canonical vectors, approved bindings, response closure, source-link, compatibility, and forbidden-content assertions so excluded surfaces remain absent and the 209/196 inventories reconcile exactly.
-- [ ] 3.5 Extend the existing protected live-smoke entry points only for cross-component property/workflow, wakeup-provider, runtime-conflict, and upload/error behavior not adequately proven by lower-level tests.
-- [ ] 3.6 Add `scripts/e2e/myl534_verify.sh` as a thin deterministic driver for checksum-pinned CLI acquisition, distinct SDK checkouts, isolated profiles/daemons/Compose/database/ports/fixtures, selected walkthroughs, provenance capture, and failure-safe cleanup.
-- [ ] 3.7 Add the dependency-free macOS `scripts/render_terminal.swift` and its deterministic checks so actual captured UTF-8 text can be rendered to required before/after PNGs without committing text or images.
+- [ ] 3.5 Align the existing protected `.github/workflows/live-smoke.yml`, its controller tests, and prepared-target documentation with CLI `0.6.5`; retain its open same-repository GitHub PR/current-head authorization, fixed protected runner inputs, existing `make live` suite, sanitized evidence allowlist, and run-owned project cleanup without adding undeclared provider, actor, workflow, or failure fixtures.
 
 ## 4. Documentation and Release Coherence
 
@@ -36,5 +34,5 @@
 ## 5. Acceptance at One Candidate SHA
 
 - [ ] 5.1 Run strict change validation; source-aware contract validation; deterministic double render and generated check; pinned source-link audit; focused suites; Ruff format/check; mypy source/tests/scripts; complete non-live pytest and live-node exclusion; build; wheel/sdist checks; and Git/package forbidden-content audits at one clean SHA.
-- [ ] 5.2 After human approval, have an independent Tester run the repository driver against exact baseline/candidate SDK revisions and CLI `0.6.1`/`0.6.5`, perform separate public-action walkthroughs, and publish commands, exits, assertions, MR/commit/file links, actual before/after text, and PNG attachments only in Multica with read-back.
-- [ ] 5.3 Remove only disposable stand/profile/daemon/database/port/fixture/staging state on success or failure while preserving evidence branch/MR/commits; do not close, merge, or delete the branch without separate authorization.
+- [ ] 5.2 After human approval, have an independent Tester dispatch the trusted default-branch `live-smoke.yml` with an open same-repository GitHub PR number and its current full head SHA, verify the protected runner's fixed inputs and sanitized artifact, and publish the workflow run, PR/commit/file links, commands, exits, and assertions only in Multica with read-back.
+- [ ] 5.3 Confirm the existing live suite and workflow trap remove only their run-owned project graph and raw runner log on success or failure while preserving the GitHub PR, branch, commits, and sanitized workflow artifact; do not close, merge, or delete the PR/branch without separate authorization.

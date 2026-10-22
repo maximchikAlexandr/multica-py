@@ -44,37 +44,44 @@ clean implementation SHA. Required CI tests and fixtures SHALL be implemented by
 the Implementer; the independent Tester SHALL inspect and run them without
 editing them.
 
-The repository SHALL provide one thin versioned verification driver and the
-bundled dependency-free macOS `scripts/render_terminal.swift`. The driver SHALL
-verify checksum-pinned baseline/target CLI binaries, use distinct SDK checkouts,
-profiles, daemons, Compose state, database, ports, and fixture names, and remove
-only disposable state through failure-safe cleanup. Raw text, PNGs, logs,
-credentials, private hosts, diagnostic JSON, and command evidence MUST remain
-outside Git and SHALL be attached or linked only in the final Multica Tester
-comment with read-back.
+Feature-specific workflow, self-hosted-provider, alternate-actor, and injected-
+failure assertions SHALL use deterministic lower-level fixtures because the
+declared stand provisions none of those live prerequisites. Those fixtures SHALL
+prove exact argv/wire/result behavior, call counts, no retry, redaction, and
+cleanup at the SDK boundary without claiming backend semantics.
+
+The existing protected live-smoke workflow SHALL remain a separate compatibility
+regression gate. It SHALL be dispatched from the trusted default branch with the
+number and current full head SHA of an open same-repository GitHub PR, execute
+the existing `make live` suite with the fixed protected runner inputs, require
+observed CLI `0.6.5`, and publish only its sanitized allowlisted artifact. Raw
+logs, credentials, private hosts, diagnostic JSON, and command evidence MUST
+remain outside Git and SHALL be linked only in the final Multica Tester comment
+with read-back.
 
 #### Scenario: Offline acceptance is complete
 - **WHEN** implementation is presented for review
 - **THEN** every mandatory offline command exits successfully at the reported candidate SHA and the worktree remains clean
 
-#### Scenario: Independent live verification is separately evidenced
-- **WHEN** human approval and the isolated target stand are available
-- **THEN** Tester records tested revisions, commands, exits, assertions, MR/commit/file links, actual text, and required PNG attachments in Multica without committing evidence
+#### Scenario: Trusted GitHub PR regression is separately evidenced
+- **WHEN** human approval, an open same-repository GitHub PR, and its current full head SHA are available
+- **THEN** Tester dispatches the trusted workflow and records its run, tested revision, PR/commit/file links, commands, exits, assertions, and sanitized artifact read-back in Multica without committing runtime evidence
 
 #### Scenario: Cleanup preserves development evidence
-- **WHEN** independent verification finishes or fails
-- **THEN** disposable stand state is removed while the evidence branch, MR, commits, and repository-owned scripts remain available and unmerged/unclosed until separately authorized
+- **WHEN** trusted live verification finishes or fails
+- **THEN** the suite removes its run-owned project graph and raw runner log while the GitHub PR, branch, commits, and sanitized artifact remain available and unmerged/unclosed until separately authorized
 
-### Requirement: Changed macOS output has real before and after evidence
-Changed daemon status and multi-value property output SHALL be captured as actual
-UTF-8 baseline and candidate text with equivalent fixtures, locale, width, and
-output mode, then rendered to PNG by `scripts/render_terminal.swift`. ANSI,
-TTY, and progress limitations SHALL be stated; fabricated or translated output
-MUST NOT be accepted.
+### Requirement: SDK-only output changes need no visual evidence
+The changed surfaces SHALL remain typed SDK values, command arguments, and error
+objects rather than an SDK-controlled terminal table, UI, progress display, or
+log layout. Text or PNG before/after evidence MUST NOT be required unless the
+implementation introduces a user-visible presentation change, in which case a
+new planning revision SHALL define an executable capture mechanism before that
+change proceeds.
 
-#### Scenario: Before and after output is comparable
-- **WHEN** Tester captures baseline and candidate output for an approved visible-output case
-- **THEN** the text and PNG pairs identify scenario and revision, preserve the tested output language, and show the asserted difference under equivalent conditions
+#### Scenario: Planned implementation has no presentation delta
+- **WHEN** the approved tasks and public surfaces are inspected
+- **THEN** deterministic value and command fixtures are sufficient and no fabricated terminal image is requested
 
 ### Requirement: Documentation describes one direct migration and rollback
 README, API, CLI coverage, compatibility, migration, contributing,

@@ -67,8 +67,8 @@ both create surface not required by the reviewed values and would age poorly.
 
 Add `workflow_id: str | None` to existing project wire/entity models. Keep issue
 mutation signatures and command construction intact; prove authoritative
-validation, remap, assignment, and run handoff through fixtures and focused live
-checks. Surface conflicts once without retry or simulation.
+validation, remap, assignment, and run handoff through deterministic response
+fixtures. Surface conflicts once without retry or simulation.
 
 Alternative: workflow resources or client-side status mapping. Rejected because
 there is no approved public CLI and the transaction is server-owned.
@@ -93,32 +93,35 @@ destination rather than inferring from names.
 Alternative: retain prose-only rules for implementer interpretation. Rejected
 because the contract must fail closed and generate deterministic validation.
 
-### 6. Keep verification layered and evidence external
+### 6. Keep feature verification deterministic and the live gate provisioned
 
-Extend existing unit/contract/component tables for deterministic behavior and
-use one focused local driver only for real cross-component workflow, wakeup,
-runtime-conflict, and upload/error observations. The driver uses the isolated
-test repository/stand from project configuration, unique profile/daemon/Compose/
-database/port state, and failure-safe cleanup. Actual text is rendered on macOS
-with the bundled `scripts/render_terminal.swift`; outputs and images are posted
-only to Multica.
+Extend existing unit/contract/component tables for every changed SDK boundary.
+The SDK only constructs CLI arguments and decodes results for the workflow,
+self-hosted-provider, runtime-conflict, and upload-error cases, so exact argv,
+response, call-count, no-retry, redaction, and cleanup fixtures are sufficient.
+Do not claim live coverage that would require workflow administration,
+alternate actors, a self-hosted VCS provider, or failure injection absent from
+the declared stand. Separately align the existing protected live smoke with
+CLI `0.6.5` as a compatibility regression gate: it is dispatched from the
+trusted default branch for an open same-repository GitHub PR/current head and
+uses only the fixed protected runner inputs and prepared resources it already
+documents.
 
-Alternative: duplicate lower-level assertions in a new framework or commit
-runtime evidence. Rejected because the existing suites own assertions and Git
-must remain free of environment evidence.
+Alternative: add a custom E2E driver, renderer, or hidden fixture service.
+Rejected because their prerequisites are not provisioned and the existing
+lower-level suites plus trusted regression workflow own the executable checks.
 
 ## Ponytail Gate
 
-`ponytail full` finds no necessary new product subsystem. Each candidate has an
+`ponytail full` finds no necessary new product or verification subsystem. Each candidate has an
 existing alternative and is removed: property enum/conversion layer → open type
 strings plus the existing decoder; workflow client/engine → existing project and
 issue operations; daemon identity service → optional field on `DaemonStatus`;
 provider adapter → existing wakeup condition; diagnostic hierarchy → existing
-typed/redacted command errors; second generator/test framework → current contract
-renderer and frozen case tables. Two verification files remain necessary rather
-than product abstractions: a thin `scripts/e2e/myl534_verify.sh` orchestrator for
-pinned acquisition/isolation/cleanup and the bundled dependency-free
-`scripts/render_terminal.swift` required for real macOS before/after PNGs.
+typed/redacted command errors; second generator/test framework → current
+contract renderer and frozen case tables; custom E2E driver and terminal
+renderer → existing protected GitHub live-smoke controller, prepared-target
+suite, and sanitized artifact. No new subsystem or verification script remains.
 
 ## Risks / Trade-offs
 
@@ -128,8 +131,10 @@ pinned acquisition/isolation/cleanup and the bundled dependency-free
   open strings and validate only reviewed shapes.
 - [Legacy omission] old CLI output lacks new fields → use explicit omitted/null/
   empty fixtures and optional defaults.
-- [Server-owned transactions] offline fixtures cannot prove atomic live effects →
-  require isolated independent walkthroughs after human approval.
+- [Server-owned transactions] the declared stand cannot provision the needed
+  workflows, provider, actors, or failure modes → verify the SDK-owned argv,
+  decode, no-retry, and unchanged-state contracts deterministically and do not
+  claim backend semantics as SDK acceptance evidence.
 - [Privacy and evidence leakage] logs and hosts may be sensitive → use unique
   disposable state, redaction assertions, Multica-only publication, and Git/
   package forbidden-content audits.
@@ -142,10 +147,10 @@ pinned acquisition/isolation/cleanup and the bundled dependency-free
    inventories, mappings, normalized constraints, response verdicts, and bounds.
 2. Validate and double-render before refreshing the generated projection.
 3. Implement bounded existing-model/resource/decoder changes and extend current
-   case tables, CI fixtures, live-smoke driver, and documentation.
+   case tables, the existing protected live-smoke gate, and documentation.
 4. Run all offline gates at one clean candidate SHA; after human authorization,
-   run independent isolated verification and publish Multica-only evidence.
-5. Roll back contract, generated output, handwritten code, tests, scripts, and
+   dispatch the trusted GitHub PR live-smoke workflow and publish its read-back.
+5. Roll back contract, generated output, handwritten code, tests, workflow, and
    documentation together if any mandatory gate fails.
 
 ## Open Questions

@@ -51,9 +51,9 @@ None.
   error boundaries gain the reviewed additive fields and presence-sensitive
   behavior while deferred and non-CLI surfaces remain excluded.
 - `verification-and-release`: deterministic generation, source-link audit,
-  positive/negative tests, independent local verification, documentation,
-  packaging, and rollback must prove the direct upgrade without tracked raw
-  evidence or transient artifacts.
+  positive/negative tests, the provisioned protected GitHub PR regression gate,
+  documentation, packaging, and rollback must prove the direct upgrade without
+  tracked raw evidence or transient artifacts.
 
 ## Impact
 
