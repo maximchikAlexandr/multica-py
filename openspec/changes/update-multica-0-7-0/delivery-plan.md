@@ -20,14 +20,22 @@
 
 `e2e_required=true`.
 
-The changed public contract crosses the Python SDK, the real Multica `0.7.0`
-binary, daemon/server behavior, persistence, and structured errors. Unit,
-component, contract, and package tests are sufficient for deterministic argv,
-presence, decoding, redaction, and compatibility logic, but cannot prove the
-live response/error lifecycle. Changed daemon-status text also requires genuine
-before/after capture. The local test environment is the isolated project stand
-described by Multica project metadata; the primary Multica profile, daemon,
-containers, checkout, and data are forbidden.
+The remaining live gap is deliberately narrow: prove that the candidate SDK
+performs its strict version preflight and a disposable project lifecycle against
+the real Multica `0.7.0` stand, and capture the changed daemon-status output.
+Deterministic contract, mapping, presence, decoder, validator, redaction,
+retained-parity and failure behavior is fully covered at lower levels because
+the declared five-value live harness has no PR fixture, workflow catalog,
+property-definition authority, secondary identities, runtime-grant provisioning,
+or controlled error injector. The plan SHALL NOT invent those prerequisites.
+
+The project-declared test repository is
+`https://github.com/maximchikAlexandr/multica-py`. The isolated stand supplies
+only `MULTICA_LIVE_CLI`, `MULTICA_LIVE_EXPECTED_VERSION`,
+`MULTICA_LIVE_SERVER_URL`, `MULTICA_LIVE_WORKSPACE_ID`, and
+`MULTICA_LIVE_PROFILE`; the candidate harness SHALL keep that exact interface
+and update its fixed prepared target to `0.7.0`. The primary Multica profile,
+daemon, containers, checkout, and data are forbidden.
 
 ### Readiness and attempt control
 
@@ -35,12 +43,27 @@ Before a live attempt, Tester SHALL prove:
 
 1. product checkout and implementation PR head equal the candidate SHA;
 2. test-script commit is identified separately when it differs from product SHA;
-3. CLI binary reports `0.7.0` and matches the approved target provenance;
-4. the isolated profile, workspace, daemon, database, ports, and checkout belong
-   to the project stand, not the primary environment;
+3. all five declared live values are nonempty, the resolved CLI is executable,
+   and `"$MULTICA_LIVE_CLI" version --output json` reports `0.7.0`;
+4. `MULTICA_LIVE_SERVER_URL`, workspace and profile identify the project stand
+   described in project metadata; the frontend/API readiness probes for that
+   stand succeed without printing their private values;
 5. focused offline contract/resource tests and required CI checks are green on
    the candidate;
-6. fixtures are disposable and cleanup commands are known to succeed.
+6. the unique project prefix is unused and project create/delete succeeds in a
+   readiness fixture that is deleted before the measured case;
+7. for CAP-01, both verified CLI binaries and a verified local path to the
+   required `scripts/render_terminal.swift` are supplied as execution inputs.
+
+`CAPTURE-INPUT-BLOCKER`: neither the published repository nor the project
+description declares the `openspec-e2e-testing` repository, package, URL, or a
+local `scripts/render_terminal.swift` path. The renderer interface SHALL NOT be
+guessed or downloaded from an undeclared source. CAP-01 and therefore complete
+E2E verification remain blocked until the execution assignment supplies a
+verified local renderer path. Tester SHALL first run the supplied script's
+documented help/usage and record the actual render commands. A missing baseline
+`0.6.1` binary is the same kind of pre-attempt material-input blocker. These
+blockers consume no live attempt and do not relax the mandatory captures.
 
 A failed readiness gate consumes no live attempt. A PASS remains valid only for
 the same product revision and material fixtures. After a revision change,
@@ -49,16 +72,73 @@ local suites obey the workspace ten-minute cap; longer suites run in GitHub
 Actions on the exact published revision. Agent-driven walkthrough steps are
 manual verification and are not represented as automated suite results.
 
-### Verification matrix
+### Live case contract
 
-| Case | Requirement / scenario | Gap and decision | Public boundary | Repeatable script | Independent Tester steps | CI disposition | Assertions | Artifacts / images |
-|---|---|---|---|---|---|---|---|---|
-| E2E-01 | Array property values; comparison filters | Real persistence and CLI query composition are not proven by fake transport | SDK issue property set/list and issue list through CLI/API | `tests/live/test_multica_070.py -k property_arrays_and_comparisons` via existing live runner | Create disposable properties/issues; set ordered duplicate and empty arrays; query equality/comparisons; inspect returned typed values and server state; delete fixtures | Add table rows to existing offline property/resource tests in `quality` and `contract-check`; live remains protected `live-smoke` | order, duplicates, empty/null policy, operator semantics, exit status, cleanup | command/result text, tested SHA, fixture IDs, assertions, cleanup status; no image because machine-readable data is sufficient |
-| E2E-02 | Project workflow presence; daemon `cli_commit` | Real nullable workflow projection and binary/daemon identity cross components | SDK project create/get/update and daemon status | `tests/live/test_multica_070.py -k project_workflow_or_daemon_status` | Read baseline `0.6.1` daemon status and candidate `0.7.0` status with equivalent width/locale/output; create/read/update a disposable project; inspect raw JSON and typed values | Extend existing project/daemon unit and component cases; protected live job runs candidate path | omitted/null/present workflow behavior, no workflow-management API, exact `cli_commit`, legacy decode | baseline/candidate raw text; `daemon-status-061.png`, `daemon-status-070.png`; revision/locale/width/output-mode manifest in Multica |
-| E2E-03 | Wakeup PR conflicts and diagnostics | Condition registration, server evaluation, and stale-error clearing require live coordination | SDK wakeup create/get/update/disable against disposable issue/PR fixture | `tests/live/test_multica_070.py -k wakeup_pr_conflicts` | Create isolated issue and approved PR-conflict wakeup; inspect condition and diagnostics; force a safe conflict/no-conflict transition if fixture permits; disable and inspect cleanup | Exact argv and decode rows in offline wakeup tests; live lifecycle in protected job | exactly-one validation pre-I/O, condition round-trip, diagnostic presence/clear, no duplicate wakeup, cleanup | sanitized commands, response excerpts, issue/PR links, exit statuses, assertions; image only if human-readable diagnostics differ visibly |
-| E2E-04 | Runtime sharing, revoke blockers, agent authorization | Authorization and atomic revoke semantics require real identities and persisted grants | SDK runtime list/update/delete and agent create/update | `tests/live/test_multica_070.py -k runtime_sharing_and_privacy` | With disposable authorized identities, inspect sharing; exercise allowed agent write; attempt blocked revoke and denied write; prove sharing unchanged; remove fixtures | Offline runtime/agent/conflict/redaction tables remain mandatory; protected live job uses safe pre-provisioned identities | ordered safe identity projection, structured blocker code/context, denied grant, atomic no-change, no retry, cleanup | sanitized JSON excerpts and assertions in Multica only; no personal data or private hostname; no image unless output format visibly changed |
-| E2E-05 | Upload/network/server/allowlist errors | Real boundary is needed for at least one safe reproducible structured error; destructive/private failures stay fixture-tested | SDK attachment or skill upload and workspace write | `tests/live/test_multica_070.py -k structured_errors` | Trigger only documented disposable/safe invalid operations; inspect exception type/code/status/context and redaction; confirm no retry or partial resource | All error shapes covered offline in transport/component fixtures; live proves only safe reproducible representatives | stable mapping, generic fallback, secret/URL/host/path redaction, no partial mutation, exit status | sanitized exception text, commands, assertions, cleanup status; raw logs/diagnostic JSON remain Multica attachments only |
-| E2E-06 | Direct compatibility and package surface | Installed artifacts plus real target binary are not proven by source-tree imports | wheel and sdist installed in fresh environment; SDK compatibility probe | `tests/live/test_multica_070.py -k packaged_candidate` after existing package build | Install candidate wheel in isolated environment, import without CLI, then point to verified target CLI and execute representative read calls | Existing `package-test` matrix plus compatibility jobs; live only for exact target probe | clean import, public exports, `max_tested_cli_version`, representative retained/adapted calls, no transient evidence in package | package filename/hash, candidate SHA, commands/exit codes, assertions; no decorative images |
+| Case | Remaining live gap | Entry command | Setup / reset | Independent Tester action | Assertions | Failure-safe cleanup | Evidence |
+|---|---|---|---|---|---|---|---|
+| LIVE-01 | Strict `0.7.0` preflight plus real SDK/CLI/server persistence | `uv run pytest -o addopts="" -q -rP -m live_smoke tests/live/test_multica_070.py -k target_preflight_and_project_roundtrip` with the five declared env values | Verify exact product SHA and CLI version; generate `multica-py-live-<uuid>`; test registers project deletion in `ExitStack` immediately after create; no shared fixture is changed | From a fresh client, create project, get it, update name/description, get again, then inspect that the returned IDs/values agree before deletion | preflight accepts only `0.7.0`; public command/eager paths reach the real boundary; persisted update is visible; every command exits successfully | `finally` invokes `prepared_client.projects.delete_command(project.id).run()`; after interruption, use the captured ID with `"$MULTICA_LIVE_CLI" project delete "$PROJECT_ID" --output json`, then confirm get returns not-found | sanitized pytest output, product/test SHA, CLI version-output hash, project ID, commands/exit codes and cleanup assertion in Multica only |
+| LIVE-02 | Real target daemon-status additive field | `uv run pytest -o addopts="" -q -rP -m live_smoke tests/live/test_multica_070.py -k daemon_status_cli_commit` | Read-only case; verify resolved CLI first; no server fixture and no reset | Run the SDK daemon status command and separately inspect `"$MULTICA_LIVE_CLI" daemon status --output json` | typed `cli_commit` equals the reviewed target commit form; required legacy fields remain decodable | none beyond deleting local sanitized staging after upload | sanitized JSON/text, command exit codes, candidate SHA; no image from this machine-readable case |
+| CAP-01 | Mandatory visible before/after daemon-status comparison | After `CAPTURE-INPUT-BLOCKER` is resolved: run `"$BASELINE_CLI" daemon status` and `"$MULTICA_LIVE_CLI" daemon status` with `LC_ALL=C`, identical width and non-JSON mode; invoke the supplied renderer exactly as its documented usage states | Verify baseline reports `0.6.1`, candidate reports `0.7.0`, renderer path is supplied and inspected, and daemon state is equivalent; capture into a private staging directory | Compare the actual text for semantic changes, render both captures, open both PNGs, and check labels/readability | genuine baseline/candidate text exists; both PNGs represent those exact files; provenance, width, locale, output mode and ANSI/TTY limitations are recorded | read-only commands; upload sanitized text/PNG to Multica, verify attachments, then remove private staging files | `daemon-status-061.txt`, `daemon-status-070.txt`, `daemon-status-061.png`, `daemon-status-070.png`; missing input or capture blocks completion |
+
+### Complete delta-scenario traceability
+
+The following matrix maps every affected scenario in all four delta specs. `LL`
+means a deterministic lower-level/CI assertion is sufficient; only the cases
+with a named live gap use the stand.
+
+| Delta requirement / scenario | Verification assignment | Concrete command / assertion |
+|---|---|---|
+| Upstream — Provenance is complete | LL-CONTRACT | `uv run pytest -o addopts="" -q tests/contract/test_sdk_contract.py tests/unit/test_upstream_contract.py`; assert target/release/tag/commit/artifact digests and baseline role |
+| Upstream — An inventory item is absent or duplicated | LL-CONTRACT | same mutation tables reject missing/duplicate CLI or response verdicts and mismatched totals |
+| Upstream — Deferred commands remain non-public | LL-PARITY | `uv run pytest -o addopts="" -q tests/unit/test_coverage_gate.py tests/unit/resources/test_operations.py tests/contract/test_public_invariants.py`; discovery/export sets exclude autostart symbols |
+| Upstream — Names match without traced behavior | LL-CONTRACT | contract mutation case removes source/destination/constraint trace and strict loader rejects it |
+| Upstream — Reviewed endpoints are accepted | LL-COMPAT + LIVE-01 | `make compat` proves interval edges; LIVE-01 proves target preflight at the real boundary |
+| Upstream — A version exceeds the reviewed ceiling | LL-COMPAT | `make compat`; strict/warn cases assert exclusive-ceiling behavior without subprocess I/O |
+| Upstream — Evidence contains a candidate change | LL-CONTRACT | run render twice from approved contract while evidence-only candidate is present in fixture; bytes/public discovery stay unchanged |
+| SDK — An array property round-trips | LL-PROPERTY | `uv run pytest -o addopts="" -q tests/unit/resources/test_properties.py tests/unit/resources/test_issues.py`; encode/decode table preserves order, duplicates and empty arrays |
+| SDK — An invalid array value is supplied | LL-PROPERTY | same table asserts wrong container/element/URL/null fails before mocked transport |
+| SDK — Ordered comparisons are valid | LL-PROPERTY | exact argv/query rows preserve predicate and operator order |
+| SDK — A comparison is ambiguous or unsupported | LL-PROPERTY | operator/type/value negative rows assert stable pre-I/O errors |
+| SDK — Workflow is omitted or null | LL-PROJECT | `uv run pytest -o addopts="" -q tests/unit/resources/test_project_relations.py tests/unit/resources/test_operations.py`; decode rows preserve absent versus null |
+| SDK — A workflow-aware write is invalid | LL-PROJECT | create/update vectors assert validation or typed upstream error and unchanged unrelated argv fields |
+| SDK — Target status includes a commit | LL-DAEMON + LIVE-02 | operation/decode row checks exact target payload; LIVE-02 checks the real target |
+| SDK — Legacy status omits the commit | LL-DAEMON | legacy empty/omitted/malformed fixture table checks optional policy |
+| SDK — A PR-conflict wakeup is constructed | LL-WAKEUP | `uv run pytest -o addopts="" -q tests/unit/resources/test_issue_wakeups_v2.py`; create/update eager/command rows assert exact argv/result |
+| SDK — Conditions conflict | LL-WAKEUP | exactly-one negative table proves pre-I/O rejection |
+| SDK — A stale diagnostic is cleared | LL-WAKEUP | omitted/null/empty diagnostic fixture rows assert presence distinction |
+| SDK — Sharing identities are returned | LL-RUNTIME | `uv run pytest -o addopts="" -q tests/unit/resources/test_runtimes.py tests/unit/resources/test_operations.py`; ordered safe identity and legacy omission rows |
+| SDK — Privacy revocation is blocked | LL-RUNTIME | structured conflict fixtures assert blocker context, no retry and no local partial mutation |
+| SDK — An agent write lacks an explicit grant | LL-RUNTIME | agent create/update error vectors assert typed authorization failure and redaction |
+| SDK — A reviewed failure occurs | LL-ERROR | `uv run pytest -o addopts="" -q tests/unit/test_transport.py tests/component/test_transport_errors.py tests/unit/resources/test_attachments.py tests/unit/resources/test_skills.py tests/unit/resources/test_workspace_relations_extra.py`; approved mappings and redaction |
+| SDK — An unknown error occurs | LL-ERROR | malformed/unreviewed fixtures remain generic command failures without new public type or retry |
+| Parity — Target help inventory is checked offline | LL-PARITY | closed inventory/discovery equality asserts all target nodes/flags and reviewed delta totals |
+| Parity — Upstream-only behavior is discovered | LL-PARITY | defer/not-surface fixture rows produce no operation, model, resource or export |
+| Parity — A retained operation drifts | LL-PARITY | exact signature/argv/validator/decoder/return discovery fails on retained mutation |
+| Verification — Coverage reconciliation runs | LL-COVERAGE | `uv run pytest -o addopts="" -q tests/unit/test_coverage_gate.py tests/contract/test_public_invariants.py`; every supported item maps once to verdict/test/docs action |
+| Verification — A deterministic gate detects drift | LL-GATES | run `uv run python scripts/upstream_contract.py check --approved contracts/sdk-contract.json`, `uv run python scripts/audit_source_links.py`, and a second transient render comparison; any diff fails |
+| Verification — The isolated lifecycle succeeds | LIVE-01 + LIVE-02 + CAP-01 | each case records exact product/test revisions, material inputs, commands, exits, assertions and cleanup; CAP-01 must be unblocked |
+| Verification — Revision or environment identity differs | LL-HARNESS | `uv run pytest -o addopts="" -q tests/unit/test_live_smoke_workflow.py`; harness tests reject SHA/version/five-env mismatch before live collection, while readiness checks reject stand identity mismatch |
+| Verification — Visible output is compared | CAP-01 | genuine equivalent baseline/candidate text and mandatory PNG attachments |
+| Verification — Required capture is unavailable | CAP-01 blocker assertion | absence of either binary, renderer path, text or PNG records `blocked`/incomplete and forbids PASS or synthetic substitution |
+
+### Lower-level and CI entry commands
+
+Implementer SHALL add the rows/fixtures named above and run focused commands in
+their owning WPs. WP-07 then runs the consolidated gates on the exact candidate:
+
+```text
+uv run python scripts/upstream_contract.py check --approved contracts/sdk-contract.json
+uv run python scripts/audit_source_links.py
+uv run pytest -o addopts="" -q tests/unit/test_upstream_contract.py tests/contract/test_sdk_contract.py tests/unit/test_coverage_gate.py tests/contract/test_public_invariants.py
+uv run pytest -o addopts="" -q tests/unit/resources/test_properties.py tests/unit/resources/test_issues.py tests/unit/resources/test_project_relations.py tests/unit/resources/test_issue_wakeups_v2.py tests/unit/resources/test_runtimes.py tests/unit/test_transport.py tests/component/test_transport_errors.py
+make compat
+make package
+```
+
+The complete offline suite, types and lint run in the existing GitHub `quality`,
+`types`, `lint`, `compatibility`, `contract-check`, and `package-test` jobs on the
+published exact revision when their local automated duration is expected to
+exceed the workspace limit. No new CI framework or private dependency is added.
 
 ### Scripts, fixtures, and ownership
 
@@ -66,16 +146,15 @@ manual verification and are not represented as automated suite results.
   frozen unit/component/contract tables, minimal fake-CLI fixtures, and required
   GitHub workflow adjustments. Tester verifies them and SHALL NOT edit product
   CI tests or fixtures.
-- The live script SHALL reuse `tests/live/conftest.py`, existing markers and
-  runner, accept environment/profile identifiers already supported by the live
-  harness, record product and test-code revisions, and implement failure-safe
-  cleanup. It SHALL not introduce a second runner or hardcode private URLs,
-  hostnames, credentials, identities, or workspace IDs.
-- Disposable fixtures: uniquely prefixed project, issue, property definitions,
-  wakeup, upload payload, and only project-approved runtime/agent identities.
-  Cleanup removes created server resources and local transient files while
-  preserving the evidence PR/branch/commits. It SHALL NOT merge, close, or
-  delete the evidence branch without separate instruction.
+- The live script SHALL reuse `tests/live/conftest.py`, the existing three
+  module markers and runner, retain exactly the five declared env inputs, update
+  the prepared target to `0.7.0`, record product/test-code revisions, and use
+  immediate `ExitStack` cleanup. It SHALL not add identity, PR, workflow,
+  property-catalog, runtime-grant, or error-injection assumptions.
+- The only mutable measured fixture is a uniquely named disposable project in
+  LIVE-01. LIVE-02 and CAP-01 are read-only. Cleanup removes that project and
+  private local staging while preserving the evidence branch/commits. It SHALL
+  NOT merge, close, or delete the evidence branch without separate instruction.
 - Tests and real functional outputs produced by the tested Git utility SHALL be
   separated into distinct commits when both exist; when no functional-output
   commit exists, a second commit is not required. Genuine tool-created commits
@@ -91,14 +170,16 @@ provenance, and test results belong only in Multica and SHALL NOT be committed.
 JSON enters Git only when JSON generation itself is the product behavior under
 test.
 
-For changed terminal output on macOS, Tester SHALL capture actual baseline and
-candidate text with equivalent fixtures, locale, width, and output mode, then
-render PNGs using the bundled `scripts/render_terminal.swift` from
-`openspec-e2e-testing`. The images and raw text retain the product language;
-Tester-authored explanations are English. Renders SHALL be labeled as renders,
-not terminal screenshots. ANSI, TTY, interactive, and progress limitations are
-reported rather than simulated. Missing required baseline/candidate text or PNG
-blocks completion.
+For changed terminal output on macOS, CAP-01 governs actual baseline/candidate
+text, identical capture conditions and the required `scripts/render_terminal.swift`.
+Because its source/path and CLI are not declared, `CAPTURE-INPUT-BLOCKER` is a
+material input gate, not permission to invent a download or command. Once the
+verified script is supplied, Tester uses its documented interface, records the
+exact command, opens both outputs, and publishes the genuine pair. Images and
+raw text retain the product language; authored explanations are English.
+Renders are labeled as renders, not terminal screenshots. ANSI, TTY,
+interactive and progress limitations are reported rather than simulated.
+Missing required input, text or PNG blocks completion.
 
 ## Work-package topology
 
@@ -116,8 +197,8 @@ Complete stage mapping:
 | `WP-03-project-daemon` | 2 | `WP-01-contract-foundation` |
 | `WP-04-wakeup-conflicts` | 2 | `WP-01-contract-foundation` |
 | `WP-05-error-boundary` | 2 | `WP-01-contract-foundation` |
-| `WP-06-runtime-privacy` | 3 | `WP-01-contract-foundation`, `WP-05-error-boundary` |
-| `WP-07-integration-release` | 4 | `WP-02-property-surface`, `WP-03-project-daemon`, `WP-04-wakeup-conflicts`, `WP-05-error-boundary`, `WP-06-runtime-privacy` |
+| `WP-06-runtime-privacy` | 3 | `WP-05-error-boundary` |
+| `WP-07-integration-release` | 4 | `WP-02-property-surface`, `WP-03-project-daemon`, `WP-04-wakeup-conflicts`, `WP-06-runtime-privacy` |
 
 ### WP-01-contract-foundation
 
@@ -240,8 +321,10 @@ Complete stage mapping:
 ## Coverage and graph checks
 
 - Every task 1.1 through 8.6 appears in exactly one WP.
-- All dependency edges are direct. Every predecessor has a lower stage than its
-  dependent; stages 1 through 4 are contiguous.
+- The listed edges are the transitive reduction: WP-06 reaches WP-01 through
+  WP-05, and WP-07 reaches WP-05 through WP-06 and WP-01 through its stage-2/3
+  predecessors. No direct edge is transitively redundant. Every predecessor has
+  a lower stage than its dependent; stages 1 through 4 are contiguous.
 - Stage 2 contains four independently writable packages, so the graph has a
   genuine parallel frontier. WIP limits are operational policy, not DAG edges.
 - Responsibility scopes include directly related tests, fixtures, snapshots,
