@@ -17,6 +17,12 @@ class CompositionError(ValueError):
 
 
 _TASK = re.compile(r"^(\s*-\s*\[)( |x)(\].*)$")
+_SPEC_DELTA_SECTION = re.compile(r"^## (ADDED|MODIFIED|REMOVED) Requirements\s*$", re.MULTILINE)
+_SPEC_BLOCK = re.compile(
+    r"^### (?:Requirement|Exclusion):.*?(?=^### (?:Requirement|Exclusion):|\Z)",
+    flags=re.MULTILINE | re.DOTALL,
+)
+_SPEC_BLOCK_ID = re.compile(r"^### (Requirement|Exclusion):\s*(.+?)\s*$", re.MULTILINE)
 
 
 def _tree_files(revision: str, path: str) -> dict[str, bytes]:
@@ -65,8 +71,21 @@ def _task_completion_preserves_text(planned: bytes, final: bytes) -> bool:
     return task_count > 0
 
 
-def _expected_synced_specs(files: dict[str, bytes]) -> dict[str, bytes]:
-    specs: dict[str, bytes] = {}
+def _requirement_blocks(text: str) -> tuple[str, ...]:
+    return tuple(block.strip() for block in _SPEC_BLOCK.findall(text))
+
+
+def _requirement_id(block: str, path: str) -> tuple[str, str]:
+    match = _SPEC_BLOCK_ID.match(block)
+    if match is None:
+        raise CompositionError(f"invalid requirement block in change spec: {path}")
+    return match.group(1), match.group(2)
+
+
+def _expected_synced_specs(
+    files: dict[str, bytes],
+) -> dict[str, tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]]:
+    specs: dict[str, tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]] = {}
     for relative_path, content in files.items():
         parts = PurePosixPath(relative_path).parts
         if not relative_path.startswith("specs/"):
@@ -77,48 +96,100 @@ def _expected_synced_specs(files: dict[str, bytes]) -> dict[str, bytes]:
             text = content.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise CompositionError(f"change spec is not UTF-8: {relative_path}") from exc
-        header = "## ADDED Requirements\n\n"
-        if header not in text:
+        headings = list(_SPEC_DELTA_SECTION.finditer(text))
+        all_requirement_headings = list(
+            re.finditer(r"^## .*Requirements\s*$", text, flags=re.MULTILINE)
+        )
+        if len(headings) != len(all_requirement_headings):
+            raise CompositionError(f"unsupported requirement section: {relative_path}")
+        if not any(match.group(1) == "ADDED" for match in headings):
             raise CompositionError(
                 f"change spec has no ADDED Requirements section: {relative_path}"
             )
-        body = text.split(header, 1)[1].strip()
-        if not body:
-            raise CompositionError(f"change spec has no requirements: {relative_path}")
-        specs[f"{parts[1]}/spec.md"] = body.encode("utf-8")
+        deltas: dict[str, list[str]] = {"ADDED": [], "MODIFIED": [], "REMOVED": []}
+        for index, heading in enumerate(headings):
+            section_end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
+            next_heading = re.search(r"^## ", text[heading.end() : section_end], re.MULTILINE)
+            if next_heading is not None:
+                section_end = heading.end() + next_heading.start()
+            blocks = _requirement_blocks(text[heading.end() : section_end])
+            if not blocks:
+                raise CompositionError(f"change spec section has no requirements: {relative_path}")
+            deltas[heading.group(1)].extend(blocks)
+        for operation, delta_blocks in deltas.items():
+            identities = [_requirement_id(block, relative_path) for block in delta_blocks]
+            if len(identities) != len(set(identities)):
+                raise CompositionError(
+                    f"change spec repeats a {operation.lower()} requirement: {relative_path}"
+                )
+        specs[f"{parts[1]}/spec.md"] = (
+            tuple(deltas["ADDED"]),
+            tuple(deltas["MODIFIED"]),
+            tuple(deltas["REMOVED"]),
+        )
     return specs
 
 
-def _requirement_blocks(text: str) -> tuple[str, ...]:
-    return tuple(
-        block.strip()
-        for block in re.findall(
-            r"^### Requirement:.*?(?=^### Requirement:|\Z)",
-            text,
-            flags=re.MULTILINE | re.DOTALL,
-        )
-    )
+def _spec_prefix(text: str) -> str:
+    first_block = _SPEC_BLOCK.search(text)
+    return text if first_block is None else text[: first_block.start()]
 
 
-def _verify_closeout(
+def _merged_spec_blocks(
     *,
-    planning_sha: str,
-    candidate_sha: str,
-    openspec_path: str,
-) -> None:
+    previous_text: str,
+    relative_path: str,
+    additions: tuple[str, ...],
+    modifications: tuple[str, ...],
+    removals: tuple[str, ...],
+) -> tuple[str, ...]:
+    previous_blocks = _requirement_blocks(previous_text)
+    previous_by_id = {_requirement_id(block, relative_path): block for block in previous_blocks}
+    if len(previous_by_id) != len(previous_blocks):
+        raise CompositionError(f"main spec repeats a requirement: {relative_path}")
+    modified_by_id = {_requirement_id(block, relative_path): block for block in modifications}
+    removed_ids = {_requirement_id(block, relative_path) for block in removals}
+    added_ids = {_requirement_id(block, relative_path) for block in additions}
+    if not (set(modified_by_id) | removed_ids) <= set(previous_by_id):
+        raise CompositionError(f"change spec modifies an unknown requirement: {relative_path}")
+    if set(modified_by_id) & removed_ids:
+        raise CompositionError(
+            f"change spec both modifies and removes a requirement: {relative_path}"
+        )
+    if added_ids & set(previous_by_id):
+        raise CompositionError(f"change spec adds an existing requirement: {relative_path}")
+    merged = tuple(
+        modified_by_id.get(identity, block)
+        for block in previous_blocks
+        if (identity := _requirement_id(block, relative_path)) not in removed_ids
+    )
+    return (*merged, *additions)
+
+
+def _approved_change_tree(planning_sha: str, openspec_path: str) -> tuple[str, dict[str, bytes]]:
     source = PurePosixPath(openspec_path)
     if (
         source.is_absolute()
         or source.parts[:2] != ("openspec", "changes")
         or len(source.parts) != 3
         or source.name in {"", ".", ".."}
+        or openspec_path != source.as_posix()
     ):
         raise CompositionError("OpenSpec change path must be openspec/changes/<change>")
     source_path = source.as_posix()
     planned = _tree_files(planning_sha, source_path)
     if not planned:
         raise CompositionError(f"planning SHA has no OpenSpec change at {source_path}")
+    return source_path, planned
 
+
+def _verify_closeout(
+    *,
+    planning_sha: str,
+    candidate_sha: str,
+    source_path: str,
+    planned: dict[str, bytes],
+) -> None:
     candidate_source = _tree_files(candidate_sha, source_path)
     changed_paths = set(
         filter(
@@ -137,7 +208,7 @@ def _verify_closeout(
             raise CompositionError("candidate contains multiple closeout archive directories")
         archive_name = archive_paths.pop()
         match = re.fullmatch(r"(\d{4}-\d{2}-\d{2})-(.+)", archive_name)
-        if match is None or match.group(2) != source.name:
+        if match is None or match.group(2) != PurePosixPath(source_path).name:
             raise CompositionError("candidate archive path does not match the approved change")
         try:
             datetime.date.fromisoformat(match.group(1))
@@ -166,7 +237,7 @@ def _verify_closeout(
     candidate_specs = _tree_files(candidate_sha, "openspec/specs")
     planned_specs = _tree_files(planning_sha, "openspec/specs")
     expected_main_paths = {f"openspec/specs/{path}" for path in synced_specs}
-    for relative_path, requirement_body in synced_specs.items():
+    for relative_path, (additions, modifications, removals) in synced_specs.items():
         previous = planned_specs.get(relative_path)
         final = candidate_specs.get(relative_path)
         if previous is None or final is None:
@@ -174,16 +245,21 @@ def _verify_closeout(
         try:
             previous_text = previous.decode("utf-8")
             final_text = final.decode("utf-8")
-            required_text = requirement_body.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise CompositionError(f"main spec is not UTF-8: {relative_path}") from exc
-        if any(block not in final_text for block in _requirement_blocks(previous_text)):
+        expected_blocks = _merged_spec_blocks(
+            previous_text=previous_text,
+            relative_path=relative_path,
+            additions=additions,
+            modifications=modifications,
+            removals=removals,
+        )
+        if (
+            _spec_prefix(final_text) != _spec_prefix(previous_text)
+            or _requirement_blocks(final_text) != expected_blocks
+        ):
             raise CompositionError(
-                f"synced main spec removed or changed existing requirements: {relative_path}"
-            )
-        if required_text not in final_text:
-            raise CompositionError(
-                f"synced main spec omits approved change requirements: {relative_path}"
+                f"synced main spec requirements differ from the approved merge: {relative_path}"
             )
 
     allowed_paths = {
@@ -238,6 +314,7 @@ def verify_composition(
     candidate_head = _git("rev-parse", "--verify", f"{candidate_sha}^{{commit}}")
     if candidate_head != _git("rev-parse", "--verify", "HEAD^{commit}"):
         raise CompositionError("candidate SHA must resolve to the final checkout HEAD")
+    source_path, planned = _approved_change_tree(verified_planning_sha, openspec_path)
     diff = subprocess.run(
         ["git", "diff", "--quiet", verified_planning_sha, candidate_sha, "--", openspec_path],
         check=False,
@@ -250,7 +327,8 @@ def verify_composition(
         _verify_closeout(
             planning_sha=verified_planning_sha,
             candidate_sha=candidate_sha,
-            openspec_path=openspec_path,
+            source_path=source_path,
+            planned=planned,
         )
     except CompositionError as exc:
         raise CompositionError(

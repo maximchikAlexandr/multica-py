@@ -10,7 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from scripts.verify_composition import CompositionError, main, verify_composition
+from scripts.verify_composition import (
+    CompositionError,
+    _expected_synced_specs,
+    _merged_spec_blocks,
+    _task_completion_preserves_text,
+    main,
+    verify_composition,
+)
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -38,10 +45,8 @@ def _closeout(history: dict[str, str | Path], *, complete: bool = True) -> str:
     source_spec = repo / "openspec/changes/demo/specs/sdk-surface/spec.md"
     approved_spec = source_spec.read_text(encoding="utf-8").split("## ADDED Requirements\n\n", 1)[1]
     main_spec = repo / "openspec/specs/sdk-surface/spec.md"
-    current_main = main_spec.read_text(encoding="utf-8").replace(
-        "Draft purpose.", "Updated purpose."
-    )
-    main_spec.write_text(current_main + approved_spec, encoding="utf-8")
+    current_main = main_spec.read_text(encoding="utf-8").rstrip()
+    main_spec.write_text(current_main + "\n\n" + approved_spec, encoding="utf-8")
     archive = repo / "openspec/changes/archive/2026-10-26-demo"
     archive.parent.mkdir(parents=True)
     (repo / "openspec/changes/demo").rename(archive)
@@ -137,7 +142,7 @@ def _verify(history: dict[str, str | Path], **overrides: str) -> None:
             baseline_sha=overrides.get("baseline_sha", str(history["baseline"])),
             integration_sha=overrides.get("integration_sha", str(history["integration"])),
             candidate_sha=overrides.get("candidate_sha", str(history["candidate"])),
-            openspec_path="openspec/changes/demo",
+            openspec_path=overrides.get("openspec_path", "openspec/changes/demo"),
             accepted_shas=(overrides.get("accepted_sha", str(history["integration"])),),
         )
     finally:
@@ -202,7 +207,11 @@ def test_composition_gate_rejects_candidate_sha_before_final_head(
         _verify(history, candidate_sha=str(history["candidate"]))
 
 
-def _cli_args(history: dict[str, str | Path], candidate_sha: str) -> list[str]:
+def _cli_args(
+    history: dict[str, str | Path],
+    candidate_sha: str,
+    openspec_path: str = "openspec/changes/demo",
+) -> list[str]:
     return [
         "--composition-sha",
         str(history["composition"]),
@@ -219,27 +228,33 @@ def _cli_args(history: dict[str, str | Path], candidate_sha: str) -> list[str]:
         "--candidate-sha",
         candidate_sha,
         "--openspec-path",
-        "openspec/changes/demo",
+        openspec_path,
     ]
 
 
 def _run_cli(
-    history: dict[str, str | Path], candidate_sha: str
+    history: dict[str, str | Path],
+    candidate_sha: str,
+    openspec_path: str = "openspec/changes/demo",
 ) -> subprocess.CompletedProcess[str]:
     repo = history["repo"]
     assert isinstance(repo, Path)
     verifier = Path(__file__).resolve().parents[2] / "scripts/verify_composition.py"
-    args = [sys.executable, str(verifier), *_cli_args(history, candidate_sha)]
+    args = [sys.executable, str(verifier), *_cli_args(history, candidate_sha, openspec_path)]
     return subprocess.run(args, cwd=repo, check=False, capture_output=True, text=True)
 
 
-def _run_main(history: dict[str, str | Path], candidate_sha: str) -> int:
+def _run_main(
+    history: dict[str, str | Path],
+    candidate_sha: str,
+    openspec_path: str = "openspec/changes/demo",
+) -> int:
     repo = history["repo"]
     assert isinstance(repo, Path)
     previous = Path.cwd()
     try:
         os.chdir(repo)
-        return main(_cli_args(history, candidate_sha))
+        return main(_cli_args(history, candidate_sha, openspec_path))
     finally:
         os.chdir(previous)
 
@@ -373,6 +388,32 @@ def _change_task_text(history: dict[str, str | Path]) -> None:
     _commit(repo, "change archived task text")
 
 
+def _add_unapproved_spec_requirement(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/specs/sdk-surface/spec.md"
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(
+            "\n\n### Requirement: Unapproved behavior\n\n"
+            "The product SHALL add unreviewed behavior.\n"
+        )
+    _commit(repo, "add unapproved main spec requirement")
+
+
+def _add_unapproved_spec_exclusion(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/specs/sdk-surface/spec.md"
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(
+            "\n\n### Exclusion: Unapproved closeout scope\n\n"
+            "The closeout SHALL exclude unreviewed behavior.\n"
+        )
+    _commit(repo, "add unapproved main spec exclusion")
+
+
 _CLOSEOUT_MUTATION_CASES = (
     _CloseoutMutationCase(
         "unauthorized-design", _change_requirement, "changed approved artifact design.md"
@@ -386,12 +427,12 @@ _CLOSEOUT_MUTATION_CASES = (
     _CloseoutMutationCase(
         "lost-main-requirements",
         _drop_existing_main_requirements,
-        "removed or changed existing requirements",
+        "main spec requirements differ from the approved merge",
     ),
     _CloseoutMutationCase(
         "missing-synced-requirements",
         _omit_synced_change_requirements,
-        "omits approved change requirements",
+        "main spec requirements differ from the approved merge",
     ),
     _CloseoutMutationCase(
         "extra-archive-file", _add_archived_file, "changed the approved artifact file set"
@@ -419,6 +460,16 @@ _CLOSEOUT_MUTATION_CASES = (
         "unrelated OpenSpec changes",
     ),
     _CloseoutMutationCase("task-text-changed", _change_task_text, "tasks differ beyond completing"),
+    _CloseoutMutationCase(
+        "extra-requirement",
+        _add_unapproved_spec_requirement,
+        "main spec requirements differ from the approved merge",
+    ),
+    _CloseoutMutationCase(
+        "extra-exclusion",
+        _add_unapproved_spec_exclusion,
+        "main spec requirements differ from the approved merge",
+    ),
 )
 
 
@@ -443,3 +494,202 @@ def test_composition_gate_rejects_unapproved_closeout_mutations(
         _verify(history, candidate_sha="HEAD")
     assert _run_main(history, "HEAD") == 1
     assert "Composition verification failed:" in capsys.readouterr().err
+    cli_result = _run_cli(history, "HEAD")
+    assert cli_result.returncode == 1
+    assert cli_result.stderr.startswith(
+        "Composition verification failed: candidate OpenSpec subtree differs from planning "
+        "SHA (openspec/changes/demo): "
+    )
+    assert case.expected_error in cli_result.stderr
+
+
+@dataclass(frozen=True)
+class _OpenSpecPathCase:
+    id: str
+    path: str
+    expected_error: str
+
+
+_OPENSPEC_PATH_CASES = (
+    _OpenSpecPathCase(
+        "nonexistent-change",
+        "openspec/changes/not-real",
+        "planning SHA has no OpenSpec change at openspec/changes/not-real",
+    ),
+    _OpenSpecPathCase(
+        "malformed-change-path",
+        "openspec/changes/../demo",
+        "OpenSpec change path must be openspec/changes/<change>",
+    ),
+    _OpenSpecPathCase(
+        "unapproved-source-tree",
+        "openspec/specs/sdk-surface",
+        "OpenSpec change path must be openspec/changes/<change>",
+    ),
+)
+
+
+_UNAPPROVED_SPEC_BLOCK_CASES = (
+    _CloseoutMutationCase(
+        "extra-requirement",
+        _add_unapproved_spec_requirement,
+        "main spec requirements differ from the approved merge",
+    ),
+    _CloseoutMutationCase(
+        "extra-exclusion",
+        _add_unapproved_spec_exclusion,
+        "main spec requirements differ from the approved merge",
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _OPENSPEC_PATH_CASES, ids=lambda case: case.id)
+def test_composition_cli_rejects_unapproved_planning_path(
+    history: dict[str, str | Path],
+    case: _OpenSpecPathCase,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert _run_main(history, str(history["candidate"]), case.path) == 1
+    assert capsys.readouterr().err == f"Composition verification failed: {case.expected_error}\n"
+    result = _run_cli(history, str(history["candidate"]), case.path)
+    assert result.returncode == 1
+    assert result.stderr == f"Composition verification failed: {case.expected_error}\n"
+
+
+@pytest.mark.parametrize("case", _UNAPPROVED_SPEC_BLOCK_CASES, ids=lambda case: case.id)
+def test_composition_cli_rejects_unapproved_main_spec_blocks(
+    history: dict[str, str | Path], case: _CloseoutMutationCase
+) -> None:
+    case.mutate(history)
+    result = _run_cli(history, "HEAD")
+    assert result.returncode == 1
+    assert result.stderr == (
+        "Composition verification failed: candidate OpenSpec subtree differs from planning "
+        "SHA (openspec/changes/demo): synced main spec requirements differ from the approved "
+        "merge: sdk-surface/spec.md\n"
+    )
+
+
+_KEEP_BLOCK = "### Requirement: Kept\n\nKeep this approved behavior."
+_OLD_BLOCK = "### Requirement: Changed\n\nOld approved behavior."
+_UPDATED_BLOCK = "### Requirement: Changed\n\nUpdated approved behavior."
+_REMOVED_BLOCK = "### Requirement: Removed\n\nThis behavior is retired."
+_EXCLUSION_BLOCK = "### Exclusion: Existing boundary\n\nThis capability stays excluded."
+_ADDED_BLOCK = "### Requirement: Added\n\nAdd this approved behavior."
+_BASE_SPEC = "## Requirements\n\n" + "\n\n".join(
+    (_KEEP_BLOCK, _OLD_BLOCK, _REMOVED_BLOCK, _EXCLUSION_BLOCK)
+)
+
+
+@dataclass(frozen=True)
+class _SpecMergeCase:
+    id: str
+    additions: tuple[str, ...]
+    modifications: tuple[str, ...]
+    removals: tuple[str, ...]
+    expected: tuple[str, ...]
+
+
+_SPEC_MERGE_CASES = (
+    _SpecMergeCase(
+        "append-approved-requirement",
+        (_ADDED_BLOCK,),
+        (),
+        (),
+        (_KEEP_BLOCK, _OLD_BLOCK, _REMOVED_BLOCK, _EXCLUSION_BLOCK, _ADDED_BLOCK),
+    ),
+    _SpecMergeCase(
+        "replace-remove-and-append-approved-blocks",
+        (_ADDED_BLOCK,),
+        (_UPDATED_BLOCK,),
+        (_REMOVED_BLOCK,),
+        (_KEEP_BLOCK, _UPDATED_BLOCK, _EXCLUSION_BLOCK, _ADDED_BLOCK),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _SPEC_MERGE_CASES, ids=lambda case: case.id)
+def test_composition_spec_sync_merges_exact_approved_blocks(case: _SpecMergeCase) -> None:
+    assert (
+        _merged_spec_blocks(
+            previous_text=_BASE_SPEC,
+            relative_path="sdk-surface/spec.md",
+            additions=case.additions,
+            modifications=case.modifications,
+            removals=case.removals,
+        )
+        == case.expected
+    )
+
+
+@dataclass(frozen=True)
+class _InvalidSpecMergeCase:
+    id: str
+    previous_text: str
+    additions: tuple[str, ...]
+    modifications: tuple[str, ...]
+    removals: tuple[str, ...]
+    expected_error: str
+
+
+_INVALID_SPEC_MERGE_CASES = (
+    _InvalidSpecMergeCase(
+        "duplicate-retained-block",
+        _BASE_SPEC + "\n\n" + _KEEP_BLOCK,
+        (),
+        (),
+        (),
+        "main spec repeats a requirement",
+    ),
+    _InvalidSpecMergeCase(
+        "unknown-modification",
+        _BASE_SPEC,
+        (),
+        ("### Requirement: Unknown\n\nUnknown behavior.",),
+        (),
+        "change spec modifies an unknown requirement",
+    ),
+    _InvalidSpecMergeCase(
+        "modify-and-remove",
+        _BASE_SPEC,
+        (),
+        (_UPDATED_BLOCK,),
+        (_OLD_BLOCK,),
+        "change spec both modifies and removes a requirement",
+    ),
+    _InvalidSpecMergeCase(
+        "add-existing-requirement",
+        _BASE_SPEC,
+        (_KEEP_BLOCK,),
+        (),
+        (),
+        "change spec adds an existing requirement",
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _INVALID_SPEC_MERGE_CASES, ids=lambda case: case.id)
+def test_composition_spec_sync_rejects_ambiguous_approved_blocks(
+    case: _InvalidSpecMergeCase,
+) -> None:
+    with pytest.raises(CompositionError, match=case.expected_error):
+        _merged_spec_blocks(
+            previous_text=case.previous_text,
+            relative_path="sdk-surface/spec.md",
+            additions=case.additions,
+            modifications=case.modifications,
+            removals=case.removals,
+        )
+
+
+def test_composition_spec_sync_rejects_unapproved_requirement_sections() -> None:
+    with pytest.raises(CompositionError, match="unsupported requirement section"):
+        _expected_synced_specs(
+            {
+                "specs/sdk-surface/spec.md": (
+                    b"## ADDED Requirements\n\n### Requirement: Approved\n\n"
+                    b"Approved behavior.\n\n## EXCLUDED Requirements\n\n"
+                    b"### Exclusion: Unapproved\n\nUnapproved behavior.\n"
+                )
+            }
+        )
