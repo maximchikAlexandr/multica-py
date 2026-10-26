@@ -806,6 +806,14 @@ class _InvalidSpecMergeCase:
 
 _INVALID_SPEC_MERGE_CASES = (
     _InvalidSpecMergeCase(
+        "duplicate-approved-edit-rows",
+        _BASE_SPEC,
+        (),
+        (_UPDATED_BLOCK, _UPDATED_BLOCK),
+        (),
+        "change spec repeats an approved edit",
+    ),
+    _InvalidSpecMergeCase(
         "ambiguous-modification-of-repeated-identity",
         _BASE_SPEC,
         (),
