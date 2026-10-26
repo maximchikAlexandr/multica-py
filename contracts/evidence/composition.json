@@ -1,0 +1,14 @@
+{
+  "composition_sha": "1f8083040d862669e65b875e7bc9555de96a7346",
+  "first_parent": "b1c350ce22941a66871f11e0c5830a6ec542878c",
+  "integration_target": "a96eecf3e12a88dd7b4d56e1aafae3285fb0990c",
+  "openspec_subtree": "openspec/changes/update-multica-0-7-0",
+  "proofs": {
+    "exact_parents": true,
+    "integration_target_ancestor_of_planning_and_composition": true,
+    "parent_managed_description_readback": "composition_sha=1f8083040d862669e65b875e7bc9555de96a7346",
+    "planning_subtree_byte_identical_at_composition": true
+  },
+  "second_parent": "4a83aa817cc2539bee60fe1f1a3996753428a28e",
+  "verified_planning_sha": "4a83aa817cc2539bee60fe1f1a3996753428a28e"
+}

@@ -42,6 +42,11 @@ compat:
 contract:
 	uv run python scripts/upstream_contract.py check --approved contracts/sdk-contract.json
 	uv run python scripts/audit_source_links.py
+	uv run python scripts/verify_composition.py \
+		--composition-sha 1f8083040d862669e65b875e7bc9555de96a7346 \
+		--planning-sha 4a83aa817cc2539bee60fe1f1a3996753428a28e \
+		--baseline-sha b1c350ce22941a66871f11e0c5830a6ec542878c \
+		--integration-sha a96eecf3e12a88dd7b4d56e1aafae3285fb0990c
 
 package:
 	uv build
