@@ -445,8 +445,8 @@ def _validate_wakeup_inputs(
             pull_request_status = (
                 raw_condition.get("status") if isinstance(raw_condition, Mapping) else raw_condition
             )
-            if pull_request_status not in {"checks", "merged"}:
-                raise ValueError("condition pull_request status must be checks or merged")
+            if pull_request_status not in {"checks", "merged", "conflict"}:
+                raise ValueError("condition pull_request status must be checks, merged or conflict")
         else:
             if not isinstance(raw_condition, Mapping):
                 raise TypeError("condition referenced_issue must be an object")

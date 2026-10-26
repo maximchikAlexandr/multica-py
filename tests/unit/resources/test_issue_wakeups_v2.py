@@ -146,6 +146,18 @@ def _create_eager(resource: IssueWakeupResource) -> object:
     return resource.create("iss-1", instruction="Run checks", event_types=("comment.created",))
 
 
+def _create_pr_conflict_command(resource: IssueWakeupResource) -> object:
+    return resource.create_command(
+        "iss-1", instruction="Run checks", condition={"pull_request": "conflict"}
+    )
+
+
+def _create_pr_conflict_eager(resource: IssueWakeupResource) -> object:
+    return resource.create(
+        "iss-1", instruction="Run checks", condition={"pull_request": "conflict"}
+    )
+
+
 def _update_command(resource: IssueWakeupResource) -> object:
     return resource.update_command(
         "iss-1", "wake-1", instruction="Run checks", event_types=("comment.created",)
@@ -155,6 +167,18 @@ def _update_command(resource: IssueWakeupResource) -> object:
 def _update_eager(resource: IssueWakeupResource) -> object:
     return resource.update(
         "iss-1", "wake-1", instruction="Run checks", event_types=("comment.created",)
+    )
+
+
+def _update_pr_conflict_command(resource: IssueWakeupResource) -> object:
+    return resource.update_command(
+        "iss-1", "wake-1", instruction="Run checks", condition={"pull_request": "conflict"}
+    )
+
+
+def _update_pr_conflict_eager(resource: IssueWakeupResource) -> object:
+    return resource.update(
+        "iss-1", "wake-1", instruction="Run checks", condition={"pull_request": "conflict"}
     )
 
 
@@ -274,6 +298,18 @@ _EAGER_COMMAND_CASES = (
         _assert_bytes_transport,
     ),
     _EagerCommandCase(
+        "create-pr-conflict",
+        _create_pr_conflict_command,
+        _create_pr_conflict_eager,
+        "multica issue wakeup create iss-1 --instruction 'Run checks' --kind event --condition '{\"pull_request\":\"conflict\"}' --output json",
+        b'{"id":"wake-1","enabled":true,"condition":{"pull_request":"conflict"}}',
+        lambda result: (cast("IssueWakeup", result).id, cast("IssueWakeup", result).condition),
+        ("wake-1", {"pull_request": "conflict"}),
+        _set_bytes_response,
+        _reset_bytes_transport,
+        _assert_bytes_transport,
+    ),
+    _EagerCommandCase(
         "update",
         _update_command,
         _update_eager,
@@ -281,6 +317,18 @@ _EAGER_COMMAND_CASES = (
         b'{"id":"wake-1","enabled":true}',
         _reenabled,
         ("wake-1", True),
+        _set_bytes_response,
+        _reset_bytes_transport,
+        _assert_bytes_transport,
+    ),
+    _EagerCommandCase(
+        "update-pr-conflict",
+        _update_pr_conflict_command,
+        _update_pr_conflict_eager,
+        "multica issue wakeup update iss-1 wake-1 --instruction 'Run checks' --kind event --condition '{\"pull_request\":\"conflict\"}' --output json",
+        b'{"id":"wake-1","enabled":true,"condition":{"pull_request":"conflict"}}',
+        lambda result: (cast("IssueWakeup", result).id, cast("IssueWakeup", result).condition),
+        ("wake-1", {"pull_request": "conflict"}),
         _set_bytes_response,
         _reset_bytes_transport,
         _assert_bytes_transport,
@@ -367,9 +415,19 @@ def test_all_eager_and_command_pairs_have_exact_argv_and_decoded_results(
         {"property": {"b": 2, "a": 1}},
         {"children_done": {"stage": 2}},
         {"pull_request": "merged"},
+        {"pull_request": "conflict"},
         {"referenced_issue": {"id": "ISSUE-2", "state": "done"}},
     ],
-    ids=("status", "assignee", "label", "property", "children", "pull-request", "reference"),
+    ids=(
+        "status",
+        "assignee",
+        "label",
+        "property",
+        "children",
+        "pull-request",
+        "pr-conflict",
+        "reference",
+    ),
 )
 def test_all_condition_families_use_canonical_json_and_are_server_owned(
     condition: Mapping[str, object],
@@ -388,6 +446,7 @@ def test_all_condition_families_use_canonical_json_and_are_server_owned(
     ("kwargs", "message"),
     [
         ({"condition": {"status": "done", "label": "release"}}, "exactly one"),
+        ({"condition": {"pull_request": "conflict", "status": "done"}}, "exactly one"),
         ({"condition": {}}, "exactly one"),
         ({"condition": {"unknown": "value"}}, "exactly one"),
         ({"condition": {"status": "done"}, "event_types": ("comment.created",)}, "combined"),
