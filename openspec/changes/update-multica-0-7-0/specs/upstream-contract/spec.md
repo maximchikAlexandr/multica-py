@@ -1,73 +1,81 @@
 ## ADDED Requirements
 
-### Requirement: Multica 0.7.0 release provenance is authoritative
+### Requirement: The accepted 0.6.2 implementation baseline is exact
 
-The approved contract SHALL identify Multica `0.7.0`, release id `421685918`,
-tag object `db6e38c32bdbdd3fd1c98210414c458362df16d1`, peeled commit
-`dbdbb299164347586e2650bb67684a490726a798`, the verified Darwin arm64 archive
-and executable digests, and the pinned source URLs used by every changed mapping
-or response. It SHALL retain `0.6.1` provenance as the effective direct migration
-baseline.
+The implementation SHALL start from draft PR #101 head
+`b1c350ce22941a66871f11e0c5830a6ec542878c` and SHALL preserve its reviewed
+public behavior while reconciling conflicts with the approved integration target.
 
-#### Scenario: Provenance is complete
+#### Scenario: The implementation starts from another revision
 
-- **WHEN** strict contract validation inspects the target and release artifacts
-- **THEN** every required identity and digest matches the reviewed `0.7.0` release and no draft SDK branch is represented as a baseline
+- **WHEN** the implementation branch ancestry does not contain the exact PR #101 head
+- **THEN** baseline acceptance fails before any `0.7.0` adaptation is credited
 
-### Requirement: Target inventory is closed before generation
+#### Scenario: Conflict resolution changes accepted behavior
+
+- **WHEN** reconciliation alters a PR #101 signature, mapping, decoder, validation rule, error classification, or regression fixture without a source-pinned `0.7.0` adapt decision
+- **THEN** the retained-baseline checks fail and the change is not release-ready
+
+### Requirement: Multica 0.7.0 target provenance is authoritative
+
+The approved contract SHALL identify the accepted `0.6.2` baseline and Multica
+`0.7.0` release id `421685918`, tag object
+`db6e38c32bdbdd3fd1c98210414c458362df16d1`, peeled commit
+`dbdbb299164347586e2650bb67684a490726a798`, verified Darwin arm64 artifacts,
+and commit-pinned source references for every remaining changed mapping.
+
+#### Scenario: Provenance is incomplete or mixed
+
+- **WHEN** strict validation finds a wrong release identity, digest, baseline, target, or mutable source reference
+- **THEN** validation fails before generation
+
+### Requirement: The 0.6.2 to 0.7.0 inventory is closed
 
 The approved contract SHALL contain one reviewed verdict for every one of the
-209 target CLI nodes and one unique verdict for every one of the 196 supported
-response work items. The totals SHALL reconcile to four added, zero removed,
-six changed CLI nodes and 60 changed plus 136 unchanged response items.
+209 target CLI nodes and every one of the 196 supported response work items.
+Items already satisfied by exact PR #101 SHALL be retained with regression
+evidence; only source-pinned remaining differences SHALL be adapted.
 
-#### Scenario: An inventory item is absent or duplicated
+#### Scenario: A target item lacks one decision
 
-- **WHEN** validation finds a missing, duplicated, or unresolved command or response verdict
+- **WHEN** a command or response item is missing, duplicated, unresolved, or lacks a retained/adapted/excluded decision
 - **THEN** validation fails and generation changes no public behavior
 
-#### Scenario: Deferred commands remain non-public
+#### Scenario: An accepted 0.6.2 item is needlessly reimplemented
 
-- **WHEN** the four `daemon autostart` nodes are rendered
-- **THEN** they remain explicit `defer` decisions and produce no SDK resource, model, method, or export
+- **WHEN** a target item matches the accepted PR #101 behavior and has no reviewed `0.7.0` difference
+- **THEN** its decision remains retained and its existing regression reference is preserved
 
-### Requirement: Reviewed mappings preserve destination and presence semantics
+### Requirement: Remaining mappings are source-traced and deterministic
 
-Every added or changed input SHALL record its path, query, JSON, header,
-multipart, stdin, file, or local-control destination; omitted, null, empty,
-zero, and false behavior; and all normalized constraints with positive and
-negative test references.
+Every adapted input SHALL record its real path, query, JSON, header, multipart,
+stdin, file, or local-control destination, five-state presence behavior, and
+normalized constraints with positive and negative references. The approved
+contract SHALL remain the sole generator input and two renders SHALL be byte-identical.
 
-#### Scenario: Names match without traced behavior
+#### Scenario: A candidate has no traced behavior
 
-- **WHEN** an evidence field or enum candidate has no pinned `RunE` and helper trace to its destination and constraint behavior
-- **THEN** the candidate remains review-only and strict validation rejects its promotion
+- **WHEN** an evidence field or matching name lacks a pinned implementation trace and reviewed constraint
+- **THEN** it remains review-only and cannot create a public symbol
 
-### Requirement: Direct compatibility interval is generated
+#### Scenario: Generated output drifts
 
-The generated default policy SHALL represent the reviewed direct migration from
-Multica CLI `0.6.1` through the approved `0.7.0` target, with
-`max_tested_cli_version` equal to `0.7.0` and the existing exclusive-next-version
-policy applied above the reviewed interval.
+- **WHEN** a second render or generated freshness check differs from the approved contract
+- **THEN** release readiness fails until the source contract or handwritten adapter is reconciled
 
-#### Scenario: Reviewed endpoints are accepted
+### Requirement: Compatibility advances from the accepted baseline
 
-- **WHEN** compatibility preflight observes `0.6.1` or `0.7.0`
-- **THEN** it applies the reviewed policy without requiring an intermediate SDK release
+The generated policy SHALL accept the reviewed interval through Multica CLI
+`0.7.0`, set `max_tested_cli_version` to `0.7.0`, and apply the existing
+exclusive-next-version rule above that target without requiring an SDK release
+for every intermediate CLI patch.
+
+#### Scenario: A reviewed endpoint is checked
+
+- **WHEN** compatibility preflight observes `0.6.2` or `0.7.0`
+- **THEN** it applies the reviewed policy and does not require an intermediate SDK package
 
 #### Scenario: A version exceeds the reviewed ceiling
 
 - **WHEN** compatibility preflight observes a version above the generated exclusive ceiling
-- **THEN** the configured strict or warning policy is applied and no unreviewed behavior is claimed
-
-### Requirement: Generation remains deterministic and contract-only
-
-The approved contract SHALL remain the only production generator input. Rendering
-twice from the same contract SHALL produce byte-identical committed runtime and
-transient projections; evidence, audit copies, and upgrade bundles SHALL NOT be
-tracked or imported at runtime.
-
-#### Scenario: Evidence contains a candidate change
-
-- **WHEN** a candidate exists only in evidence or an audit projection
-- **THEN** deterministic generation leaves the public runtime unchanged
+- **THEN** the configured strict or warning policy applies and no unreviewed behavior is claimed

@@ -1,59 +1,56 @@
 ## ADDED Requirements
 
-### Requirement: Upgrade coverage is closed and table-driven
+### Requirement: Accepted PR 101 coverage remains a release gate
 
-Verification SHALL map every changed requirement and all 196 supported response
-work items to a frozen case-table row, an existing sufficient assertion, or an
-explicit non-surface decision. New repeated coverage SHALL extend existing case
-tables rather than create parallel frameworks.
+Verification SHALL prove exact PR #101 accepted behavior survives baseline
+reconciliation before remaining `0.7.0` adaptations are accepted.
+
+#### Scenario: Baseline reconciliation runs
+
+- **WHEN** the consolidated candidate is checked against the accepted PR #101 public signatures, canonical vectors, fixtures, and generated bindings
+- **THEN** every retained behavior matches or has an explicit source-pinned `0.7.0` adapt decision
+
+### Requirement: Remaining upgrade coverage is closed and table-driven
+
+Every affected remaining-delta scenario and all 196 supported response work
+items SHALL map to a frozen case-table row, existing sufficient assertion, or
+explicit retained/non-surface decision. Repeated coverage SHALL extend existing
+tables rather than create a parallel framework.
 
 #### Scenario: Coverage reconciliation runs
 
-- **WHEN** contract and test discovery compare the approved inventory with test references
-- **THEN** every supported item has one verdict and sufficient positive, negative, fixture, and documentation coverage
+- **WHEN** contract and test discovery compare target decisions with test references
+- **THEN** every item has exactly one decision and sufficient positive, negative, fixture, and documentation coverage
 
-### Requirement: Offline release gates are deterministic
+### Requirement: Offline release gates are deterministic and sufficient
 
-The exact candidate SHALL pass strict source-link audit, approved-contract
-validation, deterministic render, generated freshness check, offline unit,
-contract, component, packaging, type, lint, and distribution checks. Generated
-files SHALL NOT be hand-edited and transient evidence SHALL remain untracked.
+The exact candidate SHALL pass baseline ancestry/preservation, strict source-link
+audit, contract validation, deterministic render, generated freshness, focused
+unit/resource/component/contract tests, complete non-live tests, type, lint,
+package build/import, documentation, and forbidden-content checks in GitHub CI.
 
 #### Scenario: A deterministic gate detects drift
 
-- **WHEN** a second render, generated check, source link, package import, or offline assertion differs
+- **WHEN** ancestry, a second render, generated check, source link, lower-level assertion, package import, or forbidden-content audit differs
 - **THEN** release readiness fails until the approved source or handwritten implementation is reconciled
 
-### Requirement: Exact-revision live verification is isolated
+#### Scenario: GitHub CI evaluates the candidate
 
-Live verification SHALL use the test repository declared by the project, an
-isolated test profile/workspace and exact candidate SHA, and SHALL never use the
-primary Multica profile, daemon, containers, or reference checkout. It SHALL
-record automatic and independent-agent results separately.
+- **WHEN** the implementation revision is published for review
+- **THEN** ordinary CI runs the named offline checks against that exact SHA without live credentials or stand dependencies
 
-#### Scenario: The isolated lifecycle succeeds
+### Requirement: Local E2E and image evidence are not required
 
-- **WHEN** Tester verifies readiness and executes the approved `0.7.0` cases
-- **THEN** each case records the tested product revision, test-code revision, fixtures, assertions, command exit status, cleanup result, and accessible Multica evidence
+The delivery SHALL set `e2e_required=false` because every remaining observable
+result is fully asserted at deterministic contract, fake-CLI, component, package,
+or CI boundaries and no visible output requirement remains.
 
-#### Scenario: Revision or environment identity differs
+#### Scenario: The stand is unavailable
 
-- **WHEN** the checkout, CLI version, profile, workspace, database, port, or service identity does not match the plan
-- **THEN** live execution stops before consuming an attempt and no PASS is reported
+- **WHEN** verification is planned or executed without the project stand
+- **THEN** no live fixture is invented and the complete named offline gate set remains mandatory
 
-### Requirement: Changed terminal output has genuine before and after evidence
+#### Scenario: Evidence is published
 
-Changed CLI read/table output SHALL have actual baseline and candidate text plus
-PNG renders created by the bundled `scripts/render_terminal.swift` on macOS,
-using equivalent fixtures, locale, width, and output mode. TTY, ANSI, and progress
-limitations SHALL be stated honestly.
-
-#### Scenario: Visible output is compared
-
-- **WHEN** daemon status or another reviewed visible output changes
-- **THEN** Tester publishes labeled baseline/candidate text and PNG attachments with revision provenance in Multica
-
-#### Scenario: Required capture is unavailable
-
-- **WHEN** genuine baseline or candidate output cannot be captured
-- **THEN** verification remains incomplete and no synthetic image is substituted
+- **WHEN** final verification is reported
+- **THEN** commit, CI, command, exit-code, and assertion evidence is published in Multica without screenshots, terminal captures, live logs, private endpoints, or credentials

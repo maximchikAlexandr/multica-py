@@ -1,171 +1,147 @@
 ## Context
 
-The source snapshot is `origin/main` at
-`a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`. Its approved contract targets
-Multica `0.6.1` at `2ea01ae4ef55de4310b99af192d2dbd367832883`
-and sets `max_tested_cli_version` to `0.6.1`. The verified stable target is
-Multica `0.7.0` at `dbdbb299164347586e2650bb67684a490726a798`.
-Draft PRs for `0.6.2` and unrelated controller work are neither a published
-baseline nor a branch dependency.
+The implementation baseline is draft PR #101, branch
+`feat/MYL-474-update-multica-0.6.2`, exact head
+`b1c350ce22941a66871f11e0c5830a6ec542878c`. Its approved contract targets
+Multica `0.6.2` at `7ab92d7622ecd81d179a8d83ae2dea74835a5069` and already implements
+list-property types and validation, `DaemonStatus.cli_commit`, wakeup
+`last_error`, upload/network/server classification, search regressions, project
+partial-update behavior, deterministic generation, packaging, and extensive
+offline tests. PR #101 currently conflicts with `main`; it is implementation
+base and evidence, not a merge-ready artifact.
 
-The upstream audit is closed: the target has 209 CLI nodes (four additions, no
-removals, six changed nodes) and 196 supported response work items (60 changed,
-136 unchanged). Each reviewed argument or flag must still be traced through the
-pinned `RunE` path to path, query, JSON, header, multipart, stdin, file, or local
-control. Evidence and enum candidates never approve public SDK behavior by
-themselves.
+The verified target remains Multica `0.7.0` at
+`dbdbb299164347586e2650bb67684a490726a798`. Its closed inventory contains 209
+CLI nodes and 196 supported response work items. The planning branch does not
+merge, rebase, edit, close, or replace PR #101.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Certify a direct `0.6.1` to `0.7.0` migration with exact release, asset,
-  checksum, binary, source, mapping, response, test, and documentation
-  provenance.
-- Preserve the approved-contract-only generation boundary and fail closed on an
-  unresolved mapping, presence rule, response item, or inventory verdict.
-- Add the smallest typed surface necessary for the reviewed `adapt` decisions,
-  using existing request models, resources, decoders, transport errors, case
-  tables, and live-smoke infrastructure.
-- Keep retained operations behaviorally and structurally compatible.
+- Preserve accepted `0.6.2` behavior while reconciling PR #101 with the future
+  integration target and advancing the approved contract to `0.7.0`.
+- Implement only the remaining source-pinned delta through existing models,
+  resources, transport errors, case tables, and the single contract generator.
+- Close every affected scenario with deterministic lower-level, component,
+  contract, package, or CI evidence at one candidate SHA.
 
 **Non-goals:**
 
-- No public workflow-management HTTP client and no `daemon autostart` resource.
-- No public API inferred solely from release notes, source extraction, evidence,
-  or a matching upstream name.
-- No intermediate SDK releases, new transport, new test framework, database
-  migration, or dependency.
-- No modification, merge, close, or reuse of draft PR #101 or #103 as a base.
+- Reimplementing or reverting accepted PR #101 behavior.
+- Modifying PR #101, PR #103, their branches, issue statuses, or duplicate
+  records as part of this planning revision.
+- Adding workflow-management HTTP methods, daemon autostart methods, a new
+  generator/registry, a live stand, live credentials, terminal captures, or
+  image evidence.
 
 ## Decisions
 
-### Decision 1: Direct migration from the effective baseline
+### Decision 1: Use exact PR #101 head as the implementation baseline
 
-The approved contract SHALL replace the target with `0.7.0` and SHALL preserve
-`0.6.1` as the direct comparison and minimum reviewed migration baseline. The
-compatibility policy SHALL accept the reviewed interval through `0.7.0` and use
-the next exclusive semver ceiling produced by the existing generator.
+Implementation SHALL begin from exact commit
+`b1c350ce22941a66871f11e0c5830a6ec542878c`. The first implementation package
+SHALL reconcile that snapshot with the approved integration target, resolve
+conflicts without silently choosing either side, and prove the accepted `0.6.2`
+surface remains present before any `0.7.0` adaptation proceeds.
 
-Why: no non-draft intermediate SDK upgrade is published, and the complete
-source/binary audit already covers every release through `0.7.0`.
+Alternative: restart from `main` or replay selected PR commits. Rejected because
+it would discard reviewed work or make preservation depend on an undocumented
+commit selection.
 
-Alternative: stack the draft lower-version branches. Rejected because their
-state is not an approved baseline and would introduce unverified merge-order
-dependencies.
+### Decision 2: Rebase the approved contract conceptually from 0.6.2 to 0.7.0
 
-### Decision 2: One closed approved-contract reconciliation
+`contracts/sdk-contract.json` remains the sole production generator input. Its
+baseline provenance SHALL identify the accepted PR #101 `0.6.2` contract; target
+provenance SHALL identify `0.7.0`. All 209 command nodes and 196 supported
+response items SHALL receive one reviewed target decision, while an item whose
+SDK behavior is already satisfied by PR #101 SHALL be marked retained and
+covered by a regression reference rather than assigned new implementation.
 
-`contracts/sdk-contract.json` remains the sole production input. The target
-provenance, release artifacts, command inventory, response registry, mappings,
-constraints, presence policies, fixtures, documentation actions, and source
-references SHALL be updated together. The generator SHALL render only the
-existing committed runtime module and transient ignored projections.
+Alternative: keep the old direct `0.6.1 → 0.7.0` plan. Rejected because it
+double-counts accepted work and produces the wrong remaining estimate.
 
-Each argument and flag SHALL identify its real destination. Presence-sensitive
-fields SHALL state omitted, null, empty, zero, and false behavior. Constraints
-SHALL be normalized as `requires`, `conflicts_with`, `exactly_one`,
-`at_least_one`, `required_together`, enum/range, or a named validator, with
-positive and negative cases.
+### Decision 3: Add only five remaining behavior groups
 
-Alternative: generate from the collected evidence bundle. Rejected because it
-would bypass review and violate the established trust boundary.
+The remaining handwritten implementation SHALL be limited to:
 
-### Decision 3: Extend existing property value and filter paths
+1. reviewed property comparison operators through the existing ordered issue
+   property predicate parser and argv/query adapter;
+2. nullable project `workflow_id` and reviewed workflow-aware write outcomes;
+3. the PR-conflict wakeup condition within the existing exactly-one model;
+4. runtime `shared_with`, atomic privacy conflicts, blockers, and agent grant
+   authorization through existing runtime/agent resources and typed errors;
+5. the target workspace allowlist/conflict payload through the existing
+   sanitized exception boundary.
 
-`multi_text` and `multi_url` SHALL reuse the existing property definition/value
-models and JSON-value decoding boundary. Values SHALL preserve array order,
-duplicates, explicit empty arrays, and the reviewed null/omission distinction.
-Issue property comparison filters SHALL extend the existing ordered predicate
-model with reviewed operators and deterministic query/argv encoding; reserved,
-ill-typed, or unsupported combinations SHALL fail before transport.
+PR #101 list-property normalization, daemon commit identity, wakeup diagnostics,
+upload/network/server handling, search, and project partial-update semantics
+SHALL remain unchanged except where a source-pinned `0.7.0` record explicitly
+requires adaptation.
 
-Alternative: add a generic untyped property escape hatch. Rejected because the
-SDK already has a closed typed property model and validation boundary.
+Alternative: carry every task from the former direct-upgrade plan. Rejected
+because it would reimplement accepted behavior and obscure the remaining delta.
 
-### Decision 4: Add fields and semantics to their existing resource models
+### Decision 4: Resolve conflicts in one foundation before parallel writes
 
-- Project responses SHALL expose nullable `workflow_id`. Project create/update
-  writes SHALL preserve omitted versus explicit null/empty semantics and SHALL
-  validate workflow-aware transitions before transport where the CLI contract
-  provides a deterministic validator.
-- Daemon status SHALL expose optional `cli_commit`; old or omitted payloads SHALL
-  decode to the documented legacy value without weakening other required fields.
-- Wakeup create/update SHALL admit the reviewed PR-conflict condition, retain
-  exactly-one condition validation, and decode diagnostics plus stale-error
-  clearing without inventing a second wakeup state model.
-- Runtime definitions SHALL expose `shared_with`. Runtime update/delete and
-  agent create/update SHALL reuse existing conflict/error types for explicit
-  grants, atomic privacy revocation, busy blockers, and authorization failures.
+The foundation package SHALL own baseline reconciliation, contract identifiers,
+generated projection, and shared schemas. After it stabilizes those interfaces,
+property/project, wakeup, and runtime/error packages MAY write disjoint domains
+in parallel. Final integration owns shared tables, docs, packaging, and CI.
 
-Alternative: create version-specific `V070` resources and models. Rejected
-because every change is an additive or presence-sensitive extension of an
-existing public concept.
+Alternative: let domain packages resolve shared contract conflicts independently.
+Rejected because `contracts/sdk-contract.json` and generated projections are
+high-conflict, single-owner files.
 
-### Decision 5: Centralize reviewed error changes at the current boundary
+### Decision 5: Offline verification is sufficient
 
-Upload/network failures, sanitized stable-server failures, workspace allowlist
-errors, and structured conflicts SHALL be decoded by the current transport and
-resource-specific adapters. Public exceptions SHALL expose only reviewed code,
-status, message, and structured safe context; backend details, private URLs,
-hostnames, paths, credentials, and personal data SHALL remain redacted.
+`e2e_required=false`. Each public behavior is a deterministic transformation or
+typed decode/validation boundary already exercised with the repository's fake
+CLI, frozen payloads, component transport, contract mutation checks, package
+imports, and GitHub CI. No remaining acceptance criterion depends on a real
+database, browser, external service, interactive TTY, or human-visible output.
+The unavailable stand is therefore neither used nor replaced with invented
+fixtures; environment-based and visual evidence requirements are removed.
 
-Alternative: return raw CLI stderr or payload mappings. Rejected because it
-would leak implementation details and break the current typed exception policy.
+Alternative: retain live or screenshot gates. Rejected because they add no
+observable assertion beyond the named lower-level checks and the owner has made
+the stand unavailable.
 
-### Decision 6: Preserve explicit exclusions
+### Decision 6: Ponytail full gate
 
-The four `daemon autostart` command nodes SHALL be recorded as `defer` because
-they are local-control candidates needing separate public policy. Workflow
-management endpoints SHALL be `not_sdk_surface` because no public CLI operation
-exists. Claim metrics, Qoder/runtime ownership, daemon internals, and UI changes
-SHALL remain `not_sdk_surface` unless they alter one of the reviewed responses
-above.
-
-### Decision 7: Verification uses tables plus one isolated live lifecycle
-
-Existing frozen case tables SHALL gain rows rather than parallel suites. Offline
-tests SHALL prove exact argv, mapping, presence, ordering, duplicates, nulls,
-validators, decode behavior, errors, exports, and compatibility. The existing
-live-smoke boundary SHALL be extended for the exact `0.7.0` candidate and an
-isolated test profile/workspace. Tester evidence SHALL be published in Multica,
-not committed; genuine changed terminal output SHALL have before/after text and
-PNG renders from the bundled `scripts/render_terminal.swift`.
-
-## Ponytail full gate
-
-No new subsystem is necessary. The required alternatives already exist:
-approved contract/schema and generator, typed models/resources, centralized
-transport errors, frozen test tables, GitHub CI, and live-smoke infrastructure.
-All are retained and extended in place. A second registry, versioned resource
-layer, workflow client, daemon-control abstraction, test framework, or evidence
-store is removed from the design.
+No new subsystem is needed. The existing contract/schema/generator, typed
+models/resources, subprocess transport, fake CLI, frozen case tables, package
+tests, and GitHub CI are necessary and retained. A branch-composition framework,
+versioned resource layer, second registry, new E2E runner, identity provisioner,
+renderer, evidence store, or workflow client is unnecessary and removed.
 
 ## Risks / Trade-offs
 
-- The contract JSON is a shared high-conflict file. A foundation package owns
-  it before resource packages begin; siblings consume its stable identifiers.
-- Presence and error semantics changed across several upstream releases. Closed
-  tables and source-pinned positive/negative vectors trade authoring volume for
-  deterministic review.
-- Live infrastructure may expose only a subset of destructive/privacy paths.
-  Required lower-level fixtures remain release gates; unavailable necessary live
-  evidence is a verification blocker, not a reason to claim coverage.
-- The direct version jump makes compatibility assumptions visible. Any discovered
-  constraint requiring an intermediate migration requires an OpenSpec revision.
+- **PR #101 conflicts with main** → reconcile once in the foundation, assert
+  accepted `0.6.2` signatures/fixtures before target adaptations, and forbid
+  domain packages from independently resolving shared files.
+- **A retained PR #101 behavior could be mistaken for remaining work** → map
+  every target scenario to baseline evidence or a new task and count only the
+  latter in the estimate.
+- **The source target changes shared contract records** → stabilize identifiers
+  and regenerate before parallel domain work begins.
+- **No live stand is available** → require concrete fake-CLI/component/contract
+  assertions for all remaining behaviors and fail CI on unclassified inventory,
+  generated drift, private-data leakage, or incomplete package exports.
 
 ## Migration Plan
 
-1. Update and validate the approved provenance, inventory, response registry,
-   mapping, constraint, compatibility, and generator contract.
-2. Implement disjoint resource/model adaptations against the stable contract.
-3. Regenerate projections, reconcile tables/docs, and run focused then complete
-   offline/type/lint/package gates.
-4. Publish the exact candidate revision and run the isolated `0.7.0` live
-   lifecycle with independent inspection and evidence.
-5. Release only after human approval and all compatibility gates; no persisted
-   SDK data migration or rollback transform is required.
+1. Create the implementation branch from exact PR #101 head, reconcile the
+   integration target, and prove accepted `0.6.2` behavior is intact.
+2. Advance provenance, inventory, response decisions, mappings, compatibility,
+   and the generated projection from the accepted `0.6.2` baseline to `0.7.0`.
+3. Implement the disjoint remaining behavior groups against the stable contract.
+4. Reconcile shared tables/docs and run focused then complete offline, contract,
+   type, lint, package, and CI gates at one candidate SHA.
+5. Roll back the consolidation as one implementation commit range while keeping
+   PR #101 and its branch intact; no data migration or live-state cleanup exists.
 
-Rollback is a normal Git revert of the implementation change and its generated
-projection. It SHALL restore the prior compatibility ceiling and docs together;
-partial rollback of generated or handwritten pieces is forbidden.
+## Open Questions
+
+None. Destructive cancellation of duplicate issues is a separate owner decision
+and is not authorized or performed by this plan.

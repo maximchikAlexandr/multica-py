@@ -1,55 +1,36 @@
-## 1. Approved target and deterministic contract
+## 1. Baseline preservation and approved contract
 
-- [ ] 1.1 Replace target/release/asset/binary provenance with verified Multica `0.7.0`, retain `0.6.1` as the effective baseline, and generate the reviewed compatibility interval.
-- [ ] 1.2 Reconcile exactly 209 target CLI nodes and their positional/local/persistent flags with explicit support decisions; retain `daemon autostart*` as `defer` and workflow-management/internals as `not_sdk_surface`.
-- [ ] 1.3 Reconcile exactly 196 supported response items with 60 changed and 136 unchanged unique verdicts, paired old/target source URLs, fixture action, test reference, and documentation action.
-- [ ] 1.4 Trace every changed input to path/query/JSON/header/multipart/stdin/file/local-control destinations and approve five-state presence, enums, and normalized constraints with positive/negative vectors.
-- [ ] 1.5 Update contract schema/loader/generator only where the target data requires it; render the committed approved runtime projection and prove repeated rendering is byte-identical.
-- [ ] 1.6 Add fail-closed mutation/reconciliation tests for provenance, counts, duplicate/missing verdicts, unreviewed candidates, mappings, presence, constraints, compatibility, and deterministic generation.
+- [ ] 1.1 Create the implementation line from exact PR #101 head `b1c350ce22941a66871f11e0c5830a6ec542878c`, reconcile the approved integration target, and add ancestry plus retained-surface assertions that fail on dropped `0.6.2` behavior.
+- [ ] 1.2 Advance release, tag, archive, executable, checksum, source, compatibility, and rollback provenance from the accepted `0.6.2` contract to verified Multica `0.7.0`.
+- [ ] 1.3 Reconcile all 209 target CLI nodes and 196 supported response work items with one retained/adapted/excluded verdict, preserving PR #101 regression references for already satisfied behavior.
+- [ ] 1.4 Trace each remaining changed input to its transport destination, five-state presence behavior, normalized constraints, safe error shape, positive/negative tests, and documentation action.
+- [ ] 1.5 Extend the existing contract schema/loader only where the remaining target data requires it, render the committed projection twice, prove byte identity, and fail generated freshness on drift.
+- [ ] 1.6 Add source-linked mutation and closure cases for exact baseline ancestry, provenance, counts, duplicate/missing decisions, retained drift, mappings, constraints, compatibility, source links, and deterministic generation.
 
-## 2. Property types and comparison filters
+## 2. Property filters and project workflow
 
-- [ ] 2.1 Extend property definition/value types and exports for `multi_text` and `multi_url` using the existing typed JSON boundary.
-- [ ] 2.2 Extend issue property write encoding/decoding for ordered arrays, duplicates, explicit empty arrays, omission, null, invalid elements, and URL validation.
-- [ ] 2.3 Extend the existing issue-list property predicate model and argv/query adapter with reviewed comparison operators and deterministic order.
-- [ ] 2.4 Add frozen unit/contract/component rows for positive and negative array, presence, ordering, duplicate, null, comparison, operator/type, and legacy equality cases.
+- [ ] 2.1 Extend the existing issue-list property predicate parser and argv/query adapter for reviewed comparison operators while preserving predicate order, equality, unset sentinels, and PR #101 list-property behavior.
+- [ ] 2.2 Add table-driven positive and negative cases for each operator/type/value combination, ambiguity, order, duplicate predicates, exact argv/query, and zero transport calls on invalid input.
+- [ ] 2.3 Add nullable `workflow_id` to project wire/public models, decoders, bindings, exports, compatibility fixtures, and package assertions with UUID, null, omission, empty, malformed, and legacy cases.
+- [ ] 2.4 Adapt reviewed project/issue workflow-aware writes to decode authoritative status remap, assignment, move, and run-handoff results without workflow-management methods, client simulation, retry, or unrelated mutation.
+- [ ] 2.5 Extend existing project/issue unit, resource, component, bound-entity, and redaction tables for workflow presence, success, conflicts, partial updates, exact calls, and legacy behavior.
 
-## 3. Project and daemon response adaptations
+## 3. Wakeup conflict condition
 
-- [ ] 3.1 Add nullable `workflow_id` to project wire/public models, decoders, compatibility fixtures, and exports without adding workflow-management methods.
-- [ ] 3.2 Adapt project create/update mappings for reviewed workflow presence and validation semantics; cover omitted, null, empty, present, invalid, and legacy responses.
-- [ ] 3.3 Add optional `cli_commit` to daemon status decoding and public typing with target, empty, omitted, malformed, and legacy fixture cases.
+- [ ] 3.1 Extend the existing wakeup condition model and create/update adapters for the reviewed PR-conflict condition while preserving PR #101 diagnostic fields and clearing semantics.
+- [ ] 3.2 Add eager/command parity and positive/negative case rows proving exact argv, exactly-one validation, zero I/O on conflicting conditions, typed decoding, and legacy compatibility.
 
-## 4. Wakeup condition and diagnostics
+## 4. Runtime privacy and workspace errors
 
-- [ ] 4.1 Extend the existing wakeup condition enum/request mapping for the reviewed PR-conflict condition in eager and command APIs.
-- [ ] 4.2 Preserve exactly-one condition validation and add positive/negative argv parity cases for create and update.
-- [ ] 4.3 Decode reviewed wakeup diagnostics and stale `last_error` clearing with explicit omitted/null/empty distinctions and self-hosted compatibility fixtures.
+- [ ] 4.1 Add reviewed `shared_with` wire/public typing, decoding, exports, binding, order, omission, malformed, and legacy behavior to runtime results.
+- [ ] 4.2 Adapt runtime update/delete for explicit sharing, atomic privacy revocation, busy blockers, safe structured conflicts, no retry, and no partial local mutation.
+- [ ] 4.3 Adapt agent create/update authorization for explicit runtime grants and cover allowed, denied, revoked, malformed, and legacy paths through the existing typed exception boundary.
+- [ ] 4.4 Adapt the target workspace create/update allowlist conflict shape while retaining PR #101 upload/network/server behavior and generic fallback.
+- [ ] 4.5 Extend existing runtime, agent, workspace, transport, decoder, bound-resource, conflict, and redaction tables to prove safe identity/context shapes and absence of private URLs, hosts, paths, credentials, personal data, and backend detail.
 
-## 5. Runtime sharing, privacy, and authorization
+## 5. Documentation, packaging, and exact-SHA acceptance
 
-- [ ] 5.1 Add reviewed `shared_with` wire/public typing, decoder behavior, exports, and legacy omission handling to runtime list/rename/update results.
-- [ ] 5.2 Adapt runtime update/delete for explicit sharing, atomic privacy revocation, busy blockers, and structured 409 context without partial local mutation or retry.
-- [ ] 5.3 Adapt agent create/update authorization errors for explicitly granted runtimes and cover allowed, denied, revoked, malformed, and legacy paths.
-- [ ] 5.4 Add frozen resource, decoder, bound-entity, conflict, and redaction cases for sharing order, identity shape, revoke atomicity, blocker context, and authorization.
-
-## 6. Upload, network, server, and workspace errors
-
-- [ ] 6.1 Extend centralized transport error decoding for the reviewed stable server and network shapes while retaining generic fallback behavior.
-- [ ] 6.2 Adapt attachment/skill upload paths and workspace create/update allowlist failures to expose only approved typed safe context.
-- [ ] 6.3 Add component and unit fixtures for status/code/message/context mapping, malformed payloads, redaction of URLs/hosts/paths/credentials/personal data, and no unintended retry.
-
-## 7. Documentation and compatibility migration
-
-- [ ] 7.1 Update compatibility, CLI coverage, API, and migration docs for the direct `0.6.1` to `0.7.0` interval and each supported adaptation.
-- [ ] 7.2 Document retained/deferred/non-surface decisions, array/comparison syntax, presence semantics, workflow field, daemon commit, wakeup conflicts, runtime grants/revocation, and sanitized errors with checked examples.
-- [ ] 7.3 Update changelog and release documentation with provenance, generation commands, package checks, rollback, and the human approval gate.
-
-## 8. Offline, CI, package, and live verification
-
-- [ ] 8.1 Run source-link audit, strict approved-contract validation, deterministic render, generated freshness check, and contract schema/inventory reconciliation.
-- [ ] 8.2 Run focused tests after each owned resource change, then offline unit/contract/component/packaging suites, collection audit, mypy for source/tests, Ruff check/format, and build wheel/sdist import checks.
-- [ ] 8.3 Extend existing GitHub CI jobs and fixtures only as required for the new offline contract; do not introduce a second test framework or private service dependency.
-- [ ] 8.4 Extend the existing five-input live-smoke harness for the exact CLI `0.7.0` candidate, disposable project lifecycle and read-only daemon commit case with failure-safe cleanup; keep property, wakeup, runtime/privacy, authorization, and structured-error scenarios on the explicit lower-level checks in `delivery-plan.md` because the declared stand provides none of their required fixtures or provisioning controls.
-- [ ] 8.5 Have an independent Tester perform the delivery-plan walkthrough, publish exact revision/command/assertion/cleanup evidence and required before/after text plus PNG attachments in Multica, and leave the evidence branch/PR open unless separately instructed.
-- [ ] 8.6 Verify the final Git diff contains no collector output, raw logs, diagnostic JSON, screenshots, generated evidence, private URLs/hosts/personal data, or hand-edited generated files before release approval.
+- [ ] 5.1 Update README, API, CLI coverage, compatibility, migration, service-usage, changelog, contributing, and releasing guidance for PR #101 baseline preservation, the remaining `0.6.2 → 0.7.0` delta, exclusions, offline evidence, and atomic rollback.
+- [ ] 5.2 Reconcile public discovery, canonical vectors, bindings, response closure, generated docs, exports, package content, and forbidden-content assertions without advertising deferred or non-SDK surfaces.
+- [ ] 5.3 Run focused property/project/wakeup/runtime/workspace tests, strict OpenSpec and contract checks, deterministic render/freshness, source-link audit, Ruff, mypy, complete non-live pytest, compatibility checks, and wheel/sdist package tests at one clean candidate SHA.
+- [ ] 5.4 Publish exact implementation SHA, PR/commit/file links, CI jobs, commands, exit codes, and assertion results in Multica with read-back; do not publish or require stand runs, live logs, screenshots, terminal captures, private endpoints, or credentials.
