@@ -25,6 +25,8 @@ commits, and remove the unsupported write contract without rewriting history.
 - Replace the unstarted WP-04/WP-05 graph remainder with one all-covering
   remaining package. Reuse existing child MYL-576 after approval; do not create
   duplicate children or reuse prior ACCEPT markers under the new revision.
+  Clear MYL-576's obsolete stage through a read-backed detach/re-parent cycle,
+  then cancel MYL-577 as its duplicate so only one nonterminal child remains.
 - Keep `e2e_required=false`: all revised behavior is closed by source-link,
   contract, fake-CLI, unit/resource/component, package, and ordinary CI checks.
 

@@ -119,9 +119,26 @@ no `depends_on`, stage, frontier, or DAG metadata.
 
 After approval, Manager SHALL reuse existing MYL-576 for the sole revised
 package, bind it to the new graph revision and incorporated input SHA, and
-invalidate its old blocked attempt as non-accepted. MYL-577 SHALL not launch or
-count as a revised package. Operational status handling is Manager-owned; no
-duplicate child is created.
+invalidate its old blocked attempt as non-accepted. Because `multica issue
+update --stage` accepts only positive ordinals, Manager SHALL clear the obsolete
+stage with the supported parent transition: while MYL-577 remains nonterminal,
+detach MYL-576 with `--parent "" --no-start`, prove both `parent_issue_id` and
+`stage` are null, and immediately re-parent it to exact implementation parent
+`01a1714f-ae1e-72b7-8de8-664565c7f72a` without `--stage`. Final read-back SHALL
+prove the real parent is restored and `stage` remains null. No other mutation
+may occur between detach verification and re-parenting; a failed assertion
+blocks migration and requires restoration to that exact parent.
+
+Only after MYL-576 is re-parented, rewritten to the new all-covering contract,
+and parked in `backlog` without starting a run SHALL Manager rewrite MYL-577 as
+a retired child and cancel it with `--duplicate-of MYL-576`. MYL-577 remains a
+direct historical child but is terminal and cannot launch. The final child-set
+read-back SHALL show MYL-573/574/575 done, MYL-577 cancelled as a duplicate,
+and MYL-576 as the only nonterminal direct child, unstaged, with
+`delivery_mode=single_wp_no_dag` and no stage, `depends_on`, frontier, or DAG
+field in its managed contract. Thus completing MYL-576 closes every direct
+child and makes the parent's children-done fan-in reachable. No duplicate child
+is created.
 
 Alternative: preserve two sequential WPs. Rejected because the planning policy
 requires one WP when no frontier can execute two independent packages.
@@ -156,8 +173,9 @@ are unnecessary and removed from the plan.
 - **A server-only capability remains unavailable to SDK callers** → document the
   honest exclusion; a future CLI command plus separately approved SDK change is
   required before exposure.
-- **Existing children reflect the old DAG** → reuse MYL-576 only, do not launch
-  MYL-577, and require managed-contract read-back before resumed implementation.
+- **Existing children reflect the old DAG** → detach/re-parent MYL-576 to clear
+  its stage, cancel MYL-577 as its duplicate only after restoration, and prove
+  the one-nonterminal-child/fan-in invariant before resumed implementation.
 - **Error bodies may drift** → admit only reviewed status/code/message fields;
   unknown or malformed payloads fall back without exposing backend detail.
 
@@ -170,8 +188,12 @@ are unnecessary and removed from the plan.
 3. Manager incorporates the approved revision without force, reset, amend, or
    rewriting any existing ref; records historical and new planning identities;
    and read-backs the updated implementation contract.
-4. Manager reuses MYL-576 as the sole remaining all-covering WP. Old blocked
-   evidence is retained but is not an ACCEPT; MYL-577 does not launch.
+4. Manager confirms no active MYL-576/MYL-577 run, performs the ordered
+   detach/read-back/re-parent/read-back cycle for MYL-576, installs its revised
+   parked contract, then marks MYL-577 as a retired child and cancels it as a
+   duplicate of MYL-576. Old blocked evidence is retained but is not an ACCEPT.
+   Final child-set read-back proves one unstaged nonterminal child and reachable
+   children-done fan-in before MYL-576 may leave `backlog`.
 5. The remaining WP corrects the contract/generated projection first, then
    implements read-only runtime fields and CLI-backed errors, reconciles docs
    and package surfaces, and publishes one final candidate.

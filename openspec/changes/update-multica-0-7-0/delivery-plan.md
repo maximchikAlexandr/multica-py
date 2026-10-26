@@ -57,9 +57,55 @@ for remaining work.
 - The blocked WP-04 attempt has no result SHA or ACCEPT and SHALL NOT be reused.
   Manager SHALL reuse existing child MYL-576 for the sole remaining package only
   after rebinding its managed contract to the new revision and exact input.
-- Existing MYL-577 SHALL not launch or count as a package in the revised
-  topology. No duplicate child SHALL be created. Operational status handling is
-  Manager-owned and does not alter this stable topology.
+- Existing MYL-577 SHALL be retired and cancelled as a duplicate of MYL-576; it
+  SHALL not launch or count as a package in the revised topology. No duplicate
+  child SHALL be created.
+
+### Safe platform migration procedure
+
+Manager SHALL execute this procedure only after the new revision is READY and
+receives fresh human approval. It is a migration gate, not product execution:
+
+1. Keep product execution paused and do not promote MYL-576 while changing
+   child topology. Run `multica issue runs MYL-576 --active --output json` and
+   the equivalent for MYL-577; both arrays SHALL be empty. Read both issues and preserve exact
+   implementation parent id `01a1714f-ae1e-72b7-8de8-664565c7f72a` as the
+   rollback target. Any active child run blocks migration.
+2. While MYL-577 is still nonterminal, run
+   `multica issue update MYL-576 --parent "" --no-start --output json`. Immediate
+   `multica issue get MYL-576 --output json` read-back SHALL show
+   `parent_issue_id=null` and `stage=null`; otherwise stop and restore the exact
+   parent. This documented parent-clear transition is the supported way to
+   remove a stage because `--stage` accepts only positive integers.
+3. Without any intervening mutation, run
+   `multica issue update MYL-576 --parent 01a1714f-ae1e-72b7-8de8-664565c7f72a --no-start --output json`.
+   Read-back SHALL show that exact `parent_issue_id` and `stage=null`. Thus the
+   real parent is restored without inventing an unsupported stage-clear flag.
+4. Replace MYL-576's managed description from a workspace-local file and park it
+   atomically with `multica issue update MYL-576 --description-file ./myl-576-managed-contract.md --status backlog --no-start --output json`.
+   The read-back SHALL contain the new `graph_revision`, exact incorporated
+   `input_sha`, `wp_id=WP-04-05-cli-surface-release`, all tasks 4.1–5.4 exactly
+   once, and `delivery_mode=single_wp_no_dag`; it SHALL contain no `stage=`,
+   `depends_on=`, frontier, DAG, prior-graph ACCEPT, or execution authority.
+5. Replace MYL-577's description with a retired-child record naming MYL-576 and
+   the new graph revision, then run
+   `multica issue status MYL-577 cancelled --duplicate-of MYL-576`. Read-back
+   SHALL show `status_category=cancelled`, `duplicate_of.id` equal to
+   `01a1787c-adf7-7d0e-b5df-c2f6d4e422b5`, unchanged implementation parent, and
+   no active run. Cancellation occurs only after MYL-576 is safely re-parented,
+   so the temporary detach cannot close parent fan-in.
+6. Run `multica issue children MYL-558 --output json` and read each direct child.
+   MYL-573/574/575 SHALL be successful terminal history, MYL-577 SHALL be the
+   cancelled duplicate, and MYL-576 SHALL be the only nonterminal child and
+   appear in `unstaged` with `stage=null`. There SHALL be no other active revised
+   WP or dependency/DAG contract. The child summary therefore has exactly one
+   unfinished child; when MYL-576 becomes terminal, all direct children are
+   terminal and the parent's children-done fan-in closes.
+
+Every write is followed by read-back. On a failed assertion Manager SHALL stop,
+keep MYL-576 parked, restore its exact parent if needed, and SHALL NOT cancel
+MYL-577 or launch implementation. Temporary description files are removed only
+after successful read-back and are never committed.
 
 ## E2E decision
 
@@ -114,7 +160,7 @@ irreducibly live behavior, it violates this revision and returns to planning.
 | R30 | contract / generated drift | deterministic check | double render and generated freshness; task 5.2/5.3 |
 | R31 | compatibility / reviewed endpoint | lower-level sufficient | `0.6.2`/`0.7.0` preflight rows; task 5.3 |
 | R32 | compatibility / above ceiling | lower-level sufficient | strict/warn boundary rows; task 5.3 |
-| R33 | verification / accepted history | Git + managed-contract read-back | identities, ancestry, no old ACCEPT reuse; task 5.3/5.4 |
+| R33 | verification / accepted history and topology migration | Git + child/managed-contract read-back | identities, ancestry, no old ACCEPT reuse; MYL-576 sole unstaged nonterminal child; MYL-577 cancelled duplicate; reachable fan-in; task 5.3/5.4 |
 | R34 | verification / old result reused | managed-contract assertion | revised result must use new graph/input; task 5.4 |
 | R35 | verification / coverage closure | contract/test audit | 196 responses and all revised scenarios close once; task 5.2 |
 | R36 | verification / deterministic drift | ordinary CI | source, contract, render, tests, types, lint, package; task 5.3 |
@@ -135,6 +181,7 @@ not edit implementation fixtures or manufacture evidence.
 | Accepted ancestry | `git merge-base --is-ancestor` for composition, WP-01, WP-03, WP-02, and accepted integration against candidate `HEAD` | before resumed edits and final CI |
 | Revised planning ancestry | new `VERIFIED_PLANNING_SHA` descends from `9b5d112830831f9e727b35f4936f923ec9429cc7` and is an ancestor of candidate `HEAD` | before resumed edits and final CI |
 | Final OpenSpec | `git diff --exit-code "$VERIFIED_PLANNING_SHA" -- openspec/changes/update-multica-0-7-0/` | before resumed edits and final CI |
+| Topology migration | `multica issue get MYL-576`, `multica issue get MYL-577`, and `multica issue children MYL-558 --output json` | before MYL-576 promotion: exact parent restored, sole nonterminal child unstaged, retired child cancelled as duplicate, old children terminal, fan-in reachable |
 | Contract/source | `make contract` | existing `contract-check` job |
 | Generated freshness | `uv run python scripts/upstream_contract.py check --approved contracts/sdk-contract.json` | existing contract job |
 | Focused correction | `uv run pytest -o addopts="" -q tests/unit/resources tests/unit/test_transport.py tests/component/test_transport_errors.py tests/contract/test_sdk_contract.py` | existing unit/component/contract jobs |
@@ -169,7 +216,9 @@ remaining task 4.1–5.4 is covered exactly once by the single package below. No
 `depends_on`, stage, frontier, parallel sibling, or DAG metadata exists. This is
 required because contract correction must precede runtime/error implementation,
 which must precede final reconciliation; no remaining execution front contains
-two independent packages.
+two independent packages. Platform read-back SHALL distinguish this remaining
+topology from terminal history: MYL-576 is its only nonterminal child and is
+unstaged; MYL-577 is a cancelled duplicate and is not an executable package.
 
 ### WP-04-05-cli-surface-release
 
@@ -192,8 +241,9 @@ two independent packages.
   authorization/allowlist failures; accepted-history and final OpenSpec gates.
 - **DoD/evidence:** all R01–R39 mappings are closed; contract/source/mutation,
   focused and complete offline, lint/type, compatibility, package, ancestry, CI,
-  and evidence read-back checks pass at one clean exact SHA; no old ACCEPT,
-  direct HTTP method, live/image/private evidence, or duplicate child exists.
+  topology/fan-in and evidence read-back checks pass at one clean exact SHA; no
+  old ACCEPT, direct HTTP method, live/image/private evidence, or duplicate
+  executable child exists.
 - **Parallel safety:** single remaining writer; no parallel topology applies.
 
 ## Evidence and cleanup contract
