@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
+import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 
-from scripts.verify_composition import CompositionError, verify_composition
+from scripts.verify_composition import CompositionError, main, verify_composition
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -20,6 +23,29 @@ def _commit(repo: Path, message: str) -> str:
     _git(repo, "add", ".")
     _git(repo, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", message)
     return _git(repo, "rev-parse", "HEAD")
+
+
+def _closeout(history: dict[str, str | Path], *, complete: bool = True) -> str:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    tasks = repo / "openspec/changes/demo/tasks.md"
+    tasks.write_text(
+        "## Tasks\n\n- [x] 1. First task\n- [x] 2. Second task\n"
+        if complete
+        else "## Tasks\n\n- [x] 1. First task\n- [ ] 2. Second task\n",
+        encoding="utf-8",
+    )
+    source_spec = repo / "openspec/changes/demo/specs/sdk-surface/spec.md"
+    approved_spec = source_spec.read_text(encoding="utf-8").split("## ADDED Requirements\n\n", 1)[1]
+    main_spec = repo / "openspec/specs/sdk-surface/spec.md"
+    current_main = main_spec.read_text(encoding="utf-8").replace(
+        "Draft purpose.", "Updated purpose."
+    )
+    main_spec.write_text(current_main + approved_spec, encoding="utf-8")
+    archive = repo / "openspec/changes/archive/2026-10-26-demo"
+    archive.parent.mkdir(parents=True)
+    (repo / "openspec/changes/demo").rename(archive)
+    return _commit(repo, "archive verified change")
 
 
 def _merge(repo: Path, branch: str, message: str) -> None:
@@ -44,6 +70,25 @@ def history(tmp_path: Path) -> dict[str, str | Path]:
     _git(repo, "init", "-b", "main")
     (repo / "openspec/changes/demo").mkdir(parents=True)
     (repo / "openspec/changes/demo/spec.md").write_text("approved\n", encoding="utf-8")
+    (repo / "openspec/changes/demo/tasks.md").write_text(
+        "## Tasks\n\n- [ ] 1. First task\n- [ ] 2. Second task\n", encoding="utf-8"
+    )
+    (repo / "openspec/changes/demo/design.md").write_text("Approved design.\n", encoding="utf-8")
+    (repo / "openspec/changes/demo/specs/sdk-surface").mkdir(parents=True)
+    (repo / "openspec/changes/demo/specs/sdk-surface/spec.md").write_text(
+        "## ADDED Requirements\n\n### Requirement: Fixture behavior\n\n"
+        "The fixture SHALL preserve its behavior.\n\n"
+        "#### Scenario: Requirements are synchronized\n\n"
+        "- **WHEN** closeout runs\n- **THEN** the approved requirement remains\n",
+        encoding="utf-8",
+    )
+    (repo / "openspec/specs/sdk-surface").mkdir(parents=True)
+    (repo / "openspec/specs/sdk-surface/spec.md").write_text(
+        "# sdk-surface Specification\n\n## Purpose\n\nDraft purpose.\n\n"
+        "## Requirements\n\n### Requirement: Existing behavior\n\n"
+        "Existing requirements remain.\n",
+        encoding="utf-8",
+    )
     (repo / "integration.txt").write_text("integration\n", encoding="utf-8")
     prior_integration = _commit(repo, "prior integration")
     (repo / "baseline.txt").write_text("baseline\n", encoding="utf-8")
@@ -144,3 +189,257 @@ def test_composition_gate_uses_new_planning_sha_for_final_equality(
 ) -> None:
     assert history["composition_planning"] != history["verified_planning"]
     _verify(history)
+
+
+def test_composition_gate_rejects_candidate_sha_before_final_head(
+    history: dict[str, str | Path],
+) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    (repo / "product.py").write_text("final head\n", encoding="utf-8")
+    _commit(repo, "advance final candidate")
+    with pytest.raises(CompositionError, match="final checkout HEAD"):
+        _verify(history, candidate_sha=str(history["candidate"]))
+
+
+def _cli_args(history: dict[str, str | Path], candidate_sha: str) -> list[str]:
+    return [
+        "--composition-sha",
+        str(history["composition"]),
+        "--composition-planning-sha",
+        str(history["composition_planning"]),
+        "--verified-planning-sha",
+        str(history["verified_planning"]),
+        "--baseline-sha",
+        str(history["baseline"]),
+        "--integration-sha",
+        str(history["integration"]),
+        "--accepted-sha",
+        str(history["integration"]),
+        "--candidate-sha",
+        candidate_sha,
+        "--openspec-path",
+        "openspec/changes/demo",
+    ]
+
+
+def _run_cli(
+    history: dict[str, str | Path], candidate_sha: str
+) -> subprocess.CompletedProcess[str]:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    verifier = Path(__file__).resolve().parents[2] / "scripts/verify_composition.py"
+    args = [sys.executable, str(verifier), *_cli_args(history, candidate_sha)]
+    return subprocess.run(args, cwd=repo, check=False, capture_output=True, text=True)
+
+
+def _run_main(history: dict[str, str | Path], candidate_sha: str) -> int:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    previous = Path.cwd()
+    try:
+        os.chdir(repo)
+        return main(_cli_args(history, candidate_sha))
+    finally:
+        os.chdir(previous)
+
+
+@dataclass(frozen=True)
+class _CloseoutMutationCase:
+    id: str
+    mutate: Callable[[dict[str, str | Path]], None]
+    expected_error: str
+
+
+def _tamper_archive(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/changes/archive/2026-10-26-demo/design.md"
+    path.write_text("Tampered design.\n", encoding="utf-8")
+    _commit(repo, "tamper archived design")
+
+
+def _leave_tasks_incomplete(history: dict[str, str | Path]) -> None:
+    _closeout(history, complete=False)
+
+
+def _change_requirement(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/changes/archive/2026-10-26-demo/design.md"
+    path.write_text("Unauthorized design drift.\n", encoding="utf-8")
+    _commit(repo, "change approved archived design")
+
+
+def _drop_existing_main_requirements(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/specs/sdk-surface/spec.md"
+    path.write_text("# sdk-surface Specification\n", encoding="utf-8")
+    _commit(repo, "remove existing main spec requirements")
+
+
+def _omit_synced_change_requirements(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/specs/sdk-surface/spec.md"
+    path.write_text(
+        "# sdk-surface Specification\n\n## Requirements\n\n### Requirement: Existing behavior\n\n"
+        "Existing requirements remain.\n",
+        encoding="utf-8",
+    )
+    _commit(repo, "omit approved change requirements from main spec")
+
+
+def _add_archived_file(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/changes/archive/2026-10-26-demo/extra.md"
+    path.write_text("unapproved file\n", encoding="utf-8")
+    _commit(repo, "add unapproved archive file")
+
+
+def _use_wrong_archive_name(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    (repo / "openspec/changes/archive/2026-10-26-demo").rename(
+        repo / "openspec/changes/archive/2026-10-26-other"
+    )
+    _commit(repo, "move approved artifacts to the wrong archive")
+
+
+def _add_second_archive(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    extra = repo / "openspec/changes/archive/2026-10-27-demo"
+    extra.mkdir()
+    (extra / "proposal.md").write_text("duplicate\n", encoding="utf-8")
+    _commit(repo, "add a second archive")
+
+
+def _keep_active_and_archived_trees(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    archive = repo / "openspec/changes/archive/2026-10-26-demo"
+    active = repo / "openspec/changes/demo"
+    active.mkdir(parents=True)
+    for path in archive.rglob("*"):
+        if path.is_file():
+            target = active / path.relative_to(archive)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(path.read_bytes())
+    _commit(repo, "keep active and archived trees")
+
+
+def _remove_change_without_archiving(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    shutil.rmtree(repo / "openspec/changes/demo")
+    _commit(repo, "remove approved change")
+
+
+def _remove_synced_main_spec(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    (repo / "openspec/specs/sdk-surface/spec.md").unlink()
+    _commit(repo, "remove synced main spec")
+
+
+def _add_unrelated_openspec_file(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/specs/unrelated/spec.md"
+    path.parent.mkdir(parents=True)
+    path.write_text("unrelated\n", encoding="utf-8")
+    _commit(repo, "add unrelated spec")
+
+
+def _change_task_text(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/changes/archive/2026-10-26-demo/tasks.md"
+    path.write_text("## Tasks\n\n- [x] 1. Changed task\n- [x] 2. Second task\n", encoding="utf-8")
+    _commit(repo, "change archived task text")
+
+
+_CLOSEOUT_MUTATION_CASES = (
+    _CloseoutMutationCase(
+        "unauthorized-design", _change_requirement, "changed approved artifact design.md"
+    ),
+    _CloseoutMutationCase(
+        "tampered-archive", _tamper_archive, "changed approved artifact design.md"
+    ),
+    _CloseoutMutationCase(
+        "incomplete-tasks", _leave_tasks_incomplete, "tasks differ beyond completing"
+    ),
+    _CloseoutMutationCase(
+        "lost-main-requirements",
+        _drop_existing_main_requirements,
+        "removed or changed existing requirements",
+    ),
+    _CloseoutMutationCase(
+        "missing-synced-requirements",
+        _omit_synced_change_requirements,
+        "omits approved change requirements",
+    ),
+    _CloseoutMutationCase(
+        "extra-archive-file", _add_archived_file, "changed the approved artifact file set"
+    ),
+    _CloseoutMutationCase(
+        "wrong-archive-name", _use_wrong_archive_name, "archive path does not match"
+    ),
+    _CloseoutMutationCase(
+        "multiple-archives", _add_second_archive, "multiple closeout archive directories"
+    ),
+    _CloseoutMutationCase(
+        "active-and-archive", _keep_active_and_archived_trees, "both active and archived"
+    ),
+    _CloseoutMutationCase(
+        "removed-without-archive",
+        _remove_change_without_archiving,
+        "removed the approved change without archiving",
+    ),
+    _CloseoutMutationCase(
+        "missing-main-spec", _remove_synced_main_spec, "synced main spec is missing"
+    ),
+    _CloseoutMutationCase(
+        "unrelated-openspec",
+        _add_unrelated_openspec_file,
+        "unrelated OpenSpec changes",
+    ),
+    _CloseoutMutationCase("task-text-changed", _change_task_text, "tasks differ beyond completing"),
+)
+
+
+def test_composition_cli_accepts_verified_closeout_archive(
+    history: dict[str, str | Path],
+) -> None:
+    candidate = _closeout(history)
+    assert _run_main(history, candidate) == 0
+    result = _run_cli(history, candidate)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == f"Composition {history['composition']} is preserved in {candidate}.\n"
+
+
+@pytest.mark.parametrize("case", _CLOSEOUT_MUTATION_CASES, ids=lambda case: case.id)
+def test_composition_gate_rejects_unapproved_closeout_mutations(
+    history: dict[str, str | Path],
+    case: _CloseoutMutationCase,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    case.mutate(history)
+    with pytest.raises(CompositionError, match=case.expected_error):
+        _verify(history, candidate_sha="HEAD")
+    assert _run_main(history, "HEAD") == 1
+    assert "Composition verification failed:" in capsys.readouterr().err
