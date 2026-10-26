@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import pathlib
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Annotated, cast
 
 import msgspec
 
@@ -113,6 +113,15 @@ class _ProjectWire(msgspec.Struct, frozen=True, kw_only=True):
     icon: str | None = None
     lead_type: str | None = None
     lead_id: str | None = None
+    workflow_id: (
+        Annotated[
+            str,
+            msgspec.Meta(
+                pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+            ),
+        ]
+        | None
+    ) = None
     start_date: str | None = None
     due_date: str | None = None
     created_at: datetime.datetime | None = None
@@ -132,6 +141,7 @@ def _project_from_wire(wire: _ProjectWire) -> Project:
         icon=wire.icon,
         lead_type=wire.lead_type,
         lead_id=wire.lead_id,
+        workflow_id=wire.workflow_id,
         start_date=wire.start_date,
         due_date=wire.due_date,
         created_at=wire.created_at,
