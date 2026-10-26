@@ -1,11 +1,11 @@
 ## 1. Baseline preservation and approved contract
 
-- [ ] 1.1 Create the implementation line from exact PR #101 head `b1c350ce22941a66871f11e0c5830a6ec542878c`; before product edits, merge the exact Plan-Verifier-approved planning revision as second parent with `--no-ff`, prove that it descends from integration target `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`, assert both parent identities and byte-identical preservation of `openspec/changes/update-multica-0-7-0/`, and fail on dropped accepted `0.6.2` behavior.
+- [ ] 1.1 Create the implementation line from exact PR #101 head `b1c350ce22941a66871f11e0c5830a6ec542878c`; before product edits, merge the exact Plan-Verifier-approved planning revision as second parent with `--no-ff`, record the resulting immutable `COMPOSITION_SHA` in WP-01 evidence and the implementation managed contract, prove its exact parents and descent from integration target `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`, assert byte-identical preservation of `openspec/changes/update-multica-0-7-0/` against `VERIFIED_PLANNING_SHA`, and fail on dropped accepted `0.6.2` behavior.
 - [ ] 1.2 Advance release, tag, archive, executable, checksum, source, compatibility, and rollback provenance from the accepted `0.6.2` contract to verified Multica `0.7.0`.
 - [ ] 1.3 Reconcile all 209 target CLI nodes and 196 supported response work items with one retained/adapted/excluded verdict, preserving PR #101 regression references for already satisfied behavior.
 - [ ] 1.4 Trace each remaining changed input to its transport destination, five-state presence behavior, normalized constraints, safe error shape, positive/negative tests, and documentation action.
 - [ ] 1.5 Extend the existing contract schema/loader only where the remaining target data requires it, render the committed projection twice, prove byte identity, and fail generated freshness on drift.
-- [ ] 1.6 Add source-linked mutation and closure cases for exact composition parents, integration-target ancestry, OpenSpec subtree preservation, provenance, counts, duplicate/missing decisions, retained drift, mappings, constraints, compatibility, source links, and deterministic generation.
+- [ ] 1.6 Add source-linked mutation and closure cases for immutable composition identity and parents, final-candidate composition ancestry, final OpenSpec subtree equality to `VERIFIED_PLANNING_SHA`, integration-target ancestry, provenance, counts, duplicate/missing decisions, retained drift, mappings, constraints, compatibility, source links, and deterministic generation.
 
 ## 2. Property filters and project workflow
 
@@ -32,5 +32,5 @@
 
 - [ ] 5.1 Update README, API, CLI coverage, compatibility, migration, service-usage, changelog, contributing, and releasing guidance for PR #101 baseline preservation, the remaining `0.6.2 → 0.7.0` delta, exclusions, offline evidence, and atomic rollback.
 - [ ] 5.2 Reconcile public discovery, canonical vectors, bindings, response closure, generated docs, exports, package content, and forbidden-content assertions without advertising deferred or non-SDK surfaces.
-- [ ] 5.3 Run focused property/project/wakeup/runtime/workspace tests, strict OpenSpec and contract checks, deterministic render/freshness, source-link audit, Ruff, mypy, complete non-live pytest, compatibility checks, and wheel/sdist package tests at one clean candidate SHA.
-- [ ] 5.4 Publish exact implementation SHA, PR/commit/file links, CI jobs, commands, exit codes, and assertion results in Multica with read-back; do not publish or require stand runs, live logs, screenshots, terminal captures, private endpoints, or credentials.
+- [ ] 5.3 At one clean candidate SHA, prove immutable `COMPOSITION_SHA` is an ancestor of `HEAD` and the final OpenSpec subtree is byte-identical to `VERIFIED_PLANNING_SHA`; then run focused property/project/wakeup/runtime/workspace tests, strict OpenSpec and contract checks, deterministic render/freshness, source-link audit, Ruff, mypy, complete non-live pytest, compatibility checks, and wheel/sdist package tests.
+- [ ] 5.4 Publish exact implementation SHA, immutable `COMPOSITION_SHA`, verified planning SHA, PR/commit/file links, CI jobs, commands, exit codes, and assertion results in Multica with read-back; do not publish or require stand runs, live logs, screenshots, terminal captures, private endpoints, or credentials.

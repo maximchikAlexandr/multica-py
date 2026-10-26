@@ -5,13 +5,15 @@
 Verification SHALL prove the composition commit has exact PR #101 head as first
 parent, the Plan-Verifier-approved planning SHA as second parent, exact
 integration target `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c` in its ancestry,
-the published OpenSpec subtree unchanged, and accepted PR #101 behavior intact
-before remaining `0.7.0` adaptations are accepted.
+and an immutable recorded `COMPOSITION_SHA`. Final-candidate verification SHALL
+prove that composition is an ancestor of `HEAD`, the OpenSpec subtree at `HEAD`
+is byte-identical to `VERIFIED_PLANNING_SHA`, and accepted PR #101 behavior
+remains intact before remaining `0.7.0` adaptations are accepted.
 
 #### Scenario: Baseline reconciliation runs
 
-- **WHEN** the composition and consolidated candidate are checked against their exact parents, OpenSpec input, and accepted PR #101 public signatures, canonical vectors, fixtures, and generated bindings
-- **THEN** both parent identities and integration ancestry match, the OpenSpec subtree is byte-identical, and every retained behavior matches or has an explicit source-pinned `0.7.0` adapt decision
+- **WHEN** immutable `COMPOSITION_SHA` and consolidated candidate `HEAD` are checked against exact composition parents, `VERIFIED_PLANNING_SHA`, integration ancestry, and accepted PR #101 public signatures, canonical vectors, fixtures, and generated bindings
+- **THEN** both composition parent identities match, `COMPOSITION_SHA` is an ancestor of final `HEAD`, integration ancestry matches, final OpenSpec is byte-identical to `VERIFIED_PLANNING_SHA`, and every retained behavior matches or has an explicit source-pinned `0.7.0` adapt decision
 
 ### Requirement: Remaining upgrade coverage is closed and table-driven
 

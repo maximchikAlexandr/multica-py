@@ -56,6 +56,8 @@ None.
 - Approved integration target: exact `origin/main` snapshot
   `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`; the verified planning revision
   is its descendant and is the required second parent of the composition merge.
+  The resulting immutable composition SHA is carried through final-candidate
+  verification rather than inferred from the candidate's current `HEAD`.
 - Remaining writes: approved contract and projection, property-filter, project,
   wakeup, runtime/agent, workspace/error models and adapters, existing case
   tables, docs, package metadata, and CI verification.

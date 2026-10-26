@@ -10,7 +10,9 @@
 - `composition`: start at the implementation baseline, then before product
   edits create one `--no-ff` merge whose second parent is the exact verified
   planning revision recorded by Plan Verifier; that parent descends from the
-  approved integration target and carries the published OpenSpec input
+  approved integration target and carries the published OpenSpec input; record
+  the resulting immutable `COMPOSITION_SHA` and pass it with
+  `VERIFIED_PLANNING_SHA` through the implementation managed contract
 - `baseline_state`: reviewed `0.6.2` implementation evidence; currently
   conflicts with `main` and is not treated as merge-ready
 - `target`: Multica `0.7.0` at
@@ -45,9 +47,11 @@ source-reviewed payload fixtures, never by invented identities or operations.
 
 | Gate | Concrete command | Required assertion | CI disposition |
 |---|---|---|---|
-| Composition identity | `test "$(git rev-parse HEAD^1)" = b1c350ce22941a66871f11e0c5830a6ec542878c && test "$(git rev-parse HEAD^2)" = "$VERIFIED_PLANNING_SHA"` | composition first parent is exact PR #101 head and second parent is the planning SHA from the approved managed contract | required before product edits |
-| Integration ancestry | `git merge-base --is-ancestor a96eecf3e12a88dd7b4d56e1aafae3285fb0990c HEAD^2 && git merge-base --is-ancestor a96eecf3e12a88dd7b4d56e1aafae3285fb0990c HEAD` | exact integration target reaches both planning input and composed line | required preflight in implementation PR |
-| OpenSpec preservation | `git diff --exit-code HEAD^2 -- openspec/changes/update-multica-0-7-0/` | published OpenSpec input is byte-identical on composition commit | required before product edits and in final CI |
+| Composition capture | `COMPOSITION_SHA=$(git rev-parse HEAD) && git cat-file -e "${COMPOSITION_SHA}^{commit}"` | immutable composition commit is captured immediately after the `--no-ff` merge and recorded in WP-01 evidence and the implementation managed contract | required before product edits; exported to later CI |
+| Composition identity | `test "$(git rev-parse "${COMPOSITION_SHA}^1")" = b1c350ce22941a66871f11e0c5830a6ec542878c && test "$(git rev-parse "${COMPOSITION_SHA}^2")" = "$VERIFIED_PLANNING_SHA"` | recorded composition first parent is exact PR #101 head and second parent is the approved planning SHA | required before product edits and rerun in final CI |
+| Integration ancestry | `git merge-base --is-ancestor a96eecf3e12a88dd7b4d56e1aafae3285fb0990c "$VERIFIED_PLANNING_SHA" && git merge-base --is-ancestor a96eecf3e12a88dd7b4d56e1aafae3285fb0990c "$COMPOSITION_SHA"` | exact integration target reaches both planning input and immutable composition | required before product edits and rerun in final CI |
+| Final composition ancestry | `git merge-base --is-ancestor "$COMPOSITION_SHA" HEAD` | immutable composition is retained in the final candidate history even after ordinary product commits advance `HEAD` | required in final CI |
+| Final OpenSpec preservation | `git diff --exit-code "$VERIFIED_PLANNING_SHA" -- openspec/changes/update-multica-0-7-0/` | final candidate keeps the published OpenSpec subtree byte-identical to the approved planning input | required before product edits and in final CI |
 | Contract/source | `make contract` | approved contract validates and all source links are pinned | existing `contract-check` job |
 | Generated freshness | `uv run python scripts/upstream_contract.py check --approved contracts/sdk-contract.json` | tracked projection equals approved contract; repeated render proof is covered by contract tests | existing contract job plus focused contract tests |
 | Focused remaining delta | `uv run pytest -o addopts="" -q tests/unit/resources tests/unit/test_project_resource_models.py tests/unit/test_transport.py tests/component/test_issue_project_assignment.py tests/component/test_transport_errors.py tests/contract/test_sdk_contract.py` | all remaining adapters, validators, decoders, conflicts, and redaction paths pass | extend existing unit/component/contract jobs |
@@ -66,7 +70,7 @@ edit implementation fixtures or substitute a live run.
 
 | Capability and scenario | Sufficient lower-level or CI proof | Owning tasks |
 |---|---|---|
-| upstream-contract — The implementation starts from another revision | exact first/second-parent, integration-ancestor, OpenSpec-tree, and retained public-surface assertions | 1.1, 1.6 |
+| upstream-contract — The implementation starts from another revision | immutable composition first/second-parent, integration-ancestor, final-candidate composition-ancestor, OpenSpec-tree, and retained public-surface assertions | 1.1, 1.6 |
 | upstream-contract — Conflict resolution changes accepted behavior | PR #101 regression tables and generated binding comparison | 1.1, 1.6, 5.2 |
 | upstream-contract — Provenance is incomplete or mixed | contract schema, mutation, checksum, and source-link cases | 1.2, 1.6 |
 | upstream-contract — A target item lacks one decision | inventory/response closure and duplicate/missing mutation cases | 1.3, 1.6 |
@@ -150,7 +154,8 @@ real parallel frontier.
 - **Deliverable:** an implementation line composed by merging the exact verified
   planning revision into exact PR #101 head, with fixed integration target
   `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`, published OpenSpec input and
-  accepted `0.6.2` behavior preserved before the contract advances to `0.7.0`.
+  accepted `0.6.2` behavior preserved before the contract advances to `0.7.0`,
+  plus immutable `COMPOSITION_SHA` evidence handed to every later package.
 - **Owned responsibility scope:** branch/integration reconciliation;
   `contracts/sdk-contract.json`; contract schema/loader/validator/generator;
   `src/multica_py/_generated/approved_sdk.py`; source-link, provenance,
@@ -159,11 +164,12 @@ real parallel frontier.
 - **Critical shared files:** the approved contract and generated projection are
   single-writer foundation files. Stage-2 packages consume their stabilized
   identifiers and SHALL NOT regenerate or edit them concurrently.
-- **Contract surface:** exact two-parent composition; integration-target
-  ancestry; byte-identical OpenSpec preservation; retained/adapted/excluded
+- **Contract surface:** immutable exact two-parent composition; final-candidate
+  composition ancestry; integration-target ancestry; byte-identical OpenSpec preservation; retained/adapted/excluded
   decisions; target provenance; transport mappings; normalized constraints;
   compatibility interval; deterministic output.
-- **DoD/evidence:** both parent identities, integration ancestry and OpenSpec
+- **DoD/evidence:** `COMPOSITION_SHA` is captured and published in the managed
+  contract; both parent identities, integration ancestry and initial OpenSpec
   subtree equality pass before product edits; conflicts have no unexplained
   retained drift; 209 commands and 196 responses close; contract,
   source-link, mutation, double-render, freshness, and baseline regression checks pass.
@@ -228,9 +234,11 @@ real parallel frontier.
   reconciliation and evidence publication. Behavior fixes return to their owning
   predecessor before reconsolidation.
 - **Contract surface:** public discovery/exports, retained and excluded policy,
-  offline gate set, package contents, rollback, exact-SHA evidence.
-- **DoD/evidence:** focused and complete non-live tests, contract/source/render,
-  lint/types, compatibility and wheel/sdist checks pass on one clean SHA;
+  offline gate set, immutable composition/final-candidate ancestry, final
+  OpenSpec preservation, package contents, rollback, exact-SHA evidence.
+- **DoD/evidence:** immutable `COMPOSITION_SHA` is an ancestor of final `HEAD`,
+  final OpenSpec matches `VERIFIED_PLANNING_SHA`, and focused and complete non-live
+  tests, contract/source/render, lint/types, compatibility and wheel/sdist checks pass on one clean SHA;
   required CI points to that SHA; Multica read-back contains links, commands,
   exits and assertions with no live/image/private evidence.
 - **Parallel safety:** final join starts only after every stage-2 predecessor;

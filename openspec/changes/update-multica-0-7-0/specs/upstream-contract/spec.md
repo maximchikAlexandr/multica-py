@@ -9,11 +9,13 @@ is the exact Plan-Verifier-approved planning revision. The second parent SHALL
 descend from approved integration target
 `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`; the merge SHALL preserve the
 published `openspec/changes/update-multica-0-7-0/` subtree byte-identically and
-retain reviewed `0.6.2` public behavior while resolving conflicts.
+retain reviewed `0.6.2` public behavior while resolving conflicts. The resulting
+`COMPOSITION_SHA` SHALL be recorded before product edits and remain the immutable
+composition identity used by final-candidate ancestry checks.
 
 #### Scenario: The implementation starts from another revision
 
-- **WHEN** the composition commit has a different first parent, a second parent other than the approved planning SHA, lacks the exact integration-target ancestor, or changes the published OpenSpec subtree
+- **WHEN** the recorded `COMPOSITION_SHA` has a different first parent, a second parent other than `VERIFIED_PLANNING_SHA`, lacks the exact integration-target ancestor, is not an ancestor of final `HEAD`, or final `HEAD` changes the published OpenSpec subtree relative to `VERIFIED_PLANNING_SHA`
 - **THEN** baseline acceptance fails before any `0.7.0` adaptation or product edit is credited
 
 #### Scenario: Conflict resolution changes accepted behavior

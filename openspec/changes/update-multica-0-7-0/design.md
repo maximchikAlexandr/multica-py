@@ -54,15 +54,27 @@ second parent SHALL descend from approved integration target
 `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`, so the merge brings in both the
 fixed integration snapshot and the published OpenSpec input. Conflict resolution
 SHALL not silently choose either side and SHALL preserve the accepted `0.6.2`
-surface before any `0.7.0` adaptation proceeds.
+surface before any `0.7.0` adaptation proceeds. Immediately after the merge,
+WP-01 SHALL record `COMPOSITION_SHA=$(git rev-parse HEAD)` as immutable evidence
+and pass it, together with `VERIFIED_PLANNING_SHA`, through the implementation
+managed contract to every later package and final CI.
 
-The foundation SHALL prove all of the following on the composition commit:
+The foundation SHALL prove all of the following against the recorded
+`COMPOSITION_SHA` before product edits:
 
-- `HEAD^1` equals `b1c350ce22941a66871f11e0c5830a6ec542878c`;
-- `HEAD^2` equals the exact planning SHA accepted by Plan Verifier and recorded
-  in the implementation managed contract;
-- `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c` is an ancestor of `HEAD^2` and `HEAD`;
-- `openspec/changes/update-multica-0-7-0/` is byte-identical to `HEAD^2`.
+- `${COMPOSITION_SHA}^1` equals
+  `b1c350ce22941a66871f11e0c5830a6ec542878c`;
+- `${COMPOSITION_SHA}^2` equals the exact `VERIFIED_PLANNING_SHA` accepted by
+  Plan Verifier and recorded in the implementation managed contract;
+- `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c` is an ancestor of both
+  `VERIFIED_PLANNING_SHA` and `COMPOSITION_SHA`;
+- the composition's `openspec/changes/update-multica-0-7-0/` subtree is
+  byte-identical to `VERIFIED_PLANNING_SHA`.
+
+At every final candidate, CI SHALL additionally prove that `COMPOSITION_SHA` is
+an ancestor of current `HEAD` and that current `HEAD` keeps the same OpenSpec
+subtree as `VERIFIED_PLANNING_SHA`. No final gate SHALL reinterpret `HEAD^1` or
+`HEAD^2` after ordinary product commits have advanced the branch.
 
 Alternative: restart from `main` or replay selected PR commits. Rejected because
 it would discard reviewed work or make preservation depend on an undocumented
@@ -161,7 +173,7 @@ renderer, evidence store, or workflow client is unnecessary and removed.
 4. Reconcile shared tables/docs and run focused then complete offline, contract,
    type, lint, package, and CI gates at one candidate SHA.
 5. Roll back product commits normally. If the unmerged composition itself must
-   be undone, use `git revert -m 1 <composition-sha>`; this
+   be undone, use `git revert -m 1 "$COMPOSITION_SHA"`; this
    returns the implementation line to exact PR #101 content without modifying
    PR #101, its branch, the planning branch, or either immutable parent SHA.
 
