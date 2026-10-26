@@ -178,7 +178,8 @@ _VALID_ISSUE_FIELDS = frozenset(
 _VALID_ISSUE_SORTS = frozenset(
     {"position", "title", "created_at", "start_date", "due_date", "priority", "status"}
 )
-_PROPERTY_OPERATORS = (">=", "<=", "!=")
+_PROPERTY_COMPARISON_OPERATORS = (">=", "<=", ">", "<", "~=")
+_PROPERTY_UNSUPPORTED_OPERATORS = ("!=",)
 
 
 def _normalize_issue_fields(fields: tuple[str, ...]) -> tuple[str, ...]:
@@ -205,15 +206,32 @@ def _normalize_property_filters(filters: tuple[str, ...]) -> tuple[str, ...]:
         if type(raw_expression) is not str:
             raise TypeError("property_filters must contain only strings")
         expression = raw_expression.strip()
-        if not expression or "=" not in expression:
-            raise ValueError("IssueResource.list: property filters must use Name=Value")
-        if any(operator in expression for operator in _PROPERTY_OPERATORS):
-            raise ValueError(
-                "IssueResource.list: property comparisons >=, <=, and != are unsupported"
-            )
-        name, value = expression.split("=", 1)
+        if not expression:
+            raise ValueError("IssueResource.list: property filters must use Name<op>Value")
+        position = -1
+        comparison = ""
+        for operator in (
+            *_PROPERTY_COMPARISON_OPERATORS,
+            *_PROPERTY_UNSUPPORTED_OPERATORS,
+            "=",
+        ):
+            candidate = expression.find(operator)
+            if candidate >= 0 and (
+                position < 0
+                or candidate < position
+                or (candidate == position and len(operator) > len(comparison))
+            ):
+                position = candidate
+                comparison = operator
+        if position < 0:
+            raise ValueError("IssueResource.list: property filters must use Name<op>Value")
+        if comparison in _PROPERTY_UNSUPPORTED_OPERATORS:
+            raise ValueError("IssueResource.list: property comparison != is unsupported")
+        name, value = expression[:position], expression[position + len(comparison) :]
         if not name.strip() or not value.strip():
-            raise ValueError("IssueResource.list: property filters must use Name=Value")
+            raise ValueError("IssueResource.list: property filters must use Name<op>Value")
+        if comparison != "=" and value.strip() == "__none__":
+            raise ValueError("IssueResource.list: __none__ is supported only with equality")
         normalized.append(expression)
     return tuple(normalized)
 

@@ -8,7 +8,13 @@ from dataclasses import dataclass
 import pytest
 
 from multica_py._internal.decoders import decode_json
-from multica_py._internal.wire_models import _ProjectResourceRecordWire, project_resource_from_wire
+from multica_py._internal.wire_models import (
+    _project_from_wire,
+    _ProjectResourceRecordWire,
+    _ProjectWire,
+    project_resource_from_wire,
+)
+from multica_py.exceptions import OutputShapeError
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.project_resources import (
     GithubRepoResourceRef,
@@ -151,3 +157,35 @@ def test_model_validation_rejects(case: RejectCase) -> None:
 def test_issue_usage_decodes_cost_usd(payload: bytes, cost_usd: float | None) -> None:
     usage = decode_json(payload, IssueUsage)
     assert usage.cost_usd == cost_usd
+
+
+@pytest.mark.parametrize(
+    ("workflow_field", "expected"),
+    (
+        (None, None),
+        (('"workflow_id":null',), None),
+        (
+            ('"workflow_id":"123e4567-e89b-12d3-a456-426614174000"',),
+            "123e4567-e89b-12d3-a456-426614174000",
+        ),
+    ),
+    ids=("legacy-omitted", "explicit-null", "uuid"),
+)
+def test_project_workflow_id_decodes_legacy_null_and_uuid(
+    workflow_field: tuple[str] | None, expected: str | None
+) -> None:
+    suffix = "" if workflow_field is None else "," + workflow_field[0]
+    wire = decode_json(
+        f'{{"id":"p1","title":"Project","status":"planned"{suffix}}}'.encode(),
+        _ProjectWire,
+    )
+
+    assert _project_from_wire(wire).workflow_id == expected
+
+
+def test_project_workflow_id_rejects_malformed_uuid() -> None:
+    with pytest.raises(OutputShapeError, match="workflow_id"):
+        decode_json(
+            b'{"id":"p1","title":"Project","status":"planned","workflow_id":"bad"}',
+            _ProjectWire,
+        )

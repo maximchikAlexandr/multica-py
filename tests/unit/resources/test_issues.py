@@ -1349,10 +1349,10 @@ def test_issue_partial_assignee_scalars_do_not_fabricate_relation(field: str, va
         _IssueQueryValidationCase({"fields": ("unknown",)}, "invalid field"),
         _IssueQueryValidationCase({"fields": ("id", "id")}, "duplicate field"),
         _IssueQueryValidationCase({"fields": ("title",)}, "identity_required"),
-        _IssueQueryValidationCase({"property_filters": ("Owner>=me",)}, ">="),
-        _IssueQueryValidationCase({"property_filters": ("Owner<=me",)}, "<="),
         _IssueQueryValidationCase({"property_filters": ("Owner!=me",)}, "!="),
-        _IssueQueryValidationCase({"property_filters": ("Owner",)}, "Name=Value"),
+        _IssueQueryValidationCase({"property_filters": ("Owner",)}, "Name<op>Value"),
+        _IssueQueryValidationCase({"property_filters": ("Owner>=",)}, "Name<op>Value"),
+        _IssueQueryValidationCase({"property_filters": ("Owner>=__none__",)}, "only with equality"),
         _IssueQueryValidationCase({"sort": "property:"}, "invalid sort"),
         _IssueQueryValidationCase(
             {"fields": ("id",), "resolve_properties": True}, "requires properties"
@@ -1382,6 +1382,31 @@ def test_issue_query_accepts_none_property_sentinel() -> None:
         "list",
         "--property",
         "Name=__none__",
+        "--output",
+        "json",
+    )
+
+
+@pytest.mark.parametrize(
+    "filters",
+    (
+        ("Impact=High", "Impact=__none__", "Score>3", "Score>=4", "Score<9", "Score<=8"),
+        ("Ship Date>2026-09-01", "Ship Date<2026-10-01", "Notes~=follow up"),
+    ),
+    ids=("ordered-number-and-equality", "date-and-text"),
+)
+def test_issue_property_comparisons_preserve_order_and_exact_argv(
+    filters: tuple[str, ...],
+) -> None:
+    resource = IssueResource(MagicMock(), ClientConfig())
+
+    command = resource.list_command(property_filters=filters)
+
+    expected_args = tuple(arg for expression in filters for arg in ("--property", expression))
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "list",
+        *expected_args,
         "--output",
         "json",
     )
