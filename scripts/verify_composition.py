@@ -144,24 +144,35 @@ def _merged_spec_blocks(
     removals: tuple[str, ...],
 ) -> tuple[str, ...]:
     previous_blocks = _requirement_blocks(previous_text)
-    previous_by_id = {_requirement_id(block, relative_path): block for block in previous_blocks}
-    if len(previous_by_id) != len(previous_blocks):
-        raise CompositionError(f"main spec repeats a requirement: {relative_path}")
-    modified_by_id = {_requirement_id(block, relative_path): block for block in modifications}
-    removed_ids = {_requirement_id(block, relative_path) for block in removals}
-    added_ids = {_requirement_id(block, relative_path) for block in additions}
-    if not (set(modified_by_id) | removed_ids) <= set(previous_by_id):
+    previous_ids = [_requirement_id(block, relative_path) for block in previous_blocks]
+    previous_counts = {identity: previous_ids.count(identity) for identity in set(previous_ids)}
+    modified_ids = [_requirement_id(block, relative_path) for block in modifications]
+    removed_ids_list = [_requirement_id(block, relative_path) for block in removals]
+    added_ids = [_requirement_id(block, relative_path) for block in additions]
+    if len(modified_ids) != len(set(modified_ids)) or len(removed_ids_list) != len(
+        set(removed_ids_list)
+    ):
+        raise CompositionError(f"change spec repeats an approved edit: {relative_path}")
+    modified_by_id = dict(zip(modified_ids, modifications, strict=True))
+    removed_ids = set(removed_ids_list)
+    previous_id_set = set(previous_ids)
+    if not (set(modified_by_id) | removed_ids) <= previous_id_set:
         raise CompositionError(f"change spec modifies an unknown requirement: {relative_path}")
     if set(modified_by_id) & removed_ids:
         raise CompositionError(
             f"change spec both modifies and removes a requirement: {relative_path}"
         )
-    if added_ids & set(previous_by_id):
+    if len(added_ids) != len(set(added_ids)) or set(added_ids) & previous_id_set:
         raise CompositionError(f"change spec adds an existing requirement: {relative_path}")
+    edited_ids = set(modified_by_id) | removed_ids
+    if any(previous_counts[identity] != 1 for identity in edited_ids):
+        raise CompositionError(
+            f"change spec ambiguously edits a repeated requirement: {relative_path}"
+        )
     merged = tuple(
         modified_by_id.get(identity, block)
-        for block in previous_blocks
-        if (identity := _requirement_id(block, relative_path)) not in removed_ids
+        for identity, block in zip(previous_ids, previous_blocks, strict=True)
+        if identity not in removed_ids
     )
     return (*merged, *additions)
 

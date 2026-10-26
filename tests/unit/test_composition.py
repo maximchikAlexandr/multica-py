@@ -43,7 +43,12 @@ def _closeout(history: dict[str, str | Path], *, complete: bool = True) -> str:
         encoding="utf-8",
     )
     source_spec = repo / "openspec/changes/demo/specs/sdk-surface/spec.md"
-    approved_spec = source_spec.read_text(encoding="utf-8").split("## ADDED Requirements\n\n", 1)[1]
+    approved_spec = (
+        source_spec.read_text(encoding="utf-8")
+        .split("## ADDED Requirements\n\n", 1)[1]
+        .split("\n## ", 1)[0]
+        .strip()
+    )
     main_spec = repo / "openspec/specs/sdk-surface/spec.md"
     current_main = main_spec.read_text(encoding="utf-8").rstrip()
     main_spec.write_text(current_main + "\n\n" + approved_spec, encoding="utf-8")
@@ -68,8 +73,21 @@ def _merge(repo: Path, branch: str, message: str) -> None:
     )
 
 
-@pytest.fixture
-def history(tmp_path: Path) -> dict[str, str | Path]:
+_INHERITED_DUPLICATE_BLOCKS = (
+    "### Requirement: Complete target CLI inventory is reconciled\n\n"
+    "The pinned inventory is reconciled with the target CLI.",
+    "### Requirement: Complete target CLI inventory is reconciled\n\n"
+    "Every retained command family has an explicit target mapping.",
+    "### Requirement: Offline quality and package gates remain strict\n\n"
+    "Offline quality checks remain required.",
+    "### Requirement: Offline quality and package gates remain strict\n\n"
+    "Package checks preserve the release boundary.",
+)
+
+
+def _build_history(root: Path, *, approved_delta: tuple[str, ...] = ()) -> dict[str, str | Path]:
+    tmp_path = root
+    tmp_path.mkdir(parents=True, exist_ok=True)
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-b", "main")
@@ -91,7 +109,7 @@ def history(tmp_path: Path) -> dict[str, str | Path]:
     (repo / "openspec/specs/sdk-surface/spec.md").write_text(
         "# sdk-surface Specification\n\n## Purpose\n\nDraft purpose.\n\n"
         "## Requirements\n\n### Requirement: Existing behavior\n\n"
-        "Existing requirements remain.\n",
+        "Existing requirements remain.\n\n" + "\n\n".join(_INHERITED_DUPLICATE_BLOCKS) + "\n",
         encoding="utf-8",
     )
     (repo / "integration.txt").write_text("integration\n", encoding="utf-8")
@@ -100,6 +118,13 @@ def history(tmp_path: Path) -> dict[str, str | Path]:
     baseline = _commit(repo, "baseline")
     _git(repo, "checkout", "-b", "planning", prior_integration)
     (repo / "openspec/changes/demo/spec.md").write_text("approved plan\n", encoding="utf-8")
+    source_spec = repo / "openspec/changes/demo/specs/sdk-surface/spec.md"
+    source_spec.write_text(
+        source_spec.read_text(encoding="utf-8") + "\n\n" + "\n\n".join(approved_delta)
+        if approved_delta
+        else source_spec.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
     composition_planning = _commit(repo, "composition planning")
     _git(repo, "checkout", "main")
     _merge(repo, "planning", "composition")
@@ -123,6 +148,11 @@ def history(tmp_path: Path) -> dict[str, str | Path]:
         "composition": composition,
         "candidate": candidate,
     }
+
+
+@pytest.fixture
+def history(tmp_path: Path) -> dict[str, str | Path]:
+    return _build_history(tmp_path)
 
 
 def _verify(history: dict[str, str | Path], **overrides: str) -> None:
@@ -297,6 +327,36 @@ def _drop_existing_main_requirements(history: dict[str, str | Path]) -> None:
     _commit(repo, "remove existing main spec requirements")
 
 
+def _change_inherited_duplicate_block(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/specs/sdk-surface/spec.md"
+    content = path.read_text(encoding="utf-8")
+    path.write_text(
+        content.replace(
+            _INHERITED_DUPLICATE_BLOCKS[0],
+            _INHERITED_DUPLICATE_BLOCKS[0].replace(
+                "The pinned inventory is reconciled with the target CLI.",
+                "The pinned inventory was changed without approval.",
+            ),
+            1,
+        ),
+        encoding="utf-8",
+    )
+    _commit(repo, "change retained duplicate main spec block")
+
+
+def _remove_inherited_duplicate_block(history: dict[str, str | Path]) -> None:
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    _closeout(history)
+    path = repo / "openspec/specs/sdk-surface/spec.md"
+    content = path.read_text(encoding="utf-8")
+    path.write_text(content.replace(_INHERITED_DUPLICATE_BLOCKS[0] + "\n\n", "", 1))
+    _commit(repo, "remove retained duplicate main spec block")
+
+
 def _omit_synced_change_requirements(history: dict[str, str | Path]) -> None:
     repo = history["repo"]
     assert isinstance(repo, Path)
@@ -430,6 +490,16 @@ _CLOSEOUT_MUTATION_CASES = (
         "main spec requirements differ from the approved merge",
     ),
     _CloseoutMutationCase(
+        "changed-inherited-duplicate-block",
+        _change_inherited_duplicate_block,
+        "main spec requirements differ from the approved merge",
+    ),
+    _CloseoutMutationCase(
+        "removed-inherited-duplicate-block",
+        _remove_inherited_duplicate_block,
+        "main spec requirements differ from the approved merge",
+    ),
+    _CloseoutMutationCase(
         "missing-synced-requirements",
         _omit_synced_change_requirements,
         "main spec requirements differ from the approved merge",
@@ -481,6 +551,12 @@ def test_composition_cli_accepts_verified_closeout_archive(
     result = _run_cli(history, candidate)
     assert result.returncode == 0, result.stderr
     assert result.stdout == f"Composition {history['composition']} is preserved in {candidate}.\n"
+    repo = history["repo"]
+    assert isinstance(repo, Path)
+    final_spec = _git(repo, "show", f"{candidate}:openspec/specs/sdk-surface/spec.md")
+    cursor = 0
+    for block in _INHERITED_DUPLICATE_BLOCKS:
+        cursor = final_spec.index(block, cursor) + len(block)
 
 
 @pytest.mark.parametrize("case", _CLOSEOUT_MUTATION_CASES, ids=lambda case: case.id)
@@ -543,6 +619,84 @@ _UNAPPROVED_SPEC_BLOCK_CASES = (
 )
 
 
+@dataclass(frozen=True)
+class _InheritedDuplicateCase:
+    id: str
+    approved_delta: tuple[str, ...]
+    expected_error: str
+
+
+_INHERITED_DUPLICATE_CASES = (
+    _InheritedDuplicateCase(
+        "add-existing-cli-inventory-identity",
+        (
+            "### Requirement: Complete target CLI inventory is reconciled\n\n"
+            "An unapproved duplicate inventory block.",
+        ),
+        "change spec adds an existing requirement",
+    ),
+    _InheritedDuplicateCase(
+        "add-existing-quality-gate-identity",
+        (
+            "### Requirement: Offline quality and package gates remain strict\n\n"
+            "An unapproved duplicate quality block.",
+        ),
+        "change spec adds an existing requirement",
+    ),
+    _InheritedDuplicateCase(
+        "modify-ambiguous-cli-inventory-identity",
+        (
+            "## MODIFIED Requirements\n\n"
+            "### Requirement: Complete target CLI inventory is reconciled\n\n"
+            "An ambiguous inventory modification.",
+        ),
+        "change spec ambiguously edits a repeated requirement",
+    ),
+    _InheritedDuplicateCase(
+        "modify-ambiguous-quality-gate-identity",
+        (
+            "## MODIFIED Requirements\n\n"
+            "### Requirement: Offline quality and package gates remain strict\n\n"
+            "An ambiguous quality-gate modification.",
+        ),
+        "change spec ambiguously edits a repeated requirement",
+    ),
+    _InheritedDuplicateCase(
+        "remove-ambiguous-cli-inventory-identity",
+        (
+            "## REMOVED Requirements\n\n"
+            "### Requirement: Complete target CLI inventory is reconciled\n\n"
+            "An ambiguous inventory removal.",
+        ),
+        "change spec ambiguously edits a repeated requirement",
+    ),
+    _InheritedDuplicateCase(
+        "remove-ambiguous-quality-gate-identity",
+        (
+            "## REMOVED Requirements\n\n"
+            "### Requirement: Offline quality and package gates remain strict\n\n"
+            "An ambiguous quality-gate removal.",
+        ),
+        "change spec ambiguously edits a repeated requirement",
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _INHERITED_DUPLICATE_CASES, ids=lambda case: case.id)
+def test_composition_cli_rejects_edits_to_inherited_duplicate_identities(
+    tmp_path: Path, case: _InheritedDuplicateCase
+) -> None:
+    history = _build_history(tmp_path / case.id, approved_delta=case.approved_delta)
+    candidate = _closeout(history)
+    result = _run_cli(history, candidate)
+    assert result.returncode == 1
+    assert result.stderr == (
+        "Composition verification failed: candidate OpenSpec subtree differs from planning "
+        "SHA (openspec/changes/demo): "
+        f"{case.expected_error}: sdk-surface/spec.md\n"
+    )
+
+
 @pytest.mark.parametrize("case", _OPENSPEC_PATH_CASES, ids=lambda case: case.id)
 def test_composition_cli_rejects_unapproved_planning_path(
     history: dict[str, str | Path],
@@ -576,9 +730,14 @@ _UPDATED_BLOCK = "### Requirement: Changed\n\nUpdated approved behavior."
 _REMOVED_BLOCK = "### Requirement: Removed\n\nThis behavior is retired."
 _EXCLUSION_BLOCK = "### Exclusion: Existing boundary\n\nThis capability stays excluded."
 _ADDED_BLOCK = "### Requirement: Added\n\nAdd this approved behavior."
-_BASE_SPEC = "## Requirements\n\n" + "\n\n".join(
-    (_KEEP_BLOCK, _OLD_BLOCK, _REMOVED_BLOCK, _EXCLUSION_BLOCK)
+_BASE_BLOCKS = (
+    _KEEP_BLOCK,
+    _OLD_BLOCK,
+    _REMOVED_BLOCK,
+    _EXCLUSION_BLOCK,
+    *_INHERITED_DUPLICATE_BLOCKS,
 )
+_BASE_SPEC = "## Requirements\n\n" + "\n\n".join(_BASE_BLOCKS)
 
 
 @dataclass(frozen=True)
@@ -592,18 +751,31 @@ class _SpecMergeCase:
 
 _SPEC_MERGE_CASES = (
     _SpecMergeCase(
+        "duplicate-retained-block",
+        (_ADDED_BLOCK,),
+        (),
+        (),
+        (*_BASE_BLOCKS, _ADDED_BLOCK),
+    ),
+    _SpecMergeCase(
         "append-approved-requirement",
         (_ADDED_BLOCK,),
         (),
         (),
-        (_KEEP_BLOCK, _OLD_BLOCK, _REMOVED_BLOCK, _EXCLUSION_BLOCK, _ADDED_BLOCK),
+        (*_BASE_BLOCKS, _ADDED_BLOCK),
     ),
     _SpecMergeCase(
         "replace-remove-and-append-approved-blocks",
         (_ADDED_BLOCK,),
         (_UPDATED_BLOCK,),
         (_REMOVED_BLOCK,),
-        (_KEEP_BLOCK, _UPDATED_BLOCK, _EXCLUSION_BLOCK, _ADDED_BLOCK),
+        (
+            _KEEP_BLOCK,
+            _UPDATED_BLOCK,
+            _EXCLUSION_BLOCK,
+            *_INHERITED_DUPLICATE_BLOCKS,
+            _ADDED_BLOCK,
+        ),
     ),
 )
 
@@ -634,12 +806,20 @@ class _InvalidSpecMergeCase:
 
 _INVALID_SPEC_MERGE_CASES = (
     _InvalidSpecMergeCase(
-        "duplicate-retained-block",
-        _BASE_SPEC + "\n\n" + _KEEP_BLOCK,
+        "ambiguous-modification-of-repeated-identity",
+        _BASE_SPEC,
+        (),
+        ("### Requirement: Complete target CLI inventory is reconciled\n\nUpdated inventory.",),
+        (),
+        "ambiguously edits a repeated requirement",
+    ),
+    _InvalidSpecMergeCase(
+        "ambiguous-removal-of-repeated-identity",
+        _BASE_SPEC,
         (),
         (),
-        (),
-        "main spec repeats a requirement",
+        (_INHERITED_DUPLICATE_BLOCKS[0],),
+        "ambiguously edits a repeated requirement",
     ),
     _InvalidSpecMergeCase(
         "unknown-modification",
