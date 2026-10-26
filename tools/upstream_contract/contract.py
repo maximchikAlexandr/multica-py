@@ -2951,7 +2951,7 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         "v0.7.0",
         "dbdbb299164347586e2650bb67684a490726a798",
         "421685918",
-        "contracts/evidence/multica-0.7.0-release.json",
+        ".devlocal/upstream-contract/v0.6.2..v0.7.0/evidence/multica-0.7.0-release.json",
         "db6e38c32bdbdd3fd1c98210414c458362df16d1",
         "dbdbb299164347586e2650bb67684a490726a798",
     ):

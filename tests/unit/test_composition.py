@@ -22,7 +22,18 @@ def _commit(repo: Path, message: str) -> str:
 
 
 def _merge(repo: Path, branch: str, message: str) -> None:
-    _git(repo, "merge", "--no-ff", branch, "-m", message)
+    _git(
+        repo,
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.com",
+        "merge",
+        "--no-ff",
+        branch,
+        "-m",
+        message,
+    )
 
 
 @pytest.fixture

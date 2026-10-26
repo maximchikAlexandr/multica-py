@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 from collections.abc import Callable
 from dataclasses import dataclass
 from unittest.mock import MagicMock
@@ -10,6 +9,7 @@ import pytest
 from multica_py._internal.specs import RawCommandResult
 from multica_py.config import ClientConfig
 from multica_py.exceptions import ConflictError, OutputShapeError
+from multica_py.models.system import RuntimeDefinition
 from multica_py.resources.runtimes import RuntimeResource
 
 
@@ -18,6 +18,20 @@ class InvalidRuntimeCase:
     id: str
     invoke: Callable[[RuntimeResource], object]
     message: str
+
+
+@dataclass(frozen=True)
+class RuntimeDefinitionCase:
+    id: str
+    payload: bytes
+    invoke: Callable[[RuntimeResource], RuntimeDefinition]
+
+
+@dataclass(frozen=True)
+class InvalidRuntimeDefinitionCase:
+    id: str
+    payload: bytes
+    invoke: Callable[[RuntimeResource], object]
 
 
 INVALID_RUNTIME_CASES: tuple[InvalidRuntimeCase, ...] = (
@@ -83,19 +97,18 @@ def test_runtime_delete_empty_success_is_single_non_cascading_action(
     mock_transport.run_text.assert_not_called()
 
 
-def test_runtime_usage_preserves_future_provider_and_model_strings() -> None:
-    transport = MagicMock()
-    transport.run_bytes.return_value = RawCommandResult(
+def test_runtime_usage_preserves_future_provider_and_model_strings(
+    mock_transport: MagicMock, raw_result: Callable[..., RawCommandResult]
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
         argv=("multica", "runtime", "usage", "r1", "--days", "90", "--output", "json"),
-        exit_code=0,
         stdout=(
             b'[{"date":"2026-08-01","provider":"future-provider","model":"future-model",'
             b'"input_tokens":1,"output_tokens":2,"cache_read_tokens":3,"cache_write_tokens":4}]'
         ),
-        stderr=b"",
-        duration=datetime.timedelta(),
     )
-    resource = RuntimeResource(transport, ClientConfig())
+    resource = RuntimeResource(mock_transport, ClientConfig())
 
     usage = resource.usage("r1")
 
@@ -103,91 +116,105 @@ def test_runtime_usage_preserves_future_provider_and_model_strings() -> None:
     assert usage[0].model == "future-model"
 
 
-@pytest.mark.parametrize("operation", ("list", "rename"))
-def test_runtime_definition_decodes_visibility_and_ordered_sharing(operation: str) -> None:
-    payload = (
-        b'{"id":"r1","name":"Codex","visibility":"workspace","shared_with":["member-2","member-1"]}'
-        if operation == "rename"
-        else b'[{"id":"r1","name":"Codex","visibility":"workspace",'
-        b'"shared_with":["member-2","member-1"]}]'
+@pytest.mark.parametrize(
+    "case",
+    (
+        RuntimeDefinitionCase(
+            "list",
+            b'[{"id":"r1","name":"Codex","visibility":"workspace",'
+            b'"shared_with":["member-2","member-1"]}]',
+            lambda resource: resource.list()[0],
+        ),
+        RuntimeDefinitionCase(
+            "rename",
+            b'{"id":"r1","name":"Codex","visibility":"workspace","shared_with":["member-2","member-1"]}',
+            lambda resource: resource.rename("r1", "Codex"),
+        ),
+    ),
+    ids=lambda case: case.id,
+)
+def test_runtime_definition_decodes_visibility_and_ordered_sharing(
+    case: RuntimeDefinitionCase,
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
+        argv=("multica", "runtime", case.id), stdout=case.payload
     )
-    transport = MagicMock()
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.return_value = RawCommandResult(
-        argv=("multica", "runtime", operation),
-        exit_code=0,
-        stdout=payload,
-        stderr=b"",
-        duration=datetime.timedelta(),
-    )
-    resource = RuntimeResource(transport, ClientConfig())
-
-    definition = resource.list()[0] if operation == "list" else resource.rename("r1", "Codex")
+    definition = case.invoke(RuntimeResource(mock_transport, ClientConfig()))
 
     assert definition.visibility == "workspace"
     assert definition.shared_with == ("member-2", "member-1")
 
 
-def test_runtime_definition_legacy_sharing_fields_default_safely() -> None:
-    transport = MagicMock()
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.return_value = RawCommandResult(
-        argv=("multica", "runtime", "list"),
-        exit_code=0,
-        stdout=b'[{"id":"r1","name":"Codex"}]',
-        stderr=b"",
-        duration=datetime.timedelta(),
+def test_runtime_definition_legacy_sharing_fields_default_safely(
+    mock_transport: MagicMock, raw_result: Callable[..., RawCommandResult]
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
+        argv=("multica", "runtime", "list"), stdout=b'[{"id":"r1","name":"Codex"}]'
     )
 
-    definition = RuntimeResource(transport, ClientConfig()).list()[0]
+    definition = RuntimeResource(mock_transport, ClientConfig()).list()[0]
 
     assert definition.visibility is None
     assert definition.shared_with == ()
 
 
 @pytest.mark.parametrize(
-    ("operation", "payload"),
+    "case",
     (
-        ("list", b'[{"id":"r1","name":"Codex","visibility":3}]'),
-        ("list", b'[{"id":"r1","name":"Codex","shared_with":[3]}]'),
-        ("rename", b'{"id":"r1","name":"Codex","visibility":3}'),
-        ("rename", b'{"id":"r1","name":"Codex","shared_with":[3]}'),
+        InvalidRuntimeDefinitionCase(
+            "list-visibility",
+            b'[{"id":"r1","name":"Codex","visibility":3}]',
+            lambda resource: resource.list(),
+        ),
+        InvalidRuntimeDefinitionCase(
+            "list-shared-with",
+            b'[{"id":"r1","name":"Codex","shared_with":[3]}]',
+            lambda resource: resource.list(),
+        ),
+        InvalidRuntimeDefinitionCase(
+            "rename-visibility",
+            b'{"id":"r1","name":"Codex","visibility":3}',
+            lambda resource: resource.rename("r1", "Codex"),
+        ),
+        InvalidRuntimeDefinitionCase(
+            "rename-shared-with",
+            b'{"id":"r1","name":"Codex","shared_with":[3]}',
+            lambda resource: resource.rename("r1", "Codex"),
+        ),
     ),
+    ids=lambda case: case.id,
 )
 def test_runtime_definition_rejects_malformed_sharing_fields(
-    operation: str, payload: bytes
+    case: InvalidRuntimeDefinitionCase,
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
 ) -> None:
-    transport = MagicMock()
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.return_value = RawCommandResult(
-        argv=("multica", "runtime", operation),
-        exit_code=0,
-        stdout=payload,
-        stderr=b"",
-        duration=datetime.timedelta(),
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
+        argv=("multica", "runtime", case.id.split("-", maxsplit=1)[0]),
+        stdout=case.payload,
     )
 
     with pytest.raises(OutputShapeError):
-        if operation == "list":
-            RuntimeResource(transport, ClientConfig()).list()
-        else:
-            RuntimeResource(transport, ClientConfig()).rename("r1", "Codex")
+        case.invoke(RuntimeResource(mock_transport, ClientConfig()))
 
 
-def test_runtime_update_does_not_expose_definition_sharing_fields() -> None:
-    transport = MagicMock()
-    transport.build_full_argv.side_effect = lambda args: ("multica", *args)
-    transport.run_bytes.return_value = RawCommandResult(
+def test_runtime_update_does_not_expose_definition_sharing_fields(
+    mock_transport: MagicMock, raw_result: Callable[..., RawCommandResult]
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
         argv=("multica", "runtime", "update", "r1"),
-        exit_code=0,
         stdout=(
             b'{"id":"r1","status":"updated","visibility":"workspace","shared_with":["member-1"]}'
         ),
-        stderr=b"",
-        duration=datetime.timedelta(),
     )
 
-    result = RuntimeResource(transport, ClientConfig()).update("r1", target_version="stable")
+    result = RuntimeResource(mock_transport, ClientConfig()).update("r1", target_version="stable")
 
     assert result.value is not None
     assert result.value.id == "r1"

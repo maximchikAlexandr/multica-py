@@ -47,6 +47,8 @@ class ProjectBindingCase:
     stdout: bytes
     expected_argv: tuple[str, ...]
     kwargs: tuple[tuple[str, object], ...] = ()
+    expected_status: ProjectStatus = _PLANNED
+    expected_workflow_id: str | None = None
 
 
 PROJECT_BINDING_CASES = (
@@ -87,6 +89,8 @@ PROJECT_BINDING_CASES = (
         b'{"id":"p1","title":"Project","status":"completed",'
         b'"workflow_id":"123e4567-e89b-12d3-a456-426614174000"}',
         ("project", "status", "p1", "completed", "--output", "json"),
+        expected_status=ProjectStatus.completed,
+        expected_workflow_id="123e4567-e89b-12d3-a456-426614174000",
     ),
 )
 
@@ -408,9 +412,8 @@ def test_project_resource_returns_bound_immutable_projects(case: ProjectBindingC
     project = result.items[0] if isinstance(result, Page) else result
 
     assert isinstance(project, Project)
-    if case.name == "set status":
-        assert project.status is ProjectStatus.completed
-        assert project.workflow_id == "123e4567-e89b-12d3-a456-426614174000"
+    assert project.status == case.expected_status
+    assert project.workflow_id == case.expected_workflow_id
     assert project._client is client
     assert client.mock_calls == []
     transport.run_bytes.assert_called_once_with(case.expected_argv, stdin=None, timeout=None)

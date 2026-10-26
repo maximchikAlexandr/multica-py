@@ -786,7 +786,9 @@ def test_current_target_and_source_refs_are_pinned_to_v070() -> None:
     assert contract.target.tag == "v0.7.0"
     assert contract.target.commit == "dbdbb299164347586e2650bb67684a490726a798"
     assert contract.target.release_id == "421685918"
-    assert contract.target.release_provenance_ref == "contracts/evidence/multica-0.7.0-release.json"
+    assert contract.target.release_provenance_ref == (
+        ".devlocal/upstream-contract/v0.6.2..v0.7.0/evidence/multica-0.7.0-release.json"
+    )
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
     stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
     assert stale_commit not in {ref.commit for ref in contract.source_refs}

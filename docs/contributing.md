@@ -62,4 +62,6 @@ gate with both SHA inputs; never rewrite composition or accepted history.
 
 The generated runtime projection is
 `src/multica_py/_generated/approved_sdk.py`. Documentation, compatibility, and
-provenance projections are transient and must remain outside tracked paths.
+provenance projections are transient and must remain outside tracked paths. The
+0.7.0 release provenance is kept under
+`.devlocal/upstream-contract/v0.6.2..v0.7.0/evidence/`.
