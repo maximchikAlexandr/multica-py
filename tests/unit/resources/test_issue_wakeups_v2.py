@@ -5,7 +5,8 @@ import json
 import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, cast
+from functools import partial
+from typing import Any, Literal, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -146,16 +147,25 @@ def _create_eager(resource: IssueWakeupResource) -> object:
     return resource.create("iss-1", instruction="Run checks", event_types=("comment.created",))
 
 
-def _create_pr_conflict_command(resource: IssueWakeupResource) -> object:
-    return resource.create_command(
-        "iss-1", instruction="Run checks", condition={"pull_request": "conflict"}
-    )
+def _pr_conflict_command(
+    operation: Literal["create", "update"], resource: IssueWakeupResource
+) -> object:
+    builder = resource.create_command if operation == "create" else resource.update_command
+    args = ("iss-1",) if operation == "create" else ("iss-1", "wake-1")
+    return builder(*args, instruction="Run checks", condition={"pull_request": "conflict"})
 
 
-def _create_pr_conflict_eager(resource: IssueWakeupResource) -> object:
-    return resource.create(
-        "iss-1", instruction="Run checks", condition={"pull_request": "conflict"}
-    )
+def _pr_conflict_eager(
+    operation: Literal["create", "update"], resource: IssueWakeupResource
+) -> object:
+    runner = resource.create if operation == "create" else resource.update
+    args = ("iss-1",) if operation == "create" else ("iss-1", "wake-1")
+    return runner(*args, instruction="Run checks", condition={"pull_request": "conflict"})
+
+
+def _pr_conflict_result(result: object) -> object:
+    wakeup = cast("IssueWakeup", result)
+    return wakeup.id, wakeup.condition
 
 
 def _update_command(resource: IssueWakeupResource) -> object:
@@ -167,18 +177,6 @@ def _update_command(resource: IssueWakeupResource) -> object:
 def _update_eager(resource: IssueWakeupResource) -> object:
     return resource.update(
         "iss-1", "wake-1", instruction="Run checks", event_types=("comment.created",)
-    )
-
-
-def _update_pr_conflict_command(resource: IssueWakeupResource) -> object:
-    return resource.update_command(
-        "iss-1", "wake-1", instruction="Run checks", condition={"pull_request": "conflict"}
-    )
-
-
-def _update_pr_conflict_eager(resource: IssueWakeupResource) -> object:
-    return resource.update(
-        "iss-1", "wake-1", instruction="Run checks", condition={"pull_request": "conflict"}
     )
 
 
@@ -299,11 +297,11 @@ _EAGER_COMMAND_CASES = (
     ),
     _EagerCommandCase(
         "create-pr-conflict",
-        _create_pr_conflict_command,
-        _create_pr_conflict_eager,
+        partial(_pr_conflict_command, "create"),
+        partial(_pr_conflict_eager, "create"),
         "multica issue wakeup create iss-1 --instruction 'Run checks' --kind event --condition '{\"pull_request\":\"conflict\"}' --output json",
         b'{"id":"wake-1","enabled":true,"condition":{"pull_request":"conflict"}}',
-        lambda result: (cast("IssueWakeup", result).id, cast("IssueWakeup", result).condition),
+        _pr_conflict_result,
         ("wake-1", {"pull_request": "conflict"}),
         _set_bytes_response,
         _reset_bytes_transport,
@@ -323,11 +321,11 @@ _EAGER_COMMAND_CASES = (
     ),
     _EagerCommandCase(
         "update-pr-conflict",
-        _update_pr_conflict_command,
-        _update_pr_conflict_eager,
+        partial(_pr_conflict_command, "update"),
+        partial(_pr_conflict_eager, "update"),
         "multica issue wakeup update iss-1 wake-1 --instruction 'Run checks' --kind event --condition '{\"pull_request\":\"conflict\"}' --output json",
         b'{"id":"wake-1","enabled":true,"condition":{"pull_request":"conflict"}}',
-        lambda result: (cast("IssueWakeup", result).id, cast("IssueWakeup", result).condition),
+        _pr_conflict_result,
         ("wake-1", {"pull_request": "conflict"}),
         _set_bytes_response,
         _reset_bytes_transport,

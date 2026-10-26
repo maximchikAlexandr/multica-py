@@ -1390,30 +1390,78 @@ def test_issue_query_accepts_none_property_sentinel() -> None:
     )
 
 
-@pytest.mark.parametrize(
-    "filters",
-    (
+@dataclass(frozen=True)
+class _IssuePropertyComparisonCase:
+    name: str
+    filters: tuple[str, ...]
+    expected_argv: tuple[str, ...]
+
+
+_ISSUE_PROPERTY_COMPARISON_CASES = (
+    _IssuePropertyComparisonCase(
+        "ordered-number-and-equality",
         ("Impact=High", "Impact=__none__", "Score>3", "Score>=4", "Score<9", "Score<=8"),
-        ("Ship Date>2026-09-01", "Ship Date<2026-10-01", "Notes~=follow up"),
-        ("Score>1", "Score>1"),
+        (
+            "issue",
+            "list",
+            "--property",
+            "Impact=High",
+            "--property",
+            "Impact=__none__",
+            "--property",
+            "Score>3",
+            "--property",
+            "Score>=4",
+            "--property",
+            "Score<9",
+            "--property",
+            "Score<=8",
+            "--output",
+            "json",
+        ),
     ),
-    ids=("ordered-number-and-equality", "date-and-text", "duplicate-predicates"),
+    _IssuePropertyComparisonCase(
+        "date-and-text",
+        ("Ship Date>2026-09-01", "Ship Date<2026-10-01", "Notes~=follow up"),
+        (
+            "issue",
+            "list",
+            "--property",
+            "Ship Date>2026-09-01",
+            "--property",
+            "Ship Date<2026-10-01",
+            "--property",
+            "Notes~=follow up",
+            "--output",
+            "json",
+        ),
+    ),
+    _IssuePropertyComparisonCase(
+        "duplicate-predicates",
+        ("Score>1", "Score>1"),
+        (
+            "issue",
+            "list",
+            "--property",
+            "Score>1",
+            "--property",
+            "Score>1",
+            "--output",
+            "json",
+        ),
+    ),
 )
+
+
+@pytest.mark.parametrize("case", _ISSUE_PROPERTY_COMPARISON_CASES, ids=lambda case: case.name)
 def test_issue_property_comparisons_preserve_order_and_exact_argv(
-    filters: tuple[str, ...],
+    case: _IssuePropertyComparisonCase,
 ) -> None:
     resource = IssueResource(MagicMock(), ClientConfig())
 
-    command = resource.list_command(property_filters=filters)
+    command = resource.list_command(property_filters=case.filters)
 
-    expected_args = tuple(arg for expression in filters for arg in ("--property", expression))
-    assert command._plan.steps[0].argv == (
-        "issue",
-        "list",
-        *expected_args,
-        "--output",
-        "json",
-    )
+    assert command._plan.steps[0].argv == case.expected_argv
 
 
 def test_issue_search_envelope_preserves_unavailable_total() -> None:
