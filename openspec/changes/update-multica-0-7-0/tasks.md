@@ -1,11 +1,11 @@
 ## 1. Baseline preservation and approved contract
 
-- [ ] 1.1 Create the implementation line from exact PR #101 head `b1c350ce22941a66871f11e0c5830a6ec542878c`, reconcile the approved integration target, and add ancestry plus retained-surface assertions that fail on dropped `0.6.2` behavior.
+- [ ] 1.1 Create the implementation line from exact PR #101 head `b1c350ce22941a66871f11e0c5830a6ec542878c`; before product edits, merge the exact Plan-Verifier-approved planning revision as second parent with `--no-ff`, prove that it descends from integration target `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`, assert both parent identities and byte-identical preservation of `openspec/changes/update-multica-0-7-0/`, and fail on dropped accepted `0.6.2` behavior.
 - [ ] 1.2 Advance release, tag, archive, executable, checksum, source, compatibility, and rollback provenance from the accepted `0.6.2` contract to verified Multica `0.7.0`.
 - [ ] 1.3 Reconcile all 209 target CLI nodes and 196 supported response work items with one retained/adapted/excluded verdict, preserving PR #101 regression references for already satisfied behavior.
 - [ ] 1.4 Trace each remaining changed input to its transport destination, five-state presence behavior, normalized constraints, safe error shape, positive/negative tests, and documentation action.
 - [ ] 1.5 Extend the existing contract schema/loader only where the remaining target data requires it, render the committed projection twice, prove byte identity, and fail generated freshness on drift.
-- [ ] 1.6 Add source-linked mutation and closure cases for exact baseline ancestry, provenance, counts, duplicate/missing decisions, retained drift, mappings, constraints, compatibility, source links, and deterministic generation.
+- [ ] 1.6 Add source-linked mutation and closure cases for exact composition parents, integration-target ancestry, OpenSpec subtree preservation, provenance, counts, duplicate/missing decisions, retained drift, mappings, constraints, compatibility, source links, and deterministic generation.
 
 ## 2. Property filters and project workflow
 

@@ -5,6 +5,12 @@
 - `implementation_baseline`: draft PR #101, branch
   `feat/MYL-474-update-multica-0.6.2`, exact head
   `b1c350ce22941a66871f11e0c5830a6ec542878c`
+- `approved_integration_target`: exact `origin/main` snapshot
+  `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`
+- `composition`: start at the implementation baseline, then before product
+  edits create one `--no-ff` merge whose second parent is the exact verified
+  planning revision recorded by Plan Verifier; that parent descends from the
+  approved integration target and carries the published OpenSpec input
 - `baseline_state`: reviewed `0.6.2` implementation evidence; currently
   conflicts with `main` and is not treated as merge-ready
 - `target`: Multica `0.7.0` at
@@ -39,7 +45,9 @@ source-reviewed payload fixtures, never by invented identities or operations.
 
 | Gate | Concrete command | Required assertion | CI disposition |
 |---|---|---|---|
-| Baseline ancestry | `git merge-base --is-ancestor b1c350ce22941a66871f11e0c5830a6ec542878c HEAD` | exact PR #101 head is an ancestor | required preflight in implementation PR |
+| Composition identity | `test "$(git rev-parse HEAD^1)" = b1c350ce22941a66871f11e0c5830a6ec542878c && test "$(git rev-parse HEAD^2)" = "$VERIFIED_PLANNING_SHA"` | composition first parent is exact PR #101 head and second parent is the planning SHA from the approved managed contract | required before product edits |
+| Integration ancestry | `git merge-base --is-ancestor a96eecf3e12a88dd7b4d56e1aafae3285fb0990c HEAD^2 && git merge-base --is-ancestor a96eecf3e12a88dd7b4d56e1aafae3285fb0990c HEAD` | exact integration target reaches both planning input and composed line | required preflight in implementation PR |
+| OpenSpec preservation | `git diff --exit-code HEAD^2 -- openspec/changes/update-multica-0-7-0/` | published OpenSpec input is byte-identical on composition commit | required before product edits and in final CI |
 | Contract/source | `make contract` | approved contract validates and all source links are pinned | existing `contract-check` job |
 | Generated freshness | `uv run python scripts/upstream_contract.py check --approved contracts/sdk-contract.json` | tracked projection equals approved contract; repeated render proof is covered by contract tests | existing contract job plus focused contract tests |
 | Focused remaining delta | `uv run pytest -o addopts="" -q tests/unit/resources tests/unit/test_project_resource_models.py tests/unit/test_transport.py tests/component/test_issue_project_assignment.py tests/component/test_transport_errors.py tests/contract/test_sdk_contract.py` | all remaining adapters, validators, decoders, conflicts, and redaction paths pass | extend existing unit/component/contract jobs |
@@ -58,7 +66,7 @@ edit implementation fixtures or substitute a live run.
 
 | Capability and scenario | Sufficient lower-level or CI proof | Owning tasks |
 |---|---|---|
-| upstream-contract — The implementation starts from another revision | ancestry preflight plus retained public-discovery/canonical-vector assertions | 1.1, 1.6 |
+| upstream-contract — The implementation starts from another revision | exact first/second-parent, integration-ancestor, OpenSpec-tree, and retained public-surface assertions | 1.1, 1.6 |
 | upstream-contract — Conflict resolution changes accepted behavior | PR #101 regression tables and generated binding comparison | 1.1, 1.6, 5.2 |
 | upstream-contract — Provenance is incomplete or mixed | contract schema, mutation, checksum, and source-link cases | 1.2, 1.6 |
 | upstream-contract — A target item lacks one decision | inventory/response closure and duplicate/missing mutation cases | 1.3, 1.6 |
@@ -83,7 +91,7 @@ edit implementation fixtures or substitute a live run.
 | sdk-surface — An agent write lacks an explicit grant | agent authorization rows assert no retry and redacted typed failure | 4.3, 4.5 |
 | sdk-surface — A reviewed allowlist failure occurs | workspace/transport payload rows assert stable safe exception fields | 4.4, 4.5 |
 | sdk-surface — An unknown failure occurs | malformed/unknown payload rows assert retained generic fallback | 4.4, 4.5 |
-| verification-and-release — Baseline reconciliation runs | ancestry plus retained discovery/vector/fixture suite | 1.1, 1.6, 5.2 |
+| verification-and-release — Baseline reconciliation runs | exact parent/ancestor/OpenSpec-tree assertions plus retained discovery/vector/fixture suite | 1.1, 1.6, 5.2 |
 | verification-and-release — Coverage reconciliation runs | 196-item response closure and test-reference audit | 1.3, 1.6, 5.2 |
 | verification-and-release — A deterministic gate detects drift | contract, source-link, render, test, package, and forbidden-content negative checks | 1.5, 1.6, 5.3 |
 | verification-and-release — GitHub CI evaluates the candidate | required ordinary CI jobs resolve to the published exact SHA | 5.3, 5.4 |
@@ -118,6 +126,11 @@ existing implementation, tests, workflows, history, and planning artifacts were
 read as evidence. Unattended CI time, approval queues, and external waiting are
 excluded.
 
+The integration-target clarification fixes identities and assertions for work
+already included in baseline reconciliation. It changes no remaining behavior,
+task, work package, or effort assumption, so the authoritative estimate
+properties remain unchanged.
+
 The read-back `Estimate, hours` property is above the authoritative threshold,
 so `delivery_mode=dag`. The graph below is the transitive reduction and has a
 real parallel frontier.
@@ -134,9 +147,10 @@ real parallel frontier.
 
 ### WP-01-baseline-contract
 
-- **Deliverable:** an implementation line rooted at exact PR #101 head,
-  reconciled with the approved integration target, with accepted `0.6.2`
-  behavior preserved and the single approved contract advanced to `0.7.0`.
+- **Deliverable:** an implementation line composed by merging the exact verified
+  planning revision into exact PR #101 head, with fixed integration target
+  `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`, published OpenSpec input and
+  accepted `0.6.2` behavior preserved before the contract advances to `0.7.0`.
 - **Owned responsibility scope:** branch/integration reconciliation;
   `contracts/sdk-contract.json`; contract schema/loader/validator/generator;
   `src/multica_py/_generated/approved_sdk.py`; source-link, provenance,
@@ -145,11 +159,13 @@ real parallel frontier.
 - **Critical shared files:** the approved contract and generated projection are
   single-writer foundation files. Stage-2 packages consume their stabilized
   identifiers and SHALL NOT regenerate or edit them concurrently.
-- **Contract surface:** exact baseline ancestry; retained/adapted/excluded
+- **Contract surface:** exact two-parent composition; integration-target
+  ancestry; byte-identical OpenSpec preservation; retained/adapted/excluded
   decisions; target provenance; transport mappings; normalized constraints;
   compatibility interval; deterministic output.
-- **DoD/evidence:** exact-head ancestry passes; conflicts are resolved with no
-  unexplained retained drift; 209 commands and 196 responses close; contract,
+- **DoD/evidence:** both parent identities, integration ancestry and OpenSpec
+  subtree equality pass before product edits; conflicts have no unexplained
+  retained drift; 209 commands and 196 responses close; contract,
   source-link, mutation, double-render, freshness, and baseline regression checks pass.
 - **Parallel safety:** foundation runs alone. It removes all shared contract and
   generated-file writes from later siblings.

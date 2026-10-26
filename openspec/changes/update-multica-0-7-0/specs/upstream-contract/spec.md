@@ -3,13 +3,18 @@
 ### Requirement: The accepted 0.6.2 implementation baseline is exact
 
 The implementation SHALL start from draft PR #101 head
-`b1c350ce22941a66871f11e0c5830a6ec542878c` and SHALL preserve its reviewed
-public behavior while reconciling conflicts with the approved integration target.
+`b1c350ce22941a66871f11e0c5830a6ec542878c`. Before product edits it SHALL
+create one merge commit whose first parent is that head and whose second parent
+is the exact Plan-Verifier-approved planning revision. The second parent SHALL
+descend from approved integration target
+`a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`; the merge SHALL preserve the
+published `openspec/changes/update-multica-0-7-0/` subtree byte-identically and
+retain reviewed `0.6.2` public behavior while resolving conflicts.
 
 #### Scenario: The implementation starts from another revision
 
-- **WHEN** the implementation branch ancestry does not contain the exact PR #101 head
-- **THEN** baseline acceptance fails before any `0.7.0` adaptation is credited
+- **WHEN** the composition commit has a different first parent, a second parent other than the approved planning SHA, lacks the exact integration-target ancestor, or changes the published OpenSpec subtree
+- **THEN** baseline acceptance fails before any `0.7.0` adaptation or product edit is credited
 
 #### Scenario: Conflict resolution changes accepted behavior
 

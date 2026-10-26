@@ -2,13 +2,16 @@
 
 ### Requirement: Accepted PR 101 coverage remains a release gate
 
-Verification SHALL prove exact PR #101 accepted behavior survives baseline
-reconciliation before remaining `0.7.0` adaptations are accepted.
+Verification SHALL prove the composition commit has exact PR #101 head as first
+parent, the Plan-Verifier-approved planning SHA as second parent, exact
+integration target `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c` in its ancestry,
+the published OpenSpec subtree unchanged, and accepted PR #101 behavior intact
+before remaining `0.7.0` adaptations are accepted.
 
 #### Scenario: Baseline reconciliation runs
 
-- **WHEN** the consolidated candidate is checked against the accepted PR #101 public signatures, canonical vectors, fixtures, and generated bindings
-- **THEN** every retained behavior matches or has an explicit source-pinned `0.7.0` adapt decision
+- **WHEN** the composition and consolidated candidate are checked against their exact parents, OpenSpec input, and accepted PR #101 public signatures, canonical vectors, fixtures, and generated bindings
+- **THEN** both parent identities and integration ancestry match, the OpenSpec subtree is byte-identical, and every retained behavior matches or has an explicit source-pinned `0.7.0` adapt decision
 
 ### Requirement: Remaining upgrade coverage is closed and table-driven
 

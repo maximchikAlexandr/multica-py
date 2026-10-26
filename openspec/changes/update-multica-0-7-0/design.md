@@ -15,12 +15,18 @@ The verified target remains Multica `0.7.0` at
 CLI nodes and 196 supported response work items. The planning branch does not
 merge, rebase, edit, close, or replace PR #101.
 
+The approved Git integration target is exact `origin/main` snapshot
+`a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`. The verified planning revision
+published from `feat/MYL-557-update-multica-0.7.0` SHALL descend from that SHA
+and carries the authoritative OpenSpec input into implementation composition.
+
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Preserve accepted `0.6.2` behavior while reconciling PR #101 with the future
-  integration target and advancing the approved contract to `0.7.0`.
+- Preserve accepted `0.6.2` behavior while composing PR #101 with exact
+  integration target `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c` and advancing
+  the approved contract to `0.7.0`.
 - Implement only the remaining source-pinned delta through existing models,
   resources, transport errors, case tables, and the single contract generator.
 - Close every affected scenario with deterministic lower-level, component,
@@ -40,10 +46,23 @@ merge, rebase, edit, close, or replace PR #101.
 ### Decision 1: Use exact PR #101 head as the implementation baseline
 
 Implementation SHALL begin from exact commit
-`b1c350ce22941a66871f11e0c5830a6ec542878c`. The first implementation package
-SHALL reconcile that snapshot with the approved integration target, resolve
-conflicts without silently choosing either side, and prove the accepted `0.6.2`
-surface remains present before any `0.7.0` adaptation proceeds.
+`b1c350ce22941a66871f11e0c5830a6ec542878c`. Before any product edit, the first
+implementation package SHALL merge the exact verified planning revision into
+that branch with `--no-ff`. The resulting composition commit SHALL have PR #101
+head as first parent and the verified planning revision as second parent. That
+second parent SHALL descend from approved integration target
+`a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`, so the merge brings in both the
+fixed integration snapshot and the published OpenSpec input. Conflict resolution
+SHALL not silently choose either side and SHALL preserve the accepted `0.6.2`
+surface before any `0.7.0` adaptation proceeds.
+
+The foundation SHALL prove all of the following on the composition commit:
+
+- `HEAD^1` equals `b1c350ce22941a66871f11e0c5830a6ec542878c`;
+- `HEAD^2` equals the exact planning SHA accepted by Plan Verifier and recorded
+  in the implementation managed contract;
+- `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c` is an ancestor of `HEAD^2` and `HEAD`;
+- `openspec/changes/update-multica-0-7-0/` is byte-identical to `HEAD^2`.
 
 Alternative: restart from `main` or replay selected PR commits. Rejected because
 it would discard reviewed work or make preservation depend on an undocumented
@@ -117,7 +136,8 @@ renderer, evidence store, or workflow client is unnecessary and removed.
 
 ## Risks / Trade-offs
 
-- **PR #101 conflicts with main** → reconcile once in the foundation, assert
+- **PR #101 conflicts with the exact integration target** → compose once in the
+  foundation using the fixed parent contract above, assert
   accepted `0.6.2` signatures/fixtures before target adaptations, and forbid
   domain packages from independently resolving shared files.
 - **A retained PR #101 behavior could be mistaken for remaining work** → map
@@ -131,15 +151,19 @@ renderer, evidence store, or workflow client is unnecessary and removed.
 
 ## Migration Plan
 
-1. Create the implementation branch from exact PR #101 head, reconcile the
-   integration target, and prove accepted `0.6.2` behavior is intact.
+1. Create the implementation branch from exact PR #101 head. Merge the exact
+   verified planning revision as second parent with `--no-ff`; verify its
+   ancestry from `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`, preserve the
+   OpenSpec subtree byte-for-byte, and prove accepted `0.6.2` behavior is intact.
 2. Advance provenance, inventory, response decisions, mappings, compatibility,
    and the generated projection from the accepted `0.6.2` baseline to `0.7.0`.
 3. Implement the disjoint remaining behavior groups against the stable contract.
 4. Reconcile shared tables/docs and run focused then complete offline, contract,
    type, lint, package, and CI gates at one candidate SHA.
-5. Roll back the consolidation as one implementation commit range while keeping
-   PR #101 and its branch intact; no data migration or live-state cleanup exists.
+5. Roll back product commits normally. If the unmerged composition itself must
+   be undone, use `git revert -m 1 <composition-sha>`; this
+   returns the implementation line to exact PR #101 content without modifying
+   PR #101, its branch, the planning branch, or either immutable parent SHA.
 
 ## Open Questions
 

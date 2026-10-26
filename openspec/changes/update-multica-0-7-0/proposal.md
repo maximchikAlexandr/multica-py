@@ -8,9 +8,11 @@ implements only behavior not already present there.
 
 ## What Changes
 
-- Start implementation from exact PR #101 head, reconcile its conflicts with
-  the eventual integration target without discarding reviewed `0.6.2` behavior,
-  and advance the approved target from `0.6.2` to Multica `0.7.0`.
+- Start implementation from exact PR #101 head and compose it with approved
+  integration target `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c` through one
+  merge whose second parent is the exact verified planning revision. This
+  preserves both reviewed `0.6.2` behavior and the published OpenSpec input
+  before advancing the approved target to Multica `0.7.0`.
 - Reconcile the closed 209-node CLI inventory and 196 supported response items
   against `0.7.0`, retaining the existing approved-contract-only generator and
   explicit exclusions for daemon autostart, workflow-management HTTP endpoints,
@@ -51,6 +53,9 @@ None.
 - Integration baseline: draft PR #101 / `feat/MYL-474-update-multica-0.6.2` at
   exact head `b1c350ce22941a66871f11e0c5830a6ec542878c`; the PR and branch remain
   preserved and are not modified by this planning change.
+- Approved integration target: exact `origin/main` snapshot
+  `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`; the verified planning revision
+  is its descendant and is the required second parent of the composition merge.
 - Remaining writes: approved contract and projection, property-filter, project,
   wakeup, runtime/agent, workspace/error models and adapters, existing case
   tables, docs, package metadata, and CI verification.
