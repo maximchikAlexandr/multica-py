@@ -23,10 +23,10 @@ commits, and remove the unsupported write contract without rewriting history.
 - Retain CLI-backed agent create/update authorization failures and workspace
   allowlist failures through the existing sanitized exception boundary.
 - Replace the unstarted WP-04/WP-05 graph remainder with one all-covering
-  remaining package. Reuse existing child MYL-576 after approval; do not create
-  duplicate children or reuse prior ACCEPT markers under the new revision.
-  Clear MYL-576's obsolete stage through a read-backed detach/re-parent cycle,
-  then cancel MYL-577 as its duplicate so only one nonterminal child remains.
+  remaining package. After approval create exactly one new unstaged parked child
+  with the revised contract, then cancel old MYL-576 and MYL-577 as duplicates
+  of that replacement. Do not reuse prior ACCEPT markers or retry creation when
+  read-back can recover the already-created replacement.
 - Keep `e2e_required=false`: all revised behavior is closed by source-link,
   contract, fake-CLI, unit/resource/component, package, and ordinary CI checks.
 

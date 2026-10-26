@@ -8,16 +8,18 @@ prove the new planning revision descends from accepted integration
 composition planning parent from the new final `VERIFIED_PLANNING_SHA`. The old
 WP-04 blocked attempt and every old ACCEPT marker SHALL NOT be treated as
 acceptance under the new graph revision. Before resumed implementation,
-verification SHALL prove MYL-576 is the only nonterminal direct child, retains
-the exact implementation parent with `stage=null`, carries the all-covering
-`single_wp_no_dag` contract without stage, dependency, frontier, or DAG fields,
-and that MYL-577 is a terminal duplicate of MYL-576. Accepted historical
-children SHALL remain terminal so completion of MYL-576 can close parent fan-in.
+verification SHALL prove exactly one newly created or idempotently recovered
+replacement is the only nonterminal direct child, retains the exact
+implementation parent with `stage=null`, and carries the all-covering
+`single_wp_no_dag` contract without stage, dependency, frontier, or DAG fields.
+MYL-576 and MYL-577 SHALL be terminal duplicates of that replacement. Accepted
+historical children SHALL remain terminal so completion of the replacement can
+close parent fan-in.
 
 #### Scenario: Accepted history is reconciled
 
 - **WHEN** the revised implementation contract, direct child set, and candidate history are checked
-- **THEN** immutable composition parents, accepted WP SHAs, current integration ancestry, and both planning identities match their declared roles; MYL-576 is the sole unstaged nonterminal child under the exact parent; MYL-577 is its cancelled duplicate; and no obsolete child can prevent final children-done fan-in
+- **THEN** immutable composition parents, accepted WP SHAs, current integration ancestry, and both planning identities match their declared roles; exactly one replacement is the sole unstaged nonterminal child under the exact parent; MYL-576 and MYL-577 are its cancelled duplicates; and no obsolete child can prevent final children-done fan-in
 
 #### Scenario: An old result is reused silently
 
