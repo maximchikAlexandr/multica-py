@@ -90,6 +90,28 @@ class DetailCase:
 
 
 @dataclass(frozen=True)
+class AccessWrite403Case:
+    id: str
+    command_args: tuple[str, ...]
+
+
+_ACCESS_WRITE_403_CASES = (
+    AccessWrite403Case(
+        "command_args0",
+        ("agent", "create", "--name", "private-name", "--runtime-id", "runtime-secret"),
+    ),
+    AccessWrite403Case(
+        "command_args1", ("agent", "update", "agent-secret", "--runtime-id", "runtime-secret")
+    ),
+    AccessWrite403Case(
+        "command_args2",
+        ("workspace", "create", "--name", "private-name", "--slug", "private-slug"),
+    ),
+    AccessWrite403Case("command_args3", ("workspace", "update", "--name", "private-name")),
+)
+
+
+@dataclass(frozen=True)
 class RuntimeStatusCase:
     id: str
     status: int
@@ -1493,18 +1515,11 @@ def test_legacy_exit_code_one_classifies_from_stderr(
     assert exc.exit_code == case.reported_exit_code
 
 
-@pytest.mark.parametrize(
-    "command_args",
-    (
-        ("agent", "create", "--name", "private-name", "--runtime-id", "runtime-secret"),
-        ("agent", "update", "agent-secret", "--runtime-id", "runtime-secret"),
-        ("workspace", "create", "--name", "private-name", "--slug", "private-slug"),
-        ("workspace", "update", "--name", "private-name"),
-    ),
-)
+@pytest.mark.parametrize("case", _ACCESS_WRITE_403_CASES, ids=lambda case: case.id)
 def test_access_write_403_exposes_only_safe_authorization_error(
-    command_args: tuple[str, ...],
+    case: AccessWrite403Case,
 ) -> None:
+    command_args = case.command_args
     transport = CliTransport(ClientConfig(executable="multica"))
     transport._execute = lambda *args, **kwargs: RawCommandResult(  # type: ignore[method-assign]
         argv=("multica", *command_args),

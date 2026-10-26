@@ -49,6 +49,90 @@ def update_args(resource: IssueWakeupResource, **kwargs: object) -> Any:
 
 
 @dataclass(frozen=True)
+class _ConditionFamilyCase:
+    id: str
+    condition: Mapping[str, object]
+    expected_json: str
+
+
+_CONDITION_FAMILY_CASES = (
+    _ConditionFamilyCase("status", {"status": "done"}, '{"status":"done"}'),
+    _ConditionFamilyCase(
+        "assignee", {"assignee": "member:member-1"}, '{"assignee":"member:member-1"}'
+    ),
+    _ConditionFamilyCase("label", {"label": "release"}, '{"label":"release"}'),
+    _ConditionFamilyCase("property", {"property": {"b": 2, "a": 1}}, '{"property":{"a":1,"b":2}}'),
+    _ConditionFamilyCase(
+        "children", {"children_done": {"stage": 2}}, '{"children_done":{"stage":2}}'
+    ),
+    _ConditionFamilyCase("pull-request", {"pull_request": "merged"}, '{"pull_request":"merged"}'),
+    _ConditionFamilyCase(
+        "pr-conflict", {"pull_request": "conflict"}, '{"pull_request":"conflict"}'
+    ),
+    _ConditionFamilyCase(
+        "reference",
+        {"referenced_issue": {"id": "ISSUE-2", "state": "done"}},
+        '{"referenced_issue":{"id":"ISSUE-2","state":"done"}}',
+    ),
+)
+
+
+@dataclass(frozen=True)
+class _ConditionShapeCase:
+    id: str
+    kwargs: Mapping[str, object]
+    message: str
+
+
+_CONDITION_SHAPE_CASES = (
+    _ConditionShapeCase(
+        "kwargs0-exactly one", {"condition": {"status": "done", "label": "release"}}, "exactly one"
+    ),
+    _ConditionShapeCase(
+        "kwargs1-exactly one",
+        {"condition": {"pull_request": "conflict", "status": "done"}},
+        "exactly one",
+    ),
+    _ConditionShapeCase("kwargs2-exactly one", {"condition": {}}, "exactly one"),
+    _ConditionShapeCase("kwargs3-exactly one", {"condition": {"unknown": "value"}}, "exactly one"),
+    _ConditionShapeCase(
+        "kwargs4-combined",
+        {"condition": {"status": "done"}, "event_types": ("comment.created",)},
+        "combined",
+    ),
+    _ConditionShapeCase(
+        "kwargs5-event kind",
+        {"condition": {"status": "done"}, "kind": "every", "interval_seconds": 60},
+        "event kind",
+    ),
+    _ConditionShapeCase(
+        "kwargs6-combined",
+        {"condition": {"status": "done"}, "filter_task_id": "task-1"},
+        "combined",
+    ),
+    _ConditionShapeCase(
+        "kwargs7-member|agent|squad", {"condition": {"assignee": "person:1"}}, "member|agent|squad"
+    ),
+    _ConditionShapeCase("kwargs8-stage", {"condition": {"children_done": {"stage": 0}}}, "stage"),
+    _ConditionShapeCase(
+        "kwargs9-pull_request status",
+        {"condition": {"pull_request": "open"}},
+        "pull_request status",
+    ),
+    _ConditionShapeCase(
+        "kwargs10-referenced_issue state",
+        {"condition": {"referenced_issue": {"id": "x", "state": "open"}}},
+        "referenced_issue state",
+    ),
+    _ConditionShapeCase(
+        "kwargs11-property must be non-null",
+        {"condition": {"property": None}},
+        "property must be non-null",
+    ),
+)
+
+
+@dataclass(frozen=True)
 class _EagerCommandCase:
     name: str
     command_builder: Callable[[IssueWakeupResource], object]
@@ -404,68 +488,26 @@ def test_all_eager_and_command_pairs_have_exact_argv_and_decoded_results(
     assert case.extract(eager_result) == case.expected_result
 
 
-@pytest.mark.parametrize(
-    "condition",
-    [
-        {"status": "done"},
-        {"assignee": "member:member-1"},
-        {"label": "release"},
-        {"property": {"b": 2, "a": 1}},
-        {"children_done": {"stage": 2}},
-        {"pull_request": "merged"},
-        {"pull_request": "conflict"},
-        {"referenced_issue": {"id": "ISSUE-2", "state": "done"}},
-    ],
-    ids=(
-        "status",
-        "assignee",
-        "label",
-        "property",
-        "children",
-        "pull-request",
-        "pr-conflict",
-        "reference",
-    ),
-)
+@pytest.mark.parametrize("case", _CONDITION_FAMILY_CASES, ids=lambda case: case.id)
 def test_all_condition_families_use_canonical_json_and_are_server_owned(
-    condition: Mapping[str, object],
+    case: _ConditionFamilyCase,
 ) -> None:
     transport = make_transport()
-    command = create_args(wakeups(transport), condition=condition)
-    expected_json = json.dumps(condition, separators=(",", ":"), sort_keys=True)
+    command = create_args(wakeups(transport), condition=case.condition)
 
-    assert f"--condition '{expected_json}'" in command.commands[0]
-    transport.run_bytes.return_value = command_result(wakeup_payload(condition=condition))
-    assert command.run().condition == condition
+    assert f"--condition '{case.expected_json}'" in command.commands[0]
+    transport.run_bytes.return_value = command_result(wakeup_payload(condition=case.condition))
+    assert command.run().condition == case.condition
     transport.run_bytes.assert_called_once()
 
 
-@pytest.mark.parametrize(
-    ("kwargs", "message"),
-    [
-        ({"condition": {"status": "done", "label": "release"}}, "exactly one"),
-        ({"condition": {"pull_request": "conflict", "status": "done"}}, "exactly one"),
-        ({"condition": {}}, "exactly one"),
-        ({"condition": {"unknown": "value"}}, "exactly one"),
-        ({"condition": {"status": "done"}, "event_types": ("comment.created",)}, "combined"),
-        ({"condition": {"status": "done"}, "kind": "every", "interval_seconds": 60}, "event kind"),
-        ({"condition": {"status": "done"}, "filter_task_id": "task-1"}, "combined"),
-        ({"condition": {"assignee": "person:1"}}, "member|agent|squad"),
-        ({"condition": {"children_done": {"stage": 0}}}, "stage"),
-        ({"condition": {"pull_request": "open"}}, "pull_request status"),
-        (
-            {"condition": {"referenced_issue": {"id": "x", "state": "open"}}},
-            "referenced_issue state",
-        ),
-        ({"condition": {"property": None}}, "property must be non-null"),
-    ],
-)
+@pytest.mark.parametrize("case", _CONDITION_SHAPE_CASES, ids=lambda case: case.id)
 def test_condition_exclusivity_and_shape_rules_are_local(
-    kwargs: dict[str, object], message: str
+    case: _ConditionShapeCase,
 ) -> None:
     transport = make_transport()
-    with pytest.raises((TypeError, ValueError), match=message):
-        create_args(wakeups(transport), **kwargs)
+    with pytest.raises((TypeError, ValueError), match=case.message):
+        create_args(wakeups(transport), **dict(case.kwargs))
     transport.run_bytes.assert_not_called()
 
 

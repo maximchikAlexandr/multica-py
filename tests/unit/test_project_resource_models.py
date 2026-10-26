@@ -41,6 +41,36 @@ class RejectCase:
     match: str
 
 
+@dataclass(frozen=True)
+class _ProjectWorkflowDecodeCase:
+    id: str
+    workflow_field: str | None
+    expected: str | None
+
+
+_PROJECT_WORKFLOW_DECODE_CASES = (
+    _ProjectWorkflowDecodeCase("legacy-omitted", None, None),
+    _ProjectWorkflowDecodeCase("explicit-null", '"workflow_id":null', None),
+    _ProjectWorkflowDecodeCase(
+        "uuid",
+        '"workflow_id":"123e4567-e89b-12d3-a456-426614174000"',
+        "123e4567-e89b-12d3-a456-426614174000",
+    ),
+)
+
+
+@dataclass(frozen=True)
+class _MalformedProjectWorkflowCase:
+    id: str
+    workflow_id: str
+
+
+_MALFORMED_PROJECT_WORKFLOW_CASES = (
+    _MalformedProjectWorkflowCase("malformed", "bad"),
+    _MalformedProjectWorkflowCase("empty", ""),
+)
+
+
 _PROJECT_RESOURCE_DECODE_CASES = (
     ProjectResourceDecodeCase(
         "with-label",
@@ -159,35 +189,24 @@ def test_issue_usage_decodes_cost_usd(payload: bytes, cost_usd: float | None) ->
     assert usage.cost_usd == cost_usd
 
 
-@pytest.mark.parametrize(
-    ("workflow_field", "expected"),
-    (
-        (None, None),
-        (('"workflow_id":null',), None),
-        (
-            ('"workflow_id":"123e4567-e89b-12d3-a456-426614174000"',),
-            "123e4567-e89b-12d3-a456-426614174000",
-        ),
-    ),
-    ids=("legacy-omitted", "explicit-null", "uuid"),
-)
+@pytest.mark.parametrize("case", _PROJECT_WORKFLOW_DECODE_CASES, ids=lambda case: case.id)
 def test_project_workflow_id_decodes_legacy_null_and_uuid(
-    workflow_field: tuple[str] | None, expected: str | None
+    case: _ProjectWorkflowDecodeCase,
 ) -> None:
-    suffix = "" if workflow_field is None else "," + workflow_field[0]
+    suffix = "" if case.workflow_field is None else "," + case.workflow_field
     wire = decode_json(
         f'{{"id":"p1","title":"Project","status":"planned"{suffix}}}'.encode(),
         _ProjectWire,
     )
 
-    assert _project_from_wire(wire).workflow_id == expected
+    assert _project_from_wire(wire).workflow_id == case.expected
 
 
-@pytest.mark.parametrize("workflow_id", ("bad", ""), ids=("malformed", "empty"))
-def test_project_workflow_id_rejects_malformed_uuid(workflow_id: str) -> None:
+@pytest.mark.parametrize("case", _MALFORMED_PROJECT_WORKFLOW_CASES, ids=lambda case: case.id)
+def test_project_workflow_id_rejects_malformed_uuid(case: _MalformedProjectWorkflowCase) -> None:
     payload = (
         '{"id":"p1","title":"Project","status":"planned",'
-        f'"workflow_id":{json.dumps(workflow_id)}}}'
+        f'"workflow_id":{json.dumps(case.workflow_id)}}}'
     ).encode()
     with pytest.raises(OutputShapeError, match="workflow_id"):
         decode_json(

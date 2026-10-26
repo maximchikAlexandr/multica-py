@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -98,27 +99,33 @@ def _verify(history: dict[str, str | Path], **overrides: str) -> None:
         os.chdir(previous)
 
 
+@dataclass(frozen=True)
+class _CompositionMutationCase:
+    id: str
+    overrides: tuple[tuple[str, str], ...]
+
+
+_COMPOSITION_MUTATION_CASES = (
+    _CompositionMutationCase("override0", (("baseline_sha", "HEAD"),)),
+    _CompositionMutationCase("override1", (("composition_planning_sha", "HEAD"),)),
+    _CompositionMutationCase("override2", (("integration_sha", "HEAD"),)),
+    _CompositionMutationCase("override3", (("accepted_sha", "not-a-commit"),)),
+    _CompositionMutationCase("override4", (("candidate_sha", "not-a-commit"),)),
+)
+
+
 def test_composition_gate_accepts_exact_ancestry_and_preserved_subtree(
     history: dict[str, str | Path],
 ) -> None:
     _verify(history)
 
 
-@pytest.mark.parametrize(
-    "override",
-    [
-        {"baseline_sha": "HEAD"},
-        {"composition_planning_sha": "HEAD"},
-        {"integration_sha": "HEAD"},
-        {"accepted_sha": "not-a-commit"},
-        {"candidate_sha": "not-a-commit"},
-    ],
-)
+@pytest.mark.parametrize("case", _COMPOSITION_MUTATION_CASES, ids=lambda case: case.id)
 def test_composition_gate_rejects_identity_and_ancestry_mutations(
-    history: dict[str, str | Path], override: dict[str, str]
+    history: dict[str, str | Path], case: _CompositionMutationCase
 ) -> None:
     with pytest.raises(CompositionError):
-        _verify(history, **override)
+        _verify(history, **dict(case.overrides))
 
 
 def test_composition_gate_rejects_candidate_openspec_drift(
