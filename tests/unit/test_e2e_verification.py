@@ -135,7 +135,7 @@ class _FakeClient:
     def __init__(
         self,
         *,
-        cli_version: str = "0.6.2",
+        cli_version: str = "0.7.0",
         fail_property_create: bool = False,
         cleanup_failure: bool = False,
     ) -> None:
@@ -294,7 +294,7 @@ def test_run_success_records_public_scenarios_cleanup_and_hashes(
 
     manifest = _manifest(tmp_path / "success")
     assert manifest["sdk_sha"] == _SHA
-    assert manifest["cli_observed_version"] == "0.6.2"
+    assert manifest["cli_observed_version"] == "0.7.0"
     assert manifest["final_exit_code"] == 0
     assert manifest["commands"]
     assert manifest["resource_ids"] == {
@@ -400,7 +400,7 @@ def test_live_workflow_authorizes_trusted_exact_head_and_sanitized_graph() -> No
         "MULTICA_LIVE_PROFILE",
     ):
         assert f"      {variable}:" in protected_env
-    assert '      MULTICA_LIVE_EXPECTED_VERSION: "0.6.2"' in protected_env
+    assert '      MULTICA_LIVE_EXPECTED_VERSION: "0.7.0"' in protected_env
     assert "environments/multica-live" in workflow
     assert "required_reviewers" in workflow
     assert "required_deployments" in workflow
@@ -414,7 +414,7 @@ def test_live_workflow_authorizes_trusted_exact_head_and_sanitized_graph() -> No
     assert workflow.index("Check immutable checkout before setup") < workflow.index("setup-uv")
     assert "version --output json" in workflow
     assert "observed_version" in workflow
-    assert 'test "$observed_version" = "0.6.2"' in workflow
+    assert 'test "$observed_version" = "0.7.0"' in workflow
     assert "if: always()" in workflow
     assert "RUNNER_TEMP/multica-live-" in workflow
     assert "Upload sanitized evidence allowlist" in workflow

@@ -22,7 +22,7 @@ from multica_py.exceptions import NotFoundError
 from multica_py.models.issues import IssuePropertyAssignment
 
 _WRAPPER_EXECUTABLE = "multica-test"
-_EXPECTED_CLI_VERSION = "0.6.2"
+_EXPECTED_CLI_VERSION = "0.7.0"
 _COMMANDS = (
     "multica-test version --output json",
     "projects.create",

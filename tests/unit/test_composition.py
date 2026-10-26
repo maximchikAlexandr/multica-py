@@ -21,6 +21,10 @@ def _commit(repo: Path, message: str) -> str:
     return _git(repo, "rev-parse", "HEAD")
 
 
+def _merge(repo: Path, branch: str, message: str) -> None:
+    _git(repo, "merge", "--no-ff", branch, "-m", message)
+
+
 @pytest.fixture
 def history(tmp_path: Path) -> dict[str, str | Path]:
     repo = tmp_path / "repo"
@@ -29,22 +33,31 @@ def history(tmp_path: Path) -> dict[str, str | Path]:
     (repo / "openspec/changes/demo").mkdir(parents=True)
     (repo / "openspec/changes/demo/spec.md").write_text("approved\n", encoding="utf-8")
     (repo / "integration.txt").write_text("integration\n", encoding="utf-8")
-    integration = _commit(repo, "integration")
+    prior_integration = _commit(repo, "prior integration")
     (repo / "baseline.txt").write_text("baseline\n", encoding="utf-8")
     baseline = _commit(repo, "baseline")
-    _git(repo, "checkout", "-b", "planning", integration)
+    _git(repo, "checkout", "-b", "planning", prior_integration)
     (repo / "openspec/changes/demo/spec.md").write_text("approved plan\n", encoding="utf-8")
-    planning = _commit(repo, "planning")
+    composition_planning = _commit(repo, "composition planning")
     _git(repo, "checkout", "main")
-    _git(repo, "merge", "--no-ff", "planning", "-m", "composition")
+    _merge(repo, "planning", "composition")
     composition = _git(repo, "rev-parse", "HEAD")
+
+    (repo / "integration.txt").write_text("accepted integration\n", encoding="utf-8")
+    integration = _commit(repo, "accepted integration")
+    _git(repo, "checkout", "-b", "verified-planning", integration)
+    (repo / "openspec/changes/demo/spec.md").write_text("approved revised plan\n", encoding="utf-8")
+    verified_planning = _commit(repo, "verified planning")
+    _git(repo, "checkout", "main")
+    _merge(repo, "verified-planning", "incorporate verified planning")
     (repo / "product.py").write_text("candidate\n", encoding="utf-8")
     candidate = _commit(repo, "candidate")
     return {
         "repo": repo,
         "baseline": baseline,
         "integration": integration,
-        "planning": planning,
+        "composition_planning": composition_planning,
+        "verified_planning": verified_planning,
         "composition": composition,
         "candidate": candidate,
     }
@@ -58,11 +71,17 @@ def _verify(history: dict[str, str | Path], **overrides: str) -> None:
         os.chdir(repo)
         verify_composition(
             composition_sha=overrides.get("composition_sha", str(history["composition"])),
-            planning_sha=overrides.get("planning_sha", str(history["planning"])),
+            composition_planning_sha=overrides.get(
+                "composition_planning_sha", str(history["composition_planning"])
+            ),
+            verified_planning_sha=overrides.get(
+                "verified_planning_sha", str(history["verified_planning"])
+            ),
             baseline_sha=overrides.get("baseline_sha", str(history["baseline"])),
             integration_sha=overrides.get("integration_sha", str(history["integration"])),
             candidate_sha=overrides.get("candidate_sha", str(history["candidate"])),
             openspec_path="openspec/changes/demo",
+            accepted_shas=(overrides.get("accepted_sha", str(history["integration"])),),
         )
     finally:
         os.chdir(previous)
@@ -78,8 +97,9 @@ def test_composition_gate_accepts_exact_ancestry_and_preserved_subtree(
     "override",
     [
         {"baseline_sha": "HEAD"},
-        {"planning_sha": "HEAD"},
+        {"composition_planning_sha": "HEAD"},
         {"integration_sha": "HEAD"},
+        {"accepted_sha": "not-a-commit"},
         {"candidate_sha": "not-a-commit"},
     ],
 )
@@ -99,3 +119,10 @@ def test_composition_gate_rejects_candidate_openspec_drift(
     _commit(repo, "mutate approved input")
     with pytest.raises(CompositionError, match="OpenSpec subtree differs"):
         _verify(history, candidate_sha="HEAD")
+
+
+def test_composition_gate_uses_new_planning_sha_for_final_equality(
+    history: dict[str, str | Path],
+) -> None:
+    assert history["composition_planning"] != history["verified_planning"]
+    _verify(history)

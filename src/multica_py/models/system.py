@@ -82,6 +82,8 @@ class RuntimeDefinition(msgspec.Struct, frozen=True, kw_only=True):
     status: str | None = None
     protocol_family: str | None = None
     command_name: str | None = None
+    visibility: str | None = None
+    shared_with: tuple[str, ...] = ()
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
 

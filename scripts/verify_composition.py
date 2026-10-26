@@ -34,22 +34,27 @@ def _ancestor(ancestor: str, descendant: str) -> None:
 def verify_composition(
     *,
     composition_sha: str,
-    planning_sha: str,
+    composition_planning_sha: str,
+    verified_planning_sha: str,
     baseline_sha: str,
     integration_sha: str,
     candidate_sha: str,
     openspec_path: str,
+    accepted_shas: Sequence[str] = (),
 ) -> None:
-    """Assert exact parents and preservation against the immutable SHA inputs."""
+    """Assert immutable history and OpenSpec equality against the current plan."""
     _git("cat-file", "-e", f"{composition_sha}^{{commit}}")
     parents = _git("rev-list", "--parents", "-n", "1", composition_sha).split()
-    if parents != [composition_sha, baseline_sha, planning_sha]:
+    if parents != [composition_sha, baseline_sha, composition_planning_sha]:
         raise CompositionError("composition does not have the exact baseline/planning parents")
-    _ancestor(integration_sha, planning_sha)
-    _ancestor(integration_sha, composition_sha)
+    _ancestor(integration_sha, verified_planning_sha)
+    _ancestor(composition_sha, integration_sha)
     _ancestor(composition_sha, candidate_sha)
+    _ancestor(verified_planning_sha, candidate_sha)
+    for accepted_sha in accepted_shas:
+        _ancestor(accepted_sha, candidate_sha)
     diff = subprocess.run(
-        ["git", "diff", "--quiet", planning_sha, candidate_sha, "--", openspec_path],
+        ["git", "diff", "--quiet", verified_planning_sha, candidate_sha, "--", openspec_path],
         check=False,
         capture_output=True,
         text=True,
@@ -63,20 +68,24 @@ def verify_composition(
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--composition-sha", required=True)
-    parser.add_argument("--planning-sha", required=True)
+    parser.add_argument("--composition-planning-sha", required=True)
+    parser.add_argument("--verified-planning-sha", required=True)
     parser.add_argument("--baseline-sha", required=True)
     parser.add_argument("--integration-sha", required=True)
+    parser.add_argument("--accepted-sha", action="append", default=[])
     parser.add_argument("--candidate-sha", default="HEAD")
     parser.add_argument("--openspec-path", default="openspec/changes/update-multica-0-7-0")
     args = parser.parse_args(argv)
     try:
         verify_composition(
             composition_sha=args.composition_sha,
-            planning_sha=args.planning_sha,
+            composition_planning_sha=args.composition_planning_sha,
+            verified_planning_sha=args.verified_planning_sha,
             baseline_sha=args.baseline_sha,
             integration_sha=args.integration_sha,
             candidate_sha=args.candidate_sha,
             openspec_path=args.openspec_path,
+            accepted_shas=args.accepted_sha,
         )
     except CompositionError as exc:
         print(f"Composition verification failed: {exc}", file=sys.stderr)

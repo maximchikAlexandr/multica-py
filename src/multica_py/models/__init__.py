@@ -47,6 +47,7 @@ from multica_py.models.relations import (
 )
 from multica_py.models.system import (
     RepositoryCheckoutResult,
+    RuntimeDefinition,
     RuntimeProfile,
     RuntimeProfiles,
     RuntimeUpdateResult,
@@ -98,6 +99,7 @@ __all__ = [
     "PullRequestAutoComplete",
     "RelationMetadata",
     "RepositoryCheckoutResult",
+    "RuntimeDefinition",
     "RuntimeProfile",
     "RuntimeProfiles",
     "RuntimeUpdateResult",

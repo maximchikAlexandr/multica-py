@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.0
+
+- Approved target: Multica CLI `0.7.0`, release `421685918`, source commit
+  `dbdbb299164347586e2650bb67684a490726a798`, with compatibility bounds
+  `[0.6.2, 0.7.1)` and direct migration from `0.6.2`.
+- Runtime list and rename expose nullable `visibility` and ordered
+  `shared_with`; runtime target-version updates continue to return
+  `RuntimeUpdateResult`.
+- Agent and workspace authorization failures use safe typed errors. Runtime
+  sharing, visibility changes, grants, and revocation remain outside the
+  CLI-backed SDK surface; runtime deletion remains a separate destructive action.
+- Reconciles all 209 CLI command nodes and 196 response work items. Release
+  provenance, accepted history, and final OpenSpec preservation are checked
+  against their separate immutable identities.
+
 ## 0.6.2
 
 - Approved target: Multica CLI `0.6.2`, release `411568605`, source commit

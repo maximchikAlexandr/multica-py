@@ -1,20 +1,19 @@
 # CLI Coverage
 
-Pinned target upstream: `multica-ai/multica@7ab92d7622ecd81d179a8d83ae2dea74835a5069` (tag `v0.6.2`)
+Pinned target upstream: `multica-ai/multica@dbdbb299164347586e2650bb67684a490726a798` (tag `v0.7.0`)
 
-The reviewed compatibility interval is `[0.6.0, 0.6.3)`: baseline `v0.6.1`
-at source commit `2ea01ae4ef55de4310b99af192d2dbd367832883` is the direct
-comparison and `v0.6.2` is the maximum tested target. The
-approved inventory covers all 209 target command nodes, including wakeup v2
-lifecycle actions, task pagination, issue attachments, and retained public
-parity families from PR #95.
+The reviewed compatibility interval is `[0.6.2, 0.7.1)`: baseline `v0.6.2`
+at source commit `7ab92d7622ecd81d179a8d83ae2dea74835a5069` is the direct
+comparison and `v0.7.0` is the maximum tested target. The approved inventory
+covers all 209 target command nodes and all 196 supported response work items.
 Inherited global flags, interactive login inputs, output modes, and action
 result shapes are reconciled in typed command plans and canonical vectors.
-The 209-node reconciliation is 203 unchanged, two adapted nodes, and four
-CLI-only daemon-autostart leaves, with
+The 209-node reconciliation has 205 unchanged and four changed nodes, with
 zero added or removed nodes; hidden, test-only, and dynamic-Cobra
 classifications remain explicit. The SDK promotes 193 operations and 196
-response entrypoints, with eight changed and 188 unchanged. No public domain leaf
+response entrypoints, with eight changed and 188 unchanged. Runtime list and
+rename decode visibility and ordered sharing identities; update remains typed
+as `RuntimeUpdateResult`. No public domain leaf
 is certified only by a generic `cli:<command>` transport placeholder.
 
 ## Coverage authority

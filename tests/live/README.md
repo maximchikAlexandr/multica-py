@@ -16,9 +16,9 @@ The profile is preauthenticated by the prepared environment owner. No
 credential is copied into the repository, pytest environment, artifacts, or
 command line.
 
-The prepared CLI MUST be `0.6.2`. The fixture uses
+The prepared CLI MUST be `0.7.0`. The fixture uses
 `CompatibilityPolicy.strict` with the generated compatibility bounds
-`[0.6.0, 0.6.3)` and no local version override. Client construction is
+`[0.6.2, 0.7.1)` and no local version override. Client construction is
 I/O-free; the first public SDK operation performs the JSON version preflight.
 
 The prepared workspace must contain at least one member, agent, skill, squad,
@@ -43,7 +43,7 @@ The `Live smoke` workflow is manually dispatched with `pr_number` and a full
 `candidate_sha`. Its uncredentialed authorization job resolves the open
 same-repository PR head before the protected `multica-live` job starts. The
 protected job checks out that immutable SHA with persisted Git credentials
-disabled, requires CLI `0.6.2`, and uploads only sanitized SHA, status, and
+disabled, requires CLI `0.7.0`, and uploads only sanitized SHA, status, and
 cleanup evidence. A default-branch checkout, fork head, or SHA mismatch is
 rejected and is not release evidence.
 
@@ -58,7 +58,7 @@ uv run python scripts/e2e/verify_multica_test.py --output <run-owned-directory>
 
 The script fixes the executable to wrapper-owned `multica-test` and does not
 accept profile, server, workspace, token, or primary-CLI overrides. It performs
-the strict `0.6.2` preflight, creates uniquely named disposable resources,
+the strict `0.7.0` preflight, creates uniquely named disposable resources,
 checks direct and create-time list-property assignments plus public read-back,
 and archives/deletes only those resources on success or error. It writes
 sanitized `manifest.json`, `stdout.txt`, `stderr.txt`, and `cleanup.json`

@@ -31,17 +31,16 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
-The approved SDK target is Multica CLI `0.6.2` at commit
-`7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`), with
-compatibility interval `[0.6.0, 0.6.3)`. Migrate directly from CLI/SDK
-`0.6.1`; no intermediate SDK release is supported. The typed surface covers
-209 target command nodes (203 unchanged, two adapted, and four CLI-only daemon-autostart leaves), 193 operations, and 196 response entrypoints,
-including wakeup v2 lifecycle actions, task cursors, issue attachments,
-comment supplements, pull-request auto-complete status, and workspace MCP
-agent counts. Inherited global flags and interactive login inputs remain
-represented by typed command plans; use `command.commands` to inspect
-redacted previews before execution. The exclusive `0.6.3` ceiling keeps the
-reviewed contract bounded; `0.6.2` is the maximum tested release.
+The approved SDK target is Multica CLI `0.7.0` at commit
+`dbdbb299164347586e2650bb67684a490726a798` (release `421685918`), with
+compatibility interval `[0.6.2, 0.7.1)`. Migrate directly from CLI/SDK
+`0.6.2`; no intermediate SDK release is supported. The typed surface covers
+all 209 target command nodes, 193 operations, and 196 response entrypoints.
+Runtime list and rename include read-only visibility and ordered sharing
+identities; target-version updates still return `RuntimeUpdateResult`. The SDK
+does not provide runtime share/revoke writes or bypass the CLI with HTTP.
+Inherited global flags and interactive login inputs remain represented by
+typed command plans; use `command.commands` to inspect redacted previews.
 
 Issue responses expose the immutable `duplicate_of` snapshot when supplied;
 omitted and explicit-null values remain distinguishable through wire presence.
@@ -60,7 +59,7 @@ Task-supplement mutation/receipt APIs, duplicate receipt and PR automation,
 UI cache calculations, daemon identity, messaging/media, mobile, localization,
 and pricing changes remain outside this SDK. On a failed target acceptance,
 roll back the contract, generated runtime, fixtures, docs, and package claims
-together to the directly reviewed prior `0.6.1` state.
+together to the directly reviewed prior `0.6.2` state.
 See [the migration guide](docs/migration.md) for presence/error semantics,
 version gates, deferred surfaces, checksum roles, and rollback guidance.
 

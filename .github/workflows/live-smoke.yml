@@ -132,7 +132,7 @@ jobs:
       pull-requests: read
     env:
       MULTICA_LIVE_CLI: ${{ vars.MULTICA_LIVE_CLI }}
-      MULTICA_LIVE_EXPECTED_VERSION: "0.6.2"
+      MULTICA_LIVE_EXPECTED_VERSION: "0.7.0"
       MULTICA_LIVE_SERVER_URL: ${{ vars.MULTICA_LIVE_SERVER_URL }}
       MULTICA_LIVE_WORKSPACE_ID: ${{ vars.MULTICA_LIVE_WORKSPACE_ID }}
       MULTICA_LIVE_PROFILE: ${{ vars.MULTICA_LIVE_PROFILE }}
@@ -182,12 +182,12 @@ jobs:
           test -x "$cli_path"
           observed_json="$("$cli_path" version --output json 2>/dev/null)"
           observed_version="$(printf '%s' "$observed_json" | jq -r '.version // empty')"
-          test "$observed_version" = "0.6.2"
+          test "$observed_version" = "0.7.0"
           printf 'observed_cli_version=%s\n' "$observed_version" >> "$GITHUB_OUTPUT"
           printf 'resolved_cli_path=%s\n' "$cli_path" >> "$GITHUB_OUTPUT"
           printf 'MULTICA_LIVE_CLI=%s\n' "$cli_path" >> "$GITHUB_ENV"
 
-      - name: Run strict CLI 0.6.2 live suite
+      - name: Run strict CLI 0.7.0 live suite
         id: live
         run: |
           set +e
@@ -246,7 +246,7 @@ jobs:
             --arg postcheck_result "$POSTCHECK_RESULT" \
             --argjson test_exit_code "$test_status" \
             --argjson commands '["make live"]' \
-            '{schema:"multica-live-v2",workflow_run:$run_url,pr_number:$pr_number,candidate_sha:$candidate_sha,checkout_sha:$checkout_sha,cli_version_expected:"0.6.2",cli_version_observed:$observed_cli_version,scenario_outcomes:{authorization:"passed",cli_preflight:$cli_result,suite:$live_result,post_suite_revalidation:$postcheck_result},commands:$commands,test_exit_code:$test_exit_code,cleanup:{raw_log:"runner-temp-only",upload_allowlist:"manifest.json,cleanup.txt",raw_log_removed:"pending"},credentials:"not recorded"}' \
+            '{schema:"multica-live-v2",workflow_run:$run_url,pr_number:$pr_number,candidate_sha:$candidate_sha,checkout_sha:$checkout_sha,cli_version_expected:"0.7.0",cli_version_observed:$observed_cli_version,scenario_outcomes:{authorization:"passed",cli_preflight:$cli_result,suite:$live_result,post_suite_revalidation:$postcheck_result},commands:$commands,test_exit_code:$test_exit_code,cleanup:{raw_log:"runner-temp-only",upload_allowlist:"manifest.json,cleanup.txt",raw_log_removed:"pending"},credentials:"not recorded"}' \
             > "$evidence_dir/manifest.json"
           printf '%s\n' 'Raw logs remain outside the upload allowlist and are removed by the final cleanup step.' > "$evidence_dir/cleanup.txt"
           test -s "$evidence_dir/manifest.json"

@@ -44,9 +44,13 @@ contract:
 	uv run python scripts/audit_source_links.py
 	uv run python scripts/verify_composition.py \
 		--composition-sha 1f8083040d862669e65b875e7bc9555de96a7346 \
-		--planning-sha 4a83aa817cc2539bee60fe1f1a3996753428a28e \
+		--composition-planning-sha 4a83aa817cc2539bee60fe1f1a3996753428a28e \
+		--verified-planning-sha 306e1ee0f511236a3bd9701bcc37101dacdef34a \
 		--baseline-sha b1c350ce22941a66871f11e0c5830a6ec542878c \
-		--integration-sha a96eecf3e12a88dd7b4d56e1aafae3285fb0990c
+		--integration-sha 9b5d112830831f9e727b35f4936f923ec9429cc7 \
+		--accepted-sha b189631ad2cbc33e9ecfd5cd616052400e8f89aa \
+		--accepted-sha ddeb824b16359dce86bc1ed6fbe3b327166dbf76 \
+		--accepted-sha c24d6ac48b0a0cedfca59a54ed6e6f0e2d5a8fd1
 
 package:
 	uv build

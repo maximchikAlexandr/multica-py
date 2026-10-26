@@ -46,9 +46,10 @@ def test_approved_inventory_and_response_audit_are_complete() -> None:
     response_audit = cast("dict[str, int]", compatibility["response_audit"])
 
     assert inventory.target_nodes == 209
-    assert inventory.baseline_nodes == 205
-    assert inventory.added == 4
-    assert inventory.changed == 2
+    assert inventory.baseline_nodes == 209
+    assert inventory.added == 0
+    assert inventory.changed == 4
+    assert inventory.unchanged == 205
     assert inventory.removed == 0
     assert len(contract.operations) == 193
     assert len(contract.compatibility.response_registry) == 196
@@ -84,9 +85,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.6.2'" in runtime
-    assert b"MIN_CLI_VERSION = '0.6.0'" in runtime
-    assert b"MAX_CLI_VERSION = '0.6.3'" in runtime
+    assert b"TARGET_VERSION = '0.7.0'" in runtime
+    assert b"MIN_CLI_VERSION = '0.6.2'" in runtime
+    assert b"MAX_CLI_VERSION = '0.7.1'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -321,15 +322,14 @@ def test_prior_binary_provenance_is_exact() -> None:
 def test_reviewed_response_operation_set_is_exact() -> None:
     contract = validate_contract(APPROVED)
     assert {item.operation_id for item in contract.compatibility.reviewed_responses} == {
-        "agents.tasks",
-        "labels.create",
-        "labels.list",
-        "labels.update",
-        "runtimes.delete",
-        "skills.list",
-        "issues.create",
-        "issues.runs",
-        "issues.run_messages",
+        "projects.create",
+        "projects.get",
+        "projects.list",
+        "projects.set_status",
+        "projects.update",
+        "runtimes.list",
+        "runtimes.rename",
+        "runtimes.update",
     }
 
 

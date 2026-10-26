@@ -39,22 +39,26 @@ It never edits the approved contract or repository runtime code. Review and Git
 merge are the sole promotion decision; candidate state, journals, upgrade
 bundles, and golden generated copies are not used.
 
-For the current direct `0.6.1` → `0.6.2` review, the baseline source is pinned
-to `2ea01ae4ef55de4310b99af192d2dbd367832883`; the target source is pinned to
-`7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`) and the
-compatibility interval is `[0.6.0, 0.6.3)`. Verify the directly reviewed `0.6.1`
-and `0.6.2` release archives against the official manifests before hashing their
-extracted executables; the retained compatibility floor `0.6.0` is a separate
-floor check, not the direct migration baseline. Pass only the executable digest
-to `collect --sha256`. Run the source-link audit after validation:
+For the current direct `0.6.2` → `0.7.0` review, the baseline source is pinned
+to `7ab92d7622ecd81d179a8d83ae2dea74835a5069`; the target source is pinned to
+`dbdbb299164347586e2650bb67684a490726a798` (release `421685918`) and the
+compatibility interval is `[0.6.2, 0.7.1)`. Verify both release archives against
+their official manifests before hashing their extracted executables. Pass only
+the target executable digest to `collect --sha256`. Run the source-link audit
+after validation:
 
 The earlier `0.5.0` → `0.5.1` instructions are historical and no longer
 describe the current release workflow.
 
 ```bash
 uv run python scripts/audit_source_links.py \
-  --source-checkout .devlocal/upstream-contract/v0.6.1..v0.6.2/source/multica
+  --source-checkout .devlocal/upstream-contract/v0.6.2..v0.7.0/source/multica
 ```
+
+The release gate also keeps the immutable composition's original planning
+parent separate from the verified planning revision used for final OpenSpec
+equality. Preserve accepted implementation commits and run the composition
+gate with both SHA inputs; never rewrite composition or accepted history.
 
 The generated runtime projection is
 `src/multica_py/_generated/approved_sdk.py`. Documentation, compatibility, and

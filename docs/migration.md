@@ -15,7 +15,30 @@ There is no provider registry or automatic provider discovery. See
 target-path/environment/staging rules, process-control guarantees, and the
 provider-adapter contract.
 
-## v0.6.2 direct migration
+## v0.7.0 direct migration
+
+The approved target is Multica CLI `0.7.0` at source commit
+`dbdbb299164347586e2650bb67684a490726a798` (release `421685918`). The direct
+compatibility interval is `[0.6.2, 0.7.1)` and baseline is CLI `0.6.2` at
+`7ab92d7622ecd81d179a8d83ae2dea74835a5069`; no intermediate SDK release is
+required. The full 209-node CLI inventory and all 196 response work items are
+reconciled.
+
+Runtime list and rename now decode optional `RuntimeDefinition.visibility` and
+ordered `RuntimeDefinition.shared_with` member IDs. Import the public type from
+`multica_py.models`. Legacy responses may omit both fields; malformed field
+types fail decoding. Runtime update still returns `RuntimeUpdateResult` and
+accepts only target-version/wait inputs. The SDK has no visibility, share,
+grant, or revoke write because those operations are not exposed by the CLI;
+runtime delete remains a separate destructive operation.
+
+Agent create/update keep their existing `--runtime-id` selection. Reviewed
+authorization failures and workspace allowlist failures raise the existing
+`AuthorizationError` with a generic safe message; private CLI response text,
+paths, URLs, credentials, and backend details are not exposed. Unknown failure
+shapes retain the generic command error behavior.
+
+## Historical v0.6.2 direct migration
 
 The approved target is Multica CLI `0.6.2` at source commit
 `7ab92d7622ecd81d179a8d83ae2dea74835a5069` (release `411568605`). The direct

@@ -1002,6 +1002,48 @@ def test_compatibility_reviewed_response_bounds_are_exact() -> None:
     }
 
 
+def test_runtime_response_registry_matches_cli_response_ownership() -> None:
+    document = json.loads(APPROVED.read_text(encoding="utf-8"))
+    reviewed = {
+        item["operation_id"]: item
+        for item in document["compatibility"]["reviewed_responses"]
+        if item["operation_id"].startswith("runtimes.")
+    }
+    assert reviewed["runtimes.list"]["fields"] == ["visibility", "shared_with"]
+    assert reviewed["runtimes.rename"]["fields"] == ["visibility", "shared_with"]
+    assert reviewed["runtimes.update"]["fields"] == []
+    assert "RuntimeUpdateResult" in reviewed["runtimes.update"]["omission_policy"]
+
+    registry = {
+        item["operation_id"]: item
+        for item in document["compatibility"]["response_registry"]
+        if item["operation_id"].startswith("runtimes.")
+    }
+    assert "model=action_result_runtime_update_result" in registry["runtimes.update"]["action"]
+    assert "model=runtime_definition" in registry["runtimes.list"]["action"]
+    assert "model=runtime_definition" in registry["runtimes.rename"]["action"]
+    assert all(
+        "/server/cmd/multica/cmd_runtime.go#" in url
+        for item in registry.values()
+        for url in item["source_urls"]
+    )
+    assert not any(
+        operation["operation_id"].startswith(("runtimes.share", "runtimes.revoke"))
+        for operation in document["operations"]
+    )
+    access_management = next(
+        item
+        for item in document["scope"]["family_dispositions"]
+        if item["family"] == "runtime-access-management"
+    )
+    assert access_management["disposition"] == "not_sdk_surface"
+    assert access_management["required_operation_ids"] == []
+
+    from multica_py.models import RuntimeDefinition as PublicRuntimeDefinition
+
+    assert PublicRuntimeDefinition.__name__ == "RuntimeDefinition"
+
+
 @dataclass(frozen=True)
 class CommandInventoryMutationCase:
     case_id: str

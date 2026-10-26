@@ -132,9 +132,10 @@
           "https://github.com/multica-ai/multica/blob/dbdbb299164347586e2650bb67684a490726a798/server/internal/handler/runtime.go#L46-L46"
         ],
         "fields": [
+          "visibility",
           "shared_with"
         ],
-        "omission_policy": "The ordered member identity list is omitted for legacy responses and decodes to an empty tuple; malformed entries fail typed decoding.",
+        "omission_policy": "Visibility is nullable and absent on legacy responses; the ordered member identity list defaults to an empty tuple when omitted, and malformed field types fail typed decoding.",
         "test_ref_ids": [
           "T-OPERATION"
         ]
@@ -146,9 +147,10 @@
           "https://github.com/multica-ai/multica/blob/dbdbb299164347586e2650bb67684a490726a798/server/internal/handler/runtime.go#L46-L46"
         ],
         "fields": [
+          "visibility",
           "shared_with"
         ],
-        "omission_policy": "The ordered member identity list is omitted for legacy responses and decodes to an empty tuple; malformed entries fail typed decoding.",
+        "omission_policy": "Visibility is nullable and absent on legacy responses; the ordered member identity list defaults to an empty tuple when omitted, and malformed field types fail typed decoding.",
         "test_ref_ids": [
           "T-OPERATION"
         ]
@@ -159,10 +161,8 @@
           "https://github.com/multica-ai/multica/blob/7ab92d7622ecd81d179a8d83ae2dea74835a5069/server/internal/handler/runtime.go#L46-L46",
           "https://github.com/multica-ai/multica/blob/dbdbb299164347586e2650bb67684a490726a798/server/internal/handler/runtime.go#L46-L46"
         ],
-        "fields": [
-          "shared_with"
-        ],
-        "omission_policy": "The ordered member identity list is omitted for legacy responses and decodes to an empty tuple; malformed entries fail typed decoding.",
+        "fields": [],
+        "omission_policy": "Returns RuntimeUpdateResult for target-version updates; runtime-definition visibility and sharing fields are not part of this response.",
         "test_ref_ids": [
           "T-OPERATION"
         ]
@@ -1522,8 +1522,8 @@
         "operation_id": "runtimes.list",
         "disposition": "changed",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/7ab92d7622ecd81d179a8d83ae2dea74835a5069/server/internal/handler/runtime.go#L46-L46",
-          "https://github.com/multica-ai/multica/blob/dbdbb299164347586e2650bb67684a490726a798/server/internal/handler/runtime.go#L46-L46"
+          "https://github.com/multica-ai/multica/blob/7ab92d7622ecd81d179a8d83ae2dea74835a5069/server/cmd/multica/cmd_runtime.go#L107-L123",
+          "https://github.com/multica-ai/multica/blob/dbdbb299164347586e2650bb67684a490726a798/server/cmd/multica/cmd_runtime.go#L105-L121"
         ],
         "action": "changed: model=runtime_definition; fixture=response:runtime_list; docs=compatibility:runtimes.list"
       },
@@ -1532,8 +1532,8 @@
         "operation_id": "runtimes.rename",
         "disposition": "changed",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/7ab92d7622ecd81d179a8d83ae2dea74835a5069/server/internal/handler/runtime.go#L46-L46",
-          "https://github.com/multica-ai/multica/blob/dbdbb299164347586e2650bb67684a490726a798/server/internal/handler/runtime.go#L46-L46"
+          "https://github.com/multica-ai/multica/blob/7ab92d7622ecd81d179a8d83ae2dea74835a5069/server/cmd/multica/cmd_runtime.go#L265-L287",
+          "https://github.com/multica-ai/multica/blob/dbdbb299164347586e2650bb67684a490726a798/server/cmd/multica/cmd_runtime.go#L263-L285"
         ],
         "action": "changed: model=runtime_definition; fixture=response:runtime_rename; docs=compatibility:runtimes.rename"
       },
@@ -1542,10 +1542,10 @@
         "operation_id": "runtimes.update",
         "disposition": "changed",
         "source_urls": [
-          "https://github.com/multica-ai/multica/blob/7ab92d7622ecd81d179a8d83ae2dea74835a5069/server/internal/handler/runtime.go#L46-L46",
-          "https://github.com/multica-ai/multica/blob/dbdbb299164347586e2650bb67684a490726a798/server/internal/handler/runtime.go#L46-L46"
+          "https://github.com/multica-ai/multica/blob/7ab92d7622ecd81d179a8d83ae2dea74835a5069/server/cmd/multica/cmd_runtime.go#L298-L324",
+          "https://github.com/multica-ai/multica/blob/dbdbb299164347586e2650bb67684a490726a798/server/cmd/multica/cmd_runtime.go#L296-L322"
         ],
-        "action": "changed: model=runtime_definition; fixture=response:runtime_update; docs=compatibility:runtimes.update"
+        "action": "changed: model=action_result_runtime_update_result; fixture=response:runtime_update; docs=compatibility:runtimes.update"
       },
       {
         "work_item_id": "runtime_usage",
@@ -23457,6 +23457,15 @@
           "S-ISSUE-WAKEUP-HANDLER"
         ],
         "rationale": "The complete dynamic wakeup family is promoted with source-factory evidence, replacement/re-enable semantics, retry policy, and canonical vectors."
+      },
+      {
+        "family": "runtime-access-management",
+        "disposition": "not_sdk_surface",
+        "required_operation_ids": [],
+        "source_ref_ids": [
+          "D17"
+        ],
+        "rationale": "Runtime visibility, sharing, grant, and revoke HTTP handlers have no corresponding pinned CLI command or flag; direct HTTP access is not an SDK operation."
       },
       {
         "family": "runtime-profile",
