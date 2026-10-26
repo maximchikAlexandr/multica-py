@@ -183,9 +183,14 @@ def test_project_workflow_id_decodes_legacy_null_and_uuid(
     assert _project_from_wire(wire).workflow_id == expected
 
 
-def test_project_workflow_id_rejects_malformed_uuid() -> None:
+@pytest.mark.parametrize("workflow_id", ("bad", ""), ids=("malformed", "empty"))
+def test_project_workflow_id_rejects_malformed_uuid(workflow_id: str) -> None:
+    payload = (
+        '{"id":"p1","title":"Project","status":"planned",'
+        f'"workflow_id":{json.dumps(workflow_id)}}}'
+    ).encode()
     with pytest.raises(OutputShapeError, match="workflow_id"):
         decode_json(
-            b'{"id":"p1","title":"Project","status":"planned","workflow_id":"bad"}',
+            payload,
             _ProjectWire,
         )

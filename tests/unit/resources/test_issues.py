@@ -1350,6 +1350,9 @@ def test_issue_partial_assignee_scalars_do_not_fabricate_relation(field: str, va
         _IssueQueryValidationCase({"fields": ("id", "id")}, "duplicate field"),
         _IssueQueryValidationCase({"fields": ("title",)}, "identity_required"),
         _IssueQueryValidationCase({"property_filters": ("Owner!=me",)}, "!="),
+        _IssueQueryValidationCase({"property_filters": ("Owner==me",)}, "ambiguous"),
+        _IssueQueryValidationCase({"property_filters": ("Owner><me",)}, "ambiguous"),
+        _IssueQueryValidationCase({"property_filters": ("Owner!~=me",)}, "ambiguous"),
         _IssueQueryValidationCase({"property_filters": ("Owner",)}, "Name<op>Value"),
         _IssueQueryValidationCase({"property_filters": ("Owner>=",)}, "Name<op>Value"),
         _IssueQueryValidationCase({"property_filters": ("Owner>=__none__",)}, "only with equality"),
@@ -1392,8 +1395,9 @@ def test_issue_query_accepts_none_property_sentinel() -> None:
     (
         ("Impact=High", "Impact=__none__", "Score>3", "Score>=4", "Score<9", "Score<=8"),
         ("Ship Date>2026-09-01", "Ship Date<2026-10-01", "Notes~=follow up"),
+        ("Score>1", "Score>1"),
     ),
-    ids=("ordered-number-and-equality", "date-and-text"),
+    ids=("ordered-number-and-equality", "date-and-text", "duplicate-predicates"),
 )
 def test_issue_property_comparisons_preserve_order_and_exact_argv(
     filters: tuple[str, ...],
