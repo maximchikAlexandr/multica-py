@@ -1,33 +1,32 @@
 ## Why
 
-Draft PR #101 already contains the accepted Multica `0.6.2` SDK work, but it
-conflicts with `main` and has not been merged. The `0.7.0` upgrade therefore
-needs one consolidated remaining-delta plan that preserves exact PR #101 head
-`b1c350ce22941a66871f11e0c5830a6ec542878c` as implementation evidence and
-implements only behavior not already present there.
+WP-04 exposed a mismatch between the approved plan and pinned Multica `0.7.0`
+CLI source: runtime visibility, sharing, and atomic revocation exist only as
+server HTTP behavior, while `multica runtime update` changes only the CLI
+version. The remaining plan must stay CLI-backed, preserve accepted WP-01/02/03
+commits, and remove the unsupported write contract without rewriting history.
 
 ## What Changes
 
-- Start implementation from exact PR #101 head and compose it with approved
-  integration target `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c` through one
-  merge whose second parent is the exact verified planning revision. This
-  preserves both reviewed `0.6.2` behavior and the published OpenSpec input
-  before advancing the approved target to Multica `0.7.0`.
-- Reconcile the closed 209-node CLI inventory and 196 supported response items
-  against `0.7.0`, retaining the existing approved-contract-only generator and
-  explicit exclusions for daemon autostart, workflow-management HTTP endpoints,
-  and upstream-only internals.
-- Implement only the remaining typed delta: property comparison filters,
-  nullable project workflow identity and reviewed writes, PR-conflict wakeup
-  conditions, runtime sharing/privacy/authorization behavior, and the new
-  workspace allowlist/conflict shapes.
-- Preserve PR #101 implementations of list-property values, daemon CLI commit,
-  wakeup diagnostics, upload/network/server error handling, search, and project
-  partial-update semantics; add regression checks rather than reimplementing them.
-- Set `e2e_required=false`. Prove the remaining behavior through deterministic
-  contract checks, frozen lower-level tables, component tests, package checks,
-  and ordinary GitHub CI; do not require a stand, live credentials, images, or
-  capture artifacts.
+- Preserve immutable composition `1f8083040d862669e65b875e7bc9555de96a7346`
+  and accepted/integrated WP-01, WP-02, and WP-03 results. Publish this planning
+  correction on a separate normal ref descended from accepted integration SHA
+  `9b5d112830831f9e727b35f4936f923ec9429cc7`.
+- Correct runtime response classification: `visibility` and `shared_with` are
+  reviewed read-only fields of runtime-definition responses such as list and
+  rename; `runtimes.update` remains the target-version update result and SHALL
+  not claim those fields.
+- Explicitly classify runtime visibility/share/revoke HTTP writes as
+  `not_sdk_surface` because the pinned CLI has no corresponding command or flag.
+  Do not add an HTTP bypass and do not treat destructive delete/cascade as a
+  privacy-revocation substitute.
+- Retain CLI-backed agent create/update authorization failures and workspace
+  allowlist failures through the existing sanitized exception boundary.
+- Replace the unstarted WP-04/WP-05 graph remainder with one all-covering
+  remaining package. Reuse existing child MYL-576 after approval; do not create
+  duplicate children or reuse prior ACCEPT markers under the new revision.
+- Keep `e2e_required=false`: all revised behavior is closed by source-link,
+  contract, fake-CLI, unit/resource/component, package, and ordinary CI checks.
 
 ## Capabilities
 
@@ -37,30 +36,27 @@ None.
 
 ### Modified Capabilities
 
-- `upstream-contract`: make PR #101's exact `0.6.2` head the implementation
-  baseline and advance provenance, inventory, mappings, compatibility, and
-  deterministic projections only for the remaining `0.7.0` delta.
-- `sdk-surface`: add only the reviewed property-filter, project-workflow,
-  wakeup-conflict, runtime-sharing/privacy, and workspace-error behavior absent
-  from PR #101.
-- `public-cli-parity`: require an explicit retained/adapted/excluded decision for
-  every target node and prevent already accepted `0.6.2` behavior from drifting.
-- `verification-and-release`: replace live/capture gates with concrete offline,
-  contract, component, package, and CI assertions at one exact candidate SHA.
+- `upstream-contract`: preserve the immutable historical composition while
+  making the new planning revision and corrected CLI/source mapping authoritative.
+- `sdk-surface`: expose only CLI-backed runtime reads and typed failures, with
+  explicit exclusions for runtime access-management writes.
+- `public-cli-parity`: require response-shape decisions to match the actual CLI
+  operation rather than a related server endpoint.
+- `verification-and-release`: migrate accepted and remaining work safely to one
+  revised graph revision and update OpenSpec-preservation assertions.
 
 ## Impact
 
-- Integration baseline: draft PR #101 / `feat/MYL-474-update-multica-0.6.2` at
-  exact head `b1c350ce22941a66871f11e0c5830a6ec542878c`; the PR and branch remain
-  preserved and are not modified by this planning change.
-- Approved integration target: exact `origin/main` snapshot
-  `a96eecf3e12a88dd7b4d56e1aafae3285fb0990c`; the verified planning revision
-  is its descendant and is the required second parent of the composition merge.
-  The resulting immutable composition SHA is carried through final-candidate
-  verification rather than inferred from the candidate's current `HEAD`.
-- Remaining writes: approved contract and projection, property-filter, project,
-  wakeup, runtime/agent, workspace/error models and adapters, existing case
-  tables, docs, package metadata, and CI verification.
-- No new dependency, persistence layer, transport, workflow client, daemon
-  autostart API, live-test harness, screenshot flow, or product implementation
-  is part of this planning revision.
+- Accepted commits remain immutable: WP-01/integration
+  `b189631ad2cbc33e9ecfd5cd616052400e8f89aa`, WP-03
+  `c24d6ac48b0a0cedfca59a54ed6e6f0e2d5a8fd1`, WP-02
+  `ddeb824b16359dce86bc1ed6fbe3b327166dbf76`, and current integration
+  `9b5d112830831f9e727b35f4936f923ec9429cc7`.
+- The approved contract, generated projection, runtime models/resources,
+  agent/workspace error fixtures, shared docs, packaging, and CI assertions are
+  affected by the remaining corrective package.
+- Existing PR #101, its branch, old planning ref, WP refs, accepted commits,
+  implementation children, and immutable composition parents are preserved.
+- No direct HTTP transport, new public runtime access-management method,
+  dependency, persistence layer, live stand, image flow, force-push, reset, or
+  history rewrite is introduced.

@@ -54,38 +54,50 @@ clearing behavior.
 - **WHEN** the PR-conflict condition is combined with another exclusive condition
 - **THEN** validation fails before transport
 
-### Requirement: Runtime sharing and privacy failures are explicit
+### Requirement: Runtime sharing reads and authorization failures are CLI-backed
 
-Runtime definitions SHALL expose reviewed `shared_with` identities. Runtime
-update/delete and agent create/update SHALL preserve explicit-grant authorization,
-atomic privacy revocation, busy blockers, and structured conflict behavior through
-the existing resources and sanitized exception hierarchy.
+Runtime-definition results from reviewed CLI operations SHALL expose `visibility`
+and ordered `shared_with` identities. Target-version runtime update SHALL retain
+its `RuntimeUpdateResult` response. Agent create/update SHALL expose reviewed
+authorization rejection through the existing sanitized exception hierarchy.
+The SDK SHALL NOT expose runtime visibility, sharing, grant, or atomic-revocation
+write methods or flags until a separately approved CLI operation exists.
 
 #### Scenario: Sharing identities are returned
 
-- **WHEN** a runtime response contains `shared_with`
-- **THEN** the SDK decodes the ordered reviewed identity shape without private fields
+- **WHEN** runtime list or rename JSON contains `visibility` and `shared_with`
+- **THEN** the SDK decodes the reviewed runtime-definition fields, preserves order, and exposes no private fields
 
-#### Scenario: Privacy revocation is blocked
+#### Scenario: Runtime target-version update completes
 
-- **WHEN** an atomic revoke has active reviewed blockers
-- **THEN** the SDK raises the typed conflict with safe blocker context and leaves sharing unchanged
+- **WHEN** `runtimes.update` returns the reviewed target-version update result
+- **THEN** the SDK decodes `RuntimeUpdateResult` and does not infer runtime-definition sharing fields
 
-#### Scenario: An agent write lacks an explicit grant
+#### Scenario: An agent write lacks runtime access
 
 - **WHEN** agent create or update selects a runtime the actor may not use
-- **THEN** the SDK exposes the reviewed authorization failure without retrying or leaking backend details
+- **THEN** the SDK raises the reviewed authorization failure without retrying, managing grants, or leaking backend detail
+
+#### Scenario: A caller seeks runtime access management
+
+- **WHEN** public discovery and approved bindings are inspected for visibility, share, grant, or revoke writes
+- **THEN** no such SDK symbol or flag exists and the server-only routes remain `not_sdk_surface`
+
+#### Scenario: Runtime deletion is inspected as a substitute
+
+- **WHEN** the runtime delete/cascade operation is compared with privacy revocation
+- **THEN** it remains a separate destructive lifecycle operation and satisfies no sharing or revocation requirement
 
 ### Requirement: Workspace allowlist failures remain sanitized
 
 The target workspace create/update allowlist failure SHALL map through the
-existing exception hierarchy with reviewed status, code, safe message, and safe
-structured context only; PR #101 upload/network/server behavior SHALL remain retained.
+existing exception hierarchy with reviewed status, code, and safe message only;
+PR #101 upload/network/server behavior SHALL remain retained.
 
 #### Scenario: A reviewed allowlist failure occurs
 
-- **WHEN** the CLI returns the target workspace allowlist conflict shape
-- **THEN** the SDK raises the approved stable exception and redacts URL, hostname, path, credential, personal, and backend detail
+- **WHEN** the CLI returns the target workspace allowlist failure shape
+- **THEN** the SDK raises the approved stable exception and exposes no URL, hostname, path, credential, personal, or backend detail
 
 #### Scenario: An unknown failure occurs
 
