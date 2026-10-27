@@ -228,6 +228,7 @@ _ENTITY_POLICY_CASES: tuple[EntityPolicyCase, ...] = (
             "icon",
             "lead_type",
             "lead_id",
+            "workflow_id",
             "start_date",
             "due_date",
             "created_at",

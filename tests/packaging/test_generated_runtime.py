@@ -79,11 +79,12 @@ from multica_py.models.autopilots import AutopilotListPage, AutopilotRunListPage
 from multica_py.models.issue_activity import MetadataPage
 from multica_py.models.issues import IssueChildrenResult, IssueListFilter, IssueListPage
 from multica_py.models.relations import CursorPage, OffsetPage
+from multica_py.models.system import RuntimeDefinition
 from multica_py.resources.cli import CliResult
 
 symbols = (
     "AutopilotListPage", "AutopilotRunListPage", "IssueChildrenResult", "IssueListFilter",
-    "IssueListPage", "MetadataPage", "CursorPage", "OffsetPage",
+    "IssueListPage", "MetadataPage", "CursorPage", "OffsetPage", "RuntimeDefinition",
 )
 assert hasattr(multica_py, "Page") and hasattr(multica_py, "ActionResult")
 assert all(hasattr(models, name) for name in symbols)
@@ -104,9 +105,9 @@ def test_installed_artifact_version(
         """
 from multica_py._generated import approved_sdk as generated
 
-assert generated.TARGET_VERSION == "0.6.1"
-assert generated.MIN_CLI_VERSION == "0.6.0"
-assert generated.MAX_CLI_VERSION == "0.6.2"
+assert generated.TARGET_VERSION == "0.7.0"
+assert generated.MIN_CLI_VERSION == "0.6.2"
+assert generated.MAX_CLI_VERSION == "0.7.1"
 """,
     )
 

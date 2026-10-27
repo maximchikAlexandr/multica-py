@@ -16,16 +16,23 @@ runtime, and run the deterministic check:
 collect → validate --source-checkout → render → check
 ```
 
-The current approved target is `v0.6.1` with compatibility interval
-`[0.6.0, 0.6.2)`. The pinned commit, release asset/checksum, and exact
+The current approved target is `v0.7.0` with compatibility interval
+`[0.6.2, 0.7.1)`. The pinned commit, release asset/checksum, and exact
 commands for this review are maintained in [docs/compatibility.md](compatibility.md).
-The target source commit is
-`2ea01ae4ef55de4310b99af192d2dbd367832883`; the `0.6.0` source commit
-`48745d2fe9e80ee9c027293ef22971ff5723f5f5` is comparison provenance only.
+The direct comparison source is `0.6.2` at commit
+`7ab92d7622ecd81d179a8d83ae2dea74835a5069`; the target source commit is
+`dbdbb299164347586e2650bb67684a490726a798`. Verify runtime response ownership:
+list and rename may decode visibility and sharing identities, while update
+returns `RuntimeUpdateResult`; server-only access writes are not SDK operations.
 Release archive SHA-256 values must be checked against official manifests
 separately from extracted executable SHA-256 values. Run
 `scripts/audit_source_links.py` and the contract `validate -> render -> check`
 sequence before packaging.
+
+The composition gate verifies the immutable composition parents against
+`COMPOSITION_PLANNING_SHA` and OpenSpec byte equality against
+`VERIFIED_PLANNING_SHA`. It also checks accepted WP commits and candidate
+ancestry. Keep these identities separate in release automation.
 
 Git review and merge are the only promotion action. The repository keeps one
 committed generated runtime projection; transient documentation, compatibility,

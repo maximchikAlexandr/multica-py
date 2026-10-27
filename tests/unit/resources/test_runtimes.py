@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 from collections.abc import Callable
 from dataclasses import dataclass
 from unittest.mock import MagicMock
@@ -9,7 +8,8 @@ import pytest
 
 from multica_py._internal.specs import RawCommandResult
 from multica_py.config import ClientConfig
-from multica_py.exceptions import ConflictError
+from multica_py.exceptions import ConflictError, OutputShapeError
+from multica_py.models.system import RuntimeDefinition
 from multica_py.resources.runtimes import RuntimeResource
 
 
@@ -18,6 +18,20 @@ class InvalidRuntimeCase:
     id: str
     invoke: Callable[[RuntimeResource], object]
     message: str
+
+
+@dataclass(frozen=True)
+class RuntimeDefinitionCase:
+    id: str
+    payload: bytes
+    invoke: Callable[[RuntimeResource], RuntimeDefinition]
+
+
+@dataclass(frozen=True)
+class InvalidRuntimeDefinitionCase:
+    id: str
+    payload: bytes
+    invoke: Callable[[RuntimeResource], object]
 
 
 INVALID_RUNTIME_CASES: tuple[InvalidRuntimeCase, ...] = (
@@ -83,21 +97,126 @@ def test_runtime_delete_empty_success_is_single_non_cascading_action(
     mock_transport.run_text.assert_not_called()
 
 
-def test_runtime_usage_preserves_future_provider_and_model_strings() -> None:
-    transport = MagicMock()
-    transport.run_bytes.return_value = RawCommandResult(
+def test_runtime_usage_preserves_future_provider_and_model_strings(
+    mock_transport: MagicMock, raw_result: Callable[..., RawCommandResult]
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
         argv=("multica", "runtime", "usage", "r1", "--days", "90", "--output", "json"),
-        exit_code=0,
         stdout=(
             b'[{"date":"2026-08-01","provider":"future-provider","model":"future-model",'
             b'"input_tokens":1,"output_tokens":2,"cache_read_tokens":3,"cache_write_tokens":4}]'
         ),
-        stderr=b"",
-        duration=datetime.timedelta(),
     )
-    resource = RuntimeResource(transport, ClientConfig())
+    resource = RuntimeResource(mock_transport, ClientConfig())
 
     usage = resource.usage("r1")
 
     assert usage[0].provider == "future-provider"
     assert usage[0].model == "future-model"
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        RuntimeDefinitionCase(
+            "list",
+            b'[{"id":"r1","name":"Codex","visibility":"workspace",'
+            b'"shared_with":["member-2","member-1"]}]',
+            lambda resource: resource.list()[0],
+        ),
+        RuntimeDefinitionCase(
+            "rename",
+            b'{"id":"r1","name":"Codex","visibility":"workspace","shared_with":["member-2","member-1"]}',
+            lambda resource: resource.rename("r1", "Codex"),
+        ),
+    ),
+    ids=lambda case: case.id,
+)
+def test_runtime_definition_decodes_visibility_and_ordered_sharing(
+    case: RuntimeDefinitionCase,
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
+        argv=("multica", "runtime", case.id), stdout=case.payload
+    )
+    definition = case.invoke(RuntimeResource(mock_transport, ClientConfig()))
+
+    assert definition.visibility == "workspace"
+    assert definition.shared_with == ("member-2", "member-1")
+
+
+def test_runtime_definition_legacy_sharing_fields_default_safely(
+    mock_transport: MagicMock, raw_result: Callable[..., RawCommandResult]
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
+        argv=("multica", "runtime", "list"), stdout=b'[{"id":"r1","name":"Codex"}]'
+    )
+
+    definition = RuntimeResource(mock_transport, ClientConfig()).list()[0]
+
+    assert definition.visibility is None
+    assert definition.shared_with == ()
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        InvalidRuntimeDefinitionCase(
+            "list-visibility",
+            b'[{"id":"r1","name":"Codex","visibility":3}]',
+            lambda resource: resource.list(),
+        ),
+        InvalidRuntimeDefinitionCase(
+            "list-shared-with",
+            b'[{"id":"r1","name":"Codex","shared_with":[3]}]',
+            lambda resource: resource.list(),
+        ),
+        InvalidRuntimeDefinitionCase(
+            "rename-visibility",
+            b'{"id":"r1","name":"Codex","visibility":3}',
+            lambda resource: resource.rename("r1", "Codex"),
+        ),
+        InvalidRuntimeDefinitionCase(
+            "rename-shared-with",
+            b'{"id":"r1","name":"Codex","shared_with":[3]}',
+            lambda resource: resource.rename("r1", "Codex"),
+        ),
+    ),
+    ids=lambda case: case.id,
+)
+def test_runtime_definition_rejects_malformed_sharing_fields(
+    case: InvalidRuntimeDefinitionCase,
+    mock_transport: MagicMock,
+    raw_result: Callable[..., RawCommandResult],
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
+        argv=("multica", "runtime", case.id.split("-", maxsplit=1)[0]),
+        stdout=case.payload,
+    )
+
+    with pytest.raises(OutputShapeError):
+        case.invoke(RuntimeResource(mock_transport, ClientConfig()))
+
+
+def test_runtime_update_does_not_expose_definition_sharing_fields(
+    mock_transport: MagicMock, raw_result: Callable[..., RawCommandResult]
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = raw_result(
+        argv=("multica", "runtime", "update", "r1"),
+        stdout=(
+            b'{"id":"r1","status":"updated","visibility":"workspace","shared_with":["member-1"]}'
+        ),
+    )
+
+    result = RuntimeResource(mock_transport, ClientConfig()).update("r1", target_version="stable")
+
+    assert result.value is not None
+    assert result.value.id == "r1"
+    assert not hasattr(result.value, "visibility")
+    assert not hasattr(result.value, "shared_with")

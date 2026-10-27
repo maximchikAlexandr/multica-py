@@ -33,6 +33,7 @@ from multica_py.exceptions import (
     ConflictError,
     NetworkError,
     NotFoundError,
+    ProcessOutputCaptureError,
     ValidationError,
 )
 from multica_py.execution import CommandExecutor, ExecutionRequest, LocalExecutor
@@ -294,7 +295,7 @@ class CliTransport:
             return
         result = self._execute(("version", "--output", "json"), check_compat=False)
         if result.exit_code != 0:
-            self._raise_command_error(result)
+            self._raise_command_error(result, command_args=("version", "--output", "json"))
         raw = decode_text(result.stdout, command=" ".join(result.argv))
         parsed = parse_cli_version(raw)
         check_version_from_config(parsed, self._config)
@@ -345,15 +346,29 @@ class CliTransport:
                     argv, stdin=stdin, file_contents=file_contents
                 )
                 diagnostic_argv = redact_diagnostic_argv(argv, secret_values=secret_values)
-                completed = self._executor.run(
-                    ExecutionRequest(
-                        argv=execution_argv,
-                        cwd=cwd,
-                        environment=environment,
-                        stdin=stdin,
-                        timeout=effective_timeout,
+                capture_error: str | None = None
+                try:
+                    completed = self._executor.run(
+                        ExecutionRequest(
+                            argv=execution_argv,
+                            cwd=cwd,
+                            environment=environment,
+                            stdin=stdin,
+                            timeout=effective_timeout,
+                        )
                     )
-                )
+                except ProcessOutputCaptureError as error:
+                    if command_args[:2] != ("attachment", "upload"):
+                        raise
+                    capture_error = redact_text(str(error), secret_values=secret_values)
+
+                if capture_error is not None:
+                    raise NetworkError(
+                        "Attachment upload failed while capturing CLI output",
+                        exit_code=2,
+                        stderr=capture_error,
+                        argv=diagnostic_argv,
+                    )
 
             duration = datetime.datetime.now(tz=datetime.UTC) - t0
             return RawCommandResult(
@@ -387,10 +402,12 @@ class CliTransport:
                 minimum_cli_version=minimum_cli_version,
             )
         if result.exit_code != 0:
-            self._raise_command_error(result)
+            self._raise_command_error(result, command_args=command_args)
         return result
 
-    def _raise_command_error(self, result: RawCommandResult) -> None:
+    def _raise_command_error(
+        self, result: RawCommandResult, *, command_args: tuple[str, ...] = ()
+    ) -> None:
         command = " ".join(result.argv)
         stdout_text = redact_text(
             decode_text(
@@ -419,8 +436,26 @@ class CliTransport:
             stdout=stdout_text,
             stderr=stderr_text,
         )
+        status_match = _HTTP_STATUS_PATTERN.search(stderr_text)
+        status_code = (
+            cast("str | None", status_match.group(1)) if status_match is not None else None
+        )
+        safe_access_denial = (
+            command_args[:2]
+            in {
+                ("agent", "create"),
+                ("agent", "update"),
+                ("workspace", "create"),
+                ("workspace", "update"),
+            }
+            and status_code == "403"
+        )
         detail = stderr_text.strip() or stdout_text.strip()
-        structured = _reviewed_error_fields(stderr_text)
+        if safe_access_denial:
+            stdout_text = ""
+            stderr_text = ""
+            detail = "The requested operation is not authorized."
+        structured = {} if safe_access_denial else _reviewed_error_fields(stderr_text)
         message = cast("str", structured.get("message", detail)) or (
             f"Command failed with exit code {result.exit_code} [command: {command}]"
         )
@@ -429,7 +464,7 @@ class CliTransport:
             exit_code=reported_exit_code,
             stdout=stdout_text,
             stderr=stderr_text,
-            argv=result.argv,
+            argv=() if safe_access_denial else result.argv,
             code=cast("str | None", structured.get("code")),
             blocker_counts=cast("Mapping[str, int] | None", structured.get("blocker_counts")),
             profile_identity=cast("Mapping[str, str] | None", structured.get("profile_identity")),

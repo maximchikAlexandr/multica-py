@@ -532,7 +532,7 @@ def test_public_docs_and_examples_have_no_deleted_surface_terms() -> None:
     paths.extend((ROOT / "examples").glob("*.py"))
     documents = "\n".join(path.read_text() for path in paths)
     forbidden = (*REMOVED_DTO_NAMES, "IssueSummary", "request-object", "request object")
-    assert not any(term in documents for term in forbidden)
+    assert not any(re.search(rf"\b{re.escape(term)}\b", documents) for term in forbidden)
 
 
 def test_documented_advanced_import_locations_are_real() -> None:

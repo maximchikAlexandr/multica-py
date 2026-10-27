@@ -5,7 +5,8 @@ import json
 import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, cast
+from functools import partial
+from typing import Any, Literal, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -45,6 +46,90 @@ def update_args(resource: IssueWakeupResource, **kwargs: object) -> Any:
     return cast("Any", resource.update_command)(
         "iss-1", "wake-1", instruction="Run checks", **kwargs
     )
+
+
+@dataclass(frozen=True)
+class _ConditionFamilyCase:
+    id: str
+    condition: Mapping[str, object]
+    expected_json: str
+
+
+_CONDITION_FAMILY_CASES = (
+    _ConditionFamilyCase("status", {"status": "done"}, '{"status":"done"}'),
+    _ConditionFamilyCase(
+        "assignee", {"assignee": "member:member-1"}, '{"assignee":"member:member-1"}'
+    ),
+    _ConditionFamilyCase("label", {"label": "release"}, '{"label":"release"}'),
+    _ConditionFamilyCase("property", {"property": {"b": 2, "a": 1}}, '{"property":{"a":1,"b":2}}'),
+    _ConditionFamilyCase(
+        "children", {"children_done": {"stage": 2}}, '{"children_done":{"stage":2}}'
+    ),
+    _ConditionFamilyCase("pull-request", {"pull_request": "merged"}, '{"pull_request":"merged"}'),
+    _ConditionFamilyCase(
+        "pr-conflict", {"pull_request": "conflict"}, '{"pull_request":"conflict"}'
+    ),
+    _ConditionFamilyCase(
+        "reference",
+        {"referenced_issue": {"id": "ISSUE-2", "state": "done"}},
+        '{"referenced_issue":{"id":"ISSUE-2","state":"done"}}',
+    ),
+)
+
+
+@dataclass(frozen=True)
+class _ConditionShapeCase:
+    id: str
+    kwargs: Mapping[str, object]
+    message: str
+
+
+_CONDITION_SHAPE_CASES = (
+    _ConditionShapeCase(
+        "kwargs0-exactly one", {"condition": {"status": "done", "label": "release"}}, "exactly one"
+    ),
+    _ConditionShapeCase(
+        "kwargs1-exactly one",
+        {"condition": {"pull_request": "conflict", "status": "done"}},
+        "exactly one",
+    ),
+    _ConditionShapeCase("kwargs2-exactly one", {"condition": {}}, "exactly one"),
+    _ConditionShapeCase("kwargs3-exactly one", {"condition": {"unknown": "value"}}, "exactly one"),
+    _ConditionShapeCase(
+        "kwargs4-combined",
+        {"condition": {"status": "done"}, "event_types": ("comment.created",)},
+        "combined",
+    ),
+    _ConditionShapeCase(
+        "kwargs5-event kind",
+        {"condition": {"status": "done"}, "kind": "every", "interval_seconds": 60},
+        "event kind",
+    ),
+    _ConditionShapeCase(
+        "kwargs6-combined",
+        {"condition": {"status": "done"}, "filter_task_id": "task-1"},
+        "combined",
+    ),
+    _ConditionShapeCase(
+        "kwargs7-member|agent|squad", {"condition": {"assignee": "person:1"}}, "member|agent|squad"
+    ),
+    _ConditionShapeCase("kwargs8-stage", {"condition": {"children_done": {"stage": 0}}}, "stage"),
+    _ConditionShapeCase(
+        "kwargs9-pull_request status",
+        {"condition": {"pull_request": "open"}},
+        "pull_request status",
+    ),
+    _ConditionShapeCase(
+        "kwargs10-referenced_issue state",
+        {"condition": {"referenced_issue": {"id": "x", "state": "open"}}},
+        "referenced_issue state",
+    ),
+    _ConditionShapeCase(
+        "kwargs11-property must be non-null",
+        {"condition": {"property": None}},
+        "property must be non-null",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -144,6 +229,27 @@ def _create_command(resource: IssueWakeupResource) -> object:
 
 def _create_eager(resource: IssueWakeupResource) -> object:
     return resource.create("iss-1", instruction="Run checks", event_types=("comment.created",))
+
+
+def _pr_conflict_command(
+    operation: Literal["create", "update"], resource: IssueWakeupResource
+) -> object:
+    builder = resource.create_command if operation == "create" else resource.update_command
+    args = ("iss-1",) if operation == "create" else ("iss-1", "wake-1")
+    return builder(*args, instruction="Run checks", condition={"pull_request": "conflict"})
+
+
+def _pr_conflict_eager(
+    operation: Literal["create", "update"], resource: IssueWakeupResource
+) -> object:
+    runner = resource.create if operation == "create" else resource.update
+    args = ("iss-1",) if operation == "create" else ("iss-1", "wake-1")
+    return runner(*args, instruction="Run checks", condition={"pull_request": "conflict"})
+
+
+def _pr_conflict_result(result: object) -> object:
+    wakeup = cast("IssueWakeup", result)
+    return wakeup.id, wakeup.condition
 
 
 def _update_command(resource: IssueWakeupResource) -> object:
@@ -274,6 +380,18 @@ _EAGER_COMMAND_CASES = (
         _assert_bytes_transport,
     ),
     _EagerCommandCase(
+        "create-pr-conflict",
+        partial(_pr_conflict_command, "create"),
+        partial(_pr_conflict_eager, "create"),
+        "multica issue wakeup create iss-1 --instruction 'Run checks' --kind event --condition '{\"pull_request\":\"conflict\"}' --output json",
+        b'{"id":"wake-1","enabled":true,"condition":{"pull_request":"conflict"}}',
+        _pr_conflict_result,
+        ("wake-1", {"pull_request": "conflict"}),
+        _set_bytes_response,
+        _reset_bytes_transport,
+        _assert_bytes_transport,
+    ),
+    _EagerCommandCase(
         "update",
         _update_command,
         _update_eager,
@@ -281,6 +399,18 @@ _EAGER_COMMAND_CASES = (
         b'{"id":"wake-1","enabled":true}',
         _reenabled,
         ("wake-1", True),
+        _set_bytes_response,
+        _reset_bytes_transport,
+        _assert_bytes_transport,
+    ),
+    _EagerCommandCase(
+        "update-pr-conflict",
+        partial(_pr_conflict_command, "update"),
+        partial(_pr_conflict_eager, "update"),
+        "multica issue wakeup update iss-1 wake-1 --instruction 'Run checks' --kind event --condition '{\"pull_request\":\"conflict\"}' --output json",
+        b'{"id":"wake-1","enabled":true,"condition":{"pull_request":"conflict"}}',
+        _pr_conflict_result,
+        ("wake-1", {"pull_request": "conflict"}),
         _set_bytes_response,
         _reset_bytes_transport,
         _assert_bytes_transport,
@@ -358,57 +488,26 @@ def test_all_eager_and_command_pairs_have_exact_argv_and_decoded_results(
     assert case.extract(eager_result) == case.expected_result
 
 
-@pytest.mark.parametrize(
-    "condition",
-    [
-        {"status": "done"},
-        {"assignee": "member:member-1"},
-        {"label": "release"},
-        {"property": {"b": 2, "a": 1}},
-        {"children_done": {"stage": 2}},
-        {"pull_request": "merged"},
-        {"referenced_issue": {"id": "ISSUE-2", "state": "done"}},
-    ],
-    ids=("status", "assignee", "label", "property", "children", "pull-request", "reference"),
-)
+@pytest.mark.parametrize("case", _CONDITION_FAMILY_CASES, ids=lambda case: case.id)
 def test_all_condition_families_use_canonical_json_and_are_server_owned(
-    condition: Mapping[str, object],
+    case: _ConditionFamilyCase,
 ) -> None:
     transport = make_transport()
-    command = create_args(wakeups(transport), condition=condition)
-    expected_json = json.dumps(condition, separators=(",", ":"), sort_keys=True)
+    command = create_args(wakeups(transport), condition=case.condition)
 
-    assert f"--condition '{expected_json}'" in command.commands[0]
-    transport.run_bytes.return_value = command_result(wakeup_payload(condition=condition))
-    assert command.run().condition == condition
+    assert f"--condition '{case.expected_json}'" in command.commands[0]
+    transport.run_bytes.return_value = command_result(wakeup_payload(condition=case.condition))
+    assert command.run().condition == case.condition
     transport.run_bytes.assert_called_once()
 
 
-@pytest.mark.parametrize(
-    ("kwargs", "message"),
-    [
-        ({"condition": {"status": "done", "label": "release"}}, "exactly one"),
-        ({"condition": {}}, "exactly one"),
-        ({"condition": {"unknown": "value"}}, "exactly one"),
-        ({"condition": {"status": "done"}, "event_types": ("comment.created",)}, "combined"),
-        ({"condition": {"status": "done"}, "kind": "every", "interval_seconds": 60}, "event kind"),
-        ({"condition": {"status": "done"}, "filter_task_id": "task-1"}, "combined"),
-        ({"condition": {"assignee": "person:1"}}, "member|agent|squad"),
-        ({"condition": {"children_done": {"stage": 0}}}, "stage"),
-        ({"condition": {"pull_request": "open"}}, "pull_request status"),
-        (
-            {"condition": {"referenced_issue": {"id": "x", "state": "open"}}},
-            "referenced_issue state",
-        ),
-        ({"condition": {"property": None}}, "property must be non-null"),
-    ],
-)
+@pytest.mark.parametrize("case", _CONDITION_SHAPE_CASES, ids=lambda case: case.id)
 def test_condition_exclusivity_and_shape_rules_are_local(
-    kwargs: dict[str, object], message: str
+    case: _ConditionShapeCase,
 ) -> None:
     transport = make_transport()
-    with pytest.raises((TypeError, ValueError), match=message):
-        create_args(wakeups(transport), **kwargs)
+    with pytest.raises((TypeError, ValueError), match=case.message):
+        create_args(wakeups(transport), **dict(case.kwargs))
     transport.run_bytes.assert_not_called()
 
 
@@ -536,14 +635,20 @@ def test_update_is_full_replacement_and_reenables_with_valid_response() -> None:
         update_args(wakeups(transport), event_types=("comment.created",)).run()
 
 
-def _wakeup_identity_and_expiry(result: object) -> object:
+def test_wakeup_decodes_optional_last_error(mock_transport: MagicMock) -> None:
+    mock_transport.run_bytes.return_value = command_result(wakeup_payload(last_error="failed"))
+    result = wakeups(mock_transport).get("iss-1", "wake-1")
+    assert result.last_error == "failed"
+
+
+def _wakeup_identity_expiry_and_error(result: object) -> object:
     wakeup = cast("IssueWakeup", result)
-    return wakeup.id, wakeup.expires_in_seconds
+    return wakeup.id, wakeup.expires_in_seconds, wakeup.last_error
 
 
-def _list_wakeup_expiry(result: object) -> object:
+def _list_wakeup_identity_expiry_and_error(result: object) -> object:
     wakeup = cast("IssueWakeupPage", result).items[0]
-    return wakeup.id, wakeup.expires_in_seconds
+    return wakeup.id, wakeup.expires_in_seconds, wakeup.last_error
 
 
 def _event_optional_fields(result: object) -> object:
@@ -565,6 +670,7 @@ _V2_NULL_WAKEUP = wakeup_payload(
     paused=None,
     condition=None,
     provenance=None,
+    last_error=None,
 )
 _V2_VALID_WAKEUP = wakeup_payload(
     expires_in_seconds=3600,
@@ -575,6 +681,7 @@ _V2_VALID_WAKEUP = wakeup_payload(
     paused=False,
     condition={"status": "done"},
     provenance={"source": "system"},
+    last_error="last run failed",
 )
 _V2_OMITTED_EVENTS = b'{"event_types":[{"name":"comment.created"}]}'
 _V2_NULL_EVENTS = (
@@ -615,16 +722,69 @@ def _identity_payload(payload: bytes) -> bytes:
 
 
 _V2_WAKEUP_VARIANTS = (
-    _V2Variant("omitted", _V2_OMITTED_WAKEUP, ("wake-1", None)),
-    _V2Variant("null", _V2_NULL_WAKEUP, ("wake-1", None)),
-    _V2Variant("valid", _V2_VALID_WAKEUP, ("wake-1", 3600)),
+    _V2Variant("omitted", _V2_OMITTED_WAKEUP, ("wake-1", None, None)),
+    _V2Variant("null", _V2_NULL_WAKEUP, ("wake-1", None, None)),
+    _V2Variant("valid", _V2_VALID_WAKEUP, ("wake-1", 3600, "last run failed")),
+    _V2Variant(
+        "diagnostic-snapshots-unavailable",
+        wakeup_payload(
+            last_error=(
+                "Condition pending: PR checks cannot be evaluated: GitHub snapshot refresh "
+                "is unavailable on this server; ask the server administrator to configure "
+                "the GitHub App snapshot client"
+            )
+        ),
+        (
+            "wake-1",
+            None,
+            "Condition pending: PR checks cannot be evaluated: GitHub snapshot refresh "
+            "is unavailable on this server; ask the server administrator to configure "
+            "the GitHub App snapshot client",
+        ),
+    ),
+    _V2Variant(
+        "diagnostic-not-linked",
+        wakeup_payload(
+            last_error=(
+                "Condition pending: No pull request is linked to this issue; link the PR "
+                "to this issue (a parent issue's PR is not included), or wait for the "
+                "linking webhook"
+            )
+        ),
+        (
+            "wake-1",
+            None,
+            "Condition pending: No pull request is linked to this issue; link the PR "
+            "to this issue (a parent issue's PR is not included), or wait for the "
+            "linking webhook",
+        ),
+    ),
+    _V2Variant(
+        "diagnostic-snapshot-pending",
+        wakeup_payload(
+            last_error=(
+                "Condition pending: PR check snapshot is not available yet; inspect this "
+                "issue's pull-requests snapshot_available field and ask the server "
+                "administrator to check snapshot refresh if it persists"
+            )
+        ),
+        (
+            "wake-1",
+            None,
+            "Condition pending: PR check snapshot is not available yet; inspect this "
+            "issue's pull-requests snapshot_available field and ask the server "
+            "administrator to check snapshot refresh if it persists",
+        ),
+    ),
 )
 _V2_WAKEUP_ENTRYPOINTS = (
-    _V2Entrypoint("create", _create_command, _wakeup_identity_and_expiry, _identity_payload),
-    _V2Entrypoint("update", _update_command, _wakeup_identity_and_expiry, _identity_payload),
-    _V2Entrypoint("list", _list_command, _list_wakeup_expiry, _list_response),
-    _V2Entrypoint("get", _get_command, _wakeup_identity_and_expiry, _identity_payload),
-    _V2Entrypoint("disable", _disable_command, _wakeup_identity_and_expiry, _identity_payload),
+    _V2Entrypoint("create", _create_command, _wakeup_identity_expiry_and_error, _identity_payload),
+    _V2Entrypoint("update", _update_command, _wakeup_identity_expiry_and_error, _identity_payload),
+    _V2Entrypoint("list", _list_command, _list_wakeup_identity_expiry_and_error, _list_response),
+    _V2Entrypoint("get", _get_command, _wakeup_identity_expiry_and_error, _identity_payload),
+    _V2Entrypoint(
+        "disable", _disable_command, _wakeup_identity_expiry_and_error, _identity_payload
+    ),
 )
 _V2_EVENT_VARIANTS = (
     _V2Variant("omitted", _V2_OMITTED_EVENTS, ("comment.created", None, None)),
@@ -658,12 +818,44 @@ _V2_DECODE_CASES = tuple(
 
 @pytest.mark.parametrize("case", _V2_DECODE_CASES, ids=lambda case: case.name)
 def test_six_evolved_entrypoints_decode_optional_v2_response_states(
-    case: _V2DecodeCase,
+    case: _V2DecodeCase, mock_transport: MagicMock
 ) -> None:
-    transport = make_transport()
-    transport.run_bytes.return_value = command_result(case.payload)
-    result = cast("Command[object]", case.command_builder(wakeups(transport))).run()
+    mock_transport.run_bytes.return_value = command_result(case.payload)
+    result = cast("Command[object]", case.command_builder(wakeups(mock_transport))).run()
     assert case.extract(result) == case.expected
+
+
+_V2_RECOVERY_DIAGNOSTICS = tuple(
+    cast("tuple[str, object, str]", variant.expected)[2]
+    for variant in _V2_WAKEUP_VARIANTS
+    if variant.name.startswith("diagnostic-")
+)
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    _V2_RECOVERY_DIAGNOSTICS,
+    ids=("snapshots-unavailable", "not-linked", "snapshot-pending"),
+)
+@pytest.mark.parametrize(
+    "healthy_payload",
+    (wakeup_payload(last_error=None), wakeup_payload()),
+    ids=("explicit-null", "omitted"),
+)
+def test_wakeup_last_error_clears_after_recovery(
+    diagnostic: str, healthy_payload: bytes, mock_transport: MagicMock
+) -> None:
+    mock_transport.run_bytes.side_effect = [
+        command_result(wakeup_payload(last_error=diagnostic)),
+        command_result(healthy_payload),
+    ]
+    resource = wakeups(mock_transport)
+
+    pending = resource.get("iss-1", "wake-1")
+    healthy = resource.get("iss-1", "wake-1")
+
+    assert pending.last_error == diagnostic
+    assert healthy.last_error is None
 
 
 @dataclass(frozen=True)

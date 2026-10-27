@@ -6,6 +6,7 @@ import pathlib
 import stat
 import sys
 import time
+import traceback
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -38,6 +39,7 @@ from multica_py.exceptions import (
     ExecutableNotRunnableError,
     NetworkError,
     NotFoundError,
+    ProcessOutputCaptureError,
     UnsupportedCliVersionError,
     ValidationError,
 )
@@ -85,6 +87,28 @@ class DetailCase:
     expected_exc: type[CommandExecutionError]
     expected_exit_code: int
     expected_message: str
+
+
+@dataclass(frozen=True)
+class AccessWrite403Case:
+    id: str
+    command_args: tuple[str, ...]
+
+
+_ACCESS_WRITE_403_CASES = (
+    AccessWrite403Case(
+        "command_args0",
+        ("agent", "create", "--name", "private-name", "--runtime-id", "runtime-secret"),
+    ),
+    AccessWrite403Case(
+        "command_args1", ("agent", "update", "agent-secret", "--runtime-id", "runtime-secret")
+    ),
+    AccessWrite403Case(
+        "command_args2",
+        ("workspace", "create", "--name", "private-name", "--slug", "private-slug"),
+    ),
+    AccessWrite403Case("command_args3", ("workspace", "update", "--name", "private-name")),
+)
 
 
 @dataclass(frozen=True)
@@ -179,7 +203,7 @@ _CLI_0442_ENVELOPE = (
     b'{"arch":"arm64","commit":"76f59f5f1","date":"2026-09-09T11:06:33Z",'
     b'"go":"go1.26.8","os":"darwin","version":"0.4.42"}'
 )
-_CLI_060_ENVELOPE = _CLI_0442_ENVELOPE.replace(b'"0.4.42"', b'"0.6.0"')
+_CLI_062_ENVELOPE = _CLI_0442_ENVELOPE.replace(b'"0.4.42"', b'"0.6.2"')
 
 
 _INVALID_VERSION_OUTPUTS = (
@@ -284,6 +308,14 @@ class _EchoExecutor(LocalExecutor):
         output = b"stdout " + self.echoed
         error = b"stderr " + self.echoed
         return ExecutionResult(self.exit_code, output, error)
+
+
+class _CaptureFailExecutor(LocalExecutor):
+    def __init__(self, diagnostic: str = "bounded capture") -> None:
+        self.diagnostic = diagnostic
+
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        raise ProcessOutputCaptureError(self.diagnostic)
 
 
 class _CompatibilityProbeExecutor(LocalExecutor):
@@ -823,6 +855,64 @@ def test_transport_redacts_split_token_args():
     redacted = redact_argv(("multica", "auth", "login", "--token", "secret123"))
     assert "secret123" not in " ".join(redacted)
     assert redacted[-1] == "***"
+
+
+def test_attachment_upload_capture_interruption_is_network_error(tmp_path: pathlib.Path) -> None:
+    env_secret = "env-" + "secret"
+    argv_secret = "argv-" + "secret"
+    stdin_secret = "stdin-" + "secret"
+    file_secret = "file-" + "secret"
+    original_secret = "super-" + "secret-value"
+    file_path = tmp_path / "credential.json"
+    file_path.write_text(f'{{"token":"{file_secret}"}}', encoding="utf-8")
+    diagnostic = "capture failed for " + " ".join(
+        (env_secret, argv_secret, stdin_secret, file_secret, original_secret)
+    )
+    transport = CliTransport(
+        ClientConfig(
+            compatibility=CompatibilityPolicy.ignore,
+            environment=(
+                ("MULTICA_TOKEN", env_secret),
+                ("MULTICA_CAPTURE_SECRET", original_secret),
+            ),
+        ),
+        executor=_CaptureFailExecutor(diagnostic),
+    )
+    args = (
+        "attachment",
+        "upload",
+        "--token",
+        argv_secret,
+        "--credential-file",
+        str(file_path),
+        "--credential-stdin",
+    )
+    stdin_payload = f'{{"token":"{stdin_secret}"}}'.encode()
+    with pytest.raises(NetworkError, match="Attachment upload failed") as excinfo:
+        transport.run_bytes(args, stdin=stdin_payload)
+    exc = excinfo.value
+    assert exc.exit_code == 2
+    assert "capture failed for ***" in exc.stderr
+    assert exc.__cause__ is None
+    assert exc.__context__ is None
+    rendered_traceback = "".join(traceback.format_exception(exc))
+    for secret in (
+        env_secret,
+        argv_secret,
+        stdin_secret,
+        file_secret,
+        original_secret,
+    ):
+        for surface in (
+            str(exc),
+            exc.stderr,
+            repr(exc),
+            rendered_traceback,
+            repr(exc.__cause__),
+            repr(exc.__context__),
+            repr(exc.argv),
+        ):
+            assert secret not in surface
 
 
 @pytest.mark.parametrize("case", _SECRET_REDACTION_CASES, ids=lambda case: case.id)
@@ -1425,6 +1515,48 @@ def test_legacy_exit_code_one_classifies_from_stderr(
     assert exc.exit_code == case.reported_exit_code
 
 
+@pytest.mark.parametrize("case", _ACCESS_WRITE_403_CASES, ids=lambda case: case.id)
+def test_access_write_403_exposes_only_safe_authorization_error(
+    case: AccessWrite403Case,
+) -> None:
+    command_args = case.command_args
+    transport = CliTransport(ClientConfig(executable="multica"))
+    transport._execute = lambda *args, **kwargs: RawCommandResult(  # type: ignore[method-assign]
+        argv=("multica", *command_args),
+        exit_code=1,
+        stdout=b"https://private.example.test/private/path token=private-token",
+        stderr=(
+            b"Error: POST /api/private/path returned 403: "
+            b'{"code":"PRIVATE_CODE","message":"private backend detail"}'
+        ),
+        duration=datetime.timedelta(),
+    )
+
+    with pytest.raises(AuthorizationError, match="requested operation is not authorized") as error:
+        transport.run_text(command_args)
+
+    assert error.value.exit_code == 3
+    assert error.value.stdout == ""
+    assert error.value.stderr == ""
+    assert error.value.argv == ()
+    assert error.value.code is None
+    assert "private" not in str(error.value)
+
+
+def test_non_access_write_403_keeps_existing_diagnostic() -> None:
+    transport = CliTransport(ClientConfig(executable="multica"))
+    transport._execute = lambda *args, **kwargs: RawCommandResult(  # type: ignore[method-assign]
+        argv=("multica", "workspace", "get", "ws-1"),
+        exit_code=1,
+        stdout=b"",
+        stderr=b"Error: GET /api/workspaces/ws-1 returned 403: forbidden",
+        duration=datetime.timedelta(),
+    )
+
+    with pytest.raises(AuthorizationError, match="/api/workspaces/ws-1"):
+        transport.run_text(("workspace", "get", "ws-1"))
+
+
 def test_classify_cli_failure_maps_http_status() -> None:
     exc_class, reported = classify_cli_failure(
         exit_code=1,
@@ -1722,7 +1854,7 @@ def test_transport_warn_policy_rejects_unparseable_version_output_from_check():
 
 
 def test_strict_preflight_is_lazy_uses_exact_json_argv_and_preserves_global_order() -> None:
-    executor = _CompatibilityProbeExecutor(_CLI_060_ENVELOPE)
+    executor = _CompatibilityProbeExecutor(_CLI_062_ENVELOPE)
     config = ClientConfig(
         executable="/opt/multica",
         server_url="https://example.test",
@@ -1766,15 +1898,15 @@ def test_strict_preflight_is_lazy_uses_exact_json_argv_and_preserves_global_orde
 
 
 def test_operation_minimum_rejects_new_surface_but_allows_retained_surface() -> None:
-    old_executor = _CompatibilityProbeExecutor(_CLI_060_ENVELOPE)
+    old_executor = _CompatibilityProbeExecutor(_CLI_062_ENVELOPE)
     old_transport = CliTransport(
         ClientConfig(compatibility=CompatibilityPolicy.strict), executor=old_executor
     )
-    with pytest.raises(UnsupportedCliVersionError, match=r"below minimum 0\.6\.1"):
-        old_transport.run_bytes(("issue", "comment", "update"), minimum_cli_version="0.6.1")
+    with pytest.raises(UnsupportedCliVersionError, match=r"below minimum 0\.7\.0"):
+        old_transport.run_bytes(("issue", "comment", "update"), minimum_cli_version="0.7.0")
     assert len(old_executor.requests) == 1
 
-    retained_executor = _CompatibilityProbeExecutor(_CLI_060_ENVELOPE)
+    retained_executor = _CompatibilityProbeExecutor(_CLI_062_ENVELOPE)
     retained_transport = CliTransport(
         ClientConfig(compatibility=CompatibilityPolicy.strict), executor=retained_executor
     )
@@ -1783,7 +1915,7 @@ def test_operation_minimum_rejects_new_surface_but_allows_retained_surface() -> 
 
 
 def _assert_strict_client_constructor_is_lazy_and_first_public_operation_succeeds() -> None:
-    executor = _CompatibilityProbeExecutor(_CLI_060_ENVELOPE)
+    executor = _CompatibilityProbeExecutor(_CLI_062_ENVELOPE)
     config = ClientConfig(compatibility=CompatibilityPolicy.strict)
     client = MulticaClient(config, executor=executor)
 
