@@ -1,12 +1,26 @@
 from __future__ import annotations
 
+import json
+from typing import cast
+from unittest.mock import MagicMock
+
 import pytest
 
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig
+from multica_py.exceptions import OutputShapeError
 from multica_py.resources.issue_properties import IssuePropertyResource
 from multica_py.resources.properties import PropertyResource
 from multica_py.sentinels import Unset
+from tests.unit.resources._factories import command_result
+from tests.unit.resources.property_cases import (
+    MALFORMED_SCALAR_PROPERTY_CASES,
+    PROPERTY_ACCEPTED_CASES,
+    PROPERTY_INVALID_CASES,
+    AcceptedPropertyInputCase,
+    MalformedScalarPropertyCase,
+    PropertyInputCase,
+)
 
 
 def test_create_rejects_options_for_actor_types() -> None:
@@ -83,6 +97,151 @@ def test_issue_property_set_passes_actor_value_through_argv() -> None:
         "--output",
         "json",
     )
+
+
+def test_issue_property_set_encodes_discriminated_list_values(mock_transport: MagicMock) -> None:
+    resource = IssuePropertyResource(mock_transport, ClientConfig())
+    command = resource.set_command(
+        "iss_001",
+        name="Tags",
+        value=("alpha", "beta", "alpha"),
+        property_type="multi_text",
+    )
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "property",
+        "set",
+        "iss_001",
+        "--name",
+        "Tags",
+        "--value",
+        '["alpha","beta"]',
+        "--output",
+        "json",
+    )
+
+
+@pytest.mark.parametrize("case", PROPERTY_ACCEPTED_CASES, ids=lambda case: case.id)
+def test_issue_property_set_accepts_property_boundaries(
+    case: AcceptedPropertyInputCase, mock_transport: MagicMock
+) -> None:
+    resource = IssuePropertyResource(mock_transport, ClientConfig())
+    command = resource.set_command(
+        "iss_001",
+        name="Tags",
+        value=cast("str | tuple[str, ...]", case.value),
+        property_type=case.property_type,  # type: ignore[arg-type]
+    )
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "property",
+        "set",
+        "iss_001",
+        "--name",
+        "Tags",
+        "--value",
+        case.encoded,
+        "--output",
+        "json",
+    )
+
+
+@pytest.mark.parametrize("case", PROPERTY_INVALID_CASES, ids=lambda case: case.id)
+def test_issue_property_set_rejects_invalid_values_before_io(
+    case: PropertyInputCase, mock_transport: MagicMock
+) -> None:
+    resource = IssuePropertyResource(mock_transport, ClientConfig())
+    with pytest.raises(case.error_type, match=case.message):
+        resource.set(
+            "iss_001",
+            name="Tags",
+            value=cast("str | tuple[str, ...]", case.value),
+            property_type=case.property_type,  # type: ignore[arg-type]
+        )
+    mock_transport.run_bytes.assert_not_called()
+
+
+def test_issue_property_set_accepts_discriminated_string_forms(mock_transport: MagicMock) -> None:
+    resource = IssuePropertyResource(mock_transport, ClientConfig())
+    comma = resource.set_command(
+        "iss_001", name="Tags", value="alpha,beta,alpha", property_type="multi_text"
+    )
+    json_array = resource.set_command(
+        "iss_001",
+        name="Tags",
+        value='["alpha,beta","[beta]"]',
+        property_type="multi_text",
+    )
+    assert comma._plan.steps[0].argv == (
+        "issue",
+        "property",
+        "set",
+        "iss_001",
+        "--name",
+        "Tags",
+        "--value",
+        '["alpha","beta"]',
+        "--output",
+        "json",
+    )
+    assert json_array._plan.steps[0].argv == (
+        "issue",
+        "property",
+        "set",
+        "iss_001",
+        "--name",
+        "Tags",
+        "--value",
+        '["alpha,beta","[beta]"]',
+        "--output",
+        "json",
+    )
+
+
+@pytest.mark.parametrize(
+    "value",
+    ("scalar", {"nested": "value"}, None, ["ok", 1]),
+    ids=("scalar", "object", "null", "non-string-item"),
+)
+def test_issue_property_list_rejects_malformed_list_values(
+    value: object, mock_transport: MagicMock
+) -> None:
+    mock_transport.run_bytes.return_value = command_result(
+        json.dumps(
+            [
+                {
+                    "property_id": "prop_001",
+                    "name": "Tags",
+                    "type": "multi_text",
+                    "value": value,
+                }
+            ]
+        ).encode()
+    )
+    resource = IssuePropertyResource(mock_transport, ClientConfig())
+    with pytest.raises(OutputShapeError, match="array of strings"):
+        resource.list("iss_001")
+
+
+@pytest.mark.parametrize("case", MALFORMED_SCALAR_PROPERTY_CASES, ids=lambda case: case.id)
+def test_issue_property_list_rejects_malformed_scalar_values(
+    case: MalformedScalarPropertyCase, mock_transport: MagicMock
+) -> None:
+    mock_transport.run_bytes.return_value = command_result(
+        json.dumps(
+            [
+                {
+                    "property_id": "prop_001",
+                    "name": "Impact",
+                    "type": case.property_type,
+                    "value": case.value,
+                }
+            ]
+        ).encode()
+    )
+    resource = IssuePropertyResource(mock_transport, ClientConfig())
+    with pytest.raises(OutputShapeError, match=f"^{case.message}$"):
+        resource.list("iss_001")
 
 
 def test_issue_property_unset_omits_value_flag() -> None:

@@ -10,9 +10,14 @@ from multica_py._internal.decoders import decode_json
 from multica_py._internal.transport import CliTransport
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.models.common import ActionResult
-from multica_py.models.properties import PropertyValue
+from multica_py.models.properties import (
+    PropertyInputValue,
+    PropertyListType,
+    PropertyValue,
+    decode_property_value,
+    normalize_property_input,
+)
 from multica_py.resources._base import BaseResource
-from multica_py.types import MetadataValue
 
 __all__ = ["IssuePropertyResource", "PropertyValue"]
 
@@ -21,7 +26,7 @@ class _PropertyValueWire(msgspec.Struct, frozen=True, kw_only=True):
     property_id: str
     name: str
     type: str
-    value: MetadataValue
+    value: object
     display: str = ""
     archived: bool = False
 
@@ -38,7 +43,7 @@ class IssuePropertyResource(BaseResource):
                 property_id=row.property_id,
                 name=row.name,
                 type=row.type,
-                value=row.value,
+                value=decode_property_value(row.type, row.value),
                 display=row.display,
                 archived=row.archived,
             )
@@ -63,11 +68,13 @@ class IssuePropertyResource(BaseResource):
         issue_id: str,
         *,
         name: str,
-        value: str,
+        value: PropertyInputValue,
+        property_type: PropertyListType | None = None,
         options: OperationOptions | None = None,
     ) -> Command[tuple[PropertyValue, ...]]:
         validate_nonblank(issue_id)
         validate_nonblank(name)
+        encoded_value = normalize_property_input(value, property_type)
         return self._property_values_command(
             (
                 "issue",
@@ -77,7 +84,7 @@ class IssuePropertyResource(BaseResource):
                 "--name",
                 name,
                 "--value",
-                value,
+                encoded_value,
             ),
             options=options,
         )
@@ -87,10 +94,17 @@ class IssuePropertyResource(BaseResource):
         issue_id: str,
         *,
         name: str,
-        value: str,
+        value: PropertyInputValue,
+        property_type: PropertyListType | None = None,
         options: OperationOptions | None = None,
     ) -> tuple[PropertyValue, ...]:
-        return self.set_command(issue_id, name=name, value=value, options=options).run()
+        return self.set_command(
+            issue_id,
+            name=name,
+            value=value,
+            property_type=property_type,
+            options=options,
+        ).run()
 
     def unset_command(
         self,

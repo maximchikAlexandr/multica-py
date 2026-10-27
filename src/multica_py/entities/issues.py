@@ -51,7 +51,7 @@ from multica_py.models.issues import (
     IssueReference,
     LinkedPullRequest,
 )
-from multica_py.models.properties import PropertyValue
+from multica_py.models.properties import PropertyValue, decode_property_value
 from multica_py.models.relations import (
     _GENERATION_UNSET,
     CursorLazyCollection,
@@ -111,7 +111,7 @@ def _property_relation_initial(
             property_id=property_id,
             name=name,
             type=property_type,
-            value=cast("MetadataValue", row.get("value")),
+            value=decode_property_value(property_type, row.get("value")),
             display=cast("str", row.get("display", "")),
             archived=cast("bool", row.get("archived", False)),
         )

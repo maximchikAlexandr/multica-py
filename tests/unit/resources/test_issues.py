@@ -54,6 +54,14 @@ from multica_py.resources.issue_labels import IssueLabelResource
 from multica_py.resources.issue_metadata import IssueMetadataResource
 from multica_py.resources.issue_subscribers import IssueSubscriberResource
 from multica_py.resources.issues import IssueResource, _decode_issue_search
+from tests.unit.resources.property_cases import (
+    MALFORMED_SCALAR_PROPERTY_CASES,
+    PROPERTY_ACCEPTED_CASES,
+    PROPERTY_INVALID_CASES,
+    AcceptedPropertyInputCase,
+    MalformedScalarPropertyCase,
+    PropertyInputCase,
+)
 
 _DESCRIPTION_INPUT_IMPOSTORS = (
     type("NoDescription", (), {})(),
@@ -606,6 +614,99 @@ def test_issue_create_properties_are_ordered_atomic_and_version_gated() -> None:
     assert len(command._plan.steps) == 1
 
 
+def test_issue_create_list_property_values_are_json_encoded_and_deduplicated(
+    mock_transport: MagicMock,
+) -> None:
+    resource = IssueResource(mock_transport, ClientConfig())
+    command = resource.create_command(
+        title="Test",
+        properties=(
+            IssuePropertyAssignment(
+                reference="Tags",
+                value=("alpha", "beta", "alpha"),
+                property_type="multi_text",
+            ),
+        ),
+    )
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "create",
+        "--title",
+        "Test",
+        "--property",
+        'Tags=["alpha","beta"]',
+        "--output",
+        "json",
+    )
+
+
+def test_issue_create_snapshots_list_property_assignment_before_caller_mutation(
+    mock_transport: MagicMock,
+) -> None:
+    values = ["alpha", "beta"]
+    assignment = IssuePropertyAssignment(reference="Tags", value=values, property_type="multi_text")
+    values.append("mutated")
+
+    command = IssueResource(mock_transport, ClientConfig()).create_command(
+        title="Test", properties=(assignment,)
+    )
+
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "create",
+        "--title",
+        "Test",
+        "--property",
+        'Tags=["alpha","beta"]',
+        "--output",
+        "json",
+    )
+
+
+@pytest.mark.parametrize("case", PROPERTY_ACCEPTED_CASES, ids=lambda case: case.id)
+def test_issue_create_accepts_property_boundaries(
+    case: AcceptedPropertyInputCase, mock_transport: MagicMock
+) -> None:
+    command = IssueResource(mock_transport, ClientConfig()).create_command(
+        title="Test",
+        properties=(
+            IssuePropertyAssignment(
+                reference="Tags",
+                value=case.value,  # type: ignore[arg-type]
+                property_type=case.property_type,  # type: ignore[arg-type]
+            ),
+        ),
+    )
+    assert command._plan.steps[0].argv == (
+        "issue",
+        "create",
+        "--title",
+        "Test",
+        "--property",
+        f"Tags={case.encoded}",
+        "--output",
+        "json",
+    )
+
+
+@pytest.mark.parametrize("case", PROPERTY_INVALID_CASES, ids=lambda case: case.id)
+def test_issue_create_rejects_invalid_values_before_io(
+    case: PropertyInputCase, mock_transport: MagicMock
+) -> None:
+    with pytest.raises(case.error_type, match=case.message):
+        IssueResource(mock_transport, ClientConfig()).create_command(
+            title="Test",
+            properties=(
+                IssuePropertyAssignment(
+                    reference="Tags",
+                    value=case.value,  # type: ignore[arg-type]
+                    property_type=case.property_type,  # type: ignore[arg-type]
+                ),
+            ),
+        )
+    mock_transport.run_bytes.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "case",
     (
@@ -991,6 +1092,62 @@ def test_issue_property_projection_decodes_full_and_partial_target_rows(
         client.issues._properties_relation_command.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "value",
+    ("scalar", {"nested": "value"}, None, ["ok", 1]),
+    ids=("scalar", "object", "null", "non-string-item"),
+)
+def test_issue_property_projection_rejects_malformed_list_values(value: object) -> None:
+    payload = json.dumps(
+        {
+            "issues": [
+                {
+                    "id": "i1",
+                    "properties": [
+                        {
+                            "property_id": "p1",
+                            "name": "Tags",
+                            "type": "multi_text",
+                            "value": value,
+                        }
+                    ],
+                }
+            ]
+        }
+    ).encode()
+    page = _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire))
+    issue = page.items[0]._with_client(MagicMock())
+    with pytest.raises(OutputShapeError, match="array of strings"):
+        issue.properties.all()
+
+
+@pytest.mark.parametrize("case", MALFORMED_SCALAR_PROPERTY_CASES, ids=lambda case: case.id)
+def test_issue_property_projection_rejects_malformed_scalar_values(
+    case: MalformedScalarPropertyCase,
+) -> None:
+    payload = json.dumps(
+        {
+            "issues": [
+                {
+                    "id": "i1",
+                    "properties": [
+                        {
+                            "property_id": "p1",
+                            "name": "Impact",
+                            "type": case.property_type,
+                            "value": case.value,
+                        }
+                    ],
+                }
+            ]
+        }
+    ).encode()
+    page = _issue_list_page_from_wire(decode_json(payload, _IssueListPageWire))
+    issue = page.items[0]._with_client(MagicMock())
+    with pytest.raises(OutputShapeError, match=f"^{case.message}$"):
+        issue.properties.all()
+
+
 def test_issue_projection_preserves_full_allowlist_and_omitted_vs_null() -> None:
     payload = (
         b'{"issues":[{"id":"i1","workspace_id":"ws","number":7,'
@@ -1192,10 +1349,13 @@ def test_issue_partial_assignee_scalars_do_not_fabricate_relation(field: str, va
         _IssueQueryValidationCase({"fields": ("unknown",)}, "invalid field"),
         _IssueQueryValidationCase({"fields": ("id", "id")}, "duplicate field"),
         _IssueQueryValidationCase({"fields": ("title",)}, "identity_required"),
-        _IssueQueryValidationCase({"property_filters": ("Owner>=me",)}, ">="),
-        _IssueQueryValidationCase({"property_filters": ("Owner<=me",)}, "<="),
         _IssueQueryValidationCase({"property_filters": ("Owner!=me",)}, "!="),
-        _IssueQueryValidationCase({"property_filters": ("Owner",)}, "Name=Value"),
+        _IssueQueryValidationCase({"property_filters": ("Owner==me",)}, "ambiguous"),
+        _IssueQueryValidationCase({"property_filters": ("Owner><me",)}, "ambiguous"),
+        _IssueQueryValidationCase({"property_filters": ("Owner!~=me",)}, "ambiguous"),
+        _IssueQueryValidationCase({"property_filters": ("Owner",)}, "Name<op>Value"),
+        _IssueQueryValidationCase({"property_filters": ("Owner>=",)}, "Name<op>Value"),
+        _IssueQueryValidationCase({"property_filters": ("Owner>=__none__",)}, "only with equality"),
         _IssueQueryValidationCase({"sort": "property:"}, "invalid sort"),
         _IssueQueryValidationCase(
             {"fields": ("id",), "resolve_properties": True}, "requires properties"
@@ -1228,6 +1388,80 @@ def test_issue_query_accepts_none_property_sentinel() -> None:
         "--output",
         "json",
     )
+
+
+@dataclass(frozen=True)
+class _IssuePropertyComparisonCase:
+    name: str
+    filters: tuple[str, ...]
+    expected_argv: tuple[str, ...]
+
+
+_ISSUE_PROPERTY_COMPARISON_CASES = (
+    _IssuePropertyComparisonCase(
+        "ordered-number-and-equality",
+        ("Impact=High", "Impact=__none__", "Score>3", "Score>=4", "Score<9", "Score<=8"),
+        (
+            "issue",
+            "list",
+            "--property",
+            "Impact=High",
+            "--property",
+            "Impact=__none__",
+            "--property",
+            "Score>3",
+            "--property",
+            "Score>=4",
+            "--property",
+            "Score<9",
+            "--property",
+            "Score<=8",
+            "--output",
+            "json",
+        ),
+    ),
+    _IssuePropertyComparisonCase(
+        "date-and-text",
+        ("Ship Date>2026-09-01", "Ship Date<2026-10-01", "Notes~=follow up"),
+        (
+            "issue",
+            "list",
+            "--property",
+            "Ship Date>2026-09-01",
+            "--property",
+            "Ship Date<2026-10-01",
+            "--property",
+            "Notes~=follow up",
+            "--output",
+            "json",
+        ),
+    ),
+    _IssuePropertyComparisonCase(
+        "duplicate-predicates",
+        ("Score>1", "Score>1"),
+        (
+            "issue",
+            "list",
+            "--property",
+            "Score>1",
+            "--property",
+            "Score>1",
+            "--output",
+            "json",
+        ),
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _ISSUE_PROPERTY_COMPARISON_CASES, ids=lambda case: case.name)
+def test_issue_property_comparisons_preserve_order_and_exact_argv(
+    case: _IssuePropertyComparisonCase,
+) -> None:
+    resource = IssueResource(MagicMock(), ClientConfig())
+
+    command = resource.list_command(property_filters=case.filters)
+
+    assert command._plan.steps[0].argv == case.expected_argv
 
 
 def test_issue_search_envelope_preserves_unavailable_total() -> None:

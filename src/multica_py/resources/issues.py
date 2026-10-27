@@ -4,6 +4,7 @@ import datetime
 import json
 import os
 import pathlib
+import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast, overload
@@ -178,7 +179,8 @@ _VALID_ISSUE_FIELDS = frozenset(
 _VALID_ISSUE_SORTS = frozenset(
     {"position", "title", "created_at", "start_date", "due_date", "priority", "status"}
 )
-_PROPERTY_OPERATORS = (">=", "<=", "!=")
+_PROPERTY_COMPARISON_OPERATORS = (">=", "<=", ">", "<", "~=")
+_PROPERTY_UNSUPPORTED_OPERATORS = ("!=",)
 
 
 def _normalize_issue_fields(fields: tuple[str, ...]) -> tuple[str, ...]:
@@ -205,15 +207,45 @@ def _normalize_property_filters(filters: tuple[str, ...]) -> tuple[str, ...]:
         if type(raw_expression) is not str:
             raise TypeError("property_filters must contain only strings")
         expression = raw_expression.strip()
-        if not expression or "=" not in expression:
-            raise ValueError("IssueResource.list: property filters must use Name=Value")
-        if any(operator in expression for operator in _PROPERTY_OPERATORS):
-            raise ValueError(
-                "IssueResource.list: property comparisons >=, <=, and != are unsupported"
-            )
-        name, value = expression.split("=", 1)
+        if not expression:
+            raise ValueError("IssueResource.list: property filters must use Name<op>Value")
+        position = -1
+        comparison = ""
+        for operator in (
+            *_PROPERTY_COMPARISON_OPERATORS,
+            *_PROPERTY_UNSUPPORTED_OPERATORS,
+            "=",
+        ):
+            candidate = expression.find(operator)
+            if candidate >= 0 and (
+                position < 0
+                or candidate < position
+                or (candidate == position and len(operator) > len(comparison))
+            ):
+                position = candidate
+                comparison = operator
+        if position < 0:
+            raise ValueError("IssueResource.list: property filters must use Name<op>Value")
+        if comparison in _PROPERTY_UNSUPPORTED_OPERATORS:
+            raise ValueError("IssueResource.list: property comparison != is unsupported")
+        name, value = expression[:position], expression[position + len(comparison) :]
         if not name.strip() or not value.strip():
-            raise ValueError("IssueResource.list: property filters must use Name=Value")
+            raise ValueError("IssueResource.list: property filters must use Name<op>Value")
+        if any(character in name for character in "=<>!~"):
+            try:
+                uuid.UUID(name.strip())
+            except ValueError as error:
+                raise ValueError(
+                    "IssueResource.list: ambiguous property filter; use the property UUID "
+                    "when its name contains operator characters"
+                ) from error
+        if any(
+            value.lstrip().startswith(operator)
+            for operator in (*_PROPERTY_COMPARISON_OPERATORS, *_PROPERTY_UNSUPPORTED_OPERATORS, "=")
+        ):
+            raise ValueError("IssueResource.list: ambiguous composed property comparison")
+        if comparison != "=" and value.strip() == "__none__":
+            raise ValueError("IssueResource.list: __none__ is supported only with equality")
         normalized.append(expression)
     return tuple(normalized)
 
@@ -1163,7 +1195,7 @@ class IssueResource(BaseResource):
         if no_start:
             args.append("--no-start")
         for assignment in properties:
-            args.extend(["--property", f"{assignment.reference}={assignment.value}"])
+            args.extend(["--property", f"{assignment.reference}={assignment.encoded_value}"])
         create_args, create_decode = self._plan_decode(tuple(args), _IssueWire)
         steps = [_Step(create_args, "run_bytes", decode=create_decode, result_alias="create")]
         for label_id in label_ids:

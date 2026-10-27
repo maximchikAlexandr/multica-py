@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast, overload
 
 import msgspec
 
 from multica_py.enums import IssueStatus
 from multica_py.models.common import CommentCursor, Page
+from multica_py.models.properties import (
+    PropertyInputValue,
+    PropertyListType,
+    normalize_property_input,
+)
 from multica_py.types import MetadataValue
 
 if TYPE_CHECKING:
@@ -52,15 +58,26 @@ class IssuePropertyAssignment(msgspec.Struct, frozen=True, kw_only=True):
     """One ordered, atomic property assignment for issue creation."""
 
     reference: str
-    value: str
+    value: PropertyInputValue
+    property_type: PropertyListType | None = None
 
     def __post_init__(self) -> None:
+        if type(self.value) is not str and isinstance(self.value, Sequence):
+            sequence_value: Sequence[str] = self.value
+            msgspec.structs.force_setattr(self, "value", tuple[str, ...](sequence_value))
         if type(self.reference) is not str:
             raise TypeError("reference must be a string")
         if not self.reference.strip():
             raise ValueError("reference must be nonblank")
-        if type(self.value) is not str:
-            raise TypeError("value must be a string")
+        if type(self.value) is str and self.property_type is None:
+            return
+        normalize_property_input(self.value, self.property_type)
+
+    @property
+    def encoded_value(self) -> str:
+        if type(self.value) is str and self.property_type is None:
+            return self.value
+        return normalize_property_input(self.value, self.property_type)
 
 
 class PullRequestAutoComplete(msgspec.Struct, frozen=True, kw_only=True):
