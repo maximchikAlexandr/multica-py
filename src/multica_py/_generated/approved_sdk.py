@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-TARGET_VERSION = '0.6.1'
-MIN_CLI_VERSION = '0.6.0'
-MAX_CLI_VERSION = '0.6.2'
+TARGET_VERSION = '0.7.0'
+MIN_CLI_VERSION = '0.6.2'
+MAX_CLI_VERSION = '0.7.1'
 
 class AutopilotExecutionMode(StrEnum):
     create_issue = 'create_issue'
@@ -1520,6 +1520,21 @@ PUBLIC_INVENTORY: tuple[GeneratedInventoryItem, ...] = (
         'command:multica.config.show', 'command', 'multica config show',
         'typed', 'multica_py.resources.configuration.ConfigurationResource.show', None,
         'requires_cli>=0.5.3',
+    ),
+    GeneratedInventoryItem(
+        'command:multica.daemon.autostart.disable', 'command', 'multica daemon autostart disable',
+        'outside-public-scope', None, None,
+        'requires_cli>=0.6.2',
+    ),
+    GeneratedInventoryItem(
+        'command:multica.daemon.autostart.enable', 'command', 'multica daemon autostart enable',
+        'outside-public-scope', None, None,
+        'requires_cli>=0.6.2',
+    ),
+    GeneratedInventoryItem(
+        'command:multica.daemon.autostart.status', 'command', 'multica daemon autostart status',
+        'outside-public-scope', None, None,
+        'requires_cli>=0.6.2',
     ),
     GeneratedInventoryItem(
         'command:multica.daemon.disk-usage', 'command', 'multica daemon disk-usage',
