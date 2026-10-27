@@ -82,6 +82,8 @@ class RuntimeDefinition(msgspec.Struct, frozen=True, kw_only=True):
     status: str | None = None
     protocol_family: str | None = None
     command_name: str | None = None
+    visibility: str | None = None
+    shared_with: tuple[str, ...] = ()
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
 
@@ -156,6 +158,7 @@ class DaemonStatus(msgspec.Struct, frozen=True, kw_only=True):
     device_name: str | None = None
     server_url: str | None = None
     cli_version: str | None = None
+    cli_commit: str | None = None
     launched_by: str | None = None
     active_task_count: int | None = None
     running_task_count: int | None = None
