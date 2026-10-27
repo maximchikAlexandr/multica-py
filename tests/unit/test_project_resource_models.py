@@ -8,7 +8,13 @@ from dataclasses import dataclass
 import pytest
 
 from multica_py._internal.decoders import decode_json
-from multica_py._internal.wire_models import _ProjectResourceRecordWire, project_resource_from_wire
+from multica_py._internal.wire_models import (
+    _project_from_wire,
+    _ProjectResourceRecordWire,
+    _ProjectWire,
+    project_resource_from_wire,
+)
+from multica_py.exceptions import OutputShapeError
 from multica_py.models.issue_activity import IssueUsage
 from multica_py.models.project_resources import (
     GithubRepoResourceRef,
@@ -33,6 +39,36 @@ class RejectCase:
     id: str
     factory: Callable[[], object]
     match: str
+
+
+@dataclass(frozen=True)
+class _ProjectWorkflowDecodeCase:
+    id: str
+    workflow_field: str | None
+    expected: str | None
+
+
+_PROJECT_WORKFLOW_DECODE_CASES = (
+    _ProjectWorkflowDecodeCase("legacy-omitted", None, None),
+    _ProjectWorkflowDecodeCase("explicit-null", '"workflow_id":null', None),
+    _ProjectWorkflowDecodeCase(
+        "uuid",
+        '"workflow_id":"123e4567-e89b-12d3-a456-426614174000"',
+        "123e4567-e89b-12d3-a456-426614174000",
+    ),
+)
+
+
+@dataclass(frozen=True)
+class _MalformedProjectWorkflowCase:
+    id: str
+    workflow_id: str
+
+
+_MALFORMED_PROJECT_WORKFLOW_CASES = (
+    _MalformedProjectWorkflowCase("malformed", "bad"),
+    _MalformedProjectWorkflowCase("empty", ""),
+)
 
 
 _PROJECT_RESOURCE_DECODE_CASES = (
@@ -151,3 +187,29 @@ def test_model_validation_rejects(case: RejectCase) -> None:
 def test_issue_usage_decodes_cost_usd(payload: bytes, cost_usd: float | None) -> None:
     usage = decode_json(payload, IssueUsage)
     assert usage.cost_usd == cost_usd
+
+
+@pytest.mark.parametrize("case", _PROJECT_WORKFLOW_DECODE_CASES, ids=lambda case: case.id)
+def test_project_workflow_id_decodes_legacy_null_and_uuid(
+    case: _ProjectWorkflowDecodeCase,
+) -> None:
+    suffix = "" if case.workflow_field is None else "," + case.workflow_field
+    wire = decode_json(
+        f'{{"id":"p1","title":"Project","status":"planned"{suffix}}}'.encode(),
+        _ProjectWire,
+    )
+
+    assert _project_from_wire(wire).workflow_id == case.expected
+
+
+@pytest.mark.parametrize("case", _MALFORMED_PROJECT_WORKFLOW_CASES, ids=lambda case: case.id)
+def test_project_workflow_id_rejects_malformed_uuid(case: _MalformedProjectWorkflowCase) -> None:
+    payload = (
+        '{"id":"p1","title":"Project","status":"planned",'
+        f'"workflow_id":{json.dumps(case.workflow_id)}}}'
+    ).encode()
+    with pytest.raises(OutputShapeError, match="workflow_id"):
+        decode_json(
+            payload,
+            _ProjectWire,
+        )

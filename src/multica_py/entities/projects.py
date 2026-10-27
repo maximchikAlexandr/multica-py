@@ -36,6 +36,7 @@ class Project(_BoundEntity):  # type: ignore[misc]
     icon: str | None = None
     lead_type: str | None = None
     lead_id: str | None = None
+    workflow_id: str | None = None
     start_date: str | None = None
     due_date: str | None = None
     created_at: datetime.datetime | None = None
