@@ -46,9 +46,9 @@ issue = workspace_client.issues.get("issue_456")
 Derived views keep independent immutable configuration and share the original
 process semaphore. Closing one view does not close another.
 
-## Use the v0.6.1 response and lifecycle surfaces
+## Historical v0.6.2 response and lifecycle surfaces
 
-The approved direct upgrade from CLI/SDK `0.6.0` to `0.6.1` keeps offline
+The approved direct upgrade from CLI/SDK `0.6.1` to `0.6.2` keeps offline
 compatibility separate from live backend status. Wakeups expose v2 fields and
 typed lifecycle actions through the existing resource:
 
@@ -80,7 +80,9 @@ The SDK validates local attachment paths before I/O, requires explicit
 `allow_external_file=True` for paths outside the working directory, and does
 not retry a target failure after upload. Omitted and explicit-null response
 fields remain distinct, and unknown forward-compatible status/action values are
-preserved.
+preserved. Multi-value text and URL properties are passed as immutable tuples;
+the SDK emits compact JSON arrays, deduplicated in first-seen order. Wakeups
+expose `last_error` when present, while daemon status exposes `cli_commit`.
 
 Duplicate issue transitions are explicit and atomic:
 
@@ -603,6 +605,21 @@ process.wait()
 ```
 
 See the complete runnable examples under [examples/](../examples/).
+
+## Runtime visibility and access
+
+`client.runtimes.list()` and `client.runtimes.rename()` decode the runtime
+definition's optional `visibility` and ordered `shared_with` member IDs.
+Legacy responses omit these fields safely. `client.runtimes.update()` is a
+target-version operation and returns `RuntimeUpdateResult`; it does not change
+sharing. Runtime visibility, sharing, grant, and revoke writes are not exposed
+because the CLI has no corresponding command. Runtime deletion remains a
+separate destructive lifecycle operation, never an access-revocation shortcut.
+
+Agent create/update and workspace create/update retain their CLI runtime and
+allowlist behavior. A reviewed HTTP 403 is surfaced as a generic
+`AuthorizationError` without CLI response text, command arguments, or private
+backend details.
 
 ## Handle typed upstream failures
 
