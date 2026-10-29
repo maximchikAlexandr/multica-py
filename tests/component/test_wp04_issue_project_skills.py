@@ -205,6 +205,12 @@ def test_skill_refresh_remote_failures_keep_typed_error_and_existing_portable_fi
         ("SKILL.md", "old instructions"),
         ("references/guide.md", "old guide"),
     )
+    _write_skill_response(fake, responses_dir, stdout=json.dumps(existing_bundle))
+    after = client.skills.files.list("skill-1", with_content=True)
+    assert tuple((file.path, file.content) for file in after.items) == (
+        ("SKILL.md", "old instructions"),
+        ("references/guide.md", "old guide"),
+    )
 
 
 @pytest.mark.parametrize(
@@ -239,8 +245,12 @@ def test_skill_refresh_path_rejection_preserves_existing_readable_snapshot(
     with pytest.raises(ValidationError) as excinfo:
         client.skills.refresh("skill-1")
     assert "400" in excinfo.value.stderr
-
     assert tuple((file.path, file.content) for file in existing.items) == (
+        ("SKILL.md", "stable instructions"),
+    )
+    _write_skill_response(fake, responses_dir, stdout=json.dumps(old_bundle))
+    after = client.skills.files.list("skill-1", with_content=True)
+    assert tuple((file.path, file.content) for file in after.items) == (
         ("SKILL.md", "stable instructions"),
     )
 
@@ -255,6 +265,14 @@ def test_skill_bundle_decodes_complete_portable_text_files_without_binary_payloa
         {"id": "file-2", "path": "references/guide.md", "content": "guide"},
         {"id": "file-3", "path": "scripts/run.py", "content": "print('ok')"},
     ]
+    binary_candidate = {
+        "path": "assets/logo.png",
+        "kind": "binary",
+        "content_hex": "89504e470d0a1a0a",
+    }
+    candidates = (*bundle, binary_candidate)
+    candidate_paths = {candidate["path"] for candidate in candidates}
+    binary_path = binary_candidate["path"]
     fake = FakeMultica(responses_dir=responses_dir)
     _write_skill_response(
         fake,
@@ -275,4 +293,47 @@ def test_skill_bundle_decodes_complete_portable_text_files_without_binary_payloa
         "scripts/run.py",
     )
     assert tuple(file.content for file in files.items) == ("instructions", "guide", "print('ok')")
-    assert all(not file.path.endswith(".bin") for file in files.items)
+    returned_paths = {file.path for file in files.items}
+    assert binary_path in candidate_paths
+    assert binary_path not in returned_paths
+    assert returned_paths == {"SKILL.md", "references/guide.md", "scripts/run.py"}
+
+
+def test_successful_skill_refresh_replaces_the_entire_bundle(
+    client_factory: Callable[..., MulticaClient], tmp_path: pathlib.Path
+) -> None:
+    responses_dir = tmp_path / "responses"
+    responses_dir.mkdir()
+    fake = FakeMultica(responses_dir=responses_dir)
+    old_bundle = [
+        {"id": "old-1", "path": "SKILL.md", "content": "old instructions"},
+        {"id": "old-2", "path": "references/old.md", "content": "old reference"},
+    ]
+    new_bundle = [
+        {"id": "new-1", "path": "SKILL.md", "content": "new instructions"},
+        {"id": "new-2", "path": "references/new.md", "content": "new reference"},
+        {"id": "new-3", "path": "scripts/new.py", "content": "print('new')"},
+    ]
+    _write_skill_response(fake, responses_dir, stdout=json.dumps(old_bundle))
+    client = client_factory(environment=(("MULTICA_FAKE_RESPONSES", str(responses_dir)),))
+    before = client.skills.files.list("skill-1", with_content=True)
+    assert tuple(file.path for file in before.items) == ("SKILL.md", "references/old.md")
+
+    _write_skill_response(
+        fake,
+        responses_dir,
+        stdout=json.dumps({"id": "skill-1", "name": "refreshed", "file_count": 3}),
+    )
+    refreshed = client.skills.refresh("skill-1")
+    assert refreshed.name == "refreshed"
+    _write_skill_response(fake, responses_dir, stdout=json.dumps(new_bundle))
+
+    after = client.skills.files.list("skill-1", with_content=True)
+    assert tuple((file.path, file.content) for file in after.items) == (
+        ("SKILL.md", "new instructions"),
+        ("references/new.md", "new reference"),
+        ("scripts/new.py", "print('new')"),
+    )
+    assert {file.path for file in after.items}.isdisjoint(
+        {file.path for file in before.items} - {"SKILL.md"}
+    )
