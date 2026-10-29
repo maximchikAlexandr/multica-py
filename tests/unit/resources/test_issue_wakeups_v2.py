@@ -74,6 +74,11 @@ _CONDITION_FAMILY_CASES = (
         {"referenced_issue": {"id": "ISSUE-2", "state": "done"}},
         '{"referenced_issue":{"id":"ISSUE-2","state":"done"}}',
     ),
+    _ConditionFamilyCase(
+        "reference-blocked",
+        {"referenced_issue": {"id": "ISSUE-2", "state": "blocked"}},
+        '{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}',
+    ),
 )
 
 
@@ -128,6 +133,24 @@ _CONDITION_SHAPE_CASES = (
         "kwargs11-property must be non-null",
         {"condition": {"property": None}},
         "property must be non-null",
+    ),
+    _ConditionShapeCase(
+        "kwargs12-referenced_issue state",
+        {"condition": {"referenced_issue": {"id": "ISSUE-2", "state": "unknown"}}},
+        "referenced_issue state",
+    ),
+    _ConditionShapeCase(
+        "kwargs13-referenced_issue dependency",
+        {"condition": {"referenced_issue": {"state": "blocked"}}},
+        "id must be nonblank",
+    ),
+    _ConditionShapeCase(
+        "kwargs14-blocked with event types",
+        {
+            "condition": {"referenced_issue": {"id": "ISSUE-2", "state": "blocked"}},
+            "event_types": ("issue.updated",),
+        },
+        "cannot be combined",
     ),
 )
 
@@ -499,6 +522,67 @@ def test_all_condition_families_use_canonical_json_and_are_server_owned(
     transport.run_bytes.return_value = command_result(wakeup_payload(condition=case.condition))
     assert command.run().condition == case.condition
     transport.run_bytes.assert_called_once()
+
+
+@pytest.mark.parametrize("operation", ("create", "update"))
+def test_blocked_issue_condition_round_trips_on_create_and_update(operation: str) -> None:
+    transport = make_transport()
+    resource = wakeups(transport)
+    condition = {"referenced_issue": {"id": "ISSUE-2", "state": "blocked"}}
+    payload = wakeup_payload(condition=condition)
+    transport.run_bytes.return_value = command_result(payload)
+
+    if operation == "create":
+        command = create_args(resource, condition=condition)
+        expected = (
+            "multica issue wakeup create iss-1 --instruction 'Run checks' --kind event "
+            '--condition \'{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}\' '
+            "--output json"
+        )
+    else:
+        command = update_args(resource, condition=condition)
+        expected = (
+            "multica issue wakeup update iss-1 wake-1 --instruction 'Run checks' --kind event "
+            '--condition \'{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}\' '
+            "--output json"
+        )
+
+    assert command.commands == (expected,)
+    assert command.run().condition == condition
+    assert any("blocked" in arg for arg in transport.run_bytes.call_args.args[0])
+
+
+@pytest.mark.parametrize(
+    ("operation", "payload"),
+    (
+        (
+            "get",
+            b'{"id":"wake-1","condition":{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}}',
+        ),
+        (
+            "list",
+            b'{"wakeups":[{"id":"wake-1","condition":{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}}]}',
+        ),
+        (
+            "events",
+            b'{"events":[{"name":"issue.state","condition":{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}}]}',
+        ),
+    ),
+)
+def test_blocked_issue_condition_is_preserved_on_read_paths(operation: str, payload: bytes) -> None:
+    transport = make_transport()
+    transport.run_bytes.return_value = command_result(payload)
+    resource = wakeups(transport)
+    condition: object
+
+    if operation == "get":
+        condition = resource.get("iss-1", "wake-1").condition
+    elif operation == "list":
+        condition = resource.list("iss-1").items[0].condition
+    else:
+        condition = resource.events().events[0].condition
+
+    assert condition == {"referenced_issue": {"id": "ISSUE-2", "state": "blocked"}}
 
 
 @pytest.mark.parametrize("case", _CONDITION_SHAPE_CASES, ids=lambda case: case.id)
