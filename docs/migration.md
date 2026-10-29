@@ -19,9 +19,10 @@ provider-adapter contract.
 
 The approved target is Multica CLI `0.7.1` at source commit
 `aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` (release `425269384`). The direct
-compatibility interval is `[0.6.2, 0.7.2)` and baseline is CLI `0.6.2` at
-`7ab92d7622ecd81d179a8d83ae2dea74835a5069`; no intermediate SDK release is
-required. The full 209-node CLI inventory and all 196 response work items are
+upgrade is from CLI `0.7.0` at baseline source commit
+`dbdbb299164347586e2650bb67684a490726a798`. The compatibility interval is
+`[0.6.2, 0.7.2)`, preserving `0.6.2` as the supported minimum; no intermediate
+SDK release is required. The full 209-node CLI inventory and all 196 response work items are
 reconciled.
 
 The `0.7.1` update adds the open wakeup state `blocked` and agent `custom_args`

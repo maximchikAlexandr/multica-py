@@ -6,11 +6,12 @@ The generated runtime constants in
 - `TARGET_VERSION` remains the exact source checkout pinned by every source reference;
 - `MIN_CLI_VERSION` and exclusive `MAX_CLI_VERSION` come from the approved compatibility block.
 
-The current reviewed interval is `[0.6.2, 0.7.2)`. This direct `0.6.2` →
+The current reviewed interval is `[0.6.2, 0.7.2)`. This direct `0.7.0` →
 `0.7.1` migration compares baseline source commit
-`7ab92d7622ecd81d179a8d83ae2dea74835a5069` with target `0.7.1` at source
-commit `aec9b0b1699939a6d993da9ca2ebd2c62900a8e0`; it does not publish an
-intermediate SDK release. The target is release `425269384`. The typed SDK
+`dbdbb299164347586e2650bb67684a490726a798` with target `0.7.1` at source
+commit `aec9b0b1699939a6d993da9ca2ebd2c62900a8e0`; the supported CLI floor
+remains `0.6.2`, and no intermediate SDK release is required. The target is
+release `425269384`. The typed SDK
 maintains a closed 209-node inventory, 193-operation registry, and 196-entrypoint
 response registry, with eight changed and 188 unchanged responses. Runtime list
 and rename return visibility and ordered sharing identities, while target-version
@@ -19,7 +20,13 @@ outside the SDK because the CLI provides no corresponding operation.
 Historical note: the superseded `0.5.0` → `0.5.1` review is retained only as
 historical comparison evidence, not as the current compatibility claim.
 
-The baseline release is GitHub release `411568605`, asset
+The direct comparison baseline is GitHub release `421685918`, asset
+`multica-cli-0.7.0-darwin-arm64.tar.gz`: archive digest
+`0e42f2387829a7137ff2cf7278731282b75f691272a02e4c7f958b5ac104b865`, executable
+digest `b867363c94dafb2045885e4dd9da347cd703056b0a7fe1227466dbc60d1f5a10`,
+and version-output digest
+`ce2e32186bbbafdfe9b0c75b5dab486be00b3940b78350ccbee3d0c2067f2099`.
+The `0.6.2` supported-floor release is GitHub release `411568605`, asset
 `multica-cli-0.6.2-darwin-arm64.tar.gz`: archive digest
 `fc6651c46bfe11724d38f8cfea4bf421d8c61d00e9cfc3e7766d20b992694f31`, executable
 digest `dd33644e6b6860cd618bb8407e9213649e0bf1c9bb23ef30a5f9b39ac851bb27`,

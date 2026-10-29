@@ -11,7 +11,7 @@
 - Covers issue search and assignment, atomic project-resource partial updates,
   portable all-or-nothing skill bundles, and typed remote skill failures.
 - Reconciles the 209-command and 196-response inventories; migrate directly
-  from CLI/SDK `0.6.2`.
+  from CLI/SDK `0.7.0` to `0.7.1` while retaining the `0.6.2` support floor.
 
 ## 0.7.0
 

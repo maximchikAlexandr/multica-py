@@ -33,8 +33,9 @@ Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`
 
 The approved SDK target is Multica CLI `0.7.1` at commit
 `aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` (release `425269384`), with
-compatibility interval `[0.6.2, 0.7.2)`. Migrate directly from CLI/SDK
-`0.6.2`; no intermediate SDK release is supported. The typed surface covers
+compatibility interval `[0.6.2, 0.7.2)`. The reviewed release migration is
+directly from CLI/SDK `0.7.0` to `0.7.1`; SDK compatibility still includes
+CLI `0.6.2`. The typed surface covers
 all 209 target command nodes, 193 operations, and 196 response entrypoints.
 The SDK also supports blocked wakeup conditions, agent custom arguments,
 autopilot task settlement, process-cleanup outcomes, safe skill-bundle refresh,
@@ -62,7 +63,8 @@ Task-supplement mutation/receipt APIs, duplicate receipt and PR automation,
 UI cache calculations, daemon identity, messaging/media, mobile, localization,
 and pricing changes remain outside this SDK. On a failed target acceptance,
 roll back the contract, generated runtime, fixtures, docs, and package claims
-together to the directly reviewed prior `0.6.2` state.
+together to the directly reviewed prior `0.7.0` state while retaining the
+supported `0.6.2` minimum.
 See [the migration guide](docs/migration.md) for presence/error semantics,
 version gates, deferred surfaces, checksum roles, and rollback guidance.
 

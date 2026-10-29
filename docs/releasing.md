@@ -17,11 +17,11 @@ collect → validate --source-checkout → render → check
 ```
 
 The current approved target is `v0.7.1` with compatibility interval
-`[0.6.2, 0.7.2)`. The pinned commit, release asset/checksum, and exact
+`[0.6.2, 0.7.2)`, preserving the `0.6.2` minimum. The pinned commit, release asset/checksum, and exact
 commands for this review are maintained in
 [docs/compatibility.md](compatibility.md).
-The direct comparison source is `0.6.2` at commit
-`7ab92d7622ecd81d179a8d83ae2dea74835a5069`; the target source commit is
+The direct comparison source is `0.7.0` at commit
+`dbdbb299164347586e2650bb67684a490726a798`; the target source commit is
 `aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` (release `425269384`). Verify
 runtime response ownership:
 list and rename may decode visibility and sharing identities, while update

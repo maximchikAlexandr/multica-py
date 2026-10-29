@@ -2,9 +2,10 @@
 
 Pinned target upstream: `multica-ai/multica@aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` (tag `v0.7.1`)
 
-The reviewed compatibility interval is `[0.6.2, 0.7.2)`: baseline `v0.6.2`
-at source commit `7ab92d7622ecd81d179a8d83ae2dea74835a5069` is the direct
-comparison and `v0.7.1` is the maximum tested target. The approved inventory
+The reviewed compatibility interval is `[0.6.2, 0.7.2)`: the direct comparison
+is `v0.7.0` at source commit `dbdbb299164347586e2650bb67684a490726a798` to
+`v0.7.1`; `0.6.2` remains the supported minimum and `0.7.1` is the maximum
+tested target. The approved inventory
 covers all 209 target command nodes and all 196 supported response work items.
 Inherited global flags, interactive login inputs, output modes, and action
 result shapes are reconciled in typed command plans and canonical vectors.
