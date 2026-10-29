@@ -15,14 +15,23 @@ There is no provider registry or automatic provider discovery. See
 target-path/environment/staging rules, process-control guarantees, and the
 provider-adapter contract.
 
-## v0.7.0 direct migration
+## v0.7.1 direct migration
 
-The approved target is Multica CLI `0.7.0` at source commit
-`dbdbb299164347586e2650bb67684a490726a798` (release `421685918`). The direct
-compatibility interval is `[0.6.2, 0.7.1)` and baseline is CLI `0.6.2` at
+The approved target is Multica CLI `0.7.1` at source commit
+`aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` (release `425269384`). The direct
+compatibility interval is `[0.6.2, 0.7.2)` and baseline is CLI `0.6.2` at
 `7ab92d7622ecd81d179a8d83ae2dea74835a5069`; no intermediate SDK release is
 required. The full 209-node CLI inventory and all 196 response work items are
 reconciled.
+
+The `0.7.1` update adds the open wakeup state `blocked` and agent `custom_args`
+handling, including omission versus an explicit empty list. Create-issue
+autopilot results retain their `task_id`; task and issue-run projections preserve
+known process-cleanup outcomes while accepting future string values. Issue
+search keeps large numeric-looking input as text, workflow updates preserve the
+returned assignee, and concurrent project-resource partial updates retain
+unmentioned fields. Skill refresh accepts portable text bundles atomically,
+skips binary files, and retains the prior bundle on typed remote failures.
 
 Runtime list and rename now decode optional `RuntimeDefinition.visibility` and
 ordered `RuntimeDefinition.shared_with` member IDs. Import the public type from

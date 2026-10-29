@@ -31,14 +31,17 @@ pip install "multica-py @ git+https://github.com/maximchikAlexandr/multica-py@v0
 
 Lock reproducibility: this repo pins every transitive dep in `uv.lock`. For `uv`, `uv sync --frozen` verifies the lockfile; for `pip`, prefer the `--require-hashes` flow once hashes are exported.
 
-The approved SDK target is Multica CLI `0.7.0` at commit
-`dbdbb299164347586e2650bb67684a490726a798` (release `421685918`), with
-compatibility interval `[0.6.2, 0.7.1)`. Migrate directly from CLI/SDK
+The approved SDK target is Multica CLI `0.7.1` at commit
+`aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` (release `425269384`), with
+compatibility interval `[0.6.2, 0.7.2)`. Migrate directly from CLI/SDK
 `0.6.2`; no intermediate SDK release is supported. The typed surface covers
 all 209 target command nodes, 193 operations, and 196 response entrypoints.
-Runtime list and rename include read-only visibility and ordered sharing
-identities; target-version updates still return `RuntimeUpdateResult`. The SDK
-does not provide runtime share/revoke writes or bypass the CLI with HTTP.
+The SDK also supports blocked wakeup conditions, agent custom arguments,
+autopilot task settlement, process-cleanup outcomes, safe skill-bundle refresh,
+and concurrent project-resource updates through the existing API. Runtime
+list and rename include read-only visibility and ordered sharing identities;
+target-version updates still return `RuntimeUpdateResult`. The SDK does not
+provide runtime share/revoke writes or bypass the CLI with HTTP.
 Inherited global flags and interactive login inputs remain represented by
 typed command plans; use `command.commands` to inspect redacted previews.
 

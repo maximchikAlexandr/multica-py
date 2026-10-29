@@ -95,6 +95,21 @@ The reference must be nonblank. `set_status` requires status `cancelled`, while
 `update` permits omitted status or explicit `cancelled`; descriptions and emitted
 attachments cannot accompany a duplicate transition.
 
+## Multica CLI 0.7.1 behavior
+
+The SDK accepts the wakeup condition state `blocked` through the existing
+wakeup resource and preserves it when reading create, update, get, list, and
+event results. Agent `custom_args` distinguishes omission from an explicit
+empty tuple; provider-reserved arguments raise the standard typed validation
+error. Changing an agent runtime does not discard its custom arguments.
+
+Create-issue autopilot results retain their task identity, and blocked issue
+settlement does not report the run as a failed task. Process-cleanup values stay
+forward-compatible strings on issue-run and agent-task results so unknown
+values remain available to callers. Skill refresh replaces a bundle only after
+a complete portable text bundle is accepted; a failed refresh leaves the prior
+bundle readable. Project-resource partial updates preserve unnamed fields.
+
 ## Collect or stream a managed process
 
 Buffered process APIs provide one immutable `ProcessResult` for the complete

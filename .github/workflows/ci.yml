@@ -117,8 +117,8 @@ jobs:
       - run: uv sync --frozen --all-groups
       - name: Fetch pinned Multica source for contract audit
         run: |
-          mkdir -p .devlocal/upstream-contract/v0.6.2..v0.7.0/source
-          git clone --no-checkout https://github.com/multica-ai/multica.git .devlocal/upstream-contract/v0.6.2..v0.7.0/source/multica
-          git -C .devlocal/upstream-contract/v0.6.2..v0.7.0/source/multica fetch --depth=1 origin dbdbb299164347586e2650bb67684a490726a798
-          git -C .devlocal/upstream-contract/v0.6.2..v0.7.0/source/multica checkout --detach dbdbb299164347586e2650bb67684a490726a798
+          mkdir -p .devlocal/upstream-contract/v0.7.1/source
+          git clone --no-checkout https://github.com/multica-ai/multica.git .devlocal/upstream-contract/v0.7.1/source/multica
+          git -C .devlocal/upstream-contract/v0.7.1/source/multica fetch --depth=1 origin aec9b0b1699939a6d993da9ca2ebd2c62900a8e0
+          git -C .devlocal/upstream-contract/v0.7.1/source/multica checkout --detach aec9b0b1699939a6d993da9ca2ebd2c62900a8e0
       - run: make contract

@@ -6,19 +6,20 @@ Migration details and removed/renamed surfaces are documented in
 singular-reference example is in
 [examples/singular_references.py](../examples/singular_references.py).
 
-## Approved v0.7.0 target
+## Approved v0.7.1 target
 
-This SDK contract supports Multica CLI `0.7.0` at commit
-`dbdbb299164347586e2650bb67684a490726a798` (release `421685918`), with the
-reviewed/compatible interval `[0.6.2, 0.7.1)` and `0.7.0` as the maximum
+This SDK contract supports Multica CLI `0.7.1` at commit
+`aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` (release `425269384`), with the
+reviewed/compatible interval `[0.6.2, 0.7.2)` and `0.7.1` as the maximum
 tested CLI version. Migrate directly from `0.6.2`; no intermediate SDK release
 is required. The complete public CLI parity surface is represented by typed
 eager and `*_command()` methods: 209 target command nodes, 193 operations, and
 196 response entrypoints, including wakeup v2,
 task cursors, issue attachments, comment supplements, pull-request
 auto-complete status, workspace MCP agent counts, multi-value properties,
-wakeup error details, and daemon commit provenance. The SDK intentionally
-does not expose daemon autostart child APIs.
+wakeup error details, daemon commit provenance, and the `0.7.1` wakeup, agent,
+autopilot, issue, project-resource, skill, and process-cleanup scenarios. The
+SDK intentionally does not expose daemon autostart child APIs.
 
 Duplicate transitions extend the existing direct and bound
 `set_status[_command]` and `update[_command]` methods. A nonblank
