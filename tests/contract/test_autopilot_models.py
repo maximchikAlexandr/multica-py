@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import datetime
+import json
 from dataclasses import dataclass
 from unittest.mock import MagicMock
 
+import msgspec
 import pytest
 
 from multica_py._internal.decoders import decode_json
@@ -204,6 +206,24 @@ def test_autopilot_run_decoding(json_bytes: bytes, expected_fields: dict[str, ob
     run = decode_json(json_bytes, AutopilotRun, command="test")
     for field, expected in expected_fields.items():
         assert getattr(run, field) == expected, f"{field} mismatch"
+
+
+@pytest.mark.parametrize("task_id", (17, True, [], {}), ids=("number", "bool", "array", "object"))
+def test_autopilot_run_rejects_malformed_non_null_task_id(task_id: object) -> None:
+    with pytest.raises((msgspec.ValidationError, OutputShapeError)):
+        decode_json(
+            json.dumps(
+                {
+                    "id": "r1",
+                    "autopilot_id": "a1",
+                    "source": "manual",
+                    "status": "completed",
+                    "task_id": task_id,
+                }
+            ).encode(),
+            AutopilotRun,
+            command="autopilot run",
+        )
 
 
 _DECODE_ERROR_CASES: tuple[DecodeErrorCase, ...] = (
