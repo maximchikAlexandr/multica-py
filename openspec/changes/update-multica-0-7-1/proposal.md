@@ -31,5 +31,5 @@ None.
 
 - Approved contract and generated projection: `contracts/sdk-contract.json`, `src/multica_py/_generated/approved_sdk.py`, contract validation/render/check tooling, and exact source/test references.
 - Existing public models and adapters for agents, issue wakeups, autopilot runs, issue search/update, project resources, skills, and task-run results; no new top-level SDK resource or dependency.
-- Existing unit, contract, component, packaging, and live-smoke fixtures plus a focused isolated `multica-test` verification walkthrough; generated evidence remains untracked and is published only in Multica.
+- Existing unit, contract, component, packaging, and CI fixtures; verification adds no task-specific live script or infrastructure, and generated evidence remains untracked and is published only in Multica.
 - Compatibility, API, service-usage, migration, coverage, changelog, packaging, and release documentation.

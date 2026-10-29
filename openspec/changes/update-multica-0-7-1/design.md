@@ -56,19 +56,19 @@ Alternative considered: add SDK transaction, bundle, or workflow abstractions. R
 
 No new subsystem is necessary: the need is fully covered by the existing approved contract, deterministic generator, resource adapters, frozen/open models, shared standard-error decoder, table-case types, and repository verification commands. Parallel validators, version-specific resource wrappers, provider policy registries, task-result enums, bundle managers, and another E2E runner are omitted.
 
-### 7. Independent evidence uses one focused isolated walkthrough
+### 7. Independent evidence uses existing lower-level and CI capabilities
 
-Implementation SHALL add one repository-native verification script using the project-described isolated `multica-test` target. It SHALL assert representative real-boundary behavior for wakeup `blocked`, provider-reserved arguments, autopilot settlement, issue boundary/assignee behavior, concurrent project-resource updates, atomic skill refresh, and process-cleanup decoding, while reusing lower-level tests for exhaustive case matrices. The script SHALL record the exact product and test revisions, use disposable data, sanitize outputs, and clean up failure-safely. The Tester SHALL independently perform the public actions and inspect resulting objects/state; replaying the script alone is not the manual check.
+`e2e_required=false`. The change governs SDK mappings, validation, decoding, compatibility, deterministic generation, and documented behavior; each affected scenario can be proved with the repository's existing frozen tables, fake-CLI component boundary, controlled lifecycle/concurrency fixtures, contract checks, and non-live CI. No task-specific live script, repository URL, new target, or additional infrastructure is justified. The Tester SHALL independently inspect scenario-to-test coverage, execute focused lower-level checks from a fresh exact-revision checkout, and verify the published CI and remote SHA without claiming live server proof.
 
-No before/after PNG is required because this change does not alter human-facing terminal tables, logs, progress, summaries, or browser UI. Actual JSON/text outputs, commands, exit codes, hashes, assertions, and provenance SHALL be attached only to Multica, not committed.
+No before/after PNG is required because this change does not alter human-facing terminal tables, logs, progress, summaries, or browser UI. Commands, exit codes, assertions, provenance, and links SHALL be attached only to Multica, not committed.
 
 ## Risks / Trade-offs
 
 - **Wide source diff can hide SDK-relevant behavior** → Close all 209 command nodes and 196 supported response entrypoints with old/target source URLs and explicit actions.
 - **Open upstream values reduce static exhaustiveness** → Keep open strings/mappings and test known `0.7.1` values without rejecting unknown future values.
-- **Server-correctness changes can look wire-compatible** → Require component fixtures plus focused real-boundary assertions for concurrency, settlement, and atomic refresh.
-- **Live evidence can accidentally target the primary profile or wrong revision** → Use only the isolated project stand and `multica-test`, prove exact revisions before mutation, and publish sanitized evidence with read-back.
-- **Skill failure testing can overwrite the prior bundle** → Use disposable skills and assert the old bundle before and after each failure class, with failure-safe cleanup.
+- **Server-correctness changes can look wire-compatible** → Require deterministic fake-CLI/component fixtures that model the reviewed target responses and state transitions without overstating them as live-server proof.
+- **No task-specific live target is authorized** → Keep E2E disabled, add no script or infrastructure, and make exact-revision lower-level/CI evidence the acceptance boundary.
+- **Skill failure testing can accidentally mask partial replacement** → Use controlled filesystem fixtures and assert the old bundle before and after each failure class.
 - **Full offline verification may exceed the local ten-minute limit** → Stop only the owned test process at ten minutes and finish the exact published revision in GitHub Actions without splitting the suite.
 
 ## Migration Plan
@@ -78,7 +78,7 @@ No before/after PNG is required because this change does not alter human-facing 
 3. Extend the existing resource/model adapters only where required and add table rows or focused regressions for every specified behavior.
 4. Update compatibility, API, migration, coverage, changelog, packaging, and release documentation for direct `0.7.0` to `0.7.1` adoption.
 5. Run focused gates locally; run any automated suite expected to exceed ten minutes in GitHub Actions on the published exact revision.
-6. Have an independent Tester execute the isolated walkthrough, attach sanitized evidence in Multica with read-back, and remove only disposable stand data.
+6. Have an independent Tester verify exact-revision scenario coverage and focused lower-level/CI evidence, then attach the sanitized command/link record in Multica with read-back.
 7. Roll back by reverting the implementation commit set and restoring the prior generated projection and `0.7.0` target; no persistent data migration is introduced.
 
 ## Open Questions

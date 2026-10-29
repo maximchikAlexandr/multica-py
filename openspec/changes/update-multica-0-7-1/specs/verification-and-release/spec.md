@@ -26,20 +26,20 @@ The published implementation revision SHALL pass contract validate/render/check,
 - **WHEN** all implementation and verification artifacts are inspected before delivery
 - **THEN** no `.devlocal` evidence, logs, diagnostic JSON, screenshots, hashes, or environment-specific output SHALL be tracked
 
-### Requirement: Focused isolated E2E proves real-boundary corrections
-One repository-native script and one independent Tester walkthrough SHALL use the project-described isolated test repository, profile, daemon, backend, database, and `multica-test` executable to close behavior gaps that lower-level fixtures cannot prove alone.
+### Requirement: Existing lower-level checks prove the SDK corrections
+The implementation SHALL use the repository's existing unit, contract, fake-CLI component, lifecycle, concurrency, documentation, packaging, and CI capabilities to prove every changed SDK scenario without adding a task-specific live script, repository target, or infrastructure.
 
-#### Scenario: Readiness gate precedes mutations
-- **WHEN** the Tester prepares the walkthrough
-- **THEN** the script and independent inspection SHALL prove the exact product revision, test revision, CLI `0.7.1`, isolated profile/daemon, disposable namespace, and focused offline checks before creating data
+#### Scenario: Every changed scenario has sufficient coverage
+- **WHEN** wakeup, agent, autopilot, issue, project-resource, skill, and process-cleanup coverage is reviewed
+- **THEN** every scenario SHALL map to a deterministic test and assertion at the lowest sufficient layer, including controlled lifecycle and interleaving fixtures where a simple table row is insufficient
 
-#### Scenario: Real-boundary cases are observable
-- **WHEN** the focused walkthrough executes wakeup blocked, provider-reserved custom arguments, autopilot settlement, issue boundary/assignee, concurrent project-resource, skill atomicity, and process-cleanup observations
-- **THEN** each case SHALL record public calls, initial state, exact assertions, exit status, sanitized result artifacts, and failure-safe cleanup
+#### Scenario: Independent verification uses the exact revision
+- **WHEN** the Tester verifies the delivery from a fresh checkout
+- **THEN** the Tester SHALL confirm the exact published revision, inspect the scenario-to-test mapping, run the focused lower-level checks, and verify the corresponding CI evidence without representing those checks as live-server proof
 
-#### Scenario: Independent inspection is not a script replay
-- **WHEN** the Tester performs the manual check
-- **THEN** the Tester SHALL independently invoke representative public actions and inspect returned SDK objects and final server state rather than treating a second script invocation as manual evidence
+#### Scenario: No new infrastructure is introduced
+- **WHEN** verification artifacts and dependencies are inspected
+- **THEN** no task-specific E2E script, repository URL, profile, daemon, backend, database, port, credential, or additional runner SHALL be required
 
 #### Scenario: No decorative images are required
 - **WHEN** verification confirms that terminal tables, logs, progress, summaries, and browser UI are unchanged
@@ -58,7 +58,7 @@ Implementation and Tester evidence SHALL identify one published revision and SHA
 
 #### Scenario: Cleanup preserves durable development results
 - **WHEN** verification finishes or fails
-- **THEN** disposable stand data SHALL be removed while the evidence branch, commits, links, and Multica attachments remain available; merge, closure, and branch deletion SHALL require separate authorization
+- **THEN** run-owned local diagnostic output SHALL be removed while the evidence branch, commits, links, and Multica attachments remain available; merge, closure, and branch deletion SHALL require separate authorization
 
 ### Requirement: Direct migration and rollback remain coherent
 User documentation SHALL describe direct `0.7.0` to `0.7.1` migration, the preserved `0.6.2` minimum, maximum-tested `0.7.1`, exclusive `0.7.2` ceiling, changed retained behavior, open-value policy, and rollback to the prior contract projection.

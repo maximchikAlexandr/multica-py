@@ -35,9 +35,9 @@
 - [ ] 5.3 Run strict OpenSpec validation, source-link audit, contract validate/render/check, public-operation completeness, live-test collection isolation, mypy for source/tests, Ruff check/format, documentation, and packaging gates.
 - [ ] 5.4 Run the full non-live suite locally only if it can complete within ten minutes; otherwise run the unsplit suite in GitHub Actions against the published exact revision and preserve the CI link.
 
-## 6. Independent E2E Evidence and Delivery
+## 6. Independent Verification Evidence and Delivery
 
-- [ ] 6.1 Add one repository-native focused verification script that uses only the isolated `multica-test` profile/daemon/stand, records exact revisions, creates disposable data, emits sanitized result artifacts, and cleans up failure-safely.
-- [ ] 6.2 Cover wakeup blocked, provider-reserved arguments, autopilot settlement, issue boundary/assignee, concurrent project-resource updates, skill atomicity, and process-cleanup observations in the script without duplicating exhaustive lower-level matrices.
-- [ ] 6.3 Publish implementation and test-script commits separately when both produce distinct durable results, push normally, and prove the remote branch SHA equals the reviewed local SHA.
-- [ ] 6.4 Have an independent Tester perform the public walkthrough, inspect returned objects and final state, attach commands/results/hashes/links in Multica with read-back, explain why no visible-output PNG applies, and remove only disposable stand data.
+- [ ] 6.1 Map every changed scenario to an existing or extended unit, contract, fake-CLI component, lifecycle, concurrency, documentation, or packaging check; add no task-specific live script or infrastructure.
+- [ ] 6.2 Have an independent Tester use a fresh exact-revision checkout to inspect the mapping, run the focused lower-level checks, and verify that their assertions cover wakeup, agent, autopilot, issue, project-resource, skill, and process-cleanup behavior without claiming live-server proof.
+- [ ] 6.3 Publish normal development and test commits according to their natural results, push normally, and prove the remote branch SHA equals the reviewed local SHA.
+- [ ] 6.4 Attach commands, exit codes, assertions, CI/MR/commit/file links, and the no-image rationale in Multica, read the comment and attachments back, and keep diagnostic outputs untracked.
