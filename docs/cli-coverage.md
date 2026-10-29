@@ -12,7 +12,9 @@ result shapes are reconciled in typed command plans and canonical vectors.
 The 209-node reconciliation has 205 unchanged and four changed nodes, with
 zero added or removed nodes; hidden, test-only, and dynamic-Cobra
 classifications remain explicit. The SDK promotes 193 operations and 196
-response entrypoints, with eight changed and 188 unchanged. Runtime list and
+response entrypoints, with 0 changed and 196 unchanged response shapes. The
+V071 changes are wire-compatible behavioral corrections, not response-shape
+changes. Runtime list and
 rename decode visibility and ordered sharing identities; update remains typed
 as `RuntimeUpdateResult`. No public domain leaf
 is certified only by a generic `cli:<command>` transport placeholder.

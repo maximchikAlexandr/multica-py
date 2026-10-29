@@ -1413,6 +1413,40 @@ class AgentArgvCase:
     build: Callable[[AgentResource], Command[Agent]]
 
 
+@dataclass(frozen=True)
+class AgentCustomArgsCase:
+    id: str
+    expected_argv: str
+    build: Callable[[AgentResource], Command[Agent]]
+    expected_custom_args: tuple[str, ...]
+
+
+def _create_agent_with_custom_args(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent", model="gpt-5", custom_args=("--fast", "future"))
+
+
+def _update_agent_with_runtime_and_retained_custom_args(
+    resource: AgentResource,
+) -> Command[Agent]:
+    return resource.update_command("agent-1", runtime_id="runtime-2")
+
+
+_AGENT_CUSTOM_ARGS_CASES = (
+    AgentCustomArgsCase(
+        "create",
+        'multica agent create --name agent --model gpt-5 --custom-args \'["--fast","future"]\' --output json',
+        _create_agent_with_custom_args,
+        ("--fast", "future"),
+    ),
+    AgentCustomArgsCase(
+        "update-retains",
+        "multica agent update agent-1 --runtime-id runtime-2 --output json",
+        _update_agent_with_runtime_and_retained_custom_args,
+        ("--fast", "future"),
+    ),
+)
+
+
 def _create_agent_model_thinking(resource: AgentResource) -> Command[Agent]:
     return resource.create_command(name="agent", model="gpt-5", thinking_level="high")
 
@@ -1554,29 +1588,21 @@ def test_agent_model_thinking_runtime_matrix_emits_exact_argv(
     mock_transport.run_bytes.assert_not_called()
 
 
-@pytest.mark.parametrize("operation", ("create", "update"))
+@pytest.mark.parametrize("case", _AGENT_CUSTOM_ARGS_CASES, ids=lambda case: case.id)
 def test_agent_custom_args_decode_order_and_runtime_update_retains_values(
-    operation: str, mock_transport: MagicMock
+    case: AgentCustomArgsCase, mock_transport: MagicMock
 ) -> None:
     mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
     mock_transport.run_bytes.return_value = command_result(
         b'{"id":"agent-1","name":"agent","custom_args":["--fast","future"]}'
     )
     resource = AgentResource(mock_transport, ClientConfig())
-    command = (
-        resource.create_command(name="agent", model="gpt-5", custom_args=("--fast", "future"))
-        if operation == "create"
-        else resource.update_command("agent-1", runtime_id="runtime-2")
-    )
+    command = case.build(resource)
 
     agent = command.run()
 
-    assert agent.custom_args == ("--fast", "future")
-    assert ("--custom-args" in command.commands[0]) is (operation == "create")
-    if operation == "update":
-        assert command.commands == (
-            "multica agent update agent-1 --runtime-id runtime-2 --output json",
-        )
+    assert agent.custom_args == case.expected_custom_args
+    assert command.commands == (case.expected_argv,)
 
 
 def test_agent_reserved_custom_args_preserve_standard_validation_error(

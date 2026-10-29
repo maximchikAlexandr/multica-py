@@ -208,8 +208,22 @@ def test_autopilot_run_decoding(json_bytes: bytes, expected_fields: dict[str, ob
         assert getattr(run, field) == expected, f"{field} mismatch"
 
 
-@pytest.mark.parametrize("task_id", (17, True, [], {}), ids=("number", "bool", "array", "object"))
-def test_autopilot_run_rejects_malformed_non_null_task_id(task_id: object) -> None:
+@dataclass(frozen=True)
+class MalformedTaskIdCase:
+    id: str
+    value: object
+
+
+_MALFORMED_TASK_ID_CASES = (
+    MalformedTaskIdCase("number", 17),
+    MalformedTaskIdCase("bool", True),
+    MalformedTaskIdCase("array", []),
+    MalformedTaskIdCase("object", {}),
+)
+
+
+@pytest.mark.parametrize("case", _MALFORMED_TASK_ID_CASES, ids=lambda case: case.id)
+def test_autopilot_run_rejects_malformed_non_null_task_id(case: MalformedTaskIdCase) -> None:
     with pytest.raises((msgspec.ValidationError, OutputShapeError)):
         decode_json(
             json.dumps(
@@ -218,7 +232,7 @@ def test_autopilot_run_rejects_malformed_non_null_task_id(task_id: object) -> No
                     "autopilot_id": "a1",
                     "source": "manual",
                     "status": "completed",
-                    "task_id": task_id,
+                    "task_id": case.value,
                 }
             ).encode(),
             AutopilotRun,

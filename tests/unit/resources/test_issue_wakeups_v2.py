@@ -25,6 +25,7 @@ from multica_py.models.issue_wakeups import (
     IssueWakeupTriggerResult,
 )
 from multica_py.resources.issue_wakeups import IssueWakeupResource
+from multica_py.types import JsonValue
 from tests.unit.resources._factories import command_result, make_transport
 
 
@@ -524,65 +525,112 @@ def test_all_condition_families_use_canonical_json_and_are_server_owned(
     transport.run_bytes.assert_called_once()
 
 
-@pytest.mark.parametrize("operation", ("create", "update"))
-def test_blocked_issue_condition_round_trips_on_create_and_update(operation: str) -> None:
+@dataclass(frozen=True)
+class _BlockedConditionWriteCase:
+    id: str
+    invoke: Callable[[IssueWakeupResource, Mapping[str, object]], Command[IssueWakeup]]
+    expected_argv: str
+
+
+def _create_blocked_condition(
+    resource: IssueWakeupResource, condition: Mapping[str, object]
+) -> Command[IssueWakeup]:
+    return create_args(resource, condition=condition)
+
+
+def _update_blocked_condition(
+    resource: IssueWakeupResource, condition: Mapping[str, object]
+) -> Command[IssueWakeup]:
+    return update_args(resource, condition=condition)
+
+
+_BLOCKED_CONDITION_WRITE_CASES = (
+    _BlockedConditionWriteCase(
+        "create",
+        _create_blocked_condition,
+        "multica issue wakeup create iss-1 --instruction 'Run checks' --kind event "
+        '--condition \'{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}\' '
+        "--output json",
+    ),
+    _BlockedConditionWriteCase(
+        "update",
+        _update_blocked_condition,
+        "multica issue wakeup update iss-1 wake-1 --instruction 'Run checks' --kind event "
+        '--condition \'{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}\' '
+        "--output json",
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _BLOCKED_CONDITION_WRITE_CASES, ids=lambda case: case.id)
+def test_blocked_issue_condition_round_trips_on_create_and_update(
+    case: _BlockedConditionWriteCase,
+) -> None:
     transport = make_transport()
     resource = wakeups(transport)
     condition = {"referenced_issue": {"id": "ISSUE-2", "state": "blocked"}}
     payload = wakeup_payload(condition=condition)
     transport.run_bytes.return_value = command_result(payload)
 
-    if operation == "create":
-        command = create_args(resource, condition=condition)
-        expected = (
-            "multica issue wakeup create iss-1 --instruction 'Run checks' --kind event "
-            '--condition \'{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}\' '
-            "--output json"
-        )
-    else:
-        command = update_args(resource, condition=condition)
-        expected = (
-            "multica issue wakeup update iss-1 wake-1 --instruction 'Run checks' --kind event "
-            '--condition \'{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}\' '
-            "--output json"
-        )
+    command = case.invoke(resource, condition)
 
-    assert command.commands == (expected,)
+    assert command.commands == (case.expected_argv,)
     assert command.run().condition == condition
-    assert any("blocked" in arg for arg in transport.run_bytes.call_args.args[0])
+    assert transport.run_bytes.call_args.args[0] == tuple(shlex.split(case.expected_argv)[1:])
 
 
-@pytest.mark.parametrize(
-    ("operation", "payload"),
-    (
-        (
-            "get",
-            b'{"id":"wake-1","condition":{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}}',
-        ),
-        (
-            "list",
-            b'{"wakeups":[{"id":"wake-1","condition":{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}}]}',
-        ),
-        (
-            "events",
-            b'{"events":[{"name":"issue.state","condition":{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}}]}',
-        ),
+def _read_blocked_condition_from_get(resource: IssueWakeupResource) -> JsonValue | None:
+    return resource.get("iss-1", "wake-1").condition
+
+
+def _read_blocked_condition_from_list(resource: IssueWakeupResource) -> JsonValue | None:
+    return resource.list("iss-1").items[0].condition
+
+
+def _read_blocked_condition_from_events(resource: IssueWakeupResource) -> JsonValue | None:
+    return resource.events().events[0].condition
+
+
+@dataclass(frozen=True)
+class _BlockedConditionReadCase:
+    id: str
+    payload: bytes
+    read: Callable[[IssueWakeupResource], JsonValue | None]
+    expected_condition: Mapping[str, object]
+
+
+_BLOCKED_CONDITION_READ_CASES = (
+    _BlockedConditionReadCase(
+        "get",
+        b'{"id":"wake-1","condition":{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}}',
+        _read_blocked_condition_from_get,
+        {"referenced_issue": {"id": "ISSUE-2", "state": "blocked"}},
+    ),
+    _BlockedConditionReadCase(
+        "list",
+        b'{"wakeups":[{"id":"wake-1","condition":{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}}]}',
+        _read_blocked_condition_from_list,
+        {"referenced_issue": {"id": "ISSUE-2", "state": "blocked"}},
+    ),
+    _BlockedConditionReadCase(
+        "events",
+        b'{"events":[{"name":"issue.state","condition":{"referenced_issue":{"id":"ISSUE-2","state":"blocked"}}}]}',
+        _read_blocked_condition_from_events,
+        {"referenced_issue": {"id": "ISSUE-2", "state": "blocked"}},
     ),
 )
-def test_blocked_issue_condition_is_preserved_on_read_paths(operation: str, payload: bytes) -> None:
+
+
+@pytest.mark.parametrize("case", _BLOCKED_CONDITION_READ_CASES, ids=lambda case: case.id)
+def test_blocked_issue_condition_is_preserved_on_read_paths(
+    case: _BlockedConditionReadCase,
+) -> None:
     transport = make_transport()
-    transport.run_bytes.return_value = command_result(payload)
+    transport.run_bytes.return_value = command_result(case.payload)
     resource = wakeups(transport)
-    condition: object
+    condition = case.read(resource)
 
-    if operation == "get":
-        condition = resource.get("iss-1", "wake-1").condition
-    elif operation == "list":
-        condition = resource.list("iss-1").items[0].condition
-    else:
-        condition = resource.events().events[0].condition
-
-    assert condition == {"referenced_issue": {"id": "ISSUE-2", "state": "blocked"}}
+    assert condition == case.expected_condition
 
 
 @pytest.mark.parametrize("case", _CONDITION_SHAPE_CASES, ids=lambda case: case.id)

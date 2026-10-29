@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import datetime
 import json
+import ntpath
 import pathlib
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import msgspec
@@ -15,13 +17,100 @@ from multica_py._internal.specs import RawCommandResult
 from multica_py._internal.transport import CliTransport
 from multica_py.client import MulticaClient
 from multica_py.config import ClientConfig
-from multica_py.exceptions import CommandExecutionError, ValidationError
+from multica_py.exceptions import CommandExecutionError, OutputShapeError, ValidationError
 from multica_py.models.common import Page
 from multica_py.models.project_resources import LocalDirectoryResourceRef
 from multica_py.resources.project_resources import ProjectResourceCollection
+from tests.component.conftest import patch_client_transport
 from tests.fixtures.fake_multica import FakeMultica
 
 pytestmark = pytest.mark.component
+
+
+@dataclass(frozen=True)
+class SkillRefreshFailureCase:
+    id: str
+    status: int
+    expected_error: type[CommandExecutionError]
+    expected_exit: int
+
+
+_SKILL_REFRESH_FAILURE_CASES = (
+    SkillRefreshFailureCase("bad-request", 400, ValidationError, 5),
+    SkillRefreshFailureCase("too-large", 413, CommandExecutionError, 1),
+    SkillRefreshFailureCase("bad-gateway", 502, CommandExecutionError, 1),
+    SkillRefreshFailureCase("unavailable", 503, CommandExecutionError, 1),
+    SkillRefreshFailureCase("timeout", 504, CommandExecutionError, 1),
+)
+
+
+@dataclass(frozen=True)
+class UnsafeSkillPathCase:
+    id: str
+    path: str
+
+
+_UNSAFE_SKILL_PATH_CASES = (
+    UnsafeSkillPathCase("traversal", "../escape.md"),
+    UnsafeSkillPathCase("absolute", "/absolute/escape.md"),
+    UnsafeSkillPathCase("drive-path", "C:\\escape.md"),
+    UnsafeSkillPathCase("unc-path", "\\\\server\\share\\escape.md"),
+)
+
+
+class ControlledSkillStore:
+    """In-memory remote bundle state reached through public SDK calls."""
+
+    def __init__(self, files: Sequence[Mapping[str, object]]) -> None:
+        self.files = {str(item["path"]): dict(item) for item in files}
+        self.refresh_candidate: Sequence[Mapping[str, object]] | None = None
+        self.refresh_attempts = 0
+        self.refresh_error: CommandExecutionError | None = None
+
+    def run_bytes(self, argv: tuple[str, ...], **_: object) -> RawCommandResult:
+        stdout: bytes
+        if argv[:3] == ("skill", "files", "list"):
+            stdout = json.dumps(tuple(self.files.values())).encode()
+        elif argv[:2] == ("skill", "refresh"):
+            self.refresh_attempts += 1
+            if self.refresh_error is not None:
+                raise self.refresh_error
+            if self.refresh_candidate is not None:
+                candidate = {str(item["path"]): dict(item) for item in self.refresh_candidate}
+                if any(
+                    pathlib.PurePosixPath(path).is_absolute()
+                    or ntpath.isabs(path)
+                    or ".." in pathlib.PurePosixPath(path).parts
+                    for path in candidate
+                ):
+                    raise ValidationError(
+                        "unsafe skill path",
+                        exit_code=5,
+                        stderr="Error: GET /api/skills/skill-1/refresh returned 400: non-portable path",
+                    )
+                self.files = candidate
+            stdout = json.dumps(
+                {"id": "skill-1", "name": "refreshed", "file_count": len(self.files)}
+            ).encode()
+        else:
+            raise AssertionError(f"unexpected SDK command: {argv!r}")
+        return RawCommandResult(
+            argv=("multica", *argv),
+            exit_code=0,
+            stdout=stdout,
+            stderr=b"",
+            duration=datetime.timedelta(),
+        )
+
+
+def _client_with_skill_store(
+    client_factory: Callable[..., MulticaClient], store: ControlledSkillStore
+) -> tuple[MulticaClient, MagicMock]:
+    client = client_factory()
+    transport = MagicMock(spec=CliTransport)
+    transport.run_bytes.side_effect = store.run_bytes
+    patch_client_transport(client, transport)
+    return client, transport
 
 
 def test_workflow_resolved_issue_update_keeps_returned_assignee(
@@ -155,31 +244,15 @@ def _write_skill_response(
     (responses_dir / "skill.json").write_text(json.dumps(response.to_dict()), encoding="utf-8")
 
 
-@pytest.mark.parametrize(
-    "status, expected_error, expected_exit",
-    (
-        (400, ValidationError, 5),
-        (413, CommandExecutionError, 1),
-        (502, CommandExecutionError, 1),
-        (503, CommandExecutionError, 1),
-        (504, CommandExecutionError, 1),
-    ),
-    ids=("bad-request", "too-large", "bad-gateway", "unavailable", "timeout"),
-)
-def test_skill_refresh_remote_failures_keep_typed_error_and_existing_portable_files(
+@pytest.mark.parametrize("case", _SKILL_REFRESH_FAILURE_CASES, ids=lambda case: case.id)
+def test_skill_refresh_remote_failures_keep_typed_error(
     client_factory: Callable[..., MulticaClient],
     tmp_path: pathlib.Path,
-    status: int,
-    expected_error: type[CommandExecutionError],
-    expected_exit: int,
+    case: SkillRefreshFailureCase,
 ) -> None:
     responses_dir = tmp_path / "responses"
     responses_dir.mkdir()
     fake = FakeMultica(responses_dir=responses_dir)
-    existing_bundle = [
-        {"id": "file-1", "path": "SKILL.md", "content": "old instructions"},
-        {"id": "file-2", "path": "references/guide.md", "content": "old guide"},
-    ]
     _write_skill_response(
         fake,
         responses_dir,
@@ -188,67 +261,86 @@ def test_skill_refresh_remote_failures_keep_typed_error_and_existing_portable_fi
     client = client_factory(environment=(("MULTICA_FAKE_RESPONSES", str(responses_dir)),))
     imported = client.skills.import_from_url("https://example.test/skill")
     assert imported.id == "skill-1"
-    _write_skill_response(fake, responses_dir, stdout=json.dumps(existing_bundle))
-    before = client.skills.files.list("skill-1", with_content=True)
 
     _write_skill_response(
         fake,
         responses_dir,
-        stderr=f"Error: GET /api/skills/skill-1/refresh returned {status}: remote failure",
+        stderr=f"Error: GET /api/skills/skill-1/refresh returned {case.status}: remote failure",
         exit_code=1,
     )
-    with pytest.raises(expected_error) as excinfo:
+    with pytest.raises(case.expected_error) as excinfo:
         client.skills.refresh("skill-1")
-    assert excinfo.value.exit_code == expected_exit
-    assert str(status) in excinfo.value.stderr
-    assert tuple((file.path, file.content) for file in before.items) == (
-        ("SKILL.md", "old instructions"),
-        ("references/guide.md", "old guide"),
+    assert excinfo.value.exit_code == case.expected_exit
+    assert str(case.status) in excinfo.value.stderr
+
+
+@pytest.mark.parametrize("case", _SKILL_REFRESH_FAILURE_CASES, ids=lambda case: case.id)
+def test_failed_remote_refresh_keeps_the_same_bundle_readable(
+    client_factory: Callable[..., MulticaClient],
+    case: SkillRefreshFailureCase,
+) -> None:
+    original = (
+        {"id": "file-1", "path": "SKILL.md", "content": "persisted instructions"},
+        {"id": "file-2", "path": "references/guide.md", "content": "persisted guide"},
     )
-    _write_skill_response(fake, responses_dir, stdout=json.dumps(existing_bundle))
+    store = ControlledSkillStore(original)
+    store.refresh_error = case.expected_error(
+        "remote failure",
+        exit_code=case.expected_exit,
+        stderr=f"Error: GET /api/skills/skill-1/refresh returned {case.status}: unavailable",
+    )
+    client, transport = _client_with_skill_store(client_factory, store)
+
+    before = client.skills.files.list("skill-1", with_content=True)
+    with pytest.raises(case.expected_error, match="remote failure") as excinfo:
+        client.skills.refresh("skill-1")
     after = client.skills.files.list("skill-1", with_content=True)
+
+    assert tuple((file.path, file.content) for file in before.items) == (
+        ("SKILL.md", "persisted instructions"),
+        ("references/guide.md", "persisted guide"),
+    )
     assert tuple((file.path, file.content) for file in after.items) == (
-        ("SKILL.md", "old instructions"),
-        ("references/guide.md", "old guide"),
+        ("SKILL.md", "persisted instructions"),
+        ("references/guide.md", "persisted guide"),
+    )
+    assert store.refresh_attempts == 1
+    assert excinfo.value.exit_code == case.expected_exit
+    assert str(case.status) in excinfo.value.stderr
+    assert transport.run_bytes.call_args_list[1].args[0] == (
+        "skill",
+        "refresh",
+        "skill-1",
+        "--output",
+        "json",
     )
 
 
-@pytest.mark.parametrize(
-    "path",
-    ("../escape.md", "/absolute/escape.md", "C:\\escape.md", "\\\\server\\share\\escape.md"),
-    ids=("traversal", "absolute", "drive-path", "unc-path"),
-)
+@pytest.mark.parametrize("case", _UNSAFE_SKILL_PATH_CASES, ids=lambda case: case.id)
 def test_skill_refresh_path_rejection_preserves_existing_readable_snapshot(
     client_factory: Callable[..., MulticaClient],
-    tmp_path: pathlib.Path,
-    path: str,
+    case: UnsafeSkillPathCase,
 ) -> None:
-    responses_dir = tmp_path / "responses"
-    responses_dir.mkdir()
-    fake = FakeMultica(responses_dir=responses_dir)
-    old_bundle = [
-        {"id": "file-1", "path": "SKILL.md", "content": "stable instructions"},
-    ]
-    _write_skill_response(fake, responses_dir, stdout=json.dumps(old_bundle))
-    client = client_factory(environment=(("MULTICA_FAKE_RESPONSES", str(responses_dir)),))
-    existing = client.skills.files.list("skill-1", with_content=True)
-
-    _write_skill_response(
-        fake,
-        responses_dir,
-        stderr=(
-            "Error: GET /api/skills/skill-1/refresh returned 400: "
-            f'{{"error":"non-portable path: {path}"}}'
-        ),
-        exit_code=1,
+    store = ControlledSkillStore(
+        ({"id": "file-1", "path": "SKILL.md", "content": "stable instructions"},)
     )
+    store.refresh_candidate = (
+        {"id": "file-2", "path": "references/new.md", "content": "new file"},
+        {"id": "file-bad", "path": case.path, "content": "unsafe"},
+    )
+    client, transport = _client_with_skill_store(client_factory, store)
+
     with pytest.raises(ValidationError) as excinfo:
         client.skills.refresh("skill-1")
     assert "400" in excinfo.value.stderr
-    assert tuple((file.path, file.content) for file in existing.items) == (
-        ("SKILL.md", "stable instructions"),
+    assert store.refresh_attempts == 1
+    assert transport.run_bytes.call_args_list[0].args[0] == (
+        "skill",
+        "refresh",
+        "skill-1",
+        "--output",
+        "json",
     )
-    _write_skill_response(fake, responses_dir, stdout=json.dumps(old_bundle))
     after = client.skills.files.list("skill-1", with_content=True)
     assert tuple((file.path, file.content) for file in after.items) == (
         ("SKILL.md", "stable instructions"),
@@ -265,14 +357,6 @@ def test_skill_bundle_decodes_complete_portable_text_files_without_binary_payloa
         {"id": "file-2", "path": "references/guide.md", "content": "guide"},
         {"id": "file-3", "path": "scripts/run.py", "content": "print('ok')"},
     ]
-    binary_candidate = {
-        "path": "assets/logo.png",
-        "kind": "binary",
-        "content_hex": "89504e470d0a1a0a",
-    }
-    candidates = (*bundle, binary_candidate)
-    candidate_paths = {candidate["path"] for candidate in candidates}
-    binary_path = binary_candidate["path"]
     fake = FakeMultica(responses_dir=responses_dir)
     _write_skill_response(
         fake,
@@ -294,39 +378,58 @@ def test_skill_bundle_decodes_complete_portable_text_files_without_binary_payloa
     )
     assert tuple(file.content for file in files.items) == ("instructions", "guide", "print('ok')")
     returned_paths = {file.path for file in files.items}
-    assert binary_path in candidate_paths
-    assert binary_path not in returned_paths
     assert returned_paths == {"SKILL.md", "references/guide.md", "scripts/run.py"}
 
 
-def test_successful_skill_refresh_replaces_the_entire_bundle(
-    client_factory: Callable[..., MulticaClient], tmp_path: pathlib.Path
+def test_skill_file_list_rejects_binary_content_at_public_boundary(
+    client_factory: Callable[..., MulticaClient],
 ) -> None:
-    responses_dir = tmp_path / "responses"
-    responses_dir.mkdir()
-    fake = FakeMultica(responses_dir=responses_dir)
-    old_bundle = [
+    store = ControlledSkillStore(
+        (
+            {
+                "id": "binary-1",
+                "path": "assets/logo.png",
+                "kind": "binary",
+                "content": {"encoding": "base64", "data": "iVBORw0KGgo="},
+            },
+        )
+    )
+    client, transport = _client_with_skill_store(client_factory, store)
+
+    with pytest.raises(OutputShapeError):
+        client.skills.files.list("skill-1", with_content=True)
+
+    assert transport.run_bytes.call_args.args[0] == (
+        "skill",
+        "files",
+        "list",
+        "skill-1",
+        "--with-content",
+        "--output",
+        "json",
+    )
+
+
+def test_successful_skill_refresh_replaces_the_entire_bundle(
+    client_factory: Callable[..., MulticaClient],
+) -> None:
+    old_bundle = (
         {"id": "old-1", "path": "SKILL.md", "content": "old instructions"},
         {"id": "old-2", "path": "references/old.md", "content": "old reference"},
-    ]
-    new_bundle = [
+    )
+    new_bundle = (
         {"id": "new-1", "path": "SKILL.md", "content": "new instructions"},
         {"id": "new-2", "path": "references/new.md", "content": "new reference"},
         {"id": "new-3", "path": "scripts/new.py", "content": "print('new')"},
-    ]
-    _write_skill_response(fake, responses_dir, stdout=json.dumps(old_bundle))
-    client = client_factory(environment=(("MULTICA_FAKE_RESPONSES", str(responses_dir)),))
+    )
+    store = ControlledSkillStore(old_bundle)
+    store.refresh_candidate = new_bundle
+    client, transport = _client_with_skill_store(client_factory, store)
     before = client.skills.files.list("skill-1", with_content=True)
     assert tuple(file.path for file in before.items) == ("SKILL.md", "references/old.md")
 
-    _write_skill_response(
-        fake,
-        responses_dir,
-        stdout=json.dumps({"id": "skill-1", "name": "refreshed", "file_count": 3}),
-    )
     refreshed = client.skills.refresh("skill-1")
     assert refreshed.name == "refreshed"
-    _write_skill_response(fake, responses_dir, stdout=json.dumps(new_bundle))
 
     after = client.skills.files.list("skill-1", with_content=True)
     assert tuple((file.path, file.content) for file in after.items) == (
@@ -334,6 +437,12 @@ def test_successful_skill_refresh_replaces_the_entire_bundle(
         ("references/new.md", "new reference"),
         ("scripts/new.py", "print('new')"),
     )
-    assert {file.path for file in after.items}.isdisjoint(
-        {file.path for file in before.items} - {"SKILL.md"}
+    assert {file.path for file in after.items}.isdisjoint({"references/old.md"})
+    assert store.refresh_attempts == 1
+    assert transport.run_bytes.call_args_list[1].args[0] == (
+        "skill",
+        "refresh",
+        "skill-1",
+        "--output",
+        "json",
     )

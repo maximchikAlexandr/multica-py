@@ -13,7 +13,9 @@ commit `aec9b0b1699939a6d993da9ca2ebd2c62900a8e0`; the supported CLI floor
 remains `0.6.2`, and no intermediate SDK release is required. The target is
 release `425269384`. The typed SDK
 maintains a closed 209-node inventory, 193-operation registry, and 196-entrypoint
-response registry, with eight changed and 188 unchanged responses. Runtime list
+response registry, with 0 changed and 196 unchanged response shapes. V071
+behavioral corrections remain wire-compatible and do not change those response
+shapes. Runtime list
 and rename return visibility and ordered sharing identities, while target-version
 update remains `RuntimeUpdateResult`. Runtime access-management writes remain
 outside the SDK because the CLI provides no corresponding operation.

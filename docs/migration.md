@@ -56,7 +56,9 @@ compatibility interval is `[0.6.0, 0.6.3)`; the direct baseline is Multica
 `0.6.1` at source commit `2ea01ae4ef55de4310b99af192d2dbd367832883`, with no
 intermediate SDK release.
 The refreshed contract covers 209 command nodes, 193 operations, and 196
-response entrypoints, including eight changed and 188 unchanged responses.
+response entrypoints, with 0 changed and 196 unchanged response shapes. The
+V071 changes are wire-compatible behavioral corrections rather than response
+shape changes.
 
 Multi-value text and URL properties use immutable `tuple[str, ...]` values.
 Callers must pass `property_type="multi_text"` or `property_type="multi_url"`
