@@ -49,6 +49,13 @@ _SEARCH_CASES: tuple[SearchCase, ...] = (
         expected=(("i4", "comment"),),
     ),
     SearchCase(
+        id="int4-overflow-query-remains-text",
+        query="2147483648",
+        payload=b'{"issues":[{"id":"i5","title":"Issue 2147483648",'
+        b'"status":"todo","match_source":"title"}],"total":1}',
+        expected=(("i5", "title"),),
+    ),
+    SearchCase(
         id="legacy-array",
         query="legacy",
         payload=b'[{"id":"i1","title":"Legacy","status":"todo","match_source":"comment"}]',
