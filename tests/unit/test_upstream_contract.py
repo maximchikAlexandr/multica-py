@@ -30,7 +30,7 @@ from tools.upstream_contract.evidence import ReleaseIdentity, collect
 from tools.upstream_contract.generation import _validate_transient_projection, render_files
 
 APPROVED = pathlib.Path("contracts/sdk-contract.json")
-PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.6.2..v0.7.0/source/multica")
+PINNED_SOURCE = pathlib.Path(".devlocal/upstream-contract/v0.7.1/source/multica")
 
 _SQUAD_MEMBER_OPERATION_IDS = (
     "squads.members.add",
@@ -91,7 +91,7 @@ INVALID_CONTRACT_CASES = (
     InvalidContractCase("unapproved-response-alias", "unapproved_response_alias"),
     InvalidContractCase("raw-command-category", "raw_command_category"),
     InvalidContractCase("convention-command", "convention_command"),
-    InvalidContractCase("target-annotated-tag-object", "target_annotated_tag_object"),
+    InvalidContractCase("target-tag-object", "target_tag_object"),
     InvalidContractCase("target-peeled-commit", "target_peeled_commit"),
     InvalidContractCase("target-release-provenance-ref", "target_release_provenance_ref"),
     InvalidContractCase("baseline-contract-blob", "baseline_contract_blob"),
@@ -194,8 +194,8 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
             entrypoint["presence_policy_ids"] = []
         elif mutation == "convention_command":
             entrypoint["command_symbol"] = "not_a_command"
-    elif mutation == "target_annotated_tag_object":
-        document["target"]["annotated_tag_object"] = "0" * 40
+    elif mutation == "target_tag_object":
+        document["target"]["tag_object"] = "0" * 40
     elif mutation == "target_peeled_commit":
         document["target"]["peeled_commit"] = "0" * 40
     elif mutation == "target_release_provenance_ref":
@@ -213,7 +213,7 @@ def _mutated_contract(tmp_path: pathlib.Path, mutation: str) -> pathlib.Path:
         artifact = next(
             item
             for item in document["compatibility"]["release_artifacts"]
-            if item["version"] == "0.7.0"
+            if item["version"] == "0.7.1"
         )
         artifact["version_output_sha256"] = "0" * 64
     elif mutation == "stale_request_dto":
@@ -498,28 +498,51 @@ def test_issue_operation_rationales_stay_with_their_operations() -> None:
     }
 
 
-def test_response_registry_has_target_ranges_and_explicit_removals() -> None:
+def test_response_registry_has_exact_target_ranges_and_retained_shapes() -> None:
     contract = validate_contract(APPROVED)
     registry = contract.compatibility.response_registry
     assert len(registry) == 196
-    assert {item.disposition for item in registry} == {"unchanged", "changed"}
     assert {
         url.split("/blob/")[1].split("/")[0] for item in registry for url in item.source_urls
     } == {
-        "7ab92d7622ecd81d179a8d83ae2dea74835a5069",
         "dbdbb299164347586e2650bb67684a490726a798",
+        "aec9b0b1699939a6d993da9ca2ebd2c62900a8e0",
     }
     assert all("#L1-L1" not in url for item in registry for url in item.source_urls)
     assert not any(item.operation_id.startswith("plugins.") for item in registry)
-    assert sum(item.disposition == "changed" for item in registry) == 8
-    assert sum(item.disposition == "unchanged" for item in registry) == 188
+    assert {item.disposition for item in registry} == {"unchanged"}
+    assert sum(item.disposition == "changed" for item in registry) == 0
+    assert sum(item.disposition == "unchanged" for item in registry) == 196
     assert len({item.work_item_id for item in registry}) == 196
-    assert all(
-        item.source_urls and item.action.startswith(("retained:", "changed:")) for item in registry
-    )
+    assert all(item.source_urls and item.action.startswith("retained:") for item in registry)
     assert all(
         all(token in item.action for token in ("model=", "fixture=", "docs=")) for item in registry
     )
+    assert all(item.error_behavior for item in registry)
+    assert {
+        item.operation_id: item.behavioral_scenarios
+        for item in registry
+        if item.behavioral_scenarios
+    } == {
+        "agents.create": ("V071-03",),
+        "agents.update": ("V071-03",),
+        "agents.tasks": ("V071-08",),
+        "autopilots.history": ("V071-04",),
+        "autopilots.trigger": ("V071-04",),
+        "issues.runs": ("V071-08",),
+        "issues.search": ("V071-05",),
+        "issues.update": ("V071-05",),
+        "issues.update_bound": ("V071-05",),
+        "issues.wakeups.create": ("V071-02",),
+        "issues.wakeups.events": ("V071-02",),
+        "issues.wakeups.get": ("V071-02",),
+        "issues.wakeups.list": ("V071-02",),
+        "issues.wakeups.update": ("V071-02",),
+        "projects.resources.update_local_directory": ("V071-06",),
+        "skills.files.list": ("V071-07",),
+        "skills.import_from_url": ("V071-07",),
+        "skills.refresh": ("V071-07",),
+    }
 
 
 @pytest.mark.parametrize(
@@ -780,15 +803,17 @@ def test_update_field_policies_are_explicit_and_source_pinned() -> None:
     )
 
 
-def test_current_target_and_source_refs_are_pinned_to_v070() -> None:
+def test_current_target_and_source_refs_are_pinned_to_v071() -> None:
     contract = load_contract(APPROVED)
-    assert contract.target.version == "0.7.0"
-    assert contract.target.tag == "v0.7.0"
-    assert contract.target.commit == "dbdbb299164347586e2650bb67684a490726a798"
-    assert contract.target.release_id == "421685918"
+    assert contract.target.version == "0.7.1"
+    assert contract.target.tag == "v0.7.1"
+    assert contract.target.commit == "aec9b0b1699939a6d993da9ca2ebd2c62900a8e0"
+    assert contract.target.release_id == "425269384"
     assert contract.target.release_provenance_ref == (
-        ".devlocal/upstream-contract/v0.6.2..v0.7.0/evidence/multica-0.7.0-release.json"
+        ".devlocal/upstream-contract/v0.7.1/evidence/multica-0.7.1-release.json"
     )
+    assert contract.target.tag_object_type == "commit"
+    assert contract.target.tag_object == contract.target.peeled_commit
     assert {ref.commit for ref in contract.source_refs} == {contract.target.commit}
     stale_commit = "93342d04a7a9f788fec921e5aa736f86c7f22d8f"
     assert stale_commit not in {ref.commit for ref in contract.source_refs}
@@ -913,6 +938,14 @@ def test_compatibility_binary_and_release_provenance_are_exact() -> None:
             os="darwin",
             arch="arm64",
         ),
+        VerifiedBinary(
+            version="0.7.1",
+            commit="aec9b0b1699939a6d993da9ca2ebd2c62900a8e0",
+            build_date="2026-10-27T09:46:34Z",
+            go_version="go1.27.3",
+            os="darwin",
+            arch="arm64",
+        ),
     )
     assert compatibility.release_artifacts == (
         ReleaseArtifact(
@@ -951,6 +984,15 @@ def test_compatibility_binary_and_release_provenance_are_exact() -> None:
             executable_sha256="b867363c94dafb2045885e4dd9da347cd703056b0a7fe1227466dbc60d1f5a10",
             version_output_sha256="ce2e32186bbbafdfe9b0c75b5dab486be00b3940b78350ccbee3d0c2067f2099",
         ),
+        ReleaseArtifact(
+            version="0.7.1",
+            tag="v0.7.1",
+            release_id="425269384",
+            asset_name="multica-cli-0.7.1-darwin-arm64.tar.gz",
+            archive_sha256="a1f78965984fa0eacff331d67360da2cfc8298e9e97d5f136000b3e8682b1c9b",
+            executable_sha256="f167df5161555d8696a996be8fedfde8ab1cbad27c419c9a7905b23492ad9350",
+            version_output_sha256="960c4efbe6bcb22f903914ecb1759f6d5ba424ca2d878d1e3428a16d07f28012",
+        ),
     )
 
 
@@ -967,9 +1009,9 @@ def test_compatibility_command_inventory_is_reconciled() -> None:
         hidden=("probe-runtimes",),
         test_only=("repo-test", "test", "x"),
         changed_commands=(
-            "issue list",
+            "agent create",
+            "agent update",
             "issue wakeup create",
-            "issue wakeup events",
             "issue wakeup update",
         ),
         added_commands=(),
@@ -991,7 +1033,7 @@ def test_compatibility_reviewed_response_bounds_are_exact() -> None:
     assert (
         compatibility.min_cli_version,
         compatibility.max_tested_cli_version,
-    ) == ("0.6.2", "0.7.0")
+    ) == ("0.6.2", "0.7.1")
     assert {item.operation_id for item in compatibility.reviewed_responses} == {
         "projects.create",
         "projects.get",
@@ -1193,7 +1235,7 @@ def test_compatibility_projection_reuses_reviewed_bounds_for_runtime_and_report(
     assert json.loads(files[2].content) == {
         "max_cli_version": "0.4.36",
         "min_cli_version": "0.4.27",
-        "target_version": "0.7.0",
+        "target_version": "0.7.1",
     }
 
 
@@ -1573,9 +1615,22 @@ def test_source_validation_rejects_symlink_escape(
     outside = tmp_path / "outside.go"
     outside.write_text("symbol\n", encoding="utf-8")
     (checkout / "inside.go").symlink_to(outside)
+    catalog = validate_contract(APPROVED)
+    catalog_raw = dict(catalog.raw)
+    compatibility_raw = dict(cast("dict[str, object]", catalog_raw["compatibility"]))
+    reviewed_interval = dict(cast("dict[str, object]", compatibility_raw["reviewed_interval"]))
+    reviewed_interval["baseline_commit"] = commit
+    compatibility_raw["reviewed_interval"] = reviewed_interval
+    catalog_raw["compatibility"] = compatibility_raw
     clean_catalog = replace(
-        validate_contract(APPROVED),
-        target=replace(validate_contract(APPROVED).target, commit=commit),
+        catalog,
+        raw=catalog_raw,
+        compatibility=replace(
+            catalog.compatibility,
+            response_registry=(),
+            reviewed_responses=(),
+        ),
+        target=replace(catalog.target, commit=commit),
         source_refs=(SourceRef("S", "repo", commit, "tracked.go", "checkout_symbol", 1, 1),),
     )
     monkeypatch.setattr(cli, "validate_contract", lambda _: clean_catalog)

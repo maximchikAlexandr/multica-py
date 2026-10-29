@@ -10,7 +10,7 @@ import sys
 from dataclasses import dataclass
 from typing import cast
 
-from .contract import ContractError, validate_contract
+from .contract import ContractError, _response_source_url, validate_contract
 from .evidence import ReleaseIdentity, collect
 from .generation import RUNTIME_PATH, check_repository, render_files, write_rendered
 
@@ -58,6 +58,21 @@ def _parser() -> argparse.ArgumentParser:
 def _source_validate(approved: pathlib.Path, source_checkout: pathlib.Path) -> None:
     catalog = validate_contract(approved)
     checkout_root = source_checkout.resolve()
+    source_blobs: dict[tuple[str, str], bytes] = {}
+
+    def source_blob(commit: str, source_path: str) -> bytes:
+        key = (commit, source_path)
+        if key not in source_blobs:
+            try:
+                source_blobs[key] = subprocess.run(
+                    ["git", "-C", str(source_checkout), "show", f"{commit}:{source_path}"],
+                    check=True,
+                    capture_output=True,
+                ).stdout
+            except subprocess.CalledProcessError as exc:
+                raise ContractError(f"pinned source is missing: {commit}:{source_path}") from exc
+        return source_blobs[key]
+
     if not checkout_root.is_dir():
         raise ContractError(f"source checkout does not exist: {source_checkout}")
     actual = subprocess.run(
@@ -76,22 +91,7 @@ def _source_validate(approved: pathlib.Path, source_checkout: pathlib.Path) -> N
             raise ContractError(
                 f"approved source reference escapes source checkout: {source_ref.path}"
             ) from exc
-        try:
-            blob = subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(source_checkout),
-                    "show",
-                    f"{catalog.target.commit}:{source_ref.path}",
-                ],
-                check=True,
-                capture_output=True,
-            ).stdout
-        except subprocess.CalledProcessError as exc:
-            raise ContractError(
-                f"approved source reference is missing from target commit: {path}"
-            ) from exc
+        blob = source_blob(catalog.target.commit, source_ref.path)
         lines = blob.decode("utf-8", errors="replace").splitlines()
         start = source_ref.line_start
         end = source_ref.line_end
@@ -102,6 +102,36 @@ def _source_validate(approved: pathlib.Path, source_checkout: pathlib.Path) -> N
         for part in symbol.split("/"):
             if part not in text:
                 raise ContractError(f"source symbol {part!r} not found in {path}:{start}-{end}")
+    compatibility = cast("dict[str, object]", catalog.raw["compatibility"])
+    interval = cast("dict[str, str]", compatibility["reviewed_interval"])
+    try:
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(source_checkout),
+                "merge-base",
+                "--is-ancestor",
+                interval["baseline_commit"],
+                catalog.target.commit,
+            ],
+            check=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise ContractError("target source must descend from the reviewed baseline") from exc
+    response_urls = [
+        url for item in catalog.compatibility.response_registry for url in item.source_urls
+    ] + [url for item in catalog.compatibility.reviewed_responses for url in item.source_urls]
+    for url in response_urls:
+        source_commit, source_path, start, end = _response_source_url(url, "response source URL")
+        try:
+            blob = source_blob(source_commit, source_path)
+        except ContractError as exc:
+            raise ContractError(f"response source URL points to a missing source: {url}") from exc
+        lines = blob.decode("utf-8", errors="replace").splitlines()
+        if start < 1 or end < start or end > len(lines):
+            raise ContractError(f"response source URL has an invalid line range: {url}")
 
 
 def _require_runtime_output(path: pathlib.Path) -> None:
