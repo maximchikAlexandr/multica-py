@@ -58,12 +58,38 @@ _UNSAFE_SKILL_PATH_CASES = (
 )
 
 
+@dataclass(frozen=True)
+class MixedSkillBundleCase:
+    id: str
+    acquired: tuple[Mapping[str, object], ...]
+    expected_files: tuple[tuple[str, str], ...]
+
+
+_MIXED_SKILL_BUNDLE_CASES = (
+    MixedSkillBundleCase(
+        "text-and-detected-binary",
+        (
+            {"id": "text-1", "path": "SKILL.md", "kind": "text", "content": "instructions"},
+            {
+                "id": "binary-1",
+                "path": "assets/logo.png",
+                "kind": "binary",
+                "content": {"encoding": "base64", "data": "iVBORw0KGgo="},
+            },
+            {"id": "text-2", "path": "references/guide.md", "kind": "text", "content": "guide"},
+        ),
+        (("SKILL.md", "instructions"), ("references/guide.md", "guide")),
+    ),
+)
+
+
 class ControlledSkillStore:
     """In-memory remote bundle state reached through public SDK calls."""
 
     def __init__(self, files: Sequence[Mapping[str, object]]) -> None:
         self.files = {str(item["path"]): dict(item) for item in files}
         self.refresh_candidate: Sequence[Mapping[str, object]] | None = None
+        self.refresh_acquisition: Sequence[Mapping[str, object]] | None = None
         self.refresh_attempts = 0
         self.refresh_error: CommandExecutionError | None = None
 
@@ -75,7 +101,14 @@ class ControlledSkillStore:
             self.refresh_attempts += 1
             if self.refresh_error is not None:
                 raise self.refresh_error
-            if self.refresh_candidate is not None:
+            if self.refresh_acquisition is not None:
+                # Model the remote refresh operation's binary detection and skip.
+                self.files = {
+                    str(item["path"]): dict(item)
+                    for item in self.refresh_acquisition
+                    if item.get("kind") != "binary"
+                }
+            elif self.refresh_candidate is not None:
                 candidate = {str(item["path"]): dict(item) for item in self.refresh_candidate}
                 if any(
                     pathlib.PurePosixPath(path).is_absolute()
@@ -379,6 +412,27 @@ def test_skill_bundle_decodes_complete_portable_text_files_without_binary_payloa
     assert tuple(file.content for file in files.items) == ("instructions", "guide", "print('ok')")
     returned_paths = {file.path for file in files.items}
     assert returned_paths == {"SKILL.md", "references/guide.md", "scripts/run.py"}
+
+
+@pytest.mark.parametrize("case", _MIXED_SKILL_BUNDLE_CASES, ids=lambda case: case.id)
+def test_skill_refresh_skips_detected_binary_from_mixed_acquisition(
+    client_factory: Callable[..., MulticaClient], case: MixedSkillBundleCase
+) -> None:
+    store = ControlledSkillStore(())
+    store.refresh_acquisition = case.acquired
+    client, transport = _client_with_skill_store(client_factory, store)
+
+    client.skills.refresh("skill-1")
+    files = client.skills.files.list("skill-1", with_content=True)
+
+    assert store.refresh_attempts == 1
+    assert tuple((file.path, file.content) for file in files.items) == case.expected_files
+    assert {file.path for file in files.items} == {path for path, _ in case.expected_files}
+    assert all(isinstance(file.content, str) for file in files.items)
+    assert [call.args[0] for call in transport.run_bytes.call_args_list] == [
+        ("skill", "refresh", "skill-1", "--output", "json"),
+        ("skill", "files", "list", "skill-1", "--with-content", "--output", "json"),
+    ]
 
 
 def test_skill_file_list_rejects_binary_content_at_public_boundary(
