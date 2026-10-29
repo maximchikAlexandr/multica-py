@@ -337,7 +337,7 @@ class _TaskRunWire(msgspec.Struct, frozen=True, kw_only=True):
         msgspec.UNSET
     )
     usage: tuple[_TaskUsageWire, ...] | None | msgspec.UnsetType = msgspec.UNSET
-    result: object | None = None
+    result: str | dict[str, object] | None = None
     error: str | None = None
     failure_reason: str | None = None
 
@@ -411,11 +411,7 @@ def _task_run_from_wire(
             for item in wire.usage
         )
     )
-    result = (
-        None
-        if wire.result is msgspec.UNSET or wire.result is None
-        else _coerce_json_value(wire.result, field_name="result")
-    )
+    result = None if wire.result is None else _coerce_json_value(wire.result, field_name="result")
     cancelled_by = (
         None
         if wire.cancelled_by is msgspec.UNSET

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import msgspec
 
+from multica_py._internal.json_values import _coerce_json_value
 from multica_py._internal.wire_presence import presence as _presence_seed
 from multica_py.exceptions import OutputShapeError
 from multica_py.models.agents import AgentConversationStarter, AgentSkill, AgentTask
@@ -57,6 +58,7 @@ class _AgentTaskWire(msgspec.Struct, frozen=True, kw_only=True):
     started_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
     cancelled_by: _TaskCancellationActorWire | msgspec.UnsetType = msgspec.UNSET
+    result: str | dict[str, object] | None = None
     failure_reason: str | None = None
 
 
@@ -93,6 +95,9 @@ def _agent_task_from_wire(wire: _AgentTaskWire) -> AgentTask:
         ),
         issue_state_delta_known=(
             None if wire.issue_state_delta_known is msgspec.UNSET else wire.issue_state_delta_known
+        ),
+        result=(
+            None if wire.result is None else _coerce_json_value(wire.result, field_name="result")
         ),
         failure_reason=wire.failure_reason,
         started_at=wire.started_at,

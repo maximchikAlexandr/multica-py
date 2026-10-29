@@ -6,6 +6,7 @@ from collections.abc import Mapping
 import msgspec
 
 from multica_py.models.issue_activity import TaskCancellationActor
+from multica_py.types import JsonValue
 
 
 class AgentSkill(msgspec.Struct, frozen=True, kw_only=True):
@@ -31,6 +32,7 @@ class AgentTask(msgspec.Struct, frozen=True, kw_only=True):
     issue_assignee_id: str | None = None
     issue_changed_fields: tuple[str, ...] = ()
     issue_state_delta_known: bool | None = None
+    result: JsonValue | None = None
     failure_reason: str | None = None
     started_at: datetime.datetime | None = None
     completed_at: datetime.datetime | None = None
