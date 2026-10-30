@@ -69,6 +69,14 @@ def _encode_conversation_starters(
     return msgspec.json.encode(value).decode()
 
 
+def _encode_custom_args(value: tuple[str, ...] | UnsetType) -> str | None:
+    if value is Unset:
+        return None
+    if not isinstance(value, tuple) or not all(isinstance(item, str) for item in value):
+        raise ValueError("custom_args must be a tuple of strings")
+    return msgspec.json.encode(value).decode()
+
+
 def _validate_omp_model(
     model: str | None | UnsetType,
     thinking_level: str | None | UnsetType,
@@ -426,6 +434,7 @@ class AgentResource(BaseResource):
         model: str | None = None,
         thinking_level: str | None = None,
         conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
+        custom_args: tuple[str, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[Agent]:
         validate_nonblank(name)
@@ -437,6 +446,7 @@ class AgentResource(BaseResource):
             raise ValueError("model must be nonblank for agent create")
         _validate_omp_model(model, thinking_level)
         encoded_starters = _encode_conversation_starters(conversation_starters)
+        encoded_custom_args = _encode_custom_args(custom_args)
         args = ["agent", "create", "--name", name]
         if description is not None:
             args.extend(["--description", description])
@@ -448,6 +458,8 @@ class AgentResource(BaseResource):
             args.extend(["--thinking-level", thinking_level])
         if encoded_starters is not None:
             args.extend(["--conversation-starters", encoded_starters])
+        if encoded_custom_args is not None:
+            args.extend(["--custom-args", encoded_custom_args])
         return self._decoded_command(tuple(args), Agent, options=options)._map(
             lambda agent: agent._with_client(self._client)
         )
@@ -461,6 +473,7 @@ class AgentResource(BaseResource):
         model: str | None = None,
         thinking_level: str | None = None,
         conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
+        custom_args: tuple[str, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Agent:
         return self.create_command(
@@ -470,6 +483,7 @@ class AgentResource(BaseResource):
             model=model,
             thinking_level=thinking_level,
             conversation_starters=conversation_starters,
+            custom_args=custom_args,
             options=options,
         ).run()
 
@@ -483,6 +497,7 @@ class AgentResource(BaseResource):
         model: str | None | UnsetType = Unset,
         thinking_level: str | None | UnsetType = Unset,
         conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
+        custom_args: tuple[str, ...] | UnsetType = Unset,
         effective_model: str | None | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[Agent]:
@@ -496,6 +511,7 @@ class AgentResource(BaseResource):
         _validate_optional_string(thinking_level, "thinking_level")
         _validate_omp_model(model, thinking_level, effective_model=effective_model)
         encoded_starters = _encode_conversation_starters(conversation_starters)
+        encoded_custom_args = _encode_custom_args(custom_args)
         if (
             name is Unset
             and description is Unset
@@ -503,6 +519,7 @@ class AgentResource(BaseResource):
             and model is Unset
             and thinking_level is Unset
             and encoded_starters is None
+            and encoded_custom_args is None
         ):
             return self._decoded_command(("agent", "get", agent_id), Agent, options=options)._map(
                 lambda agent: agent._with_client(self._client)
@@ -520,6 +537,8 @@ class AgentResource(BaseResource):
             args.extend(["--thinking-level", "" if thinking_level is None else thinking_level])
         if encoded_starters is not None:
             args.extend(["--conversation-starters", encoded_starters])
+        if encoded_custom_args is not None:
+            args.extend(["--custom-args", encoded_custom_args])
         return self._decoded_command(tuple(args), Agent, options=options)._map(
             lambda agent: agent._with_client(self._client)
         )
@@ -534,6 +553,7 @@ class AgentResource(BaseResource):
         model: str | None | UnsetType = Unset,
         thinking_level: str | None | UnsetType = Unset,
         conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
+        custom_args: tuple[str, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Command[Agent]:
         return self._update_command(
@@ -544,6 +564,7 @@ class AgentResource(BaseResource):
             model=model,
             thinking_level=thinking_level,
             conversation_starters=conversation_starters,
+            custom_args=custom_args,
             options=options,
         )
 
@@ -557,6 +578,7 @@ class AgentResource(BaseResource):
         model: str | None | UnsetType = Unset,
         thinking_level: str | None | UnsetType = Unset,
         conversation_starters: tuple[AgentConversationStarter, ...] | UnsetType = Unset,
+        custom_args: tuple[str, ...] | UnsetType = Unset,
         options: OperationOptions | None = None,
     ) -> Agent:
         return self.update_command(
@@ -567,6 +589,7 @@ class AgentResource(BaseResource):
             model=model,
             thinking_level=thinking_level,
             conversation_starters=conversation_starters,
+            custom_args=custom_args,
             options=options,
         ).run()
 

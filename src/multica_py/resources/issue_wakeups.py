@@ -452,9 +452,9 @@ def _validate_wakeup_inputs(
                 raise TypeError("condition referenced_issue must be an object")
             referenced_state = raw_condition.get("state")
             referenced_id = raw_condition.get("id")
-            if referenced_state not in {"done", "ended", "in_review"}:
+            if referenced_state not in {"blocked", "done", "ended", "in_review"}:
                 raise ValueError(
-                    "condition referenced_issue state must be done, ended or in_review"
+                    "condition referenced_issue state must be blocked, done, ended or in_review"
                 )
             if not isinstance(referenced_id, str) or not referenced_id.strip():
                 raise ValueError("condition referenced_issue id must be nonblank")

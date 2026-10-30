@@ -15,14 +15,28 @@ There is no provider registry or automatic provider discovery. See
 target-path/environment/staging rules, process-control guarantees, and the
 provider-adapter contract.
 
-## v0.7.0 direct migration
+## v0.7.1 direct migration
 
-The approved target is Multica CLI `0.7.0` at source commit
-`dbdbb299164347586e2650bb67684a490726a798` (release `421685918`). The direct
-compatibility interval is `[0.6.2, 0.7.1)` and baseline is CLI `0.6.2` at
-`7ab92d7622ecd81d179a8d83ae2dea74835a5069`; no intermediate SDK release is
-required. The full 209-node CLI inventory and all 196 response work items are
+The approved target is Multica CLI `0.7.1` at source commit
+`aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` (release `425269384`). The direct
+upgrade is from CLI `0.7.0` at baseline source commit
+`dbdbb299164347586e2650bb67684a490726a798`. The compatibility interval is
+`[0.6.2, 0.7.2)`, preserving `0.6.2` as the supported minimum; no intermediate
+SDK release is required. The full 209-node CLI inventory and all 196 response work items are
 reconciled.
+The refreshed contract covers 209 command nodes, 193 operations, and 196
+response entrypoints, with 0 changed and 196 unchanged response shapes. The
+V071 changes are wire-compatible behavioral corrections rather than response
+shape changes.
+
+The `0.7.1` update adds the open wakeup state `blocked` and agent `custom_args`
+handling, including omission versus an explicit empty list. Create-issue
+autopilot results retain their `task_id`; task and issue-run projections preserve
+known process-cleanup outcomes while accepting future string values. Issue
+search keeps large numeric-looking input as text, workflow updates preserve the
+returned assignee, and concurrent project-resource partial updates retain
+unmentioned fields. Skill refresh accepts portable text bundles atomically,
+skips binary files, and retains the prior bundle on typed remote failures.
 
 Runtime list and rename now decode optional `RuntimeDefinition.visibility` and
 ordered `RuntimeDefinition.shared_with` member IDs. Import the public type from
@@ -45,8 +59,6 @@ The approved target is Multica CLI `0.6.2` at source commit
 compatibility interval is `[0.6.0, 0.6.3)`; the direct baseline is Multica
 `0.6.1` at source commit `2ea01ae4ef55de4310b99af192d2dbd367832883`, with no
 intermediate SDK release.
-The refreshed contract covers 209 command nodes, 193 operations, and 196
-response entrypoints, including eight changed and 188 unchanged responses.
 
 Multi-value text and URL properties use immutable `tuple[str, ...]` values.
 Callers must pass `property_type="multi_text"` or `property_type="multi_url"`

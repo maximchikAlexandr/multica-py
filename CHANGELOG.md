@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.1
+
+- Approved target: Multica CLI `0.7.1`, release `425269384`, source commit
+  `aec9b0b1699939a6d993da9ca2ebd2c62900a8e0`, preserving the `0.6.2` minimum
+  and raising the maximum-tested CLI to `0.7.1` (exclusive ceiling `0.7.2`).
+- Adds open `blocked` wakeup conditions and provider-owned agent custom
+  arguments; preserves create-issue autopilot task identity and process-cleanup
+  outcomes across task paths.
+- Covers issue search and assignment, atomic project-resource partial updates,
+  portable all-or-nothing skill bundles, and typed remote skill failures.
+- Reconciles the 209-command and 196-response inventories; migrate directly
+  from CLI/SDK `0.7.0` to `0.7.1` while retaining the `0.6.2` support floor.
+
 ## 0.7.0
 
 - Approved target: Multica CLI `0.7.0`, release `421685918`, source commit

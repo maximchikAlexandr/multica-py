@@ -54,8 +54,8 @@ def test_approved_inventory_and_response_audit_are_complete() -> None:
     assert len(contract.operations) == 193
     assert len(contract.compatibility.response_registry) == 196
     assert response_audit["supported_entrypoints"] == 196
-    assert response_audit["changed"] == 8
-    assert response_audit["unchanged"] == 188
+    assert response_audit["changed"] == 0
+    assert response_audit["unchanged"] == 196
 
     typed_rows = [
         item
@@ -85,9 +85,9 @@ def test_runtime_projection_is_single_authoritative_output() -> None:
 def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
     contract = validate_contract(APPROVED)
     runtime = render_files(APPROVED)[0].content
-    assert b"TARGET_VERSION = '0.7.0'" in runtime
+    assert b"TARGET_VERSION = '0.7.1'" in runtime
     assert b"MIN_CLI_VERSION = '0.6.2'" in runtime
-    assert b"MAX_CLI_VERSION = '0.7.1'" in runtime
+    assert b"MAX_CLI_VERSION = '0.7.2'" in runtime
 
     descriptors = {
         item.operation_id: item
@@ -100,6 +100,24 @@ def test_generated_runtime_tracks_target_and_copy_search_descriptors() -> None:
             f"{descriptor.operation_id!r}, {descriptor.entrypoint_id!r}, {descriptor.command!r}"
         ).encode()
         assert descriptor_header in runtime
+
+
+def test_071_help_mappings_are_source_traced_and_complete() -> None:
+    contract = validate_contract(APPROVED)
+    mappings = cast("list[dict[str, object]]", contract.raw["help_mappings"])
+    assert [item["command"] for item in mappings] == [
+        "agent create",
+        "agent update",
+        "issue wakeup create",
+        "issue wakeup update",
+    ]
+    assert all(
+        item["source_ref_ids"] and item["positive_case"] and item["negative_case"]
+        for item in mappings
+    )
+    assert {item["destination"] for item in mappings[:2]} == {"json_body:custom_args"}
+    assert all("Omitted" in str(item["presence_semantics"]) for item in mappings)
+    assert all("blocked" in str(item["target_help"]) for item in mappings[2:])
 
 
 def _signature_parameter_names(signature: str) -> tuple[str, ...]:
@@ -350,10 +368,10 @@ def test_retained_inventory_is_reconciled() -> None:
     assert len(contract.compatibility.response_registry) == 196
     assert (
         sum(item.disposition == "unchanged" for item in contract.compatibility.response_registry)
-        == 188
+        == 196
     )
     assert (
-        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 8
+        sum(item.disposition == "changed" for item in contract.compatibility.response_registry) == 0
     )
     assert relation_ids == tuple(f"relation:R{index:02d}" for index in range(1, 39) if index != 34)
 

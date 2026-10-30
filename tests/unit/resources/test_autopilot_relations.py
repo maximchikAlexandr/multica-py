@@ -230,6 +230,79 @@ def test_direct_list_item_second_hop_uses_origin_client() -> None:
     )
 
 
+def test_create_issue_settlement_and_retry_history_preserve_task_order() -> None:
+    transport = MagicMock(spec=CliTransport)
+    transport.run_bytes.return_value = command_result(
+        msgspec.json.encode(
+            {
+                "runs": [
+                    {
+                        "id": "run-success",
+                        "autopilot_id": "ap-1",
+                        "source": "manual",
+                        "status": "completed",
+                        "issue_id": "issue-success",
+                        "task_id": "task-success",
+                        "failure_reason": None,
+                    },
+                    {
+                        "id": "run-blocked",
+                        "autopilot_id": "ap-1",
+                        "source": "manual",
+                        "status": "completed",
+                        "issue_id": "issue-blocked",
+                        "task_id": "task-blocked",
+                        "failure_reason": None,
+                        "result": {"issue_status": "blocked"},
+                    },
+                    {
+                        "id": "run-retry-1",
+                        "autopilot_id": "ap-1",
+                        "source": "manual",
+                        "status": "failed",
+                        "issue_id": "issue-retry",
+                        "task_id": "task-failed",
+                        "failure_reason": "agent_error.process_failure",
+                    },
+                    {
+                        "id": "run-retry-2",
+                        "autopilot_id": "ap-1",
+                        "source": "manual",
+                        "status": "completed",
+                        "issue_id": "issue-retry",
+                        "task_id": "task-retry",
+                        "failure_reason": None,
+                    },
+                ],
+                "total": 4,
+            }
+        ),
+        "autopilot",
+        "runs",
+        "ap-1",
+        "--output",
+        "json",
+    )
+    resource = autopilot_resource(transport, MagicMock())
+
+    runs = resource.history("ap-1").runs
+
+    assert [run.task_id for run in runs] == [
+        "task-success",
+        "task-blocked",
+        "task-failed",
+        "task-retry",
+    ]
+    assert runs[0].status == "completed" and runs[0].failure_reason is None
+    assert runs[1].status == "completed" and runs[1].failure_reason is None
+    assert runs[1].result == {"issue_status": "blocked"}
+    assert runs[2].failure_reason == "agent_error.process_failure"
+    assert runs[3].status == "completed" and runs[3].failure_reason is None
+    transport.run_bytes.assert_called_once_with(
+        ("autopilot", "runs", "ap-1", "--output", "json"), stdin=None, timeout=None
+    )
+
+
 @pytest.mark.parametrize("case", _SEED_CASES, ids=lambda case: case.name)
 def test_get_binds_autopilot_and_seeds_only_present_relations(
     case: SeedCase,

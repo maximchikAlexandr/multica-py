@@ -40,8 +40,8 @@ _RESPONSE_SOURCE_URL = re.compile(
     r"(?P<start>(?:[2-9]|[1-9][0-9]+))-L"
     r"(?P<end>(?:[2-9]|[1-9][0-9]+))$"
 )
-_BASELINE_COMMIT = "7ab92d7622ecd81d179a8d83ae2dea74835a5069"
-_TARGET_COMMIT = "dbdbb299164347586e2650bb67684a490726a798"
+_BASELINE_COMMIT = "dbdbb299164347586e2650bb67684a490726a798"
+_TARGET_COMMIT = "aec9b0b1699939a6d993da9ca2ebd2c62900a8e0"
 _TAG_KINDS = frozenset(
     {
         "primitive",
@@ -993,7 +993,8 @@ class Target:
     commit: str
     release_id: str
     release_provenance_ref: str
-    annotated_tag_object: str
+    tag_object: str
+    tag_object_type: str
     peeled_commit: str
 
 
@@ -1044,6 +1045,8 @@ class ResponseReview:
     disposition: str
     source_urls: tuple[str, ...]
     action: str
+    error_behavior: str
+    behavioral_scenarios: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -2447,9 +2450,49 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "scope",
             "operations",
             "traceability",
+            "help_mappings",
         }
     )
     _exact_keys(raw, required | {"inventory"}, "contract")
+    help_mappings = _list(raw["help_mappings"], "help_mappings")
+    if len(help_mappings) != 4:
+        raise ContractError("help_mappings must cover the four reviewed 0.7.1 changes")
+    help_mapping_commands: set[str] = set()
+    help_mapping_fields = frozenset(
+        {
+            "command",
+            "input",
+            "before_help",
+            "target_help",
+            "source_ref_ids",
+            "destination",
+            "presence_semantics",
+            "value_policy",
+            "positive_case",
+            "negative_case",
+        }
+    )
+    for index, value in enumerate(help_mappings):
+        item = _dict(value, f"help_mappings[{index}]")
+        _exact_keys(item, help_mapping_fields, f"help_mappings[{index}]")
+        command = _str(item["command"], f"help_mappings[{index}].command")
+        if command in help_mapping_commands:
+            raise ContractError("help_mappings commands must be unique")
+        help_mapping_commands.add(command)
+        for field in help_mapping_fields - {"source_ref_ids"}:
+            _str(item[field], f"help_mappings[{index}].{field}")
+        source_refs = _list(item["source_ref_ids"], f"help_mappings[{index}].source_ref_ids")
+        if not source_refs:
+            raise ContractError("every help mapping needs source evidence")
+        for source_ref in source_refs:
+            _str(source_ref, f"help_mappings[{index}].source_ref_ids")
+    if help_mapping_commands != {
+        "agent create",
+        "agent update",
+        "issue wakeup create",
+        "issue wakeup update",
+    }:
+        raise ContractError("help_mappings must reconcile the four approved command nodes")
     if _int(raw["schema_version"], "schema_version") != 3:
         raise ContractError("approved contract schema_version must be 3")
     baseline = _baseline_identity(raw["baseline"])
@@ -2463,7 +2506,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 "commit",
                 "release_id",
                 "release_provenance_ref",
-                "annotated_tag_object",
+                "tag_object",
+                "tag_object_type",
                 "peeled_commit",
             }
         ),
@@ -2477,19 +2521,20 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         release_provenance_ref=_str(
             target_raw["release_provenance_ref"], "target.release_provenance_ref"
         ),
-        annotated_tag_object=_str(
-            target_raw["annotated_tag_object"], "target.annotated_tag_object"
-        ),
+        tag_object=_str(target_raw["tag_object"], "target.tag_object"),
+        tag_object_type=_str(target_raw["tag_object_type"], "target.tag_object_type"),
         peeled_commit=_str(target_raw["peeled_commit"], "target.peeled_commit"),
     )
     if not _COMMIT.fullmatch(target.commit):
         raise ContractError("target.commit must be a full lowercase hexadecimal commit")
-    if not _COMMIT.fullmatch(target.annotated_tag_object):
-        raise ContractError(
-            "target.annotated_tag_object must be a full lowercase hexadecimal object"
-        )
+    if not _COMMIT.fullmatch(target.tag_object):
+        raise ContractError("target.tag_object must be a full lowercase hexadecimal object")
+    if target.tag_object_type not in {"tag", "commit"}:
+        raise ContractError("target.tag_object_type must be tag or commit")
     if not _COMMIT.fullmatch(target.peeled_commit):
         raise ContractError("target.peeled_commit must be a full lowercase hexadecimal commit")
+    if target.tag_object_type == "commit" and target.tag_object != target.peeled_commit:
+        raise ContractError("lightweight tag object must equal its peeled commit")
     compatibility_raw = _dict(raw["compatibility"], "compatibility")
     _exact_keys(
         compatibility_raw,
@@ -2497,6 +2542,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             {
                 "min_cli_version",
                 "max_tested_cli_version",
+                "reviewed_interval",
                 "verified_binaries",
                 "release_artifacts",
                 "command_inventory",
@@ -2519,6 +2565,20 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         int(part) for part in bounds[1].split(".")
     ):
         raise ContractError("compatibility minimum must not exceed maximum tested version")
+    interval = _dict(compatibility_raw["reviewed_interval"], "compatibility.reviewed_interval")
+    _exact_keys(
+        interval,
+        frozenset({"sdk_base_commit", "baseline_version", "baseline_commit"}),
+        "compatibility.reviewed_interval",
+    )
+    if interval != {
+        "sdk_base_commit": "f3c41027b89550731e52335e6bea42eeb7b4e905",
+        "baseline_version": "0.7.0",
+        "baseline_commit": "dbdbb299164347586e2650bb67684a490726a798",
+    }:
+        raise ContractError(
+            "reviewed interval must use the approved SDK base and Multica 0.7.0 baseline"
+        )
     verified_binaries: list[VerifiedBinary] = []
     for index, value in enumerate(
         _list(compatibility_raw["verified_binaries"], "compatibility.verified_binaries")
@@ -2668,7 +2728,15 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         _list(compatibility_raw["response_registry"], "compatibility.response_registry")
     ):
         item = _dict(value, f"compatibility.response_registry[{index}]")
-        registry_fields = ("work_item_id", "operation_id", "disposition", "source_urls", "action")
+        registry_fields = (
+            "work_item_id",
+            "operation_id",
+            "disposition",
+            "source_urls",
+            "action",
+            "error_behavior",
+            "behavioral_scenarios",
+        )
         _exact_keys(item, frozenset(registry_fields), f"compatibility.response_registry[{index}]")
         work_item_id = _str(item["work_item_id"], "response registry work_item_id")
         operation_id = _str(item["operation_id"], "response registry operation_id")
@@ -2689,6 +2757,15 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 "response registry source URLs must cover both approved old and target commits"
             )
         action = _str(item["action"], "response registry action")
+        error_behavior = _str(item["error_behavior"], "response registry error_behavior")
+        behavioral_scenarios = tuple(
+            _str(scenario, "response registry behavioral scenario")
+            for scenario in _list(
+                item["behavioral_scenarios"], "response registry behavioral_scenarios"
+            )
+        )
+        if not set(behavioral_scenarios) <= {f"V071-{index:02d}" for index in range(1, 10)}:
+            raise ContractError("response registry contains an unknown behavioral scenario")
         action_prefix = (
             "removed:"
             if operation_id.startswith("plugins.")
@@ -2709,6 +2786,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
                 disposition=response_disposition,
                 source_urls=urls,
                 action=action,
+                error_behavior=error_behavior,
+                behavioral_scenarios=behavioral_scenarios,
             )
         )
     response_review_complete = _bool(
@@ -2729,10 +2808,10 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         != 196
     ):
         raise ContractError("response audit must cover exactly 196 supported entrypoints")
-    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 8:
-        raise ContractError("response audit must contain exactly 8 changed entrypoints")
-    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 188:
-        raise ContractError("response audit must contain exactly 188 unchanged entrypoints")
+    if _int(response_audit["changed"], "compatibility.response_audit.changed") != 0:
+        raise ContractError("response audit must contain no changed wire entrypoints")
+    if _int(response_audit["unchanged"], "compatibility.response_audit.unchanged") != 196:
+        raise ContractError("response audit must contain 196 unchanged wire entrypoints")
     changed_entrypoints = tuple(
         _str(value, "compatibility.response_audit.changed_entrypoints")
         for value in _list(
@@ -2740,8 +2819,8 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
             "compatibility.response_audit.changed_entrypoints",
         )
     )
-    if len(changed_entrypoints) != 8:
-        raise ContractError("response audit must list exactly 8 changed entrypoints")
+    if changed_entrypoints:
+        raise ContractError("response audit must not list changed wire entrypoints")
     compatibility = Compatibility(
         min_cli_version=bounds[0],
         max_tested_cli_version=bounds[1],
@@ -2859,13 +2938,23 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
     for vector in vectors:
         if vector.operation_id not in operation_ids:
             raise ContractError(f"{vector.vector_id} references unknown operation")
-    source_refs = _source_refs(raw["source_refs"])
-    source_ref_ids = {item.source_ref_id for item in source_refs}
+    parsed_source_refs = _source_refs(raw["source_refs"])
+    source_ref_ids = {item.source_ref_id for item in parsed_source_refs}
+    help_source_ref_ids = {
+        _str(source_ref, "help mapping source_ref_ids")
+        for item in help_mappings
+        for source_ref in _list(
+            _dict(item, "help mapping")["source_ref_ids"],
+            "help mapping source_ref_ids",
+        )
+    }
+    if not help_source_ref_ids <= source_ref_ids:
+        raise ContractError("help_mappings reference unknown source evidence")
     for disposition in _list(scope["family_dispositions"], "scope.family_dispositions"):
         item = _dict(disposition, "scope.family_dispositions item")
         if item.get("family") == "issue-wakeup" and item.get("disposition") == "defer":
             _validate_issue_wakeup_evidence(item, source_ref_ids)
-    if any(item.commit != target.commit for item in source_refs):
+    if any(item.commit != target.commit for item in parsed_source_refs):
         raise ContractError("every source_refs commit must match target.commit")
     test_refs = _test_refs(raw["test_refs"])
     known_test_refs = {item.test_ref_id for item in test_refs}
@@ -2913,7 +3002,7 @@ def load_contract(path: pathlib.Path) -> ContractCatalog:
         target=target,
         compatibility=compatibility,
         operations=operations,
-        source_refs=source_refs,
+        source_refs=parsed_source_refs,
         test_refs=test_refs,
         enum_definitions=enum_definitions,
         validator_definitions=validator_definitions,
@@ -2944,18 +3033,20 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         contract.target.commit,
         contract.target.release_id,
         contract.target.release_provenance_ref,
-        contract.target.annotated_tag_object,
+        contract.target.tag_object,
+        contract.target.tag_object_type,
         contract.target.peeled_commit,
     ) != (
-        "0.7.0",
-        "v0.7.0",
-        "dbdbb299164347586e2650bb67684a490726a798",
-        "421685918",
-        ".devlocal/upstream-contract/v0.6.2..v0.7.0/evidence/multica-0.7.0-release.json",
-        "db6e38c32bdbdd3fd1c98210414c458362df16d1",
-        "dbdbb299164347586e2650bb67684a490726a798",
+        "0.7.1",
+        "v0.7.1",
+        "aec9b0b1699939a6d993da9ca2ebd2c62900a8e0",
+        "425269384",
+        ".devlocal/upstream-contract/v0.7.1/evidence/multica-0.7.1-release.json",
+        "aec9b0b1699939a6d993da9ca2ebd2c62900a8e0",
+        "commit",
+        "aec9b0b1699939a6d993da9ca2ebd2c62900a8e0",
     ):
-        raise ContractError("approved contract must target Multica v0.7.0")
+        raise ContractError("approved contract must target Multica v0.7.1")
     if contract.target.peeled_commit != contract.target.commit:
         raise ContractError("target.peeled_commit must equal target.commit")
     if contract.compatibility.command_inventory != CommandInventory(
@@ -2969,13 +3060,13 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         test_only=("repo-test", "test", "x"),
         added_commands=(),
         changed_commands=(
-            "issue list",
+            "agent create",
+            "agent update",
             "issue wakeup create",
-            "issue wakeup events",
             "issue wakeup update",
         ),
     ):
-        raise ContractError("command inventory does not match the approved 0.6.2/0.7.0 review")
+        raise ContractError("command inventory does not match the approved 0.7.0/0.7.1 review")
     expected_artifacts = {
         "0.6.0": (
             "v0.6.0",
@@ -3009,6 +3100,14 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
             "b867363c94dafb2045885e4dd9da347cd703056b0a7fe1227466dbc60d1f5a10",
             "ce2e32186bbbafdfe9b0c75b5dab486be00b3940b78350ccbee3d0c2067f2099",
         ),
+        "0.7.1": (
+            "v0.7.1",
+            "425269384",
+            "multica-cli-0.7.1-darwin-arm64.tar.gz",
+            "a1f78965984fa0eacff331d67360da2cfc8298e9e97d5f136000b3e8682b1c9b",
+            "f167df5161555d8696a996be8fedfde8ab1cbad27c419c9a7905b23492ad9350",
+            "960c4efbe6bcb22f903914ecb1759f6d5ba424ca2d878d1e3428a16d07f28012",
+        ),
     }
     actual_artifacts = {
         item.version: (
@@ -3037,8 +3136,8 @@ def validate_contract(path: pathlib.Path) -> ContractCatalog:
         )
         for disposition in ("unchanged", "changed")
     }
-    if dispositions != {"unchanged": 188, "changed": 8}:
-        raise ContractError("response registry must contain 188 unchanged and 8 changed items")
+    if dispositions != {"unchanged": 196, "changed": 0}:
+        raise ContractError("response registry must contain 196 unchanged wire entrypoints")
     expected_lifecycle = {
         "issue_wakeup_trigger": (
             ("issue", "wakeup", "trigger"),

@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 import datetime
+import json
 import pathlib
+from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import msgspec
 import pytest
 
+from multica_py._internal.agent_wires import _agent_task_from_wire, _AgentTaskWire
+from multica_py._internal.decoders import decode_json
 from multica_py._internal.specs import RawCommandResult, TextResult
 from multica_py._internal.transport import CliTransport
-from multica_py._internal.wire_models import _CommentWire, comment_from_wire
+from multica_py._internal.wire_models import (
+    _CommentWire,
+    _task_run_from_wire,
+    _TaskRunWire,
+    comment_from_wire,
+)
 from multica_py.config import ClientConfig, OperationOptions
 from multica_py.exceptions import CommandExecutionError, OutputShapeError
 from multica_py.execution import ExecutionRequest, ExecutionResult, LocalExecutor
@@ -225,6 +234,96 @@ def test_update_rejects_missing_attachment_before_io(tmp_path: pathlib.Path) -> 
     with pytest.raises(ValueError, match="existing local file"):
         resource.update_command("issue-1", attachments=(str(tmp_path / "missing.txt"),))
     transport.run_bytes.assert_not_called()
+
+
+def test_agent_tasks_preserve_process_cleanup_result_and_failure() -> None:
+    transport = MagicMock()
+    transport.run_text.return_value = TextResult(
+        '[{"id":"task-1","status":"failed","issue_id":"issue-1",'
+        '"failure_reason":"agent_error.process_failure",'
+        '"result":{"process_cleanup":{"status":"completed",'
+        '"remaining_processes":0}}}]',
+        "",
+        0,
+    )
+
+    task = AgentResource(transport, ClientConfig()).tasks("agent-1").items[0]
+
+    assert task.failure_reason == "agent_error.process_failure"
+    assert task.result == {"process_cleanup": {"status": "completed", "remaining_processes": 0}}
+
+
+@dataclass(frozen=True)
+class _TaskCleanupOutcomeCase:
+    id: str
+    failure_reason: str
+    result: object
+
+
+_TASK_CLEANUP_OUTCOME_CASES = (
+    _TaskCleanupOutcomeCase(
+        "known-cleanup",
+        "agent_error.process_failure",
+        {"process_cleanup": {"status": "completed", "remaining_processes": 0}},
+    ),
+    _TaskCleanupOutcomeCase(
+        "future-open-values", "future_cleanup_failure", "future_cleanup_result"
+    ),
+)
+
+
+@pytest.mark.parametrize("case", _TASK_CLEANUP_OUTCOME_CASES, ids=lambda case: case.id)
+def test_task_cleanup_outcomes_are_open_on_both_response_paths(
+    case: _TaskCleanupOutcomeCase,
+) -> None:
+    payload = {
+        "id": "task-cleanup-1",
+        "status": "failed",
+        "issue_id": "issue-1",
+        "failure_reason": case.failure_reason,
+        "result": case.result,
+    }
+    encoded = json.dumps(payload).encode()
+    issue_run = _task_run_from_wire(decode_json(encoded, _TaskRunWire), issue_id="issue-1")
+    agent_task = _agent_task_from_wire(decode_json(encoded, _AgentTaskWire))
+
+    assert issue_run.failure_reason == agent_task.failure_reason == case.failure_reason
+    assert issue_run.result == agent_task.result == case.result
+
+
+@dataclass(frozen=True)
+class _MalformedTaskCleanupOutcomeCase:
+    id: str
+    field: str
+    value: object
+
+
+_MALFORMED_TASK_CLEANUP_OUTCOME_CASES = (
+    _MalformedTaskCleanupOutcomeCase("reason-number", "failure_reason", 3),
+    _MalformedTaskCleanupOutcomeCase("reason-object", "failure_reason", {"reason": "failed"}),
+    _MalformedTaskCleanupOutcomeCase("result-array", "result", ["cleanup"]),
+    _MalformedTaskCleanupOutcomeCase("result-number", "result", 3),
+    _MalformedTaskCleanupOutcomeCase("result-bool", "result", False),
+)
+
+
+@pytest.mark.parametrize("case", _MALFORMED_TASK_CLEANUP_OUTCOME_CASES, ids=lambda case: case.id)
+def test_task_cleanup_outcome_invalid_shapes_fail_on_both_paths(
+    case: _MalformedTaskCleanupOutcomeCase,
+) -> None:
+    encoded = json.dumps(
+        {
+            "id": "task-1",
+            "status": "failed",
+            "issue_id": "issue-1",
+            case.field: case.value,
+        }
+    ).encode()
+
+    with pytest.raises((msgspec.ValidationError, OutputShapeError)):
+        _task_run_from_wire(decode_json(encoded, _TaskRunWire), issue_id="issue-1")
+    with pytest.raises((msgspec.ValidationError, OutputShapeError)):
+        _agent_task_from_wire(decode_json(encoded, _AgentTaskWire))
 
 
 @pytest.mark.parametrize(

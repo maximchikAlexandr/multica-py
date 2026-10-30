@@ -37,7 +37,7 @@ from multica_py.entities.skills import Skill
 from multica_py.entities.squads import Squad
 from multica_py.entities.workspaces import WorkspaceMember
 from multica_py.enums import IssueStatus
-from multica_py.exceptions import DetachedEntityError, OutputShapeError
+from multica_py.exceptions import DetachedEntityError, OutputShapeError, ValidationError
 from multica_py.models.agents import AgentSkill, AgentTask
 from multica_py.models.common import ActionResult, Page
 from multica_py.models.issue_activity import TaskCancellationActor
@@ -57,6 +57,7 @@ from multica_py.resources.skill_files import SkillFileResource
 from multica_py.resources.skills import SkillResource
 from multica_py.resources.squad_members import SquadMemberResource
 from multica_py.resources.squads import SquadResource
+from tests.unit.resources._factories import command_result
 
 _TODO = IssueStatus("todo")
 
@@ -1412,6 +1413,40 @@ class AgentArgvCase:
     build: Callable[[AgentResource], Command[Agent]]
 
 
+@dataclass(frozen=True)
+class AgentCustomArgsCase:
+    id: str
+    expected_argv: str
+    build: Callable[[AgentResource], Command[Agent]]
+    expected_custom_args: tuple[str, ...]
+
+
+def _create_agent_with_custom_args(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent", model="gpt-5", custom_args=("--fast", "future"))
+
+
+def _update_agent_with_runtime_and_retained_custom_args(
+    resource: AgentResource,
+) -> Command[Agent]:
+    return resource.update_command("agent-1", runtime_id="runtime-2")
+
+
+_AGENT_CUSTOM_ARGS_CASES = (
+    AgentCustomArgsCase(
+        "create",
+        'multica agent create --name agent --model gpt-5 --custom-args \'["--fast","future"]\' --output json',
+        _create_agent_with_custom_args,
+        ("--fast", "future"),
+    ),
+    AgentCustomArgsCase(
+        "update-retains",
+        "multica agent update agent-1 --runtime-id runtime-2 --output json",
+        _update_agent_with_runtime_and_retained_custom_args,
+        ("--fast", "future"),
+    ),
+)
+
+
 def _create_agent_model_thinking(resource: AgentResource) -> Command[Agent]:
     return resource.create_command(name="agent", model="gpt-5", thinking_level="high")
 
@@ -1452,6 +1487,22 @@ def _update_agent_runtime_swap_model_thinking_set(resource: AgentResource) -> Co
     return resource.update_command(
         "agent-1", runtime_id="runtime-2", model="gpt-5", thinking_level="high"
     )
+
+
+def _create_agent_custom_args(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent", model="gpt-5", custom_args=("--fast", "future"))
+
+
+def _create_agent_empty_custom_args(resource: AgentResource) -> Command[Agent]:
+    return resource.create_command(name="agent", model="gpt-5", custom_args=())
+
+
+def _update_agent_custom_args(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", custom_args=("--fast", "future"))
+
+
+def _update_agent_empty_custom_args(resource: AgentResource) -> Command[Agent]:
+    return resource.update_command("agent-1", custom_args=())
 
 
 _AGENT_MODEL_RUNTIME_ARGV_CASES = (
@@ -1504,6 +1555,26 @@ _AGENT_MODEL_RUNTIME_ARGV_CASES = (
         "--thinking-level high --output json",
         _update_agent_runtime_swap_model_thinking_set,
     ),
+    AgentArgvCase(
+        "create-custom-args",
+        'multica agent create --name agent --model gpt-5 --custom-args \'["--fast","future"]\' --output json',
+        _create_agent_custom_args,
+    ),
+    AgentArgvCase(
+        "create-empty-custom-args",
+        "multica agent create --name agent --model gpt-5 --custom-args '[]' --output json",
+        _create_agent_empty_custom_args,
+    ),
+    AgentArgvCase(
+        "update-custom-args",
+        'multica agent update agent-1 --custom-args \'["--fast","future"]\' --output json',
+        _update_agent_custom_args,
+    ),
+    AgentArgvCase(
+        "update-empty-custom-args",
+        "multica agent update agent-1 --custom-args '[]' --output json",
+        _update_agent_empty_custom_args,
+    ),
 )
 
 
@@ -1515,6 +1586,44 @@ def test_agent_model_thinking_runtime_matrix_emits_exact_argv(
     command = case.build(AgentResource(mock_transport, ClientConfig()))
     assert command.commands == (case.expected,)
     mock_transport.run_bytes.assert_not_called()
+
+
+@pytest.mark.parametrize("case", _AGENT_CUSTOM_ARGS_CASES, ids=lambda case: case.id)
+def test_agent_custom_args_decode_order_and_runtime_update_retains_values(
+    case: AgentCustomArgsCase, mock_transport: MagicMock
+) -> None:
+    mock_transport.build_full_argv.side_effect = lambda args: ("multica", *args)
+    mock_transport.run_bytes.return_value = command_result(
+        b'{"id":"agent-1","name":"agent","custom_args":["--fast","future"]}'
+    )
+    resource = AgentResource(mock_transport, ClientConfig())
+    command = case.build(resource)
+
+    agent = command.run()
+
+    assert agent.custom_args == case.expected_custom_args
+    assert command.commands == (case.expected_argv,)
+
+
+def test_agent_reserved_custom_args_preserve_standard_validation_error(
+    mock_transport: MagicMock,
+) -> None:
+    failure = ValidationError(
+        "provider rejected reserved argument",
+        exit_code=5,
+        stderr='Error: POST /api/agents returned 400: {"code":"provider_reserved"}',
+        code="provider_reserved",
+    )
+    mock_transport.run_bytes.side_effect = failure
+
+    with pytest.raises(ValidationError) as raised:
+        AgentResource(mock_transport, ClientConfig()).create(
+            name="agent", model="gpt-5", custom_args=("--model=reserved",)
+        )
+
+    assert raised.value is failure
+    assert raised.value.code == "provider_reserved"
+    assert '"code":"provider_reserved"' in raised.value.stderr
 
 
 @dataclass(frozen=True)

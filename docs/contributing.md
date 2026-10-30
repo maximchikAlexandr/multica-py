@@ -39,10 +39,11 @@ It never edits the approved contract or repository runtime code. Review and Git
 merge are the sole promotion decision; candidate state, journals, upgrade
 bundles, and golden generated copies are not used.
 
-For the current direct `0.6.2` → `0.7.0` review, the baseline source is pinned
-to `7ab92d7622ecd81d179a8d83ae2dea74835a5069`; the target source is pinned to
-`dbdbb299164347586e2650bb67684a490726a798` (release `421685918`) and the
-compatibility interval is `[0.6.2, 0.7.1)`. Verify both release archives against
+For the current direct `0.7.0` → `0.7.1` review, the baseline source is pinned
+to `dbdbb299164347586e2650bb67684a490726a798`; the target source is pinned to
+`aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` (release `425269384`) and the
+compatibility interval is `[0.6.2, 0.7.2)`, preserving `0.6.2` as its minimum.
+Verify both release archives against
 their official manifests before hashing their extracted executables. Pass only
 the target executable digest to `collect --sha256`. Run the source-link audit
 after validation:
@@ -52,7 +53,7 @@ describe the current release workflow.
 
 ```bash
 uv run python scripts/audit_source_links.py \
-  --source-checkout .devlocal/upstream-contract/v0.6.2..v0.7.0/source/multica
+  --source-checkout .devlocal/upstream-contract/v0.7.1/source/multica
 ```
 
 The release gate also keeps the immutable composition's original planning
@@ -63,5 +64,5 @@ gate with both SHA inputs; never rewrite composition or accepted history.
 The generated runtime projection is
 `src/multica_py/_generated/approved_sdk.py`. Documentation, compatibility, and
 provenance projections are transient and must remain outside tracked paths. The
-0.7.0 release provenance is kept under
-`.devlocal/upstream-contract/v0.6.2..v0.7.0/evidence/`.
+0.7.1 release provenance is kept under
+`.devlocal/upstream-contract/v0.7.1/evidence/`.

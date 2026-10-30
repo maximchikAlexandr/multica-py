@@ -6,34 +6,41 @@ The generated runtime constants in
 - `TARGET_VERSION` remains the exact source checkout pinned by every source reference;
 - `MIN_CLI_VERSION` and exclusive `MAX_CLI_VERSION` come from the approved compatibility block.
 
-The current reviewed interval is `[0.6.2, 0.7.1)`. This direct `0.6.2` →
-`0.7.0` migration compares baseline source commit
-`7ab92d7622ecd81d179a8d83ae2dea74835a5069` with target `0.7.0` at source
-commit `dbdbb299164347586e2650bb67684a490726a798`; it does not publish an
-intermediate SDK release. The target is release `421685918`. The typed SDK
+The current reviewed interval is `[0.6.2, 0.7.2)`. This direct `0.7.0` →
+`0.7.1` migration compares baseline source commit
+`dbdbb299164347586e2650bb67684a490726a798` with target `0.7.1` at source
+commit `aec9b0b1699939a6d993da9ca2ebd2c62900a8e0`; the supported CLI floor
+remains `0.6.2`, and no intermediate SDK release is required. The target is
+release `425269384`. The typed SDK
 maintains a closed 209-node inventory, 193-operation registry, and 196-entrypoint
-response registry, with eight changed and 188 unchanged responses. Runtime list
+response registry, with 0 changed and 196 unchanged response shapes. V071
+behavioral corrections remain wire-compatible and do not change those response
+shapes. Runtime list
 and rename return visibility and ordered sharing identities, while target-version
 update remains `RuntimeUpdateResult`. Runtime access-management writes remain
 outside the SDK because the CLI provides no corresponding operation.
 Historical note: the superseded `0.5.0` → `0.5.1` review is retained only as
 historical comparison evidence, not as the current compatibility claim.
 
-The baseline release is GitHub release `411568605`, asset
-`multica-cli-0.6.2-darwin-arm64.tar.gz`: archive digest
-`fc6651c46bfe11724d38f8cfea4bf421d8c61d00e9cfc3e7766d20b992694f31`, executable
-digest `dd33644e6b6860cd618bb8407e9213649e0bf1c9bb23ef30a5f9b39ac851bb27`,
-and version-output digest
-`82fbdffce4eab90f6e08e462a77dddcf1ef5a7663f8f033585a4c5123577b9eb`.
-The target is GitHub release `421685918`, asset
+The direct comparison baseline is GitHub release `421685918`, asset
 `multica-cli-0.7.0-darwin-arm64.tar.gz`: archive digest
 `0e42f2387829a7137ff2cf7278731282b75f691272a02e4c7f958b5ac104b865`, executable
 digest `b867363c94dafb2045885e4dd9da347cd703056b0a7fe1227466dbc60d1f5a10`,
 and version-output digest
 `ce2e32186bbbafdfe9b0c75b5dab486be00b3940b78350ccbee3d0c2067f2099`.
-These identities are checked independently; the collector receives only the
-executable digest. The preceding `0.4.44` archive and executable digests remain
-historical comparison evidence; both baseline and target retain separate
+The `0.6.2` supported-floor release is GitHub release `411568605`, asset
+`multica-cli-0.6.2-darwin-arm64.tar.gz`: archive digest
+`fc6651c46bfe11724d38f8cfea4bf421d8c61d00e9cfc3e7766d20b992694f31`, executable
+digest `dd33644e6b6860cd618bb8407e9213649e0bf1c9bb23ef30a5f9b39ac851bb27`,
+and version-output digest
+`82fbdffce4eab90f6e08e462a77dddcf1ef5a7663f8f033585a4c5123577b9eb`.
+The target is GitHub release `425269384`, asset
+`multica-cli-0.7.1-darwin-arm64.tar.gz`. Its archive, executable, and version
+output identities are recorded in the ignored release evidence referenced by
+`contracts/sdk-contract.json`; verify them independently before collection.
+The collector receives only the executable digest. The preceding `0.4.44`
+archive and executable digests remain historical comparison evidence; both
+baseline and target retain separate
 checksum roles.
 
 `multica_py._internal.compat` imports these constants. Client configuration
@@ -46,23 +53,23 @@ For an upstream release, use the reviewed flow:
 collect → validate --source-checkout → render → check
 ```
 
-The current v0.7.0 review uses these exact stages, in this order; collection
+The current v0.7.1 review uses these exact stages, in this order; collection
 requires the verified release binary and writes only to ignored evidence:
 
 ```bash
 uv run python scripts/upstream_contract.py collect \
-  --source-checkout /absolute/pinned/v0.6.2..v0.7.0/source/multica \
-  --binary /absolute/verified/multica-cli-0.7.0 \
-  --tag v0.7.0 --version 0.7.0 \
-  --commit dbdbb299164347586e2650bb67684a490726a798 \
-  --release-id 421685918 --asset-name multica-cli-0.7.0-darwin-arm64.tar.gz \
-  --sha256 b867363c94dafb2045885e4dd9da347cd703056b0a7fe1227466dbc60d1f5a10 \
+  --source-checkout /absolute/pinned/v0.7.1/source/multica \
+  --binary /absolute/verified/multica-cli-0.7.1 \
+  --tag v0.7.1 --version 0.7.1 \
+  --commit aec9b0b1699939a6d993da9ca2ebd2c62900a8e0 \
+  --release-id 425269384 --asset-name multica-cli-0.7.1-darwin-arm64.tar.gz \
+  --sha256 <verified-executable-sha256> \
   --os darwin --arch arm64 \
   --version-output /absolute/evidence/version-output.json \
   --output-dir /absolute/ignored/upstream-contract-evidence
 uv run python scripts/upstream_contract.py validate \
   --approved contracts/sdk-contract.json \
-  --source-checkout /absolute/pinned/v0.6.2..v0.7.0/source/multica
+  --source-checkout /absolute/pinned/v0.7.1/source/multica
 uv run python scripts/upstream_contract.py render \
   --approved contracts/sdk-contract.json \
   --runtime-output src/multica_py/_generated/approved_sdk.py \
@@ -70,7 +77,7 @@ uv run python scripts/upstream_contract.py render \
 uv run python scripts/upstream_contract.py check \
   --approved contracts/sdk-contract.json
 uv run python scripts/audit_source_links.py \
-  --source-checkout /absolute/pinned/v0.6.2..v0.7.0/source/multica
+  --source-checkout /absolute/pinned/v0.7.1/source/multica
 ```
 
 The release archive hashes are verified separately from the extracted binary:
