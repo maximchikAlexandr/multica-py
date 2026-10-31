@@ -24,7 +24,11 @@ The live test repository SHALL be `https://github.com/maximchikAlexandr/multica-
 
 #### Scenario: Cleanup preserves evidence but removes mutable state
 - **WHEN** live verification completes or fails
-- **THEN** run-owned issues/comments/runs/chat fixtures SHALL be removed through the owning member profile, provisioned credentials/profiles SHALL remain untouched, evidence links and commits SHALL remain, and no branch/MR SHALL be closed, merged, or deleted without separate authorization
+- **THEN** each captured nonterminal run SHALL be cancelled and refreshed to terminal within the bounded cleanup window before the owning member deletes the uniquely named disposable project; public read-back SHALL prove project/issue gets and captured chat-thread reads raise redacted `NotFoundError` and run IDs are absent from captured agents' task listings, while supplied credentials/profiles and evidence links/commits remain untouched
+
+#### Scenario: Residual graph state blocks further attempts
+- **WHEN** a captured run does not become terminal, project deletion fails, or any issue/run/chat fixture remains observable after deletion
+- **THEN** cleanup and the case SHALL fail, a sanitized recovery manifest SHALL retain the disposable project and captured object identifiers for the environment owner, no unsupported per-object delete SHALL be attempted, and no further live attempt SHALL start until recovery is confirmed
 
 ### Requirement: Release gates and documentation describe the direct migration
 User and maintainer documentation SHALL describe direct `0.7.1` to `0.7.2` migration, preserved `0.6.2` minimum, maximum-tested `0.7.2`, exclusive `0.7.3` ceiling, rerun deprecation/migration, steering/force/property/privacy behavior, and rollback. Delivery SHALL pass strict OpenSpec, contract/source validation, transient render/check, source-link, deterministic diff, operation completeness, focused tests, live isolation collection, typing, Ruff, docs, packaging, and exact local/remote SHA gates.
