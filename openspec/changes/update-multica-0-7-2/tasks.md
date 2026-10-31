@@ -23,13 +23,13 @@
 - [ ] 3.5 Extend agent-task and issue-run fixtures for member/authorized-agent/self/permission-denied/omitted `can_supplement` and foreign-chat redaction while keeping the field open and optional.
 - [ ] 3.6 Add run-message foreign-chat 404 coverage that preserves the existing message payload and redacted `NotFoundError` boundary.
 
-## 4. Focused Live and CI Verification Assets
+## 4. Verification Preparation and CI Assets
 
-- [ ] 4.1 Extend the existing `tests/live` harness with exact-revision fixtures for the `multica-test` stand, dedicated `myl-623-tester-N` profile/daemon, disposable identities/issues/runs/comments/properties, readiness checks, attempt recording, and failure-safe cleanup.
-- [ ] 4.2 Add focused live cases for steering authority, self/cap/race fallback, multiple receipts, task visibility, and foreign-chat transcript privacy using real member/agent identities without leaking private content.
-- [ ] 4.3 Add focused live daemon cases that compare the dedicated PID/profile against the primary daemon, prove ordinary and confirmed forced cleanup, and fail closed on identity or cleanup uncertainty.
-- [ ] 4.4 Keep visible-output captures disabled because output is unchanged; if implementation changes terminal tables/logs/progress/summaries, stop for a planning revision requiring actual baseline/candidate text and Mac PNG rendering via bundled `scripts/render_terminal.swift`.
-- [ ] 4.5 Extend existing GitHub CI jobs/fixtures for all applicable offline and isolated live checks without adding a runner, private hostname, credential, or personal profile to the repository.
+- [ ] 4.1 Extend the existing `tests/live` readiness layer to require four independently authenticated profile inputs (member, self-agent, authorized agent, denied agent), validate caller identity without exposing credentials, and refuse mutation when any profile or documented provisioning provenance is absent.
+- [ ] 4.2 Prepare focused authority/privacy live cases and run-owned setup/reset/cleanup for disposable owner issue, self-owned run, authorized/denied agent relations, comments, and foreign-chat tasks; keep the case blocked until the test owner supplies the four profiles through a supported authentication channel.
+- [ ] 4.3 Add deterministic `FakeMultica` and existing process-contract cases for ordinary/forced daemon argv, graceful timeout, PID/profile mismatch, unresolved PID, force failure, confirmed termination, and unconfirmed cleanup; do not add a live daemon failure injector.
+- [ ] 4.4 Keep visible-output captures disabled because output is unchanged; if implementation changes terminal tables/logs/progress/summaries, stop for a planning revision that selects an available capture method and requires actual baseline/candidate text and images.
+- [ ] 4.5 Extend existing GitHub CI jobs/fixtures for applicable offline checks and live readiness collection without adding a runner, private hostname, credential, personal profile, or credential provisioning to the repository.
 
 ## 5. Documentation and Repository Gates
 
@@ -41,6 +41,6 @@
 ## 6. Independent Verification and Delivery
 
 - [ ] 6.1 Map every OpenSpec scenario to a lower-level check, focused live case, existing sufficient coverage, or explicit exclusion and keep automated, manual Tester, and CI results distinct.
-- [ ] 6.2 Have an independent Tester use a fresh exact-SHA checkout to inspect the mapping, run focused lower-level checks, execute only the authorized isolated live cases, and record case-level product/CLI revisions, fixtures, assertions, attempts, and cleanup.
+- [ ] 6.2 Prepare and publish a parent-level verification manifest for a fresh exact-SHA checkout, including mapped lower-level commands, the blocked four-profile live prerequisite, permitted live actions, fixture/reset/cleanup steps, and required revision/assertion/attempt fields.
 - [ ] 6.3 Publish normal development/test commits according to their natural durable results, push without force, and prove local candidate HEAD equals the remote branch SHA.
-- [ ] 6.4 Attach sanitized commands, exit codes, assertions, CI/MR/commit/file links, and any required artifacts to the final Multica comment, read back comment and attachments, and keep logs, diagnostics, hashes, provenance output, and images out of Git.
+- [ ] 6.4 Publish the implementation handoff bundle with sanitized command inventory, exit-code summary, CI/MR/commit/file links, expected attachment slots, and read-back procedure; keep actual Tester logs, diagnostics, hashes, provenance output, assertions, and images out of Git for the parent-level post-fan-in gate.

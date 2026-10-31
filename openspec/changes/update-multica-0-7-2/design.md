@@ -13,7 +13,7 @@ The current code already has a rich `TaskRun`, comment supplement decoding, shel
 - Define a direct `0.7.1` to `0.7.2` upgrade with exact release, tag, source, archive, executable, command, response, and compatibility provenance.
 - Approve stable Python names, types, defaults, migration behavior, validation, and error boundaries for run rerun, comment steering, daemon force, property capacity, and task/chat privacy.
 - Preserve deterministic generation, open future values, table-driven tests, exact-SHA evidence, and rollback to the `0.7.1` projection.
-- Add only the focused live verification needed to prove server-side authority/privacy and isolated daemon lifecycle behavior.
+- Add only the focused live verification needed to prove server-side authority/privacy, and require an honest environment blocker when independently authenticated callers cannot be provisioned.
 
 **Non-Goals:**
 
@@ -66,17 +66,19 @@ No new subsystem is necessary. The approved contract/generator, `TaskRun`, comme
 
 ### 7. Focus live verification on irreducibly server-owned behavior
 
-`e2e_required=true`. Lower-level tests prove argv, decoding, validation, deterministic generation, and error classification. A focused isolated live walkthrough is still required for (a) steering authorization/caps/race fallback and foreign-chat privacy across real member/agent identities, and (b) forced daemon shutdown's PID/profile identity and cleanup confirmation. These outcomes depend on server authority, scheduling, and real process state and cannot be proven by fake CLI output alone.
+`e2e_required=true`. Lower-level tests prove argv, decoding, validation, deterministic generation, cap/race outcome mapping, and daemon error classification. A focused isolated live walkthrough is still required only for actual-caller steering authorization and foreign-chat privacy across independently authenticated member, self-agent, authorized-agent, and denied-agent callers. The base harness has one preauthenticated profile and no supported provisioning/authentication channel for the other callers, so this live case is explicitly blocked by the environment. Listing agents is not authentication. No implementation parent may claim complete and no Tester may start the live case until the test owner supplies four isolated profiles and documents how each was authenticated.
 
-The Implementer will extend the existing `tests/live` harness rather than add a runner. Tester will use the project test repository `https://github.com/maximchikAlexandr/multica-py`, the isolated `multica-test` stand, a dedicated `myl-623-tester-N` profile/daemon, disposable issues/comments/runs/properties, and owned ports/data only. The primary Multica profile, daemon, containers, and reference checkout are forbidden. Visible CLI output is not intentionally changed, so no before/after PNG is required; actual text and images become mandatory only if implementation changes visible output.
+Per-run/global caps and race fallback remain lower-level contract/component cases: the SDK neither owns server scheduling nor has a deterministic target barrier hook, so timing a live race would add flaky server testing without improving SDK boundary proof. Daemon graceful-timeout, PID/profile mismatch, force failure, and unconfirmed cleanup likewise remain deterministic `FakeMultica`/process-contract cases because the SDK delegates lifecycle policy to the pinned CLI and the target exposes no safe failure-injection fixture. Live daemon mutation is excluded rather than conditionally promised.
+
+The Implementer will prepare the existing `tests/live` harness to fail readiness without the four caller profiles rather than add a runner or synthesize credentials. Once provisioned, the parent-level Tester will use the project test repository `https://github.com/maximchikAlexandr/multica-py`, the isolated `multica-test` stand, disposable issues/comments/runs and foreign-chat fixtures, and profile-local data only. Each caller profile is validated by a benign identity/read operation before mutation; setup creates one owner/member issue, one active self-owned run, one authorized foreign-agent relation, one denied-agent relation, and two chat tasks with a unique test label. Reset creates fresh fixtures instead of reusing state. Cleanup deletes only run-owned comments/issues/chat fixtures through the owning member profile and leaves credentials/profiles untouched. The primary Multica profile, daemon, containers, and reference checkout are forbidden. Visible CLI output is not intentionally changed, so no before/after PNG is required; any visible-output change requires a new planning revision and an actually available capture method.
 
 ## Risks / Trade-offs
 
 - **The hidden legacy rerun disappears in a later CLI** → Mark it deprecated, bind it only inside the declared interval, document migration, and remove it only through a future breaking change.
 - **Short run IDs resolve ambiguously** → Preserve target `--issue` narrowing, test ambiguity/not-found errors, and never resolve IDs locally.
 - **Steering outcomes evolve** → Keep status/reason strings open while strictly validating required shape and IDs.
-- **Force stop could affect the wrong daemon** → Require a dedicated profile, compare target PID with primary daemon status, reject identity mismatch, and terminate only the owned child.
-- **Live authority/race cases are timing-sensitive** → Gate attempts on exact revision/readiness, capture task/run IDs and outcomes, diagnose with deterministic checks before retry, and preserve a case-level attempt ledger.
+- **Force stop could affect the wrong daemon** → Do not induce live failures; prove the SDK's exact delegation and fail-closed error mapping with programmable CLI/process fixtures, leaving target-owned OS lifecycle validation to the pinned upstream contract.
+- **Live caller authentication is unavailable** → Keep authority/privacy E2E required but blocked until the test owner supplies four independently authenticated isolated profiles through a documented supported channel; never infer authentication from agent listing or reuse one caller as several actors.
 - **Wide contract edits can hide omissions** → Require 209/209 command closure, 196 unique response work items, exactly eight changed verdicts, source-link audit, and byte-stable regeneration.
 - **Full automated verification can exceed ten minutes** → Stop only the owned local suite at the limit and run the unsplit suite in GitHub Actions on the published exact revision.
 
@@ -84,10 +86,10 @@ The Implementer will extend the existing `tests/live` harness rather than add a 
 
 1. Reproduce exact release/source/binary evidence outside the tracked tree and update only the reviewed approved contract.
 2. Render the existing generated projection, add the new operation/input/output bindings, and preserve the legacy rerun shim as deprecated manual compatibility surface.
-3. Extend issue/comment/task, daemon, and property adapters plus table-driven unit/contract/component/process/live fixtures.
+3. Extend issue/comment/task, daemon, and property adapters plus table-driven unit/contract/component/process fixtures; prepare the live authority/privacy readiness contract without inventing caller credentials.
 4. Update compatibility, API, migration, coverage, changelog, contributing, packaging, and release documentation for direct `0.7.1` to `0.7.2` adoption and rerun migration.
 5. Run focused local gates, publish normally, and run any suite expected to exceed or reaching ten minutes unsplit in GitHub Actions at the same SHA.
-6. Have an independent Tester verify lower-level mappings and the isolated live cases, attach sanitized evidence in Multica, and read back the comment/attachments.
+6. After every WP child fans in, have an independent Tester verify lower-level mappings and, only after the four-profile prerequisite is supplied, the isolated live authority/privacy case; attach sanitized evidence in Multica and read back the comment/attachments.
 7. Roll back by reverting implementation commits and restoring the `0.7.1` approved/generated projection; no persistent product-data migration is introduced. Do not close, merge, or delete the evidence branch without separate authorization.
 
 ## Open Questions

@@ -31,5 +31,5 @@ None.
 
 - Approved contract and generated projection: `contracts/sdk-contract.json`, `src/multica_py/_generated/approved_sdk.py`, validation/render/check tooling, and exact source/test references.
 - Existing issue, comment, task-run, daemon, and property resources; shared wire/entity models; operation tables; compatibility checks; and public documentation. No new top-level resource, runner, framework, or runtime dependency is introduced.
-- Existing unit, contract, component, process, packaging, and CI fixtures. Verification uses lower-level deterministic checks plus a focused isolated live CLI walkthrough for server-authority/privacy behavior; evidence remains Multica-only.
+- Existing unit, contract, component, process, packaging, and CI fixtures. Verification uses lower-level deterministic checks plus a focused isolated live CLI walkthrough for server-authority/privacy behavior. That live gate is blocked until the test owner supplies independently authenticated caller profiles through a documented supported channel; the single profile in the current harness is insufficient. Evidence remains Multica-only.
 - The legacy issue-level rerun remains callable only as a documented deprecated shim and is not represented as a target public CLI node.
