@@ -129,7 +129,13 @@ models remain. One stdlib E2E orchestration helper is necessary because the
 provided stand has fixed shared ports/profile state and force-stop evidence
 must prove exact child ownership; its alternative is an undocumented sequence
 of manual mutations, which cannot enforce a stand lease or reliable failure
-cleanup, so the narrow helper remains. A direct HTTP client, second generator,
+cleanup, so the narrow helper remains. Its daemon mode is an explicit
+human-local gate: it preserves task identity, refuses daemon-managed execution,
+and uses a recorded dedicated foreground child plus POSIX `SIGSTOP` to make the
+graceful path deterministically time out before observing the target CLI's
+forced-termination/unconfirmed-cleanup result. Agent-safe fixtures cover argv,
+human-local refusal, mismatch refusal, and error propagation; they never
+impersonate a human or signal a daemon. A direct HTTP client, second generator,
 second validator, custom process manager, background runner, parallel E2E
 framework, and evidence database are unnecessary and removed from the plan.
 All other work extends existing modules and tables.
