@@ -120,14 +120,19 @@ require row-oriented reuse and one completeness inventory.
 
 ### Decision 7: Ponytail full gate
 
-No new subsystem is necessary. The only new top-level public component is the
-required workflow resource; its existing alternative is raw CLI use, which
-would leave an approved public family untyped, so it remains. New workflow
-models are necessary to preserve structured results; a generic JSON dictionary
-alternative would weaken the SDK contract, so the minimal dedicated models
-remain. A direct HTTP client, second generator, second validator, custom process
-manager, background runner, E2E harness, and evidence database are unnecessary
-and removed from the plan. All other work extends existing modules and tables.
+No new product subsystem is necessary. The only new top-level public component
+is the required workflow resource; its existing alternative is raw CLI use,
+which would leave an approved public family untyped, so it remains. New
+workflow models are necessary to preserve structured results; a generic JSON
+dictionary alternative would weaken the SDK contract, so the minimal dedicated
+models remain. One stdlib E2E orchestration helper is necessary because the
+provided stand has fixed shared ports/profile state and force-stop evidence
+must prove exact child ownership; its alternative is an undocumented sequence
+of manual mutations, which cannot enforce a stand lease or reliable failure
+cleanup, so the narrow helper remains. A direct HTTP client, second generator,
+second validator, custom process manager, background runner, parallel E2E
+framework, and evidence database are unnecessary and removed from the plan.
+All other work extends existing modules and tables.
 
 ## Risks / Trade-offs
 

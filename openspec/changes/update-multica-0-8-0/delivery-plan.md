@@ -45,34 +45,56 @@ literal attachment argv, numeric model decoding, limits, diagnostics, privacy
 fallbacks, and warning-channel separation are sufficiently proven at lower
 levels unless a live case observes them incidentally.
 
-The test repository is the project repository configured in the Multica
-project description. Public artifacts SHALL refer to the isolated environment
-through parameter names, not its private URL or hostname. The Tester SHALL use
-the isolated project test profile/CLI, its own checkout, resources, database
-state, and ports; the primary Multica profile, daemon, and data are forbidden.
+No separate evidence or test repository is used. The product GitHub repository
+is an attached Multica project resource, not a URL supplied by the project
+description; all tracked SDK tests, fixtures, CI changes, and the minimal live
+orchestration helper SHALL stay in that product repository. The project
+description supplies only the local stand path, Compose project, fixed local
+ports, and dedicated `multica-test` profile/daemon. Public artifacts SHALL
+refer to those values through parameter names, not disclose private hostnames,
+tokens, or profile data.
+
+The Tester SHALL create a clean product checkout at the exact candidate SHA.
+The fixed stand is shared infrastructure, so the tracked helper
+`scripts/e2e/verify_multica_0_8_0.py` SHALL obtain an atomic exclusive lease in
+the configured stand root before mutation and refuse an existing lease. While
+holding it, the helper SHALL verify Compose project identity and readiness on
+the configured API/frontend ports, namespace every mutable record with a
+run-id, and use only the dedicated test CLI/profile. It SHALL NOT launch a
+second stack on the fixed ports, reset the shared database, or reference the
+primary Multica profile/daemon. Only supported public CLI resource operations
+define the teardown boundary; an issue that the public CLI cannot delete is
+cancelled and reported as a retained namespaced fixture rather than removed
+through an unreviewed HTTP route. Cleanup releases only the caller-owned lease
+after restoration checks.
 
 ## Verification case matrix
 
 | Case | OpenSpec requirement/scenario | Remaining gap and decision | Public boundary | Script / entry command | Independent Tester steps | CI disposition | Assertions | Artifacts / images |
 |---|---|---|---|---|---|---|---|---|
-| `E2E-01` | Workflow lifecycle, handoff replacement, project default/set mapping, dry-run/conflict | Real persistence, resolution by id/name/default, mapping plan, and structured conflict require server state; local E2E selected | SDK workflow/project methods invoking CLI `0.8.0`; workflow/project API operations behind the CLI | Extend `tests/live/test_smoke.py`; focused entry `uv run pytest tests/live/test_smoke.py -k workflow -vv` with existing live fixtures | In a fresh checkout, create a uniquely named workflow and disposable project, get/list/update it, set a handoff, dry-run project mapping, apply mapping, read back `workflow_id`, reset to default, and delete all disposable records | Extend existing `live-smoke.yml` on the trusted exact candidate when its protected target provides CLI `0.8.0`; otherwise report readiness blocker, never lower the expected version | Exact candidate and CLI versions; typed fields; open strings; no-op update rejected pre-I/O; dry-run changes no state; conflict is structured; set/reset persist; cleanup succeeds | Sanitized command/exit/assertion transcript and object IDs in Multica only; no image because the SDK has no changed rendered UI/table output |
-| `E2E-02` | Runtime concurrency set/clear and definition decoding | Real PATCH persistence and null clearing cross CLI/server/model layers; local E2E selected | `RuntimeResource.concurrency` and `runtime list` through CLI `0.8.0` | Extend `tests/live/test_smoke.py`; focused entry `uv run pytest tests/live/test_smoke.py -k runtime_concurrency -vv` | Select only the Tester's isolated runtime, record the original value, set a safe valid limit, read it back, clear to `none`, read back null, and restore the exact original value in `finally` | Extend existing protected live-smoke job if the isolated CI fixture exposes a disposable runtime; otherwise local-only with recorded reason | Exact `1..50` behavior; null round trip; unrelated runtime fields unchanged; invalid values produce zero I/O; restoration verified | Sanitized before/after JSON field projection, commands, exits, and restoration proof in Multica only; no image because no SDK rendering changes |
-| `E2E-03` | Task-targeted rerun, fresh mode, comment steering receipts/races, foreign-chat privacy | Task resolution, new task identity, queued/coalesced/deferred/blocked/steered outcomes, permission checks, and race fallback require the scheduler; local E2E selected | Issue/task/comment SDK methods through isolated CLI/server | Extend `tests/live/test_smoke.py` only for deterministic rerun/steering paths; focused entry `uv run pytest tests/live/test_smoke.py -k 'rerun_task or steering' -vv` | Create a disposable issue and short bounded task, rerun by full id and scoped prefix with/without fresh mode, verify distinct task identity, steer an eligible active run, observe the returned outcome, verify attachment conflict locally, then remove disposable issue data allowed by the environment | Deterministic rerun path may extend live-smoke CI; race/permission variants remain independent local walkthrough because CI cannot guarantee timing or multiple principals | Canonical task result; issue scoping; fresh flag; no legacy action result; receipt state preserved; attachments rejected with steering; unauthorized/foreign data not disclosed | Sanitized issue/task/comment IDs, state timeline, commands, exits, outcome receipts, and cleanup result in Multica only; no images because terminal rendering is unchanged and receipts are machine-readable |
-| `E2E-04` | Forced daemon stop exact-child safety | PID/profile validation, graceful timeout, and exact-child termination cannot be proven by fake CLI alone; isolated manual E2E selected | SDK daemon stop through `multica-test` and its dedicated daemon/profile | Use existing test service controls plus focused SDK invocation; no unattended destructive runner is added | Confirm the selected PID is the isolated test daemon and differs from the primary daemon; exercise graceful stop/start, then an approved force path against only the dedicated child; test a mismatch/refusal fixture; restore the isolated daemon and verify readiness | Local-only; CI runners must not force-stop their controlling/shared daemon | Default stop unchanged; force emits one flag; exact isolated child only; mismatch/refusal does not signal or clean locally; service restores healthy; primary daemon untouched | Sanitized PID relationship assertion, commands, exits, readiness proof, and cleanup in Multica only; no raw private paths/hostnames and no image because process state is asserted textually |
-| `LOW-01` | Literal attachment paths, credits/runtime malformed payloads, property/skill limits, skill-source errors, repo warning, privacy fallbacks | Existing shared argv/decode/component/transport tables close the behavior without live state; no local E2E | Fake CLI, model decoder, contract mutation, and transport process fixtures | `make test` plus focused existing test modules selected by implementer | Independently inspect exact case rows and run focused tests; compare command previews for a comma-containing path and warning fixture | Ordinary CI `quality`, `types`, `contract-check`, `compatibility`, and package jobs | Repeated literal argv; exact integer/null semantics; all boundary pairs; stdout/stderr separation; sanitized errors; excluded symbols absent | Test/CI links, commands, exits, and assertions in Multica only; no images |
+| `E2E-01` | `Workflow commands preserve upstream identity and presence` — `Workflow update requires an explicit change`, `Project reset uses explicit default`, `Handoff replacement preserves unspecified fields`; `Workflow resources use typed open contracts` — `Workflow list and get decode future values`, `Create and update preserve optional fields`, `Mapping conflict remains structured` | Real persistence, resolution by id/name/default, mapping plan, and structured conflict require server state; live E2E selected | Public CLI: `workflow list/get/create/update/delete`, `workflow handoff set`, `project workflow get/set`; SDK models: workflow/page/handoff/mapping-plan/conflict results. OpenAPI operation/schema IDs: `N/A` — the approved product base contains no OpenAPI document or generated HTTP client, and the reviewed SDK boundary is the public CLI | Implementer extends `tests/live/test_smoke.py`; exact focused entry under the leased wrapper: `uv run python scripts/e2e/verify_multica_0_8_0.py run --case E2E-01 --candidate-sha "$CANDIDATE_SHA" --run-id "$RUN_ID"` | With the helper-provided client, create a run-namespaced workflow and disposable project, get/list/update, replace one handoff field, dry-run mapping, apply it, read back `workflow_id`, reset to `default`, then delete the disposable project and workflow in `finally` | Extend `live-smoke.yml` only when its protected target provides exact CLI `0.8.0`; otherwise report readiness blocked and never lower the expected version | Exact candidate/CLI versions; typed open fields; no-op update is zero-I/O; dry-run leaves state unchanged; conflict stays structured; set/reset persist; teardown succeeds | Sanitized commands/exits/assertions and object IDs in Multica only; no image because no rendered output changes |
+| `E2E-02` | `Runtime concurrency is typed and bounded` — `Concurrency limit is set`, `Concurrency limit is cleared`, `Invalid concurrency is zero-I/O` | Real persistence and null clearing cross CLI/server/model layers; live E2E selected | Public CLI: `runtime concurrency <runtime-id> <limit\|none>` and `runtime list`; SDK model: runtime definition. OpenAPI operation/schema IDs: `N/A` — no OpenAPI source exists at the approved product base and no HTTP operation is an SDK contract | Implementer extends `tests/live/test_smoke.py`; entry under the leased wrapper: `uv run python scripts/e2e/verify_multica_0_8_0.py run --case E2E-02 --candidate-sha "$CANDIDATE_SHA" --run-id "$RUN_ID" --runtime-id "$MULTICA_LIVE_RUNTIME_ID"` | Verify the configured runtime belongs to the leased test workspace, capture its original value, set a safe valid limit, read back, clear to `none`, read back null, and restore the exact original value in `finally`; refuse an absent or shared/non-test runtime | Extend protected live-smoke only if it exposes an explicitly disposable runtime; otherwise local-only with reason | Exact `1..50` behavior; null round trip; unrelated fields unchanged; invalid inputs produce zero I/O; restoration verified | Sanitized before/after field projection, commands, exits, and restoration proof in Multica only; no image |
+| `E2E-03` | `Rerun migration targets task runs explicitly` — `Scoped rerun resolves one task`; `Comment steering is explicit and receipt-preserving` — `Selected runs are steered in caller order`, `Steering and attachments conflict before I/O`, `Active steering is distinct from explicit steering`; `Target limits and diagnostics adapt existing operations` — `Privacy behavior remains fail closed` | Task identity, live eligibility, receipt races, member permission, and privacy fallback require the scheduler; live E2E selected, while multi-principal denial remains lower-level because the stand fixture exposes one authenticated client | Public CLI: `issue create`, `issue runs --active`, `issue rerun-task`, `issue comment add --steer`, `issue status cancelled`, and `issue assign --unassign`; SDK results: canonical task run and comment trigger/steering receipts. OpenAPI operation/schema IDs: `N/A` — the product base has no OpenAPI document/client and unreviewed server routes are excluded | Implementer extends `tests/live/test_smoke.py`; entry under the leased wrapper: `uv run python scripts/e2e/verify_multica_0_8_0.py run --case E2E-03 --candidate-sha "$CANDIDATE_SHA" --run-id "$RUN_ID" --project-id "$MULTICA_LIVE_PROJECT_ID" --agent-id "$MULTICA_LIVE_AGENT_ID"` | Preflight proves the single client is a member and the configured disposable agent is visible/eligible to that member. Create one run-namespaced issue in the prepared project, assigned to that agent, with a bounded instruction to inspect one repository fixture and return a fixed token. Poll with a bounded deadline until its active task reports `can_supplement=true`; submit explicit steering for that exact task and record whether the race yields a steer receipt or a documented queued/coalesced/deferred fallback after task completion. Wait for terminal state, rerun by full id and issue-scoped prefix with/without fresh mode, and verify distinct task identity. In `finally`, unassign and cancel the issue; because public CLI `0.8.0` has no issue-delete action, retain the cancelled namespaced issue and report its ID instead of calling an unreviewed route | Deterministic rerun may extend live-smoke CI; timing/receipt walkthrough stays independent local verification. A missing eligible agent/member permission or absent steerable window is readiness blocked, not PASS | Canonical task result; issue scope/fresh flag; ordered receipts; race fallback is observable; attachment conflict is zero-I/O; foreign data is not disclosed; retained fixture is cancelled and identified | Sanitized issue/task/comment IDs, bounded state timeline, receipt, commands/exits, and retained-fixture result in Multica only; no image |
+| `E2E-04` | `Forced daemon stop remains an upstream safety operation` — `Default stop remains graceful`, `Forced stop uses one reviewed flag`; `Force-stop safety stays outside the SDK process layer` — `CLI refusal is not bypassed` | PID/profile validation, graceful timeout, exact-child termination, and refusal cannot be proven by fake CLI alone; isolated manual E2E selected | Public CLI: `daemon status/start/stop --force`; SDK: daemon stop eager/lazy command. OpenAPI operation/schema IDs: `N/A` — daemon lifecycle is a local process boundary, not HTTP/OpenAPI | Implementer adds the daemon case to the same tracked helper; exact entry: `uv run python scripts/e2e/verify_multica_0_8_0.py run --case E2E-04 --candidate-sha "$CANDIDATE_SHA" --run-id "$RUN_ID"`. The helper invokes only the configured `multica-test` wrapper and scrubs primary-run `MULTICA_TASK_*`, `MULTICA_AGENT_ID`, `MULTICA_DAEMON_PORT`, `MULTICA_TOKEN`, and primary URL/workspace variables from its child environment so the wrapper selects its fixed dedicated profile | Under the exclusive stand lease, capture primary and test daemon status and refuse equal PID/profile identity. Gracefully stop the test daemon, launch `multica-test daemon start --foreground --no-auto-reload` as a recorded `Popen` child, wait until status PID equals that child, call SDK `stop(force=True)`, and prove only that child exits. With no test daemon running, start a harmless recorded sentinel child, temporarily place only its PID in the dedicated profile PID fixture, call force-stop, require refusal and sentinel survival, then restore the fixture. In `finally`, terminate only still-live recorded child handles after rechecking they differ from the primary daemon PID, restore the original PID file, restart the dedicated test daemon if it was initially running, and poll status readiness; never kill by executable name | Local-only; CI runners SHALL NOT force-stop their controlling/shared daemon | Default stop unchanged; one force flag; foreground PID equals owned child; primary PID remains alive/unchanged; mismatch refuses and sentinel survives; PID fixture is restored; dedicated daemon readiness returns | Sanitized PID relationship, commands/exits, refusal, restart/readiness, and failure-cleanup proof in Multica only; no private paths/hostnames and no image |
+| `LOW-01` | `Repeated attachment paths remain literal argv values` — `Commas remain part of one path`, `Multiple paths preserve order`, `Invalid path input fails before execution`; `Task usage credits preserve integer precision` — `Credits are absent or null`, `Credits preserve exact magnitude`; `Target limits and diagnostics adapt existing operations` — `Boundary tables cover both sides`, `Repository warning does not claim freshness`, `Privacy behavior remains fail closed`; `CLI warnings and structured errors retain channel boundaries` — `Stale-checkout warning preserves success result`, `Workflow conflict remains a failure result`; `Task-only and hidden surfaces remain excluded` — `Exclusions cannot leak into generation` | Existing shared argv/decode/component/transport tables close the behavior without live state; no live E2E | Fake CLI, model decoder, contract mutation, and transport fixtures. OpenAPI operation/schema IDs: `N/A` — no live HTTP boundary is selected and the repository contains no OpenAPI source | `make test` plus focused existing table modules selected by Implementer | Inspect exact case rows and run focused tests; compare previews for comma-containing paths and warning fixtures | Ordinary CI `quality`, `types`, `contract-check`, `compatibility`, and package jobs | Literal repeated argv; integer/null precision; both sides of boundaries; stdout/stderr separation; sanitized errors; excluded symbols absent | Test/CI links, commands, exits, and assertions in Multica only; no images |
 
 ## Test implementation ownership
 
 The Implementer owns all tracked contract, focused feature, shared integration,
 CI, and release-gate test changes, including extensions to
 `tests/live/test_smoke.py`, shared fixtures, fake-CLI tables, CI version/source
-pins, and directly related documentation. The Tester SHALL not edit those
-files. The Tester independently runs or inspects the published exact revision,
-records findings, and requests a new product revision when a defect is found.
+pins, and the single stdlib orchestration helper
+`scripts/e2e/verify_multica_0_8_0.py`. That helper owns lease/preflight,
+case selection, bounded waits, child-process identity checks, restoration, and
+cleanup; it SHALL NOT contain product behavior or collect evidence into Git.
+The Tester SHALL not edit those files. The Tester independently runs or
+inspects the published exact revision, records findings, and requests a new
+product revision when a defect is found.
 
 No parallel runner, browser framework, snapshot library, or E2E evidence
-directory is added. The existing pytest/live-smoke infrastructure and project
-test environment are sufficient.
+directory is added. The helper is a narrow safety wrapper around existing
+pytest/live-smoke, SDK, public CLI, and stand controls, not a second test
+framework.
 
 ## Readiness and attempt contract
 
@@ -80,12 +102,13 @@ Before any live attempt, the Tester SHALL verify:
 
 1. the product checkout is the exact published candidate SHA and clean;
 2. the CLI reports exact target version `0.8.0` and expected commit prefix;
-3. the isolated test profile, daemon, project resources, database, and ports are
-   selected and the primary Multica profile/daemon are not referenced;
+3. the stand-root lease is owned by this run; Compose project and configured
+   fixed ports are ready; the dedicated test profile/daemon and namespaced
+   database records are selected; and primary Multica identity is excluded;
 4. focused offline/contract tests and source-of-truth checks passed on the same
    candidate or have a linked CI result;
-5. disposable workflow/project/issue/task names are unique and cleanup actions
-   are known before mutation;
+5. disposable workflow/project/issue/task names carry the run-id and cleanup or
+   explicit cancelled-fixture retention is known before mutation;
 6. the original runtime concurrency value and isolated daemon PID/profile are
    captured for restoration.
 
@@ -109,21 +132,23 @@ No before/after PNG is required: the SDK change adds typed methods and model
 fields but does not change a rendered SDK CLI table, log formatter, progress
 view, terminal summary, or browser UI. Real structured/text outputs are required
 for each case. If implementation unexpectedly changes visible terminal output,
-the plan must be revised before verification to require baseline/candidate text
-and Mac PNG renders made with bundled `scripts/render_terminal.swift`, with
-locale, width, output mode, ANSI/TTY limitations, revision, command, and exit
-status recorded honestly.
+the plan must be revised before verification to name a real, available capture
+mechanism, its Implementer-owned task, baseline/candidate text, locale, width,
+output mode, ANSI/TTY limitations, revision, command, and exit status. No
+capture script is assumed at the approved base.
 
 ## Cleanup and preservation
 
-Cleanup SHALL delete disposable workflows, projects, issues, comments, and test
-tasks where the isolated environment supports deletion; restore the original
-runtime concurrency; restart and health-check the isolated test daemon; and
-leave the primary Multica environment untouched. Cleanup SHALL preserve the
-evidence branch/PR/commits and their links. The branch or PR SHALL not be closed,
-merged, or deleted without separate authority. Cleanup failures are reported as
-verification failures with the remaining resource identity, never hidden by a
-later successful command.
+Cleanup SHALL delete disposable workflows/projects where the public CLI
+supports deletion, unassign and cancel the E2E-03 issue, restore the original
+runtime concurrency and daemon PID fixture, restart and health-check the
+dedicated test daemon, release the owned stand lease, and leave the primary
+Multica environment untouched. Tasks, comments, and the cancelled issue are
+retained when the public CLI has no supported delete action; their namespaced
+identities SHALL be reported. Cleanup SHALL preserve evidence branch/PR/commits
+and links. The branch or PR SHALL not be closed, merged, or deleted without
+separate authority. Cleanup failures are verification failures with the
+remaining resource identity, never hidden by a later successful command.
 
 ## Estimate conclusion
 
@@ -266,9 +291,11 @@ are excluded from active developer-hours and remain delivery risks.
 - Owned responsibility scope: shared operation/component/public-discovery
   registries, package root/exports, cross-feature compatibility and packaging
   checks, README and common API/CLI/compatibility/migration/service/contributing/
-  changelog/releasing docs, live-smoke integration, final conflict resolution,
-  and evidence publication. It may repair predecessor code only through explicit
-  findings attributed to the owning WP contract and SHALL rerun affected gates.
+  changelog/releasing docs, live-smoke integration,
+  `scripts/e2e/verify_multica_0_8_0.py` and its focused tests, final conflict
+  resolution, and evidence publication. It may repair predecessor code only
+  through explicit findings attributed to the owning WP contract and SHALL
+  rerun affected gates.
 - Contract surface: complete public operation closure, package/export boundary,
   documented migration/exclusions, exact target compatibility claim, live case
   contract, release/rollback and evidence identity.
