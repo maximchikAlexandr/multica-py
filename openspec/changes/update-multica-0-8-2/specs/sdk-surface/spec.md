@@ -63,3 +63,71 @@ The SDK SHALL model reviewed `0.7.1` to `0.8.2` additive fields including attach
 - **WHEN** a task usage payload contains `credits_micros`
 - **THEN** the SDK exposes the exact integer millionths value without conversion through binary floating point
 
+## MODIFIED Requirements
+
+### Requirement: Closed public types
+The SDK MUST use immutable `msgspec` models and closed public enums or primitive unions without public `Any`.
+
+#### Scenario: Structured output stays closed and typed
+- **WHEN** structured output is decoded
+- **THEN** it is a typed model or documented closed primitive.
+<!-- Source IDs: 001:FR-033–FR-039 -->
+<!-- Modified by issue-list-pagination: `IssueListPage` is a frozen `msgspec.Struct`
+     with typed `issues: tuple[IssueSummary, ...]` and closed-scalar pagination
+     fields; no public `Any`. -->
+
+#### Scenario: One public class per concept
+- **WHEN** a consumer imports a full domain concept
+- **THEN** exactly one public class represents it (e.g. `Issue`, `Project`,
+  `Agent`) and no separate `*Data`, `*Entity`, or passive DTO class for that
+  concept is exported from `multica_py` or its submodules
+
+#### Scenario: Public domain fields are declared once and frozen
+- **WHEN** the unified class is inspected
+- **THEN** each public domain field is declared exactly once on the class and
+  the class is `msgspec.Struct, frozen=True, kw_only=True`
+
+#### Scenario: Runtime state is private and excluded
+- **WHEN** a unified instance is compared, printed, or serialized
+- **THEN** `_client`, lazy-relation caches, locks, and loaders are excluded
+  from equality, `repr`, `to_json`, and `to_dict`
+
+#### Scenario: No public ResourceEntity base
+- **WHEN** the public surface is inspected
+- **THEN** `ResourceEntity` is absent from `multica_py.__all__` and from
+  `multica_py.models.__all__`; a private `_BoundEntity` helper may exist but
+  is not exported
+
+#### Scenario: Request and filter models stay separate
+- **WHEN** a create, update, assignment, reorder, or list-filter operation is
+  inspected
+- **THEN** its request/filter model (`IssueCreateRequest`,
+  `IssueUpdateRequest`, `IssueAssignmentRequest`, `IssueReorderRequest`,
+  `IssueListFilter`, ...) remains a distinct public class and is not merged
+  into the unified domain class
+
+#### Scenario: IssueSummary stays a distinct partial response
+- **WHEN** `issues.list` or a list-backed relation returns rows
+- **THEN** the rows are `IssueSummary` values and the SDK does not construct a
+  full `Issue` with empty defaults for fields the list response omitted
+
+#### Scenario: JSON values have immutable public snapshots
+- **WHEN** a consumer reads an `AutopilotRun.trigger_payload` or `result`
+  value
+- **THEN** object nodes are typed as `Mapping[str, JsonValue]`, arrays are
+  tuples, and recursively mutating the original input cannot change the run
+
+#### Scenario: JSON values serialize through the SDK boundary
+- **WHEN** a consumer calls `AutopilotRun.to_dict()` or `to_json()`
+- **THEN** immutable Mapping/tuple snapshots are materialized as standard
+  JSON dict/list containers and the result is directly serializable
+
+#### Scenario: Command and approved 0.8.2 models remain closed
+
+- **WHEN** the public surface is inspected after the `0.8.2` upgrade
+- **THEN** `Command` remains an immutable generic with no public mutable state;
+  each newly approved issue-status, project-member, workflow, saved-view,
+  runtime-concurrency, rerun-task, or additive response concept is represented
+  by one frozen typed model or documented closed primitive; and no unapproved
+  public type or public `Any` is added
+

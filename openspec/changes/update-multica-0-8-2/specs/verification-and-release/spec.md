@@ -23,7 +23,7 @@ Validation, render, check, source-link audit, and regeneration SHALL run without
 - **THEN** generated production bytes and public method discovery remain unchanged
 
 ### Requirement: Independent live verification uses the isolated test target
-The final candidate SHALL be checked through the project-described `multica-test` target using an independent agent, isolated test-owned resources, strict `0.8.2` preflight, and failure-safe cleanup; this live check SHALL not use the primary Multica profile or daemon.
+The delivery SHALL set `e2e_required=true`, and the final candidate SHALL be checked through the project-described `multica-test` target using an independent agent, isolated test-owned resources, strict `0.8.2` preflight, and failure-safe cleanup; this live check SHALL not use the primary Multica profile or daemon.
 
 #### Scenario: Live public boundary succeeds
 - **WHEN** the candidate executes the selected read/create/update/list/delete workflows against the isolated target
@@ -54,4 +54,56 @@ The candidate SHALL pass strict OpenSpec validation, contract/source checks, lin
 #### Scenario: Evidence is published outside Git
 - **WHEN** the independent verifier completes the candidate assessment
 - **THEN** commands, exit codes, assertions, SHA/PR/CI/file links, logs, PNGs, limitations, and cleanup are attached to Multica with successful read-back while transient evidence remains untracked
+
+## MODIFIED Requirements
+
+### Requirement: Existing lower-level checks prove the SDK corrections
+The implementation SHALL use the repository's existing unit, contract,
+fake-CLI component, lifecycle, concurrency, documentation, packaging, and CI
+capabilities to prove deterministic command, model, error, generation, and
+exclusion behavior. The isolated live and image checks required by this change
+SHALL separately prove the service, process, file-binding, authorization, and
+visible-output gaps that lower-level checks cannot close.
+
+#### Scenario: Every deterministic scenario has sufficient lower-level coverage
+- **WHEN** argv, presence, range, response, malformed payload, error,
+  generation, compatibility, package, and exclusion coverage is reviewed
+- **THEN** every deterministic scenario maps to an existing table-driven or
+  focused assertion at the lowest sufficient layer without duplicating the live
+  walkthrough
+
+#### Scenario: Independent verification uses the exact revision
+- **WHEN** the Tester verifies the delivery from a fresh checkout
+- **THEN** the Tester confirms the exact published revision, inspects the
+  scenario-to-test mapping, runs or reads the required lower-level and CI
+  evidence, and performs the separately required isolated live walkthrough
+  without representing one evidence layer as the other
+
+#### Scenario: Live infrastructure is bounded and isolated
+- **WHEN** verification artifacts and dependencies are inspected
+- **THEN** the existing repository-native walkthrough, protected live workflow,
+  wrapper-owned `multica-test`, project-provided isolated target, test-owned
+  resources, and confirmed renderer are the only live infrastructure added or
+  extended; no parallel runner framework or primary Multica profile, daemon,
+  checkout, database, or container is used
+
+#### Scenario: Changed visible output has authentic images
+- **WHEN** verification covers rerun-task, issue-status, or workflow/view output
+  changed by the `0.8.2` target
+- **THEN** equivalent verified `0.7.1` baseline and `0.8.2` candidate actions
+  produce actual UTF-8 text and the mandatory before/after PNGs defined by the
+  delivery plan, with missing renderer or baseline readiness blocking complete
+  verification
+
+## REMOVED Requirements
+
+### Requirement: Local E2E and image evidence are not required
+
+**Reason**: The `0.8.2` change adds real service lifecycle, cross-identity
+authorization, run-targeted task, file-binding, and visible CLI-output risks
+that deterministic lower-level checks cannot fully prove.
+
+**Migration**: Set `e2e_required=true` and follow the isolated target,
+readiness, authentic text/PNG, Multica publication, and cleanup contract in
+`delivery-plan.md`; retain lower-level checks for deterministic behavior.
 
