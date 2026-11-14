@@ -4,7 +4,7 @@
 - [ ] 1.2 Encode exactly 236 target command nodes with 28 additions, one removal, 18 changed nodes, every source-only name, one reviewed disposition per node, and complete positional/flag/default/alias/deprecation/constraint/presence/destination/source/test metadata for every retained or adapted mapping.
 - [ ] 1.3 Encode 196 unique baseline response-entrypoint verdicts (88 changed, 108 unchanged), their model/error/fixture/doc actions and pinned sources, and make validation reject missing, duplicate, unresolved, or pending rows.
 - [ ] 1.4 Extend existing contract schema/check/render/source-link tooling only as required by the reviewed `0.9.0` facts, render `src/multica_py/_generated/approved_sdk.py`, and prove repeated rendering is byte-stable with evidence and transient output outside Git.
-- [ ] 1.5 Add or extend central canonical operation and decoder vector tables so approved operations have one canonical case, changed mappings have positive and negative cases, and deferred/not-SDK candidates cannot generate public behavior.
+- [ ] 1.5 Exclusively update the shared `tests/cases/operations.py` canonical operation table and central decoder-vector metadata for every changed domain so approved operations have one canonical case, changed mappings have positive and negative vectors, and no downstream work package rewrites these shared tables.
 
 ## 2. Issue, Project, Task, Attachment, and Comment Models
 
@@ -12,7 +12,8 @@
 - [ ] 2.2 Add project visibility and creator identity decoding with open-value compatibility and proven private-project 404/omission behavior.
 - [ ] 2.3 Add task credit and redaction projections across issue-run and agent-task paths, preserving open future values and rejecting malformed wire types.
 - [ ] 2.4 Add attachment dimension and comment-resolution projections using the existing models/resources, including omitted/null/malformed compatibility and exact response-envelope coverage.
-- [ ] 2.5 Extend table-driven issue/project/task/attachment/comment operation and component cases for exact argv, destinations, validation timing, standard errors, and eager/preview equivalence without creating parallel test hierarchies.
+- [ ] 2.5 Extend issue/project/task decoder, relation, and fake-CLI component cases outside `tests/cases/operations.py` for presence, validation timing, standard errors, and eager/preview equivalence without creating a parallel operation table.
+- [ ] 2.6 Extend attachment/comment decoder, resource, transport, and fake-CLI cases outside `tests/cases/operations.py`, including the existing `tests/unit/resources/test_attachments.py` and `test_issue_comments.py`, for response presence, literal input, standard errors, and eager/preview equivalence.
 
 ## 3. Rerun Migration and Relationship Safety
 
@@ -40,7 +41,7 @@
 ## 6. Documentation, CI, and Repository Verification
 
 - [ ] 6.1 Update compatibility, API, service-usage, migration, CLI-coverage, changelog, contributing, packaging, and release documentation for the direct `0.7.1` to `0.9.0` upgrade, retained/deferred dispositions, typed additions, private behavior, cancellation, and rerun migration.
-- [ ] 6.2 Update existing CI contract/live-smoke configuration and safe fixtures to pin exact `0.9.0` source/CLI identity and cover only the focused real-boundary gaps; add no new framework or undeclared private dependency.
+- [ ] 6.2 Update the existing CI/live-smoke configuration, `tests/live/conftest.py`, `tests/live/test_smoke.py`, and `scripts/e2e/verify_multica_test.py` to pin exact `0.9.0`, require the protected rerun agent, runtime, project-subscription fixture, and denied-profile inputs defined in `delivery-plan.md`, fail the readiness gate before dispatch when any input is absent, and cover only the focused reproducible real-boundary gaps without adding a new framework.
 - [ ] 6.3 Run focused table-driven unit, contract, component, transport, relation, documentation, and packaging checks for every changed scenario and record exact commands and exit codes.
 - [ ] 6.4 Run strict OpenSpec validation, contract validate/render/check, repeated-render comparison, source-link audit, operation completeness, non-live collection isolation, mypy for source/tests/scripts, Ruff check/format, documentation, packaging, and release gates.
 - [ ] 6.5 Run the full non-live automated suite locally only if it is expected to complete within ten minutes; otherwise, or if it reaches ten minutes, stop only that run-owned process and run the unsplit suite in GitHub Actions on the published exact revision.
@@ -48,8 +49,8 @@
 ## 7. Independent Exact-Revision Verification and Delivery
 
 - [ ] 7.1 Map every affected OpenSpec scenario to a sufficient lower-level assertion or one focused live case, and have an independent Tester inspect that mapping from a fresh exact-revision checkout without editing implementation tests or fixtures.
-- [ ] 7.2 Gate live verification on exact product/test revisions, verified `0.9.0` CLI, isolated test profile/daemon/backend/database/ports, focused lower-level results, disposable fixtures, and confirmed macOS renderer availability before consuming an attempt.
-- [ ] 7.3 Execute focused live cases for rerun-task resume/fresh, cancellation 499/no-body, private-project 404/omission/redaction, project-inherited subscriber provenance, runtime-update nonzero exit, and exact runtime-usage window with case-specific assertions and failure-safe cleanup.
+- [ ] 7.2 Have the `multica-live` environment administrator provision and attest the protected rerun-agent/runtime fixture, pre-subscribed project/issue fixture, and distinct denied human profile exactly as specified in `delivery-plan.md`; gate dispatch on exact product/test revisions, CLI `0.9.0`, isolated bindings, differing authenticated identities, focused lower-level results, cleanup callbacks, and renderer availability.
+- [ ] 7.3 Execute the exact live setup/action/assertion/cleanup sequences in `delivery-plan.md` for rerun-task resume/fresh, private-project 404/list omission, project-inherited subscriber provenance, safe nonexistent-runtime update failure, and exact runtime-usage window; prove 499/no-body separately with the required deterministic fake-CLI/process fixture because pinned `0.9.0` exposes no safe public trigger for that server cancellation path.
 - [ ] 7.4 For any changed visible terminal output, capture equivalent baseline and candidate text plus genuine macOS PNGs at identical locale/width/output mode; otherwise publish a case-specific no-image rationale and do not create decorative images.
 - [ ] 7.5 Publish normal development and applicable test/result commits, push normally, prove remote branch SHA equals the verified local SHA, and preserve branch/PR/commits without force, merge, close, or deletion.
 - [ ] 7.6 Publish sanitized commands, exit codes, assertions, CI/PR/commit/file links, exact SHAs, provenance, and required images as Multica evidence attachments; read back the final comment and attachments, then remove only run-owned stand data and local diagnostic output.

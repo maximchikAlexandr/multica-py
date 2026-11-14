@@ -27,11 +27,15 @@ An independent Tester SHALL verify the protected live cases that cannot be suffi
 
 #### Scenario: Readiness gate precedes live actions
 - **WHEN** Tester begins live verification
-- **THEN** the candidate SHA, approved target CLI identity, isolated profile/daemon, backend, database, ports, fixtures, renderer availability, and focused lower-level results SHALL be confirmed before consuming a live attempt
+- **THEN** the candidate SHA, approved target CLI identity, isolated primary and denied profiles, backend, database, ports, protected rerun/runtime/subscription fixtures, distinct authenticated identities, cleanup callbacks, renderer availability, and focused lower-level results SHALL be confirmed before dispatch, and a missing prerequisite SHALL block the live attempt
 
 #### Scenario: Live boundary cases are observed
 - **WHEN** Tester executes the focused public SDK/CLI paths
-- **THEN** rerun-task resume/fresh, cancellation 499/no-body, private-project 404/omission/redaction, project subscriber provenance, runtime-update nonzero exit, and exact runtime-usage window SHALL each have case-specific assertions and cleanup
+- **THEN** rerun-task resume/fresh, private-project 404/list omission, project subscriber provenance, safe nonexistent-runtime update failure, and exact runtime-usage window SHALL follow the specified setup/action/assertion/cleanup sequences and record case-specific evidence
+
+#### Scenario: Cancellation without a public trigger stays deterministic
+- **WHEN** verification covers the reviewed server 499/no-body cancellation path for which pinned `0.9.0` exposes no safe deterministic public trigger
+- **THEN** the required fake-CLI/process fixture SHALL emit the exact no-body nonzero response, assert standard cancellation rather than output-shape failure, and the live suite SHALL NOT claim or attempt server-side 499 proof
 
 ### Requirement: Visible output evidence is genuine and reviewable
 Changed terminal output SHALL have equivalent baseline and candidate text plus real macOS PNG captures; unchanged or non-visible behavior SHALL not receive decorative images.

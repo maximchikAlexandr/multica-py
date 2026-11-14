@@ -59,9 +59,9 @@ Alternative: special-case cancellation and runtime update inside each resource. 
 
 ### 6. Verify with lower layers plus focused protected live smoke
 
-Contract, unit, component, packaging, and CI checks prove deterministic mappings, wire shapes, authorization semantics, and failures. A focused protected exact-SHA live smoke is required for the remaining real CLI/backend boundary: `rerun-task` lifecycle, 499 cancellation, private-project behavior, project-inherited subscriber provenance, runtime update exit, and exact usage window. It reuses `.github/workflows/live-smoke.yml`, `scripts/e2e/verify_multica_test.py`, and the project test stand; it does not add a second E2E framework.
+Contract, unit, component, packaging, and CI checks prove deterministic mappings, wire shapes, authorization semantics, 499/no-body cancellation, and failures. Pinned `0.9.0` has no safe deterministic public action that forces the server-side 499 path, so that path remains a required exact fake-CLI/process fixture and is not claimed as live evidence. A focused protected exact-SHA live smoke is required only for the reproducible real CLI/backend boundaries: `rerun-task` lifecycle, private-project behavior, project-inherited subscriber provenance, safe update of the reserved nonexistent runtime identifier, and exact usage window. It reuses `.github/workflows/live-smoke.yml`, `scripts/e2e/verify_multica_test.py`, and the project test stand; it does not add a second E2E framework or mutate the prepared runtime.
 
-Alternative: declare all behavior lower-level-only. Rejected because the remaining gaps depend on actual CLI exit/body behavior, authorization filtering, and server-owned lifecycle state.
+Alternative: declare all behavior lower-level-only. Rejected because the remaining gaps depend on authorization filtering and server-owned lifecycle state. Conversely, forcing 499 live coverage was rejected because no public deterministic trigger exists; inventing a backend fault hook would expand product scope.
 
 ## Risks / Trade-offs
 
