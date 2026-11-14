@@ -22,6 +22,10 @@ The SDK SHALL preserve the proven `0.9.0` 404, omission, and redaction behavior 
 - **WHEN** a list response omits an inaccessible private-project record
 - **THEN** the SDK SHALL return the remaining typed page without manufacturing a redacted row
 
+#### Scenario: Private fixture setup does not expand the SDK mutation surface
+- **WHEN** protected verification needs a private project under pinned `0.9.0`
+- **THEN** the administrator fixture channel SHALL create it outside the candidate SDK, while project create/update SHALL NOT gain visibility input under this change
+
 ### Requirement: Issue rerun is run targeted
 The SDK SHALL remove the obsolete `issue rerun <issue-id>` mapping and provide explicit eager and command-preview operations for `issue rerun-task <run-id>` with reviewed resume and fresh behavior and a typed result.
 
