@@ -27,7 +27,7 @@ An independent Tester SHALL verify the protected live cases that cannot be suffi
 
 #### Scenario: Readiness gate precedes live actions
 - **WHEN** Tester begins live verification
-- **THEN** the candidate SHA, approved target CLI identity, isolated administrator/primary/denied profiles, backend, database, ports, protected rerun/runtime/subscription fixtures, external cleanup registry, distinct authenticated identities, cleanup callbacks, renderer availability, focused lower-level results, and a successful setup/cleanup probe SHALL be confirmed before dispatch, and a missing prerequisite SHALL block the live attempt
+- **THEN** the candidate SHA, approved target CLI identity, isolated administrator/primary/denied profiles, backend, database, ports, protected rerun/runtime/subscription fixtures, persistent intent journal, distinct authenticated identities, private membership assertions, cleanup callbacks, renderer availability, focused lower-level results, and successful normal-registration plus pending-intent recovery probes SHALL be confirmed before dispatch, and a missing prerequisite SHALL block the live attempt
 
 #### Scenario: Live boundary cases are observed
 - **WHEN** Tester executes the focused public SDK/CLI paths
@@ -35,7 +35,7 @@ An independent Tester SHALL verify the protected live cases that cannot be suffi
 
 #### Scenario: Mutable live resources are removed failure-safely
 - **WHEN** a focused live case creates an issue, task run, or project, or consumes the run-specific private fixture
-- **THEN** each canonical identifier SHALL be registered outside Git before use, active tasks SHALL be cancelled as needed, the administrator channel SHALL delete every created issue before its project, fixture-finally and workflow-always cleanup SHALL verify issue/run/project absence, and only successfully removed entries SHALL leave the registry
+- **THEN** an exact unique intent SHALL be durably persisted before each project/issue mutation, pending intents SHALL reconcile by exhaustive exact title/marker/parent match after interruption, active tasks SHALL be cancelled as needed, the administrator channel SHALL delete every issue before its project, fixture-finally and workflow-always cleanup SHALL verify issue/run/project absence, and ambiguous or unresolved records SHALL fail closed and remain journaled
 
 #### Scenario: Cancellation without a public trigger stays deterministic
 - **WHEN** verification covers the reviewed server 499/no-body cancellation path for which pinned `0.9.0` exposes no safe deterministic public trigger
