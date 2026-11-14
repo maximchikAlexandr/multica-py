@@ -1,0 +1,55 @@
+## 1. Approved Upstream Contract Foundation
+
+- [ ] 1.1 Update `contracts/sdk-contract.json` from exact Multica `0.7.1` commit `aec9b0b1699939a6d993da9ca2ebd2c62900a8e0` to stable `0.9.0` release `444052572` at commit `8cd8a2db978d532d8627c78cd29f05deab6c6f17`, including verified archive/executable identities and reviewed compatibility interval.
+- [ ] 1.2 Encode exactly 236 target command nodes with 28 additions, one removal, 18 changed nodes, every source-only name, one reviewed disposition per node, and complete positional/flag/default/alias/deprecation/constraint/presence/destination/source/test metadata for every retained or adapted mapping.
+- [ ] 1.3 Encode 196 unique baseline response-entrypoint verdicts (88 changed, 108 unchanged), their model/error/fixture/doc actions and pinned sources, and make validation reject missing, duplicate, unresolved, or pending rows.
+- [ ] 1.4 Extend existing contract schema/check/render/source-link tooling only as required by the reviewed `0.9.0` facts, render `src/multica_py/_generated/approved_sdk.py`, and prove repeated rendering is byte-stable with evidence and transient output outside Git.
+- [ ] 1.5 Add or extend central canonical operation and decoder vector tables so approved operations have one canonical case, changed mappings have positive and negative cases, and deferred/not-SDK candidates cannot generate public behavior.
+
+## 2. Issue, Project, Task, Attachment, and Comment Models
+
+- [ ] 2.1 Add typed issue requester and issue-list creator identity decoding with present, older-server omitted, allowed-null, malformed, and private-project redaction/omission fixtures.
+- [ ] 2.2 Add project visibility and creator identity decoding with open-value compatibility and proven private-project 404/omission behavior.
+- [ ] 2.3 Add task credit and redaction projections across issue-run and agent-task paths, preserving open future values and rejecting malformed wire types.
+- [ ] 2.4 Add attachment dimension and comment-resolution projections using the existing models/resources, including omitted/null/malformed compatibility and exact response-envelope coverage.
+- [ ] 2.5 Extend table-driven issue/project/task/attachment/comment operation and component cases for exact argv, destinations, validation timing, standard errors, and eager/preview equivalence without creating parallel test hierarchies.
+
+## 3. Rerun Migration and Relationship Safety
+
+- [ ] 3.1 Remove the obsolete `issue rerun <issue-id>` approved mapping and public operation, then add explicit typed eager and preview operations for `issue rerun-task <run-id>` with reviewed resume and fresh inputs and result decoding.
+- [ ] 3.2 Add positive resume/fresh, invalid identifier, conflicting/unsupported input, malformed response, and nonzero command-error cases; prove no compatibility alias reinterprets an issue identifier as a run identifier.
+- [ ] 3.3 Update issue create/update relationship prevalidation so required-together, exactly-one, conflicts, identifiers, properties, parent/project/assignee, and attachment inputs fail before transport or mutation.
+- [ ] 3.4 Preserve literal inline/file attachment binding and failure cleanup through existing helpers, with table-driven special-character, option-like, upload failure, mutation failure, and atomic-success cases.
+- [ ] 3.5 Update public exports, API examples, migration documentation, type-check fixtures, and compatibility notes with a compiling old-to-new rerun path based on an actual run identifier.
+
+## 4. Runtime, User, Workspace, and Subscriber Adaptations
+
+- [ ] 4.1 Add runtime capacity and exact usage-window projections and tests, including open provider/model values, boundary days, omitted/null/malformed fields, and source-pinned date/window assertions.
+- [ ] 4.2 Make runtime update nonzero exit fail through the shared command-error path even when progress text exists, while preserving typed zero-exit result and passive command preview.
+- [ ] 4.3 Add user-profile `whats_new_seen_version` and workspace-list `pinned_at` decoding with present/null/omitted/malformed fixtures and list-order assertions.
+- [ ] 4.4 Add project-inherited issue subscriber reason `project` through the existing typed subscriber relation, preserving older direct rows, open reason values, page order, and bounded cursor behavior.
+- [ ] 4.5 Add authorization-safe relation cases proving omitted/redacted private identifiers create no loader or permalink while present identifiers use only governed typed resource services.
+
+## 5. Transport and Error Boundaries
+
+- [ ] 5.1 Extend the shared transport/error decoder for reviewed status `499` with no body, preserving command context and avoiding false JSON output-shape errors.
+- [ ] 5.2 Add cancellation cases for empty body, sanitized stderr, neighboring nonzero statuses, and eager/preview behavior without weakening existing command-error classification.
+- [ ] 5.3 Extend retained comment/attachment/file/stdin command cases for literal argv and payload transport, local prevalidation, caller-file preservation, and failure-safe cleanup.
+- [ ] 5.4 Add private-project 404, list omission, redaction, and relationship fail-closed component fixtures using existing standard error and fake-CLI infrastructure.
+
+## 6. Documentation, CI, and Repository Verification
+
+- [ ] 6.1 Update compatibility, API, service-usage, migration, CLI-coverage, changelog, contributing, packaging, and release documentation for the direct `0.7.1` to `0.9.0` upgrade, retained/deferred dispositions, typed additions, private behavior, cancellation, and rerun migration.
+- [ ] 6.2 Update existing CI contract/live-smoke configuration and safe fixtures to pin exact `0.9.0` source/CLI identity and cover only the focused real-boundary gaps; add no new framework or undeclared private dependency.
+- [ ] 6.3 Run focused table-driven unit, contract, component, transport, relation, documentation, and packaging checks for every changed scenario and record exact commands and exit codes.
+- [ ] 6.4 Run strict OpenSpec validation, contract validate/render/check, repeated-render comparison, source-link audit, operation completeness, non-live collection isolation, mypy for source/tests/scripts, Ruff check/format, documentation, packaging, and release gates.
+- [ ] 6.5 Run the full non-live automated suite locally only if it is expected to complete within ten minutes; otherwise, or if it reaches ten minutes, stop only that run-owned process and run the unsplit suite in GitHub Actions on the published exact revision.
+
+## 7. Independent Exact-Revision Verification and Delivery
+
+- [ ] 7.1 Map every affected OpenSpec scenario to a sufficient lower-level assertion or one focused live case, and have an independent Tester inspect that mapping from a fresh exact-revision checkout without editing implementation tests or fixtures.
+- [ ] 7.2 Gate live verification on exact product/test revisions, verified `0.9.0` CLI, isolated test profile/daemon/backend/database/ports, focused lower-level results, disposable fixtures, and confirmed macOS renderer availability before consuming an attempt.
+- [ ] 7.3 Execute focused live cases for rerun-task resume/fresh, cancellation 499/no-body, private-project 404/omission/redaction, project-inherited subscriber provenance, runtime-update nonzero exit, and exact runtime-usage window with case-specific assertions and failure-safe cleanup.
+- [ ] 7.4 For any changed visible terminal output, capture equivalent baseline and candidate text plus genuine macOS PNGs at identical locale/width/output mode; otherwise publish a case-specific no-image rationale and do not create decorative images.
+- [ ] 7.5 Publish normal development and applicable test/result commits, push normally, prove remote branch SHA equals the verified local SHA, and preserve branch/PR/commits without force, merge, close, or deletion.
+- [ ] 7.6 Publish sanitized commands, exit codes, assertions, CI/PR/commit/file links, exact SHAs, provenance, and required images as Multica evidence attachments; read back the final comment and attachments, then remove only run-owned stand data and local diagnostic output.
