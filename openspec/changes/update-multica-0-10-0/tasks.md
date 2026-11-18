@@ -12,10 +12,11 @@
 - [ ] 2.2 Add table-driven present/omitted/null/malformed and older-server fixtures for every target-added field while preserving open upstream-owned values and source-significant absence.
 - [ ] 2.3 Adapt private-project get/list behavior to preserve membership-only not-found/omission/redaction semantics without broadening access or synthesizing projects.
 - [ ] 2.4 Adapt project list/activity/archive and subscriber projections to preserve `has_more`, ordering, `project_covered`, delivery, timestamps, numeric precision, and malformed-value rejection.
+- [ ] 2.5 Define the rerun-task public result model, wire decoder, model/root exports, present/malformed fixtures, and typed compatibility contract consumed by the issue resource; do not add command construction in this task.
 
 ## 3. Rerun, Text, Metadata, Webhook, and Error Safety
 
-- [ ] 3.1 Remove the target-invalid issue-targeted rerun mapping and add explicit run/task-targeted `rerun_task[_command]` resume/fresh methods, typed result decoding, exports, operation-table rows, and migration coverage without an identity-inference alias.
+- [ ] 3.1 Remove the target-invalid issue-targeted rerun mapping and add explicit run/task-targeted `rerun_task[_command]` resume/fresh methods that consume the task 2.5 result decoder, plus operation-table rows and migration coverage without an identity-inference alias.
 - [ ] 3.2 Adapt existing command builders so inline text stays literal, file/stdin content loses at most one trailing LF, explicit empty differs from omission, and explicitly false stdin selection preserves stored text.
 - [ ] 3.3 Encode metadata keys as one escaped segment and add Unicode, slash, percent, space, empty/invalid, and round-trip command cases.
 - [ ] 3.4 Normalize target webhook filter required/conflict/presence rules at the existing pre-I/O boundary and add valid repeated-value plus invalid no-process-invocation cases.
@@ -26,7 +27,7 @@
 - [ ] 4.1 Extend existing `ArgvCase`, `CommandCase`, decode, operation-completeness, legacy, and malformed tables for every changed contract row; add focused tests only where lifecycle, privacy, concurrency, or destructive safety cannot be represented as a row.
 - [ ] 4.2 Add or update fake-CLI component fixtures for literal channels, rerun-task result/error modes, private omission, project pagination/activity/archive, inherited subscriber delivery, cancellation, metadata escaping, webhook validation, and bounded destructive conflicts.
 - [ ] 4.3 Update the exact-PR-head live workflow and its safe fixtures to require observed CLI `0.10.0`, immutable candidate SHA, protected credentials, sanitized allowlisted evidence, and post-suite SHA revalidation.
-- [ ] 4.4 Implement `scripts/e2e_multica_010.py` using public SDK calls, parameterized stand/profile inputs, exact-revision/CLI readiness checks, disposable fixtures, sanitized outputs, and failure-safe cleanup; do not embed private URLs, credentials, or evidence results.
+- [ ] 4.4 Extend `scripts/e2e/verify_multica_test.py` and its existing unit fixtures for observed CLI `0.10.0`, literal inline/file read-back, escaped metadata-key read-back, archived-project SDK conflict, sanitized scenario outcomes, restore/delete cleanup, and exact-revision readiness; add no second runner or embedded private value.
 
 ## 5. Documentation and Repository Verification
 
@@ -37,7 +38,7 @@
 
 ## 6. Independent E2E Evidence and Delivery
 
-- [ ] 6.1 Have an independent Tester pass the readiness gate with `multica-test`, a dedicated isolated profile/daemon and disposable stand data, then execute the E2E script once for the consolidated exact revision.
-- [ ] 6.2 Have Tester independently walk through private membership visibility, literal file/stdin text, metadata escaping, rerun-task, no-body cancellation, and bounded archive/runtime-delete failures; inspect SDK/CLI output and remote state rather than rerunning the script.
+- [ ] 6.1 Have an independent Tester pass the existing verifier readiness gate with wrapper-owned `multica-test` isolation and disposable stand data, then execute `scripts/e2e/verify_multica_test.py` once for the consolidated exact revision.
+- [ ] 6.2 Have Tester independently walk through literal inline/file persistence, metadata-key round-trip, and archived-project mutation refusal on fresh disposable resources; inspect SDK/CLI output and remote state rather than rerunning the verifier, and inspect lower-level evidence for private membership, rerun-task, `499`, webhook, and runtime-delete scenarios.
 - [ ] 6.3 Preserve ordinary development/test scripts, fixtures, generated product outputs, and real commits in Git, but publish real outputs, logs, hashes, diagnostic JSON, private endpoints, and any images only as sanitized Multica evidence; clean stand data while preserving the evidence branch/MR/commits.
 - [ ] 6.4 Publish normal commits, push without force, prove remote SHA equals the reviewed local SHA, attach commands/exit codes/assertions/provenance/CI/MR/commit/file links and the no-image rationale in Multica, and verify comment and attachment read-back.
