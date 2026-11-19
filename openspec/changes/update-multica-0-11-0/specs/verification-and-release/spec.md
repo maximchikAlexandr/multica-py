@@ -75,3 +75,27 @@ reports from tracked Git.
 #### Scenario: Planning package is published
 - **WHEN** the planning commit is pushed
 - **THEN** the worktree is clean, remote branch SHA equals local HEAD, and implementation remains behind explicit human approval
+
+## REMOVED Requirements
+
+### Requirement: Local E2E and image evidence are not required
+**Reason**: The Multica `0.11.0` text-input and archived-project changes leave
+material process/server persistence gaps that deterministic lower-level checks
+cannot close, while the approved change still does not alter visible output.
+
+**Migration**: Use `Exact-revision live verification uses the existing isolated seam`
+and `Live cases are limited to remaining integration gaps` for the selected live
+cases, and `Independent evidence is published outside Git` for the unchanged
+no-image contract.
+
+### Requirement: Existing lower-level checks prove the SDK corrections
+**Reason**: Lower-level checks remain sufficient for deterministic command,
+decode, validation, cancellation, conflict, and size-limit behavior, but they
+cannot prove literal/file persistence, metadata-key round-trip, or archived
+remote state for this target.
+
+**Migration**: Use `Offline verification closes the approved 0.11.0 contract`
+for mandatory deterministic coverage and `Live cases are limited to remaining
+integration gaps` for the exact split between selected live cases and
+lower-level-only cases. Reuse `scripts/e2e/verify_multica_test.py`; no
+task-specific runner or verification framework is introduced.
