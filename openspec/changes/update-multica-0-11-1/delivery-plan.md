@@ -7,7 +7,7 @@
 - Upstream target: Multica `0.11.1` release `451169000` at `e1fe10d6694848e35dd1aa00e08cd11d93e545ac`
 - Estimate source of truth: root planning issue properties `Estimate, hours`, `Estimate min, hours`, and `Estimate max, hours`; this file intentionally contains no numeric O/M/P/E totals.
 - Planning authority: proposal, design, delta specs, tasks, and this delivery contract. Live status and assignees remain in Multica.
-- Human gate: no implementation child, implementation code, or implementation PR is authorized until explicit approval.
+- Human gate: after READY, Plan Verifier SHALL create exactly one child `implementation_parent` in `backlog` with `human_review=pending`. Until explicit human approval, that parent SHALL NOT materialize WP children, start implementation code, or open an implementation PR.
 
 ## E2E decision
 

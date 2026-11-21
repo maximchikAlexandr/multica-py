@@ -19,7 +19,7 @@ The verified target is Multica `0.11.1` release `451169000` at `e1fe10d6694848e3
 - Publishing chat wakeups, inbox, issue batch/delete/PR linking, issue-status, view, workflow, project-management, runtime-concurrency, or other newly discovered families.
 - Adding HTTP bypasses, a second transport, runtime dispatch registry, compatibility registry, generator, validation framework, dependency, or E2E framework.
 - Treating release notes, extractor output, or source similarity as automatic public API approval.
-- Running implementation, creating implementation children, or opening an implementation PR before human approval.
+- Materializing WP children, running implementation, or opening an implementation PR before human approval. After READY, Plan Verifier may create exactly one child `implementation_parent` in `backlog` with `human_review=pending`; that pending parent is the handoff record, not authorization to execute the DAG.
 
 ## Decisions
 
