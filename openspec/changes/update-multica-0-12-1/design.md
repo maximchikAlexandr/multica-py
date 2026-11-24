@@ -46,11 +46,13 @@ All other added command families stay `defer` unless already represented by an a
 
 Changed responses will be implemented in the existing resource/model/decoder locations and frozen case tables. The design groups them by ownership, not by intermediate release:
 
-- collaboration state: issue `description_revision` and merge conflicts, comment replay/idempotency, project progress/activity projections, skill revision/base-revision conflicts, guest membership/project visibility, requester/subscriber and status payload changes;
-- operational state: configuration limits, daemon log controls, runtime/profile/workspace fields, usage windows, autopilot/run outcome, attachment dimensions, and other approved retained operation changes;
+- shared wire foundation: target structs and decoding helpers in `src/multica_py/_internal/wire_models.py` and `src/multica_py/_internal/decoders.py` are completed once before parallel domain work;
+- issue and transport state: `rerun_task`, issue `description_revision`, issue merge conflicts, literal text and shared 400/409/413/499 transport behavior;
+- collaboration state: comment replay/idempotency, project progress/activity projections, skill revision/base-revision conflicts, all workspace response changes including guest membership/project visibility, requester/subscriber and status payload changes outside the issue resource;
+- operational state: configuration limits, daemon log controls, runtime/profile fields, usage windows, autopilot/run outcome, attachment dimensions, and other approved retained operation changes;
 - shared boundaries: pagination, omission versus explicit null/false/zero/empty, unknown valid upstream values, and standard 400/409/413/499 error decoding.
 
-The implementation will extend current frozen models or introduce the smallest domain type required by an approved response. It will not add version-specific wrappers. Open upstream-owned strings remain open; closed SDK enums change only when the approved contract names the exact values and compatibility policy.
+The implementation will extend current frozen models or introduce the smallest domain type required by an approved response. Stage-2 packages consume the predecessor wire structs and SHALL NOT edit shared wire/decoder files. Central public-operation discovery and shared test registries are reconciled only by the stage-3 integrator after all domain packages finish. It will not add version-specific wrappers. Open upstream-owned strings remain open; closed SDK enums change only when the approved contract names the exact values and compatibility policy.
 
 ### 5. Presence, conflict, replay, and redaction are first-class contracts
 
@@ -62,7 +64,7 @@ Cancellation status 499 and retained 400/409/413 behavior continue through the s
 
 Unit/contract tests own exact argv/body/model/error matrices. Fake-CLI component tests own cross-resource decoding, pagination, and deterministic conflict/replay fixtures. Existing source-link, contract, typing, lint, package, documentation, and operation-completeness gates remain authoritative.
 
-Four material gaps require the isolated project stand because a fixture alone cannot prove real target CLI/server interaction: issue description revision conflict, comment idempotent replay, skill base-revision conflict, and guest/project-progress visibility. A reusable gated live module under `tests/live/` will use the configured `multica-test` profile and isolated stand; it will not use the primary Multica profile or daemon. Tester uses a fresh checkout and independent data namespace. These checks do not add a second E2E framework.
+Four material gaps require the isolated project stand because a fixture alone cannot prove real target CLI/server interaction: issue description revision conflict, comment idempotent replay, skill base-revision conflict, and guest/project-progress visibility. A reusable gated live module under `tests/live/` will extend the existing `prepared_client` harness and its `MULTICA_LIVE_*` configuration. `tests/live/conftest.py` will change its exact prepared target from `0.7.0` to `0.12.1`; `tests/live/README.md` will document the existing five variables plus the minimal guest fixture parameters; `.github/workflows/live-smoke.yml` will receive an explicit target-`0.12.1` disposition. Local execution binds `MULTICA_LIVE_CLI=multica-test`, the isolated `multica-test` profile/daemon, the prepared workspace, and UUID-derived test names. It will not use the primary Multica profile or daemon and will not introduce a second runner or configuration namespace. Tester uses a fresh checkout and the existing live namespace/cleanup pattern.
 
 The SDK consumes JSON and this change does not intentionally alter human-visible terminal tables, logs, progress, summaries, or browser UI. Before/after PNGs are therefore not required. If implementation changes visible output, verification stops until a planning revision defines baseline/candidate text and real Mac PNG capture with a confirmed renderer.
 
@@ -72,7 +74,7 @@ Implementation and test commits follow natural durable results. The published ca
 
 ## Risks / Trade-offs
 
-- The `118` changed response rows span many domains. A single contract foundation avoids contradictory source decisions, while disjoint domain work packages reduce write contention.
+- The `118` changed response rows span many domains. A single contract/wire predecessor owns shared schemas and decoders; central registries wait for integration; disjoint issue, collaboration, and operational packages own all remaining domain files.
 - Preserving the `0.6.2` floor increases regression scope. Existing operation-level compatibility gates and frozen baseline fixtures constrain that risk.
 - Replacing `rerun` is a public compatibility change. The removal is unavoidable against target public help, so migration docs and a focused replacement operation are preferred over retaining a broken command or exposing the hidden compatibility node.
 - Live conflict/redaction checks depend on isolated stand readiness and permissions. A readiness gate blocks attempt consumption; unavailable required infrastructure is reported as unverified rather than converted into a fixture-only PASS.

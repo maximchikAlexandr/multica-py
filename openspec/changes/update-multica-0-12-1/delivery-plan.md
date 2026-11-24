@@ -15,7 +15,7 @@
 
 Most acceptance is fully provable through the repository's existing frozen tables, contract validation, fake-CLI component fixtures, typing, packaging, and CI. Four material gaps remain because their expected result depends on the real `0.12.1` CLI/server/database authorization path: issue description optimistic concurrency, comment idempotent replay, skill base-revision conflict, and caller-dependent guest visibility combined with project progress. A fixture can prove SDK decoding but cannot prove that the target server preserves state, deduplicates the write, or redacts the field for the actual caller.
 
-The plan therefore adds one gated live module to the existing `tests/live` layer and no second runner. It uses the isolated project stand through parameters such as `MULTICA_E2E_PROFILE`, `MULTICA_E2E_API_URL`, and a run namespace; no private hostname, credential, personal identity, profile content, or diagnostic output is committed. The primary Multica profile/daemon and reference checkout are forbidden.
+The plan therefore adds one gated module to the existing `tests/live` layer and does not create a second runner or configuration namespace. It reuses the five required `MULTICA_LIVE_*` inputs from `tests/live/conftest.py`, adds only guest-fixture inputs needed by the authorization case, and updates the existing harness from its hard-coded prepared target `0.7.0` to `0.12.1`. Local execution binds `MULTICA_LIVE_CLI=multica-test` to the isolated profile, daemon, and prepared workspace. No private hostname, credential, personal identity, profile content, or diagnostic output is committed. The primary Multica profile/daemon and reference checkout are forbidden.
 
 ## Verification matrix
 
@@ -23,25 +23,26 @@ The plan therefore adds one gated live module to the existing `tests/live` layer
 |---|---|---|---|---|---|---|---|---|
 | V121-01 | Exact provenance, `209→276` command reconciliation, 196 response verdicts, deterministic generation | Contract checks are sufficient; no live gap | Approved contract and generated projection | Existing contract/unit checks; no live script | Compare exact identities/totals/links, repeat render/check, inspect clean diff | Existing `contract-check`, updated target pin | Exact pins; 276/68/1/34; 196/118; no pending; byte-stable render | Commands, exits, SHA, source/file/CI links in Multica; no image |
 | V121-02 | Rerun removal/replacement and all changed request mappings | Exact argv/body/failure tables are sufficient; triggering arbitrary agent work live adds cost without a distinct SDK assertion | `IssueResource`, bound issue, command builder, shared errors | Existing unit/component tables; no live script | Inspect canonical operation/discovery rows and run focused argv/error cases | Existing non-live jobs | Old operation absent; replacement exact; omission/constraints/errors exact | Commands, exits, test/file links; no image |
-| V121-03 | Issue `description_revision` and stale-write conflict | Real state preservation after server conflict remains unproved below live | Issue get/edit/update and typed 409 error | `tests/live/test_v0121_upgrade.py::test_issue_description_revision_conflict` | Create isolated issue, read revision, perform current write, submit stale write, reread state, clean up | Gated local live only; CI lower-level coverage remains mandatory | Revision advances; stale write is typed 409; winning content remains | Sanitized actual text/assertion summary and IDs redacted in Multica; no image |
-| V121-04 | Comment idempotent replay | Real server deduplication remains unproved below live | Comment add/list and typed replay result | `tests/live/test_v0121_upgrade.py::test_comment_idempotent_replay` | Add same logical comment twice with one idempotency identity, list thread, inspect identity/count, clean up parent issue | Gated local live only | Same logical result; one stored comment; content/revision typed | Sanitized assertion summary in Multica; no image |
-| V121-05 | Skill revision/base-revision conflict | Real atomic state preservation after stale mutation remains unproved below live | Skill get/update/files and typed 409 error | `tests/live/test_v0121_upgrade.py::test_skill_base_revision_conflict` | Create isolated skill, read revision, apply current update, submit stale update, reread metadata/files, delete test skill | Gated local live only | Revision advances; stale mutation is typed conflict; prior complete state remains | Sanitized text/assertions and file links in Multica; no image |
-| V121-06 | Guest redaction and project progress | Authorization-dependent projection and computed progress require real actors/server state | Workspace members, project get/list, issue create/status | `tests/live/test_v0121_upgrade.py::test_guest_redaction_and_project_progress` | Create isolated project/issues, transition states, use configured non-guest/guest fixtures, compare projections, clean up run-owned data | Gated local live only; no private CI credentials | Progress matches states; authorized scope visible; guest projection omits redacted IDs | Sanitized projections/assertions in Multica; no image |
+| V121-03 | Issue `description_revision` and stale-write conflict | Real state preservation after server conflict remains unproved below live | Issue get/edit/update and typed 409 error | `tests/live/test_v0121_upgrade.py::test_issue_description_revision_conflict` | Through the existing prepared client, create a UUID-named issue, read revision, perform current write, submit stale write, reread state, clean up | Repository-native isolated local live is required; existing protected `live-smoke.yml` may additionally run when provisioned | Revision advances; stale write is typed 409; winning content remains | Sanitized actual text/assertion summary and IDs redacted in Multica; no image |
+| V121-04 | Comment idempotent replay | Real server deduplication remains unproved below live | Comment add/list and typed replay result | `tests/live/test_v0121_upgrade.py::test_comment_idempotent_replay` | Through the existing prepared client, add the same logical comment twice with one idempotency identity, inspect identity/count, clean up parent issue | Repository-native isolated local live is required; existing protected `live-smoke.yml` may additionally run when provisioned | Same logical result; one stored comment; content/revision typed | Sanitized assertion summary in Multica; no image |
+| V121-05 | Skill revision/base-revision conflict | Real atomic state preservation after stale mutation remains unproved below live | Skill get/update/files and typed 409 error | `tests/live/test_v0121_upgrade.py::test_skill_base_revision_conflict` | Through the existing prepared client, create a UUID-named skill, apply current and stale updates, reread metadata/files, delete test skill | Repository-native isolated local live is required; existing protected `live-smoke.yml` may additionally run when provisioned | Revision advances; stale mutation is typed conflict; prior complete state remains | Sanitized text/assertions and file links in Multica; no image |
+| V121-06 | Guest redaction and project progress | Authorization-dependent projection and computed progress require real actors/server state | Workspace members, project get/list, issue create/status | `tests/live/test_v0121_upgrade.py::test_guest_redaction_and_project_progress` | Use prepared non-guest and read-only guest clients, create UUID-named project/issues, compare projections, clean up only run-owned project data | Repository-native isolated local live is required; existing protected `live-smoke.yml` may additionally run when provisioned | Progress matches states; authorized scope visible; guest projection omits redacted IDs | Sanitized projections/assertions in Multica; no image |
 | V121-07 | Remaining 118 changed responses, open values, pagination, malformed output, 400/409/413/499 | Frozen decoder and fake-CLI fixtures are sufficient and safer than manufacturing every server failure | Existing domain models/resources/shared transport | Existing unit/contract/component tables; no live script | Trace each registry row to a concrete test and run focused domain selections | Existing non-live jobs | Every row mapped; presence/nullability/open values exact; malformed fails closed; typed errors retained | Test paths, commands, exits, registry/file links; no image |
 | V121-08 | Compatibility, docs, package, exact-SHA release | Repository and CI gates are sufficient | Makefile, workflows, package and docs | Existing commands; no live script | Fresh checkout at candidate SHA; run focused gates; verify remote SHA and linked CI/package evidence | Existing lint/types/test/compat/contract/package jobs | Claims agree; live tests excluded from offline collection; package imports; local=remote SHA | Commit/MR/file/CI links and command exits in Multica; no image |
 
 ## Live script and environment contract
 
-- Implementer owns `tests/live/test_v0121_upgrade.py` and directly related reusable fixtures. It SHALL use the repository's pytest markers and public SDK calls; it SHALL NOT add browser automation, a second framework, shelling to the primary CLI profile, or hardcoded stand endpoints.
-- Entry command: `MULTICA_E2E_PROFILE=<isolated-profile> MULTICA_E2E_API_URL=<private-api-url> MULTICA_E2E_RUN_ID=<unique-run-id> uv run pytest -o addopts="" -q -m live_smoke tests/live/test_v0121_upgrade.py`.
-- Product revision and test revision SHALL both equal the published candidate SHA unless evidence explicitly identifies a separate test-only commit and its relationship. The installed CLI SHALL report target `0.12.1` and target commit prefix before an attempt.
-- Initial state is a unique run namespace with no matching issue, comment, skill, project, or membership fixture. Setup creates only run-owned resources. Cleanup is registered before the first mutation and runs on pass or failure.
-- Non-guest and guest actors are supplied by the stand fixture configuration. The plan never records credentials, email addresses, tokens, profile paths, private URLs, or personal data.
+- Implementer owns `tests/live/test_v0121_upgrade.py`, `tests/live/conftest.py`, `tests/live/README.md`, `.github/workflows/live-smoke.yml`, and directly related live-only fixtures. It SHALL extend the existing `prepared_client`, markers, and public SDK calls; it SHALL NOT add browser automation, a second framework, a parallel runner/config namespace, shelling to the primary CLI profile, or hardcoded stand endpoints.
+- Entry command: `MULTICA_LIVE_CLI=multica-test MULTICA_LIVE_EXPECTED_VERSION=0.12.1 MULTICA_LIVE_SERVER_URL=<private-api-url> MULTICA_LIVE_WORKSPACE_ID=<prepared-workspace-id> MULTICA_LIVE_PROFILE=<isolated-profile> MULTICA_LIVE_GUEST_PROFILE=<isolated-read-only-guest-profile> MULTICA_LIVE_GUEST_PROJECT_ID=<prepared-read-only-guest-project-id> uv run pytest -o addopts="" -q -rP -m live_smoke tests/live/test_v0121_upgrade.py`.
+- `tests/live/conftest.py` SHALL retain the five existing required inputs and change its exact prepared-version assertion to `0.12.1`; guest profile/project inputs are the only additions. `tests/live/README.md` SHALL document this same command and isolation contract. `.github/workflows/live-smoke.yml` SHALL retain its protected manual harness, update all version/evidence expectations to `0.12.1`, and remain optional when its protected environment is unavailable; required evidence comes from the isolated local harness.
+- Product revision and test revision SHALL both equal the published candidate SHA unless evidence explicitly identifies a separate test-only commit and its relationship. `multica-test version --output json` SHALL report `0.12.1` before an attempt, and the wrapper SHALL resolve to the isolated test profile/daemon rather than the primary Multica state.
+- Initial state uses the existing UUID-derived naming pattern, with no matching issue, comment, skill, or project. Setup creates only run-owned resources in the prepared workspace. Cleanup is registered before the first mutation and runs on pass or failure. The prepared guest profile/project are read-only fixtures and are never mutated or deleted.
+- Non-guest and guest actors are supplied by the existing live fixture configuration. The plan never records credentials, email addresses, tokens, profile paths, private URLs, or personal data.
 - Actual commands, outputs, exit codes, diagnostic JSON, IDs, hashes, and logs are Multica-only evidence. Git contains only reusable tests/fixtures and normal generated product artifacts.
 
 ## Readiness, attempts, and cleanup
 
-- Before consuming a live attempt, Tester SHALL verify exact local/remote candidate SHA, target CLI identity, isolated profile and daemon, API reachability, disposable namespace, both actor permissions, focused lower-level PASS, live collection, and cleanup hooks.
+- Before consuming a live attempt, Tester SHALL verify exact local/remote candidate SHA, `multica-test` target identity `0.12.1`, isolated profile and daemon, all five existing required `MULTICA_LIVE_*` values, the read-only guest profile/project fixtures, API reachability, prepared workspace, disposable UUID namespace, both actor permissions, focused lower-level PASS, live collection, and cleanup hooks.
 - A failed readiness gate consumes no product assertion and is reported as not run. Live runs are not used to debug setup or tests; cheaper deterministic checks repair those first.
 - Each PASS records case ID, candidate SHA, material fixture revision, public actions, assertions, cleanup result, and evidence links. A candidate change requires impact assessment and rerun only for affected cases; uncertain impact leaves the case unverified.
 - Cleanup removes run-owned issues/comments/skills/projects/memberships when supported and records any residue. It removes local diagnostic output but preserves branch, commits, CI/MR links, and Multica evidence. It SHALL NOT merge, close, or delete the branch.
@@ -74,7 +75,7 @@ If candidate implementation changes visible output, Tester SHALL stop and reques
 | Contract inventory/response expansion | Exact 276-node and 196-row closed review | `contracts/sdk-contract.json`, `scripts/upstream_contract.py` | Current data is pinned to 0.7.1 and cannot represent the target decisions without approved rows |
 | `rerun_task` replacement | Target removes public rerun and adds replacement | `IssueResource`, bound issue, generated bindings, frozen operation cases | Existing operation invokes a removed public command |
 | Revision/replay/redaction fields | 118 changed response rows and stale/replay/privacy semantics | Existing frozen models, decoders, resource adapters, table cases | Current types and fixtures omit target fields and conflict/replay projections |
-| Four live cases | Server state preservation, deduplication, computed progress, caller redaction | Existing gated `tests/live` pytest layer and isolated project stand | Deterministic fixtures cannot prove real target server/authorization behavior |
+| Four live cases | Server state preservation, deduplication, computed progress, caller redaction | Existing `tests/live/conftest.py`, `tests/live/README.md`, `prepared_client`, and protected `live-smoke.yml` harness | The harness is fixed to `0.7.0` and lacks the two read-only guest fixture inputs; deterministic fixtures still cannot prove real target server/authorization behavior |
 | CI source pin/docs | Exact target source and package claims | Existing `contract-check`, Make targets, docs | Current workflow and claims fetch/name 0.7.1 |
 
 Skipped as duplicate or risk-free scope: new resource families for the other 67 added help nodes, `doc`/`environment`, a second generator, a second live runner, decorative images, and intermediate-release deliveries. Directly related tests, fixtures, snapshots, docs, and service files remain in the owning work package even when not exhaustively named.
@@ -93,9 +94,9 @@ Confidence is medium and calibration is unavailable: the acceptance package and 
 
 - `stage`: 1
 - `depends_on`: none
-- OpenSpec task coverage: 1.1–1.7
-- Deliverable: one closed, validated `0.7.1→0.12.1` approved contract and byte-stable generated projection.
-- Owned responsibility scope: `contracts/sdk-contract.json`, `scripts/upstream_contract.py`, generated approved SDK projection, source-link/contract validators, and their focused tests. It owns all shared inventory/response decisions; later packages consume rather than rewrite them.
+- OpenSpec task coverage: 1.1–1.8
+- Deliverable: one closed, validated `0.7.1→0.12.1` approved contract, byte-stable generated projection, and immutable shared target wire/decoder foundation.
+- Owned responsibility scope: `contracts/sdk-contract.json`, `scripts/upstream_contract.py`, generated approved SDK projection, `src/multica_py/_internal/wire_models.py`, `src/multica_py/_internal/decoders.py`, source-link/contract validators, and focused contract/shared-wire tests. It owns all shared inventory/response decisions and wire decoding; later packages consume rather than rewrite them.
 - Contract surface: exact provenance; 276/68/1/34 command totals; 196/118 response totals; compatibility floor/maximum/ceiling; dispositions; source/test traceability.
 - DoD/evidence: validate/render/check twice; exact totals and links pass; repeated render clean; review-only artifacts absent from Git.
 - Parallel-safety rationale: this predecessor establishes shared contracts once before domain siblings begin.
@@ -104,10 +105,10 @@ Confidence is medium and calibration is unavailable: the acceptance package and 
 
 - `stage`: 2
 - `depends_on`: WP-1
-- OpenSpec task coverage: 2.1–2.7
-- Deliverable: exact adapted command builders and the complete `rerun` to `rerun_task` public replacement with typed transport behavior.
-- Owned responsibility scope: issue resource/bound relation and shared command/validation/transport paths, generated-binding consumers, command option tests, operation cases, and directly related docs/tests. It SHALL not edit WP-1 contract/generator outputs or WP-3/WP-4 domain models.
-- Contract surface: exact argv/body/channels, presence semantics, imperative constraints, literal text behavior, 400/409/413/499 decoding, public discovery.
+- OpenSpec task coverage: 2.1–2.7 and 3.1–3.2
+- Deliverable: exact issue-domain adaptation, the complete `rerun` to `rerun_task` public replacement, and shared transport/validation behavior.
+- Owned responsibility scope: `src/multica_py/_internal/transport.py`, `src/multica_py/resources/issues.py`, `src/multica_py/models/issues.py`, `src/multica_py/entities/issues.py`, issue-bound relations, and issue/shared-transport-local tests and fixtures. It SHALL not edit central operation registries/conftest, WP-1 wire/decoder files, or any WP-3/WP-4 domain resource.
+- Contract surface: exact issue argv/body/channels, presence semantics, imperative constraints, literal text behavior, 400/409/413/499 decoding, and canonical `rerun_task` behavior; central public-discovery reconciliation belongs to WP-5.
 - DoD/evidence: all adapted command rows have positive/negative/omission cases; old rerun is absent; replacement is canonical; deferred families remain absent.
 - Parallel-safety rationale: writes are command/transport-oriented and disjoint from WP-3 collaboration models and WP-4 operational models; shared contract files belong exclusively to WP-1.
 
@@ -115,9 +116,9 @@ Confidence is medium and calibration is unavailable: the acceptance package and 
 
 - `stage`: 2
 - `depends_on`: WP-1
-- OpenSpec task coverage: 3.1–3.8
-- Deliverable: typed issue/comment/skill/project/workspace target response semantics with deterministic conflict, replay, pagination, and redaction coverage.
-- Owned responsibility scope: collaboration domain models/resources/decoders and their unit/contract/component fixtures, including issue descriptions, comments, skills, projects, and workspace membership. It does not own shared transport internals or operational domains.
+- OpenSpec task coverage: 3.3–3.8
+- Deliverable: typed comment/skill/project/workspace target response semantics with deterministic conflict, replay, pagination, and redaction coverage.
+- Owned responsibility scope: `src/multica_py/resources/issue_comments.py`, `skills.py`, `skill_files.py`, `projects.py`, `project_resources.py`, and `workspaces.py`; corresponding comment/project/skill/workspace model/entity files; and domain-local tests/fixtures. It consumes WP-1 wire decoding and WP-2 shared transport without editing them, issue-domain files, central registries/conftest, or operational resources.
 - Contract surface: revisions/base revisions, idempotency, project progress/activity, guest/project scope, omission/nullability/open values, older-payload compatibility.
 - DoD/evidence: every assigned changed registry row maps to a concrete frozen case or focused deterministic test; stale/replay/redaction behavior is asserted; supported older fixtures remain green.
 - Parallel-safety rationale: collaboration files and fixtures are separate from WP-2 command/transport and WP-4 operational write zones; any shared integration helper waits for WP-5.
@@ -127,8 +128,8 @@ Confidence is medium and calibration is unavailable: the acceptance package and 
 - `stage`: 2
 - `depends_on`: WP-1
 - OpenSpec task coverage: 4.1–4.7
-- Deliverable: all remaining approved operational response adaptations and regression coverage across configuration, daemon, runtime/profile/workspace/usage, agent/autopilot/task/attachment, and retained rows.
-- Owned responsibility scope: operational domain models/resources/decoders and their unit/contract/component fixtures. It consumes shared errors and contract outputs without editing WP-2 transport or WP-3 collaboration domains.
+- Deliverable: all remaining approved operational response adaptations and regression coverage across configuration, daemon, runtime/profile/usage, agent/autopilot/task/attachment, and retained rows.
+- Owned responsibility scope: `src/multica_py/resources/configuration.py`, `daemon.py`, `runtimes.py`, `runtime_profiles.py`, `agents.py`, `autopilots.py`, and `attachments.py`; corresponding operational model/entity files; and domain-local tests/fixtures. It consumes WP-1 wire decoding and WP-2 shared transport without editing them, `resources/workspaces.py`, central registries/conftest, or WP-3 collaboration domains.
 - Contract surface: configuration limits, daemon controls, machine-bound profile fields, usage windows, outcomes/credits/dimensions, pagination, open values, malformed outputs, retained errors.
 - DoD/evidence: all assigned registry actions are implemented and traceable; changed and unchanged rows pass focused coverage; no version wrapper or deferred family appears.
 - Parallel-safety rationale: operational domains have no sibling production write zone; cross-domain docs/helpers are deferred to WP-5.
@@ -139,7 +140,7 @@ Confidence is medium and calibration is unavailable: the acceptance package and 
 - `depends_on`: WP-2, WP-3, WP-4
 - OpenSpec task coverage: 5.1–5.6
 - Deliverable: integrated candidate with coherent docs/CI/package claims, complete scenario map, required repository gates, and normal-push exact-SHA proof.
-- Owned responsibility scope: cross-domain integration tests/helpers, public docs, changelog, package metadata/checks, CI workflows, final generated-consumer reconciliation, and integration repairs after all siblings finish.
+- Owned responsibility scope: `tests/cases/operations.py`, `tests/unit/resources/test_operations.py`, shared `tests/conftest.py` and `tests/component/conftest.py`, `src/multica_py/client.py`, root/public export registries, cross-domain integration helpers, public docs, changelog, package metadata/checks, non-live CI workflows, and integration repairs after all siblings finish. It SHALL not edit live harness files owned by WP-6.
 - Contract surface: migration/rollback, source pin, full gate set, ten-minute policy, exact candidate SHA, evidence-clean tree.
 - DoD/evidence: focused gates pass; long suite is preserved unsplit in CI when required; local HEAD equals remote; all claims match the approved contract.
 - Parallel-safety rationale: starts only after all stage-2 siblings, so shared docs, CI, and integration fixes cannot race active domain writes.
@@ -150,7 +151,7 @@ Confidence is medium and calibration is unavailable: the acceptance package and 
 - `depends_on`: WP-5
 - OpenSpec task coverage: 6.1–6.6
 - Deliverable: reusable gated live coverage plus independent exact-revision lower-level/live/CI evidence with cleanup and Multica read-back.
-- Owned responsibility scope: `tests/live/test_v0121_upgrade.py`, stand-specific reusable fixtures using parameterized configuration, readiness/cleanup documentation, execution evidence, and final Multica publication. Tester never edits implementation artifacts.
+- Owned responsibility scope: `tests/live/test_v0121_upgrade.py`, `tests/live/conftest.py`, `tests/live/README.md`, `.github/workflows/live-smoke.yml`, directly related live-only fixtures, readiness/cleanup documentation, execution evidence, and final Multica publication. Implementer owns changes through task 6.2; Tester never edits implementation artifacts.
 - Contract surface: issue and skill revision conflicts, comment replay, guest redaction/project progress, exact-SHA evidence, attachments/read-back, cleanup.
 - DoD/evidence: readiness passes before mutation; all four live cases and independent deterministic review are case-recorded; evidence is readable in Multica; no private or transient artifact is tracked; branch remains preserved and unmerged.
 - Parallel-safety rationale: live and independent verification require the consolidated published candidate and therefore follow WP-5.
@@ -163,3 +164,17 @@ Confidence is medium and calibration is unavailable: the acceptance package and 
 - Stage 4 frontier: WP-6 verifies the immutable candidate and publishes evidence.
 
 The graph has a real three-way parallel frontier. WIP policy is operational and is not encoded as extra dependencies or stages.
+
+## Critical shared-file ownership
+
+Each mutable shared path has exactly one owner. Directly related domain tests, fixtures, snapshots, and service files follow that owner unless this table assigns them to the later integrator.
+
+| Critical path / surface | Sole owner | Consumer rule |
+|---|---|---|
+| `contracts/sdk-contract.json`, `scripts/upstream_contract.py`, generated approved projection | WP-1 | WP-2/3/4 consume the frozen projection |
+| `src/multica_py/_internal/wire_models.py`, `src/multica_py/_internal/decoders.py` | WP-1 | Stage-2 siblings SHALL NOT edit shared wire/decoder files |
+| `src/multica_py/_internal/transport.py`, `resources/issues.py`, `models/issues.py`, `entities/issues.py` | WP-2 | WP-3/4 consume shared errors/transport and do not edit issue files |
+| `resources/issue_comments.py`, `skills.py`, `skill_files.py`, `projects.py`, `project_resources.py`, `workspaces.py` and corresponding domain models/entities | WP-3 | WP-2/4 do not edit collaboration/workspace paths |
+| `resources/configuration.py`, `daemon.py`, `runtimes.py`, `runtime_profiles.py`, `agents.py`, `autopilots.py`, `attachments.py` and corresponding operational models/entities | WP-4 | WP-2/3 do not edit operational paths |
+| `tests/cases/operations.py`, `tests/unit/resources/test_operations.py`, shared test conftest/fixtures, `src/multica_py/client.py`, public export registries | WP-5 | Stage-2 packages use domain-local cases; reconciliation waits for all siblings |
+| `tests/live/test_v0121_upgrade.py`, `tests/live/conftest.py`, `tests/live/README.md`, `.github/workflows/live-smoke.yml` | WP-6 | No earlier WP edits the live runner/configuration surface |
