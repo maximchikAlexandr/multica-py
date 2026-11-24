@@ -23,8 +23,8 @@ The isolated project stand SHALL verify issue description revision conflict, com
 - **THEN** current revisions SHALL succeed, stale revisions SHALL return typed conflicts without lost state, and repeated idempotent comment creation SHALL resolve to one logical comment
 
 #### Scenario: Guest redaction and project progress hold live
-- **WHEN** non-guest and guest actors inspect equivalent isolated project/workspace data
-- **THEN** progress SHALL match the created issue states, authorized callers SHALL see approved guest scope, and guest-visible projections SHALL omit redacted project identifiers
+- **WHEN** the non-guest owner creates two UUID-named run-owned issues in a dedicated empty prepared project already readable by the guest, leaves one `todo`, moves one to `done`, and both actors inspect that same project/workspace state
+- **THEN** both project projections SHALL report the reviewed progress fields for one done of two total and 50 percent where supplied, the non-guest workspace projection SHALL preserve the approved guest project scope, the guest-visible membership projection SHALL omit redacted project identifiers, and cleanup SHALL delete every run-owned issue and restore the prepared project to its empty baseline without mutating the project or membership
 
 #### Scenario: Failure-safe cleanup preserves evidence
 - **WHEN** a live case passes or fails

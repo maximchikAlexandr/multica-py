@@ -13,15 +13,15 @@
 
 - [ ] 2.1 Replace `issues.rerun` and resource/bound `rerun` methods with reviewed `issues.rerun_task`, `rerun_task`, and `rerun_task_command` mappings, results, issue relations, issue exports, and issue-local tests.
 - [ ] 2.2 Adapt only `IssueResource` and bound Issue command builders for approved changed issue inputs while retaining stable public names outside the explicit rerun replacement; comment, skill, project, workspace, and operational builders remain in tasks 3.x/4.x.
-- [ ] 2.3 Encode every reviewed omitted/null/empty/zero/false presence rule and requires/conflicts/exactly-one/at-least-one/required-together/custom constraint at the existing validation boundary.
-- [ ] 2.4 Preserve target inline/file/stdin literal text and trailing-LF behavior in the shared transport and issue paths; domain token mappings remain in their owning 3.x/4.x tasks.
-- [ ] 2.5 Preserve shared sanitized decoding for reviewed 400, 409, 413, and 499 responses and add no domain-specific error bypass.
-- [ ] 2.6 Extend issue-local and shared-transport exact-argv/body/error tests with positive, negative, omission, explicit-value, and malformed-input rows; do not edit central `tests/cases/operations.py` or `tests/unit/resources/test_operations.py`.
+- [ ] 2.3 Extend only reusable generated/shared presence and constraint primitives for omitted/null/empty/zero/false and requires/conflicts/exactly-one/at-least-one/required-together behavior; domain-specific application and custom rules remain in their owning 2.1–2.2, 3.x, or 4.x tasks.
+- [ ] 2.4 Preserve target inline/file/stdin literal text and trailing-LF behavior in shared command/content/transport primitives; issue and other domain token mappings remain in their owning 2.1–2.2, 3.x, or 4.x tasks.
+- [ ] 2.5 Preserve shared sanitized decoding for the standard reviewed 400, 409, 413, and 499 envelopes in `src/multica_py/_internal/transport.py`; domain adapters consume this boundary and add no bypass.
+- [ ] 2.6 Extend issue-local exact-argv/body/error tests that consume the WP-1 transport boundary, with positive, negative, omission, explicit-value, and malformed-input rows; do not edit shared-transport-focused tests, central `tests/cases/operations.py`, or `tests/unit/resources/test_operations.py`.
 - [ ] 2.7 Remove obsolete rerun runtime/export and issue-test references; central operation discovery and documentation reconciliation remain in tasks 5.1–5.2.
 
 ## 3. Collaboration Response Adaptation
 
-- [ ] 3.1 Extend issue domain models/adapters for `description_revision`, requester/subscriber/status and other approved issue-row changes by consuming the task 1.8 wire foundation, with exact omission/nullability/open-value behavior.
+- [ ] 3.1 Extend issue domain models/adapters for `description_revision`, requester/subscriber/status and other approved issue-row changes by consuming the WP-1 command/wire/transport foundation, with exact omission/nullability/open-value behavior.
 - [ ] 3.2 Implement revision-aware issue description writes and table/component cases for current revision, stale typed 409 conflict, omission, explicit empty content, and preserved server state.
 - [ ] 3.3 Extend comment models/adapters, domain command builders, and domain-local cases for target revisions and idempotency identity, proving successful replay resolves to one logical comment and malformed/conflict responses fail closed.
 - [ ] 3.4 Extend skill models/adapters, domain command builders, and domain-local cases for target revision/base-revision semantics, current/stale/omitted inputs, conflict preservation, and existing portable atomic bundle behavior.
@@ -36,7 +36,7 @@
 - [ ] 4.2 Extend daemon start/stop/log projections, domain command builders, and domain-local cases for approved log controls and response changes without changing human-visible renderer output.
 - [ ] 4.3 Extend runtime/profile/usage projections, domain command builders, and domain-local cases for every approved changed registry row, including machine-bound profiles, usage windows, omission/nullability, and open values; consume workspace projections owned by task 3.6 without editing workspace resource/model/entity files.
 - [ ] 4.4 Extend agent/autopilot/task/attachment projections, domain command builders, and domain-local cases for approved run outcome, task-credit, dimensions, and related target fields while preserving existing relation and pagination behavior.
-- [ ] 4.5 Apply every remaining operational response-registry action in its domain-owned model/resource seam by consuming the task 1.8 wire foundation, and record each row's concrete test and documentation reference.
+- [ ] 4.5 Apply every remaining operational response-registry action in its domain-owned model/resource seam by consuming the WP-1 command/wire/transport foundation, and record each row's concrete test and documentation reference.
 - [ ] 4.6 Add domain-owned frozen unit/contract/component rows for positive, malformed, omitted, null, empty, numeric-boundary, pagination, unknown-open-value, and retained typed-error behavior across tasks 4.1–4.5 without editing shared test registries or conftest files.
 - [ ] 4.7 Prove all unchanged response rows remain source-equal and regression-covered and that no deferred resource family or version-specific wrapper was introduced.
 
@@ -51,8 +51,8 @@
 
 ## 6. Isolated Live and Independent Evidence
 
-- [ ] 6.1 Add the gated `tests/live/test_v0121_upgrade.py` module by reusing the existing `prepared_client`, live markers, five required `MULTICA_LIVE_*` values, UUID naming, and cleanup pattern; add only the minimal `MULTICA_LIVE_GUEST_PROFILE` and `MULTICA_LIVE_GUEST_PROJECT_ID` fixture inputs needed for the read-only guest assertion.
-- [ ] 6.2 Update `tests/live/conftest.py` and `tests/live/README.md` from exact prepared target `0.7.0` to `0.12.1`, document `MULTICA_LIVE_CLI=multica-test` with the isolated daemon/profile/workspace and guest fixtures, update `.github/workflows/live-smoke.yml` to target `0.12.1` without adding a runner/config namespace, and enforce exact revisions, stand readiness, UUID namespace, permissions, collection, and failure-safe cleanup.
+- [ ] 6.1 Add the gated `tests/live/test_v0121_upgrade.py` module by reusing the existing `prepared_client`, live markers, five required `MULTICA_LIVE_*` values, UUID naming, and cleanup pattern; add only `MULTICA_LIVE_GUEST_PROFILE` and `MULTICA_LIVE_GUEST_PROJECT_ID`, where the project is a dedicated empty resettable fixture readable by both actors and writable only through the non-guest owner for run-owned issue setup/cleanup.
+- [ ] 6.2 Update `tests/live/conftest.py` and `tests/live/README.md` from exact prepared target `0.7.0` to `0.12.1`, document `MULTICA_LIVE_CLI=multica-test` with the isolated daemon/profile/workspace and guest fixtures, update `.github/workflows/live-smoke.yml` to target `0.12.1` without adding a runner/config namespace, and enforce exact revisions, an empty guest-project baseline, owner create/update/delete plus guest read permissions, UUID namespace, collection, and failure-safe deletion/read-back of every run-owned issue.
 - [ ] 6.3 Have an independent Tester use a fresh exact-revision checkout and isolated data to run the issue-description, comment-idempotency, skill-revision, and guest/project-progress cases without editing implementation or test artifacts.
 - [ ] 6.4 Have Tester inspect lower-level mappings and run focused deterministic checks for command inventory, rerun replacement, all changed response domains, errors, compatibility, docs, and packaging.
 - [ ] 6.5 Publish case-level commands, exit codes, assertions, tested SHA, fixtures, commit/MR/file/CI links, cleanup result, and no-image rationale in Multica; attach any actual outputs only there and verify comment/attachment read-back.
