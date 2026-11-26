@@ -44,7 +44,7 @@ Alternative: keep a deprecated alias. Rejected because upstream removed the comm
 
 ### 4. Keep new values open and new command families deferred
 
-Squad `handoff_mode` SHALL be represented by the existing open-string model policy: known values are `manual` and `stage`, omission from older payloads remains compatible, and unknown future strings decode unchanged. Task-run document attribution/kind SHALL be added to the existing agent-task/run wire and public model without creating a public document resource. `squad briefs` and all other unapproved command families remain contract dispositions only.
+Squad `handoff_mode` SHALL preserve the reviewed `leader|direct` values. Omission from an older payload SHALL decode to the CLI-compatible `leader` default; any other value SHALL fail typed decoding because upstream defines this field as a closed enum. Blocker reference `via` remains the separate open `manual|stage` value. Task-run document attribution/kind SHALL be added to the existing agent-task/run wire and public model without creating a public document resource. `squad briefs` and all other unapproved command families remain contract dispositions only.
 
 Alternative: add closed enums and public resources for each discovered command. Rejected because source discovery is not public API approval and closed values would turn forward expansion into decode failures.
 
@@ -59,7 +59,7 @@ Alternative: expose server cleanup details as a new result model. Rejected becau
 Every substantial addition maps to a distinct requirement or risk and an existing seam:
 
 - Blocker projections/mutations are required by privacy and lifecycle acceptance; seam: `src/multica_py/entities/issues.py`, `resources/issues.py`, and private wire decoders. Existing issue relations lack blocker kind/count semantics.
-- Handoff mode is required by squad assignment behavior; seam: `entities/squads.py` and `resources/squads.py`. The current squad model has no field or update flag.
+- Handoff mode is required by squad assignment behavior; seam: `entities/squads.py` and `resources/squads.py`. The current squad model has no field or reviewed `leader|direct` decoding/default.
 - Task document attribution is required by run provenance/access; seam: `models/agents.py`, `_internal/agent_wires.py`, and issue task/run resources. Current wires cannot retain the new fields.
 - Rerun replacement is required by an upstream removal; seam: existing issue operation tables and resource method. Retention would execute a nonexistent command.
 - Contract/generator/test/doc work is required to keep the approved contract authoritative and releaseable; existing seams are sufficient and no parallel framework is justified.
@@ -70,14 +70,14 @@ Duplicate per-version adapters, a blocker graph cache, closed provider enums, an
 
 Most mappings, omission/nullability/open-value behavior, deterministic rendering, and typed errors SHALL be proved by existing unit, contract, component, and CI gates. Focused local E2E is required only for behavior that cheaper checks cannot establish across a real CLI/backend: hidden blocker counts without identity leakage, manual/stage lifecycle and mutation failures, handoff mode round-trip, task document attribution/access, and rerun replacement.
 
-The Tester SHALL use the isolated project stand and `multica-test`, a dedicated checkout/profile/data namespace, and the repository's focused script. Evidence SHALL be attached to Multica, not committed: command logs, assertions, diagnostic JSON, revisions, hashes, and genuine before/after terminal PNGs for changed read output. Test scripts and safe fixtures belong in Git; secrets, hostnames, raw logs, and images do not.
+The Tester SHALL extend and use the existing `scripts/e2e/verify_multica_test.py` harness on the isolated project stand. The harness already owns exact-SHA/version gates, sanitization, the artifact manifest, resource tracking, and failure-safe cleanup; case selection and a second wrapper-owned test identity are additions to that seam, not a new runner. The Tester SHALL use a fresh exact-revision checkout and an exclusive lease on the fixed project stand. Evidence SHALL be attached to Multica, not committed: command logs, assertions, diagnostic JSON, revisions, hashes, and genuine before/after terminal PNGs for changed read output. Test scripts and safe fixtures belong in Git; secrets, hostnames, raw logs, and images do not.
 
 ## Risks / Trade-offs
 
 - **Large accumulated delta** → Require closed `277 + 1` command disposition and `196/196` response registry before generation.
 - **Privacy regression from blocker projections** → Keep identities and counts separate; test hidden rows and sanitized errors at lower and live boundaries.
 - **Older server omissions** → Use presence-aware private wires and explicit absent/null/empty cases instead of making new fields required.
-- **Unknown values introduced after `0.13.0`** → Decode handoff/reference/document kinds as open strings and test unknown values.
+- **Unknown values introduced after `0.13.0`** → Keep reviewed blocker/document kinds open and test unknown values; reject unreviewed `handoff_mode` values with the typed shape error required by its closed upstream enum.
 - **Live evidence flakiness or leakage** → Gate readiness, isolate resources/profile, sanitize artifacts, preserve failed evidence, and clean only test-owned data.
 - **Parallel implementation conflicts** → Put contract/generator foundation first; partition issue, squad/task, retained-mapping, verification, and documentation write zones.
 

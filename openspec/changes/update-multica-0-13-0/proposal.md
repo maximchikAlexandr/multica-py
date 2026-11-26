@@ -8,7 +8,7 @@ The published SDK still approves Multica `0.7.1`, while stable Multica `0.13.0` 
 - Reconcile all `277` target binary-help nodes plus the removed `issue rerun` node and all `196` supported response work items against exact old/target source references.
 - Add typed issue blocker projections and mutations, including privacy-preserving hidden counts, manual/stage references, and local validation for self, cycle, cross-workspace, and maximum-count failures.
 - **BREAKING** Remove the obsolete public `issue rerun` operation and document migration to `issue rerun-task`.
-- Adapt task-run document attribution/kind and squad `handoff_mode` while retaining omission compatibility and unknown-value forward decoding.
+- Adapt task-run document attribution/kind and squad `handoff_mode`, preserving the reviewed `leader|direct` closed policy and legacy `leader` omission default while retaining open-value decoding only for reviewed blocker/document kinds.
 - Preserve existing public surfaces for retained operations, explicitly defer unapproved command families including `squad briefs`, and keep delete side effects governed by the existing action-result boundary.
 - Regenerate production artifacts only from `contracts/sdk-contract.json`; extend table-driven unit, contract, component, live verification, documentation, packaging, and release gates.
 
@@ -21,7 +21,7 @@ None.
 ### Modified Capabilities
 
 - `upstream-contract`: Pin the direct `0.7.1` to `0.13.0` provenance, complete command/response dispositions, compatibility interval, and deterministic projection.
-- `sdk-surface`: Add reviewed blocker, handoff, and task-run fields; remove legacy rerun; preserve omission, open-value, privacy, and error behavior.
+- `sdk-surface`: Add reviewed blocker, handoff, and task-run fields; remove legacy rerun; preserve field-specific omission, closed/open-value, privacy, and error behavior.
 - `public-cli-parity`: Govern changed command mappings, the rerun replacement, deferred candidates, and exact transport vectors.
 - `verification-and-release`: Require table-driven offline coverage, isolated live evidence for interaction-only behavior, documentation, packaging, CI, and exact-revision proof.
 

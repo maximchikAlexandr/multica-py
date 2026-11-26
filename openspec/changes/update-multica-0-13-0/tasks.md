@@ -14,10 +14,10 @@
 
 ## 3. Squad handoff and task document attribution
 
-- [ ] 3.1 Add squad `handoff_mode` to approved models and create/update/get/list adapters with known `manual|stage`, omission compatibility, and unknown-string forward decoding.
+- [ ] 3.1 Add squad `handoff_mode` to approved models and create/update/get/list adapters with reviewed `leader|direct` values, legacy omission defaulting to `leader`, and typed rejection of unreviewed values.
 - [ ] 3.2 Add task-run document identity, kind, and actor/source attribution through existing private wires and public task/run models without adding a document resource or leaking inaccessible metadata.
 - [ ] 3.3 Preserve delete `ActionResult[None]` and shared redaction/error behavior for the reviewed cleanup/access deltas.
-- [ ] 3.4 Extend existing frozen unit/contract/component/type tables for known/unknown/omitted handoff modes, task document nullability/omission/access, delete side effect, and malformed payloads.
+- [ ] 3.4 Extend existing frozen unit/contract/component/type tables for `leader|direct`, unknown/omitted handoff modes, task document nullability/omission/access, delete side effect, and malformed payloads.
 
 ## 4. Retained command and response adaptation
 
@@ -27,7 +27,7 @@
 
 ## 5. Verification implementation
 
-- [ ] 5.1 Add `scripts/e2e/verify_multica_013.py` using existing script conventions and safe fixtures to verify blocker privacy/lifecycle, handoff round-trip, task document attribution/access, and rerun-task on an isolated prepared target.
+- [ ] 5.1 Extend `scripts/e2e/verify_multica_test.py` and its existing unit fixtures with case selection and wrapper-owned second-identity support for blocker privacy/lifecycle, handoff round-trip, task document attribution/access, and rerun-task; retain its SHA/version gate, sanitization, manifest, resource registry, and failure-safe cleanup instead of adding another runner.
 - [ ] 5.2 Add/extend existing CI tests and fixtures for approved command/response mappings, deterministic generation, source-link completeness, privacy, compatibility, packaging, and collection-only live exclusion; do not add a CI framework.
 - [ ] 5.3 Run focused offline checks and complete repository gates within the local automatic-test limit, moving longer suites to existing GitHub Actions on the published exact revision and recording commands/exit codes.
 

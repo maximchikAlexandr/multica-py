@@ -57,19 +57,19 @@ The SDK SHALL remove public legacy `issue rerun` behavior and SHALL support `iss
 - **WHEN** public symbols, resources, generated inventories, operation cases, docs, and type fixtures are scanned
 - **THEN** no callable legacy rerun alias remains and migration documentation points to rerun-task
 
-### Requirement: Squad handoff mode is forward-compatible
+### Requirement: Squad handoff mode follows reviewed closed policy
 
-Squad payloads and approved create/update operations SHALL preserve handoff mode as an open value with known `manual` and `stage` spellings.
+Squad payloads and approved create/update operations SHALL preserve the closed handoff mode values `leader` and `direct`, while older payload omission SHALL default to `leader`.
 
 #### Scenario: Known modes round-trip
 
-- **WHEN** create, update, get, or list returns `manual` or `stage`
+- **WHEN** create, update, get, or list returns `leader` or `direct`
 - **THEN** the public squad value preserves the mode and exact create/update presence semantics
 
-#### Scenario: Omitted and unknown modes decode
+#### Scenario: Omitted and unknown modes follow reviewed policy
 
-- **WHEN** an older payload omits handoff mode or a future server returns an unknown nonblank mode
-- **THEN** omission uses the documented compatibility default/optional state and the unknown string is retained without a closed-enum failure
+- **WHEN** an older payload omits handoff mode or a server returns an unreviewed value
+- **THEN** omission decodes to `leader` and the unreviewed value raises the existing typed output-shape error
 
 ### Requirement: Task-run document attribution remains typed and access-safe
 
