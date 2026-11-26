@@ -27,7 +27,7 @@
 
 ## 5. Verification implementation
 
-- [ ] 5.1 Extend `scripts/e2e/verify_multica_test.py` and its existing unit fixtures with case selection and wrapper-owned second-identity support for blocker privacy/lifecycle, handoff round-trip, task document attribution/access, and rerun-task; retain its SHA/version gate, sanitization, manifest, resource registry, and failure-safe cleanup instead of adding another runner.
+- [ ] 5.1 Extend `scripts/e2e/verify_multica_test.py` and its existing unit fixtures with case selection, parameterized stand bindings, wrapper-owned second-identity support, and read-only named document-fixture inputs for blocker privacy/lifecycle, handoff round-trip, task document attribution/access, and rerun-task; retain its SHA/version gate, sanitization, manifest, resource registry, and failure-safe cleanup instead of adding another runner.
 - [ ] 5.2 Add/extend existing CI tests and fixtures for approved command/response mappings, deterministic generation, source-link completeness, privacy, compatibility, packaging, and collection-only live exclusion; do not add a CI framework.
 - [ ] 5.3 Run focused offline checks and complete repository gates within the local automatic-test limit, moving longer suites to existing GitHub Actions on the published exact revision and recording commands/exit codes.
 
